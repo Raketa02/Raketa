@@ -24,6 +24,9 @@
  * - **Peeking** (the default): a card is `railCardRatio` of the content width, so the next one's
  *   edge is the affordance; **a lone card takes the content width**, since there is nothing to
  *   peek at. It scrolls freely unless the row asks it to **snap** a card at a time.
+ * - **Wide** (#816): the peeking rail at the request card's wider share, `requestCardRatio` — a
+ *   friend request and an ask for a level in Needs your answer. A lone card takes the content
+ *   width, as on the peeking rail. It scrolls freely.
  * - **Paging**: every card the content width, snapping one at a time, and 7.18's dots under it,
  *   tracking the scroll — a paging rail takes the dots always.
  * - **Tiles** (#801; 7.31): New in Raketa's portrait tiles, each `portraitTile.railRatio` of the
@@ -163,8 +166,11 @@ function RowLink({ link }: { readonly link: HomeRowLink }) {
   );
 }
 
-/** 7.7's two geometries, New in Raketa's portrait tiles (7.31) and Top 10's numbered cards (7.36). */
-export type HomeRowRailGeometry = 'peeking' | 'paging' | 'tiles' | 'numbered';
+/**
+ * 7.7's two geometries, Needs your answer's wider peeking card (7.7 as amended by #816), New in
+ * Raketa's portrait tiles (7.31) and Top 10's numbered cards (7.36).
+ */
+export type HomeRowRailGeometry = 'peeking' | 'wide' | 'paging' | 'tiles' | 'numbered';
 
 export interface HomeRowRailProps<Card> {
   /** **The cards' data**, in the order drawn — a peeking rail draws a lone one at the content width. */
@@ -204,7 +210,9 @@ export function HomeRowRail<Card>({
         ? content * theme.size.topTen.railRatio
         : paging || cards.length === 1
           ? content
-          : content * theme.size.railCardRatio;
+          : geometry === 'wide'
+            ? content * theme.size.requestCardRatio
+            : content * theme.size.railCardRatio;
   const step = cardWidth + STRIP_GAP;
   const watching = onScreen !== undefined;
   const seen = useCardsOnScreen({ cards, lead: STRIP_LEAD, cardWidth, step, onScreen });
@@ -316,5 +324,7 @@ const s = StyleSheet.create({
   // Part 8: the negative margin is what lets the strip bleed to the screen edge while its content
   // still aligns to the gutter.
   strip: { marginHorizontal: -theme.size.gutter },
-  stripContent: { paddingHorizontal: STRIP_LEAD, gap: STRIP_GAP },
+  // Every card as tall as the tallest — the row's own default, said aloud because Needs your
+  // answer's tiles hold their buttons at their foot, level across the rail (#816, Q3).
+  stripContent: { paddingHorizontal: STRIP_LEAD, gap: STRIP_GAP, alignItems: 'stretch' },
 });

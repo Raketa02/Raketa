@@ -212,6 +212,37 @@ describe('the Home row frame', () => {
     });
   });
 
+  /** Needs your answer's request and ask tiles (#816; home refactor 2): wider, the next one peeking. */
+  describe('the wide rail', () => {
+    it('draws each card at the request card’s share of the content width, so the next one peeks', () => {
+      render(<Row count={3} geometry="wide" />);
+
+      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.requestCardRatio);
+      expect(widthOf('card-2')).toBeCloseTo(content() * theme.size.requestCardRatio);
+      expect(theme.size.requestCardRatio).toBeGreaterThan(theme.size.railCardRatio);
+    });
+
+    it('draws a lone card at the content width — there is nothing to peek at', () => {
+      render(<Row count={1} geometry="wide" />);
+
+      expect(widthOf('card-0')).toBe(content());
+    });
+
+    /** So a tile's buttons, held at its foot, sit level with the next tile's (Q3). */
+    it('stands every card as tall as the tallest', () => {
+      render(<Row count={2} geometry="wide" />);
+
+      expect(flat(rail().props.contentContainerStyle)).toMatchObject({ alignItems: 'stretch' });
+    });
+
+    it('scrolls freely and draws no dots', () => {
+      render(<Row count={3} geometry="wide" />);
+
+      expect(rail().props.snapToInterval).toBeUndefined();
+      expect(screen.queryByTestId('pager-dots', { includeHiddenElements: true })).toBeNull();
+    });
+  });
+
   /** New in Raketa's portrait tiles (#801; home rows 17): narrow, several on screen, the last cut. */
   describe('the tiles rail', () => {
     it('draws each tile at its share of the content width — a lone one too', () => {

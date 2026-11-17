@@ -2,8 +2,8 @@
  * **A friend link, opened on a phone** ([#756](https://github.com/Raketa02/Raketa/issues/756), PRD
  * #743; the friends mechanics §4.2–§4.3). Tomek sends his link, `rakieta.app/f/<code>`:
  *
- * - **Ania, signed in**, opens it and lands on Home with *tomek.k wants to be your friend · Invited
- *   you to Raketa* on top.
+ * - **Ania, signed in**, opens it and lands on Home with *tomek.k wants to be your friend* waiting
+ *   behind the envelope, in Needs your answer (#816).
  * - **Zofia, new**, opens it, signs up, goes through onboarding, and lands on the same Home.
  * - **Her own link, or a friend's**, moves nobody; **a dead link** is a toast, and so is one whose
  *   owner she blocked.
@@ -23,6 +23,7 @@ import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/sh
 import { savePhonePreference } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { openNeedsYourAnswer } from '@/test-support/needsYourAnswer';
 import { walkANewAccountToFinish } from '@/test-support/newAccountWalk';
 import { CLUB, CLUB_ID, club, rating } from '@/test-support/officialGroupsServer';
 import {
@@ -106,12 +107,17 @@ function serve(account: GateStub) {
 const openings = () => transport.requestsTo('POST', OPENING).length;
 const toasts = () => useToastQueue.getState().queue.map((toast) => toast.message);
 
-/** Home, with Tomek's request on top: *tomek.k wants to be your friend · Invited you to Raketa*. */
+/**
+ * Home, with Tomek's request waiting in Needs your answer: *tomek.k wants to be your friend*, and no
+ * *Invited you to Raketa* since #816 (ADR-0205 §1). The link lands on Home, and the envelope opens the
+ * sheet; #817 opens it already up.
+ */
 async function expectTomeksRequestOnHome() {
   await waitFor(() => expect(screen).toHavePathname('/'));
+  await openNeedsYourAnswer();
   const card = within(await screen.findByTestId(`friend-request-${TOMEK.id}`));
   expect(card.getByText(wantsToBeYourFriend(TOMEK.name))).toBeTruthy();
-  expect(card.getByText(FRIENDS_COPY.home.byLink)).toBeTruthy();
+  expect(screen.queryByText('Invited you to Raketa')).toBeNull();
 }
 
 /** Ania, signed in and on her You tab — anywhere but Home. */

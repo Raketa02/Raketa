@@ -1,4 +1,4 @@
-# friends — requests, Members' pills, the record's Add friend, Home's FRIEND REQUESTS and ASKED FOR A LEVEL
+# friends — requests, Members' pills, the record's Add friend, Needs your answer's FRIEND REQUESTS and ASKED FOR A LEVEL
 
 The client side of the backend's **Friends** context: a player asks a group-mate to be friends from
 Members or from their record, answers a request on Home, and sees who is a friend on every face.
@@ -452,3 +452,38 @@ or a notice opened included. A tag, not their keys: `discovery` draws this featu
 `reread` is now optional on the ask, cancel and remove hooks, and the round button takes none where
 its surface is a people list. The request card's three exclusive booleans this paragraph flagged for
 #802/#803 were folded into one discriminant by #802 (above).
+
+## FRIEND REQUESTS and ASKED FOR A LEVEL move into Needs your answer (#816)
+
+**Both rows left Home for the sheet the header's envelope opens** ([#816](https://github.com/Raketa02/Raketa/issues/816),
+PRD #810; [ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§1; home refactor 2). They are `FriendRequestsSection` and `LevelAsksSection` now, renamed from
+`…Row`, and the shell's `NeedsYourAnswer` holds them, FRIEND REQUESTS first, each drawing nothing
+while it holds nothing. What the paragraphs above say about _Home: FRIEND REQUESTS · n above Your
+games_ and _ASKED FOR A LEVEL … before Your games_ was true until this one; their reads, writes,
+busy rules and re-reads are unchanged.
+
+- **The tile is wider**: the row frame's `wide` rail, `size.requestCardRatio` (0,83) of the content,
+  measured off mock 2, the next tile peeking and a lone one at the content width. The ask is drawn as
+  the request card (the screens §6.4), so it takes the same width. **Every tile stands as tall as the
+  tallest, its title held to two lines and its buttons at its foot**, so the buttons sit level (Q3).
+- **A request says who and their chip, and no where-line** (Q2): _With you in Kazimierz crew · Padel
+  3,40 ·_, _Invited you to Raketa_, _Found you in the padel ranking_ and the three Home rows' lines are
+  gone, and so is `whereLine` with its words. `proposals` still maps `foundBy`, the group and the one
+  sport, since the server still serves them; nothing here draws them. #818 adds the sender's sport
+  levels.
+- **An ask says its title and nothing under it**: _A few questions, and they can add you to a game._
+  and _You're on question 5._ are gone; the button still reads **Carry on** for a run left halfway.
+- **The coral button's start is the shell's to run.** It navigates, and nothing in a sheet reads the
+  navigation (`docs/architecture.md` Part 13), so `useGetAskedLevel` is exported and called beside the
+  sheet; `LevelAsksSection` takes `starting` and an `onStart` that closes the sheet for good and
+  starts. The _level asked_ notice's toast for a start that fails is the shell's to show, as before.
+- **A face still opens the record**, now over the sheet, drawn inside it (`discovery`'s vibe sheet's
+  pattern: iOS drops a native window opened while another is closing).
+
+The walks are rewritten: `friends.test.tsx` (_FRIEND REQUESTS in Needs your answer_: behind the
+envelope, the tile's words and widths, no where-line, answering, the last answer closing the sheet, a
+request arriving while it is open, the record over it) and `levelAsks.test.tsx` (the section, the coral
+button closing the sheet and starting, Not now, and _Get your level on Home_ with and without an ask).
+**Not seen on a device**: both tiles against mock 2, two lines of title, the buttons level across a
+rail of two.

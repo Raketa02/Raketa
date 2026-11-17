@@ -55,29 +55,22 @@ export function useHomeFriendRequests(): readonly HomeFriendRequest[] | undefine
   return useHome().data?.friendRequests;
 }
 
-/** Nothing to draw, one value for every render that says so. */
-const NO_LEVEL_ASKS: readonly HomeLevelAsk[] = [];
-
 /**
  * **ASKED FOR A LEVEL · n** (#765) — the friends' asks for a level waiting on the reader, one per
- * sport, off Home's one read. `undefined` only **while Home has yet to answer**: the row draws
- * nothing then, and nor does Home's *Get your level*, which this row stands in place of for a
- * player rated in nothing (the friends screens §6.4) — so neither is drawn and then swapped for the
- * other. A read refused, or waiting for a connection with nothing held, is **none known**: no row,
- * and *Get your level* is free to say why nothing is happening. The cards are `friends`' to draw and
- * answer; the read is Home's, and so this feature's.
+ * sport, off Home's one read: `undefined` while it is in flight or refused, which draws no section,
+ * as an empty list does. They wait in Needs your answer since #816, where `friends` draws and answers
+ * them; the read is Home's, and so this feature's. Until #816 Home's *Get your level* gave way to
+ * them, and told *not yet read* from *none* here; it no longer reads them (ADR-0205 §4).
  */
 export function useHomeLevelAsks(): readonly HomeLevelAsk[] | undefined {
-  const home = useHome();
-  if (home.data !== undefined) return home.data.levelAsks;
-  return home.isError || home.fetchStatus === 'paused' ? NO_LEVEL_ASKS : undefined;
+  return useHome().data?.levelAsks;
 }
 
 /**
- * **The trophy left of the bell** (#775) — the reader's ranking, off Home's one read: `undefined`
- * only **while Home has yet to answer**; `null` once it has and there is none — no result in any
- * sport — and, as for the level asks, while it is refused or waiting for a connection with nothing
- * held: none known. The trophy is drawn either way, a number only with a place, and Rankings opens on
+ * **The trophy in the header's corner** (#775; right of the bell since #816) — the reader's ranking,
+ * off Home's one read: `undefined` only **while Home has yet to answer**; `null` once it has and
+ * there is none — no result in any sport — and while it is refused or waiting for a connection with
+ * nothing held: none known. The trophy is drawn either way, a number only with a place, and Rankings opens on
  * its sport; it is `rankings`' to draw, and the read is Home's, and so this feature's.
  */
 export function useHomeRanking(): HomeRanking | null | undefined {

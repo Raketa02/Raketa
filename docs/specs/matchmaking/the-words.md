@@ -1156,12 +1156,12 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Home, the row's title | `FRIEND REQUESTS · {n}` | `{n}` ≥ 1; at 0 the row and its title are gone |
-| The card, who | `{nickname} wants to be your friend` | |
-| The card, where (a group) | `With you in {group} · {Sport} {level} ·` and the reliability chip | the group the request was made in and its sport; the chip is the existing one (*✦ 98*) |
-| The card, where (a link) | `Invited you to Raketa` | in place of the group line |
-| The card, where (the ranking) | §30.8's `Found you in the {sport} ranking`, cited | in place of the group line, as a link's stands (ADR-0203 §9); a request from the ranking to a group-mate reads it too |
-| The card, buttons | `Not now` · `Accept` | |
+| Needs your answer, the section's title | `FRIEND REQUESTS · {n}` | `{n}` ≥ 1; at 0 the section and its title are gone. Home's row until 2026-11-17 ([§32](#32-needs-your-answer), #816) |
+| The card, who | `{nickname} wants to be your friend` | two lines at most on the tile |
+| The card, where (a group) | `With you in {group} · {Sport} {level} ·` and the reliability chip | the group the request was made in and its sport; the chip is the existing one (*✦ 98*). **Retired on the tile 2026-11-17** (ADR-0205 §1, #816): the tile draws the chip alone, on its own line, and #818 adds the sender's levels. The notice's body still says it |
+| The card, where (a link) | `Invited you to Raketa` | in place of the group line. **Retired on the tile 2026-11-17**, as the group line |
+| The card, where (the ranking) | §30.8's `Found you in the {sport} ranking`, cited | in place of the group line, as a link's stands (ADR-0203 §9); a request from the ranking to a group-mate reads it too. **Retired on the tile 2026-11-17**, as the group line; the notice keeps it |
+| The card, buttons | `Not now` · `Accept` | at the tile's foot |
 | Notice, a request | `{nickname} wants to be your friend` · body: the card's where-line | once per request |
 | Refused, the daily limit | ~~§30.8's limit sentence, cited~~ | **retired 2026-11-14** (ADR-0204 §2): there is no daily limit, and `daily_request_limit` leaves the contract |
 | Notice, accepted | `{nickname} said yes — you're friends` | to the requester |
@@ -1192,7 +1192,7 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Home, the request | `{nickname} wants to be your friend` · `Invited you to Raketa` · `Not now` · `Accept` | the card of §29.2 |
+| Home, the request | `{nickname} wants to be your friend` · `Invited you to Raketa` · `Not now` · `Accept` | the card of §29.2. Since 2026-11-17 it waits in Needs your answer, without `Invited you to Raketa` (#816) |
 | The public page | `{nickname} invited you to play on Raketa` · the store buttons · `Open in Raketa` | the stores' own badges; the preview image carries the same sentence |
 | The public page, a replaced or unknown code | `Nothing at that link` | |
 
@@ -1213,14 +1213,14 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Home, the row's title | `ASKED FOR A LEVEL · {n}` | `{n}` ≥ 1 is the number of sports with a card; at 0 the row and its title are gone |
+| Needs your answer, the section's title | `ASKED FOR A LEVEL · {n}` | `{n}` ≥ 1 is the number of sports with a card; at 0 the section and its title are gone. Home's row until 2026-11-17 ([§32](#32-needs-your-answer), #816) |
 | The card, who — one asker | `{nickname} wants to play {sport} with you` | *tomek.k wants to play padel with you* |
 | … two askers | `{nickname} and {nickname} want to play {sport} with you` | *tomek.k and kuba.w want to play padel with you* |
 | … three or more | `{nickname}, {nickname} and {m} more want to play {sport} with you` | the two newest; `{m}` ≥ 1 counts the rest (*tomek.k, kuba.w and 2 more*); up to three faces are drawn |
-| The card, the line — one asker | `A few questions, and {nickname} can add you to a game.` | |
-| … two or more | `A few questions, and they can add you to a game.` | *they*, never a gender (ADR-0096) |
-| The card, the buttons | `Not now` · `Get your {sport} level` | outline · coral; the coral one starts the sport's questionnaire from Home, as the notice does |
-| The card, a questionnaire in that sport left halfway | `You're on question {n}.` · `Not now` · `Carry on` | the line and the coral button change; the title doesn't. `{n}` is the question the run is on |
+| The card, the line — one asker | `A few questions, and {nickname} can add you to a game.` | **retired 2026-11-17** (ADR-0205 §1, #816): the tile has no line under its title |
+| … two or more | `A few questions, and they can add you to a game.` | *they*, never a gender (ADR-0096). **Retired 2026-11-17**, as above |
+| The card, the buttons | `Not now` · `Get your {sport} level` | outline · coral; the coral one closes Needs your answer and starts the sport's questionnaire from Home, as the notice does |
+| The card, a questionnaire in that sport left halfway | `Not now` · `Carry on` | the coral button changes; the title doesn't. `You're on question {n}.` was the line and is **retired 2026-11-17** with it |
 | Not now, the toast | `You can get your {sport} level any time, from You › Skill passport.` | neutral, held long enough to read; the passport is where §27's `Rate {sport}` chip is. Nobody else is told |
 | A start that fails | the *level asked* notice's own toasts | cited, not respelled: `You have a {sport} level already.` for `sport_already_rated` (`notificationsCopy`) |
 
@@ -1540,7 +1540,9 @@ the club the group plays at.
 
 ### 31.10 Request lines
 
-On the receiver's request card and its notice, in place of the group line (§29.2):
+On the receiver's request card and its notice, in place of the group line (§29.2). **Since
+2026-11-17 the card in Needs your answer draws none of them** (ADR-0205 §1, #816); the notice keeps
+them, and the server still serves where a request was found:
 
 | Found in | Sentence | Falls back to |
 | --- | --- | --- |
@@ -1573,3 +1575,20 @@ On the receiver's request card and its notice, in place of the group line (§29.
 | `Show me in General` · `Players who don't know you can see your place, open your record and send you a request.` | §30.8, You | replaced by §31.12's switch (ADR-0204 §2) |
 | `Hidden from General` | §30.4, the place card | nobody is hidden from the ranking |
 | `You've sent 10 requests to new people today. Try again tomorrow.` | §30.8, §29.2 | the daily limit goes, with `daily_request_limit` |
+
+## 32. Needs your answer
+
+> Added 2026-11-17 by [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §1–§2, PRD [#810](https://github.com/Raketa02/Raketa/issues/810). The sheet's words, and the
+> envelope that opens it. Each section under the title keeps its own words: FRIEND REQUESTS is
+> [§29.2](#292-friend-requests) and ASKED FOR A LEVEL [§29.5](#295-asking-for-a-level), moved off Home by
+> the player app's [#816](https://github.com/Raketa02/Raketa/issues/816). *TO CONFIRM* and FRIENDS GAME
+> join them with [#817](https://github.com/Raketa02/Raketa/issues/817), and the envelope's count with
+> [#819](https://github.com/Raketa02/Raketa/issues/819). Rows marked *(a call)* were written in by #816.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Home's header, the envelope | `Needs your answer` | its spoken name; the mark is drawn. #819 adds `, {n} new` while its count shows |
+| The sheet's title | `Needs your answer` | |
+| The sheet's ✕ | `Close Needs your answer` | spoken *(a call)*: a close is never just *Close* |
+| The sections, in order | `TO CONFIRM · {n}` · `FRIENDS GAME · {n}` · `FRIEND REQUESTS · {n}` · `ASKED FOR A LEVEL · {n}` | each hidden at 0; the first two from #817 |

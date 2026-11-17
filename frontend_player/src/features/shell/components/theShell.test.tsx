@@ -12,12 +12,14 @@
  * the old loop's Players and Chats columns, and the flag that brought them back, are gone.
  */
 
+import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
-import type { ScrollView } from 'react-native';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { AccessibilityInfo, StyleSheet, type ScrollView } from 'react-native';
 
 import { authKeys, NICKNAME_ROW_TITLE } from '@/features/auth/types';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
+import { levelAsksHeading, notNowLabel, requestsHeading } from '@/features/friends/types';
 import {
   AREA_LINE,
   INTRO_TITLE,
@@ -44,8 +46,8 @@ import {
   reliabilityLine,
   scoreRingLabel,
 } from '@/features/player_record/types';
-import { HOME_GAME_COPY } from '@/features/proposals/types';
-import { doorRowLabel } from '@/shared/ui';
+import { HOME_GAME_COPY, proposalKeys } from '@/features/proposals/types';
+import { doorRowLabel, theme } from '@/shared/ui';
 import {
   BOOKED_ROOM,
   BOOKING,
@@ -56,13 +58,21 @@ import {
   stubBooking,
   stubHomeGames,
 } from '@/test-support/home';
+import {
+  closeNeedsYourAnswer,
+  envelope,
+  openNeedsYourAnswer,
+  sheetTitle,
+} from '@/test-support/needsYourAnswer';
 import { scrollerOf } from '@/test-support/pinned';
+import { pullDown } from '@/test-support/swipe';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { forgetPhonePreferences } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import {
   GATE_USER,
+  HOME_PATH,
   launchSignedIn,
   OWN_RECORD_SERVED,
   PROFILE_OPTIONS_SERVED,
@@ -71,13 +81,21 @@ import {
   stubConversations,
   stubEntries,
   stubGate,
+  stubHome,
+  stubNotices,
   stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
-import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
+import {
+  installTransport,
+  json,
+  noContent,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
 
-import { HOME_COPY, PLAY_COPY } from './shellCopy';
+import { HOME_COPY, NEEDS_YOUR_ANSWER_COPY, PLAY_COPY } from './shellCopy';
 import { YOU_COPY } from './youCopy';
 
 /** One rating and a committed profile: the gate's fourth answer is *the app*. */
@@ -592,6 +610,192 @@ describe('Home, kept', () => {
     pressTab('Home');
     await waitFor(() => expect(screen).toHavePathname('/'));
     expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
+  });
+});
+
+/**
+ * **Needs your answer** ([#816](https://github.com/Raketa02/Raketa/issues/816), ADR-0205 §1–§2;
+ * home refactor 1 and 2): the header's envelope, there only while something waits, and the sheet it
+ * opens. What each section's tiles say and do is `friends`' suites'; this is the frame — the header's
+ * order, the sheet's title, focus and ways out, the sections' order, and the self-close.
+ */
+describe('Needs your answer', () => {
+  const INES: Wire['HomeFriendRequestSchema'] = {
+    player_id: 'e0000000-0000-4000-8000-000000000816',
+    nickname: 'ines.d',
+    photo_id: null,
+    photo_url: null,
+    asked_at: '2026-11-17T07:00:00Z',
+    by_link: false,
+    from_ranking: false,
+    from_new_players: false,
+    from_same_level: false,
+    from_same_vibe: false,
+    group: null,
+    sport: 'PADEL',
+    level: 3.4,
+    player_score: 98,
+    reliability_band: 'VERY_HIGH',
+    percent_even: null,
+    in_common: null,
+  };
+  const KUBA_ASKS: Wire['HomeLevelAskSchema'] = {
+    sport: 'SQUASH',
+    askers: [
+      {
+        player_id: 'e0000000-0000-4000-8000-000000000817',
+        nickname: 'kuba.w',
+        photo_id: null,
+        photo_url: null,
+      },
+    ],
+  };
+  const SET_ASIDE = `/api/v1/friends/requests/${INES.player_id}/set-aside`;
+
+  /** Home's read, holding `waiting` until *Not now* takes Inés's request off it. */
+  function serveHome(waiting: Partial<Wire['HomeResponse']>) {
+    stubHome(transport, waiting);
+    transport.on('POST', SET_ASIDE, () => {
+      stubHome(transport, { ...waiting, friend_requests: [] });
+      return noContent();
+    });
+  }
+
+  /** The header's three, left to right, by what each is. */
+  const header = () =>
+    screen
+      .getAllByRole('button')
+      .map((node) =>
+        node.props.testID === 'needs-your-answer-envelope'
+          ? 'envelope'
+          : node.props.testID === 'ranking-trophy'
+            ? 'trophy'
+            : /^Recent notifications/.test(String(node.props.accessibilityLabel))
+              ? 'bell'
+              : undefined,
+      )
+      .filter((one) => one !== undefined);
+
+  /** The section headings the sheet draws under its title, top to bottom. */
+  const sections = () =>
+    within(screen.getByTestId('bottom-sheet'))
+      .getAllByRole('header')
+      .map((node) => node.props.children as unknown)
+      .filter((text): text is string => typeof text === 'string');
+
+  it('reads envelope, bell, trophy — the trophy in the far-right corner — while something waits', async () => {
+    serveHome({ friend_requests: [INES] });
+    await launchIntoTheApp();
+
+    await waitFor(() => expect(envelope()).not.toBeNull());
+    expect(header()).toEqual(['envelope', 'bell', 'trophy']);
+  });
+
+  it('is an ink Feather mail mark in a 44pt target, named Needs your answer', async () => {
+    serveHome({ friend_requests: [INES] });
+    await launchIntoTheApp();
+
+    const mark = await waitFor(() => {
+      const found = envelope();
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    expect(mark.props.accessibilityLabel).toBe(NEEDS_YOUR_ANSWER_COPY.title);
+    expect(StyleSheet.flatten(mark.props.style)).toMatchObject({
+      width: theme.size.minTouch,
+      height: theme.size.minTouch,
+    });
+    const glyph = within(mark).UNSAFE_getByType(Feather);
+    expect(glyph.props.name).toBe('mail');
+    expect(glyph.props.color).toBe(theme.color.ink);
+  });
+
+  it('draws no envelope while nothing waits, and the bell and the trophy keep their places', async () => {
+    serveHome({});
+    await launchIntoTheApp();
+
+    await waitFor(() => expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(0));
+    expect(envelope()).toBeNull();
+    expect(header()).toEqual(['bell', 'trophy']);
+  });
+
+  it('opens on the envelope, its title taking the focus, FRIEND REQUESTS then ASKED FOR A LEVEL', async () => {
+    serveHome({ friend_requests: [INES], level_asks: [KUBA_ASKS] });
+    await launchIntoTheApp();
+    // Nothing that waits is on Home itself.
+    await waitFor(() => expect(envelope()).not.toBeNull());
+    expect(screen.queryByTestId('friend-requests')).toBeNull();
+    expect(screen.queryByTestId('level-asks')).toBeNull();
+    const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+
+    try {
+      // Only what the press moves: Home's own launch may move focus before it.
+      focus.mockClear();
+      await openNeedsYourAnswer();
+
+      expect(focus).toHaveBeenCalledTimes(1);
+      expect(sections()).toEqual([requestsHeading(1), levelAsksHeading(1)]);
+    } finally {
+      focus.mockRestore();
+    }
+  });
+
+  it('hides a section with nothing in it', async () => {
+    serveHome({ level_asks: [KUBA_ASKS] });
+    await launchIntoTheApp();
+
+    await openNeedsYourAnswer();
+
+    expect(sections()).toEqual([levelAsksHeading(1)]);
+    expect(screen.queryByTestId('friend-requests')).toBeNull();
+  });
+
+  it('closes on ✕, on the backdrop and on a pull down its head, and the envelope stays', async () => {
+    serveHome({ friend_requests: [INES] });
+    await launchIntoTheApp();
+
+    await openNeedsYourAnswer();
+    closeNeedsYourAnswer();
+    await waitFor(() => expect(sheetTitle()).toBeNull());
+
+    await openNeedsYourAnswer();
+    fireEvent.press(screen.getByTestId('bottom-sheet-scrim', { includeHiddenElements: true }));
+    await waitFor(() => expect(sheetTitle()).toBeNull());
+
+    await openNeedsYourAnswer();
+    expect(pullDown(sheetTitle()!, theme.size.sheetSwipe.close)).toBe(true);
+    await waitFor(() => expect(sheetTitle()).toBeNull());
+
+    expect(envelope()).not.toBeNull();
+  });
+
+  it('closes itself on the last answer, and the envelope goes', async () => {
+    serveHome({ friend_requests: [INES] });
+    stubNotices(transport, []);
+    await launchIntoTheApp();
+    await openNeedsYourAnswer();
+
+    fireEvent.press(screen.getByRole('button', { name: notNowLabel(INES.nickname) }));
+
+    await waitFor(() => expect(transport.requestsTo('POST', SET_ASIDE)).toHaveLength(1));
+    await waitFor(() => expect(sheetTitle()).toBeNull());
+    expect(envelope()).toBeNull();
+    expect(header()).toEqual(['bell', 'trophy']);
+  });
+
+  it('stays closed when something new arrives after the last answer — the envelope comes back', async () => {
+    serveHome({ friend_requests: [INES] });
+    stubNotices(transport, []);
+    await launchIntoTheApp();
+    await openNeedsYourAnswer();
+    fireEvent.press(screen.getByRole('button', { name: notNowLabel(INES.nickname) }));
+    await waitFor(() => expect(envelope()).toBeNull());
+
+    stubHome(transport, { level_asks: [KUBA_ASKS] });
+    await act(() => queryClient.invalidateQueries({ queryKey: proposalKeys.home() }));
+
+    await waitFor(() => expect(envelope()).not.toBeNull());
+    expect(sheetTitle()).toBeNull();
   });
 });
 

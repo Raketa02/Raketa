@@ -23,7 +23,12 @@
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { FlatList } from 'react-native';
 
-import { FRIENDS_COPY, removeTitle, roundLabel } from '@/features/friends/types';
+import {
+  FRIENDS_COPY,
+  removeTitle,
+  roundLabel,
+  wantsToBeYourFriend,
+} from '@/features/friends/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
@@ -38,6 +43,7 @@ import {
   stubHome,
   stubHottestGroups,
 } from '@/test-support/onboardingRouter';
+import { openNeedsYourAnswer } from '@/test-support/needsYourAnswer';
 import { servedReliability } from '@/test-support/playerRecord';
 import {
   errorResponse,
@@ -522,8 +528,8 @@ describe('the round friend button', () => {
   });
 });
 
-describe('Home’s request card', () => {
-  it('reads Found you among new players, and accepting it turns the envelope to ✓', async () => {
+describe('a request from New in Raketa, in Needs your answer (#816)', () => {
+  it('says no found-by line, and accepting it there turns the envelope on the row to ✓', async () => {
     peopleServer();
     stubHome(transport, {
       friend_requests: [
@@ -550,7 +556,11 @@ describe('Home’s request card', () => {
     });
     await homeWithTheRow();
 
-    expect(await screen.findByText(FRIENDS_COPY.home.newPlayers, { exact: false })).toBeTruthy();
+    await openNeedsYourAnswer();
+
+    // Where the request was found is still served, and no tile draws it (ADR-0205 §1).
+    expect(screen.getByText(wantsToBeYourFriend(MICHAL.nickname))).toBeTruthy();
+    expect(screen.queryByText('Found you among new players')).toBeNull();
     fireEvent.press(screen.getByRole('button', { name: `Accept ${MICHAL.nickname}` }));
 
     expect(await round(MICHAL, 'FRIEND')).toBeTruthy();

@@ -1091,6 +1091,17 @@ const size = {
    *  than stops; `tilt` is the most a card turns under the thumb, reached at twice the commit
    *  distance and measured off the two swipe mocks. */
   deckSwipe: { commit: 95, intent: SWIPE_INTENT, flight: 480, tilt: 12 },
+  /** THE SHEET'S SWIPE DOWN — 9.1 as amended by [#816](https://github.com/Raketa02/Raketa/issues/816),
+   *  the third gesture in the app, on a sheet that asks for it (`closesOnSwipe`), read on its head.
+   *
+   *  `intent` is the swipe row's number, READ FROM THERE for the deck's reason: the same finger
+   *  deciding between a tap on the close and a drag. `close` is how far the sheet is pulled before a
+   *  release closes it: about a third of a short sheet, so a nudge springs back. `fling` is the
+   *  speed down that closes it however short the pull, in points per millisecond, `PanResponder`'s
+   *  own `vy`: a flick, not a drift. `flingWindow` is how recently, in milliseconds, the finger must
+   *  have moved for that speed to count — `vy` is the last move's and never decays, so a finger that
+   *  stopped and held lifts with a speed it no longer has. Six frames at 60 Hz. */
+  sheetSwipe: { intent: SWIPE_INTENT, close: 96, fling: 0.5, flingWindow: 100 },
   /** THE DECK'S THREE ROUND BUTTONS — ✕, i, the ball — measured off the mock at 1×: 54, 42 and
    *  66. Circles rather than 6.1's 10pt rectangle, through `Button`'s `pill` shape (4.2 as
    *  amended: the third user, fenced to this row); the i is under 6.5's 44 and takes `hit.btn`.
@@ -1472,6 +1483,13 @@ const size = {
    *  There is a second rail and it has no ratio, because its card is the content width
    *  whole. What carries the affordance there is 7.18's dots. */
   railCardRatio: 0.74,
+  /** THE REQUEST CARD in Needs your answer — a friend request, and the ask for a level drawn as
+   *  one ([#816](https://github.com/Raketa02/Raketa/issues/816); home refactor 2; ADR-0205 §9.3):
+   *  the peeking rail's card, WIDER, so the face, two lines of title, the chip and two buttons fit
+   *  without the squeeze 0,74 gave them. MEASURED off home refactor 2: the tile is 450 of the
+   *  content's 540 pixels, 0,833. A RATIO, for `railCardRatio`'s reason; the next card's edge is
+   *  still the affordance, at 0,17 of the content less the gap. */
+  requestCardRatio: 0.83,
   /** THE PHOTO CAROUSEL's card — all of a player's photos, sideways, on the record
    *  ([#799](https://github.com/Raketa02/Raketa/issues/799)) and the vibe sheet (home rows 23, #803),
    *  over Part 8's Strip (Part 16 2026-11-14). A card's share of the content width, for

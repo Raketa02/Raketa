@@ -57,6 +57,7 @@ import {
   stubPayments,
   stubPush,
 } from '@/test-support/onboardingRouter';
+import { envelope } from '@/test-support/needsYourAnswer';
 import { fakePayments, fakePush, type FakePush } from '@/test-support/platform';
 import {
   errorResponse,
@@ -161,7 +162,9 @@ describe('FRIENDS GAME · n on Home (friends 12)', () => {
     expect(within(row).getByRole('button', { name: 'Accept, tomek.k’s game' })).toBeTruthy();
   });
 
-  it('sits above FRIEND REQUESTS and Your games', async () => {
+  // FRIEND REQUESTS waits in Needs your answer since #816, behind the envelope; FRIENDS GAME joins it
+  // with #817.
+  it('sits above Your games, and a friend request is behind the envelope, not between them', async () => {
     stubHomeGames(transport, [homeGame()], {
       friends_games: [invitation()],
       friend_requests: [
@@ -189,12 +192,12 @@ describe('FRIENDS GAME · n on Home (friends 12)', () => {
     await launchSignedIn();
     await theCard();
 
-    await screen.findByTestId('friend-requests');
+    await waitFor(() => expect(envelope()).not.toBeNull());
     const order = testIdsInOrder();
     const at = (id: string) => order.indexOf(id);
     expect(at('friends-games')).toBeGreaterThan(-1);
-    expect(at('friends-games')).toBeLessThan(at('friend-requests'));
-    expect(at('friend-requests')).toBeLessThan(at(`home-game-${BOOKING}`));
+    expect(at('friends-games')).toBeLessThan(at(`home-game-${BOOKING}`));
+    expect(at('friend-requests')).toBe(-1);
   });
 
   it('draws no row and no title while nothing waits', async () => {

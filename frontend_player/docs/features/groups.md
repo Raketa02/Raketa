@@ -672,7 +672,11 @@ never a wall. **A friend's ask for a level stands in its place** ([#765](https:/
 Q129): the rule is `homeAsksForALevel(groups, rated, askedForALevel)` now, over `proposals`'
 `useHomeLevelAsks` too — nothing while Home's ASKED FOR A LEVEL holds a card or Home has yet to
 answer, and the card again once the row is empty; a Home read refused or offline holds none. `groupKeys` is exported for the notice that opens Home on it, which marks the groups
-list stale with the ratings.
+list stale with the ratings. **#816 dropped that hand-off** (ADR-0205 §4, Q13): a friend's ask waits
+in Needs your answer, behind the header's envelope, and is never drawn in the card's place, so the
+rule is `homeAsksForALevel(groups, rated)` again and the hook reads no Home. The card shows above
+_Your games_ whenever she is in a group and rated in nothing, whether or not someone asked. The walk is
+`friends`' `levelAsks.test.tsx` (_Get your level on Home_).
 **Calls made here**: _+ Another sport_ is the bar's farthest pill rather than a chip of its own
 beside the pill (no mock draws it); Members' chip carries it too; the pill's hint for an unfold onto
 it alone is _Offers another sport to rate_. **Not seen on a device**: the pill and the bar with

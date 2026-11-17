@@ -411,13 +411,14 @@ function formOf(row: Wire['RankedRowSchema']): string[] {
 // ---------------------------------------------------------------------------
 
 describe('the trophy on Home', () => {
-  it('reads #7 left of the bell, and opens Rankings on its sport with the Home tab lit', async () => {
+  it('reads #7 in the corner, right of the bell, and opens Rankings on its sport with the Home tab lit', async () => {
     rankingServer({ trophy: { sport: 'TENNIS', general_place: 7, friends_place: null } });
     await launchSignedIn();
 
     await waitFor(() => expect(within(trophy()).getByText('#7')).toBeTruthy());
     expect(trophy().props.accessibilityLabel).toBe('Rankings, 7th in tennis');
-    // The bell keeps the corner, beside it.
+    // The trophy took the corner from the bell, which stands beside it (#816, ADR-0205 §2); the
+    // header's order is the shell's suite's.
     expect(screen.getByRole('button', { name: 'Recent notifications' })).toBeTruthy();
 
     fireEvent.press(trophy());

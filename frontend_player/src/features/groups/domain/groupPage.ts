@@ -126,18 +126,12 @@ export function sportsToOffer(
  * rating in any sport. For a player who never opens a group, it says why nothing is happening.
  * **Nobody in no group**: a level unlocks nothing there yet, and joining one is what Play is for.
  *
- * **Nor while a friend's ask for a level is on Home** (#765; the friends screens §6.4; Q129):
- * ASKED FOR A LEVEL stands in its place — it says why too, and names who wants to play — and the
- * card comes back once that row is empty and she is still rated in nothing.
- *
- * @param askedForALevel the cards Home's ASKED FOR A LEVEL holds.
+ * **Whether or not a friend asked her for a level** (#816, ADR-0205 §4, Q13). The ask waits in
+ * Needs your answer, behind the envelope, and is never drawn in this card's place: #765's hand-off,
+ * which left the card out while ASKED FOR A LEVEL was on Home, went with that row.
  */
-export function homeAsksForALevel(
-  groups: number,
-  rated: readonly Sport[],
-  askedForALevel: number,
-): boolean {
-  return groups > 0 && rated.length === 0 && askedForALevel === 0;
+export function homeAsksForALevel(groups: number, rated: readonly Sport[]): boolean {
+  return groups > 0 && rated.length === 0;
 }
 
 /** **One sport's roster** — `undefined` for a sport the group's read did not carry. */

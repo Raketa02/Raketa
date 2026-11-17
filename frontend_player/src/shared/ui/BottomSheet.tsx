@@ -75,10 +75,30 @@
  * Architecture Reanimated commits a layout prop to the shadow tree and skips that commit while
  * React commits anywhere in the app, so a per-frame height froze and jumped (`RecordDetails`).
  * Absent, the sheet takes its new height at once, as every other sheet does, and draws plain views.
+ *
+ * ## A sheet can close on a swipe down (`closesOnSwipe`)
+ *
+ * **Needs your answer** closes on ✕, the backdrop or a pull down (#816; 9.1 as amended). The pull is
+ * read on **the head**, the grab and the title row, and never on the body: the body holds sideways
+ * rails and its own scroll, and a gesture laid over them would steal theirs. Under the finger the
+ * sheet follows it down; on release it closes or springs back (`sheetSwipeGeometry`). It is React
+ * Native's `Animated` on the native driver, moving `transform` only, as the swipe row and the deck
+ * do. A sheet that also moves with its body (`layoutTransition`) is Reanimated's view, which takes
+ * no such value, so there the release still closes it but the sheet does not follow the finger.
+ * Every other sheet is as it was: nothing on its head claims a touch.
  */
 
-import { useEffect, useRef, type ComponentProps, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react';
+import {
+  Animated as Motion,
+  KeyboardAvoidingView,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { KEYBOARD_AVOIDANCE, dismissKeyboard } from '@/shared/lib/platform/keyboard';
@@ -86,6 +106,7 @@ import { KEYBOARD_AVOIDANCE, dismissKeyboard } from '@/shared/lib/platform/keybo
 import { CloseControl } from './CloseControl';
 import { ModalStage } from './ModalStage';
 import { moveAccessibilityFocus, useReducedMotion, type FocusTarget } from './overlay';
+import { claimsTheSheetSwipe, closesOnRelease, sheetDrop } from './sheetSwipeGeometry';
 import { theme } from './theme';
 
 export interface BottomSheetProps {
@@ -129,6 +150,12 @@ export interface BottomSheetProps {
    * scrolls itself.
    */
   readonly layoutTransition?: SheetLayoutTransition;
+  /**
+   * **A pull down on the head closes it** — see the module note. Off by default. A pull that closes
+   * calls `onClose` and leaves the sheet where the finger left it, for the window to take away, so a
+   * caller that asks for it closes the sheet when asked.
+   */
+  readonly closesOnSwipe?: boolean;
   readonly children: ReactNode;
 }
 
@@ -146,22 +173,31 @@ export function BottomSheet({
   keepsKeyboardOnTap = false,
   scrollsItself = false,
   layoutTransition,
+  closesOnSwipe = false,
   children,
 }: BottomSheetProps) {
   const reducedMotion = useReducedMotion();
   // Reanimated's views only where a caller moves the sheet; every other sheet keeps plain ones.
   const moves = layoutTransition !== undefined;
-  const Sheet = moves ? Animated.View : View;
+  // React Native's own animated view where the sheet follows a pull down (the module note).
+  const follows = closesOnSwipe && !moves;
+  const Sheet = moves ? Animated.View : follows ? Motion.View : View;
   const Body = moves ? Animated.ScrollView : ScrollView;
   const moving = moves ? { layout: layoutTransition } : {};
   const heading = useRef<View | null>(null);
   const wasVisible = useRef(visible);
+  /** How far below its place a pull has the sheet — 0 at rest. Made once, not on every render. */
+  const [drop] = useState(() => new Motion.Value(0));
+  /** When the finger last moved, on the touch's own clock — what a flick's speed is read against. */
+  const lastMoveAt = useRef(0);
 
   useEffect(() => {
     if (visible === wasVisible.current) return;
     wasVisible.current = visible;
+    // A sheet closed by a pull opens again where it belongs.
+    if (visible) drop.setValue(0);
     moveAccessibilityFocus(visible ? heading : returnFocusTo);
-  }, [visible, returnFocusTo]);
+  }, [visible, returnFocusTo, drop]);
 
   /**
    * Every way out goes through here. A field in the sheet may still hold the keyboard — the card's
@@ -172,6 +208,44 @@ export function BottomSheet({
     dismissKeyboard();
     onClose();
   };
+
+  /**
+   * What the pull's handlers read when they run — made once, so a render mid-pull never drops the
+   * gesture, and reading the render that is on screen rather than the one they were made in (the
+   * swipe row's pattern).
+   */
+  const now = useRef({ dismiss, reducedMotion });
+  now.current = { dismiss, reducedMotion };
+
+  const pull = useMemo(() => {
+    if (!closesOnSwipe) return undefined;
+    const settle = () => {
+      if (now.current.reducedMotion) {
+        drop.setValue(0);
+        return;
+      }
+      Motion.timing(drop, {
+        toValue: 0,
+        duration: theme.motion.settle,
+        useNativeDriver: true,
+      }).start();
+    };
+    return PanResponder.create({
+      // Never on the press itself: ✕ is on the head, and a tap has to reach it.
+      onMoveShouldSetPanResponder: (_event, gesture) => claimsTheSheetSwipe(gesture),
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderMove: (event, gesture) => {
+        lastMoveAt.current = event.nativeEvent.timestamp;
+        drop.setValue(sheetDrop(gesture.dy));
+      },
+      onPanResponderRelease: (event, gesture) => {
+        const still = event.nativeEvent.timestamp - lastMoveAt.current;
+        if (closesOnRelease({ dy: gesture.dy, vy: gesture.vy, still })) now.current.dismiss();
+        else settle();
+      },
+      onPanResponderTerminate: settle,
+    });
+  }, [closesOnSwipe, drop]);
 
   return (
     <ModalStage
@@ -195,37 +269,47 @@ export function BottomSheet({
           onPress={dismiss}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
+          testID="bottom-sheet-scrim"
         />
 
-        <Sheet style={s.sheet} accessibilityViewIsModal testID="bottom-sheet" {...moving}>
-          <View style={s.grab} />
+        <Sheet
+          style={[s.sheet, follows ? { transform: [{ translateY: drop }] } : undefined]}
+          accessibilityViewIsModal
+          testID="bottom-sheet"
+          {...moving}
+        >
+          {/* The head: what a pull is read on, where the sheet asks for one. Its gap is the
+              sheet's own, so the grab and the title stand where they always have. */}
+          <View style={s.top} {...(pull === undefined ? {} : pull.panHandlers)}>
+            <View style={s.grab} />
 
-          {mark === undefined ? (
-            <View style={s.head}>
-              {/* `accessible` on the wrapper, not the Text: focus has to land on a host
-                  element this component holds a ref to, and it must be the heading alone
-                  rather than the row it shares with the close control. */}
-              <View ref={heading} accessible accessibilityRole="header" style={s.titleBox}>
-                <Text style={s.title}>{title}</Text>
-              </View>
-              {action}
-              <CloseControl onPress={dismiss} accessibilityLabel={closeLabel} />
-            </View>
-          ) : (
-            <>
-              <View style={[s.head, s.headClose]}>
+            {mark === undefined ? (
+              <View style={s.head}>
+                {/* `accessible` on the wrapper, not the Text: focus has to land on a host
+                    element this component holds a ref to, and it must be the heading alone
+                    rather than the row it shares with the close control. */}
+                <View ref={heading} accessible accessibilityRole="header" style={s.titleBox}>
+                  <Text style={s.title}>{title}</Text>
+                </View>
+                {action}
                 <CloseControl onPress={dismiss} accessibilityLabel={closeLabel} />
               </View>
-              {/* The mark is the thing the title is about, drawn — hidden by the caller, and the
-                  heading is still the one element focus lands on. */}
-              <View style={s.hero}>
-                {mark}
-                <View ref={heading} accessible accessibilityRole="header">
-                  <Text style={[s.title, s.centred]}>{title}</Text>
+            ) : (
+              <>
+                <View style={[s.head, s.headClose]}>
+                  <CloseControl onPress={dismiss} accessibilityLabel={closeLabel} />
                 </View>
-              </View>
-            </>
-          )}
+                {/* The mark is the thing the title is about, drawn — hidden by the caller, and
+                    the heading is still the one element focus lands on. */}
+                <View style={s.hero}>
+                  {mark}
+                  <View ref={heading} accessible accessibilityRole="header">
+                    <Text style={[s.title, s.centred]}>{title}</Text>
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
 
           {/* `flexShrink` is what lets the cap apply to this rather than to the sheet's
               last child: without it the ScrollView takes its content's full height and the
@@ -261,9 +345,17 @@ const s = StyleSheet.create({
     // OS text size, and stops before it becomes the screen.
     maxHeight: '88%',
     paddingHorizontal: theme.size.gutter,
-    paddingTop: theme.space.sm,
     gap: theme.space.sm,
     ...theme.shadow.sheet,
+  },
+  // The grab and the head, in one view a pull is read on: the sheet's own gap between them, and the
+  // sheet's top padding and gutters taken inside it, so the strip over the grab and the gutters
+  // beside the title are the head's to pull too. Every sheet stands exactly where it did.
+  top: {
+    gap: theme.space.sm,
+    paddingTop: theme.space.sm,
+    marginHorizontal: -theme.size.gutter,
+    paddingHorizontal: theme.size.gutter,
   },
   // The cap lands here. `flexShrink` without a `flexGrow`, so a short sheet is still the
   // height of its content and only a tall one is bounded.

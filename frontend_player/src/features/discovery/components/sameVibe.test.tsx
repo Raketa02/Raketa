@@ -36,6 +36,7 @@ import {
   stubHome,
   stubNewInRaketa,
 } from '@/test-support/onboardingRouter';
+import { openNeedsYourAnswer } from '@/test-support/needsYourAnswer';
 import { servedReliability } from '@/test-support/playerRecord';
 import {
   errorResponse,
@@ -528,7 +529,9 @@ describe('the vibe sheet', () => {
   });
 });
 
-describe('Home’s request card', () => {
+// The request waits in Needs your answer since #816, and its tile says no found-by line (ADR-0205 §1):
+// where it was found is still served, and drawn nowhere.
+describe('a request from Same vibe, in Needs your answer', () => {
   const request = (
     over: Partial<Wire['HomeFriendRequestSchema']>,
   ): Wire['HomeFriendRequestSchema'] => ({
@@ -552,29 +555,18 @@ describe('Home’s request card', () => {
     ...over,
   });
 
-  // The row holds Kuba alone, so no tile says the card's count.
-  it('reads 6 things in common — today’s count', async () => {
+  // The row holds Kuba alone, so no tile on it says Ania's count.
+  it('says no line of where it was found, today’s things in common included', async () => {
     vibeServer([KUBA]);
     stubHome(transport, { friend_requests: [request({})] });
     await homeWithTheRow();
+    await openNeedsYourAnswer();
 
-    expect(await screen.findByText(/^6 things in common/)).toBeTruthy();
-  });
-
-  it('reads 1 thing in common in the singular', async () => {
-    vibeServer([KUBA]);
-    stubHome(transport, { friend_requests: [request({ in_common: 1 })] });
-    await homeWithTheRow();
-
-    expect(await screen.findByText(/^1 thing in common/)).toBeTruthy();
-  });
-
-  it('falls back to Found you through your tags once they share none', async () => {
-    vibeServer([KUBA]);
-    stubHome(transport, { friend_requests: [request({ in_common: 0 })] });
-    await homeWithTheRow();
-
-    expect(await screen.findByText(/^Found you through your tags/)).toBeTruthy();
+    // Kuba's tile on the row under the sheet says his own; the sheet says none.
+    const sheet = within(screen.getByTestId('bottom-sheet'));
+    expect(sheet.getByTestId(`friend-request-${ANIA.player_id}`)).toBeTruthy();
+    expect(sheet.queryByText(/things? in common/)).toBeNull();
+    expect(sheet.queryByText(/Found you through your tags/)).toBeNull();
   });
 });
 

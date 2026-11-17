@@ -38,6 +38,7 @@ import {
   stubNewInRaketa,
   stubOwnRecord,
 } from '@/test-support/onboardingRouter';
+import { openNeedsYourAnswer } from '@/test-support/needsYourAnswer';
 import { servedReliability } from '@/test-support/playerRecord';
 import {
   errorResponse,
@@ -477,7 +478,9 @@ describe('the comparison sheet, when its person leaves the row', () => {
   });
 });
 
-describe('Home’s request card', () => {
+// The request waits in Needs your answer since #816, and its tile says no found-by line (ADR-0205 §1):
+// where it was found is still served, and drawn nowhere.
+describe('a request from Same competitive level, in Needs your answer', () => {
   const request = (
     over: Partial<Wire['HomeFriendRequestSchema']>,
   ): Wire['HomeFriendRequestSchema'] => ({
@@ -501,20 +504,15 @@ describe('Home’s request card', () => {
     ...over,
   });
 
-  it('reads Your level in padel · 91% even — today’s %', async () => {
+  it('says no line of where it was found, today’s % even included', async () => {
     levelServer();
     stubHome(transport, { friend_requests: [request({})] });
     await homeWithTheRow();
+    await openNeedsYourAnswer();
 
-    expect(await screen.findByText(/^Your level in padel · 91% even/)).toBeTruthy();
-  });
-
-  it('falls back to Found you at your padel level once either holds no level there', async () => {
-    levelServer();
-    stubHome(transport, { friend_requests: [request({ percent_even: null, level: null })] });
-    await homeWithTheRow();
-
-    expect(await screen.findByText(/^Found you at your padel level/)).toBeTruthy();
+    expect(screen.getByTestId(`friend-request-${MICHAL.player_id}`)).toBeTruthy();
+    expect(screen.queryByText(/Your level in padel/)).toBeNull();
+    expect(screen.queryByText(/Found you at your padel level/)).toBeNull();
   });
 });
 

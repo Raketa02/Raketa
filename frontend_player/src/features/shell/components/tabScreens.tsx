@@ -9,7 +9,7 @@
  */
 
 import { useQueryClient } from '@tanstack/react-query';
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
@@ -18,7 +18,6 @@ import {
   SameVibeRow,
   rereadDiscovery,
 } from '@/features/discovery/types';
-import { FriendRequestsRow, LevelAsksRow } from '@/features/friends/types';
 import {
   GROUPS_COPY,
   HomeLevelCard,
@@ -26,8 +25,7 @@ import {
   rereadHomeGroups,
   useInNoGroup,
 } from '@/features/groups/types';
-import { NoticeBell, OPEN_NOTICE_WORDS, rereadNotices } from '@/features/notifications/types';
-import { PlayerRecordSheet, PlayerScoreTag } from '@/features/player_record/types';
+import { NoticeBell, rereadNotices } from '@/features/notifications/types';
 import {
   FriendsGamesRow,
   HomeRail,
@@ -38,6 +36,7 @@ import { RankingTrophy, TopTenRow, rereadTopTen } from '@/features/rankings/type
 import { theme } from '@/shared/ui';
 
 import { whenHomeStartsOver } from './homeStart';
+import { NeedsYourAnswer } from './NeedsYourAnswer';
 import { ShellScreen } from './ShellScreen';
 import { HOME_COPY } from './shellCopy';
 
@@ -68,20 +67,16 @@ import { HOME_COPY } from './shellCopy';
  * invitation waits on the reader — above *TO CONFIRM* too: an invitation runs out in hours, and the
  * mechanics put it at the very top. Answering one re-reads the bell, handed in as for requests.
  *
- * **FRIEND REQUESTS sits above Your games** (`friends`' row, [#753](https://github.com/Raketa02/Raketa/issues/753);
- * the friends screens §6; Q13), drawn only while a request waits. The shell hands it the two things
- * that are `player_record`'s — the reliability chip, and the record a face opens — so `friends` does
- * not import the feature that draws its record button; and the bell's re-read, since answering a
- * request takes its row off the bell.
+ * **FRIEND REQUESTS and ASKED FOR A LEVEL are behind the envelope** ([#816](https://github.com/Raketa02/Raketa/issues/816),
+ * ADR-0205 §1): `friends`' sections in **Needs your answer**, the sheet the header's envelope opens
+ * (`NeedsYourAnswer`). They were Home's rows above Your games from #753 and #765, and the ask no longer
+ * stands in place of *Get your level*, which is drawn whether or not someone asked.
  *
- * **ASKED FOR A LEVEL sits under it** (`friends`' row, [#765](https://github.com/Raketa02/Raketa/issues/765);
- * the friends screens §6.4; Q129), drawn only while a friend's ask waits, handed the same record and
- * bell, and the *level asked* notice's toast for a start that fails. **For a player rated in nothing
- * it stands in place of *Get your level*** — `groups`' rule, which reads the same Home.
- *
- * **The trophy stands just left of the bell** (`rankings`' `RankingTrophy`, [#775](https://github.com/Raketa02/Raketa/issues/775);
- * the rankings screens §1; Q13): the reader's General place in the sport of their latest result, and
- * the way to Rankings — the bell keeps the corner.
+ * **The header reads envelope, bell, trophy** (ADR-0205 §2; home refactor 1): the envelope only while
+ * something waits for an answer; `notifications`' bell; and `rankings`' `RankingTrophy`
+ * ([#775](https://github.com/Raketa02/Raketa/issues/775)), the reader's General place and the way to
+ * Rankings, in the far-right corner. The slot is right-aligned, so without the envelope the bell and
+ * the trophy stand where they were.
  *
  * **The five Home rows stand below *Your games*** (ADR-0204; the Home rows screens §1), each reading on
  * its own so a slow or failed one holds up nothing — **HOTTEST GROUPS** first (`groups`' row,
@@ -115,8 +110,9 @@ export const HomeScreen = memo(function HomeScreen() {
       startsOverWhen={whenHomeStartsOver}
       right={
         <View style={s.headerRight}>
-          <RankingTrophy />
+          <NeedsYourAnswer />
           <NoticeBell />
+          <RankingTrophy />
         </View>
       }
       onRefresh={() =>
@@ -131,7 +127,6 @@ export const HomeScreen = memo(function HomeScreen() {
       <HomeLevelCard />
       <FriendsGamesRow onAnswered={() => rereadNotices(client)} />
       <PaymentsToConfirm />
-      <HomeFriendRows />
       <HomeRail
         empty={
           inNoGroup ? { ...HOME_COPY.empty, act: GROUPS_COPY.hottest.groupless } : HOME_COPY.empty
@@ -146,39 +141,7 @@ export const HomeScreen = memo(function HomeScreen() {
   );
 });
 
-/** *FRIEND REQUESTS · n* and *ASKED FOR A LEVEL · n*, and the record a face on either opens. */
-function HomeFriendRows() {
-  const client = useQueryClient();
-  const [reading, setReading] = useState<string>();
-  return (
-    <>
-      <FriendRequestsRow
-        scoreTag={(request) => (
-          <PlayerScoreTag
-            score={request.playerScore}
-            {...(request.reliabilityBand === undefined ? {} : { band: request.reliabilityBand })}
-          />
-        )}
-        onFace={setReading}
-        onAnswered={() => rereadNotices(client)}
-      />
-      <LevelAsksRow
-        onFace={setReading}
-        onAnswered={() => rereadNotices(client)}
-        unstarted={OPEN_NOTICE_WORDS.unstarted}
-      />
-      {reading === undefined ? null : (
-        <PlayerRecordSheet
-          visible
-          onClose={() => setReading(undefined)}
-          subject={{ kind: 'player', playerId: reading }}
-        />
-      )}
-    </>
-  );
-}
-
 const s = StyleSheet.create({
-  // The trophy, then the bell in the corner: the bell's own 44pt target is its spacing on the right.
+  // The envelope and the bell, each in its own 44pt target, then the trophy's pill in the corner.
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs },
 });

@@ -31,6 +31,11 @@ export { ShellScreen, type ShellScreenProps } from './components/ShellScreen';
  * change and the rules the sentences carry are not.
  */
 export { HOME_COPY, PLAY_COPY } from './components/shellCopy';
+/**
+ * **Needs your answer's words** (#816) — read by the suites that open the sheet the envelope opens
+ * to reach what waits in it, for the reason above.
+ */
+export { NEEDS_YOUR_ANSWER_COPY } from './components/shellCopy';
 
 /**
  * **Play** — the *Groups | Explore* segment and the page under it

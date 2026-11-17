@@ -6,8 +6,8 @@
  * **The acts are this feature's; the surfaces are their own.** Members (`groups`) draws its rows and
  * hands each to `RowWithFriendEnd`, which puts the pill or the tag on its right. The record
  * (`player_record`) reads `recordFootOf` and draws `FriendButton` beside `blocks`' Block. The shell
- * composes `FriendRequestsRow` and `LevelAsksRow` into Home above Your games. Each surface hands its
- * own re-read in, so this feature never names another's keys.
+ * composes `FriendRequestsSection` and `LevelAsksSection` into Needs your answer, the sheet its
+ * envelope opens. Each surface hands its own re-read in, so this feature never names another's keys.
  *
  * **You › Friends** (#754) is a frame and a body: `FriendsPage` draws the header, *+ Add friends* and
  * its sheet; `FriendsTabs` is what it holds from You, and the picker (#757) what it holds from a
@@ -56,13 +56,22 @@ export { FriendButton, type FriendButtonProps } from './components/FriendButton'
  */
 export { RoundFriendButton, type RoundFriendButtonProps } from './components/RoundFriendButton';
 export type { Reread } from './hooks/useFriendWrites';
-export { FriendRequestsRow, type FriendRequestsRowProps } from './components/FriendRequestsRow';
 /**
- * **ASKED FOR A LEVEL** (#765) — Home's row of a friend's asks for a level, after FRIEND REQUESTS:
- * the shell composes it, handing in the record a face opens, the bell's re-read and the *level
- * asked* notice's toast for a start that failed.
+ * **FRIEND REQUESTS and ASKED FOR A LEVEL** (#816, ADR-0205 §1) — two of Needs your answer's
+ * sections, which the shell's sheet holds: it hands in the reliability chip, the record a face
+ * opens and the bell's re-read. Each draws nothing while it holds nothing.
  */
-export { LevelAsksRow, type LevelAsksRowProps } from './components/LevelAsksRow';
+export {
+  FriendRequestsSection,
+  type FriendRequestsSectionProps,
+} from './components/FriendRequestsSection';
+export { LevelAsksSection, type LevelAsksSectionProps } from './components/LevelAsksSection';
+/**
+ * **The ask's coral button, run outside the sheet** (#816): the questionnaire's start navigates,
+ * and nothing inside a sheet does, so the shell calls this beside the sheet and hands
+ * `LevelAsksSection` its `starting` and a press that closes the sheet and starts.
+ */
+export { useGetAskedLevel, type GetAskedLevel } from './hooks/useGetAskedLevel';
 
 export {
   recordAskedWhere,
@@ -93,9 +102,9 @@ export {
   cancelTitle,
   linkOpeningMessage,
   notNowLabel,
+  levelAsksHeading,
   removeTitle,
   requestsHeading,
   roundLabel,
   wantsToBeYourFriend,
-  whereLine,
 } from './components/friendsCopy';

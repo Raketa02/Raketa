@@ -1,6 +1,6 @@
 /**
  * **Every sentence this feature says** — Members' pills and tags, the record's two buttons and their
- * sheets, and Home's FRIEND REQUESTS ([#753](https://github.com/Raketa02/Raketa/issues/753); the
+ * sheets, and FRIEND REQUESTS, in Needs your answer since #816 ([#753](https://github.com/Raketa02/Raketa/issues/753); the
  * words [§29.1–§29.2](../../../../../docs/specs/matchmaking/the-words.md#29-friends)); You ›
  * Friends, the Add friends sheet and the result screen's PLAYED WITH
  * ([#754](https://github.com/Raketa02/Raketa/issues/754); the words §29.1, §29.3); and the friend
@@ -82,8 +82,11 @@
 - **The *Request sent* sheet's busy word** is the record's *Cancelling…*.
 - **A refusal on the round button is a toast**: there is no room under a 24pt mark for a note.
 
-_Found you in the padel ranking_ replaces the where-line whole — no sport and Level after it, the
- * chip beside it — which is §29.2's own: the group line is the whole line, and a link's replaces it.
+ * **#816 took the where-line away** (ADR-0205 §1): a friend request in Needs your answer says who
+ * and their chip, and an ask for a level its title alone. _With you in Kazimierz crew_, _Invited you
+ * to Raketa_, _Found you in the padel ranking_, Home rows' three found-by lines, _A few questions,
+ * and they can add you to a game._ and _You're on question 5._ are no longer drawn, so no longer
+ * spelled here.
  *
  * ## The whole nickname, and no pronoun
  *
@@ -93,8 +96,7 @@ _Found you in the padel ranking_ replaces the where-line whole — no sport and 
 
 import { codeMessage, type AppError } from '@/shared/errors';
 import { linkWithoutScheme } from '@/shared/formatting/linkFormat';
-import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
-import { thingsInCommon } from '@/shared/vocabulary/socialTagPresentation';
+import { formatLevel } from '@/shared/formatting/ratingFormat';
 
 import type { FriendsTab } from '../domain/friendList';
 import { askersFormOf, type AskersForm } from '../domain/levelAsk';
@@ -142,16 +144,14 @@ export const FRIENDS_COPY = {
     /** The coral button with a questionnaire in the sport left halfway; the title doesn't change. */
     carryOn: 'Carry on',
   },
+  /**
+   * **FRIEND REQUESTS** in Needs your answer (#816). The where-line and its found-by sentences went
+   * with Home's row (ADR-0205 §1).
+   */
   home: {
     notNow: 'Not now',
     accept: 'Accept',
     accepting: 'Accepting…',
-    /** A link's request, in place of the group line. */
-    byLink: 'Invited you to Raketa',
-    /** A request from New in Raketa, or a record it opened, in place of the group line (§31.10). */
-    newPlayers: 'Found you among new players',
-    /** A request from Same vibe once the two share no tag any more (§31.10). */
-    throughYourTags: 'Found you through your tags',
   },
   /** **You › Friends** (the screens §4.1): the header, the three tabs, their rows and empty lines. */
   page: {
@@ -319,83 +319,6 @@ export function wantsToBeYourFriend(nickname: string): string {
   return `${nickname} wants to be your friend`;
 }
 
-/**
- * **Where they found the reader, as the where-line says it** (§29.2, §30.8, §31.10) — the request
- * card's `foundBy`, with the sport named inside a sentence (*padel*, `sportInLine`) where the line
- * names one. Spelled here rather than imported, so this module imports no feature (see below).
- */
-export type WhereFound =
-  | { readonly kind: 'link' }
-  | { readonly kind: 'ranking'; readonly sport: string }
-  | { readonly kind: 'newInRaketa' }
-  | { readonly kind: 'sameLevel'; readonly sport: string; readonly percentEven?: number }
-  | { readonly kind: 'sameVibe'; readonly inCommon: number };
-
-/**
- * **The card's where-line, before the reliability chip** (the words §29.2) — *With you in Kazimierz
- * crew · Padel 3,40 ·*. Each part only where the wire named it: the group while both are still in it,
- * the sport and the Level where the screen showed one. The trailing ` ·` stands before the chip the
- * card draws after it; with nothing to say the line is empty and the chip stands alone.
- *
- * **A request found by a link, the ranking or a Home row says where in the group line's place**, and
- * nothing else: *Invited you to Raketa*, *Found you in the padel ranking*, *Found you among new
- * players*, *Your level in padel · 91% even* — today's %, or *Found you at your padel level* once
- * either holds no level there — and *6 things in common* — today's count, or *Found you through your
- * tags* once they share none (§31.10).
- *
- * The sport arrives named (`sportLabel`'s *Padel*, `sportInLine`'s *padel*), so this module imports
- * no feature: it is read at module load by every component here, and a feature's barrel would close
- * a loop back into them.
- */
-export function whereLine(request: {
-  readonly foundBy?: WhereFound;
-  readonly group?: { readonly name: string };
-  readonly sportName?: string;
-  readonly level?: number;
-}): string {
-  const found = request.foundBy;
-  if (found !== undefined) return foundLine(found);
-  const sport =
-    request.sportName === undefined
-      ? []
-      : [
-          [
-            request.sportName,
-            ...(request.level === undefined ? [] : [formatLevel(request.level)]),
-          ].join(' '),
-        ];
-  const parts = [
-    ...(request.group === undefined ? [] : [`With you in ${request.group.name}`]),
-    ...sport,
-  ];
-  return parts.length === 0 ? '' : `${parts.join(' · ')} ·`;
-}
-
-/** The line a found request says in the group line's place — a switch, so a kind with no words fails to compile. */
-function foundLine(found: WhereFound): string {
-  switch (found.kind) {
-    case 'link':
-      return FRIENDS_COPY.home.byLink;
-    case 'ranking':
-      return foundYouInTheRanking(found.sport);
-    case 'newInRaketa':
-      return FRIENDS_COPY.home.newPlayers;
-    case 'sameLevel':
-      return found.percentEven === undefined
-        ? `Found you at your ${found.sport} level`
-        : `Your level in ${found.sport} · ${formatPercent(found.percentEven)} even`;
-    case 'sameVibe':
-      return found.inCommon === 0
-        ? FRIENDS_COPY.home.throughYourTags
-        : thingsInCommon(found.inCommon);
-  }
-}
-
-/** *Found you in the padel ranking* — a request from the ranking's where-line (§30.8). */
-export function foundYouInTheRanking(sportInLine: string): string {
-  return `Found you in the ${sportInLine} ranking`;
-}
-
 /** *Asked you · 2* — the one tab that counts, while requests wait; *Asked you* alone at nought. */
 export function askedYouTab(count: number): string {
   const name = FRIENDS_COPY.page.tabs.ASKED_YOU;
@@ -404,7 +327,8 @@ export function askedYouTab(count: number): string {
 
 /**
  * *Padel 2,75 · Tennis 3,10* — a friend's line on *Friends*: every sport they play with its Level
- * (call 11). The sport arrives named, as `whereLine`'s does, so this module imports no feature.
+ * (call 11). The sport arrives named, so this module imports no feature: it is read at module load
+ * by every component here, and a feature's barrel would close a loop back into them.
  */
 export function sportsLine(
   sports: readonly { readonly name: string; readonly level: number }[],
@@ -508,26 +432,9 @@ export function wantToPlay(nicknames: readonly string[], sportInLine: string): s
   return WANT_TO_PLAY[askersFormOf(nicknames.length)](nicknames, sportInLine);
 }
 
-/** **The line under it** — the one asker by name, *they* for several (ADR-0096: never a gender). */
-const LEVEL_ASK_LINE: Readonly<Record<AskersForm, (nicknames: readonly string[]) => string>> = {
-  one: ([first]) => `A few questions, and ${first} can add you to a game.`,
-  two: () => 'A few questions, and they can add you to a game.',
-  more: () => 'A few questions, and they can add you to a game.',
-};
-
-/** *A few questions, and tomek.k can add you to a game.* — `nicknames` newest first. */
-export function levelAskLine(nicknames: readonly string[]): string {
-  return LEVEL_ASK_LINE[askersFormOf(nicknames.length)](nicknames);
-}
-
-/** *Get your padel level* — the card's coral button, which starts the sport's questionnaire. */
+/** *Get your padel level* — the tile's coral button, which starts the sport's questionnaire. */
 export function getYourLevelLabel(sportInLine: string): string {
   return `Get your ${sportInLine} level`;
-}
-
-/** *You're on question 5.* — the line, with a questionnaire in the sport left halfway. */
-export function youReOnQuestion(question: number): string {
-  return `You're on question ${question}.`;
 }
 
 /** The spoken name of a card's **Not now**: which ask it puts away. */

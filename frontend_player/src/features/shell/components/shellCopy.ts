@@ -43,6 +43,21 @@ export const HOME_COPY = {
 } as const;
 
 /**
+ * **Needs your answer** — the envelope on Home's header and the sheet it opens
+ * ([#816](https://github.com/Raketa02/Raketa/issues/816), ADR-0205 §1–§2; the words §32).
+ *
+ * The shell's because the header and the sheet are: each section under the title is its feature's,
+ * with its own heading. The envelope is named by what it opens, as the bell is; its count, *, 2
+ * new*, is #819's.
+ */
+export const NEEDS_YOUR_ANSWER_COPY = {
+  /** The sheet's title, and the envelope's spoken name. */
+  title: 'Needs your answer',
+  /** The sheet's ✕ — never just *Close* (`CloseControl`). */
+  close: 'Close Needs your answer',
+} as const;
+
+/**
  * **The Play tab's own words** — the two segments it opens on
  * ([#512](https://github.com/Raketa02/Raketa/issues/512), play mocks 1 and 3).
  *

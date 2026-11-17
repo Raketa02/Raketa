@@ -5,77 +5,19 @@ import {
   askedYouTab,
   friendsRowLine,
   groupCountsLine,
-  levelAskLine,
   levelAsksHeading,
   notNowLevelAskLabel,
   getYourLevelLabel,
   setAsideToast,
   wantToPlay,
-  youReOnQuestion,
   requestsHeading,
   sportsLine,
   wantsToBeYourFriend,
-  whereLine,
 } from './friendsCopy';
 
 describe('the request card’s words (§29.2)', () => {
   it('names who asks, whole', () => {
     expect(wantsToBeYourFriend('ines.d')).toBe('ines.d wants to be your friend');
-  });
-
-  it('says where, the sport and the Level, before the chip', () => {
-    expect(
-      whereLine({
-        group: { name: 'Kazimierz crew' },
-        sportName: 'Padel',
-        level: 3.4,
-      }),
-    ).toBe('With you in Kazimierz crew · Padel 3,40 ·');
-  });
-
-  it('reads Invited you to Raketa for a link’s request', () => {
-    expect(whereLine({ foundBy: { kind: 'link' } })).toBe('Invited you to Raketa');
-  });
-
-  it('reads Found you in the padel ranking for a request from the ranking, in the group line’s place', () => {
-    expect(
-      whereLine({ foundBy: { kind: 'ranking', sport: 'padel' }, sportName: 'Padel', level: 3.4 }),
-    ).toBe('Found you in the padel ranking');
-  });
-
-  it('reads Found you among new players for a request from New in Raketa, in the group line’s place (#801)', () => {
-    expect(whereLine({ foundBy: { kind: 'newInRaketa' }, group: { name: 'Kazimierz crew' } })).toBe(
-      'Found you among new players',
-    );
-  });
-
-  it('reads today’s % even for a request from Same competitive level, or its fallback once a level is gone (#802; §31.10)', () => {
-    expect(
-      whereLine({
-        foundBy: { kind: 'sameLevel', sport: 'padel', percentEven: 91 },
-        sportName: 'Padel',
-        level: 2.69,
-      }),
-    ).toBe('Your level in padel · 91% even');
-    expect(whereLine({ foundBy: { kind: 'sameLevel', sport: 'squash' } })).toBe(
-      'Found you at your squash level',
-    );
-  });
-
-  it('reads today’s things in common for a request from Same vibe, or its fallback once none is shared (#803; §31.10)', () => {
-    expect(
-      whereLine({ foundBy: { kind: 'sameVibe', inCommon: 6 }, group: { name: 'Kazimierz crew' } }),
-    ).toBe('6 things in common');
-    expect(whereLine({ foundBy: { kind: 'sameVibe', inCommon: 1 } })).toBe('1 thing in common');
-    expect(whereLine({ foundBy: { kind: 'sameVibe', inCommon: 0 } })).toBe(
-      'Found you through your tags',
-    );
-  });
-
-  it('says only what the wire named — a group they left, a sport they hold no Level in', () => {
-    expect(whereLine({ sportName: 'Padel' })).toBe('Padel ·');
-    expect(whereLine({ group: { name: 'Kazimierz crew' } })).toBe('With you in Kazimierz crew ·');
-    expect(whereLine({})).toBe('');
   });
 
   it('counts the row’s title', () => {
@@ -163,19 +105,11 @@ describe('ASKED FOR A LEVEL’s words (§29.5)', () => {
     expect(wantToPlay(['tomek.k', 'kuba.w', 'ania.m', 'ewa.s'], 'padel')).toBe(
       'tomek.k, kuba.w and 2 more want to play padel with you',
     );
-    expect(levelAskLine(['tomek.k'])).toBe('A few questions, and tomek.k can add you to a game.');
-    expect(levelAskLine(['tomek.k', 'kuba.w'])).toBe(
-      'A few questions, and they can add you to a game.',
-    );
-    expect(levelAskLine(['tomek.k', 'kuba.w', 'ania.m'])).toBe(
-      'A few questions, and they can add you to a game.',
-    );
   });
 
-  it('names the button by the sport, and the question a run left halfway is on', () => {
+  it('names the button by the sport, and Carry on for a run left halfway', () => {
     expect(getYourLevelLabel('padel')).toBe('Get your padel level');
     expect(FRIENDS_COPY.levelAsks.carryOn).toBe('Carry on');
-    expect(youReOnQuestion(5)).toBe("You're on question 5.");
     expect(notNowLevelAskLabel('padel')).toBe('Not now, your padel level');
   });
 

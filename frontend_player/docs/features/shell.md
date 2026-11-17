@@ -298,3 +298,29 @@ another tab, the app in the background (`useFocusEffect` and `useAppInBackground
 shell screen drawn outside a navigator never asks; coming back says the band again). Nothing drawn
 changes, and nothing re-renders as the page moves: the band is followed, not state. What a row does
 with it is `discovery`'s.
+
+**Home's header reads envelope, bell, trophy, and what waits on the player is behind the envelope**
+([#816](https://github.com/Raketa02/Raketa/issues/816), PRD #810;
+[ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§1, §2, §4; home refactor 1 and 2). `HomeScreen`'s right slot is `NeedsYourAnswer`, then
+`notifications`' `NoticeBell`, then `rankings`' `RankingTrophy` in the corner — the trophy took it from
+the bell, so the paragraph on #775 above that says _the bell keeps the corner_ was true until this one.
+**The envelope** is an `ink` Feather `mail` in a 44pt target named _Needs your answer_, drawn only
+while a friend request or an ask for a level waits; the slot is right-aligned, so without it the bell
+and the trophy stay put. **It opens Needs your answer**, `shared/ui`'s `BottomSheet` with
+`closesOnSwipe` (✕, the scrim, or a pull down its head), kept mounted so its title takes a screen
+reader's focus on opening. It holds `friends`' `FriendRequestsSection` and `LevelAsksSection`, handed
+what is other features' as `HomeFriendRows` handed it before: the chip and the record
+(`player_record`'s), and the bell's re-read. **Where the sheet stands is `domain/needsYourAnswer`'s**:
+closed, open, or aside under a record a face opened — drawn inside the sheet, for iOS's second-window
+reason (`discovery`'s vibe sheet) — and up only while something waits. **The last answer closes it for
+good** and the envelope goes; something arriving later brings the envelope back and never the sheet.
+**Get your level or Carry on closes it for good, then starts**: the start navigates, so the shell runs
+`friends`' `useGetAskedLevel` beside the sheet, never in it, and shows the _level asked_ notice's toast
+for a start that fails. **Home's body** loses FRIEND REQUESTS and ASKED FOR A LEVEL, and _Get your
+level_ is drawn whether or not someone asked (`groups`' rule, [`groups.md`](groups.md)). _TO CONFIRM_
+and FRIENDS GAME stay on Home until #817 moves them into the sheet; the envelope's count is #819's.
+The walk is `theShell.test.tsx` (_Needs your answer_: the header's order with and without the envelope,
+the mark, the title's focus, the sections' order and hidden empties, ✕, the scrim and the pull, the
+self-close and what arrives after it). **Not seen on a device**: the header against mock 1, the sheet
+against mock 2, the pull and its spring back.

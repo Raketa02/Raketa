@@ -127,6 +127,26 @@ your friend.** Shown after a For fun game too.
 its title are there only while they hold a card. ASKED FOR A LEVEL is §6.4, after the sender's game,
 so that §6.3 keeps its number.
 
+*(Since 2026-11-17, [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§1–§2, [#816](https://github.com/Raketa02/Raketa/issues/816); home refactor 1 and 2:)* **FRIEND
+REQUESTS and ASKED FOR A LEVEL are no longer on Home.** They wait in **Needs your answer**, the sheet
+the envelope opens. The envelope is an ink Feather `mail` mark in Home's header, named *Needs your
+answer*, left of the bell, with the trophy in the far-right corner, and it is there only while
+something waits. Without it, the bell and the trophy don't move. The sheet is the app's bottom sheet,
+titled *Needs your answer* with ✕. It is as tall as what it holds, up to the usual cap, and scrolls
+beyond that. It closes on ✕, a swipe down or the backdrop, and its title takes a screen reader's
+focus when it opens. In it, FRIEND REQUESTS comes before ASKED FOR A LEVEL. Each is a sideways peeking
+rail of wider tiles, hidden while empty. Tiles in a rail are as tall as the tallest, with their
+buttons at the bottom and their titles held to two lines, so the buttons sit level.
+- **An answered tile** leaves on the re-read, and an emptied section goes.
+- **The last answer** closes the sheet, and the envelope goes.
+- **A request arriving** while the sheet is open appears in it.
+- **A face** opens the record over the sheet, and the sheet is there when the record closes if
+  anything still waits.
+- ***Get your padel level*** closes the sheet for good and starts the questionnaire.
+
+FRIENDS GAME stays on Home until #817 moves it into the sheet, first after *TO CONFIRM*.
+
 #### 6.1 FRIENDS GAME · n (friends 12)
 
 A horizontal row of invitation cards, each with a coral border:
@@ -160,6 +180,14 @@ above, which go (ADR-0205 §2); the face, the title and the reliability chip sta
 still draws; the tile is the player app's
 ([#818](https://github.com/Raketa02/Raketa/issues/818)).
 
+*(Since 2026-11-17, [#816](https://github.com/Raketa02/Raketa/issues/816), home refactor 2:)* **The
+tile in *Needs your answer*** is about 0,83 of the content width, measured off the mock, the next one
+peeking. A lone tile takes the content width. It reads the face, *Inés D. wants to be your friend* in
+two lines at most, and the reliability chip on its own line under the title. **Not now** and
+**Accept** sit at its foot. **The where-line and every found-by line are gone from it**: *With you in
+Kazimierz crew · Padel 3,40*, *Invited you to Raketa*, *Found you in the padel ranking* and the Home
+rows' three. Until #818 lands, nothing stands in their place.
+
 #### 6.3 The sender's game, in Your games (designed, no mock)
 
 The ordinary booked game's row, with a status line for its seats: *2 of 3 friends in · waiting for
@@ -190,6 +218,18 @@ number of sports. **It is a friend-request card** (friends 5) *(a call)*: faces,
 - **For a player rated in no sport**, Home's dark *Get your level* card isn't drawn while this row
   has a card, and is drawn again once the row is empty and she is still rated in nothing.
 - **Home's tab badge** doesn't count the row.
+
+*(Since 2026-11-17, ADR-0205 §1 and §4, [#816](https://github.com/Raketa02/Raketa/issues/816):)*
+**The section waits in *Needs your answer*, after FRIEND REQUESTS**, never on Home, on the same wider
+tile as a request (§6.2). It changes in three ways:
+- **There is no line under the title.** *A few questions, and they can add you to a game.* and
+  *You're on question 5.* are gone. The coral button still reads **Carry on** for a questionnaire left
+  halfway.
+- **Get your padel level** and **Carry on** close the sheet for good, then start the questionnaire,
+  since a screen can't stand behind a sheet. A start that fails shows the notice's toast over Home.
+- **The *Get your level* hand-off is dropped.** Home's dark *Get your level* card is drawn above *Your
+  games* whenever she is in a group and rated in nothing, **whether or not someone asked**. The ask
+  is never drawn in its place.
 
 ### 7. The group's Friends tab (friends 7–11)
 

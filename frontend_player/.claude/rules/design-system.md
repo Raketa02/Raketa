@@ -61,7 +61,10 @@ licence for a second dark surface.
 - **Content width is screen width − 30**, and a **peeking** rail card is
   `0.74 × content width` — never a fixed 362 or 268. Those are the prototype's phone picture.
   A **paging** rail takes the content width whole and draws 7.18's dots, because a card with
-  no peek has no affordance until something else carries it.
+  no peek has no affordance until something else carries it. The one wider peeking card is
+  Needs your answer's request tile, `requestCardRatio` (0.83, the `wide` rail, #816).
+- **Two envelopes, one meaning — _someone asked you_.** The round friend button's is `volt`
+  with a halo; Home's header's is `ink` Feather `mail` (10.3, #816). Never a third.
 - **Colour is picked by meaning:** coral = the one accent · mint = settled · amber =
   reversible, not yet wrong · red = ended badly · info = explanation, not status.
 - **§1.2's coral list is closed at six** — primary button, active tab, level mark, onboarding
