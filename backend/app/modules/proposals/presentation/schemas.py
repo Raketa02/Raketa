@@ -20,7 +20,7 @@ from collections.abc import Collection, Mapping, Sequence
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field
 
 from app.engines.matchfit.core import ReliabilityBand, SearchMode
 from app.kernel import Instant, Sport, instant
@@ -62,6 +62,7 @@ from app.modules.proposals.domain.games_and_money import (
     MOST_ILL_PAY_CHOICES_GROSZE,
     GamesAndMoney,
 )
+from app.modules.proposals.domain.needs_your_answer import WhatIsNew
 from app.modules.proposals.domain.overlap import (
     DayRange,
     Overlap,
@@ -1752,6 +1753,59 @@ class HomeRankingSchema(BaseModel):
         )
 
 
+class HomeNeedsYourAnswerSchema(BaseModel):
+    """**The envelope's badge** (#815; `docs/adr/0205` §3): what is new in
+    *Needs your answer* since you last closed it, kept on the server so every
+    phone agrees — and the watermark to send back when you close it."""
+
+    new_count: int = Field(
+        description=(
+            "How many of the items waiting on you **arrived since you last "
+            "closed Needs your answer** (`POST /players/me/needs-your-answer/"
+            "visit`), on any phone — every one of them before your first close. "
+            "Counted over the four sections: each payment to confirm "
+            "(`payments_to_confirm`) by when it came to need confirming, each "
+            "friends game invitation by when your seat was "
+            "invited into, each friend request by when it was asked, and **each "
+            "friend on an ask for a level by their own ask** — so a second "
+            "friend asking on a card already there is new. **A change of state "
+            "is never new**: a payment going from *Fix your card* to *Confirm* "
+            "counts as it did. An answered item leaves the count with its "
+            "section. Draw *99+* above 99. Never `needing_you`, never the bell's "
+            "number."
+        )
+    )
+    watermark: datetime | None = Field(
+        description=(
+            "**This read's watermark**: the newest arrival among everything "
+            "counted above, seen or not, to the millisecond. Send it back as the "
+            "visit's `watermark` when the sheet drawn from this read closes — "
+            "draw all four sections from this read (`payments_to_confirm` "
+            "included), or a row read elsewhere may be covered without being "
+            "shown. `null` while nothing waits."
+        )
+    )
+
+    @classmethod
+    def of(cls, new: WhatIsNew) -> "HomeNeedsYourAnswerSchema":
+        return cls(new_count=new.count, watermark=new.watermark)
+
+
+class NeedsYourAnswerVisitRequest(BaseModel):
+    """Closing *Needs your answer* (#815): the watermark of the read the sheet
+    showed."""
+
+    watermark: AwareDatetime | None = Field(
+        description=(
+            "`GET /home`'s `needs_your_answer.watermark` from the read the sheet "
+            "was last drawn from, as it was served — never the phone's clock, "
+            "never the moment of the close. Compared to the millisecond, so a "
+            "date that kept only milliseconds is the same watermark. `null`, a "
+            "read with nothing waiting, records nothing."
+        )
+    )
+
+
 class HomeResponse(BaseModel):
     """**Home**: the reader's games from the moment they fill, and the friend
     requests, friends game invitations and asks for a level waiting on them."""
@@ -1822,12 +1876,34 @@ class HomeResponse(BaseModel):
             "and still opens Rankings."
         ),
     )
+    payments_to_confirm: list[PaymentToConfirmSchema] = Field(
+        description=(
+            "*TO CONFIRM · n*, first in *Needs your answer* (#815; "
+            "`docs/adr/0205` §1, §3): every payment you have to confirm, soonest "
+            "game first — **the same rows as `GET /players/me/payments-to-"
+            "confirm`**, read at this read's instant. They are the payments "
+            "`needing_you` counts and `needs_your_answer` covers, so a sheet "
+            "drawn from this read alone shows exactly what its watermark says "
+            "it showed."
+        )
+    )
+    needs_your_answer: HomeNeedsYourAnswerSchema = Field(
+        description=(
+            "The envelope's badge, left of the bell (#815; `docs/adr/0205` §2, "
+            "§3): what is new in *Needs your answer*, and the watermark of this "
+            "read."
+        )
+    )
 
     @classmethod
     def from_home(cls, home: Home, *, reader: UUID) -> "HomeResponse":
         return cls(
             read_at=home.read_at,
             needing_you=home.needing_you,
+            payments_to_confirm=PaymentsToConfirmResponse.from_owed(
+                home.payments_to_confirm
+            ).payments,
+            needs_your_answer=HomeNeedsYourAnswerSchema.of(home.needs_your_answer),
             friend_requests=[
                 HomeFriendRequestSchema.of(request) for request in home.friend_requests
             ],

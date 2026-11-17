@@ -1649,16 +1649,23 @@ async def test_the_asks_on_home_are_one_card_per_sport_newest_first(
     )
     asks: LevelAsksOnHome = implementation.build(session)
 
-    def face(player_id: UUID, nickname: str) -> HomeLevelAsker:
+    def face(player_id: UUID, nickname: str, *, hours: int) -> HomeLevelAsker:
+        """Each asker on a card with **their own ask's** instant (#815)."""
+
         return HomeLevelAsker(
-            player_id=player_id, nickname=nickname, photo_id=None, photo_url=None
+            player_id=player_id,
+            nickname=nickname,
+            photo_id=None,
+            photo_url=None,
+            asked_at=ASKED_AT + timedelta(hours=hours),
         )
 
     assert await asks.of(reader) == (
         HomeLevelAsk(
-            sport=Sport.PADEL, askers=(face(kuba, "kuba"), face(tomek, "tomek"))
+            sport=Sport.PADEL,
+            askers=(face(kuba, "kuba", hours=2), face(tomek, "tomek", hours=0)),
         ),
-        HomeLevelAsk(sport=Sport.SQUASH, askers=(face(kuba, "kuba"),)),
+        HomeLevelAsk(sport=Sport.SQUASH, askers=(face(kuba, "kuba", hours=1),)),
     )
     # Nothing waits on anybody who asked.
     assert await asks.of(tomek) == ()

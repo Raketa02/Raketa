@@ -10,6 +10,7 @@ from app.modules.bookings.domain.events import (
 from app.modules.groups.domain.events import GroupDeleted, GroupLeft
 from app.modules.proposals.application.handlers import (
     LogGamesAndMoneySet,
+    LogNeedsYourAnswerClosed,
     LogProposalEvent,
     MarkDueForProposing,
     ResumeYesesOnAFreedWeek,
@@ -30,6 +31,7 @@ from app.modules.proposals.domain.events import (
     CourtHourLost,
     FellBackToFilling,
     GamesAndMoneySet,
+    NeedsYourAnswerClosed,
     NoSaid,
     ProposalExpired,
     ProposalFilled,
@@ -62,6 +64,7 @@ _EVENTS = (
     (ProposalExpired, "proposals.proposal_expired"),
     (CourtHourLost, "proposals.court_hour_lost"),
     (GamesAndMoneySet, "proposals.games_and_money_set"),
+    (NeedsYourAnswerClosed, "proposals.needs_your_answer_closed"),
     (ProposalFilled, "proposals.proposal_filled"),
     (SeatReopened, "proposals.seat_reopened"),
     (YesPaused, "proposals.yes_paused"),
@@ -98,6 +101,7 @@ def subscribe_proposal_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(ProposalExpired, LogProposalEvent())
     dispatcher.subscribe(CourtHourLost, LogProposalEvent())
     dispatcher.subscribe(GamesAndMoneySet, LogGamesAndMoneySet())
+    dispatcher.subscribe(NeedsYourAnswerClosed, LogNeedsYourAnswerClosed())
     dispatcher.subscribe(ProposalFilled, LogProposalEvent())
     dispatcher.subscribe(SeatReopened, LogProposalEvent())
     dispatcher.subscribe(YesPaused, LogProposalEvent())

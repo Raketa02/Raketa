@@ -22,6 +22,7 @@ from app.modules.proposals.application.event_subscriptions import (
 from app.modules.proposals.domain.events import (
     CourtHourLost,
     GamesAndMoneySet,
+    NeedsYourAnswerClosed,
     NoSaid,
     ProposalExpired,
     ProposalFilled,
@@ -74,6 +75,12 @@ EVENTS = [
     GamesAndMoneySet(
         player_id=PLAYER, games_per_week=1, most_ill_pay_grosze=None, occurred_at=NOW
     ),
+    NeedsYourAnswerClosed(
+        player_id=PLAYER,
+        # The phone's watermark comes back to the microsecond it was served.
+        watermark=datetime(2026, 10, 5, 5, 58, 12, 345678, tzinfo=timezone.utc),
+        occurred_at=NOW,
+    ),
 ]
 
 
@@ -114,6 +121,7 @@ def test_each_event_is_filed_under_its_own_name_in_the_proposals_namespace():
         "proposals.proposal_filled",
         "proposals.games_and_money_set",
         "proposals.games_and_money_set",
+        "proposals.needs_your_answer_closed",
     ]
 
 

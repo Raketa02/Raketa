@@ -493,12 +493,15 @@ async def _rows_on_home(
 @final
 @dataclass(frozen=True, slots=True)
 class LevelAsker:
-    """One friend on an ask's card: a face that opens their record."""
+    """One friend on an ask's card: a face that opens their record, and when
+    they asked — **their own ask**, which a card already there gains a new
+    asker by (#815)."""
 
     player_id: UUID
     nickname: str
     photo_id: UUID | None
     photo_url: str | None
+    asked_at: Instant
 
 
 @final
@@ -607,6 +610,7 @@ class ReadLevelAsksOnHome:
                     nickname=face.nickname,
                     photo_id=face.photo_id,
                     photo_url=face.photo_url,
+                    asked_at=ask.asked_at,
                 )
             )
         return tuple(

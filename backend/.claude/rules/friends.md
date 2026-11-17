@@ -119,7 +119,10 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5; the rank
     `tests/api/test_friend_request_levels.py` holds the order, none, a new level, and the
     rating streams' statements the same for one request as for three, one batch among them;
   - **Home's asks for a level** — `LevelAsksOnHome` (`ReadLevelAsksOnHome`, #764, below):
-    `GET /home`'s `level_asks`, one card per sport;
+    `GET /home`'s `level_asks`, one card per sport. **Each asker carries their own ask's
+    `asked_at`** (`LevelAsker`, #815), and a request's arrival is its `asked_at`. These are what
+    *Needs your answer* counts new by (`proposals.md`): a second friend asking on a card already
+    there is new by their own ask;
   - **the bell** — Notifications' `Friendships` (`FriendsOfTheReader`, below);
   - **the Rankings' Friends view** (#771) — `ReadersFriends`
     (`rankings/infrastructure/friends_readers_friends.py`), over `ReadRelations.friends_of`:

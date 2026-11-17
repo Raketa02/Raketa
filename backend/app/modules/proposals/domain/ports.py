@@ -51,6 +51,7 @@ from app.modules.proposals.domain.club_bookings import (
 )
 from app.modules.proposals.domain.deck import CardForecast, SellingTerms, Sides
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
+from app.modules.proposals.domain.needs_your_answer import NeedsYourAnswerVisit
 from app.modules.proposals.domain.home import (
     BookedGame,
     ClubCancelReason,
@@ -194,6 +195,19 @@ class GamesAndMoneyRepository(Protocol):
         ...
 
     async def save(self, settings: GamesAndMoney) -> None: ...
+
+
+@runtime_checkable
+class NeedsYourAnswerVisits(Protocol):
+    """When each player last closed *Needs your answer*, one stream per player
+    under their own id (#815)."""
+
+    async def load(self, player_id: UUID) -> NeedsYourAnswerVisit:
+        """**No watermark for a player who never closed it** — never
+        ``None``."""
+        ...
+
+    async def save(self, visit: NeedsYourAnswerVisit) -> None: ...
 
 
 @runtime_checkable
@@ -550,12 +564,14 @@ class FriendRequestsOnHome(Protocol):
 @dataclass(frozen=True, slots=True)
 class HomeLevelAsker:
     """One friend on a *ASKED FOR A LEVEL* card: their face, which opens their
-    record."""
+    record — and when they asked, **their own ask**: a second friend asking on
+    a card already there arrives in *Needs your answer* by it (#815)."""
 
     player_id: UUID
     nickname: str
     photo_id: UUID | None
     photo_url: str | None
+    asked_at: Instant
 
 
 @final

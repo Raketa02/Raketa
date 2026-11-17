@@ -53,6 +53,17 @@ requests and the reader's games — one card per sport, Friends' read through
 reader's latest result, in any sport, and their General place there, through
 ``RankingOnHome`` — ``None`` with no result anywhere.
 
+**What's new in Needs your answer rides on this read** (#815;
+``docs/adr/0205`` §3): the four kinds waiting there — the payments to confirm
+(gathered for ``needing_you`` already), the friends game invitations, the
+friend requests and each level asker — are this read's own, so their arrivals
+are compared here with the reader's last visit's watermark, and no other
+context is asked anything new. The read's own watermark is the newest arrival
+among the four, which the phone sends back when it closes the sheet. **The
+payments to confirm are served here too**, as *To confirm* rows identical to
+``GET /players/me/payments-to-confirm``'s, so a sheet drawn off this one read
+shows exactly what its watermark covers.
+
 **Classic play's games are not here**: a game a challenge's line-up opened has
 no booking. Its card is ``GET /games``'.
 """
@@ -67,7 +78,11 @@ from uuid import UUID
 from app.kernel import Clock, Instant, Sport, instant
 from app.modules.proposals.application.booked_people import people_on
 from app.modules.proposals.application.friends import with_the_readers_friends
-from app.modules.proposals.application.payments_to_confirm import owed_by
+from app.modules.proposals.application.payments_to_confirm import (
+    PaymentToConfirm,
+    owed_by,
+    to_confirm,
+)
 from app.modules.proposals.domain.home import (
     BookedGame,
     BookedState,
@@ -76,6 +91,7 @@ from app.modules.proposals.domain.home import (
     state_of,
     without_a_booking,
 )
+from app.modules.proposals.domain.needs_your_answer import WhatIsNew, what_is_new
 from app.modules.proposals.domain.ports import (
     BookedGameChanges,
     HoldingTimes,
@@ -88,6 +104,7 @@ from app.modules.proposals.domain.ports import (
     HomeLevelAsk,
     HomeRanking,
     LevelAsksOnHome,
+    NeedsYourAnswerVisits,
     RankingOnHome,
     ReaderRelations,
     GameResults,
@@ -115,6 +132,9 @@ class HomeInvitation:
 
     game: BookedGame
     club_name: str | None
+    #: When the reader's seat was invited into: its arrival in *Needs your
+    #: answer* (#815).
+    invited_at: Instant
 
 
 @final
@@ -141,6 +161,13 @@ class Home:
     #: The trophy left of the bell (#768): the sport of the reader's latest
     #: result and their General place in it. ``None`` with no result anywhere.
     ranking: HomeRanking | None = None
+    #: *TO CONFIRM* (#815; ``docs/adr/0205`` §3): every payment the reader has
+    #: to confirm, soonest game first — the rows ``needing_you`` counts and the
+    #: watermark covers, so the sheet can draw all four sections off one read.
+    payments_to_confirm: tuple[PaymentToConfirm, ...] = ()
+    #: The envelope's badge (#815): what waits in *Needs your answer* that
+    #: arrived since the reader last closed it, and this read's watermark.
+    needs_your_answer: WhatIsNew = WhatIsNew(count=0, watermark=None)
 
 
 @final
@@ -161,8 +188,10 @@ class ReadHome:
         level_asks: LevelAsksOnHome,
         ranking: RankingOnHome,
         friends_games: FriendsGameBookings,
+        visits: NeedsYourAnswerVisits,
         clock: Clock,
     ) -> None:
+        self._visits = visits
         self._ranking = ranking
         self._level_asks = level_asks
         self._friends_games = friends_games
@@ -195,7 +224,19 @@ class ReadHome:
             reader=reader,
             now=now,
         )
-        names = await self._clubs.names_of({game.club_id for game in booked})
+        owed = await owed_by(
+            reader,
+            proposals=self._proposals,
+            directory=self._directory,
+            bookings=self._bookings,
+            games=self._games,
+            now=now,
+        )
+        # One question for every club Home names: its games' and its *To
+        # confirm* rows'.
+        names = await self._clubs.names_of(
+            {game.club_id for game in booked} | {one.proposal.club_id for one in owed}
+        )
         # The reader's own shares only checked at the fill (#639).
         held_from = await self._holding_times.of(
             reader, [game.booking_id for game in booked]
@@ -218,14 +259,8 @@ class ReadHome:
             if on_home(card.game, card.state, now=now)
         ]
         invitations = await self._invitations(reader, now=now)
-        owed = await owed_by(
-            reader,
-            proposals=self._proposals,
-            directory=self._directory,
-            bookings=self._bookings,
-            games=self._games,
-            now=now,
-        )
+        friend_requests = await self._friend_requests.of(reader)
+        level_asks = await self._level_asks.of(reader)
         return Home(
             read_at=now,
             games=tuple(cards),
@@ -241,27 +276,53 @@ class ReadHome:
                 reader=reader,
                 relations=self._relations,
             ),
-            friend_requests=await self._friend_requests.of(reader),
+            friend_requests=friend_requests,
             friends_games=invitations,
-            level_asks=await self._level_asks.of(reader),
+            level_asks=level_asks,
             ranking=await self._ranking.of(reader),
+            payments_to_confirm=to_confirm(owed, names=names),
+            needs_your_answer=await self._what_is_new(
+                reader,
+                [
+                    *(one.refused_at for one in owed),
+                    *(invited.invited_at for invited in invitations),
+                    *(request.asked_at for request in friend_requests),
+                    # Each asker by their own ask: one card per sport gains
+                    # askers.
+                    *(asker.asked_at for ask in level_asks for asker in ask.askers),
+                ],
+            ),
         )
+
+    async def _what_is_new(self, reader: UUID, arrivals: list[Instant]) -> WhatIsNew:
+        """The envelope's badge over these arrivals — the reader's last visit
+        read only when something waits, since with nothing waiting nothing is
+        new whatever they saw."""
+
+        if not arrivals:
+            return what_is_new((), seen_through=None)
+        visit = await self._visits.load(reader)
+        return what_is_new(arrivals, seen_through=visit.watermark)
 
     async def _invitations(
         self, reader: UUID, *, now: Instant
     ) -> tuple[HomeInvitation, ...]:
         """The friends games whose invitation still waits on the reader."""
 
-        games = [
-            game
+        invited = [
+            (game, seat)
             for booking_id in await self._friends_games.invitations_of(reader, now=now)
             if (game := await self._bookings.find(booking_id)) is not None
-            and game.invited_now(reader, now=now) is not None
+            and (seat := game.invited_now(reader, now=now)) is not None
         ]
-        names = await self._clubs.names_of({game.club_id for game in games})
+        names = await self._clubs.names_of({game.club_id for game, _ in invited})
         return tuple(
-            HomeInvitation(game=game, club_name=names.get(game.club_id))
-            for game in games
+            HomeInvitation(
+                game=game,
+                club_name=names.get(game.club_id),
+                invited_at=seat.invited_at,
+            )
+            for game, seat in invited
         )
 
     async def _without_a_booking(

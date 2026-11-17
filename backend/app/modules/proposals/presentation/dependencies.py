@@ -37,6 +37,7 @@ from app.bootstrap.composition import (
     build_deal_the_pool_now,
     build_say_no_to_a_rescue,
     build_games_and_money_repository,
+    build_needs_your_answer_visits,
     build_join_a_rescue,
     build_leave_the_game,
     build_post_a_game,
@@ -84,6 +85,7 @@ from app.modules.proposals.application.group_deck import (
 from app.modules.proposals.application.home import ReadHome
 from app.modules.proposals.application.leave_the_game import LeaveTheGame
 from app.modules.proposals.application.live_yeses import ReadLiveYeses
+from app.modules.proposals.application.needs_your_answer import CloseNeedsYourAnswer
 from app.modules.proposals.application.payments_to_confirm import (
     ReadPaymentsToConfirm,
 )
@@ -232,6 +234,24 @@ def get_set_games_and_money(
 
 
 SetGamesAndMoneyDep = Annotated[SetGamesAndMoney, Depends(get_set_games_and_money)]
+
+
+def get_close_needs_your_answer(
+    event_store: DomainEventStoreDep,
+    events: EventPublisherDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> CloseNeedsYourAnswer:
+    return CloseNeedsYourAnswer(
+        visits=build_needs_your_answer_visits(event_store=event_store, events=events),
+        uow=uow,
+        clock=clock,
+    )
+
+
+CloseNeedsYourAnswerDep = Annotated[
+    CloseNeedsYourAnswer, Depends(get_close_needs_your_answer)
+]
 
 
 def get_booked_games(db: DbSession) -> BookedGames:

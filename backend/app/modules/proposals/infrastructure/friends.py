@@ -144,6 +144,7 @@ class FriendsLevelAsksOnHome:
                         nickname=asker.nickname,
                         photo_id=asker.photo_id,
                         photo_url=asker.photo_url,
+                        asked_at=asker.asked_at,
                     )
                     for asker in card.askers
                 ),

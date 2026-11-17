@@ -203,6 +203,7 @@ from app.modules.proposals.domain.ports import (
     CourtKinds,
     DeckPeople,
     GamesAndMoneyRepository,
+    NeedsYourAnswerVisits,
     PlayerFit,
     PlayersInPlay,
     WherePoolsPlay,
@@ -220,6 +221,9 @@ from app.modules.proposals.infrastructure.club_court_hours import (
 )
 from app.modules.proposals.infrastructure.event_sourced_games_and_money_repository import (  # noqa: E501
     EventSourcedGamesAndMoneyRepository,
+)
+from app.modules.proposals.infrastructure.event_sourced_needs_your_answer_visits import (  # noqa: E501
+    EventSourcedNeedsYourAnswerVisits,
 )
 from app.modules.proposals.infrastructure.matcher_balance_forecasts import (
     MatcherBalanceForecasts,
@@ -1766,6 +1770,17 @@ def build_games_and_money_repository(
     """A player's Games & money, one stream per player under their own id —
     per unit of work, for the reason every aggregate repository is."""
     return EventSourcedGamesAndMoneyRepository(event_store=event_store, events=events)
+
+
+def build_needs_your_answer_visits(
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> NeedsYourAnswerVisits:
+    """When each player last closed *Needs your answer* (#815), one stream per
+    player under their own id — per unit of work, for the reason every
+    aggregate repository is."""
+    return EventSourcedNeedsYourAnswerVisits(event_store=event_store, events=events)
 
 
 def build_booked_games(session: AsyncSession) -> BookedGames:
@@ -3318,6 +3333,10 @@ def build_read_home(
         ),
         ranking=build_ranking_on_home(session, clock=clock, orders=orders),
         friends_games=build_friends_game_bookings(session, runtime=runtime),
+        visits=build_needs_your_answer_visits(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
         clock=clock,
     )
 

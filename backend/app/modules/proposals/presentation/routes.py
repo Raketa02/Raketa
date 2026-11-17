@@ -56,6 +56,7 @@ from app.modules.proposals.presentation.dependencies import (
     AcceptAFriendsGameDep,
     DeclineAFriendsGameDep,
     CallOffAFriendsGameDep,
+    CloseNeedsYourAnswerDep,
     InviteIntoASeatDep,
     OpenASeatDep,
     SendAFriendsGameDep,
@@ -95,6 +96,7 @@ from app.modules.proposals.presentation.schemas import (
     FriendsCardResponse,
     FriendsCourtsResponse,
     GamesAndMoneyRequest,
+    NeedsYourAnswerVisitRequest,
     GamesAndMoneyResponse,
     GroupDeckResponse,
     HomeResponse,
@@ -467,6 +469,51 @@ async def set_games_and_money(
         )
     )
     return GamesAndMoneyResponse.from_settings(saved)
+
+
+@players_router.post(
+    "/needs-your-answer/visit",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "description": (
+                "Closed: everything that arrived up to `watermark` is seen on "
+                "every phone, and only what arrived after it counts in "
+                "`GET /home`'s `needs_your_answer.new_count`. Also the answer "
+                "when nothing moved — the same watermark again, an older one "
+                "(another phone closed on a newer read), which never moves it "
+                "back, or `null`."
+            ),
+        },
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`watermark_in_the_future` — later than the server's clock, so "
+                "no read served it: send the watermark Home gave, never the "
+                "phone's clock. Nothing was recorded."
+            ),
+        },
+    },
+    summary="I closed Needs your answer",
+    description=(
+        "What the phone sends **whenever Needs your answer goes away for "
+        "good** — ✕, a swipe down, a tap outside it, the last answer, or a "
+        "screen it hands over to; not when it steps aside for another sheet, "
+        "since it comes back (#815; `docs/adr/0205` §3). **`watermark` is the "
+        "one `GET /home` served** with the read the sheet was last drawn from, "
+        "never the moment of the close: something that reached the server "
+        "after that read stays new."
+    ),
+)
+async def close_needs_your_answer(
+    body: NeedsYourAnswerVisitRequest,
+    user: CurrentUserDep,
+    close: CloseNeedsYourAnswerDep,
+) -> None:
+    await close.execute(
+        user.id,
+        watermark=None if body.watermark is None else instant(body.watermark),
+    )
 
 
 @seat_charges_router.post(

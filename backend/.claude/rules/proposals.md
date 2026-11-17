@@ -282,6 +282,76 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   friend is), the whole field `null` with no result anywhere — through `RankingOnHome`, signed
   in `proposals/infrastructure/rankings.py` over Rankings' `ReadHomeRanking`, with its row
   in `proposal_demands.py`.
+- **What's new in *Needs your answer* is Proposals', kept on the server and counted on Home's
+  read** (#815; [ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+  §3). `GET /home` adds `needs_your_answer`:
+  - `new_count` is the items waiting in the sheet's four sections whose **arrival** is past
+    the reader's last visit's watermark. Before any visit, every one of them counts.
+  - `watermark` is the newest arrival among them, seen or not, and `null` with nothing
+    waiting (`domain/needs_your_answer.py`'s `what_is_new`).
+  - `payments_to_confirm` is the *To confirm* rows, the same as
+    `GET /players/me/payments-to-confirm`'s (`to_confirm`, one builder for both, their clubs
+    named in the games' one question). A sheet drawn off this one read shows exactly what its
+    watermark covers. Drawn from the other read, a payment refused between the two reads could
+    be covered and never shown.
+
+  **Everything is compared to the millisecond** (`to_the_millisecond`): arrivals, the served
+  watermark and a visit's. A phone that turns the watermark into a JS date and back then sends
+  the same instant. At the store's microsecond it would send one just below the newest arrival,
+  which would be new for ever. Two arrivals inside one millisecond count as one.
+
+  **The arrivals:**
+  - a payment to confirm, by when it first came to need confirming (`Owed.refused_at`, folded
+    into `Paying`, `Reopened` and the booking's `RefusedHolding` and `KeptSeat`). A payer
+    refused first for terms or a method had nothing to confirm, so a bank's refusal after it
+    arrives then (`payments.md`);
+  - a friends game invitation, by when its seat was invited into
+    (`HomeInvitation.invited_at`, off the booking's `InvitedSeat.invited_at`);
+  - a friend request, by its `asked_at`;
+  - an ask for a level, **by each asker's own ask** (`HomeLevelAsker.asked_at`), so a second
+    friend asking on a card already there is new.
+
+  **A change of state never moves an arrival.** Each is folded off the event that first put the
+  item there and kept through what follows: a payer refused again, a time to pay or a kept seat
+  running out (*Fix your card* → *Confirm*), a holding refused again while its card is still to
+  fix. Every one is an event's `occurred_at`, so nothing stored changed. An answered item leaves
+  its list, and the count with it.
+
+  **The visit** is `POST /players/me/needs-your-answer/visit` with `{watermark}`
+  (`CloseNeedsYourAnswer`, `204`). It records `proposals.needs_your_answer_closed` v1
+  (`NeedsYourAnswerClosed`: `player_id`, `watermark`) on the player's own stream
+  (`NeedsYourAnswerVisit`, aggregate type `needs_your_answer_visit`, under the player's id, born
+  by being used):
+  - **only when later than the last visit's**, so it is idempotent and never moves back, and a
+    stale one still answers `204`;
+  - the watermark is **the phone's, never the request's moment**, so an item that reached the
+    server after the read stays new. One past the server's clock was served by no read, and is
+    `400 watermark_in_the_future`, recording nothing; one with no offset is `422`. `null`, a
+    read with nothing waiting, records nothing and answers `204`. **A call**: the check is
+    strict, with no allowance for clocks skewed between API processes. Only one process runs
+    today, and a refused close only leaves too much new;
+  - **two phones colliding on the stream**: the one that lost rolls back, reads the other's
+    visit and closes **once more**, so the newer of the two watermarks is kept whichever landed
+    first. A second collision in a row is let go, and that close stands;
+  - **no projection**: Home loads the one stream, one statement, as Games & money's reads do,
+    and **only when something waits**. It grows only when the watermark moves, which only a
+    newer arrival can make it do.
+
+  **Why it rides on Home's read** when the bell's `new_count` rides on the notices' own: the four
+  kinds are already Home's, gathered through this context's ports (three as lists, the payments
+  for `needing_you`), so comparing them with a watermark Proposals keeps asks no context anything
+  new. A read of its own would gather them a second time, and on Home the badge arrives with all
+  four of the lists it counts, the *To confirm* rows among them since this ticket (ADR-0205 §3
+  left serving them here to it). `GET /players/me/payments-to-confirm` stays for older apps and
+  You › Payments. `needing_you` and the bell's number are untouched. **The window left open**, as
+  the bell's:
+  an item whose arrival is older than the watermark but which reaches the read only after it
+  counts as seen though never shown. That is a transaction committing behind a later one, a
+  set-aside request brought back by its link (`friends.md`), or an ask back with a friendship
+  made again. Tested over HTTP in `tests/api/test_needs_your_answer.py` (requests, asks, the
+  visit's rules, two phones, the millisecond), `…_invitations.py` and `…_payments.py`, the visit
+  and the count in `tests/unit/test_needs_your_answer.py`, and a collision in
+  `tests/unit/test_close_needs_your_answer.py`.
 - **A friends game is sent, answered and called off here** (#751; ADR-0202 §5–§6;
   `application/friends_games.py`; see `bookings.md` and `payments.md`): `POST /pools/{id}/
   friends-games` (`SendAFriendsGame`, `FriendsGameSentResponse`: booked, or `your_payments`

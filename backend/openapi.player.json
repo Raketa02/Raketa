@@ -7305,6 +7305,56 @@
         ]
       }
     },
+    "/api/v1/players/me/needs-your-answer/visit": {
+      "post": {
+        "tags": [
+          "proposals"
+        ],
+        "summary": "I closed Needs your answer",
+        "description": "What the phone sends **whenever Needs your answer goes away for good** \u2014 \u2715, a swipe down, a tap outside it, the last answer, or a screen it hands over to; not when it steps aside for another sheet, since it comes back (#815; `docs/adr/0205` \u00a73). **`watermark` is the one `GET /home` served** with the read the sheet was last drawn from, never the moment of the close: something that reached the server after that read stays new.",
+        "operationId": "close_needs_your_answer_api_v1_players_me_needs_your_answer_visit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NeedsYourAnswerVisitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Closed: everything that arrived up to `watermark` is seen on every phone, and only what arrived after it counts in `GET /home`'s `needs_your_answer.new_count`. Also the answer when nothing moved \u2014 the same watermark again, an older one (another phone closed on a newer read), which never moves it back, or `null`."
+          },
+          "400": {
+            "description": "`watermark_in_the_future` \u2014 later than the server's clock, so no read served it: send the watermark Home gave, never the phone's clock. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/pools/{pool_id}/deck": {
       "get": {
         "tags": [
@@ -14439,6 +14489,35 @@
         "title": "HomeLevelAskerSchema",
         "description": "One friend on an *ASKED FOR A LEVEL* card \u2014 a face that opens their\nrecord."
       },
+      "HomeNeedsYourAnswerSchema": {
+        "properties": {
+          "new_count": {
+            "type": "integer",
+            "title": "New Count",
+            "description": "How many of the items waiting on you **arrived since you last closed Needs your answer** (`POST /players/me/needs-your-answer/visit`), on any phone \u2014 every one of them before your first close. Counted over the four sections: each payment to confirm (`payments_to_confirm`) by when it came to need confirming, each friends game invitation by when your seat was invited into, each friend request by when it was asked, and **each friend on an ask for a level by their own ask** \u2014 so a second friend asking on a card already there is new. **A change of state is never new**: a payment going from *Fix your card* to *Confirm* counts as it did. An answered item leaves the count with its section. Draw *99+* above 99. Never `needing_you`, never the bell's number."
+          },
+          "watermark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watermark",
+            "description": "**This read's watermark**: the newest arrival among everything counted above, seen or not, to the millisecond. Send it back as the visit's `watermark` when the sheet drawn from this read closes \u2014 draw all four sections from this read (`payments_to_confirm` included), or a row read elsewhere may be covered without being shown. `null` while nothing waits."
+          }
+        },
+        "type": "object",
+        "required": [
+          "new_count",
+          "watermark"
+        ],
+        "title": "HomeNeedsYourAnswerSchema",
+        "description": "**The envelope's badge** (#815; `docs/adr/0205` \u00a73): what is new in\n*Needs your answer* since you last closed it, kept on the server so every\nphone agrees \u2014 and the watermark to send back when you close it."
+      },
       "HomeRankingSchema": {
         "properties": {
           "sport": {
@@ -14536,6 +14615,18 @@
               }
             ],
             "description": "The trophy left of the bell (#768): the sport of your latest result and your General place in it. **`null` when you have no result in any sport** \u2014 the trophy still shows, with no number, and still opens Rankings."
+          },
+          "payments_to_confirm": {
+            "items": {
+              "$ref": "#/components/schemas/app__modules__proposals__presentation__schemas__PaymentToConfirmSchema"
+            },
+            "type": "array",
+            "title": "Payments To Confirm",
+            "description": "*TO CONFIRM \u00b7 n*, first in *Needs your answer* (#815; `docs/adr/0205` \u00a71, \u00a73): every payment you have to confirm, soonest game first \u2014 **the same rows as `GET /players/me/payments-to-confirm`**, read at this read's instant. They are the payments `needing_you` counts and `needs_your_answer` covers, so a sheet drawn from this read alone shows exactly what its watermark says it showed."
+          },
+          "needs_your_answer": {
+            "$ref": "#/components/schemas/HomeNeedsYourAnswerSchema",
+            "description": "The envelope's badge, left of the bell (#815; `docs/adr/0205` \u00a72, \u00a73): what is new in *Needs your answer*, and the watermark of this read."
           }
         },
         "type": "object",
@@ -14545,7 +14636,9 @@
           "games",
           "friend_requests",
           "friends_games",
-          "level_asks"
+          "level_asks",
+          "payments_to_confirm",
+          "needs_your_answer"
         ],
         "title": "HomeResponse",
         "description": "**Home**: the reader's games from the moment they fill, and the friend\nrequests, friends game invitations and asks for a level waiting on them."
@@ -15616,6 +15709,29 @@
         ],
         "title": "NamingResponse",
         "description": "What the naming recorded: the nickname as it now stands.\n\nNot a ``UserResponse``, deliberately \u2014 that shape carries\n``has_player_profile``, a fact of another context's this write never asks\nabout, and ``false`` there would be a claim. The client re-reads ``/me``\nbefore moving on; this is what lets it show the nickname back at once."
+      },
+      "NeedsYourAnswerVisitRequest": {
+        "properties": {
+          "watermark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watermark",
+            "description": "`GET /home`'s `needs_your_answer.watermark` from the read the sheet was last drawn from, as it was served \u2014 never the phone's clock, never the moment of the close. Compared to the millisecond, so a date that kept only milliseconds is the same watermark. `null`, a read with nothing waiting, records nothing."
+          }
+        },
+        "type": "object",
+        "required": [
+          "watermark"
+        ],
+        "title": "NeedsYourAnswerVisitRequest",
+        "description": "Closing *Needs your answer* (#815): the watermark of the read the sheet\nshowed."
       },
       "NewInRaketaPageResponse": {
         "properties": {

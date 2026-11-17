@@ -1,5 +1,6 @@
 from app.modules.proposals.application.handlers.log_proposal_events import (
     LogGamesAndMoneySet,
+    LogNeedsYourAnswerClosed,
     LogProposalEvent,
 )
 from app.modules.proposals.application.handlers.mark_due_for_proposing import (
@@ -17,6 +18,7 @@ from app.modules.proposals.application.handlers.withdraw_on_leaving import (
 
 __all__ = [
     "LogGamesAndMoneySet",
+    "LogNeedsYourAnswerClosed",
     "LogProposalEvent",
     "MarkDueForProposing",
     "ResumeYesesOnAFreedWeek",

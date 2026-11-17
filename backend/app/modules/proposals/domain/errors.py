@@ -12,7 +12,8 @@ The next four are **the dealer's**, met by whoever makes and deals proposals —
 the engine (#540), a seed, a test — and by no player, since no route makes one.
 
 The last two are **Games & money**'s: a value its form does not offer, each
-naming what it does, so the screen can say both.
+naming what it does, so the screen can say both. **Needs your answer** (#815)
+refuses a visit whose watermark no read could have served: one past the clock.
 
 **Posting a game** (#546) adds the post's own: a Level range wider than the
 engine's window or upside down, *Mixed pairs* in a singles sport, a poster
@@ -187,6 +188,24 @@ class MostIllPayNotOffered(BadRequestError):
             "most I'll pay is off or one of the offered ceilings",
             details={"choices": list(choices)},
         )
+
+
+# --------------------------------------------------------------------------- #
+# Needs your answer
+# --------------------------------------------------------------------------- #
+
+
+class WatermarkInTheFuture(BadRequestError):
+    """A visit to *Needs your answer* naming a watermark past the server's
+    clock (#815). A watermark is the newest arrival a read of Home served, so
+    no read served this one: it is the phone's own clock, which would leave
+    everything arriving until then seen and never shown. Nothing is
+    recorded."""
+
+    code = "watermark_in_the_future"
+
+    def __init__(self) -> None:
+        super().__init__("the watermark is later than now: send the one Home served")
 
 
 class CourtJustTaken(ConflictError):

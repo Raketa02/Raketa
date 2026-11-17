@@ -218,6 +218,9 @@ class InvitedSeat:
     #: ``A`` — the first side — or ``B``.
     side: str
     until: Instant
+    #: When the seat was invited into — the send, for the card's own seats —
+    #: which no answer moves: what *Needs your answer* dates it by (#815).
+    invited_at: Instant
     answer: Answer = Answer.WAITING
     answered_at: Instant | None = None
     #: The empty seat an invitation is into, named by whose it was (#752) —
@@ -293,6 +296,10 @@ class RefusedHolding:
     until: Instant
     seat_charge_id: UUID
     reason: str
+    #: When the holding was **first** refused — refused again while the card
+    #: is still to fix, it keeps it: what *Needs your answer* dates the payment
+    #: to confirm by (#815).
+    refused_at: Instant
 
 
 @dataclass(frozen=True, slots=True)
@@ -306,6 +313,10 @@ class KeptSeat:
     seat_charge_id: UUID
     reason: str
     to_fix_the_card: bool
+    #: When their share was **first** refused — refused again within their
+    #: time, or that time run out, it keeps it: what *Needs your answer* dates
+    #: the payment to confirm by (#815).
+    refused_at: Instant
 
 
 @dataclass(frozen=True, slots=True)
@@ -530,7 +541,12 @@ class Booking:
             sender=sender,
             pay_mode=PayMode(booked.pay_mode),
             invited=tuple(
-                InvitedSeat(player_id=player, side=side, until=until)
+                InvitedSeat(
+                    player_id=player,
+                    side=side,
+                    until=until,
+                    invited_at=instant(booked.occurred_at),
+                )
                 for side, players in (
                     ("A", booked.first_side),
                     ("B", booked.second_side),
@@ -1474,12 +1490,18 @@ class Booking:
 
     def _apply(self, event: DomainEvent) -> None:
         if isinstance(event, CardToFix):
+            to_fix = self.cards_to_fix.get(event.player_id)
             self.cards_to_fix = {
                 **self.cards_to_fix,
                 event.player_id: RefusedHolding(
                     until=instant(event.until),
                     seat_charge_id=event.seat_charge_id,
                     reason=event.reason,
+                    refused_at=(
+                        instant(event.occurred_at)
+                        if to_fix is None
+                        else to_fix.refused_at
+                    ),
                 ),
             }
         elif isinstance(event, CardFixed):
@@ -1514,6 +1536,7 @@ class Booking:
         elif isinstance(event, NoSaidToTheSeat):
             self.said_no = self.said_no | {event.player_id}
         elif isinstance(event, SeatKept):
+            kept = self.kept.get(event.player_id)
             self.kept = {
                 **self.kept,
                 event.player_id: KeptSeat(
@@ -1521,6 +1544,9 @@ class Booking:
                     seat_charge_id=event.seat_charge_id,
                     reason=event.reason,
                     to_fix_the_card=event.to_fix_the_card,
+                    refused_at=(
+                        instant(event.occurred_at) if kept is None else kept.refused_at
+                    ),
                 ),
             }
         elif isinstance(event, KeptSeatRanOut):
@@ -1585,6 +1611,7 @@ class Booking:
                     player_id=event.player_id,
                     side=event.side,
                     until=instant(event.until),
+                    invited_at=instant(event.occurred_at),
                     seat_of=event.seat_of,
                     invited_by=event.invited_by,
                 ),

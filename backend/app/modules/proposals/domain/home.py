@@ -180,6 +180,9 @@ class InvitedSeat:
     player_id: UUID
     side: str
     until: Instant
+    #: When the seat was invited into — the send, for the card's own seats:
+    #: the invitation's arrival in *Needs your answer* (#815).
+    invited_at: Instant
     answer: InvitationAnswer = InvitationAnswer.WAITING
     #: The empty seat it is into, named by whose it was (#752) — ``None`` for
     #: the card's own seat for them.
@@ -328,6 +331,9 @@ class RefusedHolding:
     until: Instant
     seat_charge_id: UUID
     reason: ReopenReason
+    #: When the holding was first refused: the payment's arrival in *Needs
+    #: your answer* (#815).
+    refused_at: Instant
 
 
 @final
@@ -341,6 +347,9 @@ class KeptSeat:
     seat_charge_id: UUID
     reason: ReopenReason
     time_to: TimeTo
+    #: When their share was first refused, which its time running out never
+    #: moves: the payment's arrival in *Needs your answer* (#815).
+    refused_at: Instant
 
 
 @final

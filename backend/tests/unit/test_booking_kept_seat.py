@@ -120,8 +120,23 @@ def test_refused_again_within_it_they_keep_the_time_they_had():
     _keep(booking, ZOSIA, at=_at(2.2), until=until)
 
     assert booking.kept[ZOSIA].until == until
+    # The payment to confirm arrived with the first refusal (#815).
+    assert booking.kept[ZOSIA].refused_at == _at(2)
     with pytest.raises(InvariantViolated):
         _keep(booking, ZOSIA, at=_at(2.3), until=_at(2.3) + timedelta(minutes=30))
+
+
+def test_a_kept_seat_arrives_at_its_refusal_and_running_out_never_moves_it():
+    """*Needs your answer* dates the payment to confirm by its refusal: *Fix
+    your card* turning into *Confirm* once the time ran out is not new
+    (#815)."""
+
+    booking = _with_seats_open(KUBA)
+    _keep(booking, ZOSIA, at=_at(2))
+
+    booking.kept_seat_ran_out(ZOSIA, at=_at(2.5))
+
+    assert booking.kept[ZOSIA].refused_at == _at(2)
 
 
 def test_a_seat_is_kept_to_fix_never_past_the_cut_off_nor_to_pay_past_the_start():
@@ -179,6 +194,7 @@ def test_a_kept_seat_folds_back_from_its_stream():
     assert set(folded.kept) == {ZOSIA, MAREK}
     assert folded.keeps_ran_out == frozenset({MAREK})
     assert folded.seats_kept(at=_at(2.5)) == 0
+    assert folded.kept[ZOSIA].refused_at == _at(2)
     assert folded.version == booking.version
 
 

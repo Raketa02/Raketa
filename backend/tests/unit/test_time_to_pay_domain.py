@@ -202,6 +202,62 @@ def test_a_payer_refused_again_keeps_her_time_and_it_never_moves():
     assert proposal.paying[PAULA].until == PAY_BY
     assert proposal.paying[PAULA].reason is ReopenReason.TERMS_NEEDED
     assert proposal.paying[PAULA].payment_to_confirm is None
+    # Her payment to confirm arrived with the first refusal (#815).
+    assert proposal.paying[PAULA].refused_at == FILLED_AT
+
+
+def test_a_refused_share_arrives_when_it_was_refused():
+    """What *Needs your answer* dates her payment to confirm by (#815)."""
+
+    proposal = paulas_bank_checks(a_full_card())
+
+    assert proposal.paying[PAULA].refused_at == FILLED_AT
+
+
+def test_a_payment_to_confirm_arrives_when_it_came_to_need_confirming():
+    """Refused first for her terms — nothing to confirm, only terms to accept
+    again — then by her bank within her time: the payment to confirm arrived
+    with the second refusal, never the first (#815)."""
+
+    proposal = a_full_card()
+    proposal.give_time_to_pay(
+        PAULA,
+        reason=ReopenReason.TERMS_NEEDED,
+        seat_charge_id=uuid4(),
+        until=PAY_BY,
+        time_to=TimeTo.at(FILLED_AT, cut_off=CUT_OFF),
+        filled_by=IVAN,
+        at=FILLED_AT,
+    )
+    assert proposal.paying[PAULA].payment_to_confirm is None
+    later = FILLED_AT + timedelta(minutes=12)
+
+    proposal.give_time_to_pay(
+        PAULA,
+        reason=ReopenReason.DECLINED,
+        seat_charge_id=PAULAS_CHARGE,
+        until=PAY_BY,
+        time_to=TimeTo.at(later, cut_off=CUT_OFF),
+        filled_by=PAULA,
+        at=later,
+    )
+
+    assert proposal.paying[PAULA].payment_to_confirm == PAULAS_CHARGE
+    assert proposal.paying[PAULA].refused_at == later
+
+
+def test_a_seat_reopened_with_no_time_to_pay_arrives_when_it_reopened():
+    proposal = a_full_card()
+    refused = FILLED_AT + timedelta(minutes=3)
+
+    proposal.reopen_seat(
+        PAULA,
+        reason=ReopenReason.DECLINED,
+        seat_charge_id=PAULAS_CHARGE,
+        at=refused,
+    )
+
+    assert proposal.reopened[PAULA].refused_at == refused
 
 
 def test_time_to_pay_is_given_only_to_somebody_in_on_a_full_game():
@@ -229,8 +285,12 @@ def test_the_time_running_out_reopens_her_seat_as_a_refused_payment_does():
     assert isinstance(ran_out, TimeToPayRanOut)
     assert ran_out.player_ids == (PAULA,)
     assert PAULA not in proposal.yeses
+    # Fix your card becomes Confirm: still the payment refused at the fill,
+    # so it arrived then, not now (#815).
     assert proposal.reopened[PAULA] == Reopened(
-        reason=ReopenReason.AUTHENTICATION_REQUIRED, seat_charge_id=PAULAS_CHARGE
+        reason=ReopenReason.AUTHENTICATION_REQUIRED,
+        seat_charge_id=PAULAS_CHARGE,
+        refused_at=FILLED_AT,
     )
     assert proposal.paying == {}
     assert proposal.open_seats == 1
