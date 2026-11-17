@@ -173,7 +173,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   reads her row among the screens and fails the run by name unless it opens on that group,
   HOTTEST and *Asked*, with *Błonia po pracy* (two players) left out — and, **on the run
   that created the group**, a GROWING and an untagged card too: those are other layers'
-  groups, which age with the store. Proven on a fresh Postgres 17, run twice: no group or
+  groups, which age with the store. It reads *Groups heating up* too, every page (#813),
+  and fails unless the row is its first six and the row's total and the first page's are
+  the number it lists, capped at 100. Proven on a fresh Postgres 17, run twice: no group or
   booking event the second time.
 - **New in Raketa needs newcomers in relations to her, so eight are written for it**
   (#793, `app/seeds/new_in_raketa.py`; `discovery.md`): `NEWCOMERS`, outside the cohort, by

@@ -23,7 +23,9 @@
 >
 > **Amended by [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
 > §6** for each people row's **total** — the count on its FOR YOU line — built by
-> [#812](https://github.com/Raketa02/Raketa/issues/812): §6.9, §7.5, §8.8 and §15.
+> [#812](https://github.com/Raketa02/Raketa/issues/812): §6.9, §7.5, §8.8 and §15; and **§6, §7**
+> for Hottest groups' total and the *Groups heating up* page, built by
+> [#813](https://github.com/Raketa02/Raketa/issues/813): §5.10 and §15.
 
 ---
 
@@ -271,6 +273,29 @@ join a second or third group.
 - **The faces can't be tapped** (Q26): they are a picture of the group, not a way to its members.
   **No See all.**
 - **The group page itself stays members-only.** *Open group* shows only for a member.
+
+### 5.10 Its total and the *Groups heating up* page (ADR-0205 §6, §7)
+
+- **The total** is **every group with 3 or more players**, the reader's own included — every
+  group the page lists — **counted up to 100**, drawn *99+* past 99. **0** with no group of 3.
+- **It costs no statement**: the heat already counts every group's members to pick the six, and
+  the total is how many groups that count found.
+- **The page lists every group of 3 or more in §5.4's order, without the cut at six**: HOTTEST,
+  then GROWING by heat, then untagged by heat; ties go to more games this week, then the group
+  id. **The row is exactly its first six** — the same groups, places and tags.
+- **20 a page, by cursor.** The first page carries the total; the last page names no next
+  cursor. Each card is the row's card, read whole for that page's 20 only: who runs it, the
+  club, the dots, the faces (the reader's friends first, never the reader), the friends count,
+  the reader's relation, the policy and whether the reader runs it.
+- **Heat is worked out on every read, so a group can shift between pages** (accepted). A cursor
+  names a place in the order — a tag, a heat, a number of games and a group id — never a
+  count: the next page is whatever stands behind that place now. A group whose heat rose past
+  the cursor since is missed; one that cooled behind it is read again; a group gone meanwhile
+  moves nobody else.
+- **The bars on the page** are over the HOTTEST's heat, or with none over the highest heat on
+  the whole list. They differ from the row's only when six GROWING groups push a hotter
+  untagged one off the row. The app draws no bar since ADR-0205; heat still orders and tags.
+- **No filter**, by sport or distance (ADR-0205 §7).
 
 ---
 
@@ -617,6 +642,8 @@ A withdrawn Join request tells nobody.
 | --- | --- |
 | Hottest groups' size to appear | 3 or more players |
 | Hottest groups' cards | up to 6 |
+| Hottest groups' total | every group of 3 or more, counted up to 100 · *99+* past 99 |
+| A *Groups heating up* page | 20 cards, every group of 3 or more; the row is its first 6 |
 | Heat | 2 × games this week + 3 × new this month + players (to 20) |
 | *Games this week* | court time in the last 7 days, not called off, scored or not |
 | *New this month* | joined in the last 30 days, still members |

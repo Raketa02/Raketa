@@ -208,3 +208,29 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   deleted meanwhile, which took its requests with it, or no such group (a call, so a stale
   *Asked* sheet never ends on an error; it names no group). Seeded by
   `app/seeds/hottest_groups.py` (`seeds.md`).
+- **Hottest groups answers a `total`, and *Groups heating up* pages through every group**
+  (#813; [ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+  §6, §7; the Home rows mechanics §5.10). **The total is every group of three or more**, the
+  reader's own included, **counted up to 100** (`COUNTED_UP_TO`; the phone draws *99+*), and
+  it is **the length of what `crowds` already answered** — `total_of`, no statement of its
+  own: `test_the_row_s_total_adds_no_statement` holds the row to the same statements at six
+  groups and at thirty-six, and the groups projections to four questions. **The page is
+  `GET /hottest-groups/all?after=`**, on the row's own router (`/groups/all` would read as a
+  group id) and named for the row, since only the words on screen are *Groups heating up*:
+  `heat_order`, **the row's one order without the cut** — HOTTEST, GROWING by heat, untagged
+  by heat, ties to more games then the id — so **the row is exactly its first six**
+  (`hottest_groups` and `heat_order` share `_tagged_in_order`; a unit test draws twenty
+  random towns and an API test compares the cards whole). **Twenty a page**, each card the
+  row's card read whole for that page only (`_ReadsHeat._cards`, the row's own); the first
+  page carries the total and every later page `null`; the last names no `next`. **A cursor
+  is a place, never a count** (`HeatPlace`: the tag's rank, the heat, the games, the id,
+  base64url; `400 not_a_hottest_groups_page` otherwise): heat is worked out on every read,
+  so a page is the cards whose place is behind the cursor's *now*, and **a group whose heat
+  moved between two pages is read again or missed — accepted** (ADR-0205 §7), and a group
+  gone meanwhile costs nobody their place. On the whole order a bar is over the HOTTEST or,
+  with none, the highest heat on it, which differs from the row's only when six GROWING
+  push a hotter untagged group off the row. **Its cost is the row's**: the same questions,
+  about twenty groups, and one profile fold per face drawn (`ProfileGroupFaces`; up to 120
+  on a full page), which `test_a_page_asks_the_row_s_questions_and_folds_a_profile_per_face`
+  pins. The seed reads every page and fails unless the row is its first six and both totals
+  are its length, capped.

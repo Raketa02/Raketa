@@ -187,3 +187,13 @@ class AdministratorNotActive(ConflictError):
         super().__init__(
             "a group is handed only to an active administrator of the club"
         )
+
+
+class NotAHottestGroupsPage(BadRequestError):
+    """A page of *Groups heating up* asked after a cursor this server never
+    wrote (#813). A client's own bug, said so."""
+
+    code = "not_a_hottest_groups_page"
+
+    def __init__(self) -> None:
+        super().__init__("Not a page of Hottest groups: an unreadable cursor.")

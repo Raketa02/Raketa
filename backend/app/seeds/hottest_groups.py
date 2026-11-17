@@ -52,7 +52,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Final, final
+from typing import Final, TypeVar, final
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -83,11 +83,17 @@ from app.modules.groups.application.commands import (
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
 from app.modules.groups.application.hottest_groups import (
     HottestGroupCard,
+    HottestGroupsRow,
     ReadHottestGroups,
+    ReadHottestGroupsPage,
 )
-from app.modules.groups.domain.hottest import HeatTag
+from app.modules.groups.domain.hottest import (
+    CARDS,
+    COUNTED_UP_TO,
+    GAMES_WINDOW,
+    HeatTag,
+)
 from app.modules.groups.domain.value_objects import GroupRelation, JoinPolicy
-from app.modules.groups.domain.hottest import GAMES_WINDOW
 from app.modules.proposals.domain.deck import GAME_LENGTH
 from app.seeds.booked_history import MADE_AHEAD
 from app.seeds.bookings import all_say_yes, club_id_of, the_cut_off_came
@@ -240,22 +246,80 @@ async def assert_the_hottest_groups(
     """Her *Hottest groups*, read through its own use case: **one HOTTEST — this
     layer's group, with her request waiting on it — at least one GROWING and
     one untagged card, and the two-player group out**, or the run fails by
-    name. The screen line."""
+    name — and *Groups heating up*, page after page, through its own (#813):
+    **the row its first six, and the row's total and the first page's what it
+    lists**, capped. The screen line."""
 
     async with session_factory() as session:
         her = await _her_id(session)
-        row = await ReadHottestGroups(
-            directory=build_group_directory(session),
-            games=build_group_born_games(session),
-            clubs=build_home_clubs(session),
-            ratings=build_rated_group_members(session),
-            faces=build_group_faces(session, settings=settings),
-            relations=build_member_relations(session),
-            administrators=build_group_administrators(session),
-            clock=FixedClock(at=now),
+        row = await _built(
+            ReadHottestGroups, session, settings=settings, now=now
         ).execute(her)
-    _refuse_a_row_that_lies(row, seeded, whole_row=seeded.created)
-    return "Hottest groups: " + " · ".join(_card_line(card) for card in row)
+        first_total, listed = await _every_page(
+            _built(ReadHottestGroupsPage, session, settings=settings, now=now), her
+        )
+    _refuse_a_row_that_lies(row.cards, seeded, whole_row=seeded.created)
+    _refuse_a_page_that_disagrees(row, first_total=first_total, listed=listed)
+    return (
+        f"Hottest groups ({row.total}, {len(listed)} on Groups heating up): "
+        + " · ".join(_card_line(card) for card in row.cards)
+    )
+
+
+_Read = TypeVar("_Read", ReadHottestGroups, ReadHottestGroupsPage)
+
+
+def _built(
+    read: type[_Read], session: AsyncSession, *, settings: Settings, now: Instant
+) -> _Read:
+    return read(
+        directory=build_group_directory(session),
+        games=build_group_born_games(session),
+        clubs=build_home_clubs(session),
+        ratings=build_rated_group_members(session),
+        faces=build_group_faces(session, settings=settings),
+        relations=build_member_relations(session),
+        administrators=build_group_administrators(session),
+        clock=FixedClock(at=now),
+    )
+
+
+async def _every_page(
+    read: ReadHottestGroupsPage, her: UUID
+) -> tuple[int | None, list[HottestGroupCard]]:
+    """*Groups heating up*, page after page: the first page's total, and every
+    card on them."""
+
+    page = await read.execute(her, after=None)
+    first_total, listed = page.total, list(page.cards)
+    while page.next is not None:
+        page = await read.execute(her, after=page.next)
+        listed.extend(page.cards)
+    return first_total, listed
+
+
+def _refuse_a_page_that_disagrees(
+    row: HottestGroupsRow,
+    *,
+    first_total: int | None,
+    listed: Sequence[HottestGroupCard],
+) -> None:
+    """The row is the page's first six, and both count what the page lists."""
+
+    def placed(cards: Sequence[HottestGroupCard]) -> list[tuple[UUID, HeatTag | None]]:
+        return [(card.group.row.id, card.tag) for card in cards]
+
+    if placed(row.cards) != placed(listed[:CARDS]):
+        raise HottestGroupsRefused(
+            f"her Hottest groups should be the first {CARDS} of Groups heating "
+            f"up, and read {[_card_line(card) for card in row.cards]} against "
+            f"{[_card_line(card) for card in listed[:CARDS]]}"
+        )
+    if not row.total == first_total == min(len(listed), COUNTED_UP_TO):
+        raise HottestGroupsRefused(
+            f"her Hottest groups line counts {row.total}, the page's first "
+            f"{first_total}, and Groups heating up lists {len(listed)}"
+        )
 
 
 def _refuse_a_row_that_lies(

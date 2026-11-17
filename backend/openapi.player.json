@@ -4960,7 +4960,7 @@
           "groups"
         ],
         "summary": "Home's Hottest groups",
-        "description": "Up to **six** of the groups with the most going on, **whether the caller is in them or not** \u2014 every group with 3 or more players, player and official alike, the caller's own included \u2014 by **heat**: 2 \u00d7 games this week + 3 \u00d7 new this month + players, counted up to 20. One **HOTTEST**, any number of **GROWING**, in the row's order. Each card carries everything its group sheet shows, and the caller's relation to it. Worked out on every read; nothing is recorded. **The group page stays members-only**: a non-member still meets `group_not_found` there.",
+        "description": "Up to **six** of the groups with the most going on, **whether the caller is in them or not** \u2014 every group with 3 or more players, player and official alike, the caller's own included \u2014 by **heat**: 2 \u00d7 games this week + 3 \u00d7 new this month + players, counted up to 20. One **HOTTEST**, any number of **GROWING**, in the row's order. Each card carries everything its group sheet shows, and the caller's relation to it, and `total` counts every group with 3 or more players, up to 100. Worked out on every read; nothing is recorded. **The group page stays members-only**: a non-member still meets `group_not_found` there.",
         "operationId": "hottest_groups_api_v1_hottest_groups_get",
         "responses": {
           "200": {
@@ -4979,6 +4979,73 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/api/v1/hottest-groups/all": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Groups heating up: every Hottest group, page by page",
+        "description": "**Every group with 3 or more players**, player and official alike, **the caller's own included**, in Hottest groups' own order \u2014 HOTTEST, then GROWING by heat, then untagged by heat; ties to more games this week, then the group id \u2014 **20 to a page** by cursor. The first page's first six are the row's groups, in its places, with its tags. Each card is the row's card, read whole for the page's 20. The first page carries `total`, the row's. **Heat is worked out on every read**: a group whose heat moves between two pages may shift, read again or missed. No filter.",
+        "operationId": "hottest_groups_page_api_v1_hottest_groups_all_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `next` cursor: the 20 groups behind it.",
+              "title": "After"
+            },
+            "description": "A `next` cursor: the 20 groups behind it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HottestGroupsPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_a_hottest_groups_page` \u2014 a cursor this server never wrote.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/new-in-raketa": {
@@ -14537,7 +14604,7 @@
             "maximum": 1.0,
             "minimum": 0.0,
             "title": "Heat Share",
-            "description": "The heat bar, from 0 to 1: this card's heat over the **HOTTEST** card's, whose bar is full \u2014 or, with no HOTTEST, over the highest heat in the row, so no bar is more than full. Heat is 2 \u00d7 games this week + 3 \u00d7 new this month + players counted up to 20."
+            "description": "The heat bar, from 0 to 1: this card's heat over the **HOTTEST** card's, whose bar is full \u2014 or, with no HOTTEST, over the highest heat in the row (on *Groups heating up*, on the whole list), so no bar is more than full. Heat is 2 \u00d7 games this week + 3 \u00d7 new this month + players counted up to 20. The app draws no bar since `docs/adr/0205`; heat still orders the cards and picks the tags."
           },
           "tag": {
             "anyOf": [
@@ -14596,6 +14663,52 @@
         "title": "HottestGroupSchema",
         "description": "One card of Home's *Hottest groups* \u2014 and **everything its group sheet\nshows**, so tapping the card needs no second read (`docs/adr/0204` \u00a73,\n\u00a711). Drawn for any player, **whether they are in the group or not**; the\ngroup page itself stays members-only."
       },
+      "HottestGroupsPageResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/HottestGroupSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "Up to 20 cards, **every group with 3 or more players** \u2014 the reader's own included, `relation` `MEMBER` \u2014 in the row's order: HOTTEST, then GROWING by heat, then untagged by heat; ties to more games this week, then the group id. The first page's first six are the row. **Heat is worked out on every read**, so a group whose heat moved since the page before may come again or be missed. Empty on the first page when there is no group of 3."
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next",
+            "description": "The cursor the next page is read `after`; `null` on the last page."
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total",
+            "description": "How many groups there are to look through: **every group with 3 or more players**, the reader's own included \u2014 the whole list *Groups heating up* pages through \u2014 **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count. `0` with no group of 3. **On the first page only**: `null` on a page read `after` a cursor, where the first page's stands."
+          }
+        },
+        "type": "object",
+        "required": [
+          "groups",
+          "next",
+          "total"
+        ],
+        "title": "HottestGroupsPageResponse",
+        "description": "A page of *Groups heating up* (#813; ``docs/adr/0205`` \u00a77)."
+      },
       "HottestGroupsResponse": {
         "properties": {
           "groups": {
@@ -14604,12 +14717,20 @@
             },
             "type": "array",
             "title": "Groups",
-            "description": "**Up to six**, in the row's order \u2014 every group with **3 or more players** is a candidate, the reader's own included. Empty when there is none, and Home hides the row."
+            "description": "**Up to six**, in the row's order \u2014 every group with **3 or more players** is a candidate, the reader's own included. Empty when there is none, and Home hides the row. **The same groups, places and tags as the first six** of `GET /hottest-groups/all`; only `heat_share` can differ, when there is no HOTTEST and six GROWING push a hotter untagged group off the row."
+          },
+          "total": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "How many groups there are to look through: **every group with 3 or more players**, the reader's own included \u2014 the whole list *Groups heating up* pages through \u2014 **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count. `0` with no group of 3."
           }
         },
         "type": "object",
         "required": [
-          "groups"
+          "groups",
+          "total"
         ],
         "title": "HottestGroupsResponse"
       },
