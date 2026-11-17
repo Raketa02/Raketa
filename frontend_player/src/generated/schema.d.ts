@@ -1814,9 +1814,29 @@ export interface paths {
         };
         /**
          * Home's Hottest groups
-         * @description Up to **six** of the groups with the most going on, **whether the caller is in them or not** — every group with 3 or more players, player and official alike, the caller's own included — by **heat**: 2 × games this week + 3 × new this month + players, counted up to 20. One **HOTTEST**, any number of **GROWING**, in the row's order. Each card carries everything its group sheet shows, and the caller's relation to it. Worked out on every read; nothing is recorded. **The group page stays members-only**: a non-member still meets `group_not_found` there.
+         * @description Up to **six** of the groups with the most going on, **whether the caller is in them or not** — every group with 3 or more players, player and official alike, the caller's own included — by **heat**: 2 × games this week + 3 × new this month + players, counted up to 20. One **HOTTEST**, any number of **GROWING**, in the row's order. Each card carries everything its group sheet shows, and the caller's relation to it, and `total` counts every group with 3 or more players, up to 100. Worked out on every read; nothing is recorded. **The group page stays members-only**: a non-member still meets `group_not_found` there.
          */
         get: operations["hottest_groups_api_v1_hottest_groups_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hottest-groups/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Groups heating up: every Hottest group, page by page
+         * @description **Every group with 3 or more players**, player and official alike, **the caller's own included**, in Hottest groups' own order — HOTTEST, then GROWING by heat, then untagged by heat; ties to more games this week, then the group id — **20 to a page** by cursor. The first page's first six are the row's groups, in its places, with its tags. Each card is the row's card, read whole for the page's 20. The first page carries `total`, the row's. **Heat is worked out on every read**: a group whose heat moves between two pages may shift, read again or missed. No filter.
+         */
+        get: operations["hottest_groups_page_api_v1_hottest_groups_all_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2527,6 +2547,26 @@ export interface paths {
          */
         put: operations["set_games_and_money_api_v1_players_me_games_and_money_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/needs-your-answer/visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * I closed Needs your answer
+         * @description What the phone sends **whenever Needs your answer goes away for good** — ✕, a swipe down, a tap outside it, the last answer, or a screen it hands over to; not when it steps aside for another sheet, since it comes back (#815; `docs/adr/0205` §3). **`watermark` is the one `GET /home` served** with the read the sheet was last drawn from, never the moment of the close: something that reached the server after that read stays new.
+         */
+        post: operations["close_needs_your_answer_api_v1_players_me_needs_your_answer_visit_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5799,6 +5839,18 @@ export interface components {
             name: string;
         };
         /**
+         * HomeFriendRequestLevelSchema
+         * @description One sport on a request's sport-levels line — *● Padel 3,40*.
+         */
+        HomeFriendRequestLevelSchema: {
+            sport: components["schemas"]["Sport"];
+            /**
+             * Level
+             * @description Their published Level in it, as RacketSkill published it.
+             */
+            level: number;
+        };
+        /**
          * HomeFriendRequestSchema
          * @description One card in *FRIEND REQUESTS* — *Inés wants to be your friend · With you
          *     in Kazimierz crew · Padel 3,40 · ✦ 98*, **Not now** and **Accept**.
@@ -5878,6 +5930,11 @@ export interface components {
              * @description With `from_same_vibe`: how many Social tags you two hold **today**, counted on this read — `0` once you share none. `null` on every other card.
              */
             in_common: number | null;
+            /**
+             * Levels
+             * @description **Every sport they hold a published Level in**, in the app's sport order, each with that Level — the tile's sport-levels line, *● Padel 3,40 · ● Tennis 2,90* (docs/adr/0205 §2). **Empty** when they hold none, and the line is left out. `level` is the entry for `sport`.
+             */
+            levels: components["schemas"]["HomeFriendRequestLevelSchema"][];
         };
         /**
          * HomeFriendsGameSchema
@@ -6044,6 +6101,24 @@ export interface components {
             photo_url: string | null;
         };
         /**
+         * HomeNeedsYourAnswerSchema
+         * @description **The envelope's badge** (#815; `docs/adr/0205` §3): what is new in
+         *     *Needs your answer* since you last closed it, kept on the server so every
+         *     phone agrees — and the watermark to send back when you close it.
+         */
+        HomeNeedsYourAnswerSchema: {
+            /**
+             * New Count
+             * @description How many of the items waiting on you **arrived since you last closed Needs your answer** (`POST /players/me/needs-your-answer/visit`), on any phone — every one of them before your first close. Counted over the four sections: each payment to confirm (`payments_to_confirm`) by when it came to need confirming, each friends game invitation by when your seat was invited into, each friend request by when it was asked, and **each friend on an ask for a level by their own ask** — so a second friend asking on a card already there is new. **A change of state is never new**: a payment going from *Fix your card* to *Confirm* counts as it did. An answered item leaves the count with its section. Draw *99+* above 99. Never `needing_you`, never the bell's number.
+             */
+            new_count: number;
+            /**
+             * Watermark
+             * @description **This read's watermark**: the newest arrival among everything counted above, seen or not, to the millisecond. Send it back as the visit's `watermark` when the sheet drawn from this read closes — draw all four sections from this read (`payments_to_confirm` included), or a row read elsewhere may be covered without being shown. `null` while nothing waits.
+             */
+            watermark: string | null;
+        };
+        /**
          * HomeRankingSchema
          * @description Home's trophy, **🏆 #7**, just left of the bell (#768, #771;
          *     `docs/adr/0203` §5). A tap opens Rankings on `sport`, in the view you last
@@ -6102,6 +6177,13 @@ export interface components {
             level_asks: components["schemas"]["HomeLevelAskSchema"][];
             /** @description The trophy left of the bell (#768): the sport of your latest result and your General place in it. **`null` when you have no result in any sport** — the trophy still shows, with no number, and still opens Rankings. */
             ranking?: components["schemas"]["HomeRankingSchema"] | null;
+            /**
+             * Payments To Confirm
+             * @description *TO CONFIRM · n*, first in *Needs your answer* (#815; `docs/adr/0205` §1, §3): every payment you have to confirm, soonest game first — **the same rows as `GET /players/me/payments-to-confirm`**, read at this read's instant. They are the payments `needing_you` counts and `needs_your_answer` covers, so a sheet drawn from this read alone shows exactly what its watermark says it showed.
+             */
+            payments_to_confirm: components["schemas"]["app__modules__proposals__presentation__schemas__PaymentToConfirmSchema"][];
+            /** @description The envelope's badge, left of the bell (#815; `docs/adr/0205` §2, §3): what is new in *Needs your answer*, and the watermark of this read. */
+            needs_your_answer: components["schemas"]["HomeNeedsYourAnswerSchema"];
         };
         /**
          * HomeStatus
@@ -6158,7 +6240,7 @@ export interface components {
             new_this_month: number;
             /**
              * Heat Share
-             * @description The heat bar, from 0 to 1: this card's heat over the **HOTTEST** card's, whose bar is full — or, with no HOTTEST, over the highest heat in the row, so no bar is more than full. Heat is 2 × games this week + 3 × new this month + players counted up to 20.
+             * @description The heat bar, from 0 to 1: this card's heat over the **HOTTEST** card's, whose bar is full — or, with no HOTTEST, over the highest heat in the row (on *Groups heating up*, on the whole list), so no bar is more than full. Heat is 2 × games this week + 3 × new this month + players counted up to 20. The app draws no bar since `docs/adr/0205`; heat still orders the cards and picks the tags.
              */
             heat_share: number;
             /** @description `HOTTEST` on exactly one card — the highest heat, and only if it had a game this week; `GROWING` on any other with **+4 or more** new this month **and** new making up at least a quarter of today's players; `null` on the rest. The row is in order already: HOTTEST, then GROWING by heat, then untagged by heat. */
@@ -6181,13 +6263,39 @@ export interface components {
              */
             is_administrator: boolean;
         };
+        /**
+         * HottestGroupsPageResponse
+         * @description A page of *Groups heating up* (#813; ``docs/adr/0205`` §7).
+         */
+        HottestGroupsPageResponse: {
+            /**
+             * Groups
+             * @description Up to 20 cards, **every group with 3 or more players** — the reader's own included, `relation` `MEMBER` — in the row's order: HOTTEST, then GROWING by heat, then untagged by heat; ties to more games this week, then the group id. The first page's first six are the row. **Heat is worked out on every read**, so a group whose heat moved since the page before may come again or be missed. Empty on the first page when there is no group of 3.
+             */
+            groups: components["schemas"]["HottestGroupSchema"][];
+            /**
+             * Next
+             * @description The cursor the next page is read `after`; `null` on the last page.
+             */
+            next: string | null;
+            /**
+             * Total
+             * @description How many groups there are to look through: **every group with 3 or more players**, the reader's own included — the whole list *Groups heating up* pages through — **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count. `0` with no group of 3. **On the first page only**: `null` on a page read `after` a cursor, where the first page's stands.
+             */
+            total: number | null;
+        };
         /** HottestGroupsResponse */
         HottestGroupsResponse: {
             /**
              * Groups
-             * @description **Up to six**, in the row's order — every group with **3 or more players** is a candidate, the reader's own included. Empty when there is none, and Home hides the row.
+             * @description **Up to six**, in the row's order — every group with **3 or more players** is a candidate, the reader's own included. Empty when there is none, and Home hides the row. **The same groups, places and tags as the first six** of `GET /hottest-groups/all`; only `heat_share` can differ, when there is no HOTTEST and six GROWING push a hotter untagged group off the row.
              */
             groups: components["schemas"]["HottestGroupSchema"][];
+            /**
+             * Total
+             * @description How many groups there are to look through: **every group with 3 or more players**, the reader's own included — the whole list *Groups heating up* pages through — **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count. `0` with no group of 3.
+             */
+            total: number;
         };
         /**
          * InProgressAssessmentResponse
@@ -6771,6 +6879,18 @@ export interface components {
              */
             nickname: string;
         };
+        /**
+         * NeedsYourAnswerVisitRequest
+         * @description Closing *Needs your answer* (#815): the watermark of the read the sheet
+         *     showed.
+         */
+        NeedsYourAnswerVisitRequest: {
+            /**
+             * Watermark
+             * @description `GET /home`'s `needs_your_answer.watermark` from the read the sheet was last drawn from, as it was served — never the phone's clock, never the moment of the close. Compared to the millisecond, so a date that kept only milliseconds is the same watermark. `null`, a read with nothing waiting, records nothing.
+             */
+            watermark: string | null;
+        };
         /** NewInRaketaPageResponse */
         NewInRaketaPageResponse: {
             /**
@@ -6840,6 +6960,11 @@ export interface components {
              * @description Up to 10: the 10 newest of the last 30 days, those you aren't connected with first (someone who asked you among them), then those you sent a request to, then your friends — newest first within each. **Empty hides the row.**
              */
             players: components["schemas"]["NewInRaketaPlayerSchema"][];
+            /**
+             * Total
+             * @description How many the row could show: everybody who joined in the last 30 days — each person once, under the row's own exclusions — **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count and *See all N ›*: who there is to explore, never how many are good matches. `0` with an empty row.
+             */
+            total: number;
         };
         /** NewInRaketaSportSchema */
         NewInRaketaSportSchema: {
@@ -8795,6 +8920,11 @@ export interface components {
              * @description Up to 10: **fresh** good matches first — 70% even or more, neither your friend nor somebody you asked — best % first; then the **gaps** at the right — your friends, those you asked and weaker matches — best % first. Worked out on every read, so a new fresh player takes the weakest gap's place. **Empty hides the row**: you hold no level anywhere, or nobody shares a sport with you.
              */
             players: components["schemas"]["SameLevelPlayerSchema"][];
+            /**
+             * Total
+             * @description How many the row could show: everybody holding a level in any sport you hold one in — each person once, under the row's own exclusions — **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count and *See all N ›*: who there is to explore, never how many are good matches. `0` with an empty row.
+             */
+            total: number;
         };
         /**
          * SameLevelSportSchema
@@ -8893,6 +9023,11 @@ export interface components {
              * @description Up to 10: **fresh** good matches first — 2 shared tags or more, neither your friend nor somebody you asked; somebody who asked you counts — most in common first; then the **gaps** at the right — your friends, those you asked and 1-tag matches — in the same order. Worked out on every read, so a new fresh player takes the weakest gap's place. **Empty hides the row.**
              */
             players: components["schemas"]["SameVibePlayerSchema"][];
+            /**
+             * Total
+             * @description How many the row could show: everybody sharing at least one Social tag with you — each person once, under the row's own exclusions — **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count and *See all N ›*: who there is to explore, never how many are good matches. `0` with an empty row.
+             */
+            total: number;
         };
         /** SavedMethodSchema */
         SavedMethodSchema: {
@@ -13756,6 +13891,47 @@ export interface operations {
             };
         };
     };
+    hottest_groups_page_api_v1_hottest_groups_all_get: {
+        parameters: {
+            query?: {
+                /** @description A `next` cursor: the 20 groups behind it. */
+                after?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HottestGroupsPageResponse"];
+                };
+            };
+            /** @description `not_a_hottest_groups_page` — a cursor this server never wrote. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_new_in_raketa_api_v1_new_in_raketa_get: {
         parameters: {
             query?: never;
@@ -15318,6 +15494,46 @@ export interface operations {
                 };
             };
             /** @description `games_per_week_out_of_range` — outside `details.least`–`details.most`. `most_ill_pay_not_offered` — not `null` and not one of `details.choices`. Nothing was saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_needs_your_answer_api_v1_players_me_needs_your_answer_visit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NeedsYourAnswerVisitRequest"];
+            };
+        };
+        responses: {
+            /** @description Closed: everything that arrived up to `watermark` is seen on every phone, and only what arrived after it counts in `GET /home`'s `needs_your_answer.new_count`. Also the answer when nothing moved — the same watermark again, an older one (another phone closed on a newer read), which never moves it back, or `null`. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `watermark_in_the_future` — later than the server's clock, so no read served it: send the watermark Home gave, never the phone's clock. Nothing was recorded. */
             400: {
                 headers: {
                     [name: string]: unknown;

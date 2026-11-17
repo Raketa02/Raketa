@@ -311,7 +311,21 @@ function toHomeFriendRequest(wire: Schemas['HomeFriendRequestSchema']): HomeFrie
     ...(sport === undefined || wire.level === null ? {} : { level: wire.level }),
     playerScore: wire.player_score,
     ...(band === undefined ? {} : { reliabilityBand: band }),
+    levels: levelsOf(wire),
   };
+}
+
+/**
+ * **The sender's sport levels** (#818), in the order served — the server's is the app's sport order,
+ * and nothing here re-sorts it. A sport this build cannot name is dropped, as a card in one is: the
+ * line would have no word and no dot for it. A server older than #814 sends none, so no line.
+ */
+function levelsOf(wire: Schemas['HomeFriendRequestSchema']): HomeFriendRequest['levels'] {
+  const levels: Schemas['HomeFriendRequestSchema']['levels'] | undefined = wire.levels;
+  return (levels ?? []).flatMap((one) => {
+    const sport = toSport(one.sport);
+    return sport === undefined ? [] : [{ sport, level: one.level }];
+  });
 }
 
 /**

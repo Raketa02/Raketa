@@ -596,6 +596,8 @@ describe('before the cut-off, the time to fix the card (#643; Q113)', () => {
     transport.on('GET', HOME_PATH, () =>
       json<Wire['HomeResponse']>({
         read_at: HOME_READ_AT,
+        payments_to_confirm: [],
+        needs_your_answer: { new_count: 0, watermark: null },
         needing_you: 1,
         games: [],
         friends_games: [],
@@ -731,6 +733,8 @@ describe('paying in time (Q110)', () => {
     transport.on('GET', HOME_PATH, () =>
       json<Wire['HomeResponse']>({
         read_at: HOME_READ_AT,
+        payments_to_confirm: [],
+        needs_your_answer: { new_count: 0, watermark: null },
         needing_you: paid ? 0 : 1,
         friends_games: [],
         level_asks: [],
@@ -786,6 +790,8 @@ describe('out of time (Q109, Q111)', () => {
     transport.on('GET', HOME_PATH, () =>
       json<Wire['HomeResponse']>({
         read_at: HOME_READ_AT,
+        payments_to_confirm: [],
+        needs_your_answer: { new_count: 0, watermark: null },
         needing_you: 0,
         friends_games: [],
         level_asks: [],
@@ -827,6 +833,8 @@ describe('out of time (Q109, Q111)', () => {
     transport.on('GET', HOME_PATH, () =>
       json<Wire['HomeResponse']>({
         read_at: HOME_READ_AT,
+        payments_to_confirm: [],
+        needs_your_answer: { new_count: 0, watermark: null },
         needing_you: 1,
         friends_games: [],
         level_asks: [],

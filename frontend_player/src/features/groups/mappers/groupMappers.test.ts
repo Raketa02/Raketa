@@ -505,7 +505,7 @@ describe('Home’s Hottest groups', () => {
   };
 
   it('keeps every figure the card and its sheet draw, in the order served', () => {
-    expect(toHottestGroups({ groups: [OGRODY_HOT] })).toEqual([
+    expect(toHottestGroups({ groups: [OGRODY_HOT], total: 1 })).toEqual([
       {
         id: OGRODY_HOT.id,
         kind: 'OFFICIAL',
@@ -538,6 +538,7 @@ describe('Home’s Hottest groups', () => {
   it('carries no tag as none, and an Owner who can no longer be named as nobody', () => {
     const [kazimierz] = toHottestGroups({
       groups: [{ ...OGRODY_HOT, kind: 'PLAYER', tag: null, run_by: null }],
+      total: 1,
     });
     expect(kazimierz?.tag).toBeNull();
     expect(kazimierz?.runBy).toBeNull();

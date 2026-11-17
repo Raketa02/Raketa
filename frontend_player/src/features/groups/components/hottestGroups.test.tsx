@@ -156,7 +156,7 @@ function hottestServer(
   stubGate(transport, { hasPlayerProfile: true });
   stubMyGroups(transport, mine);
   transport.on('GET', HOTTEST_GROUPS_PATH, () =>
-    json<Wire['HottestGroupsResponse']>({ groups: [...groups] }),
+    json<Wire['HottestGroupsResponse']>({ groups: [...groups], total: groups.length }),
   );
 
   for (const group of initially) {

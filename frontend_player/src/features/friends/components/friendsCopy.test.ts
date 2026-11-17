@@ -11,6 +11,8 @@ import {
   setAsideToast,
   wantToPlay,
   requestsHeading,
+  requestTileLabel,
+  sportLevelEntries,
   sportsLine,
   wantsToBeYourFriend,
 } from './friendsCopy';
@@ -22,6 +24,24 @@ describe('the request card’s words (§29.2)', () => {
 
   it('counts the row’s title', () => {
     expect(requestsHeading(1)).toBe('Friend requests · 1');
+  });
+
+  describe('the sport-levels line (#818)', () => {
+    const PADEL = { name: 'Padel', level: 3.4 };
+    const TENNIS = { name: 'Tennis', level: 2.9 };
+
+    it('writes each sport and its Level with a decimal comma, the dot held to the sport before it', () => {
+      expect(sportLevelEntries([PADEL, TENNIS])).toEqual(['Padel 3,40 ·', 'Tennis 2,90']);
+      expect(sportLevelEntries([PADEL])).toEqual(['Padel 3,40']);
+      expect(sportLevelEntries([])).toEqual([]);
+    });
+
+    it('speaks who asks, then every sport and its Level', () => {
+      expect(requestTileLabel('ines.d', [PADEL, TENNIS])).toBe(
+        'ines.d wants to be your friend, Padel 3,40, Tennis 2,90',
+      );
+      expect(requestTileLabel('ines.d', [])).toBe('ines.d wants to be your friend');
+    });
   });
 });
 

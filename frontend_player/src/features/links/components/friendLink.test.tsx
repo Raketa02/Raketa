@@ -85,6 +85,7 @@ const tomeksRequest: Wire['HomeFriendRequestSchema'] = {
   reliability_band: 'VERY_HIGH',
   percent_even: null,
   in_common: null,
+  levels: [],
 };
 
 /**

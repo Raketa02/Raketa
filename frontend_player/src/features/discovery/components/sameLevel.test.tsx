@@ -169,7 +169,7 @@ function levelServer(
   // The reader's own face, on the left of every card.
   stubOwnRecord(transport);
   transport.on('GET', SAME_LEVEL_PATH, () =>
-    json<Wire['SameLevelResponse']>({ players: [...people] }),
+    json<Wire['SameLevelResponse']>({ players: [...people], total: people.length }),
   );
   transport.on('GET', SAME_LEVEL_ALL_PATH, (request) => {
     const query = new URLSearchParams(request.path.split('?')[1] ?? '');
@@ -451,7 +451,7 @@ describe('the comparison sheet, when its person leaves the row', () => {
     // Asking Kuba makes him a gap, and a fresh match behind him takes his place among the ten.
     transport.on('POST', REQUESTS_PATH, () => {
       transport.on('GET', SAME_LEVEL_PATH, () =>
-        json<Wire['SameLevelResponse']>({ players: [ZOFIA, ANIA, MICHAL] }),
+        json<Wire['SameLevelResponse']>({ players: [ZOFIA, ANIA, MICHAL], total: 3 }),
       );
       return json<Wire['RelationResponse']>({ relation: 'SENT' });
     });
@@ -470,7 +470,10 @@ describe('the comparison sheet, when its person leaves the row', () => {
 
     // A later read brings him back, as a gap: his sheet stays shut until it is tapped.
     transport.on('GET', SAME_LEVEL_PATH, () =>
-      json<Wire['SameLevelResponse']>({ players: [ZOFIA, { ...KUBA, relation: 'SENT' }] }),
+      json<Wire['SameLevelResponse']>({
+        players: [ZOFIA, { ...KUBA, relation: 'SENT' }],
+        total: 2,
+      }),
     );
     await act(() => queryClient.invalidateQueries({ queryKey: ['discovery'] }));
     expect(await round(KUBA, 'SENT')).toBeTruthy();
@@ -501,6 +504,7 @@ describe('a request from Same competitive level, in Needs your answer', () => {
     reliability_band: 'VERY_HIGH',
     percent_even: 91,
     in_common: null,
+    levels: [],
     ...over,
   });
 

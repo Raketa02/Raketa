@@ -193,7 +193,22 @@ peeking. A lone tile takes the content width. It reads the face, *Inés D. wants
 two lines at most, and the reliability chip on its own line under the title. **Not now** and
 **Accept** sit at its foot. **The where-line and every found-by line are gone from it**: *With you in
 Kazimierz crew · Padel 3,40*, *Invited you to Raketa*, *Found you in the padel ranking* and the Home
-rows' three. Until #818 lands, nothing stands in their place.
+rows' three. ~~Until #818 lands, nothing stands in their place.~~ The sport-levels line does, since
+#818 (below).
+
+*(Since 2026-11-17, [#818](https://github.com/Raketa02/Raketa/issues/818):)* **The tile reads the
+face, *Inés D. wants to be your friend*, the sport-levels line under it, then the reliability chip.**
+- **Each sport** is its dot, its name and its Level — *● Padel 3,40* — in small grey mono, the numbers
+  tabular with a decimal comma, **in the order the server sends them**. A `·` stands between two
+  sports and goes with the one before it, so a line that wraps ends in one.
+- **It wraps a sport at a time, and takes two lines at most.** A sport that doesn't fit starts the
+  next line whole; what a third line would hold isn't drawn. Two lines are two lines at whatever text
+  size the phone is set to.
+- **No level, no line**: the title and the chip close up.
+- **The buttons stay level** across a rail of tiles with no line, one line or two: every tile stands as
+  tall as the tallest, its buttons at its foot.
+- **A screen reader** reads the title and the levels as one: *ines.d wants to be your friend, Padel
+  3,40, Tennis 2,90*, every sport included.
 
 #### 6.3 The sender's game, in Your games (designed, no mock)
 

@@ -641,6 +641,7 @@ describe('Needs your answer', () => {
     reliability_band: 'VERY_HIGH',
     percent_even: null,
     in_common: null,
+    levels: [],
   };
   const KUBA_ASKS: Wire['HomeLevelAskSchema'] = {
     sport: 'SQUASH',

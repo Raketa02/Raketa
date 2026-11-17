@@ -376,6 +376,8 @@ describe('which sport it opens on', () => {
       await homeHeld;
       return json<Wire['HomeResponse']>({
         read_at: '2026-11-15T08:00:00Z',
+        payments_to_confirm: [],
+        needs_your_answer: { new_count: 0, watermark: null },
         needing_you: 0,
         games: [],
         friend_requests: [],

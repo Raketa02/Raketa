@@ -1653,6 +1653,7 @@ describe('a friend’s notices', () => {
     reliability_band: 'VERY_HIGH',
     percent_even: null,
     in_common: null,
+    levels: [],
   };
   const REQUEST = notice({
     kind: 'FRIEND_REQUEST',

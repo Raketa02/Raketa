@@ -131,6 +131,7 @@ const ANIAS_REQUEST: Wire['HomeFriendRequestSchema'] = {
   reliability_band: 'VERY_HIGH',
   percent_even: null,
   in_common: null,
+  levels: [],
 };
 
 /** A share refused while the reader was elsewhere, waiting in *TO CONFIRM*. */

@@ -240,6 +240,9 @@ export type RequestFoundBy =
  * absent where the wire says nothing: a request found by a link, the ranking or a Home row says where
  * in place of the group (`foundBy`); a request asked from a screen with no group names none, and
  * neither does one either of them has since left.
+ *
+ * Since #818 the tile in Needs your answer draws none of the where: it reads `levels` instead —
+ * *● Padel 3,40 · ● Tennis 2,90* (ADR-0205 §1). The where is still read, as the wire still serves it.
  */
 export interface HomeFriendRequest {
   readonly playerId: string;
@@ -259,6 +262,18 @@ export interface HomeFriendRequest {
   readonly playerScore: number;
   /** The band the server put it in — absent where this build cannot name the code. */
   readonly reliabilityBand?: ReliabilityBand;
+  /**
+   * **Every sport they hold a published Level in, with that Level** (#818; ADR-0205 §1, §10) — the
+   * tile's sport-levels line, in the order served, which is the app's sport order. Empty when they
+   * hold none, and the line is left out.
+   */
+  readonly levels: readonly HomeFriendRequestLevel[];
+}
+
+/** One sport on a request's sport-levels line — *● Padel 3,40*. */
+export interface HomeFriendRequestLevel {
+  readonly sport: Sport;
+  readonly level: number;
 }
 
 /**

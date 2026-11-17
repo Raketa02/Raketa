@@ -88,6 +88,13 @@
  * and they can add you to a game._ and _You're on question 5._ are no longer drawn, so no longer
  * spelled here.
  *
+ * And these, written in by #818 (the sport-levels line; the words §29.2):
+ *
+ * - **The `·` between two sports goes with the one before it** (`sportLevelEntries`), so a line that
+ *   wraps ends in one rather than starting with one.
+ * - **The tile's spoken name** (`requestTileLabel`): who asks, then every sport and its Level — the
+ *   dots are colour, and say nothing.
+ *
  * ## The whole nickname, and no pronoun
  *
  * ADR-0199 §1: every sentence naming somebody uses the whole nickname, never with an @. And no
@@ -317,6 +324,35 @@ export function requestsHeading(count: number): string {
 /** *Inés D. wants to be your friend* — the card's first line, and a request notice's title. */
 export function wantsToBeYourFriend(nickname: string): string {
   return `${nickname} wants to be your friend`;
+}
+
+/** A sport on a request's sport-levels line, named — `sportLabel`'s *Padel* — with its Level. */
+export interface NamedLevel {
+  readonly name: string;
+  readonly level: number;
+}
+
+/**
+ * *Padel 3,40 ·* · *Tennis 2,90* — **a friend request's sport-levels line** (#818; the words §29.2),
+ * one entry per sport, its dot drawn before it. Every entry but the last carries the `·` before the
+ * next, so a line that wraps ends in one rather than starting with one.
+ */
+export function sportLevelEntries(levels: readonly NamedLevel[]): readonly string[] {
+  return levels.map((one, at) => {
+    const entry = sportLevel(one.name, one.level);
+    return at < levels.length - 1 ? `${entry} ·` : entry;
+  });
+}
+
+/**
+ * *ines.d wants to be your friend, Padel 3,40, Tennis 2,90* — **a request tile, spoken** (#818): who
+ * asks, then every sport they play with its Level, as drawn. The dots are colour, and say nothing.
+ */
+export function requestTileLabel(nickname: string, levels: readonly NamedLevel[]): string {
+  return [
+    wantsToBeYourFriend(nickname),
+    ...levels.map((one) => sportLevel(one.name, one.level)),
+  ].join(', ');
 }
 
 /** *Asked you · 2* — the one tab that counts, while requests wait; *Asked you* alone at nought. */

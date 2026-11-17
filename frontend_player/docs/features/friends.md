@@ -471,7 +471,7 @@ busy rules and re-reads are unchanged.
   3,40 ·_, _Invited you to Raketa_, _Found you in the padel ranking_ and the three Home rows' lines are
   gone, and so is `whereLine` with its words. `proposals` still maps `foundBy`, the group and the one
   sport, since the server still serves them; nothing here draws them. #818 adds the sender's sport
-  levels.
+  levels (below).
 - **An ask says its title and nothing under it**: _A few questions, and they can add you to a game._
   and _You're on question 5._ are gone; the button still reads **Carry on** for a run left halfway.
 - **The coral button's start is the shell's to run.** It navigates, and nothing in a sheet reads the
@@ -487,3 +487,41 @@ request arriving while it is open, the record over it) and `levelAsks.test.tsx` 
 button closing the sheet and starting, Not now, and _Get your level on Home_ with and without an ask).
 **Not seen on a device**: both tiles against mock 2, two lines of title, the buttons level across a
 rail of two.
+
+## A friend request names every sport the sender plays (#818)
+
+**The tile reads what the sender plays, under who asks** ([#818](https://github.com/Raketa02/Raketa/issues/818),
+PRD #810; ADR-0205 §1, §10; Q28): _ines.d wants to be your friend_, then _● Padel 3,40 · ● Tennis
+2,90_, then the chip. It is #814's `levels` on each of Home's `friend_requests`, which `proposals`
+maps onto `HomeFriendRequest.levels` — every sport the sender holds a published Level in, **in the
+order served**, the app's sport order, which nothing here re-sorts. A sport this build cannot name is
+dropped, and a server older than #814 sends none, so no line.
+
+- **Each sport is its dot, its name and its Level**, drawn as New in Raketa's tile draws a sport (a
+  `sportDot` before the words), in the muted tiny mono the where-line stood in, tabular as every
+  figure. The `·` between two sports is held to the one before it, so a line that wraps ends in one
+  rather than starting with one (`sportLevelEntries`, a call).
+- **Two lines at most, a sport never split.** The entries wrap whole, and the line is capped at two of
+  its own lines, scaled by the phone's text size (`useWindowDimensions().fontScale`), since React
+  Native scales a text's line height with its size: a larger text setting draws two larger lines,
+  never one and a half. What a third line would hold is not drawn: by the mono's advance, four
+  sports should fit two lines on a 393pt phone, and a narrower one may drop the last (an estimate,
+  not a measurement). `numberOfLines` cannot do it, as the line is a row of dots and words, not one
+  text. A sport too wide for a whole line, at a large text size on a narrow phone, is held to the
+  line's width and ends in an ellipsis rather than running past the tile with its Level cut off.
+- **No Level, no line**: the title and the chip close up, as before #818.
+- **Buttons stay level.** The title, the line and the chip are each held, so the tallest tile has a
+  bound, and #816's frame stands every tile as tall as it with the buttons at its foot.
+- **Spoken**, who asks and the levels are one element, _ines.d wants to be your friend, Padel 3,40,
+  Tennis 2,90_ (`requestTileLabel`, a call), every sport included, those a third line would hold too.
+  The face, the chip and the two buttons keep their own names.
+- **The request's own `sport` and `level` are still mapped and never drawn**: they are an older app's,
+  and `level` is the entry in `levels` for `sport`.
+
+`friends.test.tsx` walks it (_the sport-levels line_): two sports in order, with their dots and mono
+figures; the spoken name; no line without a Level; four sports wrapping, held to two lines; and tiles
+with no line, one and two side by side, the rail stretching them and each one's buttons at its foot.
+The fixtures of every suite that serves Home, a row or a request were brought up to the regenerated
+contract (#812–#815's `total`, `needs_your_answer`, `payments_to_confirm` and `levels`).
+**Not seen on a device**: the line against mock 2's subtitle, the wrap and the cap on a narrow phone
+and at a large text size, the dots' alignment with the mono figures.

@@ -815,7 +815,7 @@ export function stubHottestGroups(
   groups: readonly Wire['HottestGroupSchema'][] = [],
 ) {
   transport.on('GET', HOTTEST_GROUPS_PATH, () =>
-    json<Wire['HottestGroupsResponse']>({ groups: [...groups] }),
+    json<Wire['HottestGroupsResponse']>({ groups: [...groups], total: groups.length }),
   );
 }
 
@@ -829,7 +829,7 @@ export function stubNewInRaketa(
   players: readonly Wire['NewInRaketaPlayerSchema'][] = [],
 ) {
   transport.on('GET', NEW_IN_RAKETA_PATH, () =>
-    json<Wire['NewInRaketaResponse']>({ players: [...players] }),
+    json<Wire['NewInRaketaResponse']>({ players: [...players], total: players.length }),
   );
 }
 
@@ -843,7 +843,7 @@ export function stubSameLevel(
   players: readonly Wire['SameLevelPlayerSchema'][] = [],
 ) {
   transport.on('GET', SAME_LEVEL_PATH, () =>
-    json<Wire['SameLevelResponse']>({ players: [...players] }),
+    json<Wire['SameLevelResponse']>({ players: [...players], total: players.length }),
   );
 }
 
@@ -857,7 +857,7 @@ export function stubSameVibe(
   players: readonly Wire['SameVibePlayerSchema'][] = [],
 ) {
   transport.on('GET', SAME_VIBE_PATH, () =>
-    json<Wire['SameVibeResponse']>({ players: [...players] }),
+    json<Wire['SameVibeResponse']>({ players: [...players], total: players.length }),
   );
 }
 
@@ -1202,6 +1202,8 @@ export function stubHome(transport: Transport, home: Partial<Wire['HomeResponse'
       friend_requests: [],
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       ...home,
     }),
   );

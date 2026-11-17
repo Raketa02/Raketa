@@ -12,6 +12,9 @@
  * - **Needs your answer** (#816): *FRIEND REQUESTS · n* behind the header's envelope while a request
  *   waits, never on Home — *Not now* and *Accept* take the tile, and the last one closes the sheet
  *   and takes the envelope with it. A tile says who asks and their chip, and no where-line.
+ * - **The sport-levels line** (#818): *● Padel 3,40 · ● Tennis 2,90* under the title, every sport
+ *   the sender holds a Level in, in the order served, two lines at most and none without a Level; the
+ *   tile speaks it, and its buttons stay level with a tile that has none.
  *
  * **The friends routes are answered by a small fake of the server** (`friendServer`): an act changes
  * what the next read of Members, the record and Home says, as it would — so the pill that turns after
@@ -260,25 +263,11 @@ function friendServer(
       games: [],
       friends_games: [],
       level_asks: [],
-      friend_requests: waiting().map((who) => ({
-        player_id: who.id,
-        nickname: who.name,
-        photo_id: null,
-        photo_url: null,
-        asked_at: '2026-10-01T07:00:00Z',
-        by_link: false,
-        from_ranking: false,
-        from_new_players: false,
-        from_same_level: false,
-        from_same_vibe: false,
-        group: { id: CREW.id, name: CREW.name },
-        sport: 'PADEL',
-        level: who.level,
-        player_score: who.score,
-        reliability_band: 'VERY_HIGH',
-        percent_even: null,
-        in_common: null,
-      })),
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
+      friend_requests: waiting().map((who) =>
+        request(who, { group: { id: CREW.id, name: CREW.name } }),
+      ),
     }),
   );
 
@@ -632,7 +621,10 @@ function tileWidth(who: Person): unknown {
 
 const content = () => Dimensions.get('window').width - 2 * theme.size.gutter;
 
-/** A request waiting on Tomek, as Home's read serves it — found by `found`, in no group. */
+/**
+ * A request waiting on Tomek, as Home's read serves it — found by `found`, in no group. They hold a
+ * padel Level alone, which is the entry for the request's own `sport`, as the server serves it.
+ */
 function request(
   who: Person,
   found: Partial<Wire['HomeFriendRequestSchema']> = {},
@@ -655,8 +647,26 @@ function request(
     reliability_band: 'VERY_HIGH',
     percent_even: null,
     in_common: null,
+    levels: [{ sport: 'PADEL', level: who.level }],
     ...found,
   };
+}
+
+/** A tile's sport-levels line, or `null` where it draws none. */
+const levelsLine = (who: Person) =>
+  within(screen.getByTestId(`friend-request-${who.id}`)).queryByTestId('sport-levels');
+
+/** Each sport on a tile's line, as drawn, in the order drawn. */
+const levelEntries = (who: Person) =>
+  within(screen.getByTestId(`friend-request-${who.id}`))
+    .queryAllByTestId(/^sport-level-/)
+    .map((entry) => within(entry).getByText(/\d,\d\d/));
+
+/** The rail the tile stands on — the horizontal scroll holding every tile in the section. */
+function railOf(who: Person) {
+  let node = screen.getByTestId(`friend-request-${who.id}`).parent;
+  while (node !== null && node.props.contentContainerStyle === undefined) node = node.parent;
+  return node;
 }
 
 describe('FRIEND REQUESTS in Needs your answer', () => {
@@ -683,9 +693,8 @@ describe('FRIEND REQUESTS in Needs your answer', () => {
     expect(tile.getByRole('button', { name: ZOFIA.name })).toBeTruthy();
     expect(tile.getByText(wantsToBeYourFriend(ZOFIA.name)).props.numberOfLines).toBe(2);
     expect(tile.getByText('95')).toBeTruthy();
-    // The group, the sport and the Level they were sent from are no longer drawn (ADR-0205 §1).
+    // The group they were sent from is no longer drawn (ADR-0205 §1); their levels are (#818).
     expect(screen.queryByText(/With you in/)).toBeNull();
-    expect(screen.queryByText(/Padel 2,69/)).toBeNull();
     expect(screen.getByRole('button', { name: notNowLabel(ZOFIA.name) })).toBeTruthy();
     expect(screen.getByRole('button', { name: acceptLabel(ZOFIA.name) })).toBeTruthy();
   });
@@ -694,8 +703,8 @@ describe('FRIEND REQUESTS in Needs your answer', () => {
     friendServer();
     stubHome(transport, {
       friend_requests: [
-        request(ZOFIA, { by_link: true, sport: null, level: null }),
-        request(INES, { from_ranking: true }),
+        request(ZOFIA, { by_link: true, sport: null, level: null, levels: [] }),
+        request(INES, { from_ranking: true, levels: [] }),
       ],
     });
     await launchSignedIn();
@@ -704,7 +713,8 @@ describe('FRIEND REQUESTS in Needs your answer', () => {
     expect(screen.getByRole('header', { name: requestsHeading(2) })).toBeTruthy();
     expect(tileWidth(ZOFIA)).toBeCloseTo(content() * theme.size.requestCardRatio);
     expect(tileWidth(INES)).toBeCloseTo(content() * theme.size.requestCardRatio);
-    // Neither where they were found nor the sport they were asked from (ADR-0205 §1).
+    // Neither where they were found nor the sport they were asked from (ADR-0205 §1): the request's
+    // own `sport` and `level` are an older app's, and only `levels` is drawn (#818).
     expect(screen.queryByText('Invited you to Raketa')).toBeNull();
     expect(screen.queryByText('Found you in the padel ranking')).toBeNull();
     expect(screen.queryByText(/Padel 3,40/)).toBeNull();
@@ -818,5 +828,123 @@ describe('FRIEND REQUESTS in Needs your answer', () => {
     await waitFor(() => expect(screen.queryByText(RECORD_TITLE)).toBeNull());
     expect(sheetTitle()).toBeNull();
     expect(envelope()).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The sport-levels line (#818; ADR-0205 §1; the screens §6.2)
+// ---------------------------------------------------------------------------
+
+describe('FRIEND REQUESTS — the sport-levels line', () => {
+  /** Inés's two sports, as the server serves them: the app's sport order. */
+  const TWO: Wire['HomeFriendRequestLevelSchema'][] = [
+    { sport: 'PADEL', level: 3.4 },
+    { sport: 'TENNIS', level: 2.9 },
+  ];
+  /** Every sport there is — more than one line holds on a tile. */
+  const FOUR: Wire['HomeFriendRequestLevelSchema'][] = [
+    ...TWO,
+    { sport: 'SQUASH', level: 3.1 },
+    { sport: 'BADMINTON', level: 2.5 },
+  ];
+
+  /** The requests waiting, as Home's read serves them — no relation behind them is pressed here. */
+  async function openWith(requests: readonly Wire['HomeFriendRequestSchema'][]) {
+    stubHome(transport, { friend_requests: [...requests] });
+    await launchSignedIn();
+    await openNeedsYourAnswer();
+  }
+
+  it('names two sports in the order served: each its dot, its name and its Level, mono', async () => {
+    await openWith([request(INES, { levels: TWO })]);
+
+    const entries = levelEntries(INES);
+    // A decimal comma, and the dot between two sports, held to the sport before it.
+    expect(entries.map((entry) => entry.props.children)).toEqual(['Padel 3,40 ·', 'Tennis 2,90']);
+    for (const entry of entries) {
+      // Mono and tabular, as every figure: the line does not reflow when a Level moves.
+      expect(StyleSheet.flatten(entry.props.style)).toMatchObject({
+        fontFamily: theme.num.tiny.fontFamily,
+        fontVariant: theme.tabular.fontVariant,
+      });
+    }
+    const tile = within(screen.getByTestId(`friend-request-${INES.id}`));
+    expect(StyleSheet.flatten(tile.getByTestId('sport-dot-padel').props.style)).toMatchObject({
+      backgroundColor: theme.sport.padel,
+    });
+    expect(StyleSheet.flatten(tile.getByTestId('sport-dot-tennis').props.style)).toMatchObject({
+      backgroundColor: theme.sport.tennis,
+    });
+  });
+
+  it('speaks the levels in the tile’s name, after who asks', async () => {
+    await openWith([request(INES, { levels: TWO })]);
+
+    const tile = within(screen.getByTestId(`friend-request-${INES.id}`));
+    expect(
+      tile.getByLabelText('ines.d wants to be your friend, Padel 3,40, Tennis 2,90'),
+    ).toBeTruthy();
+  });
+
+  it('draws no line for a sender who holds no level, and the tile says who asks alone', async () => {
+    await openWith([request(INES, { levels: [] })]);
+
+    expect(levelsLine(INES)).toBeNull();
+    const tile = within(screen.getByTestId(`friend-request-${INES.id}`));
+    expect(tile.getByLabelText(wantsToBeYourFriend(INES.name))).toBeTruthy();
+    // The rest of the tile stands as it was.
+    expect(tile.getByText('98')).toBeTruthy();
+    expect(screen.getByRole('button', { name: acceptLabel(INES.name) })).toBeTruthy();
+  });
+
+  it('wraps four sports onto two lines at most, a sport at a time', async () => {
+    await openWith([request(INES, { levels: FOUR })]);
+
+    expect(levelEntries(INES).map((entry) => entry.props.children)).toEqual([
+      'Padel 3,40 ·',
+      'Tennis 2,90 ·',
+      'Squash 3,10 ·',
+      'Badminton 2,50',
+    ]);
+    // A sport that does not fit starts the next line, whole; nothing past the second is shown — two
+    // of the line's own lines, at the size the phone sets its text.
+    expect(StyleSheet.flatten(levelsLine(INES)?.props.style)).toMatchObject({
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      overflow: 'hidden',
+      maxHeight: 2 * theme.num.tiny.lineHeight * Dimensions.get('window').fontScale,
+    });
+    // A sport too wide for a whole line ends in an ellipsis, never past the tile's edge.
+    const badminton = within(levelsLine(INES)!).getByTestId('sport-level-badminton');
+    expect(StyleSheet.flatten(badminton.props.style)).toMatchObject({ maxWidth: '100%' });
+    const figure = within(badminton).getByText('Badminton 2,50');
+    expect(figure.props.numberOfLines).toBe(1);
+    expect(StyleSheet.flatten(figure.props.style)).toMatchObject({ flexShrink: 1 });
+    expect(
+      screen.getByLabelText(
+        'ines.d wants to be your friend, Padel 3,40, Tennis 2,90, Squash 3,10, Badminton 2,50',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('keeps the buttons level across tiles with no line, one line and two', async () => {
+    await openWith([
+      request(INES, { levels: FOUR }),
+      request(ZOFIA, { levels: [] }),
+      request(KUBA, { levels: [{ sport: 'PADEL', level: KUBA.level }] }),
+    ]);
+
+    expect(levelEntries(INES)).toHaveLength(4);
+    expect(levelsLine(ZOFIA)).toBeNull();
+    expect(levelEntries(KUBA).map((entry) => entry.props.children)).toEqual(['Padel 2,80']);
+    // Every tile as tall as the tallest, and each one's buttons at its foot (Q3).
+    for (const who of [INES, ZOFIA, KUBA]) {
+      expect(StyleSheet.flatten(railOf(who)?.props.contentContainerStyle)).toMatchObject({
+        alignItems: 'stretch',
+      });
+      expect(
+        StyleSheet.flatten(screen.getByTestId(`friend-request-answers-${who.id}`).props.style),
+      ).toMatchObject({ marginTop: 'auto' });
+    }
   });
 });

@@ -65,6 +65,8 @@ describe('toHome', () => {
       needing_you: 2,
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: [],
       games: [
         homeGame({
@@ -136,6 +138,8 @@ describe('toHome', () => {
       needing_you: 0,
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: [],
       games: [
         homeGame({
@@ -173,6 +177,8 @@ describe('toHome', () => {
       needing_you: 0,
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: [],
       games: [
         homeGame({
@@ -194,6 +200,8 @@ describe('toHome', () => {
       needing_you: 0,
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: [],
       games: [
         homeGame({ status: 'WAITING_FOR_A_PAYMENT', payment_due_by: '2026-10-06T12:40:00Z' }),
@@ -222,6 +230,8 @@ describe('toHome', () => {
       needing_you: 0,
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: [],
       games: [
         homeGame({ your_payment_due_by: '2026-10-06T12:40:00Z', time_to: 'FIX_THE_CARD' }),
@@ -256,6 +266,8 @@ describe('toHome', () => {
       needing_you: 0,
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: [],
       games: [homeGame(), homeGame({ money: checked }), homeGame({ money: OLDER_MONEY })],
     }).games;
@@ -280,6 +292,8 @@ describe('toHome', () => {
       needing_you: 1,
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: [],
       games: [
         homeGame({
@@ -320,6 +334,8 @@ describe('toHome', () => {
       needing_you: 0,
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: [],
       games: [
         homeGame({ status: 'SEAT_OPEN', open_seats: 1, filling_again: true }),
@@ -339,6 +355,8 @@ describe('toHome', () => {
       needing_you: 0,
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: [],
       games: [
         homeGame({
@@ -364,6 +382,8 @@ describe('toHome', () => {
       needing_you: 0,
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: [],
       games: [homeGame({ sport: 'CURLING' as Wire['Sport'] }), homeGame({ booking_id: 'b-2' })],
     });
@@ -393,6 +413,7 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
     reliability_band: 'VERY_HIGH',
     percent_even: null,
     in_common: null,
+    levels: [{ sport: 'PADEL', level: 3.4 }],
     ...extra,
   });
   const home = (requests: Wire['HomeFriendRequestSchema'][]) =>
@@ -402,6 +423,8 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
       games: [],
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: requests,
     });
 
@@ -418,6 +441,7 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
         level: 3.4,
         playerScore: 98,
         reliabilityBand: 'VERY_HIGH',
+        levels: [{ sport: 'padel', level: 3.4 }],
       },
       expect.objectContaining({ playerId: 'p-2', nickname: 'kuba.w' }),
     ]);
@@ -425,8 +449,16 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
 
   it('leaves off what the wire left null — a link’s request names no group and no sport', () => {
     expect(
-      home([request({ by_link: true, group: null, sport: null, level: null, photo_url: null })])
-        .friendRequests,
+      home([
+        request({
+          by_link: true,
+          group: null,
+          sport: null,
+          level: null,
+          photo_url: null,
+          levels: [],
+        }),
+      ]).friendRequests,
     ).toEqual([
       {
         playerId: 'p-ines',
@@ -434,8 +466,53 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
         foundBy: { kind: 'link' },
         playerScore: 98,
         reliabilityBand: 'VERY_HIGH',
+        levels: [],
       },
     ]);
+  });
+
+  describe('every sport the sender holds a level in (#818; ADR-0205 §1, §10)', () => {
+    it('reads each sport and its level, in the order served — nothing here re-sorts them', () => {
+      const [read] = home([
+        request({
+          levels: [
+            { sport: 'TENNIS', level: 2.9 },
+            { sport: 'PADEL', level: 3.4 },
+          ],
+        }),
+      ]).friendRequests;
+
+      expect(read?.levels).toEqual([
+        { sport: 'tennis', level: 2.9 },
+        { sport: 'padel', level: 3.4 },
+      ]);
+    });
+
+    it('reads none for a sender who holds no level', () => {
+      expect(home([request({ levels: [] })]).friendRequests[0]?.levels).toEqual([]);
+    });
+
+    it('drops a sport this build cannot name, and keeps the rest', () => {
+      const [read] = home([
+        request({
+          levels: [
+            { sport: 'CURLING' as Wire['Sport'], level: 2.1 },
+            { sport: 'SQUASH', level: 3.1 },
+          ],
+        }),
+      ]).friendRequests;
+
+      expect(read?.levels).toEqual([{ sport: 'squash', level: 3.1 }]);
+    });
+
+    it('reads none from a server older than #814, which sends no list', () => {
+      const older = { ...request() } as Partial<Wire['HomeFriendRequestSchema']>;
+      delete older.levels;
+
+      expect(home([older as Wire['HomeFriendRequestSchema']]).friendRequests[0]?.levels).toEqual(
+        [],
+      );
+    });
   });
 
   it('reads a request from the ranking with the ranking’s sport, and no group (#779)', () => {
@@ -486,6 +563,8 @@ describe('toSeat — the friend tag (#753)', () => {
       needing_you: 0,
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       friend_requests: [],
       games: [homeGame({ sides: { yours: [tile({ friend: true })], theirs: [tile()] } })],
     }).games[0]!.sides.yours.concat(
@@ -494,6 +573,8 @@ describe('toSeat — the friend tag (#753)', () => {
         needing_you: 0,
         friends_games: [],
         level_asks: [],
+        payments_to_confirm: [],
+        needs_your_answer: { new_count: 0, watermark: null },
         friend_requests: [],
         games: [homeGame({ sides: { yours: [tile()], theirs: [] } })],
       }).games[0]!.sides.yours,
@@ -735,6 +816,8 @@ describe('a friends game (#759)', () => {
     friend_requests: [],
     friends_games: [],
     level_asks: [],
+    payments_to_confirm: [],
+    needs_your_answer: { new_count: 0, watermark: null },
     ...extra,
   });
 
@@ -890,6 +973,8 @@ describe('toHome — a friend’s ask for a level waiting on the reader (#765)',
     friend_requests: [],
     friends_games: [],
     level_asks: asks,
+    payments_to_confirm: [],
+    needs_your_answer: { new_count: 0, watermark: null },
   });
 
   it('reads one card per sport in the order served, its askers newest first', () => {
@@ -947,6 +1032,8 @@ describe('toHome — the trophy left of the bell (#775)', () => {
     friend_requests: [],
     friends_games: [],
     level_asks: [],
+    payments_to_confirm: [],
+    needs_your_answer: { new_count: 0, watermark: null },
     ...(ranking === undefined ? {} : { ranking }),
   });
 

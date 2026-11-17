@@ -2720,7 +2720,9 @@ and the cut at the right edge is the affordance ([7.36](#736-top-10-the-numbered
 mock, the tile 450 of the content's 540 pixels. It holds **the request tile in Needs your answer**:
 a friend request, and the ask for a level drawn as one. Face, a title held to two lines, the chip,
 and two buttons were squeezed at 0,74, and their buttons stood at different heights from tile to
-tile. So the rail stands **every tile as tall as the tallest** (the strip's `alignItems: stretch`,
+tile. (A request's sport-levels line, under its title since [#818](https://github.com/Raketa02/Raketa/issues/818),
+is held to two lines too — its sports wrap whole, in `num.tiny` mono with a `sportDot` each — so the
+tallest tile still has a bound.) So the rail stands **every tile as tall as the tallest** (the strip's `alignItems: stretch`,
 said aloud) and each tile holds its buttons at its foot with `marginTop: auto`, the last-hairline
 rule above, so **the buttons sit level across tiles**. The next tile's edge, 0,17 less the gap, is
 still the affordance. **A lone tile takes the content width**, as on the peeking rail; it scrolls

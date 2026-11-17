@@ -137,7 +137,7 @@ function vibeServer(
 
   stubGate(transport, { hasPlayerProfile: true });
   transport.on('GET', SAME_VIBE_PATH, () =>
-    json<Wire['SameVibeResponse']>({ players: [...people] }),
+    json<Wire['SameVibeResponse']>({ players: [...people], total: people.length }),
   );
   transport.on('GET', SAME_VIBE_ALL_PATH, (request) => {
     const query = new URLSearchParams(request.path.split('?')[1] ?? '');
@@ -386,7 +386,7 @@ describe('a tile', () => {
     const ZOSIA = vibe(4, 'zosia.p', ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'HERE_TO_IMPROVE']);
     transport.on('POST', REQUESTS_PATH, () => {
       transport.on('GET', SAME_VIBE_PATH, () =>
-        json<Wire['SameVibeResponse']>({ players: [ZOSIA, KAROL, ANIA] }),
+        json<Wire['SameVibeResponse']>({ players: [ZOSIA, KAROL, ANIA], total: 3 }),
       );
       return json<Wire['RelationResponse']>({ relation: 'SENT' });
     });
@@ -487,7 +487,7 @@ describe('the vibe sheet', () => {
     // Asking Kuba from his record makes him a gap, and a fresh match takes his place among the ten.
     transport.on('POST', REQUESTS_PATH, () => {
       transport.on('GET', SAME_VIBE_PATH, () =>
-        json<Wire['SameVibeResponse']>({ players: [KAROL, ANIA] }),
+        json<Wire['SameVibeResponse']>({ players: [KAROL, ANIA], total: 2 }),
       );
       return json<Wire['RelationResponse']>({ relation: 'SENT' });
     });
@@ -552,6 +552,7 @@ describe('a request from Same vibe, in Needs your answer', () => {
     reliability_band: 'VERY_HIGH',
     percent_even: null,
     in_common: 6,
+    levels: [],
     ...over,
   });
 

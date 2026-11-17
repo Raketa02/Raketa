@@ -155,7 +155,7 @@ function peopleServer(
 
   stubGate(transport, { hasPlayerProfile: true });
   transport.on('GET', NEW_IN_RAKETA_PATH, () =>
-    json<Wire['NewInRaketaResponse']>({ players: [...people] }),
+    json<Wire['NewInRaketaResponse']>({ players: [...people], total: people.length }),
   );
   transport.on('GET', NEW_IN_RAKETA_ALL_PATH, (request) => {
     const query = new URLSearchParams(request.path.split('?')[1] ?? '');
@@ -512,7 +512,10 @@ describe('the round friend button', () => {
 
     // Piotr's request is answered elsewhere: the read says nothing stands between them now…
     transport.on('GET', NEW_IN_RAKETA_PATH, () =>
-      json<Wire['NewInRaketaResponse']>({ players: [{ ...PIOTR, relation: 'NONE' }, BARTEK] }),
+      json<Wire['NewInRaketaResponse']>({
+        players: [{ ...PIOTR, relation: 'NONE' }, BARTEK],
+        total: 2,
+      }),
     );
     await act(() => queryClient.invalidateQueries({ queryKey: ['discovery'] }));
     expect(await round(PIOTR, 'NONE')).toBeTruthy();
@@ -520,7 +523,7 @@ describe('the round friend button', () => {
 
     // …and once it says sent again, the sheet stays shut until it is tapped.
     transport.on('GET', NEW_IN_RAKETA_PATH, () =>
-      json<Wire['NewInRaketaResponse']>({ players: [PIOTR, BARTEK] }),
+      json<Wire['NewInRaketaResponse']>({ players: [PIOTR, BARTEK], total: 2 }),
     );
     await act(() => queryClient.invalidateQueries({ queryKey: ['discovery'] }));
     expect(await round(PIOTR, 'SENT')).toBeTruthy();
@@ -551,6 +554,7 @@ describe('a request from New in Raketa, in Needs your answer (#816)', () => {
           reliability_band: 'VERY_HIGH',
           percent_even: null,
           in_common: null,
+          levels: [],
         },
       ],
     });
