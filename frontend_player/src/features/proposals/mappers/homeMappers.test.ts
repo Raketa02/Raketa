@@ -84,6 +84,8 @@ describe('toHome', () => {
       friendRequests: [],
       friendsGames: [],
       levelAsks: [],
+      paymentsToConfirm: [],
+      needsYourAnswer: { newCount: 0 },
       games: [
         {
           bookingId: 'b-1',
@@ -1058,5 +1060,74 @@ describe('toHome — the trophy left of the bell (#775)', () => {
       toHome(home({ sport: 'CURLING' as Wire['Sport'], general_place: 3, friends_place: null }))
         .ranking,
     ).toBeUndefined();
+  });
+});
+
+/**
+ * **Needs your answer on Home's read** (#819; #815's contract, ADR-0205 §3): *TO CONFIRM*'s rows —
+ * the same rows as the payments to confirm' own read, so the sheet is drawn from the one read its
+ * watermark covers — and the envelope's badge with that watermark, kept as served.
+ */
+describe('toHome — Needs your answer’s TO CONFIRM and its badge (#819)', () => {
+  const ROW: Wire['app__modules__proposals__presentation__schemas__PaymentToConfirmSchema'] = {
+    seat_charge_id: 'a2000000-0000-4000-8000-000000000001',
+    refusal: 'AUTHENTICATION_REQUIRED',
+    proposal_id: 'c0000000-0000-4000-8000-000000000001',
+    pool_id: 'group-1',
+    sport: 'PADEL',
+    kind: 'COMPETITIVE',
+    starts_at: '2026-10-03T14:00:00Z',
+    club: { id: 'club-1', name: 'Bonarka Arena' },
+    share_grosze: 3200,
+    book_by: '2026-10-02T11:00:00Z',
+    confirm_by: '2026-10-01T09:40:00Z',
+    time_to: 'PAY',
+  };
+  const wire = (extra: Partial<Wire['HomeResponse']> = {}): Wire['HomeResponse'] => ({
+    read_at: '2026-10-01T08:00:00Z',
+    needing_you: 1,
+    games: [],
+    friend_requests: [],
+    friends_games: [],
+    level_asks: [],
+    payments_to_confirm: [],
+    needs_your_answer: { new_count: 0, watermark: null },
+    ...extra,
+  });
+  const home = (extra: Partial<Wire['HomeResponse']>) => toHome(wire(extra));
+
+  it('reads TO CONFIRM’s rows as the payments to confirm are read', () => {
+    expect(home({ payments_to_confirm: [ROW] }).paymentsToConfirm).toEqual([
+      expect.objectContaining({
+        seatChargeId: ROW.seat_charge_id,
+        refusal: 'AUTHENTICATION_REQUIRED',
+        proposalId: ROW.proposal_id,
+        sport: 'padel',
+        shareGrosze: 3200,
+        confirmBy: '2026-10-01T09:40:00Z',
+        timeTo: 'PAY',
+      }),
+    ]);
+  });
+
+  it('reads the badge’s count and the watermark exactly as served', () => {
+    expect(
+      home({ needs_your_answer: { new_count: 2, watermark: '2026-10-01T07:59:00.120Z' } })
+        .needsYourAnswer,
+    ).toEqual({ newCount: 2, watermark: '2026-10-01T07:59:00.120Z' });
+  });
+
+  it('leaves the watermark off while nothing waits', () => {
+    expect(home({}).needsYourAnswer).toEqual({ newCount: 0 });
+  });
+
+  it('reads no rows and nothing new from a server older than #815, which sends neither', () => {
+    const older: Partial<Wire['HomeResponse']> = wire();
+    delete older.payments_to_confirm;
+    delete older.needs_your_answer;
+
+    const read = toHome(older as Wire['HomeResponse']);
+    expect(read.paymentsToConfirm).toEqual([]);
+    expect(read.needsYourAnswer).toEqual({ newCount: 0 });
   });
 });

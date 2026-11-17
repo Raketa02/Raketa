@@ -1515,3 +1515,67 @@ record's and the fill's two ways of doing it — a change of its own.
 rail's snap in a sheet; the confirmation, the setup and _It's a game!_ over the sheet on iOS (each
 inside it) and on Android (the overlay host's next layer); _It's a game!_ raised as the sheet's own
 tile leaves it.
+
+## What is new in Needs your answer, and the visit (#819)
+
+[ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§2, §3; home refactor 1; the backend's #815. **Home's envelope carries a count of what arrived since
+the player last closed Needs your answer**, kept on the server as the bell's is, so every phone
+agrees. This feature owns Home's read, the visit and its cache effect (`hooks/useNeedsYourAnswer.ts`);
+the shell draws the badge and says when the sheet went for good ([`shell.md`](shell.md)).
+
+- **Home's read carries it** (`needs_your_answer`): `newCount`, the badge, and **the read's
+  watermark**, the newest arrival among everything waiting, kept exactly as served — the visit hands
+  it back untouched, never re-formatted and never the phone's clock (`NeedsYourAnswerNews`,
+  `domain/home.ts`). No watermark while nothing waits; a server older than #815 reads as nothing new.
+- **TO CONFIRM moved onto Home's read**, so all four sections come from the one read the watermark
+  covers (`payments_to_confirm`, the same rows as `GET /players/me/payments-to-confirm`, read by the
+  same mapper, `toPaymentToConfirmRows`). Drawn from their own read, a payment Home's read covered
+  could be marked seen without the sheet having shown it; #815 served the rows on Home for that
+  reason, and its contract asks the sheet to draw them from there. **This replaces #817's _the read
+  is still its own_ above, and ADR-0205 §3's _To confirm's rows stay on their own read_**, which left
+  serving them on Home to the backend ticket. The decision log's rule holds the same way: a failed
+  read — now Home's — counts nothing and draws no envelope. **You › Payments, a booked game's details
+  and a rescue's keep their own read**, which starts from Home's rows wherever it holds none
+  (`usePaymentsToConfirm`'s `initialData`), stamped with Home's read's time so its words are said
+  against that read and it runs again once stale: Home no longer reads it all session, and a screen
+  that opened on a payment would draw _Pay_ for a moment before _Confirm_. Not a placeholder, whose
+  time is nought and would say _Saturday_ against 1970; not written in by each Home read either,
+  since an unobserved seed is collected after five minutes and the gap comes back.
+- **The visit names the watermark of the newest read the sheet was shown on** (`watermarkShown`,
+  `useNeedsYourAnswerVisit`): open — never beneath a record or a fill's sheet, whose scrim covers it,
+  so a read that lands under _It's a game!_ is still new after it. Every item of that read was on
+  screen, so whatever arrived while the sheet was open and a re-read brought in is seen, and whatever
+  reached the server after that read is still new. A read that comes once nothing waits has no
+  watermark, so the self-close after the last answer names the read that held it. Nothing shown,
+  nothing sent.
+- **The badge goes at the close, and nothing is written into Home's read** (`newCountAfter`): a read
+  whose watermark is no later than a visit this phone sent — on its way or recorded, read off the
+  mutation cache by the visit's key — holds nothing new. **Home is read again once the visit lands**,
+  so the badge is then what the server counts. A first version wrote _nothing new_ into the cached
+  read after stopping any read in flight; #819's review showed that the stopped read could be the one
+  taking an answered card off, that the write restarted Home's read clock and turned the countdowns
+  back, and that any read started before the visit landed put the badge back anyway. A visit that
+  fails for good counts for nothing, and the badge returns.
+- **Retried, and held while offline** (`retry: shouldRetryQuery`, the default `networkMode`), unlike
+  the fill's writes and the bell's visit: the route records a watermark only when it is later than
+  the last and answers `204` either way, so a repeat moves nothing, and a visit that lands late marks
+  seen only what the read it names showed.
+
+**Calls left as they are, from #819's review**: a row this build drops — a sport it cannot name, a
+refusal that does not wait for the player — is still in the server's count and watermark, so an old
+build may badge what it cannot draw and mark it seen, which only a newer build could have shown;
+_TO CONFIRM_'s tiles keep the phone's clock, as You › Payments' rows do, where Home's cards and
+FRIENDS GAME run on the read's — the tile and the row say one thing (`toConfirmWords`); and the
+envelope's figure and name repeat the bell's rule in `shell`'s copy rather than sharing it, two
+callers being short of the third that would earn a shared home.
+
+The walks: `shell`'s `envelopeCount.test.tsx`, over a server faked by #815's rules — the badge, its
+cap and the spoken name; the visit on ✕, the backdrop, a pull, the self-close, _Get your level_ and a
+sheet a notice opened, and none for stepping aside under a record; the badge gone at once while the
+visit is in flight, Home read after it, the envelope staying; a read landing before the visit
+keeping it gone, and a visit refused for good bringing it back; an arrival shown while open seen,
+one the phone never read coming back as new; and _TO CONFIRM_ drawn from Home's read. The rules are
+unit-tested in `domain/home.test.ts` and the shell's `domain/needsYourAnswer.test.ts`. The harness's
+Home serves the payments to confirm' rows unless a suite names its own (`stubHome`), as the server
+does. **Not seen on a device**: the badge on the envelope against mock 1.

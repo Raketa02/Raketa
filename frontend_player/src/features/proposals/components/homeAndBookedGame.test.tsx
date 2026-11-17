@@ -54,7 +54,6 @@ import {
   GATE_USER,
   HOME_PATH,
   HOME_TAB_LINE,
-  PAYMENTS_TO_CONFIRM_PATH,
   bookingPath,
   launchSignedIn,
   stubConversation,
@@ -737,16 +736,17 @@ describe('TO CONFIRM in Needs your answer (#817)', () => {
     ).toHaveLength(2);
   });
 
-  /** ADR-0205 §3: a failed read counts nothing, and Home's usual re-reads retry. */
-  it('draws no envelope for a To confirm read that failed', async () => {
-    transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () => errorResponse(429, 'rate_limited'));
-    stubHomeGames(transport, [], { needing_you: 1 });
+  /**
+   * ADR-0205 §3 and #819: the rows ride on Home's read, the one the visit's watermark covers, so a
+   * failed Home read counts nothing — whatever the payments' own read holds — and Home's usual
+   * re-reads retry.
+   */
+  it('draws no envelope while Home’s read fails, though the payments’ own read holds one', async () => {
+    stubPaymentsToConfirm(transport, [payment()]);
+    transport.on('GET', HOME_PATH, () => errorResponse(429, 'rate_limited'));
     await launchSignedIn();
 
-    await waitFor(() =>
-      expect(transport.requestsTo('GET', PAYMENTS_TO_CONFIRM_PATH).length).toBeGreaterThan(0),
-    );
-    await screen.findByText('Your games · 0');
+    expect(await screen.findByRole('alert')).toBeTruthy();
     expect(envelope()).toBeNull();
     expect(screen.queryByTestId('to-confirm')).toBeNull();
   });

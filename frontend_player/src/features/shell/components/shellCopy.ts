@@ -57,6 +57,29 @@ export const NEEDS_YOUR_ANSWER_COPY = {
   close: 'Close Needs your answer',
 } as const;
 
+/** The most the envelope's badge writes before it says *99+* — the bell's ceiling (ADR-0205 §2). */
+const ENVELOPE_CEILING = 99;
+
+/**
+ * **The envelope's badge** (#819): what is new since Needs your answer was last closed, as the
+ * server counts it — the bell's count mark and the bell's rule, the figure up to 99, *99+* above it,
+ * and nothing at nought.
+ */
+export function envelopeFigure(count: number): string | undefined {
+  if (count <= 0) return undefined;
+  return count > ENVELOPE_CEILING ? `${ENVELOPE_CEILING}+` : String(count);
+}
+
+/**
+ * The envelope's name, with its badge: *Needs your answer, 2 new*. Exact above 99, as the bell's —
+ * the cap is the drawing's room, and a listener is not short of it.
+ */
+export function envelopeSpoken(count: number): string {
+  return count <= 0
+    ? NEEDS_YOUR_ANSWER_COPY.title
+    : `${NEEDS_YOUR_ANSWER_COPY.title}, ${count} new`;
+}
+
 /**
  * **The Play tab's own words** — the two segments it opens on
  * ([#512](https://github.com/Raketa02/Raketa/issues/512), play mocks 1 and 3).

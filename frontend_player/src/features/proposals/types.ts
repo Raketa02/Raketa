@@ -152,12 +152,18 @@ export type { HomeLevelAsk, HomeLevelAsker } from './domain/home';
  * payment to confirm, and ***FRIENDS GAME · n***, one invitation at a time on the paging rail (#759;
  * friends 12). They were Home's rows. The shell composes them in the sheet the header's envelope
  * opens, handing the bell's re-read to the invitations, since answering takes one off the bell; and
- * counts what waits in all four sections off this feature's reads (`useAnswersWaiting`). The words
- * cross for the suites that walk them.
+ * counts what waits in all four sections off Home's one read (`useAnswersWaiting`), the envelope's
+ * badge with them (#819). When the sheet goes for good the shell records the visit through
+ * `useNeedsYourAnswerVisit`, which names the watermark of the read the sheet showed, clears the badge
+ * and reads Home again. The words cross for the suites that walk them.
  */
 export { ToConfirmSection } from './components/ToConfirmSection';
 export { FriendsGameSection, type FriendsGameSectionProps } from './components/FriendsGameSection';
-export { useAnswersWaiting, type AnswersWaiting } from './hooks/useNeedsYourAnswer';
+export {
+  useAnswersWaiting,
+  useNeedsYourAnswerVisit,
+  type AnswersWaiting,
+} from './hooks/useNeedsYourAnswer';
 export type { FriendsGamesWaiting } from './hooks/useHome';
 export { FRIENDS_GAME_COPY } from './components/friendsGameCopy';
 /**

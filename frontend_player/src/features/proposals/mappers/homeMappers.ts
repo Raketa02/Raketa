@@ -29,11 +29,13 @@ import type {
   HomeLevelAsk,
   HomeRanking,
   Leaving,
+  NeedsYourAnswerNews,
   RescueOffer,
 } from '../domain/home';
 import type { LeavingKind, ShareState, TimeTo } from '../domain/vocabulary';
 
 import { toClub, toKind } from './deckMappers';
+import { toPaymentToConfirmRows } from './fillMappers';
 
 type Schemas = components['schemas'];
 
@@ -240,6 +242,10 @@ export function toHome(wire: Schemas['HomeResponse']): Home {
   const friendsGames: Schemas['HomeResponse']['friends_games'] | undefined = wire.friends_games;
   // Nor does one older than #764.
   const levelAsks: Schemas['HomeResponse']['level_asks'] | undefined = wire.level_asks;
+  // Nor TO CONFIRM's rows and the envelope's badge, one older than #815.
+  const toConfirm: Schemas['HomeResponse']['payments_to_confirm'] | undefined =
+    wire.payments_to_confirm;
+  const news: Schemas['HomeResponse']['needs_your_answer'] | undefined = wire.needs_your_answer;
   return {
     readAt: wire.read_at,
     needingYou: wire.needing_you,
@@ -252,6 +258,22 @@ export function toHome(wire: Schemas['HomeResponse']): Home {
       .map(toHomeLevelAsk)
       .filter((one): one is HomeLevelAsk => one !== undefined),
     ...homeRanking(wire.ranking),
+    paymentsToConfirm: toPaymentToConfirmRows(toConfirm ?? []),
+    needsYourAnswer: toNeedsYourAnswerNews(news),
+  };
+}
+
+/**
+ * **The envelope's badge and this read's watermark** (#815, #819). The watermark is kept exactly as
+ * served — the visit hands it back untouched — and a `null`, nothing waiting, is no watermark.
+ */
+function toNeedsYourAnswerNews(
+  wire: Schemas['HomeNeedsYourAnswerSchema'] | undefined,
+): NeedsYourAnswerNews {
+  const watermark = wire?.watermark;
+  return {
+    newCount: wire?.new_count ?? 0,
+    ...(watermark === null || watermark === undefined ? {} : { watermark }),
   };
 }
 

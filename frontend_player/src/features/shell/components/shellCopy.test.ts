@@ -16,7 +16,13 @@
 
 import { TAB_BAR_TABS, type TabBarKey } from '@/shared/ui';
 
-import { HOME_COPY, PLAY_COPY } from './shellCopy';
+import {
+  HOME_COPY,
+  NEEDS_YOUR_ANSWER_COPY,
+  PLAY_COPY,
+  envelopeFigure,
+  envelopeSpoken,
+} from './shellCopy';
 import { YOU_COPY } from './youCopy';
 
 /** Every sentence the shell writes — Home's own lines, and You's group titles. */
@@ -100,5 +106,25 @@ describe('what they refuse to say', () => {
     for (const line of LINES) {
       expect(line).not.toMatch(/coming soon|soon|sorry|under construction/i);
     }
+  });
+});
+
+/**
+ * **The envelope's count** (#819, ADR-0205 §2) — the bell's count mark, so the bell's rule: the
+ * served figure up to 99 and *99+* above it, nothing at nought, and spoken exactly on the
+ * envelope's own name, since a listener is not short of room.
+ */
+describe("what the envelope's count says", () => {
+  it('draws the served figure, 99+ above 99, and nothing at nought', () => {
+    expect(envelopeFigure(0)).toBeUndefined();
+    expect(envelopeFigure(2)).toBe('2');
+    expect(envelopeFigure(99)).toBe('99');
+    expect(envelopeFigure(100)).toBe('99+');
+  });
+
+  it('is spoken on the envelope’s name — Needs your answer, 2 new — and alone at nought', () => {
+    expect(envelopeSpoken(0)).toBe(NEEDS_YOUR_ANSWER_COPY.title);
+    expect(envelopeSpoken(2)).toBe('Needs your answer, 2 new');
+    expect(envelopeSpoken(140)).toBe('Needs your answer, 140 new');
   });
 });

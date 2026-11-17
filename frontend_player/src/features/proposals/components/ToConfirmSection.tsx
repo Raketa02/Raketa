@@ -41,8 +41,14 @@
  * **The section and its title are there only while they hold a tile.** Nothing is drawn while the
  * read is in flight, refused or empty: the sheet says no failure of its own, and a failed read is
  * counted as nothing, so it draws no envelope by itself (ADR-0205 §3; decision log §3.6) — Home's
- * usual re-reads retry, and the notice and the email carry the deadline. The read is its own,
- * `GET /players/me/payments-to-confirm`, and nothing re-sorts it.
+ * usual re-reads retry, and the notice and the email carry the deadline.
+ *
+ * ## Home's read, not their own
+ *
+ * **The rows are Home's `payments_to_confirm`** (#815, #819), the same rows as
+ * `GET /players/me/payments-to-confirm` — which You › Payments keeps — and nothing re-sorts them.
+ * The sheet's four sections come from the one read whose watermark the visit names, so what it
+ * marks seen is exactly what was shown.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -51,8 +57,7 @@ import { Button, Card, HomeRow, HomeRowRail, theme } from '@/shared/ui';
 
 import { confirmAskOf, type PaymentToConfirm } from '../domain/fill';
 import { useFill } from '../hooks/useFill';
-import { useReadClock } from '../hooks/useHome';
-import { usePaymentsToConfirm } from '../hooks/useLiveYeses';
+import { useHomePaymentsToConfirm, useReadClock } from '../hooks/useHome';
 
 import { FILL_COPY } from './fillCopy';
 import { toConfirmHeading, toConfirmWords } from './fillPresentation';
@@ -61,11 +66,11 @@ import { toConfirmHeading, toConfirmWords } from './fillPresentation';
 const TITLE_LINES = 2;
 
 export function ToConfirmSection() {
-  const read = usePaymentsToConfirm();
+  const read = useHomePaymentsToConfirm();
   const fill = useFill();
   const list = read.data;
-  // The read names no instant of its own, so the time leaves a tile on this phone's clock, ticking
-  // while one is there to pass — as Home's line leaves at the deadline.
+  // The time leaves a tile on this phone's clock, as it leaves the You › Payments row, ticking while
+  // one is there to pass — as Home's line leaves at the deadline.
   const now = useReadClock(
     undefined,
     read.dataUpdatedAt,

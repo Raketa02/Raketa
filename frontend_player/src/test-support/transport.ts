@@ -43,15 +43,37 @@ export interface Transport {
   readonly requests: readonly RecordedRequest[];
   /** Requests for one route — the shape most assertions want. */
   readonly requestsTo: (method: string, path: string) => readonly RecordedRequest[];
+  /**
+   * **What a stubbed route answers right now, with nothing reaching the socket** — for a fake route
+   * the server builds out of another: Home's *TO CONFIRM* rows are the payments to confirm'
+   * (`stubHome`). Not recorded, so no suite counts it as a request; `undefined` for a route with no
+   * stub. **Called in step**, so a responder built on it answers as quickly as any other: a body
+   * awaited inside a responder costs it a turn, and a launch that runs every pending timer then
+   * times the request out. Read what `json` was handed with `servedBody`.
+   */
+  readonly answerNow: (method: string, path: string) => ReturnType<Responder> | undefined;
   readonly restore: () => void;
 }
 
+/** What each `json` response was built from — for `servedBody`. */
+const SERVED = new WeakMap<Response, unknown>();
+
 /** A JSON response, typed against whatever the caller says the route returns. */
 export function json<T>(body: T, status = 200): Response {
-  return new Response(JSON.stringify(body), {
+  const response = new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+  SERVED.set(response, body);
+  return response;
+}
+
+/**
+ * **What a `json` response was built from**, read at once rather than off its body — see
+ * `answerNow`. `undefined` for any other response.
+ */
+export function servedBody(response: Response): unknown {
+  return SERVED.get(response);
 }
 
 /** The backend's error envelope — the same shape on every failing route. */
@@ -206,6 +228,11 @@ export function installTransport(): Transport {
     requestsTo(method, path) {
       const wanted = keyOf(method, path);
       return requests.filter((r) => keyOf(r.method, r.path) === wanted);
+    },
+    answerNow(method, path) {
+      const responder = routes.get(keyOf(method, path));
+      if (responder === undefined) return undefined;
+      return responder({ method, path, url: path, headers: {}, body: undefined });
     },
     restore() {
       global.fetch = original;

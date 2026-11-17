@@ -32,6 +32,11 @@ export const proposalKeys = {
    * so the deck can tell which cards have an answer on its way (`useAnswersOnTheirWay`).
    */
   answers: () => [...proposalKeys.all, 'answer'] as const,
+  /**
+   * **A mutation key**: Needs your answer's visit (#819), so the envelope's badge can tell which
+   * watermarks this phone has sent (`useAnswersWaiting`).
+   */
+  needsYourAnswerVisit: () => [...proposalKeys.all, 'needs-your-answer-visit'] as const,
   /** `GET /players/me/live-yeses` — every yes on a game still filling, across groups. */
   liveYeses: () => [...proposalKeys.all, 'live-yeses'] as const,
   /** `GET /players/me/payments-to-confirm` — the reader's refused shares, waiting for them (#555). */

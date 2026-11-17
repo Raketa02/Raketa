@@ -2031,7 +2031,7 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   confirm among them, wherever it waits. Proposals assembles Home.
 - **Needs your answer** — **the sheet the header's envelope opens on Home, and everything waiting in
   it** for the player's answer ([ADR-0205](docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
-  §1–§3, not yet built — [#815](https://github.com/Raketa02/Raketa/issues/815)–[#819](https://github.com/Raketa02/Raketa/issues/819)).
+  §1–§3, built by [#815](https://github.com/Raketa02/Raketa/issues/815)–[#819](https://github.com/Raketa02/Raketa/issues/819)).
   - **Four sections, always in this order, each a sideways rail and each hidden while empty:**
     **To confirm** (a payment to confirm or a card to fix, with its deadline while it has one, read
     by Proposals), **Friends game** (an invitation into a **Friends game**, one at a time), **Friend

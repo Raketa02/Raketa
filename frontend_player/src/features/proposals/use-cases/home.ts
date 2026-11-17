@@ -7,13 +7,27 @@
 
 import { readPhonePreference, savePhonePreference } from '@/shared/lib/preferences';
 
-import { getBooking, getHome, postDeparture, type Cancellable } from '../api/proposalsApi';
+import {
+  getBooking,
+  getHome,
+  postDeparture,
+  postNeedsYourAnswerVisit,
+  type Cancellable,
+} from '../api/proposalsApi';
 import { openedFrom, type BookedGame, type Home } from '../domain/home';
 import type { LeavingKind } from '../domain/vocabulary';
 import { toBookedGame, toHome, toLeft } from '../mappers/homeMappers';
 
 export async function readHome(options: Cancellable = {}): Promise<Home> {
   return toHome(await getHome(options));
+}
+
+/**
+ * **Needs your answer went for good** (#819) — a pass-through: what counts as seen is the server's,
+ * up to the watermark of the read the sheet showed, handed back as it was served.
+ */
+export function recordNeedsYourAnswerVisit(watermark: string): Promise<void> {
+  return postNeedsYourAnswerVisit({ watermark });
 }
 
 /** One booked game — or nothing, for a game in a sport this build cannot name. */

@@ -17,6 +17,7 @@
  * | `getPaymentsToConfirm` | `GET /players/me/payments-to-confirm` — every refused share of the reader's still waiting for them (#555) |
  * | `postPaymentConfirmation` | `POST /seat-charges/{id}/confirmation` — *I confirmed my payment*: the yes again (#555) |
  * | `getHome` | `GET /home` — the reader's booked games, soonest first, and Home's badge (#542, #556) |
+ * | `postNeedsYourAnswerVisit` | `POST /players/me/needs-your-answer/visit` — Needs your answer went for good, naming the watermark of the read it showed (#815, #819) |
  * | `getBooking` | `GET /bookings/{id}` — one booked game in detail, for a player in it or one offered its open seat (#542, #545) |
  * | `postSeat` | `POST /bookings/{id}/seats` — *I'm in* on a rescue: the seat taken, paid at once (#545) |
  * | `postRescueNo` | `POST /bookings/{id}/no` — a no to a *Seat open* card (#545) |
@@ -185,6 +186,24 @@ export function postPaymentConfirmation(
  */
 export function getHome({ signal }: Cancellable = {}): Promise<Schemas['HomeResponse']> {
   return httpRequest({ method: 'GET', path: '/api/v1/home', authenticated: true, signal });
+}
+
+/**
+ * **Needs your answer went for good** (#815, #819; ADR-0205 §3) — `watermark` is `GET /home`'s
+ * `needs_your_answer.watermark` from the read the sheet was last drawn from, as served: everything
+ * that arrived up to it is seen on every phone. `204`, also for a watermark no later than the last
+ * visit's, which never moves it back — so a repeat is safe. `watermark_in_the_future` (400) for one
+ * past the server's clock, which no read served.
+ */
+export function postNeedsYourAnswerVisit(
+  body: Schemas['NeedsYourAnswerVisitRequest'],
+): Promise<void> {
+  return httpRequest({
+    method: 'POST',
+    path: '/api/v1/players/me/needs-your-answer/visit',
+    body,
+    authenticated: true,
+  });
 }
 
 /**

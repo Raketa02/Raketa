@@ -358,3 +358,32 @@ the setup's and the confirmation's hand-back, _It's a game!_ closing the sheet, 
 `links`' and `notifications`' suites for the landings. **Not seen on a device**: the To confirm and
 Friends game tiles against mock 2, and every sheet the fill draws over this one — on iOS each is a
 native window opened inside the sheet's; nothing in jest can show that it presents.
+
+**The envelope carries the bell's count mark, and closing the sheet records a visit**
+([#819](https://github.com/Raketa02/Raketa/issues/819), ADR-0205 §2, §3; home refactor 1). The badge
+is `shared/ui`'s `CountBadge`, tone `news`, in ink — **the bell's, unchanged** (design-system 10.3) —
+on a glyph box of its own inside the 44pt target, as the bell's is: _99+_ above 99, nothing at
+nought (`envelopeFigure`, `shellCopy.ts`). **It counts what arrived since the sheet was last closed**,
+as the server counts it on Home's read (`proposals`' `useAnswersWaiting`). Spoken on the envelope's
+name, _Needs your answer, 2 new_, exactly above 99 (`envelopeSpoken`), and hidden as a mark. **While
+anything waits the envelope stays**, with a count or without.
+
+- **Every way the sheet goes for good is a close** (`wentForGood`, `domain/needsYourAnswer`): from
+  open, aside or under the fill to closed — ✕, a swipe, the backdrop, the self-close after the last
+  answer, a record or a fill's sheet closing over nothing left, _It's a game!_, and a hand-off to a
+  screen — or straight to asked, a link or a notice asking again in the render that closed it.
+  Stepping aside is not, since the sheet comes back; nor is a sheet a link or a notice asked for that
+  never opened, since nothing was shown. **A sheet a link or a notice opened counts the same.**
+  `NeedsYourAnswer` reads the step in an effect, after the reducer has moved, and calls `proposals`'
+  `useNeedsYourAnswerVisit`, which owns the watermark, the write and the badge
+  ([`proposals.md`](proposals.md)).
+- **What the visit says was seen is what the sheet was shown on** (`sheetIsShown`): open with
+  something in it. Up beneath a record or a fill's sheet is not shown — their scrim covers it — so a
+  read that lands under _It's a game!_, which closes the sheet for good, stays new.
+- **The envelope, and so the sheet, are drawn off Home's one read now**, _TO CONFIRM_ included: the
+  paragraph on #817 above that says _a failed To confirm read draws no envelope by itself_ and that
+  an ask waits for _Home's and the payments to confirm_ was true until this one. A failed Home read
+  draws no envelope, and an ask waits for Home's alone.
+
+The walk is `envelopeCount.test.tsx`. **Not seen on a device**: the badge on the envelope against
+mock 1, where it sits over the mail mark's corner as the bell's does over the bell.

@@ -54,7 +54,6 @@ import { envelope, openNeedsYourAnswer, sheetTitle } from '@/test-support/needsY
 import {
   DEVICES_PATH,
   HOME_PATH,
-  PAYMENTS_TO_CONFIRM_PATH,
   bookingPath,
   launchSignedIn,
   resetPayments,
@@ -795,18 +794,15 @@ describe('a friends game’s notices, tapped (the mechanics §12)', () => {
     act(() => router.push('/you'));
     await waitFor(() => expect(screen).toHavePathname('/you'));
     const homeReads = transport.requestsTo('GET', HOME_PATH).length;
-    const toConfirmReads = transport.requestsTo('GET', PAYMENTS_TO_CONFIRM_PATH).length;
 
     act(() => phone.tap(push('FRIENDS_GAME_INVITATION', 'HOME', INVITED)));
 
     await waitFor(() => expect(screen).toHavePathname('/'));
     expect(await screen.findByRole('header', { name: 'Needs your answer' })).toBeTruthy();
     expect(screen.getByTestId(`friends-game-${INVITED}`)).toBeTruthy();
-    // The two reads the sheet is drawn from, read again: it opened on what they said.
+    // The read the sheet is drawn from — all four sections of it since #819 — read again: it
+    // opened on what it said.
     expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(homeReads);
-    expect(transport.requestsTo('GET', PAYMENTS_TO_CONFIRM_PATH).length).toBeGreaterThan(
-      toConfirmReads,
-    );
   });
 
   it('opens Needs your answer on Home too, where the player already is', async () => {

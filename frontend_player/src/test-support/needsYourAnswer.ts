@@ -3,6 +3,10 @@
  * and the sheet it opens. A friend request or an ask for a level waits there rather than on Home, so
  * a suite that answers one opens the sheet first.
  *
+ * **The envelope is found by its name with or without its count** (#819) — *Needs your answer*, or
+ * *Needs your answer, 2 new* while the badge shows — and never by the sheet's ✕, *Close Needs your
+ * answer*. A suite about the count asserts the whole name itself.
+ *
  * Not app code — nothing under `src/` outside tests imports this.
  */
 
@@ -12,9 +16,12 @@ import { NEEDS_YOUR_ANSWER_COPY } from '@/features/shell/types';
 
 const { title: TITLE, close: CLOSE } = NEEDS_YOUR_ANSWER_COPY;
 
+/** The envelope's name, its count or none. */
+const ENVELOPE = new RegExp(`^${TITLE}(, [0-9]+ new)?$`);
+
 /** The header's envelope, or `null` while nothing waits. */
 export function envelope() {
-  return screen.queryByRole('button', { name: TITLE });
+  return screen.queryByRole('button', { name: ENVELOPE });
 }
 
 /** The sheet's title, or `null` while it is not up. */
@@ -24,7 +31,7 @@ export function sheetTitle() {
 
 /** The envelope pressed, once Home has drawn it, and the sheet up. */
 export async function openNeedsYourAnswer(): Promise<void> {
-  fireEvent.press(await screen.findByRole('button', { name: TITLE }));
+  fireEvent.press(await screen.findByRole('button', { name: ENVELOPE }));
   await screen.findByRole('header', { name: TITLE });
 }
 

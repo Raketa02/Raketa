@@ -1,7 +1,8 @@
 /**
  * **A count over a 16pt glyph** — 10.2's badge, the one count mark the system has, drawn by the tab
- * bar's Home column and by the bell on Home's header (7.29,
- * [#627](https://github.com/Raketa02/Raketa/issues/627)). The caller places it inside the glyph's own
+ * bar's Home column, by the bell on Home's header (7.29,
+ * [#627](https://github.com/Raketa02/Raketa/issues/627)) and by the envelope beside it (10.3,
+ * [#819](https://github.com/Raketa02/Raketa/issues/819)). The caller places it inside the glyph's own
  * `size.tabIcon` box, with `overflow: 'visible'` — Android clips a child drawn outside its parent,
  * and a clipped badge is a count disappearing on one platform.
  *
@@ -10,12 +11,13 @@
  * - **`attend`** — things only the player can clear, the bar's Home badge: **`coralInk`** with a
  *   white figure at 5,89. White on `coral` is 3,89, the one pairing Rule C refuses outright and the
  *   exact correction the ⚡Play disc already took. It is 1.2's sixth coral entry.
- * - **`news`** — notices since the list was last opened, the bell's number: **`ink`** with a white
+ * - **`news`** — what is new since a visit: the bell's notices since the list was last opened, and
+ *   the envelope's answers waiting since Needs your answer was last closed. **`ink`** with a white
  *   figure at 17,50. News is not an obligation, and 1.2 closes coral at six.
  *
  * The figure is mono and tabular, so 1 → 2 does not reflow, and a minimum width rather than a
  * diameter, so two figures — or the bell's *99+* — spread the mark into a lozenge. **The caller says
- * what to write**: the bar writes every count, the bell caps at *99+*.
+ * what to write**: the bar writes every count, the bell and the envelope cap at *99+*.
  *
  * It is **out of the layout**, like the bar's active ring and for the same reason: it rises
  * `badgeRise` above the icon — the 4pt the ring already spends out of the bar's 6pt top padding — and

@@ -116,7 +116,7 @@ import { queryClient } from '@/shared/lib/query-client';
 
 import { fakePayments } from './platform';
 import { FILTER_OFF, SERGIO_RELIABILITY } from './playerRecord';
-import { errorResponse, json, noContent, type Transport, type Wire } from './transport';
+import { errorResponse, json, noContent, servedBody, type Transport, type Wire } from './transport';
 
 /**
  * The Home tab's one line — which is what *the player is in the app* looks like on screen.
@@ -1076,6 +1076,8 @@ export function stubGate(
   stubNotices(transport);
   // Opening the list behind the bell records the visit (#627).
   transport.on('POST', NOTICES_VISIT_PATH, () => noContent());
+  // Needs your answer going for good records its visit (#819).
+  transport.on('POST', NEEDS_YOUR_ANSWER_VISIT_PATH, () => noContent());
   stubBlockedPlayers(transport);
   stubFriends(transport);
 }
@@ -1185,6 +1187,9 @@ export function stubNotices(
 
 export const HOME_PATH = '/api/v1/home';
 
+/** Needs your answer went for good — its visit, naming the watermark of the read it showed (#815). */
+export const NEEDS_YOUR_ANSWER_VISIT_PATH = '/api/v1/players/me/needs-your-answer/visit';
+
 /** One booked game's details — `GET /bookings/{id}` (#556). */
 export const bookingPath = (bookingId: string) => `/api/v1/bookings/${bookingId}`;
 
@@ -1192,6 +1197,13 @@ export const bookingPath = (bookingId: string) => `/api/v1/bookings/${bookingId}
  * **Home's booked games** (#542, #556) — none by default, at a fixed read: the shell holds the read
  * all session for the bar's badge, so every suite that lands in the app makes it. A suite about
  * Home serves its own, and `test-support/home.ts` builds them.
+ *
+ * **Its *TO CONFIRM* rows are the payments to confirm'** unless the suite names them (#815, #819):
+ * the server serves *the same rows as `GET /players/me/payments-to-confirm`* on Home's read, so a
+ * suite that stubs that read — with `stubPaymentsToConfirm` or by hand — finds them in Needs your
+ * answer too, read at the moment Home is. A refused or broken read of them is none. **Nothing is
+ * new** (`needs_your_answer`) unless the suite says so, and the watermark is `null`: a suite about
+ * the envelope's badge and its visit serves both.
  */
 export function stubHome(transport: Transport, home: Partial<Wire['HomeResponse']> = {}) {
   transport.on('GET', HOME_PATH, () =>
@@ -1202,11 +1214,37 @@ export function stubHome(transport: Transport, home: Partial<Wire['HomeResponse'
       friend_requests: [],
       friends_games: [],
       level_asks: [],
-      payments_to_confirm: [],
+      payments_to_confirm: paymentsToConfirmServed(transport),
       needs_your_answer: { new_count: 0, watermark: null },
       ...home,
     }),
   );
+}
+
+/**
+ * What `GET /players/me/payments-to-confirm` answers right now — none when it refuses, fails or
+ * never answers (`answerNow`). **Its responder runs once more for every Home read**, so a suite whose
+ * payments responder counts its calls or steps through answers, or answers asynchronously, serves
+ * Home's `payments_to_confirm` by name instead.
+ */
+export function paymentsToConfirmServed(
+  transport: Transport,
+): Wire['PaymentsToConfirmResponse']['payments'] {
+  let answer: ReturnType<Transport['answerNow']>;
+  try {
+    answer = transport.answerNow('GET', PAYMENTS_TO_CONFIRM_PATH);
+  } catch {
+    return [];
+  }
+  if (answer === undefined) return [];
+  if (answer instanceof Promise) {
+    // A failure or a socket that never answers: nothing served, and nothing left unhandled.
+    answer.catch(() => undefined);
+    return [];
+  }
+  if (!answer.ok) return [];
+  const served = servedBody(answer) as Wire['PaymentsToConfirmResponse'] | undefined;
+  return served?.payments ?? [];
 }
 
 export const PAYMENT_METHOD_PATH = '/api/v1/players/me/payment-methods/current';

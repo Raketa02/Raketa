@@ -119,6 +119,29 @@ export function sheetIsUp(sheet: NeedsYourAnswerSheet, anythingWaits: boolean): 
   );
 }
 
+/**
+ * **Whether the sheet just went for good** (#819, ADR-0205 §3), from `before` to `after`: what
+ * records the visit. **Every way it goes away from standing up counts**: ✕, a swipe, the backdrop,
+ * the last answer, a screen it handed over to, a record or a fill's sheet closing over nothing left,
+ * and *It's a game!*. Stepping aside for one of those does not, since the sheet comes back, and
+ * neither does a sheet a link or a notice asked for that never opened: nothing was shown.
+ */
+export function wentForGood(before: NeedsYourAnswerSheet, after: NeedsYourAnswerSheet): boolean {
+  const wasUp = before.kind !== 'closed' && before.kind !== 'asked';
+  // Asked again in the render that closed it — a link or a notice in the same breath — is still a
+  // close: nothing steps from standing up to asked without closing first.
+  return wasUp && (after.kind === 'closed' || after.kind === 'asked');
+}
+
+/**
+ * **Whether the sheet is shown** (#819) — open with something in it. Up beneath a record or a fill's
+ * sheet is not shown: their scrim covers it, so a read that lands then is read in but not seen, and
+ * only counts once the sheet is back on top.
+ */
+export function sheetIsShown(sheet: NeedsYourAnswerSheet, anythingWaits: boolean): boolean {
+  return sheet.kind === 'open' && anythingWaits;
+}
+
 /** Whether the sheet is waiting for its reads, asked for by a link or a notice. */
 export function sheetIsAsked(sheet: NeedsYourAnswerSheet): boolean {
   return sheet.kind === 'asked';

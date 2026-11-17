@@ -1593,7 +1593,8 @@ them, and the server still serves where a request was found:
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Home's header, the envelope | `Needs your answer` | its spoken name; the mark is drawn. #819 adds `, {n} new` while its count shows |
+| Home's header, the envelope | `Needs your answer` · `Needs your answer, {n} new` | its spoken name; the mark is drawn. `, {n} new` while its badge shows, `{n}` exact above 99 (#819) |
+| Home's header, the envelope's badge | `{n}` · `99+` | the bell's count mark: what arrived since Needs your answer was last closed, `99+` above 99, nothing at 0; hidden from a listener, since the name says it (#819) |
 | The sheet's title | `Needs your answer` | |
 | The sheet's ✕ | `Close Needs your answer` | spoken *(a call)*: a close is never just *Close* |
 | The sections, in order | `TO CONFIRM · {n}` · `FRIENDS GAME · {n}` · `FRIEND REQUESTS · {n}` · `ASKED FOR A LEVEL · {n}` | each hidden at 0 |

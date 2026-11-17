@@ -20,11 +20,27 @@
  * **A Feather `mail` mark in `ink`**, in a 44pt target, named *Needs your answer* (ADR-0205 §2;
  * Part 16): the header's envelope, beside the friend button's volt one, and one meaning for both —
  * *someone asked you*. **It is drawn only while something waits** (`envelopeShows`): a payment to
- * confirm, a friends game invitation, a friend request or an ask for a level, each counted off its
- * read (`proposals`' `useAnswersWaiting`) — a read in flight or refused counts nothing, so a failed
- * *To confirm* read draws no envelope by itself. Its count is #819's. Without it the bell and the
- * trophy keep their places, since the header's right slot is right-aligned and the envelope is its
- * first item.
+ * confirm, a friends game invitation, a friend request or an ask for a level, each counted off
+ * Home's one read (`proposals`' `useAnswersWaiting`) — a read in flight or refused counts nothing,
+ * so it draws no envelope. Without it the bell and the trophy keep their places, since the header's
+ * right slot is right-aligned and the envelope is its first item.
+ *
+ * **It carries the bell's count mark** (#819; ADR-0205 §2, §3): `shared/ui`'s `CountBadge`, tone
+ * `news`, in ink, *99+* above 99 and nothing at nought — **what arrived since the sheet was last
+ * closed**, as the server counts it, so every phone agrees. Spoken on the envelope's own name,
+ * *Needs your answer, 2 new*, and hidden as a mark, as the bell's is. **While anything waits the
+ * envelope stays, with or without a count.**
+ *
+ * ## The visit
+ *
+ * **Every way the sheet goes for good records a visit** (`wentForGood`, ADR-0205 §3): ✕, a swipe,
+ * the backdrop, the self-close after the last answer, a record or a fill's sheet closing over nothing
+ * left, *It's a game!*, and a hand-off to a screen — and a sheet a link or a notice opened counts the
+ * same. Stepping aside under a record or a fill's sheet does not: the sheet comes back. **What it
+ * names is what the sheet was shown on** (`sheetIsShown`): open, never beneath a record or a fill's
+ * sheet, whose scrim covers it — so what lands under *It's a game!* is still new. Which watermark
+ * that is, the badge going at once and Home read again after it are `proposals`'
+ * (`useNeedsYourAnswerVisit`), since the read and the write are its.
  *
  * ## The sheet
  *
@@ -78,10 +94,11 @@ import {
   FriendsGameSection,
   ToConfirmSection,
   useAnswersWaiting,
+  useNeedsYourAnswerVisit,
   useSheetFill,
 } from '@/features/proposals/types';
 import { showToast } from '@/shared/store/toast.store';
-import { BottomSheet, theme } from '@/shared/ui';
+import { BottomSheet, CountBadge, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import {
@@ -90,11 +107,13 @@ import {
   needsYourAnswer,
   readingRecordOf,
   sheetIsAsked,
+  sheetIsShown,
   sheetIsUp,
+  wentForGood,
 } from '../domain/needsYourAnswer';
 
 import { whenNeedsYourAnswerAsked } from './needsYourAnswerAsked';
-import { NEEDS_YOUR_ANSWER_COPY as COPY } from './shellCopy';
+import { NEEDS_YOUR_ANSWER_COPY as COPY, envelopeFigure, envelopeSpoken } from './shellCopy';
 
 export function NeedsYourAnswer() {
   const client = useQueryClient();
@@ -130,6 +149,18 @@ export function NeedsYourAnswer() {
     );
   }, [over, waits, open]);
 
+  // The sheet gone for good — from wherever it stood up — records the visit (#819), naming what it
+  // was shown on: open, never beneath a record or a fill's sheet. Declared after the visit's own
+  // hook, whose effect keeps the watermark of what was shown up to this render.
+  const up = sheetIsUp(sheet, waits);
+  const visit = useNeedsYourAnswerVisit(sheetIsShown(sheet, waits));
+  const before = useRef(sheet);
+  useEffect(() => {
+    if (wentForGood(before.current, sheet)) visit();
+    before.current = sheet;
+  }, [sheet, visit]);
+
+  const figure = envelopeFigure(answers.newCount);
   const reading = readingRecordOf(sheet);
   const onFace = (playerId: string) => dispatch({ kind: 'faceTapped', playerId });
   const getLevel = (sport: Sport) => {
@@ -143,22 +174,26 @@ export function NeedsYourAnswer() {
         <Pressable
           ref={envelope}
           accessibilityRole="button"
-          accessibilityLabel={COPY.title}
+          accessibilityLabel={envelopeSpoken(answers.newCount)}
           onPress={() => dispatch({ kind: 'envelopePressed' })}
           style={({ pressed }) => [s.envelope, pressed ? s.pressed : undefined]}
           testID="needs-your-answer-envelope"
         >
-          <Feather
-            name="mail"
-            size={theme.size.tabIcon}
-            color={theme.color.ink}
-            accessibilityElementsHidden
-            importantForAccessibility="no"
-          />
+          {/* The glyph's own box, so the badge sits against the mark, as the bell's does. */}
+          <View style={s.glyphBox}>
+            <Feather
+              name="mail"
+              size={theme.size.tabIcon}
+              color={theme.color.ink}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            />
+            {figure === undefined ? null : <CountBadge figure={figure} tone="news" />}
+          </View>
         </Pressable>
       ) : null}
       <BottomSheet
-        visible={sheetIsUp(sheet, waits)}
+        visible={up}
         onClose={() => dispatch({ kind: 'dismissed' })}
         title={COPY.title}
         closeLabel={COPY.close}
@@ -201,12 +236,22 @@ export function NeedsYourAnswer() {
 }
 
 const s = StyleSheet.create({
-  // 6.5's whole target, the mark centred in it, as the bell's.
+  // 6.5's whole target, the mark centred in it, as the bell's. The badge overhangs the mark, so
+  // nothing clips.
   envelope: {
     width: theme.size.minTouch,
     height: theme.size.minTouch,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'visible',
   },
   pressed: { opacity: 0.7 },
+  // The badge's box (`CountBadge`): `visible`, because Android clips a child drawn outside it.
+  glyphBox: {
+    width: theme.size.tabIcon,
+    height: theme.size.tabIcon,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
 });

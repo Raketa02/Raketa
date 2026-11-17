@@ -3,7 +3,9 @@ import {
   envelopeShows,
   needsYourAnswer,
   readingRecordOf,
+  sheetIsShown,
   sheetIsUp,
+  wentForGood,
   type NeedsYourAnswerSheet,
 } from './needsYourAnswer';
 
@@ -197,5 +199,92 @@ describe('Needs your answer', () => {
       UNDER_A_SHEET,
     );
     expect(needsYourAnswer(UNDER_A_SHEET, { kind: 'dismissed' })).toEqual(UNDER_A_SHEET);
+  });
+});
+
+/**
+ * **When the sheet went for good** (#819, ADR-0205 §3) — what records the visit. Every way it goes
+ * away counts, from wherever it stood up; stepping aside for a record or a fill's sheet does not,
+ * since it comes back; and a sheet a link asked for that never opened was never shown.
+ */
+describe('went for good', () => {
+  const SHOWN = [OPEN, READING_INES, UNDER_A_SHEET, UNDER_ITS_A_GAME];
+
+  it('is every close from a sheet that was up — ✕, a swipe, the backdrop, the last answer, a screen', () => {
+    for (const event of [
+      { kind: 'dismissed' },
+      { kind: 'emptied' },
+      { kind: 'handedToScreen' },
+    ] as const) {
+      expect(wentForGood(OPEN, needsYourAnswer(OPEN, event))).toBe(true);
+    }
+  });
+
+  it('is a record or a fill closing with nothing left, and It’s a game! going', () => {
+    expect(
+      wentForGood(
+        READING_INES,
+        needsYourAnswer(READING_INES, { kind: 'recordClosed', stillWaits: false }),
+      ),
+    ).toBe(true);
+    expect(
+      wentForGood(
+        UNDER_A_SHEET,
+        needsYourAnswer(UNDER_A_SHEET, { kind: 'fillGone', stillWaits: false }),
+      ),
+    ).toBe(true);
+    expect(
+      wentForGood(
+        UNDER_ITS_A_GAME,
+        needsYourAnswer(UNDER_ITS_A_GAME, { kind: 'fillGone', stillWaits: true }),
+      ),
+    ).toBe(true);
+  });
+
+  /** A link or a notice asking for it in the same render as the close: still a close. */
+  it('is a close a link asks for again in the same breath', () => {
+    expect(wentForGood(OPEN, ASKED)).toBe(true);
+  });
+
+  it('is not stepping aside, nor coming back', () => {
+    expect(wentForGood(OPEN, READING_INES)).toBe(false);
+    expect(wentForGood(OPEN, UNDER_A_SHEET)).toBe(false);
+    expect(wentForGood(READING_INES, OPEN)).toBe(false);
+    expect(wentForGood(UNDER_A_SHEET, OPEN)).toBe(false);
+    expect(wentForGood(UNDER_A_SHEET, UNDER_ITS_A_GAME)).toBe(false);
+  });
+
+  /** Nothing was shown: Home as it is, with no sheet, and no visit. */
+  it('is not a sheet a link asked for that never opened', () => {
+    expect(wentForGood(ASKED, needsYourAnswer(ASKED, { kind: 'settled', stillWaits: false }))).toBe(
+      false,
+    );
+  });
+
+  it('is not standing still', () => {
+    for (const sheet of [CLOSED, ASKED, ...SHOWN]) expect(wentForGood(sheet, sheet)).toBe(false);
+  });
+});
+
+/**
+ * **When the sheet is shown** (#819) — what a read drawn into it must be, to count as seen: open with
+ * something in it, never stepped aside under a record or a fill's sheet, whose scrim covers it.
+ */
+describe('shown', () => {
+  it('is open with something waiting', () => {
+    expect(sheetIsShown(OPEN, true)).toBe(true);
+    expect(sheetIsShown(OPEN, false)).toBe(false);
+  });
+
+  it('is not up beneath a record or a fill’s sheet, though it is up', () => {
+    for (const covered of [READING_INES, UNDER_A_SHEET, UNDER_ITS_A_GAME]) {
+      expect(sheetIsUp(covered, true)).toBe(true);
+      expect(sheetIsShown(covered, true)).toBe(false);
+    }
+  });
+
+  it('is not closed, nor asked for', () => {
+    expect(sheetIsShown(CLOSED, true)).toBe(false);
+    expect(sheetIsShown(ASKED, true)).toBe(false);
   });
 });

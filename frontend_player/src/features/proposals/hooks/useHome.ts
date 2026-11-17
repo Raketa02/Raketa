@@ -17,6 +17,7 @@ import type { AppError } from '@/shared/errors';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import type { PaymentToConfirm } from '../domain/fill';
 import { anySeatToOpen, invitationWaits, type FriendsGameInvitation } from '../domain/friendsGame';
 import {
   openedToKeep,
@@ -39,10 +40,25 @@ import {
 import { proposalKeys } from './proposalKeys';
 import { useDeckClock } from './useDeckClock';
 
+/** Home's one read — what every hook over it observes. */
+const homeRead = {
+  queryKey: proposalKeys.home(),
+  queryFn: ({ signal }: { readonly signal: AbortSignal }) => readHome({ signal }),
+};
+
 export function useHome() {
-  return useQuery<Home, AppError>({
-    queryKey: proposalKeys.home(),
-    queryFn: ({ signal }) => readHome({ signal }),
+  return useQuery<Home, AppError>(homeRead);
+}
+
+/**
+ * **TO CONFIRM · n** (#817, #819) — the payments the reader has to confirm, off Home's one read:
+ * `undefined` while it is in flight or refused, which draws no section. Selected, so the section
+ * draws again only when its rows move, not on every change to Home.
+ */
+export function useHomePaymentsToConfirm() {
+  return useQuery<Home, AppError, readonly PaymentToConfirm[]>({
+    ...homeRead,
+    select: (home) => home.paymentsToConfirm,
   });
 }
 
@@ -133,10 +149,11 @@ export function useFriendsGamesWaiting(): FriendsGamesWaiting {
 }
 
 /**
- * **Home's two reads, read again** — the games, the badge with them, and *TO CONFIRM*, in Needs your
- * answer since #817 (#556, #625): what a notice arriving changes. *Confirm your payment by 14:40 to keep your seat*
- * puts a row there, and *Your time to pay ran out* takes the time off it, as the games' lines move
- * with every other notice.
+ * **Home's two reads, read again** — Home's, with the games, the badge and all of Needs your
+ * answer, *TO CONFIRM* among it since #819; and the payments to confirm' own, which You › Payments
+ * and a booked game draw (#556, #625, #817): what a notice arriving changes. *Confirm your payment
+ * by 14:40 to keep your seat* puts a row there, and *Your time to pay ran out* takes the time off
+ * it, as the games' lines move with every other notice.
  */
 export function rereadHome(client: QueryClient) {
   // The live yeses too: a game a notice says filled may have been filled by somebody else's yes, and
