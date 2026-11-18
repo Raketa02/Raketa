@@ -87,6 +87,7 @@ import type {
   GroupAtClub,
   GroupDetails,
   HottestGroup,
+  HottestRow,
   JoinRequest,
   MyGroup,
   NewGroup,
@@ -136,7 +137,7 @@ interface HeldRelation {
 
 /** One Hottest groups card's relation, moved — nothing when the row holds no such card. */
 function moveCard(client: QueryClient, groupId: string, relation: GroupRelation): void {
-  client.setQueryData<readonly HottestGroup[]>(groupKeys.hottest(), (row) =>
+  client.setQueryData<HottestRow>(groupKeys.hottest(), (row) =>
     row === undefined ? row : withRelation(row, groupId, relation),
   );
 }
@@ -151,8 +152,8 @@ async function guessCard(
   guess: (card: HottestGroup) => GroupRelation,
 ): Promise<HeldRelation> {
   const card = client
-    .getQueryData<readonly HottestGroup[]>(groupKeys.hottest())
-    ?.find((held) => held.id === groupId);
+    .getQueryData<HottestRow>(groupKeys.hottest())
+    ?.groups.find((held) => held.id === groupId);
   if (card === undefined) return {};
   // A read in flight would land the old relation over the guess.
   await client.cancelQueries({ queryKey: groupKeys.hottest() });
@@ -160,14 +161,22 @@ async function guessCard(
   return { relation: card.relation };
 }
 
-/** A refusal: the one card back where it stood, and the write's own error said. */
+/**
+ * A refusal: the one card back where it stood, and the write's own error said. **The row is read
+ * again** when the tap had moved a card: the guess cancelled any read in flight — a pull's, a
+ * return's — and without a new one the row's cards and its count (#822) would stand as they were
+ * before it.
+ */
 function refused(
   client: QueryClient,
   groupId: string,
   held: HeldRelation | undefined,
   error: AppError,
 ): void {
-  if (held?.relation !== undefined) moveCard(client, groupId, held.relation);
+  if (held?.relation !== undefined) {
+    moveCard(client, groupId, held.relation);
+    void client.invalidateQueries({ queryKey: groupKeys.hottest() });
+  }
   showToast({ message: recoveryMessage(error), tone: 'bad' });
 }
 

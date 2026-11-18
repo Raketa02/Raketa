@@ -8,7 +8,7 @@
  * `onScreen`'s, and the frame's look `FoldingLine.test.tsx`'s. This is the shell's part: where FOR YOU
  * stands and in what order, which line is open — one at a time, switching by a fold and then an
  * unfold, closed only from its header, kept across tabs — every read running whether a line is open or
- * not, the pull, the page shown what opened, and Reduce motion.
+ * not, the pull, the page shown what opened, Reduce motion, and the four lines' counts (#822).
  */
 
 import { router } from 'expo-router';
@@ -21,7 +21,14 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { forgetPhonePreferences } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import { theme } from '@/shared/ui';
-import { isOpen, lineHeader, lineTitles, openLine } from '@/test-support/forYou';
+import {
+  isOpen,
+  lineHeader,
+  lineNamed,
+  lineNames,
+  lineTitles,
+  openLine,
+} from '@/test-support/forYou';
 import {
   HOTTEST_GROUPS_PATH,
   NEW_IN_RAKETA_PATH,
@@ -204,10 +211,10 @@ describe('FOR YOU', () => {
   it('names each line by its title, and says whether it is expanded or collapsed', async () => {
     await home();
 
-    expect(screen.getByRole('button', { name: LEVEL, expanded: false })).toBeTruthy();
+    expect(screen.getByRole('button', { name: lineNamed(LEVEL), expanded: false })).toBeTruthy();
     await openLine(LEVEL);
-    expect(screen.getByRole('button', { name: LEVEL, expanded: true })).toBeTruthy();
-    expect(screen.getByRole('button', { name: NEW, expanded: false })).toBeTruthy();
+    expect(screen.getByRole('button', { name: lineNamed(LEVEL), expanded: true })).toBeTruthy();
+    expect(screen.getByRole('button', { name: lineNamed(NEW), expanded: false })).toBeTruthy();
   });
 
   /** Q23: every line's read runs when Home opens, open or not — its hiding needs it. */
@@ -377,7 +384,7 @@ describe('the page', () => {
     everyLine();
     stubMyGroups(transport, []);
     await launchSignedIn();
-    await screen.findByRole('button', { name: GROUPS, expanded: true });
+    await screen.findByRole('button', { name: lineNamed(GROUPS), expanded: true });
     const page = scrollerOf(screen.getByTestId('for-you')) as unknown as {
       readonly instance: ScrollView;
     };
@@ -425,5 +432,135 @@ describe('under Reduce motion', () => {
     expect(
       screen.queryByTestId(`joiner-${JOINER.player_id}`, { includeHiddenElements: true }),
     ).toBeNull();
+  });
+});
+
+/**
+ * **The counts** ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §5, §6; home
+ * refactor 3, 4, 7): how many there are to explore on four lines — a grey pill between the title and
+ * the chevron, the served total, *99+* past 99 — said in the line's name, carried into the people
+ * lines' *See all N ›*, and moving whenever the line's read does.
+ */
+describe('the counts', () => {
+  /** Pools larger than the one card each row serves: the count is the pool, never the cards. */
+  async function counted({ hottest = 6, level = 14, joined = 6, vibe = 14 } = {}) {
+    everyLine();
+    stubHottestGroups(transport, [HOT_GROUP], hottest);
+    stubSameLevel(transport, [AT_YOUR_LEVEL], level);
+    stubNewInRaketa(transport, [JOINER], joined);
+    stubSameVibe(transport, [WITH_YOUR_VIBE], vibe);
+    await launchSignedIn();
+    await screen.findByRole('button', { name: TOP });
+    await waitFor(() => expect(lineTitles()).toHaveLength(5));
+  }
+
+  const pill = (line: string) =>
+    screen.queryByTestId(`${line}-count`, { includeHiddenElements: true });
+  /** What a line's pill writes. */
+  const drawn = (line: string) =>
+    within(pill(line)!).getByText(/./, { includeHiddenElements: true }).props.children as string;
+  const footer = (line: string) =>
+    within(within(screen.getByTestId(line)).getByTestId('folding-line-footer'));
+
+  it('draws each line’s total in its pill — the pool, not the cards the row holds', async () => {
+    await counted({ hottest: 6, level: 14, joined: 9, vibe: 37 });
+
+    expect(drawn('hottest-groups')).toBe('6');
+    expect(drawn('same-level')).toBe('14');
+    expect(drawn('new-in-raketa')).toBe('9');
+    expect(drawn('same-vibe')).toBe('37');
+  });
+
+  it('draws no pill on Top 10', async () => {
+    await counted();
+
+    expect(pill('top-ten')).toBeNull();
+  });
+
+  /** ADR-0205 §6: the server counts up to 100, *100 or more*, drawn 99+. */
+  it('writes 99+ past 99, and 99 as served', async () => {
+    await counted({ hottest: 99, level: 100, joined: 100, vibe: 100 });
+
+    expect(drawn('hottest-groups')).toBe('99');
+    expect(drawn('same-level')).toBe('99+');
+    expect(drawn('new-in-raketa')).toBe('99+');
+    expect(drawn('same-vibe')).toBe('99+');
+  });
+
+  /** ADR-0205 §5: the count pill stays when the line opens. */
+  it('stays when the line opens', async () => {
+    await counted();
+
+    await openLine(LEVEL);
+
+    expect(isOpen(LEVEL)).toBe(true);
+    expect(drawn('same-level')).toBe('14');
+  });
+
+  /** #822's *Players at your level, 14, collapsed*. */
+  it('is said in the line’s name, before whether it is expanded — and Top 10 says none', async () => {
+    await counted({ level: 100 });
+
+    expect(lineNames()).toEqual([`${GROUPS}, 6`, `${LEVEL}, 99+`, `${NEW}, 6`, `${VIBE}, 14`, TOP]);
+    expect(screen.getByRole('button', { name: `${LEVEL}, 99+`, expanded: false })).toBeTruthy();
+    await openLine(VIBE);
+    expect(screen.getByRole('button', { name: `${VIBE}, 14`, expanded: true })).toBeTruthy();
+  });
+
+  /** Q34: *See all N ›* carries the line's figure, though See all shows one sport at a time. */
+  it('reads See all N in each people line’s footer, the pill’s figure, 99+ included', async () => {
+    await counted({ level: 14, joined: 100, vibe: 37 });
+
+    for (const [title, line, words, label] of [
+      [LEVEL, 'same-level', 'See all 14', DISCOVERY_COPY.sameLevel.seeAllLabel],
+      [NEW, 'new-in-raketa', 'See all 99+', DISCOVERY_COPY.newInRaketa.seeAllLabel],
+      [VIBE, 'same-vibe', 'See all 37', DISCOVERY_COPY.sameVibe.seeAllLabel],
+    ] as const) {
+      await openLine(title);
+      expect(footer(line).getByText(words)).toBeTruthy();
+      // The link keeps its spoken name: the line's own has just said the count.
+      expect(footer(line).getByRole('link', { name: label })).toBeTruthy();
+    }
+  });
+
+  /** ADR-0205 §6: they refresh when the line's read does — here, the pull. Nothing new polls. */
+  it('moves with a re-read: the pull brings each line’s new figure, in the pill and in See all', async () => {
+    await counted();
+    await openLine(LEVEL);
+    stubHottestGroups(transport, [HOT_GROUP], 7);
+    stubSameLevel(transport, [AT_YOUR_LEVEL], 100);
+    stubNewInRaketa(transport, [JOINER], 5);
+    stubSameVibe(transport, [WITH_YOUR_VIBE], 15);
+
+    await act(async () => {
+      fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
+    });
+
+    await waitFor(() => expect(drawn('same-level')).toBe('99+'));
+    expect(footer('same-level').getByText('See all 99+')).toBeTruthy();
+    expect(drawn('hottest-groups')).toBe('7');
+    expect(drawn('new-in-raketa')).toBe('5');
+    expect(drawn('same-vibe')).toBe('15');
+    expect(lineNames()[1]).toBe(`${LEVEL}, 99+`);
+  });
+
+  /**
+   * Q22: coming back to Home re-reads a line read more than thirty seconds ago. Only that half can be
+   * walked here: the harness runs every pending timer on a navigation, so its clock is always past the
+   * app's `staleTime` by the time Home is back — a return within thirty seconds is Query's to hold.
+   */
+  it('moves on a return to Home once the read is older than thirty seconds', async () => {
+    await counted();
+    await openLine(VIBE);
+    stubSameVibe(transport, [WITH_YOUR_VIBE], 15);
+
+    fireEvent.press(screen.getByRole('link', { name: DISCOVERY_COPY.sameVibe.seeAllLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/same-vibe'));
+    act(() => jest.advanceTimersByTime(31_000));
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/'));
+
+    await waitFor(() => expect(drawn('same-vibe')).toBe('15'));
+    expect(footer('same-vibe').getByText('See all 15')).toBeTruthy();
   });
 });

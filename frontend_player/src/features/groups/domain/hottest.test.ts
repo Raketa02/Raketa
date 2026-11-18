@@ -74,11 +74,16 @@ describe('the faces', () => {
 describe('a write’s relation, on the card it came from', () => {
   it('turns the one card and leaves the rest', () => {
     const kazimierz = group({ id: 'g-kazimierz', relation: 'MEMBER' });
-    const row = [group(), kazimierz];
+    const row = { groups: [group(), kazimierz], total: 2 };
 
     const asked = withRelation(row, 'g-ogrody', 'REQUESTED');
 
-    expect(asked[0]?.relation).toBe('REQUESTED');
-    expect(asked[1]).toBe(kazimierz);
+    expect(asked.groups[0]?.relation).toBe('REQUESTED');
+    expect(asked.groups[1]).toBe(kazimierz);
+  });
+
+  /** #822: the count moves with the line's read, never with a card's guess. */
+  it('keeps the row’s total', () => {
+    expect(withRelation({ groups: [group()], total: 38 }, 'g-ogrody', 'MEMBER').total).toBe(38);
   });
 });

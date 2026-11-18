@@ -24,6 +24,7 @@ import type {
   GroupMember,
   GroupPerson,
   HottestGroup,
+  HottestRow,
   JoinRequest,
   Monogram,
   MyGroup,
@@ -213,10 +214,15 @@ export function toEditedGroup(wire: Schemas['EditedGroupResponse']): EditedGroup
 /**
  * **Home's Hottest groups** (#800), in the row's order — the server's. Everything the card and its
  * sheet draw rides on the one read, so nothing here is worked out: the share, the tag and the six
- * faces are carried as they came.
+ * faces are carried as they came. **The total is the server's too** (#822): every group of 3 or more,
+ * up to 100, which the line draws as its count.
  */
-export function toHottestGroups(wire: Schemas['HottestGroupsResponse']): readonly HottestGroup[] {
-  return wire.groups.map((group) => ({
+export function toHottestRow(wire: Schemas['HottestGroupsResponse']): HottestRow {
+  return { groups: wire.groups.map(toHottestGroup), total: wire.total };
+}
+
+function toHottestGroup(group: Schemas['HottestGroupSchema']): HottestGroup {
+  return {
     id: group.id,
     kind: group.kind,
     name: group.name,
@@ -233,5 +239,5 @@ export function toHottestGroups(wire: Schemas['HottestGroupsResponse']): readonl
     friendsCount: group.friends_count,
     relation: group.relation,
     isAdministrator: group.is_administrator,
-  }));
+  };
 }

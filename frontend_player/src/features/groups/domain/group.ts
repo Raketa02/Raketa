@@ -277,6 +277,17 @@ export interface HottestGroup {
   readonly isAdministrator: boolean;
 }
 
+/**
+ * **Home's Hottest groups, as read** — the six cards, and **how many groups there are to look
+ * through** ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6): every group with 3
+ * or more players, the reader's own included, counted up to 100 — the line's count. The server's
+ * figure, refreshed only by the next read.
+ */
+export interface HottestRow {
+  readonly groups: readonly HottestGroup[];
+  readonly total: number;
+}
+
 /** A group's name is 1–40 characters once trimmed (ADR-0183 §3). The field stops at 40. */
 export const GROUP_NAME_MAX = 40;
 

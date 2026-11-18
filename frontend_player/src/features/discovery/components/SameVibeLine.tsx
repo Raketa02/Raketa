@@ -5,7 +5,10 @@
  * mechanics §8, §9; home rows 2, 20, 20.1; home refactor 10, 11).
  *
  * Open, up to ten pale tiles on the row frame's peeking rail, settling on their edges, in the read's
- * order — fresh good matches first, then the gaps — and *See all ›* to the grid at the foot.
+ * order — fresh good matches first, then the gaps — and *See all N ›* to the grid at the foot.
+ * **Its count**, on the line and in *See all N ›*, is everybody sharing at least one tag with the
+ * reader ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6; the mechanics §8.8) —
+ * the read's `total`, *99+* past 99, never the good matches — and moves with the read.
  * **Hidden** while the read holds nobody (the reader holds no tag, or nobody shares one), is in
  * flight, or failed: a line that fails is left out, and the rest of Home stands. Skill plays no part,
  * so a reader with no level sees it.
@@ -30,7 +33,7 @@ import { useOnScreenReports } from '../hooks/useOnScreenReports';
 import { usePersonSheet } from '../hooks/usePersonSheet';
 import { useSameVibe } from '../hooks/useSameVibe';
 
-import { DISCOVERY_COPY } from './discoveryCopy';
+import { DISCOVERY_COPY, seeAllWords } from './discoveryCopy';
 import { SAME_VIBE_ROUTE } from './discoveryRoutes';
 import { SameVibeTile } from './SameVibeTile';
 import { VibeSheet } from './VibeSheet';
@@ -41,17 +44,18 @@ import { VibeSheet } from './VibeSheet';
  */
 export function useSameVibeLine(): FoldingLineParts | undefined {
   const COPY = DISCOVERY_COPY.sameVibe;
-  const players = useSameVibe().data;
+  const row = useSameVibe().data;
   const onScreen = useOnScreenReports('SAME_VIBE');
-  if (players === undefined || players.length === 0) return undefined;
+  if (row === undefined || row.people.length === 0) return undefined;
   return {
     title: COPY.line,
+    count: row.total,
     testID: 'same-vibe',
-    content: <SameVibe players={players} onScreen={onScreen} />,
+    content: <SameVibe players={row.people} onScreen={onScreen} />,
     footer: (
       <FoldingLineFooter
         link={{
-          words: COPY.seeAll,
+          words: seeAllWords(row.total),
           label: COPY.seeAllLabel,
           onPress: () => router.push(SAME_VIBE_ROUTE),
         }}

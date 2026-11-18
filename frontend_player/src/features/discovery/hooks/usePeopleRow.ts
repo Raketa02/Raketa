@@ -11,6 +11,9 @@
  *   a gap the next fresh match takes the place of; read at the tap, the card would leave under the
  *   thumb. **The next read** — a return, a pull, foregrounding — **moves them**.
  * - **A block re-reads it at once**, and so does a refusal that is the state moving: those cards leave.
+ * - **Its total moves with its reads and nothing else** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+ *   ADR-0205 §6): the line's count and *See all N ›* are the server's, so a friend write drawn on a
+ *   card leaves them as read, and the next read brings the new figure. Nothing polls for it.
  */
 
 import { useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
@@ -20,27 +23,22 @@ import type { AppError } from '@/shared/errors';
 import { useOnReturn } from '@/shared/lib/platform';
 import { holdsPeople, type RelationMoved } from '@/shared/lib/query-client';
 
+import { withRelation, type PeopleRow } from '../domain/peopleRow';
+
 /** A card on a people row: whom, and where the reader stands with them. */
 interface Card {
   readonly playerId: string;
   readonly relation: FriendRelation;
 }
 
-/** **The write's answer, drawn on the row as read** — the order, and everybody else, as they were. */
-export function withRelation<Person extends Card>(
-  people: readonly Person[],
-  moved: RelationMoved<FriendRelation>,
-): readonly Person[] {
-  return people.map((one) =>
-    one.playerId === moved.playerId ? { ...one, relation: moved.relation } : one,
-  );
-}
-
-const HOLDS_STILL = holdsPeople<readonly Card[], FriendRelation>(withRelation);
+/** The write's answer drawn on the row as read — the domain's rule (`withRelation`). */
+const HOLDS_STILL = holdsPeople<PeopleRow<Card>, FriendRelation>(
+  (row, moved: RelationMoved<FriendRelation>) => withRelation(row, moved.playerId, moved.relation),
+);
 
 export function usePeopleRow<Person extends Card>(
   queryKey: QueryKey,
-  read: (signal: AbortSignal) => Promise<readonly Person[]>,
+  read: (signal: AbortSignal) => Promise<PeopleRow<Person>>,
 ) {
   const client = useQueryClient();
 
@@ -48,7 +46,7 @@ export function usePeopleRow<Person extends Card>(
     void client.refetchQueries({ queryKey, stale: true });
   });
 
-  return useQuery<readonly Person[], AppError>({
+  return useQuery<PeopleRow<Person>, AppError>({
     queryKey,
     queryFn: ({ signal }) => read(signal),
     meta: HOLDS_STILL,

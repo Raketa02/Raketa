@@ -26,7 +26,7 @@ import { HOME_COPY } from '@/features/shell/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
-import { lineTitles, openLine } from '@/test-support/forYou';
+import { lineNamed, lineTitles, openLine } from '@/test-support/forYou';
 import {
   HOME_PATH,
   HOTTEST_GROUPS_PATH,
@@ -147,11 +147,14 @@ let transport: Transport;
 /**
  * **The row's routes, faked** — a join admits an Anyone group (and grows it by one) and leaves a
  * request on a People I approve one; a withdraw takes the request back. `refuse` makes the next join
- * fail with that code.
+ * fail with that code. The row's total is the groups served, or what `total` says at each read (#822).
  */
 function hottestServer(
   initially: readonly Wire['HottestGroupSchema'][],
-  { mine = [KAZIMIERZ_MINE] }: { readonly mine?: readonly Wire['MyGroupSchema'][] } = {},
+  {
+    mine = [KAZIMIERZ_MINE],
+    total,
+  }: { readonly mine?: readonly Wire['MyGroupSchema'][]; readonly total?: () => number } = {},
 ) {
   let groups = [...initially];
   let refusal: string | undefined;
@@ -160,7 +163,10 @@ function hottestServer(
   stubGate(transport, { hasPlayerProfile: true });
   stubMyGroups(transport, mine);
   transport.on('GET', HOTTEST_GROUPS_PATH, () =>
-    json<Wire['HottestGroupsResponse']>({ groups: [...groups], total: groups.length }),
+    json<Wire['HottestGroupsResponse']>({
+      groups: [...groups],
+      total: total?.() ?? groups.length,
+    }),
   );
 
   for (const group of initially) {
@@ -252,7 +258,7 @@ const headings = () =>
     .map((node) => node.props.children as string)
     .filter((text) => typeof text === 'string');
 
-const line = () => screen.findByRole('button', { name: HOT.line });
+const line = () => screen.findByRole('button', { name: lineNamed(HOT.line) });
 
 describe('the line on Home', () => {
   /** ADR-0205 §5: FOR YOU just below *Your games*, Groups heating up its first line, closed. */
@@ -275,7 +281,8 @@ describe('the line on Home', () => {
     await launchSignedIn();
     await openLine(HOT.line);
 
-    const names = within(screen.getByTestId('hottest-groups'))
+    // In what the line holds: its header's name has a comma too, before its count (#822).
+    const names = within(screen.getByTestId('hottest-groups-content'))
       .getAllByRole('button', { name: /,/ })
       .map((node) => node.props.accessibilityLabel as string);
     expect(names.map((label) => label.split(',')[0])).toEqual([
@@ -292,7 +299,7 @@ describe('the line on Home', () => {
 
     await waitFor(() => expect(reads(HOTTEST_GROUPS_PATH)).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('button', { name: HOT.line })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(HOT.line) })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -302,7 +309,7 @@ describe('the line on Home', () => {
 
     await waitFor(() => expect(reads(HOTTEST_GROUPS_PATH)).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: HOT.line })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(HOT.line) })).toBeNull();
   });
 
   /** Q21: a line that empties while open closes and goes — and comes back closed. */
@@ -315,7 +322,9 @@ describe('the line on Home', () => {
     await act(async () => {
       fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
     });
-    await waitFor(() => expect(screen.queryByRole('button', { name: HOT.line })).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: lineNamed(HOT.line) })).toBeNull(),
+    );
 
     stubHottestGroups(transport, [OGRODY]);
     await act(async () => {
@@ -453,6 +462,25 @@ describe('the chip', () => {
     expect(await chip(PODGORZE, 'in')).toBeTruthy();
   });
 
+  /** #822: the count is the server's — the join's re-read moves it, never the card's guess. */
+  it('moves the line’s count with the re-read a join asks for, and not before', async () => {
+    let pool = 12;
+    const server = hottestServer([OGRODY, PODGORZE], { total: () => pool });
+    await launchSignedIn();
+    await openLine(HOT.line);
+    const named = (count: number) => ({ name: `${HOT.line}, ${count}`, expanded: true });
+    expect(screen.getByRole('button', named(12))).toBeTruthy();
+    const release = server.holdJoins();
+    pool = 13;
+
+    fireEvent.press(await chip(PODGORZE, 'join'));
+
+    expect(await chip(PODGORZE, 'in')).toBeTruthy();
+    expect(screen.getByRole('button', named(12))).toBeTruthy();
+    await act(async () => release());
+    expect(await screen.findByRole('button', named(13))).toBeTruthy();
+  });
+
   it('Ask to join leaves a request at once: Asked', async () => {
     hottestServer([OGRODY]);
     await launchSignedIn();
@@ -477,6 +505,28 @@ describe('the chip', () => {
     expect(await chip(PODGORZE, 'join')).toBeTruthy();
     await waitFor(() => expect(toasts()).toHaveLength(1));
     expect(toasts()[0]?.[1]).toBe('bad');
+  });
+
+  /**
+   * #822: the guess cancelled any read in flight — a pull's, a return's — so a refusal reads the row
+   * again, or its cards and its count would stand as they were before that read.
+   */
+  it('a refused join reads the row again, so a read the guess cancelled is not lost', async () => {
+    let pool = 12;
+    const server = hottestServer([PODGORZE], { total: () => pool });
+    server.refuseNextJoin('group_not_found');
+    await launchSignedIn();
+    await openLine(HOT.line);
+    const before = reads(HOTTEST_GROUPS_PATH);
+    pool = 13;
+
+    fireEvent.press(await chip(PODGORZE, 'join'));
+
+    await waitFor(() => expect(toasts()).toHaveLength(1));
+    await waitFor(() => expect(reads(HOTTEST_GROUPS_PATH)).toBeGreaterThan(before));
+    expect(
+      await screen.findByRole('button', { name: `${HOT.line}, 13`, expanded: true }),
+    ).toBeTruthy();
   });
 
   it('Asked opens the withdraw sheet, and Withdraw request turns the card back to Ask to join', async () => {
@@ -601,7 +651,9 @@ describe('a reader in no group', () => {
 
     expect(await screen.findByText(HOT.groupless)).toBeTruthy();
     expect(screen.queryByText('Play finds you one.')).toBeNull();
-    expect(await screen.findByRole('button', { name: HOT.line, expanded: true })).toBeTruthy();
+    expect(
+      await screen.findByRole('button', { name: lineNamed(HOT.line), expanded: true }),
+    ).toBeTruthy();
     expect(screen.getByTestId(`hottest-${OGRODY.id}`)).toBeTruthy();
   });
 
@@ -624,7 +676,9 @@ describe('a reader in no group', () => {
     fireEvent.press(await chip(PODGORZE, 'join'));
 
     expect(await screen.findByText('Play finds you one.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: HOT.line }).props.accessibilityState).toEqual({
+    expect(
+      screen.getByRole('button', { name: lineNamed(HOT.line) }).props.accessibilityState,
+    ).toEqual({
       expanded: true,
     });
   });
@@ -633,9 +687,13 @@ describe('a reader in no group', () => {
     hottestServer([OGRODY], { mine: [] });
     await launchSignedIn();
 
-    fireEvent.press(await screen.findByRole('button', { name: HOT.line, expanded: true }));
+    fireEvent.press(
+      await screen.findByRole('button', { name: lineNamed(HOT.line), expanded: true }),
+    );
 
-    expect(await screen.findByRole('button', { name: HOT.line, expanded: false })).toBeTruthy();
+    expect(
+      await screen.findByRole('button', { name: lineNamed(HOT.line), expanded: false }),
+    ).toBeTruthy();
   });
 });
 

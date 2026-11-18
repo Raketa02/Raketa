@@ -8,6 +8,7 @@ import {
   levelsLine,
   nobodyNewPlays,
   pairingLabel,
+  seeAllWords,
   sportLevelLine,
   sportsCount,
   tileLabel,
@@ -115,5 +116,16 @@ describe('Same vibe’s words (§31.8)', () => {
 
   it('says a See all sport that leaves nobody (a call)', () => {
     expect(nobodySharesYourTagsIn('squash')).toBe('Nobody who shares your tags plays squash yet');
+  });
+});
+
+/** #822: a people line's footer carries its count — the pill's figure, *99+* included. */
+describe('See all N', () => {
+  it.each<[number, string]>([
+    [14, 'See all 14'],
+    [99, 'See all 99'],
+    [100, 'See all 99+'],
+  ])('%i: %s', (total, words) => {
+    expect(seeAllWords(total)).toBe(words);
   });
 });

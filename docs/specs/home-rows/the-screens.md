@@ -23,6 +23,9 @@
 > ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
 > §4, §5; home refactor 3–13): the five rows fold into **FOR YOU**'s five lines. What waits for an
 > answer moved behind the envelope with #816 and #817 ([the games screens A8](../games-and-fill-in/the-screens.md#a8-home)).
+>
+> **Amended by [#822](https://github.com/Raketa02/Raketa/issues/822)** (ADR-0205 §5, §6; home
+> refactor 3, 4, 7): every line but Top 10 draws its count, and the people lines read *See all N ›*.
 
 - **The header, *Get your level* and *Your games***, as ADR-0205 §4 orders them.
 - **Then FOR YOU** (home refactor 3, 4): the eyebrow *FOR YOU*, grey caps, letter-spaced, and five
@@ -30,15 +33,27 @@
   **Players with your vibe**, **Top 10**. *Only the words on screen change*: the rows' own names
   (Hottest groups, Same competitive level players, Same vibe players) stay the glossary's and the
   code's.
-- **A closed line is a white card** with its title on the left and a chevron (›) on the right, and
-  nothing else: no faces, no subtitles, no tiles. *(Each line's count, between the title and the
-  chevron, is #822's.)*
+- **A closed line is a white card** with its title on the left and, on the right, a small grey
+  **count pill** and a chevron (›), and nothing else: no faces, no subtitles, no tiles. Top 10 has no
+  count.
+- **The count is how many there are to explore** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+  ADR-0205 §6; home refactor 3, 4): *Groups heating up · 6*, *Players at your level · 99+*, *New in
+  Raketa · 6*, *Players with your vibe · 14*. It is the line's **pool**, never how many of them are a
+  good match: every group of 3 or more; everybody holding a level in a sport the reader plays;
+  everybody who joined in the last 30 days; everybody sharing a tag with the reader
+  ([the mechanics](the-mechanics.md) §5.10, §6.9, §7.5, §8.8). So in a busy city the people lines
+  read *99+*, and that is meant. **The server counts up to 100**, which reads *100 or more*, and the
+  phone draws ***99+*** past 99. The pill is mono, grey on a paler grey, quieter than the title, and
+  **it stays when the line opens**. It refreshes whenever the line's read does — coming back to Home
+  after 30 seconds, foregrounding, the pull, or a push or a write that re-reads the row — and nothing
+  polls for it. A friend tapped on a card leaves it as read, as it leaves the card in its place.
 - **A tap anywhere on a closed line opens it, and one line is open at a time**: tapping another line
   folds the first, then unfolds the second. **Only the open line's header closes it** — a tap on a
   tile, a swipe along the rail, a footer link or Top 10's pill never does.
 - **The open line** has an ink border, a soft shadow and the chevron pointing down. Under its header,
   **today's tiles**, sideways, **settling on tile edges**; at the bottom right of the open content,
-  **its footer**: *See all ›* on the three people lines, to their See all screens; on Top 10, the
+  **its footer**: *See all N ›* on the three people lines, to their See all screens — N the line's
+  count, *99+* included, though See all shows one sport at a time (#822; home refactor 7); on Top 10, the
   sport switcher, *Padel ›*, on the left, opening to the right, and *Open the rankings ›* on the
   right ([#821](https://github.com/Raketa02/Raketa/issues/821), §7.1; home refactor 12, 13); none on
   Groups heating up until #823's page.
@@ -57,8 +72,9 @@
 - **Every line still reads when Home opens**, open or not. **Pull-to-refresh** re-reads every line;
   **coming back to Home** re-reads them when the last read is older than 30 seconds. **Top 10's pill**
   re-reads that line alone.
-- **Spoken**: each line is a button that says its title and whether it is expanded or collapsed; each
-  footer link is a button of its own.
+- **Spoken**: each line is a button that says its title, its count as drawn and whether it is
+  expanded or collapsed — *Players at your level, 14, collapsed*; the pill is not read a second time.
+  Each footer link is a button of its own, and keeps its name: *See all players at your level*.
 - **The Home tab stays lit** on every See all screen and sheet opened from Home (home rows 12, 19, 24).
 
 ### 2. The row frame, and the folding line

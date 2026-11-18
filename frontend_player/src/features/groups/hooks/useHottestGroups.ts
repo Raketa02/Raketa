@@ -19,7 +19,7 @@ import type { AppError } from '@/shared/errors';
 import { useOnReturn } from '@/shared/lib/platform';
 import { LISTS_PEOPLE } from '@/shared/lib/query-client';
 
-import type { HottestGroup } from '../domain/group';
+import type { HottestRow } from '../domain/group';
 import { readHottestGroups } from '../use-cases/groupReads';
 
 import { groupKeys } from './groupKeys';
@@ -31,7 +31,7 @@ export function useHottestGroups() {
     void client.refetchQueries({ queryKey: groupKeys.hottest(), stale: true });
   });
 
-  return useQuery<readonly HottestGroup[], AppError>({
+  return useQuery<HottestRow, AppError>({
     queryKey: groupKeys.hottest(),
     queryFn: ({ signal }) => readHottestGroups({ signal }),
     // Its faces are friends first, and the sheet counts them: a friend write re-reads it (#801).

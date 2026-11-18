@@ -6,14 +6,14 @@
  * ```
  * FOR YOU                                            ← FoldingLines: eyebrow · muted · uppercase
  * ┌──────────────────────────────────────────────┐
- * │ Groups heating up                          › │   ← closed: the title, h2, and the chevron
- * └──────────────────────────────────────────────┘   ← space.sm between lines
+ * │ Groups heating up                     (6)  › │   ← closed: the title, h2, the count pill (#822)
+ * └──────────────────────────────────────────────┘     and the chevron · space.sm between lines
  * ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
- * ┃ Players at your level                      ⌄ ┃   ← open: ink border, shadow.openLine
- * ┃ ┌────────────────────────┐ ┌─────────────────┃   ← the rail, at the line's inset, bleeding to
- * ┃ │ a card                 │ │ the next        ┃     its inner edge (RailBounds)
+ * ┃ Players at your level                (14)  ⌄ ┃   ← open: ink border, shadow.openLine; the
+ * ┃ ┌────────────────────────┐ ┌─────────────────┃     count stays · the rail, at the line's inset,
+ * ┃ │ a card                 │ │ the next        ┃     bleeding to its inner edge (RailBounds)
  * ┃ └────────────────────────┘ └─────────────────┃
- * ┃                                   See all  › ┃   ← FoldingLineFooter, bottom right
+ * ┃                                See all 14  › ┃   ← FoldingLineFooter, bottom right
  * ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  * ┃ ● Padel ›              Open the rankings  › ┃   ← Top 10's: its switcher at the left (#821)
  * ```
@@ -57,8 +57,15 @@
  *
  * ## Spoken
  *
- * **Each line is a button named by its title**, saying whether it is expanded (ADR-0205 §8; its count
- * joins the name with #822). Each footer link is a button of its own.
+ * **Each line is a button named by its title and its count** — *Players at your level, 14* — saying
+ * whether it is expanded (ADR-0205 §8, [#822](https://github.com/Raketa02/Raketa/issues/822)). Each
+ * footer link is a button of its own.
+ *
+ * ## Its count
+ *
+ * **How many there are to explore**, handed in as the read served it (`count`) and drawn in the count
+ * pill between the title and the chevron, open or closed — *99+* past 99 (`countFigure`), and no pill
+ * without one (Top 10). A fenced pill (design-system 7.37, Part 16).
  *
  * **It never imports a feature.** The title, the content and the footer are handed in.
  */
@@ -82,6 +89,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+
+import { countFigure, withCount } from '@/shared/formatting/countFigure';
 
 import { HomeRow, RailBoundsContext, type RailBounds } from './HomeRow';
 import { PageOnScreen, PageReveal, SectionOnPage, useTopOnPage, useTopWithin } from './onScreen';
@@ -139,6 +148,8 @@ export function FoldingLines({ heading, folding, testID, children }: FoldingLine
 /** **A line as its feature hands it to the page** — what the page draws it with. */
 export interface FoldingLineParts {
   readonly title: string;
+  /** **How many there are to explore**, as served — its count pill. None on Top 10. */
+  readonly count?: number;
   readonly testID: string;
   /** What it unfolds — drawn only while it is open. */
   readonly content: ReactNode;
@@ -148,6 +159,11 @@ export interface FoldingLineParts {
 
 export interface FoldingLineProps {
   readonly title: string;
+  /**
+   * **Its count** — the served total, drawn in the count pill between the title and the chevron, *99+*
+   * past 99, and said after the title. No pill without one.
+   */
+  readonly count?: number;
   /** **Whether it is open** — the page's to say, one line at a time. */
   readonly open: boolean;
   /** **A press on its header**: the whole of a closed line, the title row of an open one. */
@@ -166,6 +182,7 @@ export interface FoldingLineProps {
 
 export function FoldingLine({
   title,
+  count,
   open,
   onHeader,
   footer,
@@ -179,6 +196,7 @@ export function FoldingLine({
   const page = useContext(PageOnScreen);
   const { width: screen } = useWindowDimensions();
   const transition = reduced ? undefined : (groupFolding ?? !open) ? FOLD : UNFOLD;
+  const figure = count === undefined ? undefined : countFigure(count);
 
   /** Whether the content is drawn — while open, and while it folds away. */
   const [drawn, setDrawn] = useState(open);
@@ -278,7 +296,7 @@ export function FoldingLine({
       <View style={s.clip}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={title}
+          accessibilityLabel={withCount(title, count)}
           accessibilityState={{ expanded: open }}
           onPress={onHeader}
           onPressIn={() => setPressed(true)}
@@ -289,6 +307,7 @@ export function FoldingLine({
           <Text style={s.title} numberOfLines={1}>
             {title}
           </Text>
+          {figure === undefined ? null : <CountPill figure={figure} line={testID} />}
           <Animated.View
             style={turn}
             accessibilityElementsHidden
@@ -332,6 +351,29 @@ export function FoldingLine({
         ) : null}
       </View>
     </Animated.View>
+  );
+}
+
+/**
+ * **The count pill** (#822; 7.37; home refactor 3, 4, 7) — how many there are to explore, between the
+ * title and the chevron, open or closed. A grey lozenge: `line2`, the fold inside one thing, under
+ * the figure in `muted` mono at 4,62 — quieter than the title it follows, since it says how much
+ * there is, not that anything needs doing. **A fenced pill** (Part 16): the chip's shape, and no
+ * chip — it is not pressed, and the line it stands in is the button. Hidden from a listener: its
+ * figure is in the line's name.
+ */
+function CountPill({ figure, line }: { readonly figure: string; readonly line?: string }) {
+  return (
+    <View
+      testID={line === undefined ? undefined : `${line}-count`}
+      style={s.count}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Text style={s.countFigure} numberOfLines={1}>
+        {figure}
+      </Text>
+    </View>
   );
 }
 
@@ -420,6 +462,19 @@ const s = StyleSheet.create({
   },
   // 3.3: h2 titles a card.
   title: { ...theme.type.h2, color: theme.color.ink, flex: 1 },
+  // 7.37's count pill: the figure's own line box, `space.xs` each side of it — a lozenge. A least
+  // height rather than a fixed one: the header grows with the OS text size, and the pill grows with
+  // its figure rather than clipping it.
+  count: {
+    minHeight: theme.size.foldingLine.count,
+    paddingHorizontal: theme.space.xs,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.color.line2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // 1.4: mono and tabular, so 9 → 10 does not reflow the header.
+  countFigure: { ...theme.num.tiny, ...theme.tabular, color: theme.color.muted },
   fold: { overflow: 'hidden' },
   // Laid out at its whole height whatever the fold's is, so the measure is the content's own.
   content: {

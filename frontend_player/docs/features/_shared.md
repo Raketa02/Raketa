@@ -508,3 +508,20 @@ being Top 10: its slot starts the bar's inset before the pill's left end and run
 edge. **`FoldingLineFooter`'s link takes the room before it** (`marginLeft: 'auto'`), so a control
 stands at the footer's left and the link at its right, and a footer with a link alone is unchanged.
 Suites: `SportPill.test.tsx` (the direction), `RowSportPill.test.tsx` and `FoldingLine.test.tsx`.
+
+**A folding line carries its count** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+ADR-0205 §5, §6; home refactor 3, 4, 7; design-system 4.2, 7.37, Part 16 2026-11-18).
+`FoldingLineParts` and `FoldingLine` take an optional **`count`** — the row read's total, as served —
+drawn in **the count pill** between the title and the chevron, open or closed: `line2` under the
+figure in `num.tiny` `muted`, at least `size.foldingLine.count` (16, `num.tiny`'s line box) tall and
+growing with its figure under a larger OS text size, `space.xs` each side, `radius.pill` — a fenced
+pill, not a control. No count, no pill: Top 10 hands none. **`countFigure`** (`shared/formatting`)
+writes it — the figure up to 99, _99+_ past it, since the server counts up to 100 — and
+`discovery`'s _See all N_ uses the same function, so the pill and the footer cannot disagree; the
+bell's and the envelope's badges now cap through it too. **The line's name says it after the
+title** (`withCount`) — _Players at your level, 14_ — and the pill is hidden from a listener, as
+`CountBadge` is. It is not `CountBadge`: that mark floats over a glyph and says _new_. Suites: `countFigure.test.ts`, `FoldingLine.test.tsx` (the place, the look, the
+cap, open and closed, none without a count, the name); the counts are walked in the shell's
+`forYou.test.tsx`. Test support's `lineNamed` finds a line by its title whatever its count, and
+`lineNames` reads the whole names. **Not seen on a device**: the pill's size, fill and figure against
+home refactor 3, 4.

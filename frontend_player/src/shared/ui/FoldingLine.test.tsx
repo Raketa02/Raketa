@@ -43,16 +43,19 @@ function Line({
   onHeader = jest.fn(),
   footer,
   onTile,
+  count,
 }: {
   readonly open: boolean;
   readonly onHeader?: () => void;
   readonly footer?: FoldingLineFooterProps;
   readonly onTile?: () => void;
+  readonly count?: number;
 }) {
   return (
     <FoldingLines heading="For you" folding={!open} testID="for-you">
       <FoldingLine
         title={TITLE}
+        count={count}
         open={open}
         onHeader={onHeader}
         footer={footer === undefined ? undefined : <FoldingLineFooter {...footer} />}
@@ -141,6 +144,78 @@ describe('a closed line', () => {
 
     fireEvent(header(), 'pressOut');
     expect(card().borderColor).toBe(theme.color.line);
+  });
+});
+
+describe('its count', () => {
+  const pill = () => screen.getByTestId('line-count', { includeHiddenElements: true });
+  const figure = () => screen.getByText(/^\d+\+?$/, { includeHiddenElements: true });
+
+  /** What the header draws, left to right — the dev build's pressability overlay left out. */
+  const headerParts = () =>
+    (header().children as { props: Record<string, unknown> }[]).flatMap((part) => {
+      if (part.props.children === TITLE) return ['title'];
+      if (part.props.figure !== undefined) return ['count'];
+      if (part.props.accessibilityElementsHidden === true) return ['chevron'];
+      return [];
+    });
+
+  /** Home refactor 3, 4 (#822): the count stands between the title and the chevron. */
+  it('stands between the title and the chevron, in a grey pill', () => {
+    render(<Line open={false} count={14} />);
+
+    expect(headerParts()).toEqual(['title', 'count', 'chevron']);
+    expect(flat(pill().props.style)).toMatchObject({
+      backgroundColor: theme.color.line2,
+      borderRadius: theme.radius.pill,
+      minHeight: theme.size.foldingLine.count,
+      paddingHorizontal: theme.space.xs,
+    });
+    // It grows with its figure under a larger OS text size, rather than clipping it.
+    expect(flat(pill().props.style).height).toBeUndefined();
+  });
+
+  /** 1.4: a number is mono and tabular; `muted` on `line2` is 4.62. */
+  it('writes the served figure in muted mono', () => {
+    render(<Line open={false} count={14} />);
+
+    expect(figure().props.children).toBe('14');
+    expect(StyleSheet.flatten(figure().props.style as TextStyle)).toMatchObject({
+      ...theme.num.tiny,
+      ...theme.tabular,
+      color: theme.color.muted,
+    });
+  });
+
+  /** ADR-0205 §6: the server stops at 100, *100 or more*. */
+  it('writes 99+ past 99', () => {
+    render(<Line open={false} count={100} />);
+
+    expect(figure().props.children).toBe('99+');
+  });
+
+  /** ADR-0205 §5: the count pill stays when the line opens. */
+  it('stays when the line opens', () => {
+    render(<Line open count={14} />);
+
+    expect(figure().props.children).toBe('14');
+  });
+
+  /** Top 10 has no count. */
+  it('is not drawn without one', () => {
+    render(<Line open={false} />);
+
+    expect(screen.queryByTestId('line-count', { includeHiddenElements: true })).toBeNull();
+    expect(headerParts()).toEqual(['title', 'chevron']);
+  });
+
+  /** #822: *Players at your level, 14, collapsed* — the figure as drawn, in the line's name. */
+  it('joins the line’s name, as drawn, and is not read a second time', () => {
+    render(<Line open={false} count={100} />);
+
+    expect(screen.getByRole('button', { name: `${TITLE}, 99+`, expanded: false })).toBeTruthy();
+    expect(pill().props.accessibilityElementsHidden).toBe(true);
+    expect(pill().props.importantForAccessibility).toBe('no-hide-descendants');
   });
 });
 

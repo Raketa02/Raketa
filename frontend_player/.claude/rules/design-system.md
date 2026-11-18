@@ -112,6 +112,8 @@ licence for a second dark surface.
   (#753), the Friends page's (#754), the picker's ask (#758) and the worded friend button's _+ Add
   friend_ (#801) — and Home's Hottest groups chips (#800), through
   `Button`'s `shape`: exceptions, each fenced by a Part 16 row. Everywhere else a button is 10pt.
+  **FOR YOU's count pill** (#822, 7.37) is the chip's shape and no control — a figure, `line2`
+  under `muted` mono — fenced to FOR YOU's lines; it is not `CountBadge`, which says _new_.
 
 This design system covers `frontend_player/` **only.** The club app has its own; the palettes
 converge because it is one brand, but the values are never shared.

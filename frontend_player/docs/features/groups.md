@@ -773,3 +773,15 @@ a number read off 5.1. Walked in `hottestGroups.test.tsx`: the two figures, left
 name, nothing removed drawn on any card, and the sheet's every detail. **Not seen on a device** — a look
 is owed against home refactor 5.1: the figures' places, the card's height without the bar, the faces
 and chip at its foot.
+
+**Groups heating up counts the groups to look through** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+ADR-0205 §6; the mechanics §5.10; home refactor 3, 4). The read keeps the server's **`total`** beside
+its six cards — `HottestRow` (`toHottestRow`), every group of 3 or more players, the reader's own
+included, counted up to 100 — and the line hands it to the shell as its `count`, drawn _99+_ past 99.
+**`withRelation` now moves a card on the row and leaves the total**: a join, an ask or a withdraw draws
+the card at once, and the re-read every such write asks for brings the server's new figure — never a
+guess. **A refused join, ask or withdraw now reads the row again** when it had moved a card: the
+guess cancels any read in flight — a pull's, a return's — and without a new read the row's cards and
+its count would stand as they were before it. No footer still, so no _See all N_ here. Walked in
+`hottestGroups.test.tsx` (the count moving with a join's re-read, and not before it lands; a refusal
+reading the row again), `hottest.test.ts` and the mapper test.

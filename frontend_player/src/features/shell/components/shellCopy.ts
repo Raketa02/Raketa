@@ -12,6 +12,8 @@
  * states, which is the test each line has to pass and the test `shellCopy.test.ts` holds them to.
  */
 
+import { countFigure } from '@/shared/formatting/countFigure';
+
 /**
  * **The Home tab's own sentences** — its title, and what it says when it holds no games
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.7).
@@ -59,17 +61,13 @@ export const NEEDS_YOUR_ANSWER_COPY = {
   close: 'Close Needs your answer',
 } as const;
 
-/** The most the envelope's badge writes before it says *99+* — the bell's ceiling (ADR-0205 §2). */
-const ENVELOPE_CEILING = 99;
-
 /**
  * **The envelope's badge** (#819): what is new since Needs your answer was last closed, as the
- * server counts it — the bell's count mark and the bell's rule, the figure up to 99, *99+* above it,
- * and nothing at nought.
+ * server counts it — the bell's count mark and the bell's rule, the figure up to 99, *99+* above it
+ * (every count's cap, `countFigure`; ADR-0205 §2), and nothing at nought.
  */
 export function envelopeFigure(count: number): string | undefined {
-  if (count <= 0) return undefined;
-  return count > ENVELOPE_CEILING ? `${ENVELOPE_CEILING}+` : String(count);
+  return count <= 0 ? undefined : countFigure(count);
 }
 
 /**

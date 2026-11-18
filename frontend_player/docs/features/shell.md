@@ -427,3 +427,13 @@ hidden, FOR YOU is not drawn. The paragraphs above that say `HomeScreen` draws `
 
 The walk is `forYou.test.tsx`; each line's own is its feature's suite. **Not seen on a device**: the
 fold, the unfold, the switch, the lines sliding and the page easing down, against home refactor 3–13.
+
+**FOR YOU's lines show their counts** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+ADR-0205 §5, §6; home refactor 3, 4, 7). A line's parts carry its `count`, and `ForYou` hands it to the
+`FoldingLine` as it hands the title — the shell decides nothing about it: what a count counts is each
+feature's read, the pill and its _99+_ are `shared/ui`'s. Four lines carry one, Top 10 none.
+**Nothing new reads**: the count is on each line's own read, so it moves when that read does — a
+return after 30 seconds, foregrounding, Home's pull, a push or a write that re-reads the row. Walked
+in `forYou.test.tsx`'s _the counts_: each line's figure, the cap, no pill on Top 10, the pill kept
+open, the spoken names, _See all N_ in the people lines' footers, and the pull and a return moving
+the figure.

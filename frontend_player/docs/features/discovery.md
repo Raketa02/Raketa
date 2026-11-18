@@ -235,3 +235,19 @@ gap (`gapLine`, the words §31.6), and the read still serves it. Walked in `same
 on any card, drawn or spoken, and See all's re-comparison read off the level instead — and
 `discoveryCopy.test.ts`. **Not seen on a device** — a look is owed against home refactor 7: the foot
 with _2 sports ›_ alone at its left.
+
+**The people lines count who there is to explore** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+ADR-0205 §6, Q17, Q33, Q34; the mechanics §6.9, §7.5, §8.8; home refactor 3, 4, 7). Each row's read now
+keeps the server's **`total`** beside its cards — `PeopleRow<Person>` (`domain/peopleRow.ts`), read by
+`toNewInRaketaRow`, `toSameLevelRow` and `toSameVibeRow` — and each line hands it to the shell as its
+`count`, and to its footer as **_See all N ›_** (`seeAllWords`, through `shared/formatting`'s
+`countFigure`: _99+_ past 99). **It is the pool, never the good matches**: everybody holding a level in
+a sport the reader holds one in, everybody who joined in the last 30 days, everybody sharing a tag —
+so a busy city reads _99+_, and _See all N_ carries the same figure though See all shows one sport at
+a time. Same competitive level's total counts a card this build cannot draw, as it counts everybody
+the row does not show. **It moves only with a read**: `usePeopleRow`'s `withRelation` draws a friend
+write on its card and leaves the total as read, and the next read — a return after 30 seconds,
+foregrounding, the pull, a block — brings the new figure. **The footer link keeps its spoken name**
+(_See all players at your level_): the line's own name has just said the count. Walked in the mapper
+and copy tests and the shell's `forYou.test.tsx`; the line suites now find a line by `lineNamed`, its
+title with or without a count.

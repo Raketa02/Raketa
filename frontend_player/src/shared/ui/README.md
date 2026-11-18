@@ -136,8 +136,11 @@ have to export them — making the pill's internals the surface instead. Import 
 lines** (7.37): `FoldingLines` (the section and its eyebrow), `FoldingLine` (a card whose header the
 page opens and closes, its content drawn only while open, one height change moved by a layout
 transition) and `FoldingLineFooter` (the open content's foot: a control at its left, a 44pt link at its
-right, a layer over it). Since [#821](https://github.com/Raketa02/Raketa/issues/821) the pill opens
-rightwards there (`opens`), the current sport at the bar's left end. `HomeRow`'s heading lost its
+right, a layer over it). Since [#821](https://github.com/Raketa02/Raketa/issues/821) Top 10's sport
+pill opens rightwards there (`opens`), the current sport at the bar's left end. Since
+[#822](https://github.com/Raketa02/Raketa/issues/822) a line takes a `count` — the read's total, drawn
+in the count pill, _99+_ past 99 (`shared/formatting`'s `countFigure`), and said after the title
+(`withCount`). `HomeRow`'s heading lost its
 control, link and `over`, which only those rows used — the pill now stands in the footer — and
 `HomeRowRail` takes its bounds from a line (`RailBounds`). A section's top on the page composes
 through what holds it (`useTopOnPage`), and a page that watches shows what a line unfolds

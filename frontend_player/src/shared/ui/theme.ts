@@ -1504,8 +1504,17 @@ const size = {
    *  which is what the mocks measure (23 of the phone's 1,5 pixels to the point): a rail inside it
    *  starts its first tile there and bleeds to the card's inner edge, so a tile's share is of the
    *  card's content, not the page's. The header's `h2` line and `space.md` above and below it are
-   *  `minTouch` exactly, the closed line's height in home refactor 4. */
-  foldingLine: { pad: space.lg, border: 1 },
+   *  `minTouch` exactly, the closed line's height in home refactor 4.
+   *
+   *  `count` is THE COUNT PILL's least height (#822; 7.37; home refactor 3, 4, 7): **16, and it is
+   *  `num.tiny`'s own line box**, the figure's role — the corner badge's borrowing (`segmentBadge`),
+   *  for 15.3's reason. MEASURED off home refactor 4 at the mocks' 1,5 pixels to the point: the pill
+   *  20–22 pixels tall, about 14pt, and the digits' ink 12 pixels, `tiny`'s 11pt; 16 is the figure's
+   *  box and the nearest the grid allows without clipping it. A least height, not a fixed one, so a
+   *  larger OS text size grows the pill with its figure. Its width is the figures and `space.xs` each
+   *  side — a lozenge at `radius.pill` even for one digit (the mock's *6* is 31 pixels wide, its *14*
+   *  40). */
+  foldingLine: { pad: space.lg, border: 1, count: 16 },
   /** THE PORTRAIT TILE (#801; home rows 17–19; 7.31) — a face edge to edge with its words over the
    *  wash. `railRatio` is a tile's share of the content width on a Home row, for `railCardRatio`'s
    *  reason — a ratio, never a point value: home rows 17 draws two whole and the third cut at two

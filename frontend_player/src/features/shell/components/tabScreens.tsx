@@ -87,7 +87,9 @@ import { HOME_COPY } from './shellCopy';
  * games* reads *Join a group to get games — see Groups heating up, just below.* where *Play finds you
  * one.* stood (§31.1). **Every line reads when Home opens**, open or not, so a closed line still
  * knows whether to show; the pull re-reads them all with Home's own. With all five hidden, FOR YOU is
- * hidden too.
+ * hidden too. **Four lines carry a count** ([#822](https://github.com/Raketa02/Raketa/issues/822),
+ * ADR-0205 §6) — how many there are to explore, on each line's own read — which the shell hands the
+ * line as it hands the title; Top 10 has none.
  *
  * **A friend act anywhere moves a person on the people lines** — an answer in Needs your answer, the
  * record a face opens — because their reads list people (`LISTS_PEOPLE`) and every friend write
@@ -164,6 +166,7 @@ function ForYou({ inNoGroup }: { readonly inNoGroup: boolean }) {
           <FoldingLine
             key={key}
             title={line.title}
+            count={line.count}
             open={open === key}
             onHeader={() => press(key)}
             footer={line.footer}

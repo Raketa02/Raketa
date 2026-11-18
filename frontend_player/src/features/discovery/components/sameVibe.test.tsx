@@ -30,7 +30,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { socialTagChip, socialTagLabel } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
-import { isOpen, lineTitles, openLine } from '@/test-support/forYou';
+import { isOpen, lineNamed, lineTitles, openLine } from '@/test-support/forYou';
 import {
   SAME_VIBE_ALL_PATH,
   SAME_VIBE_PATH,
@@ -255,8 +255,8 @@ describe('the line on Home', () => {
     vibeServer();
     stubNewInRaketa(transport, [JOINER]);
     await launchSignedIn();
-    await screen.findByRole('button', { name: COPY.line });
-    await screen.findByRole('button', { name: DISCOVERY_COPY.newInRaketa.line });
+    await screen.findByRole('button', { name: lineNamed(COPY.line) });
+    await screen.findByRole('button', { name: lineNamed(DISCOVERY_COPY.newInRaketa.line) });
 
     const titles = lineTitles();
     expect(titles[titles.indexOf(DISCOVERY_COPY.newInRaketa.line) + 1]).toBe(COPY.line);
@@ -280,7 +280,7 @@ describe('the line on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -290,7 +290,7 @@ describe('the line on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 });
 

@@ -5,7 +5,7 @@
  * draws, and how a write's answer lands on the card it came from.
  */
 
-import type { GroupPerson, HottestGroup } from './group';
+import type { GroupPerson, HottestGroup, HottestRow } from './group';
 import { groupAction, type GroupAction } from './groupRules';
 import type { GroupRelation } from './vocabulary';
 
@@ -38,11 +38,17 @@ export function sheetFaces(group: HottestGroup): readonly GroupPerson[] {
   return group.faces.slice(0, SHEET_FACES);
 }
 
-/** **The row with one card's relation moved** — what a join, an ask or a withdraw draws at once. */
+/**
+ * **The row with one card's relation moved** — what a join, an ask or a withdraw draws at once. The
+ * total stands: it moves with the next read, which every such write asks for (#822).
+ */
 export function withRelation(
-  groups: readonly HottestGroup[],
+  row: HottestRow,
   groupId: string,
   relation: GroupRelation,
-): readonly HottestGroup[] {
-  return groups.map((group) => (group.id === groupId ? { ...group, relation } : group));
+): HottestRow {
+  return {
+    ...row,
+    groups: row.groups.map((group) => (group.id === groupId ? { ...group, relation } : group)),
+  };
 }

@@ -1448,16 +1448,23 @@ the club the group plays at.
 > **Amended by [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q19, Q37; home
 > refactor 12, 13): Top 10's footer reads the switcher on the left and `Open the rankings ›` on the
 > right, where it read the sport pill · `Rankings ›`.
+>
+> **Amended by [#822](https://github.com/Raketa02/Raketa/issues/822)** (ADR-0205 §5, §6, Q17, Q33,
+> Q34; home refactor 3, 4, 7): every line but Top 10 draws its count, `{n}`, and says it after its
+> title; the people lines' footers read `See all {n} ›`, where they read `See all ›`. `{n}` is the
+> line's total as served — how many there are to explore, never how many are a good match — and
+> `99+` past 99: the server counts up to 100.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
 | The section, under *Your games* | `FOR YOU` | the eyebrow, drawn uppercase from *For you* |
-| Hottest groups, the line | `Groups heating up` | no footer until the Groups heating up page (#823) |
-| Same competitive level, the line | `Players at your level` · footer `See all ›` | spoken *See all players at your level* |
-| New in Raketa, the line | `New in Raketa` · footer `See all ›` | never *Rakieta*; spoken *See all new players* |
-| Same vibe, the line | `Players with your vibe` · footer `See all ›` | spoken *See all same vibe players*, the screen it opens |
+| Hottest groups, the line | `Groups heating up` · the count `{n}` | no footer until the Groups heating up page (#823) |
+| Same competitive level, the line | `Players at your level` · the count `{n}` · footer `See all {n} ›` | spoken *See all players at your level* |
+| New in Raketa, the line | `New in Raketa` · the count `{n}` · footer `See all {n} ›` | never *Rakieta*; spoken *See all new players* |
+| Same vibe, the line | `Players with your vibe` · the count `{n}` · footer `See all {n} ›` | spoken *See all same vibe players*, the screen it opens |
+| A line's count | `{n}`, or `99+` past 99 | in the grey pill between the title and the chevron, open or closed; the footer's `{n}` is the same figure, though See all shows one sport at a time; none on Top 10 |
 | Top 10, the line | `Top 10` · footer: the switcher `{Sport} ›` on the left · `Open the rankings ›` on the right | the switcher is the deck's control, cited, its chevron pointing the way it opens: right; the link spoken *Open the rankings in padel*; the closed line shows neither |
-| A line, spoken | `{title}`, expanded or collapsed | the state is the platform's own word; the count joins the name with #822 |
+| A line, spoken | `{title}, {n}`, expanded or collapsed | *Players at your level, 14, collapsed*; the count as drawn, `99+` included — there is no exact figure past 99 to say; Top 10 says `{title}` alone; the state is the platform's own word, and the pill is not read again |
 | *Your games*, a player in no group | `Join a group to get games — see Groups heating up, just below.` | in place of §22.7's `⚡ Play finds you one.`; the first line stands; Groups heating up starts open for them |
 
 ### 31.2 Hottest groups — the card

@@ -6,8 +6,12 @@
  *
  * Open, up to ten portrait tiles on the row frame's `tiles` rail, settling on their edges, in the
  * read's order — who the reader isn't connected with first, then who they asked, then friends — and
- * *See all ›* to the grid at the foot. **Hidden** while the read holds nothing, is in flight, or
+ * *See all N ›* to the grid at the foot. **Hidden** while the read holds nothing, is in flight, or
  * failed: a line that fails is left out, and the rest of Home stands (the screens §1).
+ *
+ * **Its count, on the line and in *See all N ›*, is how many joined in the last 30 days**
+ * ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6; the mechanics §7.5) — the
+ * read's `total`, *99+* past 99 — and moves with the read.
  *
  * **A tile opens the record**, its requests sent from *new players* (`foundIn`). The line's reads list
  * people (`LISTS_PEOPLE`), so any friend write — from a tile, the record, or anywhere else in the app
@@ -23,7 +27,7 @@ import { FoldingLineFooter, HomeRowRail, type FoldingLineParts } from '@/shared/
 import { FOUND_AMONG_NEW_PLAYERS, type Joiner } from '../domain/joiner';
 import { useNewInRaketa } from '../hooks/useNewInRaketa';
 
-import { DISCOVERY_COPY } from './discoveryCopy';
+import { DISCOVERY_COPY, seeAllWords } from './discoveryCopy';
 import { NEW_IN_RAKETA_ROUTE } from './discoveryRoutes';
 import { RowRecord, type RecordOpened } from './RowRecord';
 import { JoinerTile } from './JoinerTile';
@@ -34,16 +38,17 @@ import { JoinerTile } from './JoinerTile';
  */
 export function useNewInRaketaLine(): FoldingLineParts | undefined {
   const COPY = DISCOVERY_COPY.newInRaketa;
-  const joiners = useNewInRaketa().data;
-  if (joiners === undefined || joiners.length === 0) return undefined;
+  const row = useNewInRaketa().data;
+  if (row === undefined || row.people.length === 0) return undefined;
   return {
     title: COPY.line,
+    count: row.total,
     testID: 'new-in-raketa',
-    content: <NewInRaketa joiners={joiners} />,
+    content: <NewInRaketa joiners={row.people} />,
     footer: (
       <FoldingLineFooter
         link={{
-          words: COPY.seeAll,
+          words: seeAllWords(row.total),
           label: COPY.seeAllLabel,
           onPress: () => router.push(NEW_IN_RAKETA_ROUTE),
         }}

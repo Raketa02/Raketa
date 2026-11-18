@@ -5,7 +5,10 @@
  * §4.1; the mechanics §6, §9; home rows 1, 7; home refactor 6, 7).
  *
  * Open, up to ten dark cards on the row frame's peeking rail, settling on their edges, in the read's
- * order — fresh good matches first, then the gaps — and *See all ›* to the full list at the foot.
+ * order — fresh good matches first, then the gaps — and *See all N ›* to the full list at the foot.
+ * **Its count**, on the line and in *See all N ›*, is everybody holding a level in a sport the reader
+ * holds one in ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6; the mechanics
+ * §6.9) — the read's `total`, *99+* past 99, never the good matches — and moves with the read.
  * **Hidden** while the read holds nobody (the reader holds no level anywhere, or nobody shares a
  * sport), is in flight, or failed: a line that fails is left out, and the rest of Home stands.
  *
@@ -32,7 +35,7 @@ import { usePersonSheet } from '../hooks/usePersonSheet';
 import { useReaderFace } from '../hooks/useReaderFace';
 import { useSameLevel } from '../hooks/useSameLevel';
 
-import { DISCOVERY_COPY } from './discoveryCopy';
+import { DISCOVERY_COPY, seeAllWords } from './discoveryCopy';
 import { SAME_LEVEL_ROUTE } from './discoveryRoutes';
 import { ComparingSheet } from './ComparingSheet';
 import { RowRecord, type RecordOpened } from './RowRecord';
@@ -44,17 +47,18 @@ import { SameLevelCard } from './SameLevelCard';
  */
 export function useSameLevelLine(): FoldingLineParts | undefined {
   const COPY = DISCOVERY_COPY.sameLevel;
-  const players = useSameLevel().data;
+  const row = useSameLevel().data;
   const onScreen = useOnScreenReports('SAME_LEVEL');
-  if (players === undefined || players.length === 0) return undefined;
+  if (row === undefined || row.people.length === 0) return undefined;
   return {
     title: COPY.line,
+    count: row.total,
     testID: 'same-level',
-    content: <SameLevel players={players} onScreen={onScreen} />,
+    content: <SameLevel players={row.people} onScreen={onScreen} />,
     footer: (
       <FoldingLineFooter
         link={{
-          words: COPY.seeAll,
+          words: seeAllWords(row.total),
           label: COPY.seeAllLabel,
           onPress: () => router.push(SAME_LEVEL_ROUTE),
         }}

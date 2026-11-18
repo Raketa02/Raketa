@@ -95,7 +95,14 @@ group, *Anyone*, 7 players).
   another folds the first, then unfolds the second; only the open line's header closes it. **Home
   remembers the open line while the app lives**, across tab switches, and never across a restart.
   **For a player in no group, Groups heating up starts open.**
-- **A closed line draws no tiles.** Its read still runs, for its hiding (and, from #822, its count).
+- **A closed line draws no tiles.** Its read still runs, for its hiding and its count.
+- **Four lines carry a count** ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6):
+  each row's `total` — **how many there are to explore, never how many are a good match** (§5.10,
+  §6.9, §7.5, §8.8) — counted up to 100 and drawn *99+* past 99, in the pill and in *See all N ›*
+  alike. Top 10 has none. **It is the server's**: the phone never adds a card to it or takes one
+  away, so a friend write drawn on a card (§13) leaves it as read, and **it moves with the row's
+  next read** — a return after 30 seconds, foregrounding, the pull, and a push or a write that
+  re-reads the row. Nothing polls for it.
 - **A row with nothing to show is a hidden line**, as Home's rows were: while loading, empty or failed.
   With all five hidden, FOR YOU is hidden. A line that empties while open closes and goes.
 - **Each row reads on its own.** A slow or failed row never holds up the others.

@@ -35,7 +35,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { GROUPS_COPY } from '@/features/groups/types';
-import { isOpen, lineTitles, openLine } from '@/test-support/forYou';
+import { isOpen, lineNamed, lineTitles, openLine } from '@/test-support/forYou';
 import {
   HOME_PATH,
   HOTTEST_GROUPS_PATH,
@@ -268,8 +268,8 @@ describe('the line on Home', () => {
     peopleServer();
     stubHottestGroups(transport, [HOT_GROUP]);
     await launchSignedIn();
-    await screen.findByRole('button', { name: COPY.line });
-    await screen.findByRole('button', { name: GROUPS_COPY.hottest.line });
+    await screen.findByRole('button', { name: lineNamed(COPY.line) });
+    await screen.findByRole('button', { name: lineNamed(GROUPS_COPY.hottest.line) });
 
     expect(lineTitles().slice(0, 2)).toEqual([GROUPS_COPY.hottest.line, COPY.line]);
     expect(isOpen(COPY.line)).toBe(false);
@@ -295,7 +295,7 @@ describe('the line on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -305,7 +305,7 @@ describe('the line on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 });
 

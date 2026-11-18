@@ -807,15 +807,19 @@ export function stubMyGroups(transport: Transport, groups: readonly Wire['MyGrou
   );
 }
 
-/** Home's Hottest groups (#800) — none unless the suite says, so the row is hidden. */
+/**
+ * Home's Hottest groups (#800) — none unless the suite says, so the row is hidden. **Its total is the
+ * groups served unless the suite says** (#822): the server's counts a pool the row only samples.
+ */
 export const HOTTEST_GROUPS_PATH = '/api/v1/hottest-groups';
 
 export function stubHottestGroups(
   transport: Transport,
   groups: readonly Wire['HottestGroupSchema'][] = [],
+  total: number = groups.length,
 ) {
   transport.on('GET', HOTTEST_GROUPS_PATH, () =>
-    json<Wire['HottestGroupsResponse']>({ groups: [...groups], total: groups.length }),
+    json<Wire['HottestGroupsResponse']>({ groups: [...groups], total }),
   );
 }
 
@@ -824,12 +828,14 @@ export const NEW_IN_RAKETA_PATH = '/api/v1/new-in-raketa';
 /** New in Raketa's See all — the transport drops `?sport&after`, so one responder answers each page. */
 export const NEW_IN_RAKETA_ALL_PATH = '/api/v1/new-in-raketa/all';
 
+/** Its total is the players served unless the suite says (#822). */
 export function stubNewInRaketa(
   transport: Transport,
   players: readonly Wire['NewInRaketaPlayerSchema'][] = [],
+  total: number = players.length,
 ) {
   transport.on('GET', NEW_IN_RAKETA_PATH, () =>
-    json<Wire['NewInRaketaResponse']>({ players: [...players], total: players.length }),
+    json<Wire['NewInRaketaResponse']>({ players: [...players], total }),
   );
 }
 
@@ -838,12 +844,14 @@ export const SAME_LEVEL_PATH = '/api/v1/same-level';
 /** Same level's See all — the transport drops `?sport&after`, so one responder answers each page. */
 export const SAME_LEVEL_ALL_PATH = '/api/v1/same-level/all';
 
+/** Its total is the players served unless the suite says (#822). */
 export function stubSameLevel(
   transport: Transport,
   players: readonly Wire['SameLevelPlayerSchema'][] = [],
+  total: number = players.length,
 ) {
   transport.on('GET', SAME_LEVEL_PATH, () =>
-    json<Wire['SameLevelResponse']>({ players: [...players], total: players.length }),
+    json<Wire['SameLevelResponse']>({ players: [...players], total }),
   );
 }
 
@@ -852,12 +860,14 @@ export const SAME_VIBE_PATH = '/api/v1/same-vibe';
 /** Same vibe's See all — the transport drops `?sport&after`, so one responder answers each page. */
 export const SAME_VIBE_ALL_PATH = '/api/v1/same-vibe/all';
 
+/** Its total is the players served unless the suite says (#822). */
 export function stubSameVibe(
   transport: Transport,
   players: readonly Wire['SameVibePlayerSchema'][] = [],
+  total: number = players.length,
 ) {
   transport.on('GET', SAME_VIBE_PATH, () =>
-    json<Wire['SameVibeResponse']>({ players: [...players], total: players.length }),
+    json<Wire['SameVibeResponse']>({ players: [...players], total }),
   );
 }
 

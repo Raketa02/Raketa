@@ -58,6 +58,7 @@
  */
 
 import { sportInLine, sportLabel } from '@/features/onboarding/types';
+import { countFigure } from '@/shared/formatting/countFigure';
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
 import type { SportPillWords } from '@/shared/ui';
 import { socialTagName, thingsInCommon } from '@/shared/vocabulary/socialTagPresentation';
@@ -74,7 +75,6 @@ export const DISCOVERY_COPY = {
   newInRaketa: {
     /** FOR YOU's line (#820) — its title, and what it is named: never *Rakieta*. */
     line: 'New in Raketa',
-    seeAll: 'See all',
     seeAllLabel: 'See all new players',
     /** The volt tag, top-left on every tile. */
     tag: 'NEW',
@@ -88,7 +88,6 @@ export const DISCOVERY_COPY = {
   sameLevel: {
     /** FOR YOU's line (#820) — its title: the row was *SAME COMPETITIVE LEVEL PLAYERS*. */
     line: 'Players at your level',
-    seeAll: 'See all',
     seeAllLabel: 'See all players at your level',
     /** See all's title — bold, two lines where it wraps (home rows 12). */
     title: 'Same competitive level players',
@@ -108,7 +107,6 @@ export const DISCOVERY_COPY = {
   sameVibe: {
     /** FOR YOU's line (#820) — its title: the row was *SAME VIBE PLAYERS*. */
     line: 'Players with your vibe',
-    seeAll: 'See all',
     seeAllLabel: 'See all same vibe players',
     /** See all's title. */
     title: 'Same vibe players',
@@ -118,6 +116,16 @@ export const DISCOVERY_COPY = {
     reading: 'Reading same vibe players…',
   },
 } as const;
+
+/**
+ * *See all 14* — a people line's footer link, before its chevron (#822; ADR-0205 §5, §6): **the
+ * line's count**, the pill's figure, *99+* past 99. See all shows one sport at a time, and the figure
+ * is still the line's whole pool, as the mocks draw it. Spoken, the link keeps its name
+ * (*See all players at your level*): the line's own name has just said the count.
+ */
+export function seeAllWords(total: number): string {
+  return `See all ${countFigure(total)}`;
+}
 
 /** *Padel 2,35* — one sport on a tile, its dot drawn before it. */
 export function sportLevelLine(sport: Sport, level: number): string {

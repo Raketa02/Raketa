@@ -5,13 +5,14 @@
  */
 
 import { getSameVibe, getSameVibePage, type Cancellable } from '../api/discoveryApi';
+import type { PeopleRow } from '../domain/peopleRow';
 import type { SameVibePlayer } from '../domain/sameVibe';
 import type { SeeAllAsk, SeeAllPage } from '../domain/seeAll';
-import { toPageAsked, toSameVibePage, toSameVibePlayer } from '../mappers/discoveryMappers';
+import { toPageAsked, toSameVibePage, toSameVibeRow } from '../mappers/discoveryMappers';
 
-/** Home's row — up to 10, in the server's order. */
-export function readSameVibe(options: Cancellable = {}): Promise<readonly SameVibePlayer[]> {
-  return getSameVibe(options).then((answer) => answer.players.map(toSameVibePlayer));
+/** Home's row — up to 10, in the server's order, and how many it could show (#822). */
+export function readSameVibe(options: Cancellable = {}): Promise<PeopleRow<SameVibePlayer>> {
+  return getSameVibe(options).then(toSameVibeRow);
 }
 
 /** One page of See all — with a sport, only those holding a level in it. */

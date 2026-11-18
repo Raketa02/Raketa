@@ -9,6 +9,11 @@
  * Groups heating up page has one to open (#823). **Hidden** while the read holds nothing, is in
  * flight, or failed (the screens §1: a line that fails is left out, and the rest of Home stands).
  *
+ * **Its count is how many groups there are to look through** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+ * ADR-0205 §6): every group with 3 or more players, the reader's own included — the read's `total`,
+ * drawn *99+* past 99 — never how many cards the rail holds. It moves with the read: a return after
+ * thirty seconds, foregrounding, the pull, and the re-read every join, ask and withdraw asks for.
+ *
  * ## The taps
  *
  * | | |
@@ -59,9 +64,14 @@ const HOT = GROUPS_COPY.hottest;
  * it is open or not, so the read runs when Home opens.
  */
 export function useHottestGroupsLine(): FoldingLineParts | undefined {
-  const groups = useHottestGroups().data;
-  if (groups === undefined || groups.length === 0) return undefined;
-  return { title: HOT.line, testID: 'hottest-groups', content: <HottestGroups groups={groups} /> };
+  const row = useHottestGroups().data;
+  if (row === undefined || row.groups.length === 0) return undefined;
+  return {
+    title: HOT.line,
+    count: row.total,
+    testID: 'hottest-groups',
+    content: <HottestGroups groups={row.groups} />,
+  };
 }
 
 /** Which face the one sheet shows, and for which card. */

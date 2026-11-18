@@ -30,7 +30,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { theme } from '@/shared/ui';
-import { isOpen, lineTitles, openLine } from '@/test-support/forYou';
+import { isOpen, lineNamed, lineTitles, openLine } from '@/test-support/forYou';
 import {
   SAME_LEVEL_ALL_PATH,
   SAME_LEVEL_PATH,
@@ -254,8 +254,8 @@ describe('the line on Home', () => {
     stubHottestGroups(transport, [HOT_GROUP]);
     stubNewInRaketa(transport, [JOINER]);
     await launchSignedIn();
-    await screen.findByRole('button', { name: DISCOVERY_COPY.newInRaketa.line });
-    await screen.findByRole('button', { name: GROUPS_COPY.hottest.line });
+    await screen.findByRole('button', { name: lineNamed(DISCOVERY_COPY.newInRaketa.line) });
+    await screen.findByRole('button', { name: lineNamed(GROUPS_COPY.hottest.line) });
 
     expect(lineTitles().slice(0, 3)).toEqual([
       GROUPS_COPY.hottest.line,
@@ -286,7 +286,7 @@ describe('the line on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -296,7 +296,7 @@ describe('the line on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 });
 
