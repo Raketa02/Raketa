@@ -496,3 +496,15 @@ Top 10, whose numeral stands beside its card. **Where a section stands on the pa
 lays them out — a fold's section is its line's, which is why the line names it rather than reading
 the context it stands in. Suites: `FoldingLine.test.tsx`, `HomeRow.test.tsx`, `RowSportPill.test.tsx`,
 `onScreen.test.ts`; the lines are walked in the shell's `forYou.test.tsx` and each feature's own.
+
+**The sport pill opens either way, and the footer puts its control at the left**
+([#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5, Q19, Q37; home refactor 12, 13).
+`SportPill` and `SportBar` take **`opens`**, `left` by default — a page's header, the bar growing over
+what stands before the pill — or `right`: the pill's chevron points _›_, the bar's row is laid against
+its **left** edge with the current sport first, its chevron turned back to _‹_, and the others after
+it in the page's order, each sliding out from its left, nearest first. The same shared value, the same
+widths, mirrored; `SportPillFrame` is untouched. **`RowSportPill` opens rightwards**, its one caller
+being Top 10: its slot starts the bar's inset before the pill's left end and runs to the footer's right
+edge. **`FoldingLineFooter`'s link takes the room before it** (`marginLeft: 'auto'`), so a control
+stands at the footer's left and the link at its right, and a footer with a link alone is unchanged.
+Suites: `SportPill.test.tsx` (the direction), `RowSportPill.test.tsx` and `FoldingLine.test.tsx`.

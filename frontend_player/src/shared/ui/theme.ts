@@ -993,14 +993,14 @@ const size = {
    *  - `shieldTop` — how far below the card's top the shield (`monogram.shield`) starts, so it
    *    overlaps the band and the body; `shieldRing` its white ring, and `shieldFoot` the share of
    *    its side that rounds its two lower corners — a shield's, where a tile rounds all four;
-   *  - `heatBar` — the bar's height; `tagMark` the drawn ▲ in the HOTTEST pill. */
+   *  - `tagMark` — the drawn ▲ in the HOTTEST pill. The heat bar's `heatBar` (6) retired with the
+   *    bar (#821). */
   hottest: {
     band: 39,
     stripe: 9,
     shieldTop: 15,
     shieldRing: 3,
     shieldFoot: 0.4,
-    heatBar: 6,
     tagMark: 6,
   },
   /** THE PROFILE SWITCHER'S CHIP (club 7, #518; slimmed 2026-10-01) — a face at `monogram.chip`

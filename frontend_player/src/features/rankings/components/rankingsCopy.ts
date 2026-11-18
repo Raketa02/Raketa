@@ -306,19 +306,22 @@ export const RANKINGS_PILL_WORDS: SportPillWords = {
 };
 
 /**
- * **Top 10 on Home** ([#805](https://github.com/Raketa02/Raketa/issues/805); §31.1, §31.11): the
- * heading — drawn uppercase by the row frame, *TOP 10* — and *Rankings ›*. The pill's hint and the
- * link's spoken name are calls: §31 writes only what is drawn. The empty line is §30.7's
- * `nobodyRankedLine`, as §31.11 cites it, and a card reads `rowName`'s *You*.
+ * **Top 10 on Home** ([#805](https://github.com/Raketa02/Raketa/issues/805); §31.1, §31.11): FOR
+ * YOU's line, *Top 10*, and its footer's link, ***Open the rankings ›*** since
+ * [#821](https://github.com/Raketa02/Raketa/issues/821) (ADR-0205 §5; home refactor 12, 13), where it
+ * read *Rankings ›*. The pill's hint and the link's spoken name are calls: §31 writes only what is
+ * drawn. The empty line is §30.7's `nobodyRankedLine`, as §31.11 cites it, and a card reads
+ * `rowName`'s *You*.
  */
 export const TOP_TEN_COPY = {
   /** FOR YOU's line (#820) — its title, and what it is named. */
   line: 'Top 10',
-  rankings: 'Rankings',
+  /** The open line's link, drawn with its ›: *Open the rankings ›* (#821). */
+  rankings: 'Open the rankings',
   pillHint: 'Shows Top 10 in another sport',
 } as const;
 
-/** *Rankings ›*, spoken — what it opens: *Rankings in padel*. */
+/** *Open the rankings ›*, spoken — what it opens: *Open the rankings in padel*. */
 export function topTenRankingsLabel(sport: Sport): string {
   return `${TOP_TEN_COPY.rankings} in ${sportInLine(sport)}`;
 }

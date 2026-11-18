@@ -28,6 +28,20 @@ export async function openLine(title: string): Promise<void> {
   await screen.findByRole('button', { name: title, expanded: true });
 }
 
+type Node = ReturnType<typeof screen.getByTestId>;
+
+/**
+ * **What stands in an open line's footer, left to right** (`folding-line-footer`) — *link* for the
+ * part that holds its link, and `name`'s word for every other part (#821: Top 10's switcher at the
+ * left, *Open the rankings ›* at the right).
+ */
+export function footerParts(footer: Node, name: (part: Node) => string): string[] {
+  return footer.children.map((part: Node | string) => {
+    if (typeof part === 'string') return part;
+    return within(part).queryByRole('link') !== null ? 'link' : name(part);
+  });
+}
+
 /** The lines FOR YOU shows, top to bottom, by title. */
 export function lineTitles(): string[] {
   return within(screen.getByTestId('for-you'))

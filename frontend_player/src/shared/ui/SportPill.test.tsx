@@ -1,6 +1,7 @@
 /**
  * **The sport pill's unfold, at its own seam** — the bar growing leftwards from the pill on the
- * UI thread, and simply open under reduced motion (play 41–42, #513; shared since #774). The router
+ * UI thread, or rightwards from Top 10's (#821), and simply open under reduced motion (play 41–42,
+ * #513; shared since #774). The router
  * suites walk what a tap does; this holds what the bar is drawn at while it does it.
  *
  * Reanimated is real here, as it is in the router harness (ADR-0176 §2): every worklet runs on the
@@ -9,12 +10,20 @@
  */
 
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { StyleSheet, type ViewStyle } from 'react-native';
 import { getAnimatedStyle } from 'react-native-reanimated';
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { ReducedMotionProvider } from './overlay';
-import { SportBar, type AnotherSport, type BarCover, type SportPillWords } from './SportPill';
+import {
+  SportBar,
+  SportPill,
+  type AnotherSport,
+  type BarCover,
+  type SportPillOpening,
+  type SportPillWords,
+} from './SportPill';
 import { theme } from './theme';
 
 /** A page's words — the bar says only what it is handed. */
@@ -43,11 +52,13 @@ function drawBar({
   cover,
   onAnother,
   sports = ['padel', 'tennis', 'squash', 'badminton'],
+  opens,
 }: {
   readonly reduced?: boolean;
   readonly cover?: BarCover;
   readonly onAnother?: () => void;
   readonly sports?: readonly Sport[];
+  readonly opens?: SportPillOpening;
 } = {}) {
   const onChoose = jest.fn();
   render(
@@ -59,10 +70,32 @@ function drawBar({
         onChoose={onChoose}
         {...(cover === undefined ? {} : { cover })}
         {...(onAnother === undefined ? {} : { another: { ...ANOTHER, onPress: onAnother } })}
+        {...(opens === undefined ? {} : { opens })}
       />
     </ReducedMotionProvider>,
   );
   return { onChoose };
+}
+
+/** A sliding pill's animated style — the slide is its wrapper, a few host nodes up from the button. */
+function slideOf(name: string): { readonly opacity?: number; readonly translateX?: number } {
+  let node = within(bar()).getByRole('button', { name }).parent;
+  while (node !== null) {
+    if (node.props.jestAnimatedStyle !== undefined) {
+      const style = getAnimatedStyle(node) as {
+        readonly opacity?: number;
+        readonly transform?: readonly { readonly translateX?: number }[];
+      };
+      return {
+        ...(style.opacity === undefined ? {} : { opacity: style.opacity }),
+        ...(style.transform?.[0]?.translateX === undefined
+          ? {}
+          : { translateX: style.transform[0].translateX }),
+      };
+    }
+    node = node.parent;
+  }
+  return {};
 }
 
 const bar = () => screen.getByTestId('sport-bar');
@@ -202,5 +235,106 @@ describe('the sport pill’s bar', () => {
     drawBar();
 
     expect(within(bar()).queryByRole('button', { name: ANOTHER_SPORT })).toBeNull();
+  });
+});
+
+/**
+ * **Opening rightwards** — Top 10's switcher, at the left of its line's footer (#821; ADR-0205 §5,
+ * Q19, Q37; home refactor 12, 13, note 4): the pill reads *Padel ›*, and the bar grows to the right
+ * from where it stood, the current sport at its left end and the others sliding out after it.
+ */
+describe('the sport pill opening rightwards', () => {
+  it('points its chevron the way it opens — Padel ›', () => {
+    render(
+      <SportPill
+        sports={['padel', 'tennis']}
+        sport="padel"
+        words={WORDS}
+        onUnfold={jest.fn()}
+        opens="right"
+      />,
+    );
+
+    expect(screen.getByText('›', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByText('‹', { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('keeps ‹ on a page’s pill, which opens leftwards', () => {
+    render(
+      <SportPill sports={['padel', 'tennis']} sport="padel" words={WORDS} onUnfold={jest.fn()} />,
+    );
+
+    expect(screen.getByText('‹', { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it('lists the current sport first, chosen, then the others in the page’s order', () => {
+    const { onChoose } = drawBar({ opens: 'right' });
+
+    const names = within(bar())
+      .getAllByRole('button')
+      .map((option) => [option.props.accessibilityLabel, option.props.accessibilityState.selected]);
+    expect(names).toEqual([
+      ['Padel', true],
+      ['Tennis', false],
+      ['Squash', false],
+      ['Badminton', false],
+    ]);
+
+    fireEvent.press(within(bar()).getByRole('button', { name: 'Tennis' }));
+    expect(onChoose).toHaveBeenCalledWith('tennis');
+  });
+
+  it('turns the current sport’s chevron back — ‹, the way it folds', () => {
+    drawBar({ opens: 'right' });
+
+    const current = within(bar()).getByRole('button', { name: 'Padel' });
+    expect(within(current).getByText('‹', { includeHiddenElements: true })).toBeTruthy();
+    expect(within(current).queryByText('›', { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('lays its row against the bar’s left edge, so the current sport stays where the pill stood', () => {
+    drawBar({ opens: 'right' });
+
+    const row = StyleSheet.flatten(screen.getByTestId('sport-bar-row').props.style as ViewStyle);
+    expect(row).toMatchObject({ position: 'absolute', top: PAD, left: PAD });
+    expect(row.right).toBeUndefined();
+  });
+
+  it('grows from the pill to the whole row over the unfold, as leftwards', () => {
+    drawBar({ opens: 'right' });
+    layOut();
+
+    nextFrame();
+    expect(barStyle().width).toBeGreaterThanOrEqual(PILL + 2 * PAD);
+    expect(barStyle().width).toBeLessThan(ROW + 2 * PAD);
+
+    act(() => jest.advanceTimersByTime(theme.motion.unfold + FRAME));
+    expect(barStyle().width).toBe(ROW + 2 * PAD);
+  });
+
+  it('slides each sport out rightwards from under the current one, the nearest first', () => {
+    drawBar({ opens: 'right' });
+    layOut();
+
+    act(() => jest.advanceTimersByTime(FRAME * 2));
+
+    const nearest = slideOf('Tennis');
+    expect(nearest.opacity).toBeGreaterThan(0);
+    // Still under the current sport, to its left, on its way out to the right.
+    expect(nearest.translateX).toBeLessThan(0);
+    expect(slideOf('Badminton').opacity).toBe(0);
+
+    act(() => jest.advanceTimersByTime(theme.motion.unfold));
+    expect(slideOf('Badminton')).toEqual({ opacity: 1, translateX: 0 });
+  });
+
+  it('ends with + Another sport, the farthest right, where it is offered', () => {
+    drawBar({ opens: 'right', sports: ['padel', 'tennis'], onAnother: jest.fn() });
+
+    expect(
+      within(bar())
+        .getAllByRole('button')
+        .map((option) => option.props.accessibilityLabel),
+    ).toEqual(['Padel', 'Tennis', ANOTHER_SPORT]);
   });
 });

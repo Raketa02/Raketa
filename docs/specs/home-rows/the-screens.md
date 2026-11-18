@@ -38,9 +38,10 @@
   tile, a swipe along the rail, a footer link or Top 10's pill never does.
 - **The open line** has an ink border, a soft shadow and the chevron pointing down. Under its header,
   **today's tiles**, sideways, **settling on tile edges**; at the bottom right of the open content,
-  **its footer**: *See all ›* on the three people lines, to their See all screens; Top 10's sport pill
-  and *Rankings ›*, as the row's heading carried them until #821; none on Groups heating up until
-  #823's page.
+  **its footer**: *See all ›* on the three people lines, to their See all screens; on Top 10, the
+  sport switcher, *Padel ›*, on the left, opening to the right, and *Open the rankings ›* on the
+  right ([#821](https://github.com/Raketa02/Raketa/issues/821), §7.1; home refactor 12, 13); none on
+  Groups heating up until #823's page.
 - **Motion** (designed, no mock): the content unfolds and fades in over about a quarter of a second,
   fast at first and settling; the lines below slide down rather than jump; closing is a little
   shorter; and if what opened would be cut off at the bottom, the page eases down just enough to show
@@ -88,11 +89,14 @@ draws Needs your answer's sections and *Your games*.
 - **The tag top-right**, a dark pill: *▲ HOTTEST* (home rows 3) or *+ GROWING* (home rows 4), the mark
   in volt. **No tag** on the rest (home rows 5).
 - **The name**, bold.
-- **The sports** as coloured dots and names, cut with an ellipsis when they don't fit.
-- **Two figures**, mono: *14* over *games this week*, *11* over *players*, and a green bold *+3 this
-  month* beside the players when the group grew. With no growth the *+N this month* is left out
-  (designed, no mock).
-- **The heat bar**, full width, a gradient fill over a pale track, filled by the card's heat share.
+- **Two figures**, mono: *14* over *games this week* on the left, *11* over *players* on the right,
+  held against the card's edge (home refactor 5.1).
+- **No sport line, no *+N this month*, no heat bar** — the card is slimmer since
+  [#821](https://github.com/Raketa02/Raketa/issues/821) (ADR-0205 §5, Q22; home refactor 5.1). It
+  drew the sports as dots and names cut with an ellipsis, a green *+3 this month* beside the players,
+  and a heat bar filled by the card's heat share (home rows 3, 4). **The group sheet keeps the sports
+  and *new this month*** (§3.3); the heat still orders the cards and picks the tags
+  ([the mechanics §5.5](the-mechanics.md#55-the-heat-bar)) and is drawn nowhere.
 - **Up to 4 overlapping faces**: the reader's friends first, then the longest-standing members. A
   3-member group shows the faces it has (designed, no mock).
 - **The chip** at the foot:
@@ -163,9 +167,11 @@ circle** top-right.
   reader's own band in white bold; the bar **filled in volt from the left up to the other's level**;
   the reader as **a tall white mark labelled *YOU***. A fill short of the mark means they are below,
   one past it above (home rows 7, 8).
-- **The footer:** the gap in words, *0,02 below you*, *0,09 above you* or *Same level* (designed, no
-  mock), then *· 2 sports ›* in volt when they share more than one sport. With one, the footer is the
-  gap alone (designed, no mock).
+- **The footer:** *2 sports ›* in volt when they share more than one sport, and the round button.
+  With one, the button alone. **No gap in words** since
+  [#821](https://github.com/Raketa02/Raketa/issues/821) (ADR-0205 §5, Q22; home refactor 7): the card
+  read *0,02 below you*, *0,09 above you* or *Same level* before *· 2 sports ›*; the comparison sheet's
+  blocks still say it (§4.3), and the card's pairing no longer speaks it. Everything else stays.
 - **The round friend button** ([§8](#8-the-round-friend-button-and-its-sheets)).
 - **Taps:** the other's face or nickname opens their record; *N sports ›* opens the comparison sheet;
   the button acts. Nothing else on the card is a button *(a call)*.
@@ -263,7 +269,12 @@ circle** top-right.
 
 #### 7.1 The row (home rows 2, 25, 25.1, 25.2, 25.3)
 
-- **The heading:** *TOP 10*, the sliding sport pill (*● Padel ‹*), and *Rankings ›* on the right.
+- **The heading:** *TOP 10*, the sliding sport pill (*● Padel ‹*), and *Rankings ›* on the right —
+  the row's, until FOR YOU's line (§1, #820). **Since [#821](https://github.com/Raketa02/Raketa/issues/821)**
+  (ADR-0205 §5, Q19, Q37; home refactor 12, 13) **the open line's footer** holds them: **the sport
+  switcher on the left**, *● Padel ›*, its chevron pointing the way it opens (§7.3), and ***Open the
+  rankings ›*** on the right, in *Rankings ›*'s place, going where it went
+  ([the mechanics §10.4](the-mechanics.md#104-taps)). **The closed line shows neither.**
 - **Up to 10 cards**, places 1 to 10, the row ending at the last ranked player.
 - **A sport with nobody ranked:** *Nobody ranked in squash yet*, one line in the row's place under the
   heading (designed, no mock).
@@ -282,8 +293,12 @@ circle** top-right.
 
 #### 7.3 The pill (home rows 27)
 
-- **The deck's sliding sport pill**, lifted to shared UI by #774. Opened, it slides over the heading:
-  the other sports in the app's order, then the chosen one in ink with *›*.
+- **The deck's sliding sport pill**, lifted to shared UI by #774. Opened, it slid over the heading:
+  the other sports in the app's order, then the chosen one in ink with *›*. **Since
+  [#821](https://github.com/Raketa02/Raketa/issues/821) it opens to the right** from the footer's left,
+  with today's animation (designed, no mock): the chosen one first, in ink with *‹*, where the pill
+  stood, then the other sports in the app's order, sliding out after it — the bar lies over the
+  footer, *Open the rankings ›* included, and a tap anywhere on the footer folds it.
 - **All four sports**, always.
 - **A pick swaps the ten cards** and changes nothing else on Home.
 
@@ -361,7 +376,8 @@ circle** top-right.
 New parts, each a row in the design system's Part 16 when its ticket builds it:
 
 - **The row frame** (§2), in shared UI.
-- **The group card**: the striped band, the overlapping shield badge, the tag pill, the heat bar.
+- **The group card**: the striped band, the overlapping shield badge, the tag pill, the heat bar
+  (retired with the slimmer card, #821).
 - **The comparison bar**, dark and light: four tinted bands, a fill, a tall mark with *YOU*. It reads
   the Skill passport's scale and bands, never new ones.
 - **The portrait tile** with its fade and a corner tag (New in Raketa, Top 10).

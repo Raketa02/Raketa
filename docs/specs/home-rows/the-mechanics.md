@@ -228,6 +228,10 @@ join a second or third group.
 
 ### 5.5 The heat bar
 
+**Drawn nowhere since [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home
+refactor 5.1): the card lost it, with *+N this month* and the sport line. The heat still orders the
+groups and picks the tags (§5.3, §5.4), and the read still serves each card's share. What the bar drew:
+
 - **Each card's heat over the HOTTEST card's**, which is full.
 - **With no HOTTEST, over the top card's** (call 3), **read as the highest heat in the row** *(a
   call)*: with no HOTTEST the first card is the strongest GROWING one, which an untagged card can
@@ -347,6 +351,9 @@ competitive game would be even with.
 
 - **The other's level minus the reader's, in the card's sport**, two decimals: *0,02 below you*,
   *0,09 above you*, and ***Same level*** when it rounds to 0,00.
+- **Said on the comparison sheet's blocks only** (§6.5) since
+  [#821](https://github.com/Raketa02/Raketa/issues/821) (ADR-0205 §5, Q22; home refactor 7): the card
+  no longer draws it, nor speaks it with the pairing. The read still serves the card's gap.
 - **The comparison bar** reads the same two levels on the Skill passport scale, 1,00–5,00.
 
 ### 6.5 The comparison sheet
@@ -574,9 +581,10 @@ Q33).
 ### 10.4 Taps
 
 - **A card opens the record**: *This record isn't available* across a block.
-- **Rankings ›** opens the Rankings page on the row's sport, **in General**, the view Top 10 is drawn
-  from, so the reader sees the rest of the same list *(a call)*. The page then remembers General, as
-  any look at it does.
+- ***Open the rankings ›*** (*Rankings ›* until [#821](https://github.com/Raketa02/Raketa/issues/821),
+  now in the open line's footer) opens the Rankings page on the row's sport, **in General**, the
+  view Top 10 is drawn from, so the reader sees the rest of the same list *(a call)*. The page then
+  remembers General, as any look at it does.
 
 ### 10.5 The trophy (Q32, Q36)
 
@@ -757,7 +765,7 @@ overrule):
 8. ***Joined …* counts Warsaw days**, and 28 days and up read *Joined 4 weeks ago* (§7.3).
 9. **A rested player stays rested** in that row; the count never resets (§9.2).
 10. **Top 10's fall-through goes round** the app's sport order (§10.3).
-11. **Rankings › opens the page in General**, the list Top 10 is the top of (§10.4).
+11. **Open the rankings › opens the page in General**, the list Top 10 is the top of (§10.4).
 12. **A player who turns the switch off while on a row** leaves it on the next read, and a request
     already sent to them stays open (§4.3).
 13. **A request refused under rule (b)** from a stale card puts the button back to **+**, with no

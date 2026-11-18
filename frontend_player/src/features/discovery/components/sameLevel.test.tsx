@@ -55,6 +55,9 @@ import { DISCOVERY_COPY, nobodyToCompareIn } from './discoveryCopy';
 
 const COPY = DISCOVERY_COPY.sameLevel;
 
+/** The words a card draws but hides from a listener — the separators, the bar's band names. */
+const HIDDEN = { includeHiddenElements: true } as const;
+
 const comparison = (
   sport: Wire['Sport'],
   over: Partial<Wire['SameLevelSportSchema']> = {},
@@ -324,13 +327,22 @@ describe('a card', () => {
     expect(colourOf(card(MICHAL).getByText('54%'))).toBe(theme.color.gameRed);
   });
 
-  it('says the gap in words — below, above, or the same level', async () => {
+  /**
+   * ADR-0205 §5, Q22, home refactor 7 (#821): the card no longer says the gap in words — not drawn,
+   * and not spoken with the pairing. Everything else on it stays.
+   */
+  it('says no gap in words — neither below, above, nor the same level', async () => {
     levelServer();
     await homeWithTheRow();
 
-    expect(card(ZOFIA).getByText('0,02 below you')).toBeTruthy();
-    expect(card(KUBA).getByText('0,09 above you')).toBeTruthy();
-    expect(card(ANIA).getByText(COPY.sameLevel)).toBeTruthy();
+    for (const player of [ZOFIA, KUBA, ANIA]) {
+      expect(card(player).queryByText(/below you|above you/, HIDDEN)).toBeNull();
+      expect(card(player).queryByText(COPY.sameLevel, HIDDEN)).toBeNull();
+    }
+    // Zofia's footer is N sports › and the round button alone, with no separator before it.
+    expect(card(ZOFIA).getByText('2 sports')).toBeTruthy();
+    expect(card(ZOFIA).queryByText(/^ · $/, HIDDEN)).toBeNull();
+    expect(card(ZOFIA).getByLabelText('91% even in padel, You 2,71, zofia.b 2,69')).toBeTruthy();
   });
 
   it('offers N sports › only with more than one shared sport', async () => {
@@ -559,9 +571,10 @@ describe('See all', () => {
 
     fireEvent.press(bar.getByRole('button', { name: 'Padel' }));
     await waitFor(() => expect(pageReads().at(-1)!.path).toContain('sport=PADEL'));
-    // Kuba is compared in padel now: 60%, amber, 0,49 above.
+    // Kuba is compared in padel now: 60%, at 3,20 — the card says no gap in words since #821.
     await waitFor(() => expect(card(KUBA).getByText('60%')).toBeTruthy());
-    expect(card(KUBA).getByText('0,49 above you')).toBeTruthy();
+    expect(card(KUBA).getByText('3,20')).toBeTruthy();
+    expect(card(KUBA).getByText('Padel')).toBeTruthy();
 
     fireEvent.press(screen.getByRole('button', { name: 'Sport: Padel' }));
     fireEvent.press(

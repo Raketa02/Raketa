@@ -20,7 +20,7 @@
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { RefreshControl } from 'react-native';
+import { RefreshControl, StyleSheet, type ViewStyle } from 'react-native';
 
 import { HOME_COPY } from '@/features/shell/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -46,7 +46,8 @@ import {
 } from '@/test-support/transport';
 
 import { GROUPS_COPY } from './groupsCopy';
-import { hottestCardLabel, hottestChipLabel } from './groupsPresentation';
+import { hottestChipLabel } from './groupsPresentation';
+import { SportDots } from './SportDots';
 
 const HOT = GROUPS_COPY.hottest;
 
@@ -234,6 +235,13 @@ const card = (group: Wire['HottestGroupSchema']) =>
 const chip = (group: Wire['HottestGroupSchema'], action: 'join' | 'ask' | 'requested' | 'in') =>
   screen.findByRole('button', { name: hottestChipLabel(action, group.name) });
 const reads = (path: string) => transport.requestsTo('GET', path).length;
+/** The card's two figures, left to right, by what they count. */
+const figureRow = (group: Wire['HottestGroupSchema']) =>
+  within(screen.getByTestId(`hottest-${group.id}`))
+    .getAllByTestId(/^hottest-(games|players)$/)
+    .map((node) => node.props.testID as string);
+const alignOf = (node: { readonly props: { readonly style?: unknown } }) =>
+  StyleSheet.flatten(node.props.style as ViewStyle).alignItems;
 const sheet = () => within(screen.getByTestId('bottom-sheet'));
 const toasts = () => useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone]);
 
@@ -318,59 +326,66 @@ describe('the line on Home', () => {
 });
 
 describe('the card', () => {
-  it('draws the tag, the figures, the growth and four faces', async () => {
+  /** Home refactor 5.1 (#821): the band, the tag, the shield, the name, two figures, faces, the chip. */
+  it('draws the tag, N games this week on the left, N players on the right, and four faces', async () => {
     hottestServer([OGRODY, KAZIMIERZ, PODGORZE]);
     await launchSignedIn();
     await openLine(HOT.line);
 
     const ogrody = within(screen.getByTestId(`hottest-${OGRODY.id}`));
     expect(ogrody.getByText(OGRODY.name)).toBeTruthy();
-    expect(ogrody.getByText('Padel · Tennis · Squash · Badminton')).toBeTruthy();
-    expect(ogrody.getByText('14')).toBeTruthy();
-    expect(ogrody.getByText('games this week')).toBeTruthy();
-    expect(ogrody.getByText('11')).toBeTruthy();
-    expect(ogrody.getByText('+3')).toBeTruthy();
+    // The shield's monogram, a picture of the group and hidden from a listener.
+    expect(ogrody.getByText(OGRODY.monogram.letters, HIDDEN)).toBeTruthy();
+    const games = within(ogrody.getByTestId('hottest-games'));
+    expect(games.getByText('14')).toBeTruthy();
+    expect(games.getByText('games this week')).toBeTruthy();
+    const players = within(ogrody.getByTestId('hottest-players'));
+    expect(players.getByText('11')).toBeTruthy();
+    expect(players.getByText('players')).toBeTruthy();
+    // Games on the left, the players held against the card's right edge.
+    expect(figureRow(OGRODY)).toEqual(['hottest-games', 'hottest-players']);
+    expect(alignOf(ogrody.getByTestId('hottest-players'))).toBe('flex-end');
     expect(screen.getByTestId('hottest-tag-HOTTEST', HIDDEN)).toBeTruthy();
     expect(screen.getByTestId('hottest-tag-GROWING', HIDDEN)).toBeTruthy();
     // Four of the six faces on the card; the sheet draws the six.
     expect(screen.getAllByTestId(new RegExp(`^hottest-face-${OGRODY.id}-`), HIDDEN)).toHaveLength(
       4,
     );
+    // Spoken as drawn: no growth, which the card no longer carries.
     expect(card(OGRODY).props.accessibilityLabel).toBe(
-      hottestCardLabel({
-        name: OGRODY.name,
-        tag: 'HOTTEST',
-        gamesThisWeek: 14,
-        memberCount: 11,
-        newThisMonth: 3,
-      }),
+      'Ogrody 33 Club, hottest, 14 games this week, 11 players',
     );
   });
 
-  it('writes one game in the singular, no growth at nought, and no tag on an untagged card', async () => {
+  /** ADR-0205 §5, Q22: the heat bar, *+N this month* and the sport line leave the card. */
+  it('draws no heat bar, no +N this month and no sport line — dots or names', async () => {
+    hottestServer([OGRODY, KAZIMIERZ]);
+    await launchSignedIn();
+    await openLine(HOT.line);
+
+    for (const group of [OGRODY, KAZIMIERZ]) {
+      const drawn = within(screen.getByTestId(`hottest-${group.id}`));
+      expect(drawn.queryByText(/^\+\d/, HIDDEN)).toBeNull();
+      expect(drawn.queryByText(/this month/, HIDDEN)).toBeNull();
+      expect(drawn.queryByText(/Padel|Tennis/, HIDDEN)).toBeNull();
+    }
+    expect(screen.UNSAFE_queryAllByType(SportDots)).toHaveLength(0);
+    expect(screen.queryByTestId('heat-bar', HIDDEN)).toBeNull();
+    expect(screen.queryByTestId('heat-fill', HIDDEN)).toBeNull();
+  });
+
+  it('writes one game in the singular, and no tag on an untagged card', async () => {
     hottestServer([PODGORZE]);
     await launchSignedIn();
     await openLine(HOT.line);
 
     const podgorze = within(await screen.findByTestId(`hottest-${PODGORZE.id}`));
     expect(podgorze.getByText('game this week')).toBeTruthy();
-    expect(podgorze.queryByText(/this month/)).toBeNull();
     expect(screen.queryByTestId('hottest-tag-HOTTEST', HIDDEN)).toBeNull();
     expect(screen.queryByTestId('hottest-tag-GROWING', HIDDEN)).toBeNull();
     // A three-member group draws the faces it has.
     expect(screen.getAllByTestId(new RegExp(`^hottest-face-${PODGORZE.id}-`), HIDDEN)).toHaveLength(
       2,
-    );
-  });
-
-  it('fills the heat bar to the served share', async () => {
-    hottestServer([KAZIMIERZ]);
-    await launchSignedIn();
-    await openLine(HOT.line);
-
-    const fill = await screen.findByTestId('heat-fill', HIDDEN);
-    expect(fill.props.style).toEqual(
-      expect.arrayContaining([expect.objectContaining({ width: `${(44 / 48) * 100}%` })]),
     );
   });
 
@@ -497,7 +512,11 @@ describe('the chip', () => {
 });
 
 describe('the group sheet', () => {
-  it('opens on a tap on the card, with the group’s fields and its one button', async () => {
+  /**
+   * Unchanged by the card's slimming (#821, ADR-0205 §5): the sheet keeps the sports, dots and names,
+   * and *new this month* with its *+3*, which the card no longer draws.
+   */
+  it('opens on a tap on the card, with every one of the group’s fields and its one button', async () => {
     hottestServer([OGRODY, KAZIMIERZ]);
     await launchSignedIn();
     await openLine(HOT.line);
@@ -509,6 +528,7 @@ describe('the group sheet', () => {
     expect(opened.getByRole('button', { name: hottestChipLabel('ask', OGRODY.name) })).toBeTruthy();
     expect(opened.getByText('Closed group · run by Ogrody 33 · Ogrody 33')).toBeTruthy();
     expect(opened.getByText('Padel · Tennis · Squash · Badminton')).toBeTruthy();
+    expect(opened.UNSAFE_getAllByType(SportDots)).toHaveLength(1);
     expect(opened.getByText('14')).toBeTruthy();
     expect(opened.getByText('games this week')).toBeTruthy();
     expect(opened.getByText('11')).toBeTruthy();

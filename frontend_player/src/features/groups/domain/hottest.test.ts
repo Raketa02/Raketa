@@ -3,7 +3,6 @@ import {
   CARD_FACES,
   SHEET_FACES,
   cardFaces,
-  heatFill,
   isJoinTap,
   sheetButton,
   sheetFaces,
@@ -25,7 +24,6 @@ function group(overrides: Partial<HottestGroup> = {}): HottestGroup {
     club: { id: 'c-ogrody', name: 'Ogrody 33' },
     gamesThisWeek: 14,
     newThisMonth: 3,
-    heatShare: 1,
     tag: 'HOTTEST',
     faces: [1, 2, 3, 4, 5, 6].map(face),
     friendsCount: 7,
@@ -70,18 +68,6 @@ describe('the faces', () => {
     const three = group({ faces: [1, 2].map(face), memberCount: 3 });
     expect(cardFaces(three)).toHaveLength(2);
     expect(sheetFaces(three)).toHaveLength(2);
-  });
-});
-
-describe('the heat bar', () => {
-  it('fills to the served share', () => {
-    expect(heatFill(44 / 48)).toBeCloseTo(0.9167);
-  });
-
-  it('never draws past full or below empty, whatever arrives', () => {
-    expect(heatFill(1.2)).toBe(1);
-    expect(heatFill(-0.1)).toBe(0);
-    expect(heatFill(Number.NaN)).toBe(0);
   });
 });
 

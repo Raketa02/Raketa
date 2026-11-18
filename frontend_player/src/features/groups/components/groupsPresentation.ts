@@ -617,7 +617,7 @@ export function rateSportLabel(sport: Sport): string {
 
 const HOT = GROUPS_COPY.hottest;
 
-/** *Padel · Tennis · Squash · Badminton* — every name whole; the card cuts the line, the sheet wraps it. */
+/** *Padel · Tennis · Squash · Badminton* — every name whole, on the group sheet, which wraps it. */
 export function hottestSports(sports: readonly Sport[]): string {
   return sports.map(sportLabel).join(DOT);
 }
@@ -627,7 +627,7 @@ export function gamesThisWeekWords(count: number): string {
   return count === 1 ? HOT.gameThisWeek : HOT.gamesThisWeek;
 }
 
-/** The green growth beside the players — *+3* — and nothing at nought. */
+/** The sheet's green growth beside the players — *+3* — and nothing at nought. */
 export function grownBy(count: number): string | undefined {
   return count > 0 ? `+${count}` : undefined;
 }
@@ -668,17 +668,18 @@ export function hottestChipLabel(action: GroupAction, groupName: string): string
   return isJoinTap(action) ? `${word} ${groupName}` : `${groupName}: ${word}`;
 }
 
-/** The card, spoken: *Ogrody 33 Club, hottest, 14 games this week, 11 players, 3 new this month*. */
+/**
+ * The card, spoken as drawn: *Ogrody 33 Club, hottest, 14 games this week, 11 players*. No growth
+ * since the card dropped *+N this month* (#821); the group sheet says it.
+ */
 export function hottestCardLabel(
-  group: Pick<HottestGroup, 'name' | 'tag' | 'gamesThisWeek' | 'memberCount' | 'newThisMonth'>,
+  group: Pick<HottestGroup, 'name' | 'tag' | 'gamesThisWeek' | 'memberCount'>,
 ): string {
   const tag = group.tag === null ? [] : [HOT.tagSpoken[group.tag]];
-  const grown = group.newThisMonth > 0 ? [`${group.newThisMonth} new ${HOT.thisMonth}`] : [];
   return [
     group.name,
     ...tag,
     `${group.gamesThisWeek} ${gamesThisWeekWords(group.gamesThisWeek)}`,
     `${group.memberCount} ${HOT.players}`,
-    ...grown,
   ].join(', ');
 }

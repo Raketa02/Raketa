@@ -15,6 +15,7 @@
  * ┃ └────────────────────────┘ └─────────────────┃
  * ┃                                   See all  › ┃   ← FoldingLineFooter, bottom right
  * ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+ * ┃ ● Padel ›              Open the rankings  › ┃   ← Top 10's: its switcher at the left (#821)
  * ```
  *
  * ## What opens it, and what closes it
@@ -344,7 +345,7 @@ export interface FoldingLineLink {
 }
 
 export interface FoldingLineFooterProps {
-  /** **A control before the link** — Top 10's sport pill. */
+  /** **A control at the left end** — Top 10's sport switcher (#821). */
   readonly control?: ReactNode;
   /** **The link at the right end** — *See all ›*. */
   readonly link?: FoldingLineLink;
@@ -353,8 +354,10 @@ export interface FoldingLineFooterProps {
 }
 
 /**
- * **The footer row** — at the foot of an open line, on the right: an optional control, then the link,
- * each its own button, in a row `minTouch` tall so the link's target is 44 high. The section is the
+ * **The footer row** — at the foot of an open line: an optional control at the left end and the link
+ * at the right, each its own button, in a row `minTouch` tall so the link's target is 44 high. The
+ * link takes the room before it, so it ends the row with a control or without one (#821: Top 10's
+ * switcher at the left, *Open the rankings ›* at the right; home refactor 12, 13). The section is the
  * box of what lies over it, its top-left the row's, which is where Top 10's bar stands on its pill.
  */
 export function FoldingLineFooter({ control, link, over }: FoldingLineFooterProps) {
@@ -437,11 +440,13 @@ const s = StyleSheet.create({
     gap: theme.space.sm,
     minHeight: theme.size.minTouch,
   },
+  // The room before it is the link's, so it ends the row whatever stands at the left.
   link: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.xxs,
     minHeight: theme.size.minTouch,
+    marginLeft: 'auto',
   },
   // 6.6's chip value, as the sign-in screen's link presses.
   linkPressed: { opacity: 0.7 },

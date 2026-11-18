@@ -332,3 +332,27 @@ line, which clips where the row's heading let it run into the gutter. #821 turns
 from the footer's left, where all four fit — **a look is owed** until then. Hidden, as before, while nobody is
 ranked in any sport. Walked in `topTen.test.tsx`, which now opens the line first and adds the pick
 kept across a close and a second pick, before the first lands, refused with the line kept open.
+
+**Top 10's footer: the switcher on the left, _Open the rankings ›_ on the right**
+([#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5, Q19, Q37; home refactor 12, 13,
+note 4). The pill stands first in the open line's footer and reads _● Padel ›_, its chevron pointing
+the way it opens — the mocks' _‹_ is overridden — and the link, `TOP_TEN_COPY.rankings`, reads _Open the
+rankings ›_, spoken _Open the rankings in padel_ (`topTenRankingsLabel`), going where _Rankings ›_ went:
+the Rankings page on the line's sport, in General. **The switcher opens to the right**, with the deck's
+own unfold: `RowSportPill` hands `SportPill` and `SportBar` `opens="right"`, so the current sport stands
+dark at the bar's left end where the pill stood, its chevron turned back to _‹_, and the others slide
+out after it in the app's order, nearest first. The bar's slot starts the bar's inset before the
+pill's left end and runs to the footer's right edge, **over the link**: the footer's backdrop takes a
+tap there and folds the bar, leaving Home where it is. **How far it fits, measured** in the Archivo
+the pill draws (`rowSportBarFit.test.ts`): the open bar is about 322pt, 304 of pills — not the ~268
+this record said under #805 and #820. From a 375pt phone up it opens inside the line, every sport in
+reach. On a 360pt phone — the product owner's A32 — its round end meets the line's inner edge, cut by
+under a point, and badminton's far ~6pt stand past the footer, where Android lands no touch. On a
+320pt phone it is cut by about 40pt, badminton half hidden: **a known limit, for the product owner**
+(a scrolling bar, or a narrower pill in the footer, would be the ways out). The leftward bar ending at
+the pill was cut on a 360pt phone too (#820). A pick still re-reads Top 10 alone, and the closed line
+shows neither part.
+Walked in `topTen.test.tsx` (the footer's order and words, the bar's direction and slot, the link's
+name and destination); the drawing's direction in `SportPill.test.tsx` and `RowSportPill.test.tsx`.
+**Not seen on a device** — a look is owed against home refactor 12, 13: the pill at the footer's left,
+the link at its right, and the bar sliding open to the right over the link.

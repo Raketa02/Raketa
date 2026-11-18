@@ -261,10 +261,12 @@ export interface HottestGroup {
   readonly club: ClubName;
   /** Games with court time in the last 7 days, none called off — *14 games this week*. */
   readonly gamesThisWeek: number;
-  /** Members who joined in the last 30 days and stayed — the green *+3 this month*, above nought. */
+  /**
+   * Members who joined in the last 30 days and stayed — the group sheet's green *+3*, above nought.
+   * The card drew it as *+3 this month* until #821. The read's `heat_share` is left on the wire: the
+   * heat bar it filled is drawn nowhere since #821.
+   */
   readonly newThisMonth: number;
-  /** The heat bar, 0 to 1: this card's heat over the HOTTEST card's, or the row's highest. */
-  readonly heatShare: number;
   readonly tag: HeatTag | null;
   /** Up to six members' faces — the sheet's six, the card's first four; never the reader's. */
   readonly faces: readonly GroupPerson[];

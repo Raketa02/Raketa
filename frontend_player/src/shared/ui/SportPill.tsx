@@ -27,14 +27,21 @@
  * it; a tap on the current one, or anywhere else on the page (the frame's backdrop), folds the bar
  * and changes nothing.
  *
+ * **Or it opens rightwards** (`opens`, [#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205
+ * §5, Q19, Q37; home refactor 12, 13): Top 10's switcher stands first in its line's footer, so it
+ * reads *Padel ›*, its chevron pointing the way it opens, and the bar grows **to the right** across
+ * the footer — the current sport dark at its **left** end where the pill stood, its chevron turned
+ * back to ‹, and the others sliding out after it in the page's order, nearest first. The same bar,
+ * the same unfold, mirrored; a page's header keeps the leftward one.
+ *
  * **The unfold runs on the UI thread** (ADR-0176 §2's rule for anything that moves per frame): one
  * shared value from 0 to 1 over `motion.unfold`, `easeDecel`, read by the bar's width and by each
  * sport's opacity and slide. Nothing is scaled — iOS rasterises a scaled layer blurred, which the
  * radar learned (ADR-0176 §2, amended) — the bar's **width** grows and a clip inside it reveals
- * the row, which is laid out once at its whole width, right-aligned. The width is two numbers the
- * layout measures, the row's and the current pill's, so the bar is drawn at nothing until both are
- * in; that is one frame on a device, and a suite, which lays nothing out, still finds every
- * sport by its name. **Under reduced motion** the value starts at 1 and the bar is simply open.
+ * the row, which is laid out once at its whole width against the end it opens from. The width is
+ * two numbers the layout measures, the row's and the current pill's, so the bar is drawn at nothing
+ * until both are in; that is one frame on a device, and a suite, which lays nothing out, still finds
+ * every sport by its name. **Under reduced motion** the value starts at 1 and the bar is simply open.
  * **Folding is immediate** — see `motion.unfold`.
  *
  * **It can end with *+ Another sport*** — the group page's, while there is a sport left to offer
@@ -79,9 +86,22 @@ import { theme } from './theme';
  */
 const PAD = theme.size.groupPage.filterPad;
 
-/** The pill's faint chevron, and the bar's once it has unfolded — the fold's direction. */
-const UNFOLD = '‹';
-const FOLD = '›';
+/**
+ * **Which way the bar opens** from the pill — `left`, over what stands before it, on a page's header;
+ * `right`, across what stands after it, from Top 10's footer, where the pill stands first (#821).
+ */
+export type SportPillOpening = 'left' | 'right';
+
+/**
+ * The chevrons, by the way the bar opens: the pill's points the way it unfolds, and the current sport's
+ * in the open bar the way it folds back.
+ */
+const CHEVRONS: Readonly<
+  Record<SportPillOpening, { readonly unfold: string; readonly fold: string }>
+> = {
+  left: { unfold: '‹', fold: '›' },
+  right: { unfold: '›', fold: '‹' },
+};
 
 /**
  * ***All*** — **every sport at once**, a choice beside the sports where a page lists people from all of
@@ -211,6 +231,8 @@ export interface SportPillProps<S extends SportChoice = Sport> {
   /** The bar ends with *+ Another sport* — so even one sport unfolds (#731). */
   readonly another?: AnotherSport;
   readonly onUnfold: () => void;
+  /** Which way its bar opens, and so which way its chevron points — leftwards unless told. */
+  readonly opens?: SportPillOpening;
 }
 
 export function SportPill<S extends SportChoice = Sport>({
@@ -219,6 +241,7 @@ export function SportPill<S extends SportChoice = Sport>({
   words,
   another,
   onUnfold,
+  opens = 'left',
 }: SportPillProps<S>) {
   const switches = sports.length > 1;
   const name = words.sportName(sport);
@@ -240,7 +263,7 @@ export function SportPill<S extends SportChoice = Sport>({
       style={({ pressed }) => [s.pill, s.pillClosed, pressed ? s.pressed : undefined]}
     >
       <SportName name={name} sport={sport} />
-      <Chevron mark={UNFOLD} />
+      <Chevron mark={CHEVRONS[opens].unfold} />
     </Pressable>
   );
 }
@@ -257,15 +280,23 @@ export interface BarCover {
 export interface SportBarProps<S extends SportChoice = Sport> {
   /** Every sport the pill lists, in the order the page hands them. */
   readonly sports: readonly S[];
-  /** The one the page is on — drawn last, dark. */
+  /** The one the page is on — drawn dark, at the end the bar opens from. */
   readonly sport: S;
   readonly words: SportPillWords<S>;
   /** A sport was tapped: another one picks it, the current one only folds. */
   readonly onChoose: (sport: S) => void;
-  /** What the open bar covers whole rather than ending across — absent where nothing is. */
+  /**
+   * What the open bar covers whole rather than ending across — absent where nothing is. Its two
+   * widths are measured from the end the bar opens from; only a page's leftward bar hands one.
+   */
   readonly cover?: BarCover;
   /** *+ Another sport* — absent where there is none to offer (#731). */
   readonly another?: AnotherSport;
+  /**
+   * Which way it opens from the pill — leftwards unless told, the current sport at its right end;
+   * rightwards, the current sport at its left end and the others after it (#821).
+   */
+  readonly opens?: SportPillOpening;
 }
 
 /** The bar's open width: its sports', or past the tile whole where they would end across it. */
@@ -280,10 +311,11 @@ export function SportBar<S extends SportChoice = Sport>({
   onChoose,
   cover,
   another,
+  opens = 'left',
 }: SportBarProps<S>) {
   const reduced = useReducedMotion();
   const others = sports.filter((other) => other !== sport);
-  // Everything that slides out from under the current sport: *+ Another sport*, the farthest, first.
+  // Everything that slides out from under the current sport: *+ Another sport*, the farthest, last.
   const sliding = others.length + (another === undefined ? 0 : 1);
 
   const progress = useSharedValue(reduced ? 1 : 0);
@@ -306,63 +338,74 @@ export function SportBar<S extends SportChoice = Sport>({
     [measured, closed, open],
   );
 
+  const anotherPill =
+    another === undefined ? null : (
+      // The farthest from the current sport, so the last out: where the row ends.
+      <SlideOut key="another" order={sliding - 1} count={sliding} progress={progress} opens={opens}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={another.label}
+          accessibilityHint={another.hint}
+          onPress={another.onPress}
+          hitSlop={theme.hit.chip}
+          style={({ pressed }) => [s.pill, pressed ? s.pressed : undefined]}
+        >
+          <Text style={s.label} numberOfLines={1}>
+            {another.drawn}
+          </Text>
+        </Pressable>
+      </SlideOut>
+    );
+
+  const otherPills = others.map((other, at) => (
+    // Nearest the current sport moves first: the row reads outwards from it, whichever way it opens.
+    <SlideOut
+      key={other}
+      order={opens === 'left' ? others.length - 1 - at : at}
+      count={sliding}
+      progress={progress}
+      opens={opens}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={words.sportName(other)}
+        accessibilityState={{ selected: false }}
+        onPress={() => onChoose(other)}
+        hitSlop={theme.hit.chip}
+        style={({ pressed }) => [s.pill, pressed ? s.pressed : undefined]}
+      >
+        <SportName name={words.sportName(other)} sport={other} />
+      </Pressable>
+    </SlideOut>
+  ));
+
+  const current = (
+    <Pressable
+      key="current"
+      accessibilityRole="button"
+      accessibilityLabel={words.sportName(sport)}
+      accessibilityState={{ selected: true }}
+      onPress={() => onChoose(sport)}
+      onLayout={(event) => setPillWidth(event.nativeEvent.layout.width)}
+      hitSlop={theme.hit.chip}
+      style={({ pressed }) => [s.pill, s.pillCurrent, pressed ? s.pressed : undefined]}
+    >
+      <SportName name={words.sportName(sport)} sport={sport} onInk />
+      <Chevron mark={CHEVRONS[opens].fold} onInk />
+    </Pressable>
+  );
+
   return (
     <Animated.View testID="sport-bar" style={[s.bar, grow]}>
       <View style={s.clip}>
         <View
           testID="sport-bar-row"
-          style={s.row}
+          style={[s.row, opens === 'left' ? s.rowAtRight : s.rowAtLeft]}
           onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
         >
-          {another === undefined ? null : (
-            // The farthest from the current sport, so the last out: where the row ends.
-            <SlideOut order={sliding - 1} count={sliding} progress={progress}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={another.label}
-                accessibilityHint={another.hint}
-                onPress={another.onPress}
-                hitSlop={theme.hit.chip}
-                style={({ pressed }) => [s.pill, pressed ? s.pressed : undefined]}
-              >
-                <Text style={s.label} numberOfLines={1}>
-                  {another.drawn}
-                </Text>
-              </Pressable>
-            </SlideOut>
-          )}
-          {others.map((other, at) => (
-            // Nearest the current sport moves first: the row reads leftwards out of it.
-            <SlideOut
-              key={other}
-              order={others.length - 1 - at}
-              count={sliding}
-              progress={progress}
-            >
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={words.sportName(other)}
-                accessibilityState={{ selected: false }}
-                onPress={() => onChoose(other)}
-                hitSlop={theme.hit.chip}
-                style={({ pressed }) => [s.pill, pressed ? s.pressed : undefined]}
-              >
-                <SportName name={words.sportName(other)} sport={other} />
-              </Pressable>
-            </SlideOut>
-          ))}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={words.sportName(sport)}
-            accessibilityState={{ selected: true }}
-            onPress={() => onChoose(sport)}
-            onLayout={(event) => setPillWidth(event.nativeEvent.layout.width)}
-            hitSlop={theme.hit.chip}
-            style={({ pressed }) => [s.pill, s.pillCurrent, pressed ? s.pressed : undefined]}
-          >
-            <SportName name={words.sportName(sport)} sport={sport} onInk />
-            <Chevron mark={FOLD} onInk />
-          </Pressable>
+          {opens === 'left'
+            ? [anotherPill, ...otherPills, current]
+            : [current, ...otherPills, anotherPill]}
         </View>
       </View>
     </Animated.View>
@@ -370,30 +413,35 @@ export function SportBar<S extends SportChoice = Sport>({
 }
 
 interface SlideOutProps {
-  /** 0 for the pill beside the current sport, counting leftwards. */
+  /** 0 for the pill beside the current sport, counting away from it. */
   readonly order: number;
   /** How many pills slide out — the other sports, and *+ Another sport* where there is one. */
   readonly count: number;
   readonly progress: SharedValue<number>;
+  /** The way the bar opens, and so the way each pill travels out from under the current sport. */
+  readonly opens: SportPillOpening;
   readonly children: ReactNode;
 }
 
 /** One pill of the bar's row, sliding out from under the current sport in its turn. */
-function SlideOut({ order, count, progress, children }: SlideOutProps) {
+function SlideOut({ order, count, progress, opens, children }: SlideOutProps) {
   const step = count > 1 ? (1 - OPTION_SHARE) / (count - 1) : 0;
   const start = order * step;
   const end = start + OPTION_SHARE;
+  // It starts towards the current sport — right of its place on a bar opening leftwards, left of it
+  // on one opening rightwards.
+  const from = opens === 'left' ? SLIDE : -SLIDE;
 
   const slide = useAnimatedStyle(
     () => ({
       opacity: interpolate(progress.value, [start, end], [0, 1], Extrapolation.CLAMP),
       transform: [
         {
-          translateX: interpolate(progress.value, [start, end], [SLIDE, 0], Extrapolation.CLAMP),
+          translateX: interpolate(progress.value, [start, end], [from, 0], Extrapolation.CLAMP),
         },
       ],
     }),
-    [start, end],
+    [start, end, from],
   );
 
   return <Animated.View style={slide}>{children}</Animated.View>;
@@ -438,13 +486,17 @@ const s = StyleSheet.create({
     borderRadius: theme.radius.pill,
     overflow: 'hidden',
   },
-  // Laid out once at its whole width, against the bar's right edge, so the growing bar uncovers
-  // it leftwards and the current pill never moves — and what the bar opens past it is white.
+  // Laid out once at its whole width, against the edge the bar opens from, so the growing bar
+  // uncovers it away from there and the current pill never moves — and what the bar opens past it
+  // is white.
   row: {
     position: 'absolute',
     top: PAD,
-    right: PAD,
     flexDirection: 'row',
     alignItems: 'center',
   },
+  // Opening leftwards: the current sport at the bar's right end.
+  rowAtRight: { right: PAD },
+  // Opening rightwards (#821): the current sport at its left end.
+  rowAtLeft: { left: PAD },
 });

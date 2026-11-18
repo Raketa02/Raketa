@@ -185,7 +185,8 @@ control, and not as a seventh meaning anything else may reach for.
 2026-11-14; the Home rows screens §3.2, whose mocks win on a look). A Hottest groups card's bar runs
 from `amber` to `coral` up to the group's heat: the list's fifth entry, _hot_, drawn as a length
 rather than a tag, and a mark rather than a text bed. Not a seventh entry; flagged for the product
-owner with the rest.
+owner with the rest. **Drawn nowhere since [#821](https://github.com/Raketa02/Raketa/issues/821)**:
+the card lost its bar (7.30, home refactor 5.1).
 
 ## 1.3 Semantic colour is never decorative
 
@@ -202,7 +203,9 @@ not grow to accommodate a new meaning; a meaning is assigned to a colour already
 > **Amended 2026-11-14** — a Hottest groups card's growth, _+3 this month_, is drawn in `mintInk`
 > ([#800](https://github.com/Raketa02/Raketa/issues/800), [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet);
 > home rows 3–6 draw it green): players who joined and **stayed**, a gain that is already banked,
-> which is _settled_ read as a count. It is the figure's ink and never its only word.
+> which is _settled_ read as a count. It is the figure's ink and never its only word. Since
+> [#821](https://github.com/Raketa02/Raketa/issues/821) the card no longer draws it; the group
+> sheet's second stat card does.
 
 ## 1.4 Numbers are monospaced, always
 
@@ -4099,19 +4102,18 @@ band        size.hottest.band (39) · the group's MONOGRAM_HUES colour · diagon
 shield      7.20's shield, size.hottest.shieldTop (15) below the card's top, md from its left
 tag         a pill at the band's top-right, sm in · ink · size.tag high · tag type in surface ·
             ▲ drawn in volt (size.hottest.tagMark) for HOTTEST, 6.8's volt Plus for GROWING
-body        md at the sides, 9 under the shield · h2 name, one line · the dots and the sports'
-            names, tiny muted, one line cut with an ellipsis
-figures     two columns · num.m tabular ink over tiny muted words · the growth "+3" mono 600 in
-            mintInk, "this month" after it in the words' muted
-heat bar    size.hottest.heatBar (6) · a line2 track, pill · the fill a gradient amber → coral
-            from the left to the served share
+body        md at the sides, 9 under the shield · h2 name, one line
+figures     two columns · num.m tabular ink over tiny muted words · games this week at the left,
+            players held at the right (alignItems flex-end) · no sport line, no growth, no heat
+            bar (#821)
 foot        up to four faces (FaceStack, 28), their press grown to 44 by hit.btn · the chip:
             6.1's button, sm, pill — dark for Join and Ask to join, secondary for Asked and
             You're in
 sheet       9.1's sheet · the title row's act (9.1 as amended): dark pill for Join / Ask to join,
             waiting at 6.1's corner for Asked, secondary pill for Open group · 7.20's tile at
             48 · tiny muted identity line and sports written out · two stat cards: 5.1's card,
-            num.l tabular over tiny muted · six faces and a tiny line
+            num.l tabular over tiny muted, the growth "+3" mono 600 in mintInk beside the
+            players · six faces and a tiny line
 withdraw    the same sheet: "Waiting for … to answer" as its title · Withdraw request, 6.1's
             secondary at lg
 ```
@@ -4136,6 +4138,16 @@ second. _Withdraw request_ is the outlined `secondary` button: the screens §3.3
 _destructive-outline_ button the system does not have, and an outline is the half of it this system
 holds. **Not seen on a device**: the card, the band's stripes, the shield's overlap, the bar's
 gradient, the two sheets.
+
+**The card is slimmer since [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5,
+Q22; home refactor 5.1, which leads on the look): open in FOR YOU's _Groups heating up_, it is the
+band, the tag, the shield, the name, **_N games this week_ at the left and _N players_ held at the
+right**, the faces and the chip. **The heat bar, the growth and the sport line are gone from it** — and
+the bar from the system: `size.hottest.heatBar` is retired, and its gradient's coral end (1.2's _hot_
+drawn as a length) is drawn nowhere. **The growth stays on the group sheet**, `mintInk` beside the
+players on the second stat card, and the sheet keeps the sports written out with their dots: the card
+says what to choose by, the sheet everything. **Not seen on a device**: the figures' places and the
+card's height without the bar and the line, against 5.1.
 
 ## 7.31 The portrait tile
 
@@ -4237,9 +4249,9 @@ pairing     a row: the reader | the % | them · each side a face (size.sameLevel
             balanceTone (gameGreen ≥ 70 · gameAmber 55–69 · gameRed < 55), EVEN in eyebrow
             onDarkTiny, the sport's 6pt dot and its name in rlLabel onDarkTiny
 bar         7.33 onDark, md under the pairing
-foot        minTouch (44) high · the gap in rlLabel onDarkTiny · " · " · "2 sports" rlValue at
-            700 in volt with Feather's chevron-right, reached by hit.sportsLink · the round
-            friend button (7.32) at the right
+foot        minTouch (44) high · "2 sports" rlValue at 700 in volt with Feather's
+            chevron-right, reached by hit.sportsLink, at the left · the round friend button
+            (7.32) at the right · no gap in words, and no " · " (#821)
 press       the other's side and "N sports" dim to .7 (6.6)
 sheet       9.1's sheet · the title row's act: 7.32's worded twin · one block per shared sport,
             each after the first under a Hairline (md above): the dot and the sport h2 ink, the
@@ -4259,6 +4271,11 @@ character. **The sheet's tag is 6.4's**, whose `ok`, `warn` and `bad` already pa
 beds with `BALANCE_INK`'s inks — exactly _the light version of its colour_ — rather than a second
 pill. **Not seen on a device**: the card on a row and in See all, the % in each ink, the footer's
 reach beside the button, the sheet's blocks and tags.
+
+**The card's foot says no gap in words since [#821](https://github.com/Raketa02/Raketa/issues/821)**
+(ADR-0205 §5, Q22; home refactor 7): _0,02 below you_ and its separator are gone, on the row and in See
+all alike — one card — and the foot is _2 sports ›_ where there is one, and the round button. The
+sheet's blocks keep the gap. **Not seen on a device**: the foot with _2 sports ›_ alone, against 7.
 
 ## 7.35 Same vibe: the tinted tile and the vibe sheet
 
@@ -4319,11 +4336,16 @@ move        a drawn triangle (size.topTen.chipMark, 8) and the count num.tiny at
             change or New · hidden: the card's name says it
 ring        the reader's own card: a volt border size.topTen.ring (2,5) outside the card's edge,
             its corner radius.cardDark + the ring
-row         HomeRow, rail numbered (7.7) · the heading's line: TOP 10, the sport pill (6.2's,
-            #774), Rankings › · "Nobody ranked in squash yet" rlLabel muted in the rail's place
-pill        RowSportPill: the bar (6.2) on the pill's own line, from the row's left edge to the
-            pill's right end + the bar's 9 inset, sliding over the heading; Rankings › stays ·
-            a backdrop over the row folds it
+line        FOR YOU's last line (7.37), rail numbered (7.7) · "Nobody ranked in squash yet"
+            rlLabel muted in the rail's place · its footer: the sport switcher (6.2's pill,
+            #774) at the left, "● Padel ›", and "Open the rankings ›" at the right (#821) · the
+            closed line shows neither
+pill        RowSportPill, opening rightwards (SportBar opens="right"): the pill's chevron ›; the
+            bar (6.2) on the pill's own line, from the bar's 9 inset before the pill's left end,
+            growing to the right over the footer and its link to the footer's right edge; the
+            current sport first, ink, its chevron ‹, where the pill stood; the others after it
+            in the app's order, each sliding out from its left, nearest first · a backdrop over
+            the footer folds it
 ```
 
 **The ranking's top, on Home** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home rows
@@ -4349,6 +4371,25 @@ sliding over the footer from its left edge to the pill's right end, as it slid o
 leftmost sport is cut by the line's edge**: the line clips its content, where the heading let the bar
 run into the gutter — a look is owed.
 
+**Since [#821](https://github.com/Raketa02/Raketa/issues/821) the switcher stands at the footer's left
+and opens to the right** (ADR-0205 §5, §9.5, Q19, Q37; home refactor 12, 13, which draw it as _● Padel
+‹_ — overridden by note 4: **a chevron points the way its control opens**, as the page's pill does).
+`SportPill` and `SportBar` take a direction, `opens`, rather than a second control: the bar is the
+deck's, unfolding on the same value over `motion.unfold`, mirrored — its row laid against its left
+edge, the current sport first and dark where the pill stood with its chevron turned back to _‹_, the
+others sliding out from under it to the right. A page's header keeps the leftward bar. **The bar lies
+over the footer's link while open**: it starts where the pill starts and runs to the footer's right
+edge, and the footer's backdrop folds it on a tap there — a link half under a floating bar is not a
+second door. **How far it fits is measured, not seen** (`rowSportBarFit.test.ts`, in the Archivo the
+pill draws): the open bar is about 322pt, 304 of pills. It opens inside the line with every sport in
+reach from a 375pt phone up; on a 360pt phone its round end meets the line's inner edge (cut by under a
+point) and the last sport's far ~6pt stand past the footer, out of Android's touch; on a 320pt phone it
+is cut by about 40pt — a known limit, flagged for the product owner. The leftward bar ending at the
+pill was cut on a 360pt phone too. _Open the rankings ›_ is the footer's link (7.37), in _Rankings ›_'s
+place. **Not seen on a
+device**: the pill at the left, the link at the right, the bar sliding right over the link, against
+12, 13.
+
 ## 7.37 FOR YOU: the folding line and its footer
 
 ```
@@ -4365,9 +4406,10 @@ rail        7.7's, in the line's bounds: its shares are of the line's content (t
             the border and the inset each side), bleeding to the line's inner edge, the first
             card at the inset · every geometry snaps to its cards' edges · clipped by the card's
             radius
-footer      FoldingLineFooter: a row minTouch tall, its parts at the right — an optional control
-            (Top 10's pill), then the link: the words rlValue ink, a hidden ›, a link 44 tall,
-            pressed opacity .7 · a layer laid over the whole footer, last (Top 10's open bar)
+footer      FoldingLineFooter: a row minTouch tall · an optional control at its left (Top 10's
+            switcher, #821) · the link at its right, taking the room before it (marginLeft
+            auto): the words rlValue ink, a hidden ›, a link 44 tall, pressed opacity .7 · a
+            layer laid over the whole footer, last (Top 10's open bar)
 pressed     the card's (6.6): the border coral while the header is held
 motion      opening: one change to the fold's height, a layout transition over motion.lineUnfold
             (250) easeDecel, the lines below sliding on the same beat; the content fades in from
@@ -6071,6 +6113,8 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-18 | [7.37](#737-for-you-the-folding-line-and-its-footer) · [7.7](#77-the-card-rail) · [1.5](#15-nothing-animates-that-does-not-have-to) · [`FoldingLine.tsx`](../src/shared/ui/FoldingLine.tsx) · `HomeRow` `RailBounds` · `onScreen` `PageReveal` · `theme.ts` `size.foldingLine` `motion.lineUnfold` `motion.lineFold`                                                                     | Home's five discovery rows were each a `HomeRow`: an eyebrow heading over a full rail, drawn whole whenever its read held anything                                                                                                                                                                                                                           | **The folding line, closed and open** ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5, §9.5; home refactor 3–13). `FoldingLines`: the eyebrow _FOR YOU_ and the lines `space.sm` apart. **Closed**: 5.1's card — surface, `line`, `radius.card` — holding only its header: the title `h2` and a muted Feather chevron, inset `size.foldingLine.pad` (15), `space.md` above and below, 44 tall, coral while pressed. **Open**: `ink` border, `shadow.openLine`, the chevron turned down, and the content under the header — **drawn only while open**. A rail inside takes the line's bounds (its content, bleeding to its inner edge, snapping to its cards; Top 10's by item). **Motion**: one height change and a layout transition — `lineUnfold` 250 open, `lineFold` 200 closed, `easeDecel` — the lines below on the same beat, the content fading in from `space.md` above; a switch folds then unfolds; the page eases down just enough to show what opened (`PageReveal`); nothing under Reduce motion. A button named by its title, expanded or collapsed                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | ADR-0205 §9.5's new component, home refactor 3–13's drawing. **Content drawn only while open**, because a closed line must report nobody on screen and Home must not pay for tiles no one can see (ADR-0205 §5). **`disclose`'s mechanics**, for the reason 7.13 records: a height animated per frame freezes and jumps under the New Architecture. **Two durations, not one** — the brief's _slightly shorter_ close — and **in turn on a switch**, never at once. **`h2`**: a line's title titles a card. **Not seen on a device**: everything moving, the line's height and type, the rail's snap and bleed inside it, against home refactor 3–13                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-11-18 | [7.37](#737-for-you-the-folding-line-and-its-footer) · [6.5](#65-touch-targets) · [6.6](#66-press-states) · [Appendix B](#appendix-b--quick-reference-card) · [`FoldingLine.tsx`](../src/shared/ui/FoldingLine.tsx) `FoldingLineFooter` · [`HomeRow.tsx`](../src/shared/ui/HomeRow.tsx) `HomeRow` · [`RowSportPill.tsx`](../src/shared/ui/RowSportPill.tsx) · `hit.rowLink` (retired)    | `HomeRow`'s heading line held an optional control (Top 10's pill), an optional link (_See all ›_, _Rankings ›_) reached 36 high by `hit.rowLink` — 6.5's third exception — and a layer over the row (`over`)                                                                                                                                                 | **The footer row**: at the foot of an open line, its parts at the right — an optional control, then the link (the row's words in ink `rlValue`, a hidden `›`, a `link` named by what it opens, pressed `.7`), **a row `minTouch` tall** so the link is a full 44 — and a layer over the whole footer, last (Top 10's open bar, from the footer's left edge to the pill's right end). `HomeRow` keeps its heading alone; **`hit.rowLink` is retired** and 6.5 has two exceptions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | ADR-0205 §5's footers (Q18, Q19): _See all ›_ and Top 10's pill moved off the heading to the open content's foot. The heading line could not hold a 44 target; the footer has the room, so the exception goes with the row that needed it — a token nothing references is removed, as `display` was. _Open the rankings ›_ and the pill opening rightwards are #821's. **Not seen on a device**: the footer's place and spacing against home refactor 5, 6, 12, 13                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-11-18 | [4.3](#43-elevation) · [Appendix B](#appendix-b--quick-reference-card) · [`theme.ts`](../src/shared/ui/theme.ts) `shadow.openLine` · [`FoldingLine.tsx`](../src/shared/ui/FoldingLine.tsx)                                                                                                                                                                                               | Six shadows: five for things that float and the club result, the one card that casts one                                                                                                                                                                                                                                                                     | **A seventh: `shadow.openLine`** — `#0B2B33`, offset `{0,4}`, opacity `.10`, radius 12, `elevation` 3 — cast by FOR YOU's line **while it is open**, beside its `ink` border; a closed line casts none                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | ADR-0205 §9.1, home refactor 5, 6, 8, 10, 12: the mocks lift the one open line off the page, and an `ink` hairline among four `line` ones reads as a stroke rather than _the open one_. The club result's colour and opacity with a wider blur and a lower drop — a halo, not a float — and its elevation, under the bar. Named here, as the club result was: no licence for cards in general. **Not seen on a device**: the shadow's softness on both platforms against the mocks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-11-18 | [7.36](#736-top-10-the-numbered-card-and-the-rows-sport-pill) · [7.37](#737-for-you-the-folding-line-and-its-footer) · [`SportPill.tsx`](../src/shared/ui/SportPill.tsx) `opens` · [`RowSportPill.tsx`](../src/shared/ui/RowSportPill.tsx) · `FoldingLineFooter`                                                                                                                         | Top 10's pill stood before _Rankings ›_ at the right of the open line's footer, read _● Padel ‹_, and its bar grew **leftwards** from the pill's right end — cut by the line's edge on a 360pt phone                                                                                                                                                         | **The switcher's right-opening direction** ([#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5, §9.5, Q19, Q37; home refactor 12, 13). `SportPill` and `SportBar` take `opens`, `left` by default: **`right`** points the pill's chevron _›_, lays the bar's row against its left edge — the current sport first, ink, its chevron turned back to _‹_, where the pill stood — and slides the others out from its left, nearest first, on the same unfold. `RowSportPill` opens rightwards, its slot from the bar's 9 inset before the pill's left end to the footer's right edge, over the link. **The footer** puts its control at its left and its link at its right (`marginLeft: 'auto'`); Top 10's link reads _Open the rankings ›_                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Home refactor 12, 13 and ADR-0205 §5. **A chevron points the way its control opens** — the mocks' _‹_ is overridden (note 4). **A direction, not a second control**: the bar, its unfold and its folds are the deck's, mirrored, and a page's header keeps the leftward one. **How far it fits is measured** in Archivo (`rowSportBarFit.test.ts`): a 322pt bar, inside the line from a 375pt phone up, its round end at the line's edge on a 360pt one, cut by about 40pt on a 320pt one — a known limit for the product owner. **The bar covers the link while open**, and the footer's backdrop folds it on a tap there rather than leaving Home. **Not seen on a device**: the switcher's place, the link's, and the bar sliding right over the link, against 12, 13                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-11-18 | [7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet) · [7.34](#734-same-competitive-level-the-card-and-the-comparison-sheet) · [1.2](#12-one-accent-used-sparingly) · [1.3](#13-semantic-colour-is-never-decorative) · `theme.ts` `size.hottest.heatBar` (retired)                                                                                          | A Hottest groups card drew the sports as dots and names, the green _+3 this month_ beside the players, and the amber → coral heat bar; a same-level card's foot began with the gap in words, _0,02 below you ·_                                                                                                                                              | **The slimmer group tile** ([#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5, Q22; home refactor 5.1, 7): the band, the tag, the shield, the name, **_N games this week_ at the left and _N players_ held at the right**, the faces and the chip — **no sport line, no growth, no heat bar**, and `size.hottest.heatBar` retired with the bar. The group sheet keeps the sports with their dots and the green growth. **The same-level card's foot** is _2 sports ›_ and the round button, with no gap in words; the comparison sheet's blocks keep the gap                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Home refactor 5.1 and 7, which lead on the look; ADR-0205 §5. A tile in an open line says what to choose by and the sheet says everything, so what the sheet already carries leaves the tile. **1.2's coral-ended bar is drawn nowhere** now, and 1.3's `mintInk` growth only on the sheet. **Not seen on a device**: the figures' places and the card's height without the bar and the line, against 5.1; the foot with _2 sports ›_ alone, against 7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 # Part 17 — What the reset removed
 

@@ -192,7 +192,6 @@ export const GROUPS_COPY = {
     /** One reads *game this week* (§31.2, a call). */
     gameThisWeek: 'game this week',
     players: 'players',
-    thisMonth: 'this month',
     /** The chip (§31.2) and the sheet's button (§31.3), each by the reader's relation. */
     chip: { join: 'Join', ask: 'Ask to join', requested: 'Asked', in: 'You’re in' },
     openGroup: 'Open group',

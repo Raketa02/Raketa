@@ -228,7 +228,6 @@ export function toHottestGroups(wire: Schemas['HottestGroupsResponse']): readonl
     club: toClubName(group.club),
     gamesThisWeek: group.games_this_week,
     newThisMonth: group.new_this_month,
-    heatShare: group.heat_share,
     tag: group.tag,
     faces: group.faces.map(toGroupPerson),
     friendsCount: group.friends_count,

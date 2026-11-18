@@ -20,6 +20,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { footerParts } from '@/test-support/forYou';
+
 import {
   FoldingLine,
   FoldingLineFooter,
@@ -454,25 +456,33 @@ describe('the footer', () => {
     expect(row).toMatchObject({ flexDirection: 'row', justifyContent: 'flex-end' });
   });
 
-  /** Top 10's pill stands before *Rankings ›*, and its open bar lies over the footer, last. */
-  it('draws a control before the link, and lays what it is handed over it, last', () => {
+  /**
+   * Top 10's switcher stands at the footer's left and *Open the rankings ›* at its right (#821, home
+   * refactor 12, 13), and the switcher's open bar lies over the footer, last.
+   */
+  it('draws a control at the left end, the link at the right, and lays what it is handed over both', () => {
     render(
       <Line
         open
         footer={{
           control: <View testID="pill" />,
-          link: { words: 'Rankings', label: 'Rankings in padel', onPress: jest.fn() },
+          link: {
+            words: 'Open the rankings',
+            label: 'Open the rankings in padel',
+            onPress: jest.fn(),
+          },
           over: <View testID="over" />,
         }}
       />,
     );
 
-    const named = screen
-      .UNSAFE_getAllByType(View)
-      .map((node) => node.props.testID as string | undefined)
-      .filter((testID) => testID === 'pill' || testID === 'over');
-    expect(named).toEqual(['pill', 'over']);
-    expect(screen.getByRole('link', { name: 'Rankings in padel' })).toBeTruthy();
+    const parts = footerParts(screen.getByTestId('folding-line-footer'), (part) =>
+      String(part.props.testID),
+    );
+    expect(parts).toEqual(['pill', 'link', 'over']);
+    // The link takes the room left over before it, so it ends the row whatever stands at the left.
+    const link = screen.getByRole('link', { name: 'Open the rankings in padel' });
+    expect(flat(link.props.style)).toMatchObject({ marginLeft: 'auto' });
   });
 
   it('is drawn only while the line is open', () => {

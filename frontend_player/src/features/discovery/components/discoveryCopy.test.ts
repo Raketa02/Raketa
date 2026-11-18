@@ -84,10 +84,9 @@ describe('Same competitive level’s words (§31.5, §31.6)', () => {
     expect(evenTag(91)).toBe('91% even');
   });
 
-  it('speaks the pairing in the order drawn', () => {
-    expect(pairingLabel(PADEL, 'zofia.b')).toBe(
-      '91% even in padel, You 2,71, zofia.b 2,69, 0,02 below you',
-    );
+  /** The card no longer draws the gap (#821), so its pairing no longer says it. */
+  it('speaks the pairing in the order drawn, with no gap', () => {
+    expect(pairingLabel(PADEL, 'zofia.b')).toBe('91% even in padel, You 2,71, zofia.b 2,69');
   });
 });
 

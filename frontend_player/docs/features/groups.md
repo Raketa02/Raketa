@@ -758,3 +758,18 @@ heating up, just below._ (`hottest.groupless`). Walked in `hottestGroups.test.ts
 under FOR YOU, closed; open onto the cards with no footer; hidden empty or failed; closed and gone
 when it empties while open, back closed; and the groupless line with the line open, kept open by a
 join from it.
+
+**The slimmer card** ([#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5, Q22; home
+refactor 5.1). Open in Groups heating up, a card is the striped band, the tag, the shield, the name,
+**_N games this week_ on the left and _N players_ on the right** (`Figure`'s `end`, held against the
+card's edge), the faces and the chip. **Gone: the heat bar, _+N this month_ and the sport line**, dots
+and names — and with them `heatFill`, `size.hottest.heatBar` and the copy's `thisMonth`. The heat still
+orders the groups and picks the tags on the server, and the read still serves `heatShare`; nothing
+draws it. **The card is spoken as drawn**: `hottestCardLabel` no longer says _3 new this month_.
+**The group sheet is unchanged** and keeps the sports with their dots and _players · new this month_
+with the green _+3_ — `Growth` moved into `HottestGroupSheet`, its only user now. The card is shorter by
+the sport line and the bar; its spacing is otherwise today's, a look to make on the device rather than
+a number read off 5.1. Walked in `hottestGroups.test.tsx`: the two figures, left and right, the spoken
+name, nothing removed drawn on any card, and the sheet's every detail. **Not seen on a device** — a look
+is owed against home refactor 5.1: the figures' places, the card's height without the bar, the faces
+and chip at its foot.

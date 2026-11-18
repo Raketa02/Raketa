@@ -34,7 +34,6 @@ import { sheetFaces, type SheetButton } from '../domain/hottest';
 import { FaceStack } from './FaceStack';
 import { GROUPS_COPY } from './groupsCopy';
 import { GroupMonogram } from './GroupMonogram';
-import { Growth } from './HottestGroupCard';
 import {
   gamesThisWeekWords,
   grownBy,
@@ -143,6 +142,14 @@ export function GroupSheetBody({ group }: { readonly group: HottestGroup }) {
   );
 }
 
+/**
+ * **The green growth**, *+3* — a gain banked, mono, `mintInk` (1.3 as amended): the sheet's alone
+ * since the card dropped *+N this month* (#821).
+ */
+function Growth({ children }: { readonly children: string }) {
+  return <Text style={s.grown}>{children}</Text>;
+}
+
 /** **The withdraw sheet's body** — its title says whose answer; this is the one act under it. */
 export function WithdrawBody({ onWithdraw }: { readonly onWithdraw: () => void }) {
   return (
@@ -163,6 +170,12 @@ const s = StyleSheet.create({
   stat: { flex: 1, gap: theme.space.xxs },
   valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: theme.space.xs },
   value: { ...theme.num.l, ...theme.tabular, color: theme.color.ink },
+  grown: {
+    ...theme.num.tiny,
+    ...theme.tabular,
+    fontFamily: theme.font.mono[600],
+    color: theme.color.mintInk,
+  },
   people: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   withdraw: { paddingTop: theme.space.sm },
 });

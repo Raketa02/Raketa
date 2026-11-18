@@ -1,7 +1,10 @@
 /**
  * **A Same competitive level card** ([#802](https://github.com/Raketa02/Raketa/issues/802); the Home
  * rows screens §4.2, §4.4; the words §31.5; home rows 7, 8, 10, 10.2, 10.3, 12–16; design-system
- * 7.34) — a dark card on its own ground (`levelCardGround`), top to bottom:
+ * 7.34) — a dark card on its own ground (`levelCardGround`). **Its foot says no gap in words since
+ * [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home refactor 7): *0,02
+ * below you* is gone, from the drawing and from the pairing's spoken name; the comparison sheet's
+ * blocks still say it. Top to bottom:
  *
  * ```
  * ┌──────────────────────────────────────────┐
@@ -11,7 +14,7 @@
  * │              YOU                         │
  * │ ████████████▌▐░░░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒   │  the comparison bar, onDark (7.33)
  * │ NEW  DEVELOPING ESTABLISHED  ADVANCED    │
- * │ 0,02 below you · 2 sports ›         (✓)  │  the gap · N sports › · the round button
+ * │ 2 sports ›                          (✓)  │  N sports › · the round button
  * └──────────────────────────────────────────┘
  * ```
  *
@@ -33,18 +36,12 @@ import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
 import { BALANCE_FIGURE, ComparisonBar, PlayerPhoto, theme } from '@/shared/ui';
 import { balanceTone } from '@/shared/vocabulary/balancePresentation';
 
-import {
-  foundAtSameLevel,
-  levelGapOf,
-  moreSportsOf,
-  type SameLevelPlayer,
-} from '../domain/sameLevel';
+import { foundAtSameLevel, moreSportsOf, type SameLevelPlayer } from '../domain/sameLevel';
 import type { ReaderFace } from '../hooks/useReaderFace';
 
 import {
   DISCOVERY_COPY,
   compareLabel,
-  gapLine,
   levelsLine,
   pairingLabel,
   sportsCount,
@@ -138,31 +135,23 @@ export function SameLevelCard({ player, you, width, onOpen, onCompare }: SameLev
 
       <View style={s.foot}>
         <View style={s.words}>
-          <Text style={s.gap} numberOfLines={1}>
-            {gapLine(levelGapOf(shown.levelGap))}
-          </Text>
           {more === undefined ? null : (
-            <>
-              <Text style={s.gap} accessibilityElementsHidden importantForAccessibility="no">
-                {COPY.between}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={compareLabel(player.nickname, more)}
-                onPress={onCompare}
-                hitSlop={theme.hit.sportsLink}
-                style={({ pressed }) => [s.sports, pressed ? s.pressed : undefined]}
-              >
-                <Text style={s.sportsWords}>{sportsCount(more)}</Text>
-                <Feather
-                  name="chevron-right"
-                  size={theme.type.rlValue.fontSize}
-                  color={theme.color.volt}
-                  accessibilityElementsHidden
-                  importantForAccessibility="no"
-                />
-              </Pressable>
-            </>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={compareLabel(player.nickname, more)}
+              onPress={onCompare}
+              hitSlop={theme.hit.sportsLink}
+              style={({ pressed }) => [s.sports, pressed ? s.pressed : undefined]}
+            >
+              <Text style={s.sportsWords}>{sportsCount(more)}</Text>
+              <Feather
+                name="chevron-right"
+                size={theme.type.rlValue.fontSize}
+                color={theme.color.volt}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
+            </Pressable>
           )}
         </View>
         <RoundFriendButton
@@ -221,7 +210,6 @@ const s = StyleSheet.create({
     minHeight: theme.size.minTouch,
   },
   words: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
-  gap: { ...theme.type.rlLabel, color: theme.color.onDarkTiny },
   sports: { flexDirection: 'row', alignItems: 'center' },
   sportsWords: { ...theme.type.rlValue, fontFamily: theme.font.sans[700], color: theme.color.volt },
   // 6.6: a press on a dark card dims what was pressed.

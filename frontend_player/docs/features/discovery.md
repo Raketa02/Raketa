@@ -224,3 +224,14 @@ through that cycle. The paragraphs above that say a row is _hidden with its head
 on the heading_ were true until this one. Walked in `sameLevel`, `newInRaketa`, `sameVibe` and
 `onScreen.test.tsx` — the last now lays FOR YOU, the line and its fold out as a phone would, and adds
 a closed line reporting nothing and only the open line's cards counted.
+
+**The same-level card says no gap in words** ([#821](https://github.com/Raketa02/Raketa/issues/821);
+ADR-0205 §5, Q22; home refactor 7). _0,02 below you_, _0,09 above you_ and _Same level_ are gone from
+the card's foot, with the separator that joined them to _N sports ›_: the foot is _N sports ›_ where
+there is more than one shared sport, and the round button. **The pairing's spoken name drops the gap
+too** (`pairingLabel`), as the card no longer draws it. Everything else on the card stays. It is one
+card, so **See all's full-width cards lose it as well**. The comparison sheet's blocks still say the
+gap (`gapLine`, the words §31.6), and the read still serves it. Walked in `sameLevel.test.tsx` — no gap
+on any card, drawn or spoken, and See all's re-comparison read off the level instead — and
+`discoveryCopy.test.ts`. **Not seen on a device** — a look is owed against home refactor 7: the foot
+with _2 sports ›_ alone at its left.

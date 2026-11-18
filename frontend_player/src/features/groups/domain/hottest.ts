@@ -38,15 +38,6 @@ export function sheetFaces(group: HottestGroup): readonly GroupPerson[] {
   return group.faces.slice(0, SHEET_FACES);
 }
 
-/**
- * **How far the heat bar fills**, 0 to 1 — the served share, held inside the bar. The server never
- * sends more than full (§5.5), and a bar is never drawn past its own track whatever arrives.
- */
-export function heatFill(share: number): number {
-  if (Number.isNaN(share)) return 0;
-  return Math.min(1, Math.max(0, share));
-}
-
 /** **The row with one card's relation moved** — what a join, an ask or a withdraw draws at once. */
 export function withRelation(
   groups: readonly HottestGroup[],

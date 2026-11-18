@@ -135,11 +135,13 @@ have to export them — making the pill's internals the surface instead. Import 
 **Since [#820](https://github.com/Raketa02/Raketa/issues/820) the five rows are FOR YOU's folding
 lines** (7.37): `FoldingLines` (the section and its eyebrow), `FoldingLine` (a card whose header the
 page opens and closes, its content drawn only while open, one height change moved by a layout
-transition) and `FoldingLineFooter` (the open content's foot: a control, a 44pt link, a layer over
-it). `HomeRow`'s heading lost its control, link and `over`, which only those rows used — the pill now
-stands in the footer — and `HomeRowRail` takes its bounds from a line (`RailBounds`). A section's top
-on the page composes through what holds it (`useTopOnPage`), and a page that watches shows what a
-line unfolds (`PageReveal`).
+transition) and `FoldingLineFooter` (the open content's foot: a control at its left, a 44pt link at its
+right, a layer over it). Since [#821](https://github.com/Raketa02/Raketa/issues/821) the pill opens
+rightwards there (`opens`), the current sport at the bar's left end. `HomeRow`'s heading lost its
+control, link and `over`, which only those rows used — the pill now stands in the footer — and
+`HomeRowRail` takes its bounds from a line (`RailBounds`). A section's top on the page composes
+through what holds it (`useTopOnPage`), and a page that watches shows what a line unfolds
+(`PageReveal`).
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

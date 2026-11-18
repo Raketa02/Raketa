@@ -1444,6 +1444,10 @@ the club the group plays at.
 > Until #820 the rows read `HOTTEST GROUPS` (no See all), `SAME COMPETITIVE LEVEL PLAYERS` ·
 > `See all ›`, `NEW IN RAKETA` · `See all ›`, `SAME VIBE PLAYERS` · `See all ›` and `TOP 10` · the
 > sport pill · `Rankings ›`, and the groupless line `… — the hottest ones are just below.`
+>
+> **Amended by [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q19, Q37; home
+> refactor 12, 13): Top 10's footer reads the switcher on the left and `Open the rankings ›` on the
+> right, where it read the sport pill · `Rankings ›`.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
@@ -1452,19 +1456,23 @@ the club the group plays at.
 | Same competitive level, the line | `Players at your level` · footer `See all ›` | spoken *See all players at your level* |
 | New in Raketa, the line | `New in Raketa` · footer `See all ›` | never *Rakieta*; spoken *See all new players* |
 | Same vibe, the line | `Players with your vibe` · footer `See all ›` | spoken *See all same vibe players*, the screen it opens |
-| Top 10, the line | `Top 10` · footer: the sport pill · `Rankings ›` | the pill is the deck's control, cited; *Open the rankings ›* is #821's |
+| Top 10, the line | `Top 10` · footer: the switcher `{Sport} ›` on the left · `Open the rankings ›` on the right | the switcher is the deck's control, cited, its chevron pointing the way it opens: right; the link spoken *Open the rankings in padel*; the closed line shows neither |
 | A line, spoken | `{title}`, expanded or collapsed | the state is the platform's own word; the count joins the name with #822 |
 | *Your games*, a player in no group | `Join a group to get games — see Groups heating up, just below.` | in place of §22.7's `⚡ Play finds you one.`; the first line stands; Groups heating up starts open for them |
 
 ### 31.2 Hottest groups — the card
 
+> **Amended by [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home
+> refactor 5.1): the card no longer writes `+{n}` · `this month` beside the players, nor the sports'
+> names; the group sheet still says both (§31.3). The card is spoken as drawn: *Ogrody 33 Club,
+> hottest, 14 games this week, 11 players*.
+
 | Where | Sentence | Note |
 | --- | --- | --- |
 | The tag, the hottest | `▲ HOTTEST` | on one card at most |
 | The tag, growing | `+ GROWING` | |
-| The first figure | `{n}` · `games this week` | *14 games this week*; `1 games this week` is never written: one reads `game this week` *(a call)* |
-| The second figure | `{n}` · `players` | *11 players* |
-| … grown | `+{n}` · `this month` | green, beside the players: *+3 this month* |
+| The first figure, on the left | `{n}` · `games this week` | *14 games this week*; `1 games this week` is never written: one reads `game this week` *(a call)* |
+| The second figure, on the right | `{n}` · `players` | *11 players* |
 | The chip | `Join` · `Ask to join` · `Asked` · `You're in` | *Anyone* · *People I approve* · a request waiting · a member |
 
 ### 31.3 The group sheet
@@ -1476,7 +1484,7 @@ the club the group plays at.
 | … who runs it | `run by {runner}` | *run by Ogrody 33*, *run by tomek.k* |
 | … where | `{club}` | *Ogrody 33* |
 | The first stat card | `{n}` · `games this week` | as §31.2 |
-| The second stat card | `{n}` · `players · new this month` | with the green `+{n}` |
+| The second stat card | `{n}` · `players · new this month` | with the green `+{n}`, *+3*, and none at nought — the card's until #821 |
 | The people row, friends | `{n} of your friends play here` | *7 of your friends play here* |
 | … one friend | `1 of your friends plays here` | |
 | … no friend | `{n} players` | *11 players* |
@@ -1490,6 +1498,11 @@ the club the group plays at.
 
 ### 31.5 Same competitive level — the card
 
+> **Amended by [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home
+> refactor 7): the card no longer says the gap in words — `{gap} below you`, `{gap} above you`,
+> `Same level` and the ` · ` before `{n} sports ›` are gone from it, drawn and spoken. They are the
+> comparison sheet's alone (§31.6). The pairing is spoken *91% even in padel, You 2,71, zofia.b 2,69*.
+
 | Where | Sentence | Note |
 | --- | --- | --- |
 | The reader's side | `You` · `{level}` | |
@@ -1498,9 +1511,6 @@ the club the group plays at.
 | The sport | `{Sport}` | with its dot |
 | The bar's mark | `YOU` | the reader's tall white mark |
 | The bands | `New` · `Developing` · `Established` · `Advanced` | the reader's own in bold |
-| The gap, below | `{gap} below you` | *0,02 below you* |
-| The gap, above | `{gap} above you` | *0,09 above you* |
-| The gap, none | `Same level` | when the gap rounds to 0,00 |
 | More sports | `{n} sports ›` | *2 sports ›*; only with more than one shared sport |
 
 ### 31.6 The comparison sheet
@@ -1509,7 +1519,9 @@ the club the group plays at.
 | --- | --- | --- |
 | The title | `You vs {nickname}` | *You vs zofia.b* |
 | A block's levels | `You {level} · {nickname} {level}` | *You 2,71 · zofia.b 2,69* |
-| A block's gap | §31.5's gap lines, cited | |
+| A block's gap, below | `{gap} below you` | *0,02 below you*; the card's until #821 |
+| A block's gap, above | `{gap} above you` | *0,09 above you* |
+| A block's gap, none | `Same level` | when the gap rounds to 0,00 |
 | A block's tag | `{pct} even` | *91% even*, in the light version of its colour |
 
 ### 31.7 New in Raketa

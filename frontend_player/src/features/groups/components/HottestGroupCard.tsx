@@ -1,6 +1,9 @@
 /**
- * **A Hottest groups card** ([#800](https://github.com/Raketa02/Raketa/issues/800); the Home rows
- * screens §3.2; home rows 3, 3.2, 4, 5, 21).
+ * **A Groups heating up card** ([#800](https://github.com/Raketa02/Raketa/issues/800); the Home rows
+ * screens §3.2; home rows 3, 3.2, 4, 5, 21) — **slimmer since
+ * [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home refactor 5.1): the
+ * heat bar, *+N this month* and the sport line are gone. The group sheet keeps the sports and *new this
+ * month*; the heat still orders the groups and picks the tags, and is drawn nowhere.
  *
  * ```
  * ╭──────────────────────────────────────╮
@@ -9,10 +12,8 @@
  * │ │ O3 │  ← the shield over band and body
  * │ └────╯                               │
  * │ Ogrody 33 Club                       │  ← h2
- * │ ● ● ● ● Padel · Tennis · Squash · Ba…│  ← the dots, the names cut with an ellipsis
- * │ 14               11                  │  ← num.m
- * │ games this week  players +3 this month│  ← tiny, the growth in mintInk
- * │ ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬ │  ← the heat bar, amber to coral, at the served share
+ * │ 14                                11 │  ← num.m
+ * │ games this week              players │  ← tiny: the games at the left, the players at the right
  * │ ▣▣▣▣                    ( Ask to join )│  ← four faces; the chip
  * ╰──────────────────────────────────────╯
  * ```
@@ -23,32 +24,25 @@
  * button of its own, as Home's game card draws its two (5.1's `pressed` note). The faces' press is
  * the body's door a second time, hidden from a listener, who reaches the sheet by the body.
  *
- * **Everything is the server's**: the tag, the figures, the faces, the share the bar fills to.
+ * **Everything is the server's**: the tag, the figures, the faces.
  */
 
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
 import { Button, Card, Plus, theme } from '@/shared/ui';
 
 import type { HottestGroup } from '../domain/group';
 import type { GroupAction } from '../domain/groupRules';
 import { groupAction } from '../domain/groupRules';
-import { cardFaces, heatFill, isJoinTap } from '../domain/hottest';
+import { cardFaces, isJoinTap } from '../domain/hottest';
 import type { HeatTag } from '../domain/vocabulary';
 
 import { FaceStack } from './FaceStack';
 import { GROUPS_COPY } from './groupsCopy';
 import { GroupMonogram, monogramHue } from './GroupMonogram';
-import {
-  gamesThisWeekWords,
-  grownBy,
-  hottestCardLabel,
-  hottestChipLabel,
-  hottestSports,
-} from './groupsPresentation';
-import { SportDots } from './SportDots';
+import { gamesThisWeekWords, hottestCardLabel, hottestChipLabel } from './groupsPresentation';
 
 const HOT = GROUPS_COPY.hottest;
 const SIZE = theme.size.hottest;
@@ -89,21 +83,14 @@ export function HottestGroupCard({ group, width, onOpen, onChip }: HottestGroupC
           <Text style={s.name} numberOfLines={1}>
             {group.name}
           </Text>
-          <View style={s.sports}>
-            <SportDots sports={group.sports} />
-            <Text style={s.sportNames} numberOfLines={1}>
-              {hottestSports(group.sports)}
-            </Text>
-          </View>
           <View style={s.figures}>
-            <Figure value={group.gamesThisWeek} words={gamesThisWeekWords(group.gamesThisWeek)} />
             <Figure
-              value={group.memberCount}
-              words={HOT.players}
-              grown={grownBy(group.newThisMonth)}
+              value={group.gamesThisWeek}
+              words={gamesThisWeekWords(group.gamesThisWeek)}
+              testID="hottest-games"
             />
+            <Figure value={group.memberCount} words={HOT.players} end testID="hottest-players" />
           </View>
-          <HeatBar share={group.heatShare} />
         </View>
       </Pressable>
 
@@ -151,35 +138,29 @@ function ChipButton({
   );
 }
 
-/** One figure: the number in mono over its words, the green growth beside the players. */
+/**
+ * One figure: the number in mono over its words — at the card's left, or held against its right edge
+ * (`end`), as home refactor 5.1 draws *11 players*.
+ */
 function Figure({
   value,
   words,
-  grown,
+  end = false,
+  testID,
 }: {
   readonly value: number;
   readonly words: string;
-  readonly grown?: string | undefined;
+  readonly end?: boolean;
+  readonly testID: string;
 }) {
   return (
-    <View style={s.figure}>
+    <View style={[s.figure, end ? s.figureEnd : undefined]} testID={testID}>
       <Text style={s.value}>{value}</Text>
       <Text style={s.words} numberOfLines={1}>
         {words}
-        {grown === undefined ? null : (
-          <>
-            {' '}
-            <Growth>{grown}</Growth> {HOT.thisMonth}
-          </>
-        )}
       </Text>
     </View>
   );
-}
-
-/** **The green growth**, *+3* — a gain banked, mono, `mintInk` (1.3 as amended). The sheet's too. */
-export function Growth({ children }: { readonly children: string }) {
-  return <Text style={s.grown}>{children}</Text>;
 }
 
 /**
@@ -231,36 +212,6 @@ function TagPill({ tag }: { readonly tag: HeatTag }) {
   );
 }
 
-/**
- * **The heat bar** — a pale track, filled from the left to the served share in a gradient from amber
- * to coral: the heat, the hot tag's colour at its end (Part 16, 2026-11-14). Every card's bar is
- * measured against the HOTTEST card's, which is full.
- */
-function HeatBar({ share }: { readonly share: number }) {
-  const fill = heatFill(share);
-  const gradient = useId();
-  return (
-    <View
-      style={s.track}
-      testID="heat-bar"
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    >
-      <View style={[s.fill, { width: `${fill * 100}%` }]} testID="heat-fill">
-        <Svg width="100%" height="100%" viewBox="0 0 1 1" preserveAspectRatio="none">
-          <Defs>
-            <LinearGradient id={gradient} x1="0" y1="0" x2="1" y2="0">
-              <Stop offset={0} stopColor={theme.color.amber} />
-              <Stop offset={1} stopColor={theme.color.coral} />
-            </LinearGradient>
-          </Defs>
-          <Rect x={0} y={0} width={1} height={1} fill={`url(#${gradient})`} />
-        </Svg>
-      </View>
-    </View>
-  );
-}
-
 /** Below the band: the shield's overhang under it, then 9 to the name. */
 const BODY_TOP = SIZE.shieldTop + theme.size.monogram.shield - SIZE.band + theme.space.sm;
 
@@ -288,26 +239,12 @@ const s = StyleSheet.create({
     gap: theme.space.xs,
   },
   name: { ...theme.type.h2, color: theme.color.ink },
-  sports: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
-  sportNames: { ...theme.type.tiny, color: theme.color.muted, flexShrink: 1 },
   figures: { flexDirection: 'row', gap: theme.space.md },
   figure: { flex: 1, gap: theme.space.xxs },
+  // The players, held against the card's right edge (home refactor 5.1).
+  figureEnd: { alignItems: 'flex-end' },
   value: { ...theme.num.m, ...theme.tabular, color: theme.color.ink },
   words: { ...theme.type.tiny, color: theme.color.muted },
-  grown: {
-    ...theme.num.tiny,
-    ...theme.tabular,
-    fontFamily: theme.font.mono[600],
-    color: theme.color.mintInk,
-  },
-  track: {
-    height: SIZE.heatBar,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.color.line2,
-    overflow: 'hidden',
-    marginTop: theme.space.xxs,
-  },
-  fill: { height: '100%', borderRadius: theme.radius.pill, overflow: 'hidden' },
   foot: {
     flexDirection: 'row',
     alignItems: 'center',

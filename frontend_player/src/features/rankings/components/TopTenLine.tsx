@@ -1,13 +1,14 @@
 /**
- * **Top 10** — the last of FOR YOU's five lines ([#820](https://github.com/Raketa02/Raketa/issues/820);
- * ADR-0205 §5; was the TOP 10 row, [#805](https://github.com/Raketa02/Raketa/issues/805), ADR-0204;
- * the Home rows screens §7, the mechanics §10; the words §31.1, §31.11; home rows 25–27, home refactor
- * 12, 13).
+ * **Top 10** — the last of FOR YOU's five lines ([#820](https://github.com/Raketa02/Raketa/issues/820),
+ * [#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5; was the TOP 10 row,
+ * [#805](https://github.com/Raketa02/Raketa/issues/805), ADR-0204; the Home rows screens §7, the
+ * mechanics §10; the words §31.1, §31.11; home rows 25–27, home refactor 12, 13).
  *
  * Places 1 to 10 of General in one sport. Open, the line holds the cards (`TopTenCard`) on a
  * `numbered` rail — the row ending at the last ranked player, one or two included — or *Nobody ranked
- * in squash yet* for a sport with nobody in it, and **its footer** holds the deck's sliding sport pill
- * (`RowSportPill`) and *Rankings ›*, as the row's heading did until #821 redraws them. **Hidden** while
+ * in squash yet* for a sport with nobody in it, and **its footer** holds the sport switcher at the
+ * left — *Padel ›*, the deck's pill opening rightwards (`RowSportPill`) — and *Open the rankings ›* at
+ * the right, where the row's heading held the pill and *Rankings ›* (#821). **Hidden** while
  * nobody is ranked in any sport, and while its read is out or failed: a line that fails is left out,
  * and the rest of Home stands (the screens §1). The closed line is its title alone.
  *
@@ -21,8 +22,8 @@
  * record reads *This record isn't available*** — the sheet's own drawing of the server's one refusal;
  * nothing here knows about blocks, and everybody is on the line at their true place (ADR-0204 §2).
  *
- * **Rankings › opens the Rankings page on the line's sport, in General** (the mechanics §10.4, a call):
- * the list Top 10 is the top of. The page then remembers General, as any look at it does.
+ * **Open the rankings › opens the Rankings page on the line's sport, in General** (the mechanics
+ * §10.4, a call): the list Top 10 is the top of. The page then remembers General, as any look at it does.
  */
 
 import { router } from 'expo-router';
@@ -127,7 +128,7 @@ const TopTen = memo(function TopTen({
   );
 });
 
-/** The pill and *Rankings ›*, at the open line's foot. */
+/** The switcher at the open line's foot, on the left, and *Open the rankings ›* on the right. */
 function TopTenFooter({ top, sport }: { readonly top: TopTenRead; readonly sport: Sport }) {
   const { choose } = useRankingView();
   return (

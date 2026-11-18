@@ -518,7 +518,6 @@ describe('Home’s Hottest groups', () => {
         club: { id: OGRODY_HOT.club.id, name: 'Ogrody 33' },
         gamesThisWeek: 14,
         newThisMonth: 3,
-        heatShare: 1,
         tag: 'HOTTEST',
         faces: [
           {
