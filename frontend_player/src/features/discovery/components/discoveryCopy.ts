@@ -71,8 +71,8 @@ export const DISCOVERY_COPY = {
   /** Every See all pill's first choice. */
   all: 'All',
   newInRaketa: {
-    /** Drawn uppercase by the row frame: *NEW IN RAKETA* — never *Rakieta*. */
-    heading: 'New in Raketa',
+    /** FOR YOU's line (#820) — its title, and what it is named: never *Rakieta*. */
+    line: 'New in Raketa',
     seeAll: 'See all',
     seeAllLabel: 'See all new players',
     /** The volt tag, top-left on every tile. */
@@ -85,8 +85,8 @@ export const DISCOVERY_COPY = {
     reading: 'Reading new players…',
   },
   sameLevel: {
-    /** Drawn uppercase by the row frame: *SAME COMPETITIVE LEVEL PLAYERS*. */
-    heading: 'Same competitive level players',
+    /** FOR YOU's line (#820) — its title: the row was *SAME COMPETITIVE LEVEL PLAYERS*. */
+    line: 'Players at your level',
     seeAll: 'See all',
     seeAllLabel: 'See all players at your level',
     /** See all's title — bold, two lines where it wraps (home rows 12). */
@@ -107,8 +107,8 @@ export const DISCOVERY_COPY = {
     reading: 'Reading players at your level…',
   },
   sameVibe: {
-    /** Drawn uppercase by the row frame: *SAME VIBE PLAYERS*. */
-    heading: 'Same vibe players',
+    /** FOR YOU's line (#820) — its title: the row was *SAME VIBE PLAYERS*. */
+    line: 'Players with your vibe',
     seeAll: 'See all',
     seeAllLabel: 'See all same vibe players',
     /** See all's title. */

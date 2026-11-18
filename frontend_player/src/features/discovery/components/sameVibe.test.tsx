@@ -1,9 +1,11 @@
 /**
- * **SAME VIBE PLAYERS on Home, the vibe sheet and See all** — walked through the real route tree
- * ([#803](https://github.com/Raketa02/Raketa/issues/803), PRD #789; ADR-0204 §6; the Home rows screens
- * §6, §8; the mechanics §8, §11–§13; the words §31.8, §31.10).
+ * **Players with your vibe on Home, the vibe sheet and See all** — FOR YOU's fourth line, walked
+ * through the real route tree ([#803](https://github.com/Raketa02/Raketa/issues/803), PRD #789;
+ * [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §6, ADR-0205 §5; the Home rows
+ * screens §6, §8; the mechanics §8, §11–§13; the words §31.8, §31.10).
  *
- * - **The row**: fourth of the five, *See all ›* named; gone when the read holds nobody, or fails.
+ * - **The line**: fourth of the five, closed; open, its tiles and *See all ›* named at its foot; hidden
+ *   when the read holds nobody, or fails.
  * - **A tile**: the face, the nickname, the vibe %, *6 things in common*, the tint; the shared tags
  *   fitted to three lines with *+N more* — **measured**, so the suite lays the chips out as a screen
  *   would and reads what is drawn; the round button asking from the row.
@@ -28,6 +30,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { socialTagChip, socialTagLabel } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
+import { isOpen, lineTitles, openLine } from '@/test-support/forYou';
 import {
   SAME_VIBE_ALL_PATH,
   SAME_VIBE_PATH,
@@ -212,16 +215,9 @@ const asked = () => transport.requestsTo('POST', REQUESTS_PATH).map((request) =>
 const sheets = () => screen.queryAllByTestId('bottom-sheet');
 const vibeSheet = () => within(sheets()[0]!);
 
-/** The section headings Home draws, top to bottom. */
-const headings = () =>
-  screen
-    .getAllByRole('header')
-    .map((node) => node.props.children as string)
-    .filter((text) => typeof text === 'string');
-
 async function homeWithTheRow() {
   await launchSignedIn();
-  await screen.findByRole('header', { name: COPY.heading });
+  await openLine(COPY.line);
 }
 
 /** Opens the person's vibe sheet from their tile, and waits for the record it reads. */
@@ -254,35 +250,37 @@ function layOut(
   }
 }
 
-describe('the row on Home', () => {
-  it('stands fourth of the five — after New in Raketa — with See all named', async () => {
+describe('the line on Home', () => {
+  it('stands fourth of the five — after New in Raketa — closed', async () => {
     vibeServer();
     stubNewInRaketa(transport, [JOINER]);
-    await homeWithTheRow();
-    await screen.findByRole('header', { name: DISCOVERY_COPY.newInRaketa.heading });
+    await launchSignedIn();
+    await screen.findByRole('button', { name: COPY.line });
+    await screen.findByRole('button', { name: DISCOVERY_COPY.newInRaketa.line });
 
-    const order = headings();
-    const joiners = order.indexOf(DISCOVERY_COPY.newInRaketa.heading);
-    expect(order[joiners + 1]).toBe(COPY.heading);
+    const titles = lineTitles();
+    expect(titles[titles.indexOf(DISCOVERY_COPY.newInRaketa.line) + 1]).toBe(COPY.line);
+    expect(isOpen(COPY.line)).toBe(false);
+    expect(screen.queryAllByTestId(/^same-vibe-e0/)).toEqual([]);
+  });
+
+  it('opens onto the tiles in the read’s order, See all named at its foot', async () => {
+    vibeServer();
+    await homeWithTheRow();
+
+    expect(tileIds()).toEqual(ROW.map((one) => one.player_id));
     expect(
       within(screen.getByTestId('same-vibe')).getByRole('link', { name: COPY.seeAllLabel }),
     ).toBeTruthy();
   });
 
-  it('draws the tiles in the read’s order', async () => {
-    vibeServer();
-    await homeWithTheRow();
-
-    expect(tileIds()).toEqual(ROW.map((one) => one.player_id));
-  });
-
-  it('is gone with its heading while the read holds nobody', async () => {
+  it('is hidden while the read holds nobody', async () => {
     vibeServer([]);
     await launchSignedIn();
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -292,7 +290,7 @@ describe('the row on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
   });
 });
 

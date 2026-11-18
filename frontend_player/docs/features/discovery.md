@@ -208,3 +208,19 @@ card never shown never, the batch, each row's own count, a refused report carrie
 nothing said, See all nothing, and a row read under See all or behind the home screen counted only
 on the way back; `use-cases/onScreen.test.ts` holds the reporter to its window, the midnight window,
 a late answer and its stop on a hand-turned clock.
+
+**The three people rows are FOR YOU's lines** ([#820](https://github.com/Raketa02/Raketa/issues/820);
+ADR-0205 §5; home refactor 6–11): **Players at your level**, **New in Raketa** and **Players with your
+vibe** — only the words on screen change; the glossary's terms, the code's names and the endpoints
+keep theirs (`DISCOVERY_COPY.*.line`). Each row component became a hook the shell calls
+(`useSameLevelLine`, `useNewInRaketaLine`, `useSameVibeLine`), handing the line's title, what it
+unfolds and its footer — _See all ›_ at the bottom right, to the same See all screen — or `undefined`
+while the read holds nobody, is out or failed. **The read and the on-screen reporter are the line's**,
+held while Home lives, so a report waiting to be sent outlives a close; **the cards are drawn only
+while the line is open**, so a closed line reports nobody (the mechanics §9.2), and the rail settles
+on its cards' edges. The copy is read inside each hook rather than at the module's top: `shell`'s
+surface imports these, and a module-level read of `DISCOVERY_COPY` met the copy module half-loaded
+through that cycle. The paragraphs above that say a row is _hidden with its heading_ and _See all ›
+on the heading_ were true until this one. Walked in `sameLevel`, `newInRaketa`, `sameVibe` and
+`onScreen.test.tsx` — the last now lays FOR YOU, the line and its fold out as a phone would, and adds
+a closed line reporting nothing and only the open line's cards counted.

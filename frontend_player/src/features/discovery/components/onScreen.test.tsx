@@ -1,14 +1,16 @@
 /**
  * **Rows stay alive — the cards that came on screen, reported** — walked through the real route tree
- * with the fake clock ([#804](https://github.com/Raketa02/Raketa/issues/804), PRD #789; ADR-0204; the
- * Home rows mechanics §9.2; the backend's #796).
+ * with the fake clock ([#804](https://github.com/Raketa02/Raketa/issues/804), PRD #789;
+ * [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204, ADR-0205 §5; the Home rows
+ * mechanics §9.2; the backend's #796).
  *
  * The phone tells the server which cards of *Same competitive level* and *Same vibe* came at least
  * half on screen, so that a card seen on five days without an add gives its place to a fresh match.
  *
- * - **On screen** is geometry: the page scrolled to the row, and the row's own rail scrolled to the
+ * - **On screen** is geometry: the page scrolled to the line, and the line's own rail scrolled to the
  *   card. Nothing is laid out under the harness, so the suite lays Home out as a phone would
- *   (`test-support/onScreen.ts`), each row below the fold until the page is scrolled to it.
+ *   (`test-support/onScreen.ts`), each line below the fold until the page is scrolled to it.
+ * - **Only an open line reports**: a closed line draws no card (FOR YOU, #820).
  * - **Once per card, row and Warsaw day**, batched, a failure carried into the next batch and never
  *   said; **See all** reports nothing.
  */
@@ -19,6 +21,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { moveAppTo, stopWatchingAppState, watchAppState } from '@/test-support/appState';
+import { lineHeader, openLine } from '@/test-support/forYou';
 import {
   SAME_LEVEL_ALL_PATH,
   launchSignedIn,
@@ -119,16 +122,31 @@ type Report = Wire['OnScreenRequest'];
 const reports = () =>
   transport.requestsTo('POST', ON_SCREEN_PATH).map((request) => request.body as Report);
 
-/** Home, both rows drawn and laid out below the fold, on Sunday. */
-async function home() {
+/** The line each row is, by its test id. */
+const TITLE = {
+  'same-level': DISCOVERY_COPY.sameLevel.line,
+  'same-vibe': DISCOVERY_COPY.sameVibe.line,
+} as const;
+
+/** Home with both lines shown, on Sunday — nothing open yet. */
+async function homeClosed() {
   stubGate(transport, { hasPlayerProfile: true });
   stubSameLevel(transport, SAME_LEVEL);
   stubSameVibe(transport, SAME_VIBE);
   transport.on('POST', ON_SCREEN_PATH, () => noContent());
   await launchSignedIn();
   jest.setSystemTime(new Date(SUNDAY));
-  await screen.findByRole('header', { name: DISCOVERY_COPY.sameLevel.heading });
-  await screen.findByRole('header', { name: DISCOVERY_COPY.sameVibe.heading });
+  await screen.findByRole('button', { name: TITLE['same-level'] });
+  await screen.findByRole('button', { name: TITLE['same-vibe'] });
+}
+
+/**
+ * Home with one line open — *Same competitive level*'s, unless a test asks for *Same vibe*'s — laid
+ * out below the fold, on Sunday. One line is open at a time, so the other draws no card.
+ */
+async function home(open: keyof typeof ROWS = 'same-level') {
+  await homeClosed();
+  await openLine(TITLE[open]);
   layOutHome(ROWS);
 }
 
@@ -249,6 +267,53 @@ describe('a day', () => {
   });
 });
 
+/**
+ * **A closed line draws no card, so it reports nobody** (#820; ADR-0205 §5; the mechanics §9.2): the
+ * page scrolled right through FOR YOU tells nothing until a line is open, and only that line's.
+ */
+describe('a line', () => {
+  it('reports nothing while closed, scrolled through, and its cards once it is open', async () => {
+    await homeClosed();
+    layOutHome(ROWS);
+    scrollHomeTo('same-level', pageAtRow(ROWS['same-level']));
+    scrollHomeTo('same-vibe', pageAtRow(ROWS['same-vibe']));
+    await batchCloses();
+    expect(reports()).toEqual([]);
+
+    await openLine(TITLE['same-level']);
+    layOutHome(ROWS);
+    scrollHomeTo('same-level', pageAtRow(ROWS['same-level']));
+    await batchCloses();
+
+    await waitFor(() =>
+      expect(reports()).toEqual([{ row: 'SAME_LEVEL', player_ids: [KUBA.player_id] }]),
+    );
+  });
+
+  it('reports nothing more once closed, the page scrolled back to it', async () => {
+    await home();
+    scrollHomeTo('same-level', pageAtRow(ROWS['same-level']));
+    await batchCloses();
+    await waitFor(() => expect(reports()).toHaveLength(1));
+
+    fireEvent.press(lineHeader(TITLE['same-level']));
+    jest.setSystemTime(new Date(MONDAY));
+    scrollHomeTo('same-level', 0);
+    scrollHomeTo('same-level', pageAtRow(ROWS['same-level']));
+    await batchCloses();
+
+    expect(reports()).toHaveLength(1);
+  });
+
+  it('reports only the open line’s cards — another line’s are not drawn', async () => {
+    await home();
+    scrollHomeTo('same-vibe', pageAtRow(ROWS['same-vibe']));
+    await batchCloses();
+
+    expect(reports().map((report) => report.row)).not.toContain('SAME_VIBE');
+  });
+});
+
 describe('a card never on screen', () => {
   it('is never reported — the rest of the row, and the row below the fold', async () => {
     await home();
@@ -286,7 +351,7 @@ describe('the reports', () => {
   });
 
   it('keep each row’s own count: a Same vibe tile is told as Same vibe’s', async () => {
-    await home();
+    await home('same-vibe');
     scrollHomeTo('same-vibe', pageAtRow(ROWS['same-vibe']));
     await batchCloses();
 

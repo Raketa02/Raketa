@@ -464,3 +464,35 @@ leaves the bar open (a call: a backdrop over Home would need a layer above the p
 `numbered`** hands each card `size.topTen.railRatio` of the content width — the card's width; the
 numeral beside it is the row's own, so its items are wider than the width it hands. Each has its
 suite: `RowSportPill.test.tsx`, `HomeRow.test.tsx`; the row is walked in `rankings`' `topTen.test.tsx`.
+
+**`FoldingLine`, `FoldingLines` and `FoldingLineFooter` — FOR YOU's quiet lines**
+([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5, §8, §9; home refactor 3–13;
+design-system 7.37, 4.3, Part 16 2026-11-18). `FoldingLines` is the section — the eyebrow and the
+lines `space.sm` apart — and `FoldingLine` is one line: a white card, its header the title in `h2`
+and a turning chevron, **a button named by its title that says whether it is expanded**. **The page
+says which line is open** (`open`) and a press on the header is all the line reports (`onHeader`):
+closed, the header is the whole line; open, only the header closes it, because the content's taps
+are its own. **The content is drawn only while open**, and for the fold back — hidden from a
+listener, untouchable, and on no page (`PageOnScreen` withheld) while it folds — and **on the page
+only once it has unfolded** (`lineUnfold` after it opens), so a card fading in at no height is never
+counted as seen and a closed line never reports one. **Opening is one change to a fold's height** — nought, then the
+content's measured height — and a Reanimated layout transition moves the frames, the line's and those
+of every line below it (`FoldingLines` hands them one beat, `lineUnfold` or `lineFold`), while one
+shared value fades the content in and turns the chevron: `RecordDetails`' mechanics, for the reason
+`CLAUDE.md` gives. Under Reduce motion nothing moves. **As it unfolds it asks the page to show it**
+(`PageReveal`, `onScreen.ts`'s `scrollToReveal`), once per opening, and **only when it was pressed
+open** (`reveals`): the line a page opens by itself never scrolls the page. **The fold's top is
+measured inside the line's 1pt border**, since the fold stands in the clip within it. **A line let go
+draws its rail anew at its first card when it opens again** — `HomeRow`'s _never remounted_ holds
+while a line stays open. `FoldingLines` is `HomeRow`'s section holding lines, not a copy of it. **The open line has an `ink`
+border and `shadow.openLine`**, the seventh shadow. **`FoldingLineFooter`** is the open content's
+foot: a control, then a link 44 tall — the row frame's link, moved here and grown to the minimum —
+and a layer over the footer for Top 10's open bar (`RowSportPill` now hands its pill and bar to the
+footer). **`HomeRow` lost `control`, `link` and `over`**, which only the five rows used, and
+`hit.rowLink` went with them; **`HomeRowRail` reads `RailBounds`** from a line, so its shares are of
+the line's content and it bleeds to the line's inner edge and snaps, and takes **`itemWidth`** for
+Top 10, whose numeral stands beside its card. **Where a section stands on the page now composes**
+(`useTopOnPage`, `useTopWithin`): a rail in a line in FOR YOU is measured through each, as a device
+lays them out — a fold's section is its line's, which is why the line names it rather than reading
+the context it stands in. Suites: `FoldingLine.test.tsx`, `HomeRow.test.tsx`, `RowSportPill.test.tsx`,
+`onScreen.test.ts`; the lines are walked in the shell's `forYou.test.tsx` and each feature's own.

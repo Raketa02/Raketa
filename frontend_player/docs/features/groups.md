@@ -746,3 +746,15 @@ call); the chip's spoken names (_Ogrody 33 Club: Asked_) and the withdraw sheet'
 _Keep the request_, neither in §31; _Withdraw request_ is the outlined
 `secondary` button, since the system has no destructive-outline one. **Not seen on a device**: the
 card, the band's stripes, the shield, the heat bar, both sheets — against home rows 3–6 and 21.
+
+**HOTTEST GROUPS is FOR YOU's first line, _Groups heating up_** ([#820](https://github.com/Raketa02/Raketa/issues/820);
+ADR-0205 §5; home refactor 5). `HottestGroupsRow` became `useHottestGroupsLine`, which hands the shell
+the line's title (`GROUPS_COPY.hottest.line`), its cards on the peeking rail — now settling on their
+edges — and the group sheet, or `undefined` while the read is empty, out or failed. **No footer**
+until the Groups heating up page has one to open (#823). The cards, the chips, both sheets and every
+write are unchanged (the slimmer card is #821's). **A reader in no group** finds the line open from
+the start — the shell's call, from `useInNoGroup` — and reads _Join a group to get games — see Groups
+heating up, just below._ (`hottest.groupless`). Walked in `hottestGroups.test.tsx`: the line first
+under FOR YOU, closed; open onto the cards with no footer; hidden empty or failed; closed and gone
+when it empties while open, back closed; and the groupless line with the line open, kept open by a
+join from it.

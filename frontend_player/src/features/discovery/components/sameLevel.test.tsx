@@ -1,9 +1,11 @@
 /**
- * **SAME COMPETITIVE LEVEL PLAYERS on Home, the comparison sheet and See all** — walked through the
- * real route tree ([#802](https://github.com/Raketa02/Raketa/issues/802), PRD #789; ADR-0204 §4; the
- * Home rows screens §4; the mechanics §6, §11–§13; the words §31.5, §31.6, §31.10).
+ * **Players at your level on Home, the comparison sheet and See all** — FOR YOU's second line, walked
+ * through the real route tree ([#802](https://github.com/Raketa02/Raketa/issues/802), PRD #789;
+ * [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §4, ADR-0205 §5; the Home rows
+ * screens §4; the mechanics §6, §11–§13; the words §31.5, §31.6, §31.10).
  *
- * - **The row**: second of the five, *See all ›* named; gone without a level, or when its read fails.
+ * - **The line**: second of the five, closed; open, its cards and *See all ›* named at its foot; hidden
+ *   without a level, or when its read fails.
  * - **A card**: You and them, both levels, the % in the game cards' colours, *EVEN*, the sport; the gap
  *   in words; *N sports ›* only above one; the face opening the record, its requests found at the
  *   card's sport; the round button asking from the row.
@@ -28,6 +30,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { theme } from '@/shared/ui';
+import { isOpen, lineTitles, openLine } from '@/test-support/forYou';
 import {
   SAME_LEVEL_ALL_PATH,
   SAME_LEVEL_PATH,
@@ -237,40 +240,31 @@ const sheet = () => within(screen.getByTestId('bottom-sheet'));
 const colourOf = (node: { readonly props: { readonly style?: unknown } }) =>
   (StyleSheet.flatten(node.props.style as TextStyle) ?? {}).color;
 
-/** The section headings Home draws, top to bottom. */
-const headings = () =>
-  screen
-    .getAllByRole('header')
-    .map((node) => node.props.children as string)
-    .filter((text) => typeof text === 'string');
-
 async function homeWithTheRow() {
   await launchSignedIn();
-  await screen.findByRole('header', { name: COPY.heading });
+  await openLine(COPY.line);
 }
 
-describe('the row on Home', () => {
-  it('stands second of the five — after Hottest groups, before New in Raketa — with See all named', async () => {
+describe('the line on Home', () => {
+  it('stands second of the five — after Groups heating up, before New in Raketa — closed', async () => {
     levelServer();
     stubHottestGroups(transport, [HOT_GROUP]);
     stubNewInRaketa(transport, [JOINER]);
-    await homeWithTheRow();
-    await screen.findByRole('header', { name: DISCOVERY_COPY.newInRaketa.heading });
-    await screen.findByRole('header', { name: GROUPS_COPY.hottest.heading });
+    await launchSignedIn();
+    await screen.findByRole('button', { name: DISCOVERY_COPY.newInRaketa.line });
+    await screen.findByRole('button', { name: GROUPS_COPY.hottest.line });
 
-    const order = headings();
-    const games = order.findIndex((text) => text.startsWith('Your games'));
-    expect(order.slice(games + 1, games + 4)).toEqual([
-      GROUPS_COPY.hottest.heading,
-      COPY.heading,
-      DISCOVERY_COPY.newInRaketa.heading,
+    expect(lineTitles().slice(0, 3)).toEqual([
+      GROUPS_COPY.hottest.line,
+      COPY.line,
+      DISCOVERY_COPY.newInRaketa.line,
     ]);
-    expect(
-      within(screen.getByTestId('same-level')).getByRole('link', { name: COPY.seeAllLabel }),
-    ).toBeTruthy();
+    expect(isOpen(COPY.line)).toBe(false);
+    expect(screen.queryAllByTestId(/^same-level-e0/)).toEqual([]);
   });
 
-  it('draws the cards in the read’s order', async () => {
+  /** ADR-0205 §5: *See all ›* at the bottom right of the open content, to the See all screen. */
+  it('opens onto the cards in the read’s order, See all named at its foot', async () => {
     levelServer();
     await homeWithTheRow();
 
@@ -278,15 +272,18 @@ describe('the row on Home', () => {
       .getAllByTestId(/^same-level-e0/)
       .map((node) => (node.props.testID as string).replace('same-level-', ''));
     expect(ids).toEqual(ROW.map((one) => one.player_id));
+    expect(
+      within(screen.getByTestId('same-level')).getByRole('link', { name: COPY.seeAllLabel }),
+    ).toBeTruthy();
   });
 
-  it('is gone with its heading while the read holds nobody — no level anywhere', async () => {
+  it('is hidden while the read holds nobody — no level anywhere', async () => {
     levelServer([]);
     await launchSignedIn();
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -296,7 +293,7 @@ describe('the row on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
   });
 });
 

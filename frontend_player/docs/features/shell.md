@@ -387,3 +387,43 @@ anything waits the envelope stays**, with a count or without.
 
 The walk is `envelopeCount.test.tsx`. **Not seen on a device**: the badge on the envelope against
 mock 1, where it sits over the mail mark's corner as the bell's does over the bell.
+
+**The five Home rows fold into FOR YOU, and which line is open is the shell's**
+([#820](https://github.com/Raketa02/Raketa/issues/820), ADR-0205 §5, §8; the Home rows screens §1,
+§2; home refactor 3–13). Under _Your games_, `ForYou` draws `shared/ui`'s `FoldingLines` — the eyebrow
+_FOR YOU_ (`HOME_COPY.forYou`) — and five `FoldingLine`s in ADR-0205 §5's order, each its feature's:
+`groups`' `useHottestGroupsLine`, `discovery`'s `useSameLevelLine`, `useNewInRaketaLine` and
+`useSameVibeLine`, and `rankings`' `useTopTenLine`. **Each hands its title, what it unfolds and its
+footer, or `undefined` while its read is out, empty or failed**, so the shell knows from one call per
+line whether to draw it, and **every line's read runs when Home opens**, open or not. With all five
+hidden, FOR YOU is not drawn. The paragraphs above that say `HomeScreen` draws `HottestGroupsRow` and
+`NewInRaketaRow` were true until this one.
+
+- **A hook that hands back elements**, rather than a component per line, because the shell must know
+  which lines are shown — to hide FOR YOU and to close a line that empties — and a component that
+  draws `null` cannot say so without a second read of every row or a state copied up through an
+  effect. The read, a people line's on-screen reporter and Top 10's pick are held at the line's level,
+  which lives while Home does; what the line unfolds is drawn only while it is open.
+- **Which line is open is `domain/forYou`** (pure, `forYou.test.ts`) **kept by `useOpenLine`**: a
+  press on a closed line opens it; on the open line's header closes it; on another line folds the
+  first and unfolds the second once `motion.lineFold` has run, and **whatever is pressed while a line
+  folds waits for that fold** — so an unfold never runs beside one — all at once under Reduce motion.
+  Which line Home starts on (`lineToStartOn`) and whether FOR YOU is drawn (`forYouShown`) are the
+  domain's too. A line
+  that stops being shown closes, and comes back closed. **Every line starts closed**, but **for a
+  reader in no group Groups heating up opens by itself** once it is shown and until the reader
+  presses anything — and stays open when a join from it makes them a member. **Home's own state,
+  never a store**: Home is kept under every tab (`TAB_STACK`), so the open line outlives a tab switch
+  and a screen pushed over Home, and goes with Home at a restart or a sign-out — never kept.
+- **The page shows what opened** (`PageReveal`): `ShellScreen` provides it on a page that watches,
+  scrolling just far enough that the unfolding line's foot stands at the page's — at once under
+  Reduce motion — from the band it already follows for the on-screen reports. **Only a line the
+  reader pressed open asks** (`pressed`, handed down as `reveals`): Groups heating up opening by
+  itself for a groupless reader never scrolls Home under them.
+- **Every line's content is memoised**: all five hooks run in `ForYou`, so a re-read of one line
+  renders the others' frames again, and their cards only if their own data moved.
+- **The groupless line** reads _Join a group to get games — see Groups heating up, just below._
+  (`GROUPS_COPY.hottest.groupless`).
+
+The walk is `forYou.test.tsx`; each line's own is its feature's suite. **Not seen on a device**: the
+fold, the unfold, the switch, the lines sliding and the page easing down, against home refactor 3–13.

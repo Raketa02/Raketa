@@ -1498,6 +1498,14 @@ const size = {
    *  edge is the affordance. Its height is the photo panel's 4:5, read off `PHOTO_PANEL` — one owner
    *  of the shape. */
   photoCarouselRatio: 0.5,
+  /** **FOR YOU's folding line** ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205
+   *  §5, §9.5; home refactor 3–13). A white card, `radius.card`, its 1pt border `line` closed and
+   *  `ink` open. `pad` is the card's inset, the title's and the open content's — the gutter's 15,
+   *  which is what the mocks measure (23 of the phone's 1,5 pixels to the point): a rail inside it
+   *  starts its first tile there and bleeds to the card's inner edge, so a tile's share is of the
+   *  card's content, not the page's. The header's `h2` line and `space.md` above and below it are
+   *  `minTouch` exactly, the closed line's height in home refactor 4. */
+  foldingLine: { pad: space.lg, border: 1 },
   /** THE PORTRAIT TILE (#801; home rows 17–19; 7.31) — a face edge to edge with its words over the
    *  wash. `railRatio` is a tile's share of the content width on a Home row, for `railCardRatio`'s
    *  reason — a ratio, never a point value: home rows 17 draws two whole and the third cut at two
@@ -1657,13 +1665,6 @@ const hit = {
   peopleRow: { top: 3, bottom: 3 },
   /** Home's trophy pill (#775): 30 tall, lifted to 44. */
   trophy: { top: 7, bottom: 7 },
-  /** A Home row's link — *See all ›*, Top 10's *Rankings ›* (#798; 6.5). Its 16pt line overhangs
-   *  the heading's 12 by 2 each way, `space.lg` under the row above and `space.sm` over its own
-   *  rail — so 13 above and 7 below are the whole of both gaps, and it stops at the rail, whose
-   *  cards keep their own targets: 36 tall, under 44 on purpose. Sideways it reaches the screen
-   *  edge on the right, and 3 on the left, as a chip's slop does (`chip`): of the `space.sm`
-   *  between a control and the link, the two take 3 each and leave 3 between their targets. */
-  rowLink: { top: 13, bottom: 7, left: 3, right: 15 },
   /** *2 sports ›* on the Same level card's footer (#802; 7.34): a 16pt line in the footer's 44pt
    *  row, beside the round friend button's own 44 box — 14 above and below reach exactly the row's
    *  edges, so no touch lands past its parent on Android; 6 sideways keeps clear of the gap's words. */
@@ -1675,12 +1676,13 @@ const hit = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Elevation — six shadows in the whole system, five for things that genuinely float and one
-// for the club results of the two group searches, plus one TEXT shadow, which is a different mechanism and not
-// an elevation at all.
+// Elevation — seven shadows in the whole system, five for things that genuinely float, one
+// for the club results of the two group searches and one for FOR YOU's open line, plus one TEXT
+// shadow, which is a different mechanism and not an elevation at all.
 // CARDS NEVER HAVE ONE: depth on paper comes from the surface change and the 1pt border.
 // The deck card is here because it is not a card, not because the rule bent; the club result
-// is the one amendment to the rule, and it is named rather than absorbed (4.3, Part 16).
+// and the open line are the two amendments to the rule, each named rather than absorbed (4.3,
+// Part 16).
 //
 // RN cannot express CSS spread, so these are calibrated approximations: the blur halves,
 // the offset shrinks toward the negative spread, and the opacity comes down with it.
@@ -1756,6 +1758,22 @@ const shadow = {
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
+    elevation: 3,
+  },
+  /** THE OPEN LINE — the seventh, and the second card that casts one: FOR YOU's line while it is
+   *  open ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5, §9.1; home refactor
+   *  5, 6, 8, 10, 12), beside its `ink` border and its chevron turned down. A closed line casts
+   *  none, as any card.
+   *
+   *  The mocks lift the one open line off the page so it is unmistakable among four closed ones.
+   *  Soft: the club result's colour, a wider blur at the same faint opacity, and a lower drop — the
+   *  line is over nothing, it only stands forward — so it reads as a halo round the border rather
+   *  than a card floating. `elevation` the club result's 3: the bar passes over both. */
+  openLine: {
+    shadowColor: '#0B2B33',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     elevation: 3,
   },
   /** TEXT ON GENERATED MEDIA — a textShadow, not an elevation, and the only one in the app.
@@ -1847,6 +1865,21 @@ const motion = {
    * reduced motion, where the fold is simply open or shut.
    */
   disclose: 280,
+  /**
+   * **FOR YOU's line unfolding** ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205
+   * §5; the brief's *about a quarter of a second, fast at the start and settling at the end*): the
+   * fold's height runs to the content's measured height in one layout transition, the lines below
+   * sliding down on the same beat, while the content fades in from a `space.md` above its place and
+   * the chevron turns down — `disclose`'s mechanics, `easeDecel`, on the UI thread.
+   */
+  lineUnfold: 250,
+  /**
+   * **And folding back**, *over a slightly shorter moment* (the brief): the content fades and the
+   * lines below slide up, and only then is the content let go — a closed line draws nothing. A
+   * switch runs this first and `lineUnfold` after it, never both at once. Both are skipped under
+   * Reduce motion (ADR-0205 §8), where a line is simply open or shut.
+   */
+  lineFold: 200,
   /**
    * The radar's flight — a tap on a face carries the view to them, centred, at the 3 km stop
    * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)

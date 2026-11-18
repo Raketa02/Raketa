@@ -1,15 +1,15 @@
 /**
- * **The sport pill on a Home row** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home
- * rows screens §7.3; home rows 27) — the deck's pill (#774) on a row's heading line, beside the row's
- * link, and the bar it opens onto lying over the row. Top 10 draws it; its router suite walks the
- * picks end to end. `SportPill.test.tsx` holds the bar's unfold.
+ * **The sport pill on a Home line** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home
+ * rows screens §7.3; home rows 27) — the deck's pill (#774) in a folding line's footer since #820,
+ * beside the line's link, and the bar it opens onto lying over the footer. Top 10 draws it; its router
+ * suite walks the picks end to end. `SportPill.test.tsx` holds the bar's unfold.
  *
  * The navigator is real, because leaving the screen is one of the things that folds the bar.
  */
 
 import { Stack, router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
-import { StyleSheet, Text, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import {
   pressHardwareBack,
@@ -18,7 +18,7 @@ import {
 } from '@/test-support/hardwareBack';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { HomeRow } from './HomeRow';
+import { FoldingLineFooter } from './FoldingLine';
 import { RowSportPill } from './RowSportPill';
 import type { SportPillWords } from './SportPillFrame';
 import { theme } from './theme';
@@ -47,15 +47,14 @@ function Screen() {
   return (
     <RowSportPill sports={held.sports} sport={held.sport} onPick={onPick} words={WORDS}>
       {(pill, over) => (
-        <HomeRow
-          heading="Top 10"
-          control={pill}
-          over={over}
-          link={{ words: 'Rankings', label: 'Rankings', onPress: jest.fn() }}
-          testID="row"
-        >
+        <View testID="line">
           <Text>the cards</Text>
-        </HomeRow>
+          <FoldingLineFooter
+            control={pill}
+            over={over}
+            link={{ words: 'Rankings', label: 'Rankings', onPress: jest.fn() }}
+          />
+        </View>
       )}
     </RowSportPill>
   );
@@ -108,14 +107,14 @@ describe('the sport pill on a row', () => {
     expect(screen.getByRole('link', { name: 'Rankings' })).toBeTruthy();
   });
 
-  it('stands on the heading’s line, a button named in the row’s words', async () => {
+  it('stands in the footer, a button named in the row’s words', async () => {
     await openRow();
 
     expect(pill().props.accessibilityHint).toBe('Shows the row for another sport');
     expect(bar()).toBeNull();
   });
 
-  it('opens over the row onto the other sports, the current one last', async () => {
+  it('opens over the footer onto the other sports, the current one last', async () => {
     await openRow();
     unfold();
 
@@ -144,7 +143,7 @@ describe('the sport pill on a row', () => {
     expect(bar()).toBeNull();
   });
 
-  it('folds and reports nothing on a tap anywhere else on the row', async () => {
+  it('folds and reports nothing on a tap anywhere else on the footer', async () => {
     await openRow();
     unfold();
 

@@ -315,3 +315,20 @@ outline and hairline, _10_'s two figures touching, the baseline near the card's 
 the card's portrait and wash, the move's slant and colours on a pale photograph, the volt ring, the
 pill on the heading's line and the bar sliding over _TOP 10_ while _Rankings ›_ stays, and the row's
 spacing among the others.
+
+**Top 10 is FOR YOU's last line** ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205
+§5; home refactor 12, 13). `TopTenRow` became `useTopTenLine`, which hands the shell the line's title
+(`TOP_TEN_COPY.line`), the cards on the `numbered` rail — stepping and snapping by an item, the
+numeral beside the card (`itemWidth`) — or _Nobody ranked in squash yet_, and **a footer holding
+today's pill and _Rankings ›_**, unchanged until #821 turns the pill rightwards and renames the link;
+the bar slides over the footer rather than the heading. **The pick is held by the line**, which lives
+while Home does, so it outlives a close. **The line never empties under the pill on a pick** (`useTopTen`'s
+`lastDrawn`): while a pick's own read has nothing yet — refused, or the pick before it cancelled under a
+second pick and read again — the cards last drawn stay, since FOR YOU closes a line that stops being
+shown and an open Top 10 would close under the reader. `keepPreviousData` alone covered a read in
+flight, not a failure. **On a 360pt phone the open bar's leftmost sport is cut by the line's edge**:
+the bar still grows leftwards from the pill, about 268pt, and the footer leaves it some 253 inside the
+line, which clips where the row's heading let it run into the gutter. #821 turns it to open rightwards
+from the footer's left, where all four fit — **a look is owed** until then. Hidden, as before, while nobody is
+ranked in any sport. Walked in `topTen.test.tsx`, which now opens the line first and adds the pick
+kept across a close and a second pick, before the first lands, refused with the line kept open.

@@ -1,9 +1,11 @@
 /**
- * **NEW IN RAKETA on Home, its See all, and the round friend button** — walked through the real route
- * tree ([#801](https://github.com/Raketa02/Raketa/issues/801), PRD #789; ADR-0204 §5; the Home rows
+ * **New in Raketa on Home, its See all, and the round friend button** — FOR YOU's third line, walked
+ * through the real route tree ([#801](https://github.com/Raketa02/Raketa/issues/801), PRD #789;
+ * [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §5, ADR-0205 §5; the Home rows
  * screens §5, §8; the mechanics §7, §11–§13; the words §31.7, §31.9, §31.10).
  *
- * - **The row**: after Hottest groups, *See all ›* named; gone while empty or failed; the tiles' faces,
+ * - **The line**: after Groups heating up, closed; open, *See all ›* named at its foot; hidden while
+ *   empty or failed; the tiles' faces,
  *   *NEW*, sports with their levels — none without a level — and the Joined ladder.
  * - **The round button**: every state's mark and name; **+** asks at once and draws **…** before the
  *   answer; **…** opens *Request sent* · *Cancel request*; **✓** asks *Remove … as a friend?*; the
@@ -33,6 +35,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { GROUPS_COPY } from '@/features/groups/types';
+import { isOpen, lineTitles, openLine } from '@/test-support/forYou';
 import {
   HOME_PATH,
   HOTTEST_GROUPS_PATH,
@@ -255,34 +258,25 @@ const pullSeeAll = () =>
   screen.UNSAFE_getByType(FlatList).props.refreshControl.props.onRefresh() as Promise<void>;
 const toasts = () => useToastQueue.getState().queue.map((toast) => toast.message);
 
-/** The section headings Home draws, top to bottom. */
-const headings = () =>
-  screen
-    .getAllByRole('header')
-    .map((node) => node.props.children as string)
-    .filter((text) => typeof text === 'string');
-
 async function homeWithTheRow() {
   await launchSignedIn();
-  await screen.findByRole('header', { name: COPY.heading });
+  await openLine(COPY.line);
 }
 
-describe('the row on Home', () => {
-  it('stands right after Hottest groups, with See all named for what it opens', async () => {
+describe('the line on Home', () => {
+  it('stands right after Groups heating up, closed', async () => {
     peopleServer();
     stubHottestGroups(transport, [HOT_GROUP]);
-    await homeWithTheRow();
-    await screen.findByRole('header', { name: GROUPS_COPY.hottest.heading });
+    await launchSignedIn();
+    await screen.findByRole('button', { name: COPY.line });
+    await screen.findByRole('button', { name: GROUPS_COPY.hottest.line });
 
-    const order = headings();
-    const games = order.findIndex((text) => text.startsWith('Your games'));
-    expect(order.slice(games + 1, games + 3)).toEqual([GROUPS_COPY.hottest.heading, COPY.heading]);
-    expect(
-      within(screen.getByTestId('new-in-raketa')).getByRole('link', { name: COPY.seeAllLabel }),
-    ).toBeTruthy();
+    expect(lineTitles().slice(0, 2)).toEqual([GROUPS_COPY.hottest.line, COPY.line]);
+    expect(isOpen(COPY.line)).toBe(false);
+    expect(screen.queryAllByTestId(/^joiner-e0/)).toEqual([]);
   });
 
-  it('draws the tiles in the read’s order', async () => {
+  it('opens onto the tiles in the read’s order, See all named for what it opens at its foot', async () => {
     peopleServer();
     await homeWithTheRow();
 
@@ -290,15 +284,18 @@ describe('the row on Home', () => {
       .getAllByTestId(/^joiner-e0/)
       .map((node) => (node.props.testID as string).replace('joiner-', ''));
     expect(ids).toEqual(ROW.map((one) => one.player_id));
+    expect(
+      within(screen.getByTestId('new-in-raketa')).getByRole('link', { name: COPY.seeAllLabel }),
+    ).toBeTruthy();
   });
 
-  it('is gone with its heading while the read holds nobody', async () => {
+  it('is hidden while the read holds nobody', async () => {
     peopleServer([]);
     await launchSignedIn();
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -308,7 +305,7 @@ describe('the row on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: COPY.line })).toBeNull();
   });
 });
 

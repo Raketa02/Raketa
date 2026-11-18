@@ -178,10 +178,13 @@ export const GROUPS_COPY = {
    * tags — ▲ and + — are drawn, never characters.
    */
   hottest: {
-    /** Drawn uppercase by the row frame: *HOTTEST GROUPS*, with no See all. */
-    heading: 'Hottest groups',
-    /** *Your games*, for a reader in no group, in place of *Play finds you one.* (§31.1). */
-    groupless: 'Join a group to get games — the hottest ones are just below.',
+    /** FOR YOU's line (#820) — its title, and what it is named: the row was *HOTTEST GROUPS*. */
+    line: 'Groups heating up',
+    /**
+     * *Your games*, for a reader in no group, in place of *Play finds you one.* (§31.1) — pointing at
+     * the line just below, which starts open for them (#820, Q38).
+     */
+    groupless: 'Join a group to get games — see Groups heating up, just below.',
     tag: { HOTTEST: 'HOTTEST', GROWING: 'GROWING' },
     /** The tags, spoken. */
     tagSpoken: { HOTTEST: 'hottest', GROWING: 'growing' },

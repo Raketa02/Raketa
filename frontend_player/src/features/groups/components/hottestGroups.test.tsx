@@ -1,29 +1,32 @@
 /**
- * **HOTTEST GROUPS on Home** — walked through the real route tree
- * ([#800](https://github.com/Raketa02/Raketa/issues/800), PRD #789; ADR-0204 §3; the Home rows
- * screens §3; the mechanics §5; the words §31.1–§31.4).
+ * **Groups heating up on Home** — FOR YOU's first line, walked through the real route tree
+ * ([#800](https://github.com/Raketa02/Raketa/issues/800), PRD #789; [#820](https://github.com/Raketa02/Raketa/issues/820);
+ * ADR-0204 §3, ADR-0205 §5; the Home rows screens §3; the mechanics §5; the words §31.1–§31.4).
  *
- * - **The row**: just below *Your games*, its heading with no See all; gone while the read is empty.
+ * - **The line**: first under FOR YOU, just below *Your games*, closed; open, its cards and no footer;
+ *   hidden while the read is empty or failed, and closed and gone when it empties while open.
  * - **The card**: the tag, the figures, the growth, the faces, and the chip for each relation.
  * - **The chip's taps**: Join → *You're in* at once; Ask to join → *Asked*; Asked → the withdraw
  *   sheet; You're in → the group's page. A refusal puts the chip back and says why.
  * - **The group sheet**: its title and one button, the identity line, the two stat cards, the faces
  *   (not buttons) and the friends line.
  * - **Withdraw**: *Waiting for Ogrody 33 to answer* · **Withdraw request**, and the card asks again.
- * - **The groupless line** under *Your games*.
+ * - **A reader in no group**: the groupless line under *Your games*, and the line open from the start.
  *
  * **The routes are answered by a small fake of the server** (`hottestServer`): a join admits or asks
- * by the group's policy and a withdraw takes the request back, so what the row draws after a write is
- * the row read again, never this client guessing — the guess is only what the chip says before the
+ * by the group's policy and a withdraw takes the request back, so what the line draws after a write is
+ * the line read again, never this client guessing — the guess is only what the chip says before the
  * answer lands.
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { RefreshControl } from 'react-native';
 
+import { HOME_COPY } from '@/features/shell/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { lineTitles, openLine } from '@/test-support/forYou';
 import {
   HOME_PATH,
   HOTTEST_GROUPS_PATH,
@@ -241,25 +244,29 @@ const headings = () =>
     .map((node) => node.props.children as string)
     .filter((text) => typeof text === 'string');
 
-describe('the row on Home', () => {
-  it('stands just below Your games, with no See all', async () => {
+const line = () => screen.findByRole('button', { name: HOT.line });
+
+describe('the line on Home', () => {
+  /** ADR-0205 §5: FOR YOU just below *Your games*, Groups heating up its first line, closed. */
+  it('stands first under FOR YOU, just below Your games, closed and drawing no card', async () => {
     hottestServer([OGRODY, KAZIMIERZ, PODGORZE]);
     await launchSignedIn();
 
-    expect(await screen.findByRole('header', { name: HOT.heading })).toBeTruthy();
+    expect((await line()).props.accessibilityState).toEqual({ expanded: false });
     const order = headings();
     const games = order.findIndex((text) => text.startsWith('Your games'));
     expect(games).toBeGreaterThanOrEqual(0);
-    expect(order[games + 1]).toBe(HOT.heading);
-    const row = within(screen.getByTestId('hottest-groups'));
-    expect(row.queryByRole('link')).toBeNull();
+    expect(order[games + 1]).toBe(HOME_COPY.forYou);
+    expect(lineTitles()[0]).toBe(HOT.line);
+    expect(screen.queryByTestId(`hottest-${OGRODY.id}`)).toBeNull();
   });
 
-  it('draws the cards in the read’s order', async () => {
+  /** No footer until the Groups heating up page has one to open (#823). */
+  it('opens onto the cards in the read’s order, with no footer', async () => {
     hottestServer([OGRODY, KAZIMIERZ, PODGORZE]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
-    await screen.findByRole('header', { name: HOT.heading });
     const names = within(screen.getByTestId('hottest-groups'))
       .getAllByRole('button', { name: /,/ })
       .map((node) => node.props.accessibilityLabel as string);
@@ -268,15 +275,16 @@ describe('the row on Home', () => {
       KAZIMIERZ.name,
       PODGORZE.name,
     ]);
+    expect(within(screen.getByTestId('hottest-groups')).queryByRole('link')).toBeNull();
   });
 
-  it('is gone with its heading while the read holds nothing', async () => {
+  it('is hidden while the read holds nothing', async () => {
     hottestServer([]);
     await launchSignedIn();
 
     await waitFor(() => expect(reads(HOTTEST_GROUPS_PATH)).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('header', { name: HOT.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: HOT.line })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -286,7 +294,26 @@ describe('the row on Home', () => {
 
     await waitFor(() => expect(reads(HOTTEST_GROUPS_PATH)).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('header', { name: HOT.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: HOT.line })).toBeNull();
+  });
+
+  /** Q21: a line that empties while open closes and goes — and comes back closed. */
+  it('closes and goes when it empties while open, and comes back closed', async () => {
+    hottestServer([OGRODY]);
+    await launchSignedIn();
+    await openLine(HOT.line);
+
+    stubHottestGroups(transport, []);
+    await act(async () => {
+      fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
+    });
+    await waitFor(() => expect(screen.queryByRole('button', { name: HOT.line })).toBeNull());
+
+    stubHottestGroups(transport, [OGRODY]);
+    await act(async () => {
+      fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
+    });
+    expect((await line()).props.accessibilityState).toEqual({ expanded: false });
   });
 });
 
@@ -294,8 +321,8 @@ describe('the card', () => {
   it('draws the tag, the figures, the growth and four faces', async () => {
     hottestServer([OGRODY, KAZIMIERZ, PODGORZE]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
-    await screen.findByRole('header', { name: HOT.heading });
     const ogrody = within(screen.getByTestId(`hottest-${OGRODY.id}`));
     expect(ogrody.getByText(OGRODY.name)).toBeTruthy();
     expect(ogrody.getByText('Padel · Tennis · Squash · Badminton')).toBeTruthy();
@@ -323,6 +350,7 @@ describe('the card', () => {
   it('writes one game in the singular, no growth at nought, and no tag on an untagged card', async () => {
     hottestServer([PODGORZE]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     const podgorze = within(await screen.findByTestId(`hottest-${PODGORZE.id}`));
     expect(podgorze.getByText('game this week')).toBeTruthy();
@@ -338,6 +366,7 @@ describe('the card', () => {
   it('fills the heat bar to the served share', async () => {
     hottestServer([KAZIMIERZ]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     const fill = await screen.findByTestId('heat-fill', HIDDEN);
     expect(fill.props.style).toEqual(
@@ -359,6 +388,7 @@ describe('the card', () => {
       },
     ]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     expect(await chip(OGRODY, 'ask')).toBeTruthy();
     expect(await chip(KAZIMIERZ, 'in')).toBeTruthy();
@@ -372,6 +402,7 @@ describe('the card', () => {
   it('offers Join to the Administrator who runs a People I approve group', async () => {
     hottestServer([{ ...OGRODY, is_administrator: true }]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     expect(await chip(OGRODY, 'join')).toBeTruthy();
   });
@@ -381,7 +412,7 @@ describe('the chip', () => {
   it('Join makes the reader a member at once, and the row, the list and Home are read again', async () => {
     const server = hottestServer([OGRODY, PODGORZE]);
     await launchSignedIn();
-    await screen.findByRole('header', { name: HOT.heading });
+    await openLine(HOT.line);
     await waitFor(() => expect(reads(MY_GROUPS_PATH)).toBeGreaterThan(0));
     const before = {
       hottest: reads(HOTTEST_GROUPS_PATH),
@@ -410,6 +441,7 @@ describe('the chip', () => {
   it('Ask to join leaves a request at once: Asked', async () => {
     hottestServer([OGRODY]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await chip(OGRODY, 'ask'));
 
@@ -423,6 +455,7 @@ describe('the chip', () => {
     const server = hottestServer([PODGORZE]);
     server.refuseNextJoin('group_not_found');
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await chip(PODGORZE, 'join'));
 
@@ -434,6 +467,7 @@ describe('the chip', () => {
   it('Asked opens the withdraw sheet, and Withdraw request turns the card back to Ask to join', async () => {
     hottestServer([{ ...OGRODY, relation: 'REQUESTED' }]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await chip(OGRODY, 'requested'));
 
@@ -454,6 +488,7 @@ describe('the chip', () => {
   it('You’re in opens the group’s page', async () => {
     hottestServer([KAZIMIERZ]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await chip(KAZIMIERZ, 'in'));
 
@@ -465,6 +500,7 @@ describe('the group sheet', () => {
   it('opens on a tap on the card, with the group’s fields and its one button', async () => {
     hottestServer([OGRODY, KAZIMIERZ]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${OGRODY.name},`) }));
 
@@ -490,6 +526,7 @@ describe('the group sheet', () => {
   it('says one friend, or the players, and names a Player group’s Owner', async () => {
     hottestServer([KAZIMIERZ, PODGORZE]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${KAZIMIERZ.name},`) }));
     expect(await sheet().findByText('1 of your friends plays here')).toBeTruthy();
@@ -505,6 +542,7 @@ describe('the group sheet', () => {
   it('Join on the sheet makes the reader a member, and the button opens the group', async () => {
     hottestServer([PODGORZE]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${PODGORZE.name},`) }));
     fireEvent.press(
@@ -521,6 +559,7 @@ describe('the group sheet', () => {
   it('Asked on the sheet turns it into the withdraw sheet', async () => {
     hottestServer([{ ...OGRODY, relation: 'REQUESTED' }]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${OGRODY.name},`) }));
     fireEvent.press(
@@ -534,25 +573,29 @@ describe('the group sheet', () => {
   });
 });
 
-describe('Your games for a reader in no group', () => {
-  it('points at the row below', async () => {
+describe('a reader in no group', () => {
+  /** Q38: joining a group is their next step, so the line just below says so and is open. */
+  it('reads the groupless line under Your games, and finds Groups heating up open', async () => {
     hottestServer([OGRODY], { mine: [] });
     await launchSignedIn();
 
     expect(await screen.findByText(HOT.groupless)).toBeTruthy();
     expect(screen.queryByText('Play finds you one.')).toBeNull();
+    expect(await screen.findByRole('button', { name: HOT.line, expanded: true })).toBeTruthy();
+    expect(screen.getByTestId(`hottest-${OGRODY.id}`)).toBeTruthy();
   });
 
-  it('keeps Play finds you one. for a member of a group', async () => {
+  it('keeps Play finds you one. for a member of a group, and every line closed', async () => {
     hottestServer([OGRODY]);
     await launchSignedIn();
 
     await waitFor(() => expect(reads(MY_GROUPS_PATH)).toBeGreaterThan(0));
     expect(await screen.findByText('Play finds you one.')).toBeTruthy();
     expect(screen.queryByText(HOT.groupless)).toBeNull();
+    expect((await line()).props.accessibilityState).toEqual({ expanded: false });
   });
 
-  it('turns to Play finds you one. once a join from the row makes them a member', async () => {
+  it('turns to Play finds you one. once a join from the line makes them a member — the line kept open', async () => {
     hottestServer([PODGORZE], { mine: [] });
     await launchSignedIn();
 
@@ -561,6 +604,18 @@ describe('Your games for a reader in no group', () => {
     fireEvent.press(await chip(PODGORZE, 'join'));
 
     expect(await screen.findByText('Play finds you one.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: HOT.line }).props.accessibilityState).toEqual({
+      expanded: true,
+    });
+  });
+
+  it('closes it like any line, from its header', async () => {
+    hottestServer([OGRODY], { mine: [] });
+    await launchSignedIn();
+
+    fireEvent.press(await screen.findByRole('button', { name: HOT.line, expanded: true }));
+
+    expect(await screen.findByRole('button', { name: HOT.line, expanded: false })).toBeTruthy();
   });
 });
 
@@ -568,8 +623,8 @@ describe('the pull', () => {
   it('reads the row again, and the groups the groupless line is drawn from', async () => {
     hottestServer([OGRODY]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
-    await screen.findByRole('header', { name: HOT.heading });
     await waitFor(() => expect(reads(MY_GROUPS_PATH)).toBeGreaterThan(0));
     const before = reads(HOTTEST_GROUPS_PATH);
     const mine = reads(MY_GROUPS_PATH);

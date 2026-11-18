@@ -13,22 +13,31 @@ import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
-  NewInRaketaRow,
-  SameLevelRow,
-  SameVibeRow,
   rereadDiscovery,
+  useNewInRaketaLine,
+  useSameLevelLine,
+  useSameVibeLine,
 } from '@/features/discovery/types';
 import {
   GROUPS_COPY,
   HomeLevelCard,
-  HottestGroupsRow,
   rereadHomeGroups,
+  useHottestGroupsLine,
   useInNoGroup,
 } from '@/features/groups/types';
 import { NoticeBell } from '@/features/notifications/types';
 import { HomeRail, rereadHome } from '@/features/proposals/types';
-import { RankingTrophy, TopTenRow, rereadTopTen } from '@/features/rankings/types';
-import { theme } from '@/shared/ui';
+import { RankingTrophy, rereadTopTen, useTopTenLine } from '@/features/rankings/types';
+import { FoldingLine, FoldingLines, theme, type FoldingLineParts } from '@/shared/ui';
+
+import {
+  FOR_YOU_LINES,
+  forYouShown,
+  lineToStartOn,
+  type ForYouLine,
+  type LinesShown,
+} from '../domain/forYou';
+import { useOpenLine } from '../hooks/useOpenLine';
 
 import { whenHomeStartsOver } from './homeStart';
 import { NeedsYourAnswer } from './NeedsYourAnswer';
@@ -68,22 +77,22 @@ import { HOME_COPY } from './shellCopy';
  * Rankings, in the far-right corner. The slot is right-aligned, so without the envelope the bell and
  * the trophy stand where they were.
  *
- * **The five Home rows stand below *Your games*** (ADR-0204; the Home rows screens §1), each reading on
- * its own so a slow or failed one holds up nothing — **HOTTEST GROUPS** first (`groups`' row,
- * [#800](https://github.com/Raketa02/Raketa/issues/800)). The pull re-reads them with Home's own.
- * **A reader in no group** reads *Join a group to get games — the hottest ones are just below.* where
- * *Play finds you one.* stood (§31.1): the line points at the row under it, and whether the reader is
- * in a group is `groups`' answer, its words `groups`' too.
+ * **FOR YOU stands below *Your games*** ([#820](https://github.com/Raketa02/Raketa/issues/820);
+ * ADR-0205 §5; home refactor 3–13): the five rows ADR-0204 put there, folded into five quiet lines —
+ * **Groups heating up** (`groups`'), **Players at your level**, **New in Raketa** and **Players with
+ * your vibe** (`discovery`'s), and **Top 10** (`rankings`') — each feature handing its title, what it
+ * unfolds and its footer, and `undefined` while its read is out, empty or failed. **Which line is
+ * open is the shell's** (`useOpenLine`): one at a time, closed at the start, kept across tab switches
+ * while Home lives, and Groups heating up open by itself for **a reader in no group**, whose *Your
+ * games* reads *Join a group to get games — see Groups heating up, just below.* where *Play finds you
+ * one.* stood (§31.1). **Every line reads when Home opens**, open or not, so a closed line still
+ * knows whether to show; the pull re-reads them all with Home's own. With all five hidden, FOR YOU is
+ * hidden too.
  *
- * **NEW IN RAKETA follows it** (`discovery`'s row, [#801](https://github.com/Raketa02/Raketa/issues/801)),
- * the third of the five: Same competitive level (#802) will stand between them. The pull re-reads it
- * with the rest. **A friend act anywhere moves a person on it** — an answer in FRIEND REQUESTS, the
- * record a face opens — because its reads list people (`LISTS_PEOPLE`) and every friend write reaches
- * those; the shell hands it nothing for that.
- *
- * **TOP 10 is the last** (`rankings`' row, [#805](https://github.com/Raketa02/Raketa/issues/805)), after
- * Same vibe: General's first ten in one sport, with its own sport pill and *Rankings ›*. A pick there
- * re-reads that row alone; the pull re-reads it with the rest (`rereadTopTen`).
+ * **A friend act anywhere moves a person on the people lines** — an answer in Needs your answer, the
+ * record a face opens — because their reads list people (`LISTS_PEOPLE`) and every friend write
+ * reaches those; the shell hands them nothing for that. **A pick on Top 10's pill re-reads that line
+ * alone**; the pull re-reads it with the rest (`rereadTopTen`).
  *
  * **Memoised, because it is kept** (`TAB_STACK`): Home stays mounted under every tab, and the route
  * that draws it is drawn again on every move the navigator makes — so without `memo` every press of
@@ -120,14 +129,54 @@ export const HomeScreen = memo(function HomeScreen() {
           inNoGroup ? { ...HOME_COPY.empty, act: GROUPS_COPY.hottest.groupless } : HOME_COPY.empty
         }
       />
-      <HottestGroupsRow />
-      <SameLevelRow />
-      <NewInRaketaRow />
-      <SameVibeRow />
-      <TopTenRow />
+      <ForYou inNoGroup={inNoGroup} />
     </ShellScreen>
   );
 });
+
+/**
+ * **FOR YOU** — the five lines, each its feature's, in ADR-0205 §5's order; the eyebrow over them
+ * while any is shown.
+ */
+function ForYou({ inNoGroup }: { readonly inNoGroup: boolean }) {
+  const lines: Readonly<Record<ForYouLine, FoldingLineParts | undefined>> = {
+    hottestGroups: useHottestGroupsLine(),
+    sameLevel: useSameLevelLine(),
+    newInRaketa: useNewInRaketaLine(),
+    sameVibe: useSameVibeLine(),
+    topTen: useTopTenLine(),
+  };
+  const shown: LinesShown = {
+    hottestGroups: lines.hottestGroups !== undefined,
+    sameLevel: lines.sameLevel !== undefined,
+    newInRaketa: lines.newInRaketa !== undefined,
+    sameVibe: lines.sameVibe !== undefined,
+    topTen: lines.topTen !== undefined,
+  };
+  const { open, folding, pressed, press } = useOpenLine(shown, lineToStartOn({ inNoGroup }));
+
+  if (!forYouShown(shown)) return null;
+  return (
+    <FoldingLines heading={HOME_COPY.forYou} folding={folding} testID="for-you">
+      {FOR_YOU_LINES.map((key) => {
+        const line = lines[key];
+        return line === undefined ? null : (
+          <FoldingLine
+            key={key}
+            title={line.title}
+            open={open === key}
+            onHeader={() => press(key)}
+            footer={line.footer}
+            reveals={pressed}
+            testID={line.testID}
+          >
+            {line.content}
+          </FoldingLine>
+        );
+      })}
+    </FoldingLines>
+  );
+}
 
 const s = StyleSheet.create({
   // The envelope and the bell, each in its own 44pt target, then the trophy's pill in the corner.

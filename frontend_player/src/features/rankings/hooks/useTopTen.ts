@@ -28,7 +28,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { AppError } from '@/shared/errors';
 import { useOnReturn } from '@/shared/lib/platform';
@@ -64,7 +64,7 @@ export function useTopTen(): TopTenRead {
 
   // No sport yet is `skipToken` under a key of its own, as `useDeckCounts` keeps it.
   const read = useQuery<TopTen | null, AppError>({
-    queryKey: ask === undefined ? rankingKeys.topTenUnasked() : rankingKeys.topTenAsked(ask),
+    queryKey: keyOf(ask),
     queryFn: ask === undefined ? skipToken : ({ signal }) => readTopTen(ask, { signal }),
     placeholderData: keepPreviousData,
   });
@@ -73,16 +73,34 @@ export function useTopTen(): TopTenRead {
     void client.refetchQueries({ queryKey: rankingKeys.topTen(), type: 'active', stale: true });
   });
 
-  // Derived state, as `usePersonSheet` keeps it: a pick that could not be read is undone at once,
-  // and the key it goes back to still holds its cards.
-  if (picked !== undefined && read.isError && read.data === undefined) setPicked(picked.before);
+  /**
+   * **The read last drawn** — what stays on screen while a pick's own read has nothing to show yet:
+   * `keepPreviousData` keeps it while a read is out, but not past a failure, nor once the pick before
+   * was cancelled under a second pick and is read again. So **the line never empties under the pill**
+   * on a pick, whatever its reads do — which matters since #820: FOR YOU closes a line that stops being
+   * shown, and an open Top 10 would close under the reader.
+   */
+  const lastDrawn = useRef<TopTen | null>();
+  useEffect(() => {
+    if (read.data !== undefined) lastDrawn.current = read.data;
+  });
+
+  // Derived state, as `usePersonSheet` keeps it: a pick that could not be read is undone at once.
+  const undone = picked !== undefined && read.isError && read.data === undefined;
+  if (undone) setPicked(picked.before);
+  const shown = read.data ?? (picked !== undefined ? lastDrawn.current : undefined);
 
   return {
-    face: topTenFace(read.data),
+    face: topTenFace(shown),
     sports,
-    sport: picked?.sport ?? read.data?.sport,
+    sport: (undone ? picked.before?.sport : picked?.sport) ?? shown?.sport,
     pick: (sport) => setPicked({ sport, before: picked }),
   };
+}
+
+/** A Top 10 read's key — the one asked, or no sport yet. */
+function keyOf(ask: ReturnType<typeof topTenAsk>) {
+  return ask === undefined ? rankingKeys.topTenUnasked() : rankingKeys.topTenAsked(ask);
 }
 
 /** **Every Top 10 read, again** — Home's pull. */

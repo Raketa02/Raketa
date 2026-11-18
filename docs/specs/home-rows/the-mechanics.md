@@ -81,12 +81,23 @@ group, *Anyone*, 7 players).
 
 ## 3. Home, top to bottom
 
-- **The header and today's rows stay on top, unchanged** (Q3): the title, the trophy and the bell;
-  *Get your level*, **FRIENDS GAME**, *To confirm*, **FRIEND REQUESTS**, **ASKED FOR A LEVEL**, *Your
-  games*.
-- **Then the five new rows, in this order:** *Hottest groups*, *Same competitive level players*, *New
-  in Raketa*, *Same vibe players*, *Top 10*.
-- **A row with nothing to show is hidden with its title**, as Home's rows are today.
+> **Amended by [#820](https://github.com/Raketa02/Raketa/issues/820)**
+> ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §4, §5): the five rows fold into **FOR YOU**'s lines, and what waits for an answer is behind the
+> envelope.
+
+- **The header, *Get your level* and *Your games* on top** (ADR-0205 §4).
+- **Then FOR YOU: the five rows as five folding lines, in this order:** *Hottest groups* (**Groups
+  heating up**), *Same competitive level players* (**Players at your level**), *New in Raketa*, *Same
+  vibe players* (**Players with your vibe**), *Top 10*. The titles are the words on screen; the
+  row's name stays the term.
+- **One line is open at a time**, none at app start. A tap on a closed line opens it, and a tap on
+  another folds the first, then unfolds the second; only the open line's header closes it. **Home
+  remembers the open line while the app lives**, across tab switches, and never across a restart.
+  **For a player in no group, Groups heating up starts open.**
+- **A closed line draws no tiles.** Its read still runs, for its hiding (and, from #822, its count).
+- **A row with nothing to show is a hidden line**, as Home's rows were: while loading, empty or failed.
+  With all five hidden, FOR YOU is hidden. A line that empties while open closes and goes.
 - **Each row reads on its own.** A slow or failed row never holds up the others.
   - **Pull-to-refresh re-reads them all.**
   - **Home re-reads them each time the reader comes back to it** when the last read is older than 30
@@ -95,8 +106,9 @@ group, *Anyone*, 7 players).
 - **Nicknames and today's faces everywhere** (Q4): the photo, or the generated court poster as every
   face draws it.
 - **One list for the whole app** (Q2). Everything is split by city the day a second city opens.
-- **A player in no group** reads under *Your games*: *Join a group to get games — the hottest ones are
-  just below.*, instead of *⚡ Play finds you one*.
+- **A player in no group** reads under *Your games*: *Join a group to get games — see Groups heating
+  up, just below.*, instead of *⚡ Play finds you one* (#820; it read *— the hottest ones are just
+  below.* until then).
 
 ---
 
@@ -516,6 +528,9 @@ Q33).
   without the reader adding them, while the pair is still unconnected.
 - **On screen** is at least half the card visible (call 2). **One count per card, row and day**, the
   phone reporting it. Opening Home without scrolling down to the row counts nothing.
+- **Only while its line is open** (#820, ADR-0205 §5): a closed FOR YOU line draws no card, so its
+  cards are never on screen and never counted, however far the page is scrolled. Opening the line and
+  reaching its cards is what counts them.
 - **Each row keeps its own count.** Karol resting in *Same vibe* is fresh in *Same competitive level*.
 - **A rested player can still come back in a gap.** They are never hidden.
 - **A friend added after resting stays a gap** (a call made while writing PRD #789): a friend is a gap

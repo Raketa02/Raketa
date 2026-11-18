@@ -85,11 +85,15 @@ licence for a second dark surface.
   is invisible.
 - **Every number is mono and tabular** — that is what stops a row reflowing when a level goes
   from 2,71 to 2,80. Polish formatting: `38,00 zł`, `2,71`, `65%`, `18:30`.
-- **Cards never cast a shadow — with one named exception.** Six shadows exist; five are for
+- **Cards never cast a shadow — with two named exceptions.** Seven shadows exist; five are for
   things that float, and the deck card is one of them because it is not a card. The sixth is
   the club result both group searches draw (`ClubCard`, `shadow.clubResult`, 4.3,
-  2026-09-27), and it is not a licence for cards in general. The ⚡Play disc's is the only
-  tinted one, and only on iOS — Android's `elevation` cannot be coloured.
+  2026-09-27); the seventh is FOR YOU's line **while it is open** (`FoldingLine`,
+  `shadow.openLine`, 4.3, 7.37, #820). Neither is a licence for cards in general. The ⚡Play
+  disc's is the only tinted one, and only on iOS — Android's `elevation` cannot be coloured.
+- **A FOR YOU line draws its content only while open** (`FoldingLine`, 7.37, #820): its size
+  changes once and a layout transition moves the frames — never a height animated per frame —
+  and a rail inside takes the line's bounds, snapping to its cards.
 - **Band `ink` for text and rails**, `tint`/`deep` for the bar only. A printed level range
   always comes from the model's `bandLo`/`bandHi`, never the bar's drawing values.
 - **Every state carries a word or a shape**, never colour alone.

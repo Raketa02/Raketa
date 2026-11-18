@@ -19,28 +19,59 @@
 
 ### 1. Home, top to bottom
 
-- **The header and today's rows stay as they are** (designed, no mock): the title, the trophy and the
-  bell; *Get your level*, **FRIENDS GAME**, *To confirm*, **FRIEND REQUESTS**, **ASKED FOR A LEVEL**,
-  *Your games* ([the games screens A8](../games-and-fill-in/the-screens.md#a8-home)).
-- **Then the five rows** (home rows 1, 2): *HOTTEST GROUPS*, *SAME COMPETITIVE LEVEL PLAYERS*, *NEW IN
-  RAKETA*, *SAME VIBE PLAYERS*, *TOP 10*. Each heading is grey caps, letter-spaced, with *See all ›*
-  in ink on the right where the row has one; *TOP 10* carries the sport pill and *Rankings ›*
-  instead.
-- **Each row is a sideways rail**, the last card cut at the right edge to show there is more.
-- **A row with nothing to show is gone with its heading.** A row still loading keeps its place
-  without blinking the others; a row that fails is left out *(a call)*.
-- **The groupless line** (designed, no mock): with no group, *Your games* reads *Join a group to get
-  games — the hottest ones are just below.* where *⚡ Play finds you one.* stood.
-- **Pull-to-refresh** re-reads every row; **coming back to Home** re-reads them when the last read is
-  older than 30 seconds. **Top 10's pill** re-reads that row alone.
+> **Amended by [#820](https://github.com/Raketa02/Raketa/issues/820)**
+> ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §4, §5; home refactor 3–13): the five rows fold into **FOR YOU**'s five lines. What waits for an
+> answer moved behind the envelope with #816 and #817 ([the games screens A8](../games-and-fill-in/the-screens.md#a8-home)).
+
+- **The header, *Get your level* and *Your games***, as ADR-0205 §4 orders them.
+- **Then FOR YOU** (home refactor 3, 4): the eyebrow *FOR YOU*, grey caps, letter-spaced, and five
+  quiet lines in this order — **Groups heating up**, **Players at your level**, **New in Raketa**,
+  **Players with your vibe**, **Top 10**. *Only the words on screen change*: the rows' own names
+  (Hottest groups, Same competitive level players, Same vibe players) stay the glossary's and the
+  code's.
+- **A closed line is a white card** with its title on the left and a chevron (›) on the right, and
+  nothing else: no faces, no subtitles, no tiles. *(Each line's count, between the title and the
+  chevron, is #822's.)*
+- **A tap anywhere on a closed line opens it, and one line is open at a time**: tapping another line
+  folds the first, then unfolds the second. **Only the open line's header closes it** — a tap on a
+  tile, a swipe along the rail, a footer link or Top 10's pill never does.
+- **The open line** has an ink border, a soft shadow and the chevron pointing down. Under its header,
+  **today's tiles**, sideways, **settling on tile edges**; at the bottom right of the open content,
+  **its footer**: *See all ›* on the three people lines, to their See all screens; Top 10's sport pill
+  and *Rankings ›*, as the row's heading carried them until #821; none on Groups heating up until
+  #823's page.
+- **Motion** (designed, no mock): the content unfolds and fades in over about a quarter of a second,
+  fast at first and settling; the lines below slide down rather than jump; closing is a little
+  shorter; and if what opened would be cut off at the bottom, the page eases down just enough to show
+  it. **Under Reduce motion, all of it is instant.**
+- **Which line is open**: none at app start; the one open is kept across tab switches while the app
+  lives, and never across a restart. **For a player in no group, Groups heating up starts open**, and
+  *Your games* reads *Join a group to get games — see Groups heating up, just below.* where *⚡ Play
+  finds you one.* stood.
+- **A line shows only once its read has returned something.** While it loads, empty or failed, it is
+  hidden, and the others stand; with all five hidden, FOR YOU goes too. A line that empties while open
+  closes and goes. Top 10 is hidden only when nobody is ranked anywhere: *Nobody ranked in squash yet*
+  stays inside it.
+- **Every line still reads when Home opens**, open or not. **Pull-to-refresh** re-reads every line;
+  **coming back to Home** re-reads them when the last read is older than 30 seconds. **Top 10's pill**
+  re-reads that line alone.
+- **Spoken**: each line is a button that says its title and whether it is expanded or collapsed; each
+  footer link is a button of its own.
 - **The Home tab stays lit** on every See all screen and sheet opened from Home (home rows 12, 19, 24).
 
-### 2. The row frame
+### 2. The row frame, and the folding line
 
 **One frame in shared UI**, built first and used by today's rows and the five new ones: the heading,
 an optional *See all ›*, an optional slot for a control (Top 10's pill and *Rankings ›*), and the
 sideways rail. Moving today's rows onto it changes nothing on screen
 ([#798](https://github.com/Raketa02/Raketa/issues/798)).
+
+**Since [#820](https://github.com/Raketa02/Raketa/issues/820), the five rows are folding lines** (ADR-0205
+§9.5): a line is a card holding its title and chevron, and, open, the frame's sideways rail — its
+tiles a share of the line's content, cut at the line's own edge — and a **footer row** at the bottom
+right carrying the links that stood on the heading. The frame's heading keeps no link or control; it
+draws Needs your answer's sections and *Your games*.
 
 ### 3. Hottest groups
 

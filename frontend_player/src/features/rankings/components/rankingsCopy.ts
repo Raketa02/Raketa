@@ -312,7 +312,8 @@ export const RANKINGS_PILL_WORDS: SportPillWords = {
  * `nobodyRankedLine`, as §31.11 cites it, and a card reads `rowName`'s *You*.
  */
 export const TOP_TEN_COPY = {
-  heading: 'Top 10',
+  /** FOR YOU's line (#820) — its title, and what it is named. */
+  line: 'Top 10',
   rankings: 'Rankings',
   pillHint: 'Shows Top 10 in another sport',
 } as const;

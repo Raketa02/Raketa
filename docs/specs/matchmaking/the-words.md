@@ -676,8 +676,8 @@ present-tense, saying what the tab **is** and pointing at the act:
 > score.`
 > `⚡ Play finds you one.`
 
-*(2026-11-14, ADR-0204 §1: a player in no group reads §31.1's `Join a group to get games — the
-hottest ones are just below.` in place of the second line.)*
+*(2026-11-14, ADR-0204 §1: a player in no group reads §31.1's groupless line in place of the second
+line — `Join a group to get games — see Groups heating up, just below.` since #820.)*
 
 **`PLACEHOLDER_COPY.now` dies with it**, and the test moves rather than being deleted.
 
@@ -1436,14 +1436,25 @@ the club the group plays at.
 
 ### 31.1 Home
 
+> **Amended by [#820](https://github.com/Raketa02/Raketa/issues/820)**
+> ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §5; home refactor 3–13): the five rows' headings became **FOR YOU**'s line titles, and their links
+> moved to the open line's footer. **Only the words on screen change**: *Hottest groups*, *Same
+> competitive level players* and *Same vibe players* stay the glossary's terms and the code's names.
+> Until #820 the rows read `HOTTEST GROUPS` (no See all), `SAME COMPETITIVE LEVEL PLAYERS` ·
+> `See all ›`, `NEW IN RAKETA` · `See all ›`, `SAME VIBE PLAYERS` · `See all ›` and `TOP 10` · the
+> sport pill · `Rankings ›`, and the groupless line `… — the hottest ones are just below.`
+
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Hottest groups, the heading | `HOTTEST GROUPS` | no See all |
-| Same competitive level, the heading | `SAME COMPETITIVE LEVEL PLAYERS` · `See all ›` | |
-| New in Raketa, the heading | `NEW IN RAKETA` · `See all ›` | never *Rakieta* |
-| Same vibe, the heading | `SAME VIBE PLAYERS` · `See all ›` | |
-| Top 10, the heading | `TOP 10` · the sport pill · `Rankings ›` | the pill is the deck's control, cited |
-| *Your games*, a player in no group | `Join a group to get games — the hottest ones are just below.` | in place of §22.7's `⚡ Play finds you one.`; the first line stands |
+| The section, under *Your games* | `FOR YOU` | the eyebrow, drawn uppercase from *For you* |
+| Hottest groups, the line | `Groups heating up` | no footer until the Groups heating up page (#823) |
+| Same competitive level, the line | `Players at your level` · footer `See all ›` | spoken *See all players at your level* |
+| New in Raketa, the line | `New in Raketa` · footer `See all ›` | never *Rakieta*; spoken *See all new players* |
+| Same vibe, the line | `Players with your vibe` · footer `See all ›` | spoken *See all same vibe players*, the screen it opens |
+| Top 10, the line | `Top 10` · footer: the sport pill · `Rankings ›` | the pill is the deck's control, cited; *Open the rankings ›* is #821's |
+| A line, spoken | `{title}`, expanded or collapsed | the state is the platform's own word; the count joins the name with #822 |
+| *Your games*, a player in no group | `Join a group to get games — see Groups heating up, just below.` | in place of §22.7's `⚡ Play finds you one.`; the first line stands; Groups heating up starts open for them |
 
 ### 31.2 Hottest groups — the card
 

@@ -14,10 +14,10 @@ export { RankingsScreen, type RankingsScreenProps } from './components/RankingsS
 export { RankingTrophy } from './components/RankingTrophy';
 
 /**
- * **TOP 10, the last of Home's rows** (#805) — the shell places it under Same vibe, and reads it again
- * on Home's pull (`rereadTopTen`).
+ * **Top 10, the last of FOR YOU's lines** (#805, #820) — the shell folds it under Players with your
+ * vibe, `undefined` while hidden, and reads it again on Home's pull (`rereadTopTen`).
  */
-export { TopTenRow } from './components/TopTenRow';
+export { useTopTenLine } from './components/TopTenLine';
 export { rereadTopTen } from './hooks/useTopTen';
 
 /**

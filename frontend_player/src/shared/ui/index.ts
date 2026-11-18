@@ -72,12 +72,21 @@ export {
 } from './DarkCard';
 export { DoorRow, doorRowLabel, type DoorRowGlyph, type DoorRowProps } from './DoorRow';
 export { FIT_HIGH, FIT_SCALE, FitPill, type FitPillProps } from './FitPill';
+export {
+  FoldingLine,
+  FoldingLineFooter,
+  FoldingLines,
+  type FoldingLineFooterProps,
+  type FoldingLineLink,
+  type FoldingLineParts,
+  type FoldingLineProps,
+  type FoldingLinesProps,
+} from './FoldingLine';
 export { Guide, type GuideProps, type GuideStep } from './Guide';
 export { Hairline, type HairlineProps, type HairlineVariant } from './Hairline';
 export {
   HomeRow,
   HomeRowRail,
-  type HomeRowLink,
   type HomeRowProps,
   type HomeRowRailGeometry,
   type HomeRowRailProps,
@@ -100,7 +109,14 @@ export {
   type OnCourtMarkProps,
 } from './OnCourtMark';
 export { Note, type NoteProps, type NoteVariant } from './Note';
-export { PageOnScreen, useWatchedPage, type WatchedPage } from './onScreen';
+export {
+  PageOnScreen,
+  PageReveal,
+  scrollToReveal,
+  useWatchedPage,
+  type Span,
+  type WatchedPage,
+} from './onScreen';
 export {
   PhotoAddTile,
   PhotoPosterTile,

@@ -36,10 +36,14 @@ import { KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, View } fr
 import { KEYBOARD_AVOIDANCE, useAppInBackground } from '@/shared/lib/platform';
 import {
   PageOnScreen,
+  PageReveal,
   ScreenHeader,
+  scrollToReveal,
   theme,
   TopSafeArea,
+  useReducedMotion,
   useWatchedPage,
+  type Span,
   type WatchedPage,
 } from '@/shared/ui';
 
@@ -124,8 +128,10 @@ export interface ShellScreenProps {
    * level* and *Same vibe* rows report the cards that came at least half into view, and only the
    * page knows how far it is scrolled and how tall it shows. So the scroller's every move, and the
    * page leaving view and coming back — a screen pushed over it, another tab, the app in the
-   * background — are handed down as `shared/ui`'s `PageOnScreen`. Nothing drawn changes. Off
-   * everywhere else, where the scroller says nothing of where it is and the band stays empty.
+   * background — are handed down as `shared/ui`'s `PageOnScreen`. Nothing drawn changes. **Its
+   * folding lines may ask it to show them** once they unfold (`PageReveal`, #820), since only it
+   * knows where it is scrolled. Off everywhere else, where the scroller says nothing of where it is,
+   * the band stays empty and nothing asks to be shown.
    */
   readonly watchesOnScreen?: boolean;
   /**
@@ -164,6 +170,20 @@ export function ShellScreen({
 }: ShellScreenProps) {
   const watched = useWatchedPage();
   const scroller = useRef<ScrollView>(null);
+  const reduced = useReducedMotion();
+  /**
+   * **Shows a stretch of the page** — a folding line just unfolded (#820): scrolled just far enough,
+   * from where the page is scrolled and how tall it shows, which only a page that watches knows. At
+   * once under Reduce motion.
+   */
+  const reveal = useCallback(
+    (stretch: Span) => {
+      const band = watched.band.get();
+      const to = band === undefined ? undefined : scrollToReveal(stretch, band);
+      if (to !== undefined) scroller.current?.scrollTo({ y: to, animated: !reduced });
+    },
+    [watched, reduced],
+  );
   useEffect(
     () => startsOverWhen?.(() => scroller.current?.scrollTo({ y: 0, animated: false })),
     [startsOverWhen],
@@ -213,7 +233,11 @@ export function ShellScreen({
         )
       }
     >
-      <PageOnScreen.Provider value={watched.band}>{children}</PageOnScreen.Provider>
+      <PageOnScreen.Provider value={watched.band}>
+        <PageReveal.Provider value={watchesOnScreen ? reveal : undefined}>
+          {children}
+        </PageReveal.Provider>
+      </PageOnScreen.Provider>
     </ScrollView>
   );
   const pinned = action !== undefined ? <View style={s.action}>{action}</View> : null;

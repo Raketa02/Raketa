@@ -1,25 +1,27 @@
 /**
- * **The Home row frame** — every row on Home draws its heading and its sideways rail through this
- * one frame ([#798](https://github.com/Raketa02/Raketa/issues/798); the Home rows screens §2;
- * Part 16, 2026-11-14).
+ * **The Home row frame** — a row in Needs your answer and *Your games* draws its heading and its
+ * sideways rail through this one frame ([#798](https://github.com/Raketa02/Raketa/issues/798); the
+ * Home rows screens §2; Part 16, 2026-11-14), and FOR YOU's open lines draw their rails on its rail
+ * (`FoldingLine`, [#820](https://github.com/Raketa02/Raketa/issues/820)).
  *
  * ```
- * FRIEND REQUESTS · 2                    [control]  See all ›   ← eyebrow · muted · uppercase; the link ink
- * ┌──────────────────────────┐ ┌──────────                     ← space.sm under the heading
- * │ a card, 0.74 × content   │ │ the next one peeks            ← 7.7's peeking rail, Part 8's Strip
- * └──────────────────────────┘ └──────────                     ← bleeding to the screen edge
+ * FRIEND REQUESTS · 2                                ← eyebrow · muted · uppercase
+ * ┌──────────────────────────┐ ┌──────────          ← space.sm under the heading
+ * │ a card, 0.74 × content   │ │ the next one peeks ← 7.7's peeking rail, Part 8's Strip
+ * └──────────────────────────┘ └──────────          ← bleeding to the screen edge
  * ```
  *
  * ## Two parts, so a row can say something instead of a rail
  *
- * **`HomeRow`** is the section: `space.lg` under the row above, the heading, and on the heading's
- * line an optional **control** (Top 10's sport pill) and an optional **link** (*See all ›*, Top 10's
- * *Rankings ›*). Under it, whatever the row draws — almost always **`HomeRowRail`**, but *Your games*
- * says its empty sentences or its failure there instead, and Top 10 says *Nobody ranked in
- * squash yet*. A frame that owned the rail outright would have to grow a slot for each of those.
+ * **`HomeRow`** is the section: `space.lg` under the row above, and the heading. Under it, whatever
+ * the row draws — almost always **`HomeRowRail`**, but *Your games* says its empty sentences or its
+ * failure there instead. A frame that owned the rail outright would have to grow a slot for each.
+ * **The heading's line holds the heading alone** since #820: *See all ›*, Top 10's sport pill and
+ * *Rankings ›* were the five discovery rows', and went with them to FOR YOU's footers
+ * (`FoldingLineFooter`).
  *
- * **`HomeRowRail`** is the rail, in 7.7's two geometries over Part 8's Strip — neither restated
- * here: the gap 9, the bleed through a negative margin against the gutter.
+ * **`HomeRowRail`** is the rail, in 7.7's geometries over Part 8's Strip — neither restated here: the
+ * gap 9, the bleed through a negative margin against the gutter.
  *
  * - **Peeking** (the default): a card is `railCardRatio` of the content width, so the next one's
  *   edge is the affordance; **a lone card takes the content width**, since there is nothing to
@@ -35,61 +37,51 @@
  *   width**: a portrait the width of the screen would be a poster, not a tile. It scrolls freely.
  * - **Numbered** (#805; 7.36): Top 10's cards, each `topTen.railRatio` of the content width — the
  *   width handed is the card's, and the numeral the row stands beside it is the row's own, so the
- *   rail's items are wider than the width it hands. A lone card keeps its width. It scrolls freely.
+ *   rail's items are wider than the width it hands: the row says how wide (`itemWidth`). A lone card
+ *   keeps its width. It scrolls freely.
  *
  * The rail hands each card its width; the cards are the row's.
+ *
+ * ## Inside a folding line
+ *
+ * **The content is the line's, not the page's** (#820): a rail in an open FOR YOU line takes its
+ * shares of the line's content width and bleeds to the line's inner edge, its first card at the
+ * line's inset — what `RailBounds` says, which the line provides. Outside a line it is the page's:
+ * the screen less the gutters, bleeding through the gutter. **There every rail snaps** to its cards'
+ * edges (the brief: *the tiles swipe sideways and settle on tile edges*).
  *
  * ## The rail is never remounted
  *
  * **Scroll position must survive a re-render** (Part 8): in React Native that is keeping the
  * `ScrollView` the same one. It stands at one place in the tree whatever the count, the geometry's
  * width or the heading's line hold, so a row whose cards come and go stays where the finger left it.
+ * **In a FOR YOU line that holds while the line stays open**: a closed line draws nothing, so a line
+ * opened again draws a new rail, at its first card (#820).
  *
  * ## What is drawn first
  *
- * **The cards that can be seen, and the rest a moment later.** Home stands six rails, up to ten cards
- * each, and a card is a face or four — a generated poster each, a dozen native views apiece — so
- * drawing every card at once is most of what Home costs: a device spent seconds creating views a
- * finger had not reached. So the rail's first frame draws only the cards that can be on screen
- * (`cardsDrawnFirst`, one past the screen's edge), and a stand-in of the same width for each of the
- * rest; right after it, a second pass draws the rest, once the first is on its way to the screen.
- * The content is its full width from the first frame, so the step, the snap, the dots and what is on
- * screen are measured exactly as before.
+ * **The cards that can be seen, and the rest a moment later.** A Home rail holds up to ten cards, and
+ * a card is a face or four — a generated poster each, a dozen native views apiece — so drawing every
+ * card at once was most of what Home cost: a device spent seconds creating views a finger had not
+ * reached. So the rail's first frame draws only the cards that can be on screen (`cardsDrawnFirst`,
+ * one past the rail's visible edge), and a stand-in of the same width for each of the rest; right
+ * after it, a second pass draws the rest, once the first is on its way to the screen. The content is
+ * its full width from the first frame, so the step, the snap, the dots and what is on screen are
+ * measured exactly as before.
  *
  * ## What is on screen
  *
  * **A rail handed `onScreen` is told which of its cards are at least half on screen** (#804;
  * `onScreen.ts`), on a page that watches. The section says where it stands on the page **from its
- * own layout, in its parent's coordinates** — so on such a page a `HomeRow` stands directly in the
- * page's column, as Home's rows do; wrapped in another view, it would be measured from that view.
- * The rail stands directly in the section, which is what lets the two tops add up.
- *
- * ## The link
- *
- * **The row hands in its words and its name**, as the sport pill takes its words — nothing here is
- * the frame's own. The words are drawn with a chevron after them, a direction rather than a word and
- * hidden; the name is what is spoken, and names what it opens (*See all same competitive level
- * players*), since three *See all*s on one screen would otherwise be one name for three places. It
- * is a **link** to a screen reader: it opens another screen. Ink on paper, the sign-in screen's link
- * (`rlValue`), its reach `hit.rowLink` — under 44 tall, on purpose (6.5).
- *
- * **It stands on the heading's line without making it taller.** Its 16pt line overhangs the
- * eyebrow's 12 by 2 above and 2 below, so a row with a link stands exactly where a row without one
- * does — as the mocks draw them, one under another at the same spacing.
- *
- * ## Over the row
- *
- * **A row can hand in a layer to lie over the whole of it** (`over`, #805): Top 10's open sport bar
- * and the backdrop that folds it (`RowSportPill`). It is drawn last in the section, so it stands on
- * top, and the section is its box — the heading's line at its top-left, which is what lets the bar
- * stand exactly where the pill does.
+ * own layout** (`useTopOnPage`): in its parent's coordinates, added to where the section around it
+ * stands — a folding line's content in FOR YOU — or the page's column when there is none. The rail
+ * stands directly in the section, which is what lets the two tops add up.
  *
  * **It never imports a feature.** Every word, every press and every card is handed in.
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import {
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -99,73 +91,50 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 
-import { ON_SCREEN_SAMPLE_MS, SectionOnPage, followable, useCardsOnScreen } from './onScreen';
+import { ON_SCREEN_SAMPLE_MS, SectionOnPage, useCardsOnScreen, useTopOnPage } from './onScreen';
 import { PagerDots } from './PagerDots';
 import { theme } from './theme';
-
-/** A heading's link — *See all ›*, *Rankings ›* — in the row's words. */
-export interface HomeRowLink {
-  /** Drawn, before the frame's chevron — *See all*. */
-  readonly words: string;
-  /** Spoken — what it opens: *See all same competitive level players*. */
-  readonly label: string;
-  readonly onPress: () => void;
-}
 
 export interface HomeRowProps {
   /** The row's heading as the row words it, its count included — drawn uppercase. */
   readonly heading: string;
-  /** **A control on the heading's line**, before the link — Top 10's sport pill. */
-  readonly control?: ReactNode;
-  /** **The link at the heading's right end** — *See all ›*. */
-  readonly link?: HomeRowLink;
-  /** **A layer over the whole row**, drawn last — Top 10's open sport bar and its backdrop. */
-  readonly over?: ReactNode;
   readonly testID?: string;
   /** Under the heading: the rail, or what the row says instead of one. */
   readonly children: ReactNode;
 }
 
-export function HomeRow({ heading, control, link, over, testID, children }: HomeRowProps) {
+export function HomeRow({ heading, testID, children }: HomeRowProps) {
   /** Where the section stands on its page — what a watching rail in it is measured from. */
-  const [top] = useState(() => followable<number>());
+  const { top, laidOut } = useTopOnPage();
   return (
     <View
       style={s.section}
-      onLayout={({ nativeEvent }) => top.set(nativeEvent.layout.y)}
+      onLayout={({ nativeEvent }) => laidOut(nativeEvent.layout.y)}
       {...(testID === undefined ? {} : { testID })}
     >
       <SectionOnPage.Provider value={top}>
-        <View style={s.head}>
-          <Text style={s.heading} accessibilityRole="header">
-            {heading}
-          </Text>
-          {control}
-          {link === undefined ? null : <RowLink link={link} />}
-        </View>
+        <Text style={s.heading} accessibilityRole="header">
+          {heading}
+        </Text>
         {children}
-        {over}
       </SectionOnPage.Provider>
     </View>
   );
 }
 
-function RowLink({ link }: { readonly link: HomeRowLink }) {
-  return (
-    <Pressable
-      accessibilityRole="link"
-      accessibilityLabel={link.label}
-      onPress={link.onPress}
-      hitSlop={theme.hit.rowLink}
-      style={({ pressed }) => [s.link, pressed ? s.pressed : undefined]}
-    >
-      <Text style={s.linkWords}>{link.words}</Text>
-      <Text style={s.linkWords} accessibilityElementsHidden importantForAccessibility="no">
-        {CHEVRON}
-      </Text>
-    </Pressable>
-  );
+/**
+ * **What a rail stands in** — the width its shares are of, and how far it bleeds past it each side,
+ * which is also where its first card starts. A folding line provides its own (#820); with none, the
+ * page's: the screen less the gutters, bleeding through the gutter.
+ */
+export interface RailBounds {
+  readonly content: number;
+  readonly bleed: number;
+  /** **Every card snaps** — a rail in a folding line settles on its cards' edges. */
+  readonly snaps: boolean;
 }
+
+export const RailBoundsContext = createContext<RailBounds | undefined>(undefined);
 
 /**
  * 7.7's two geometries, Needs your answer's wider peeking card (7.7 as amended by #816), New in
@@ -178,8 +147,14 @@ export interface HomeRowRailProps<Card> {
   readonly cards: readonly Card[];
   /** **Peeking** unless the card needs the width (7.7's *choose by whether the card fits*). */
   readonly geometry?: HomeRowRailGeometry;
-  /** A peeking rail that snaps a card at a time. A paging rail always does. */
+  /** A peeking rail that snaps a card at a time. A paging rail always does, and so does a line's. */
   readonly snap?: boolean;
+  /**
+   * **How wide an item stands, given the width the rail hands its card** — Top 10's, whose numeral
+   * stands beside the card (#805): what the rail steps, snaps and draws first by. A card's width when
+   * not said.
+   */
+  readonly itemWidth?: (cardWidth: number) => number;
   /**
    * **Whether a paging rail of one draws its one dot** — 7.18's *always*, the default. Needs your
    * answer's *FRIENDS GAME* draws its dots from two (#817, Q46; 7.18 as amended): one big tile in a
@@ -201,16 +176,22 @@ export function HomeRowRail<Card>({
   cards,
   geometry = 'peeking',
   snap = false,
+  itemWidth,
   dotsAlone = true,
   onScreen,
   children,
 }: HomeRowRailProps<Card>) {
   const { width: screen } = useWindowDimensions();
+  const bounds = useContext(RailBoundsContext) ?? {
+    content: screen - 2 * theme.size.gutter,
+    bleed: theme.size.gutter,
+    snaps: false,
+  };
   /** Which card is on screen — the dots' only input, on a paging rail. */
   const [current, setCurrent] = useState(0);
 
   const paging = geometry === 'paging';
-  const content = screen - 2 * theme.size.gutter;
+  const { content, bleed } = bounds;
   const cardWidth =
     geometry === 'tiles'
       ? content * theme.size.portraitTile.railRatio
@@ -221,9 +202,10 @@ export function HomeRowRail<Card>({
           : geometry === 'wide'
             ? content * theme.size.requestCardRatio
             : content * theme.size.railCardRatio;
-  const step = cardWidth + STRIP_GAP;
+  const step = (itemWidth?.(cardWidth) ?? cardWidth) + STRIP_GAP;
+  const snaps = paging || snap || bounds.snaps;
   const watching = onScreen !== undefined;
-  const seen = useCardsOnScreen({ cards, lead: STRIP_LEAD, cardWidth, step, onScreen });
+  const seen = useCardsOnScreen({ cards, lead: bleed, cardWidth, step, onScreen });
 
   /**
    * Whether the cards past the screen's edge are drawn yet — once the rail has had cards for a frame.
@@ -237,7 +219,9 @@ export function HomeRowRail<Card>({
     // on a transition started here (`Cannot read property 'add' of undefined`) and took Home down.
     if (hasCards && !allDrawn) setAllDrawn(true);
   }, [hasCards, allDrawn]);
-  const drawn = allDrawn ? cards.length : cardsDrawnFirst({ count: cards.length, screen, step });
+  const drawn = allDrawn
+    ? cards.length
+    : cardsDrawnFirst({ count: cards.length, screen: content + 2 * bleed, step });
 
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (paging) setCurrent(Math.round(event.nativeEvent.contentOffset.x / step));
@@ -249,7 +233,7 @@ export function HomeRowRail<Card>({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        {...(paging || snap ? { snapToInterval: step, decelerationRate: 'fast' as const } : {})}
+        {...(snaps ? { snapToInterval: step, decelerationRate: 'fast' as const } : {})}
         {...(paging || watching
           ? {
               onScroll,
@@ -263,8 +247,8 @@ export function HomeRowRail<Card>({
               onMomentumScrollEnd: seen.scrolled,
             }
           : {})}
-        style={s.strip}
-        contentContainerStyle={s.stripContent}
+        style={{ marginHorizontal: -bleed }}
+        contentContainerStyle={[s.stripContent, { paddingHorizontal: bleed }]}
       >
         {cards.map((card, at) =>
           at < drawn ? (
@@ -303,40 +287,19 @@ export function cardsDrawnFirst({
 /** A stand-in's key, which no row's own key can be: a row keys its cards by their ids. */
 const STAND_IN_KEY = 'drawn-in-a-moment-';
 
-/** The link's chevron — `SportPill`'s fold mark, pointing to where it goes. */
-const CHEVRON = '›';
-
-/** How far the link's line overhangs the heading's, above and below — so it never grows it. */
-const LINK_OVERHANG = (theme.type.rlValue.lineHeight - theme.type.eyebrow.lineHeight) / 2;
-
 /** Part 8's Strip gap. */
 const STRIP_GAP = theme.space.sm;
-
-/** Where the rail's first card starts — the content padded by the gutter it bleeds through. */
-const STRIP_LEAD = theme.size.gutter;
 
 /** One frame at 60 Hz. The dots track the scroll, so they are told about every frame of it. */
 const SCROLL_THROTTLE_MS = 16;
 
 const s = StyleSheet.create({
   section: { gap: theme.space.sm, marginTop: theme.space.lg },
-  head: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   // 3.3 as amended: a section heading is `eyebrow` / `muted` / uppercase, and `h2` titles a card.
-  // It takes the line's width, wrapping as it did standing alone, and leaves the rest to the link.
-  heading: {
-    ...theme.type.eyebrow,
-    color: theme.color.muted,
-    textTransform: 'uppercase',
-    flex: 1,
-  },
-  link: { flexDirection: 'row', gap: theme.space.xxs, marginVertical: -LINK_OVERHANG },
-  // 6.6's chip value, as the sign-in screen's link presses.
-  pressed: { opacity: 0.7 },
-  linkWords: { ...theme.type.rlValue, color: theme.color.ink },
-  // Part 8: the negative margin is what lets the strip bleed to the screen edge while its content
-  // still aligns to the gutter.
-  strip: { marginHorizontal: -theme.size.gutter },
-  // Every card as tall as the tallest — the row's own default, said aloud because Needs your
-  // answer's tiles hold their buttons at their foot, level across the rail (#816, Q3).
-  stripContent: { paddingHorizontal: STRIP_LEAD, gap: STRIP_GAP, alignItems: 'stretch' },
+  heading: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
+  // Part 8: the negative margin (the bounds' bleed) is what lets the strip bleed to the edge while
+  // its content still aligns to the gutter. Every card as tall as the tallest — the row's own
+  // default, said aloud because Needs your answer's tiles hold their buttons at their foot, level
+  // across the rail (#816, Q3).
+  stripContent: { gap: STRIP_GAP, alignItems: 'stretch' },
 });

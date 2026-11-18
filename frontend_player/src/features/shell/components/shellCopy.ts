@@ -40,6 +40,8 @@ export const HOME_COPY = {
       'needs a score.',
     act: 'Play finds you one.',
   },
+  /** **FOR YOU** — the eyebrow over the five folding lines, drawn uppercase (#820, ADR-0205 §5). */
+  forYou: 'For you',
 } as const;
 
 /**

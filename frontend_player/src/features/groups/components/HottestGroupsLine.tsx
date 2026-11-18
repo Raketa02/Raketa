@@ -1,12 +1,13 @@
 /**
- * **HOTTEST GROUPS** — the first of Home's five rows, just below *Your games*
- * ([#800](https://github.com/Raketa02/Raketa/issues/800); ADR-0204 §3; the Home rows screens §3; the
- * mechanics §5; home rows 1, 21).
+ * **Groups heating up** — the first of FOR YOU's five lines, just below *Your games*
+ * ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5; was HOTTEST GROUPS,
+ * [#800](https://github.com/Raketa02/Raketa/issues/800), ADR-0204 §3; the Home rows screens §3; the
+ * mechanics §5; home rows 1, 21; home refactor 5).
  *
- * Up to six cards on Home's row frame (`HomeRow`, `HomeRowRail`, #798), **peeking**, in the read's
- * order — HOTTEST, then GROWING, then untagged — and **no See all**. **Hidden with its heading** while
- * the read holds nothing, is in flight, or failed (the screens §1: a row that fails is left out, and
- * the rest of Home stands).
+ * Open, up to six cards on the row frame's rail (`HomeRowRail`), **peeking** and settling on their
+ * edges, in the read's order — HOTTEST, then GROWING, then untagged — and **no footer** until the
+ * Groups heating up page has one to open (#823). **Hidden** while the read holds nothing, is in
+ * flight, or failed (the screens §1: a line that fails is left out, and the rest of Home stands).
  *
  * ## The taps
  *
@@ -31,9 +32,9 @@
  */
 
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 
-import { BottomSheet, HomeRow, HomeRowRail } from '@/shared/ui';
+import { BottomSheet, HomeRowRail, type FoldingLineParts } from '@/shared/ui';
 
 import type { HottestGroup } from '../domain/group';
 import type { GroupAction } from '../domain/groupRules';
@@ -53,10 +54,14 @@ import { GroupSheetBody, SheetAct, WithdrawBody } from './HottestGroupSheet';
 
 const HOT = GROUPS_COPY.hottest;
 
-export function HottestGroupsRow() {
+/**
+ * **The Groups heating up line, as the shell draws it** — `undefined` while it is hidden. Read whether
+ * it is open or not, so the read runs when Home opens.
+ */
+export function useHottestGroupsLine(): FoldingLineParts | undefined {
   const groups = useHottestGroups().data;
-  if (groups === undefined || groups.length === 0) return null;
-  return <HottestGroups groups={groups} />;
+  if (groups === undefined || groups.length === 0) return undefined;
+  return { title: HOT.line, testID: 'hottest-groups', content: <HottestGroups groups={groups} /> };
 }
 
 /** Which face the one sheet shows, and for which card. */
@@ -65,7 +70,13 @@ interface SheetShown {
   readonly groupId: string;
 }
 
-function HottestGroups({ groups }: { readonly groups: readonly HottestGroup[] }) {
+/** Memoised: the shell draws every line from one component, so a re-read of another line must not
+ * draw this one's cards again. */
+const HottestGroups = memo(function HottestGroups({
+  groups,
+}: {
+  readonly groups: readonly HottestGroup[];
+}) {
   const join = useJoinGroup();
   const withdraw = useWithdrawJoinRequest();
   const [shown, setShown] = useState<SheetShown>();
@@ -104,7 +115,7 @@ function HottestGroups({ groups }: { readonly groups: readonly HottestGroup[] })
   }
 
   return (
-    <HomeRow heading={HOT.heading} testID="hottest-groups">
+    <>
       <HomeRowRail cards={groups}>
         {(group, width) => (
           <HottestGroupCard
@@ -143,6 +154,6 @@ function HottestGroups({ groups }: { readonly groups: readonly HottestGroup[] })
           )}
         </BottomSheet>
       )}
-    </HomeRow>
+    </>
   );
-}
+});

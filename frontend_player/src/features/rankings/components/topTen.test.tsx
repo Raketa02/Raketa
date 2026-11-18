@@ -1,7 +1,9 @@
 /**
- * **TOP 10 on Home, walked through the real route tree** ([#805](https://github.com/Raketa02/Raketa/issues/805),
- * PRD #789; ADR-0204; the Home rows mechanics §3, §10, §12; the screens §7; the words §31.1, §31.11),
- * with only `fetch` faked.
+ * **Top 10 on Home — FOR YOU's last line — walked through the real route tree**
+ * ([#805](https://github.com/Raketa02/Raketa/issues/805), PRD #789; [#820](https://github.com/Raketa02/Raketa/issues/820);
+ * ADR-0204, ADR-0205 §5; the Home rows mechanics §3, §10, §12; the screens §7; the words §31.1,
+ * §31.11), with only `fetch` faked. Every test opens the line first, as a player would: closed, it
+ * draws no card, no pill and no link.
  *
  * Tomek is 7th of the ten in padel at 2,71, *▲ 1*; Inés leads at 3,40, *▼ 1*; **Marek, at 4th, and
  * Tomek have blocked each other** — the row shows him at his true place, and his record reads *This
@@ -22,6 +24,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { savePhonePreference } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import { theme } from '@/shared/ui';
+import { isOpen, lineHeader, lineTitles, openLine } from '@/test-support/forYou';
 import {
   GATE_USER,
   HOME_PATH,
@@ -263,16 +266,9 @@ const cardsDrawn = () =>
     .map((node) => (node.props.testID as string).replace('top-ten-card-', ''));
 const pill = (sport: string) => row().getByRole('button', { name: `Sport: ${sport}` });
 
-/** The section headings Home draws, top to bottom. */
-const headings = () =>
-  screen
-    .getAllByRole('header')
-    .map((node) => node.props.children as string)
-    .filter((text) => typeof text === 'string');
-
 async function homeWithTheRow() {
   await launchSignedIn();
-  return screen.findByRole('header', { name: TOP_TEN_COPY.heading });
+  await openLine(TOP_TEN_COPY.line);
 }
 
 function unfold(current: string) {
@@ -294,26 +290,39 @@ function numeralFills(player: Wire['TopTenPlayerSchema']): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// The row
+// The line
 // ---------------------------------------------------------------------------
 
-describe('the row on Home', () => {
-  it('stands last of Home’s rows, with the sport pill and Rankings › on its heading’s line', async () => {
+describe('the line on Home', () => {
+  it('stands last of FOR YOU’s lines, closed — no card, no pill, no Rankings ›', async () => {
+    topTenServer();
+    await launchSignedIn();
+
+    await screen.findByRole('button', { name: TOP_TEN_COPY.line });
+    expect(lineTitles().at(-1)).toBe(TOP_TEN_COPY.line);
+    expect(isOpen(TOP_TEN_COPY.line)).toBe(false);
+    expect(cardsDrawn()).toEqual([]);
+    expect(row().queryByRole('button', { name: /^Sport:/ })).toBeNull();
+    expect(row().queryByRole('link')).toBeNull();
+  });
+
+  /** ADR-0205 §5: today's pill and *Rankings ›* move to the open line's foot, until #821. */
+  it('opens onto the cards, the sport pill and Rankings › at its foot', async () => {
     topTenServer();
     await homeWithTheRow();
 
-    expect(headings().at(-1)).toBe(TOP_TEN_COPY.heading);
+    await waitFor(() => expect(cardsDrawn()).toHaveLength(10));
     expect(await row().findByRole('button', { name: 'Sport: Padel' })).toBeTruthy();
     expect(row().getByRole('link', { name: topTenRankingsLabel('padel') })).toBeTruthy();
   });
 
-  it('is gone with its heading while nobody is ranked in any sport', async () => {
+  it('is hidden while nobody is ranked in any sport', async () => {
     topTenServer({ ranked: { PADEL: [], TENNIS: [], SQUASH: [], BADMINTON: [] } });
     await launchSignedIn();
 
     await waitFor(() => expect(reads().length).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('header', { name: TOP_TEN_COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: TOP_TEN_COPY.line })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -323,7 +332,7 @@ describe('the row on Home', () => {
 
     await waitFor(() => expect(reads().length).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('header', { name: TOP_TEN_COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: TOP_TEN_COPY.line })).toBeNull();
   });
 });
 
@@ -440,7 +449,7 @@ describe('the pill', () => {
     expect(reads().at(-1)).toContain('sport=SQUASH');
     expect(reads().at(-1)).not.toContain('prefer=');
     expect(others()).toEqual(before);
-    expect(headings().at(-1)).toBe(TOP_TEN_COPY.heading);
+    expect(isOpen(TOP_TEN_COPY.line)).toBe(true);
   });
 
   it('reads Nobody ranked in badminton yet for a sport with nobody in it', async () => {
@@ -452,9 +461,46 @@ describe('the pill', () => {
 
     expect(await row().findByText(nobodyRankedLine('badminton'))).toBeTruthy();
     expect(cardsDrawn()).toEqual([]);
-    // The heading, the pill and Rankings › stay.
+    // The line, the pill and Rankings › stay.
     expect(row().getByRole('button', { name: 'Sport: Badminton' })).toBeTruthy();
     expect(row().getByRole('link', { name: topTenRankingsLabel('badminton') })).toBeTruthy();
+  });
+
+  /**
+   * A second pick cancels the first's read, so when the second is refused the pick it goes back to has
+   * nothing read yet: the cards drawn stay, and the line stays open under the reader (#820).
+   */
+  it('stays open on a second pick before the first lands, the second refused', async () => {
+    const server = topTenServer();
+    server.refuse('TENNIS');
+    await homeWithTheRow();
+    await waitFor(() => expect(cardsDrawn()).toHaveLength(10));
+    const release = server.hold();
+
+    pickOnThePill('Padel', 'Squash');
+    pickOnThePill('Squash', 'Tennis');
+    await act(async () => release());
+
+    await waitFor(() => expect(reads().some((url) => url.includes('sport=TENNIS'))).toBe(true));
+    expect(await row().findByRole('button', { name: 'Sport: Squash' })).toBeTruthy();
+    await waitFor(() => expect(cardsDrawn()).toEqual([KUBA.player_id, ZOFIA_SQUASH.player_id]));
+    expect(isOpen(TOP_TEN_COPY.line)).toBe(true);
+  });
+
+  /** The pick is the line's, not what it unfolds: held while Home is up, a close included. */
+  it('keeps the sport picked across a close and an open', async () => {
+    topTenServer();
+    await homeWithTheRow();
+    await waitFor(() => expect(cardsDrawn()).toHaveLength(10));
+    pickOnThePill('Padel', 'Squash');
+    await waitFor(() => expect(cardsDrawn()).toEqual([KUBA.player_id, ZOFIA_SQUASH.player_id]));
+
+    fireEvent.press(lineHeader(TOP_TEN_COPY.line));
+    await waitFor(() => expect(cardsDrawn()).toEqual([]));
+    await openLine(TOP_TEN_COPY.line);
+
+    expect(await row().findByRole('button', { name: 'Sport: Squash' })).toBeTruthy();
+    expect(cardsDrawn()).toEqual([KUBA.player_id, ZOFIA_SQUASH.player_id]);
   });
 
   it('puts the pill back, the cards never having left, when a pick cannot be read', async () => {

@@ -1,30 +1,31 @@
 /**
- * **The sport pill on a Home row** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home
- * rows screens §7.3; home rows 27; design-system 7.36) — the deck's pill (#774) standing on a row's
- * heading line, before the row's link, and the bar it unfolds into **sliding over the heading**: Top
- * 10's sport, *● Padel ‹* beside *Rankings ›*.
+ * **The sport pill on a Home line** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home
+ * rows screens §7.3; home rows 27; design-system 7.36) — the deck's pill (#774) standing in a folding
+ * line's footer since [#820](https://github.com/Raketa02/Raketa/issues/820), before the line's link,
+ * and the bar it unfolds into **sliding over the footer**: Top 10's sport, *● Padel ‹* beside
+ * *Rankings ›*. (Its direction, and *Open the rankings ›*, are #821's.)
  *
  * `SportPillFrame` is the same control held on a **page**: its bar ends at the page's right edge,
- * where a header's pill stands. On a row the pill stands left of the link, and the link stays where
+ * where a header's pill stands. On a line the pill stands left of the link, and the link stays where
  * it is with the bar open (home rows 27), so the bar must end where **the pill** ends — which this
  * measures, and the frame does not.
  *
  * ```
- * TOP 10                 ● Padel ‹   Rankings ›      ← folded: the pill is the row's control
- * TO┌ ● Tennis  ● Squash  ● Badminton [● Padel ›]┐ Rankings ›   ← open: over the heading, ending
- *   └────────────────────────────────────────────┘                  where the pill ended
+ *                        ● Padel ‹   Rankings ›      ← folded: the pill is the footer's control
+ * ┌ ● Tennis  ● Squash  ● Badminton [● Padel ›]┐ Rankings ›   ← open: over the footer, ending
+ * └────────────────────────────────────────────┘                  where the pill ended
  * ```
  *
- * **The row draws both halves** (`HomeRow`'s `control` and `over`): the pill on the heading's line,
- * and — while it is open — a layer over the whole row with a backdrop that folds it and the bar on the
- * pill's own line. **The pill stands directly on the heading's line, and the line at the row's
- * top-left**, as `HomeRow` draws them, so the pill's layout is where the bar must stand.
+ * **The line draws both halves** (`FoldingLineFooter`'s `control` and `over`): the pill in the footer,
+ * and — while it is open — a layer over the whole footer with a backdrop that folds it and the bar on
+ * the pill's own line. **The pill stands directly in the footer, and the footer's box is the layer's**,
+ * so the pill's layout is where the bar must stand.
  *
- * **What folds it** is the frame's: a tap on the current sport or anywhere else on the row, Android's
- * back, and the screen losing focus (`FoldAway`). A tap elsewhere on the screen does not — the
- * backdrop is the row's — and leaves the bar open over a heading the reader may scroll past.
+ * **What folds it** is the frame's: a tap on the current sport or anywhere else on the footer,
+ * Android's back, and the screen losing focus (`FoldAway`). A tap elsewhere on the screen does not —
+ * the backdrop is the footer's — and leaves the bar open over a footer the reader may scroll past.
  *
- * Never a `Modal`: the bar is a layer of the row (ADR-0178).
+ * Never a `Modal`: the bar is a layer of the line (ADR-0178).
  */
 
 import { useState, type ReactNode } from 'react';
@@ -55,8 +56,8 @@ export interface RowSportPillProps<S extends SportChoice = Sport> {
   readonly onPick: (sport: S) => void;
   readonly words: SportPillWords<S>;
   /**
-   * The row: `pill` for its heading's line (`HomeRow`'s `control`) — `undefined` until there is a
-   * sport — and `over`, the open bar with its backdrop (`HomeRow`'s `over`), `undefined` while folded.
+   * The line: `pill` for its footer (`FoldingLineFooter`'s `control`) — `undefined` until there is a
+   * sport — and `over`, the open bar with its backdrop (the footer's `over`), `undefined` while folded.
    */
   readonly children: (pill: ReactNode | undefined, over: ReactNode | undefined) => ReactNode;
 }
@@ -115,8 +116,8 @@ export function RowSportPill<S extends SportChoice = Sport>({
 }
 
 const s = StyleSheet.create({
-  // From the row's left edge to the pill's right end and the bar's inset past it, on the pill's own
-  // line: the bar grows leftwards from there, over the heading, and its current sport stands exactly
+  // From the footer's left edge to the pill's right end and the bar's inset past it, on the pill's own
+  // line: the bar grows leftwards from there, over the footer, and its current sport stands exactly
   // where the pill stood.
   barSlot: {
     position: 'absolute',
