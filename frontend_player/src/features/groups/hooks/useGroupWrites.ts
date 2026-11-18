@@ -20,6 +20,11 @@
  * then read again — the row, the Groups list, Home's own read (*Your games*) — and the searches are
  * written, as above, never re-read.
  *
+ * **The Groups heating up page's card is the same card** ([#823](https://github.com/Raketa02/Raketa/issues/823);
+ * ADR-0205 §7): the guess, the answer and a refusal each move it **on the row and on every page read**,
+ * whichever of the two it was tapped on, and both are read again after — so the page and Home's line,
+ * still mounted under it, never disagree.
+ *
  * A failed join is said in a toast, because the row it was pressed on has no line to say it in;
  * the row goes back to its button. Joining twice changes nothing on the server, so a second tap
  * after a failure is safe — but it is the player's tap, never a retry (mutations are never
@@ -87,6 +92,7 @@ import type {
   GroupAtClub,
   GroupDetails,
   HottestGroup,
+  HottestPage,
   HottestRow,
   JoinRequest,
   MyGroup,
@@ -130,42 +136,90 @@ function writeRow(client: QueryClient, answer: GroupAtClub): void {
   rewriteSearches(client, (group) => (group.id === answer.id ? answer : group));
 }
 
-/** The relation a Hottest groups card stood at before a tap moved it — what a refusal puts back. */
+/**
+ * The relation a Hottest groups card stood at before a tap moved it — **on Home's row and on the
+ * Groups heating up page, each** (#823), since the two are two reads — what a refusal puts back. Both
+ * absent when neither holds the card: a tap from a search row moves no card.
+ */
 interface HeldRelation {
-  readonly relation?: GroupRelation;
+  readonly row?: GroupRelation;
+  readonly page?: GroupRelation;
 }
 
-/** One Hottest groups card's relation, moved — nothing when the row holds no such card. */
-function moveCard(client: QueryClient, groupId: string, relation: GroupRelation): void {
+type HottestPages = InfiniteData<HottestPage, string | undefined>;
+
+function cardOnRow(client: QueryClient, groupId: string): HottestGroup | undefined {
+  return client
+    .getQueryData<HottestRow>(groupKeys.hottest())
+    ?.groups.find((held) => held.id === groupId);
+}
+
+function cardOnPages(client: QueryClient, groupId: string): HottestGroup | undefined {
+  for (const page of client.getQueryData<HottestPages>(groupKeys.hottestAll())?.pages ?? []) {
+    const card = page.groups.find((held) => held.id === groupId);
+    if (card !== undefined) return card;
+  }
+  return undefined;
+}
+
+function moveOnRow(client: QueryClient, groupId: string, relation: GroupRelation): void {
   client.setQueryData<HottestRow>(groupKeys.hottest(), (row) =>
     row === undefined ? row : withRelation(row, groupId, relation),
   );
 }
 
+function moveOnPages(client: QueryClient, groupId: string, relation: GroupRelation): void {
+  client.setQueryData<HottestPages>(groupKeys.hottestAll(), (data) =>
+    data === undefined
+      ? data
+      : { ...data, pages: data.pages.map((page) => withRelation(page, groupId, relation)) },
+  );
+}
+
 /**
- * **The card's relation drawn at once**, from what its own policy says the tap does — or nothing,
- * for a tap from a row the Hottest groups read does not hold.
+ * **One card's relation, moved wherever Groups heating up holds it** — Home's row and every page the
+ * page has read (#823), so the line and the page say the same — nothing where it holds no such card.
+ */
+function moveCard(client: QueryClient, groupId: string, relation: GroupRelation): void {
+  moveOnRow(client, groupId, relation);
+  moveOnPages(client, groupId, relation);
+}
+
+/** Home's row and the page, read again — after a write, and after a refusal its guess cancelled. */
+function rereadTheHottest(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: groupKeys.hottestReads() });
+}
+
+/**
+ * **The card's relation drawn at once**, from what its own policy says the tap does — on the row and
+ * the page alike, wherever the tap came from, **each copy by its own policy**: they are two reads, and
+ * a group that switched policy between them is guessed as each draws it — or nothing, for a tap from
+ * a row neither read holds.
  */
 async function guessCard(
   client: QueryClient,
   groupId: string,
   guess: (card: HottestGroup) => GroupRelation,
 ): Promise<HeldRelation> {
-  const card = client
-    .getQueryData<HottestRow>(groupKeys.hottest())
-    ?.groups.find((held) => held.id === groupId);
-  if (card === undefined) return {};
-  // A read in flight would land the old relation over the guess.
-  await client.cancelQueries({ queryKey: groupKeys.hottest() });
-  moveCard(client, groupId, guess(card));
-  return { relation: card.relation };
+  const onRow = cardOnRow(client, groupId);
+  const onPage = cardOnPages(client, groupId);
+  if (onRow === undefined && onPage === undefined) return {};
+  // A read in flight would land the old relation over the guess. A next page cancelled here is asked
+  // for again once the reads settle (`useHottestGroupsPage`).
+  await client.cancelQueries({ queryKey: groupKeys.hottestReads() });
+  if (onRow !== undefined) moveOnRow(client, groupId, guess(onRow));
+  if (onPage !== undefined) moveOnPages(client, groupId, guess(onPage));
+  return {
+    ...(onRow === undefined ? {} : { row: onRow.relation }),
+    ...(onPage === undefined ? {} : { page: onPage.relation }),
+  };
 }
 
 /**
- * A refusal: the one card back where it stood, and the write's own error said. **The row is read
- * again** when the tap had moved a card: the guess cancelled any read in flight — a pull's, a
- * return's — and without a new one the row's cards and its count (#822) would stand as they were
- * before it.
+ * A refusal: the one card back where it stood, on the row and the page each, and the write's own
+ * error said. **Both are read again** when the tap had moved a card: the guess cancelled any read in
+ * flight — a pull's, a return's, a page's — and without a new one the cards and the row's count (#822)
+ * would stand as they were before it.
  */
 function refused(
   client: QueryClient,
@@ -173,21 +227,20 @@ function refused(
   held: HeldRelation | undefined,
   error: AppError,
 ): void {
-  if (held?.relation !== undefined) {
-    moveCard(client, groupId, held.relation);
-    void client.invalidateQueries({ queryKey: groupKeys.hottest() });
-  }
+  if (held?.row !== undefined) moveOnRow(client, groupId, held.row);
+  if (held?.page !== undefined) moveOnPages(client, groupId, held.page);
+  if (held?.row !== undefined || held?.page !== undefined) rereadTheHottest(client);
   showToast({ message: recoveryMessage(error), tone: 'bad' });
 }
 
 /**
  * **Every read that could show a group the reader's relation to just moved** (the Home rows mechanics
- * §13): Home's Hottest groups, the Groups list, and Home's own read — *Your games* and the groupless
- * line. **The searches are written, never re-read**: the write's answer is the row, and a search
- * read again could land an older relation over it.
+ * §13): Home's Hottest groups, the Groups heating up page (#823), the Groups list, and Home's own read
+ * — *Your games* and the groupless line. **The searches are written, never re-read**: the write's
+ * answer is the row, and a search read again could land an older relation over it.
  */
 function rereadWhereTheGroupShows(client: QueryClient): void {
-  void client.invalidateQueries({ queryKey: groupKeys.hottest() });
+  rereadTheHottest(client);
   void client.invalidateQueries({ queryKey: groupKeys.mine() });
   void client.invalidateQueries({ queryKey: proposalKeys.home() });
 }
@@ -353,8 +406,8 @@ export function useExitGroup(groupId: string) {
       );
       void client.invalidateQueries({ queryKey: groupKeys.mine() });
       void client.invalidateQueries({ queryKey: groupKeys.searches() });
-      // Home's row reads *You're in* on it until it is read again (#800).
-      void client.invalidateQueries({ queryKey: groupKeys.hottest() });
+      // Home's row reads *You're in* on it until it is read again (#800), and the page with it (#823).
+      void client.invalidateQueries({ queryKey: groupKeys.hottestReads() });
       void client.invalidateQueries({
         queryKey: groupKeys.detail(groupId),
         refetchType: 'none',

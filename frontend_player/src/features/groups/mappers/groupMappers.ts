@@ -24,6 +24,7 @@ import type {
   GroupMember,
   GroupPerson,
   HottestGroup,
+  HottestPage,
   HottestRow,
   JoinRequest,
   Monogram,
@@ -219,6 +220,16 @@ export function toEditedGroup(wire: Schemas['EditedGroupResponse']): EditedGroup
  */
 export function toHottestRow(wire: Schemas['HottestGroupsResponse']): HottestRow {
   return { groups: wire.groups.map(toHottestGroup), total: wire.total };
+}
+
+/**
+ * **A page of *Groups heating up*** (#823) — the row's cards, read whole for the page's 20, and the
+ * cursor behind them; none on the last page. The first page's `total` is the line's count, already on
+ * the row's read, and the page draws no count, so it is left on the wire.
+ */
+export function toHottestPage(wire: Schemas['HottestGroupsPageResponse']): HottestPage {
+  const groups = wire.groups.map(toHottestGroup);
+  return wire.next === null ? { groups } : { groups, next: wire.next };
 }
 
 function toHottestGroup(group: Schemas['HottestGroupSchema']): HottestGroup {

@@ -4,6 +4,7 @@ import {
   SHEET_FACES,
   cardFaces,
   isJoinTap,
+  joinHottestPages,
   sheetButton,
   sheetFaces,
   withRelation,
@@ -85,5 +86,43 @@ describe('a write’s relation, on the card it came from', () => {
   /** #822: the count moves with the line's read, never with a card's guess. */
   it('keeps the row’s total', () => {
     expect(withRelation({ groups: [group()], total: 38 }, 'g-ogrody', 'MEMBER').total).toBe(38);
+  });
+
+  /** #823: the page's cards move as the row's do, so the page and Home's line agree. */
+  it('turns the one card on a page of Groups heating up, and keeps its cursor', () => {
+    const page = { groups: [group(), group({ id: 'g-kazimierz' })], next: 'c-20' };
+
+    const joined = withRelation(page, 'g-kazimierz', 'MEMBER');
+
+    expect(joined.groups.map((each) => each.relation)).toEqual(['NONE', 'MEMBER']);
+    expect(joined.next).toBe('c-20');
+  });
+});
+
+describe('Groups heating up, page by page', () => {
+  it('lists the pages in the order read', () => {
+    const pages = [
+      { groups: [group({ id: 'g-1' }), group({ id: 'g-2' })], next: 'c-2' },
+      { groups: [group({ id: 'g-3' })] },
+    ];
+
+    expect(joinHottestPages(pages).map((each) => each.id)).toEqual(['g-1', 'g-2', 'g-3']);
+  });
+
+  /** The mechanics §5.10: heat is worked out on every read, so a group that cooled is read again. */
+  it('draws a group a later page reads again only once, where it was first drawn', () => {
+    const pages = [
+      { groups: [group({ id: 'g-1' }), group({ id: 'g-2' })], next: 'c-2' },
+      { groups: [group({ id: 'g-2', gamesThisWeek: 1 }), group({ id: 'g-3' })] },
+    ];
+
+    const listed = joinHottestPages(pages);
+
+    expect(listed.map((each) => each.id)).toEqual(['g-1', 'g-2', 'g-3']);
+    expect(listed[1]?.gamesThisWeek).toBe(14);
+  });
+
+  it('is empty before any page holds a group', () => {
+    expect(joinHottestPages([{ groups: [] }])).toEqual([]);
   });
 });

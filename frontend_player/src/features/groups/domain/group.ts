@@ -288,6 +288,18 @@ export interface HottestRow {
   readonly total: number;
 }
 
+/**
+ * **One page of *Groups heating up*** ([#823](https://github.com/Raketa02/Raketa/issues/823);
+ * ADR-0205 §7; the Home rows mechanics §5.10) — up to 20 of the row's cards, every group with 3 or
+ * more players, the reader's own included, in the row's order, and the cursor behind them. The first
+ * page's total is the line's count, which the page does not draw, so it is not carried.
+ */
+export interface HottestPage {
+  readonly groups: readonly HottestGroup[];
+  /** Read the next page `after` this — absent on the last. */
+  readonly next?: string;
+}
+
 /** A group's name is 1–40 characters once trimmed (ADR-0183 §3). The field stops at 40. */
 export const GROUP_NAME_MAX = 40;
 

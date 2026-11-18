@@ -38,6 +38,7 @@ import NewInRaketaRoute from '@/app/(app)/(tabs)/new-in-raketa';
 import RankingsRoute from '@/app/(app)/(tabs)/rankings';
 import SameLevelRoute from '@/app/(app)/(tabs)/same-level';
 import SameVibeRoute from '@/app/(app)/(tabs)/same-vibe';
+import HottestGroupsRoute from '@/app/(app)/(tabs)/hottest-groups';
 import HomeRoute from '@/app/(app)/(tabs)/index';
 import PlayRoute from '@/app/(app)/(tabs)/play/index';
 import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
@@ -170,6 +171,8 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/new-in-raketa': NewInRaketaRoute,
   '(app)/(tabs)/same-level': SameLevelRoute,
   '(app)/(tabs)/same-vibe': SameVibeRoute,
+  // The Groups heating up page, behind its line's *All groups ›* (#823).
+  '(app)/(tabs)/hottest-groups': HottestGroupsRoute,
   // You is a directory since the tab was built (ADR-0179): the root, and one screen per row
   // pushed over it, each under the tab's first segment so the column stays lit. Spelled
   // `you/index` as the file tree spells it, because the shell names the pushed screens to give
@@ -822,6 +825,12 @@ export function stubHottestGroups(
     json<Wire['HottestGroupsResponse']>({ groups: [...groups], total }),
   );
 }
+
+/**
+ * The Groups heating up page (#823) — the transport drops `?after`, so one responder answers each
+ * page.
+ */
+export const HOTTEST_GROUPS_ALL_PATH = '/api/v1/hottest-groups/all';
 
 /** Home's New in Raketa (#801) — nobody unless the suite says, so the row is hidden. */
 export const NEW_IN_RAKETA_PATH = '/api/v1/new-in-raketa';

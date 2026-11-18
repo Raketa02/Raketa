@@ -648,7 +648,9 @@ Q33).
 
 - **Each row is its own read** (§3). A row that fails shows nothing, and the rest of Home stands.
 - **After any friend or join write from a row**, every row, See all and Home read that could show that
-  person or group is read again, so one tap shows everywhere.
+  person or group is read again, so one tap shows everywhere. **The Groups heating up page is one of
+  them** ([#823](https://github.com/Raketa02/Raketa/issues/823)): a join, an ask or a withdraw from
+  the page or the line moves the card on both at once, and reads both again.
 - **A people row holds still under the tap** (2026-11-15): the person's card stays where it stands and
   shows the new state, and §9.1 moves them on the row's next read — a return to Home, a pull — never
   under the thumb. Read at the tap, asking a fresh match on *Same vibe* made the card leave as it was

@@ -785,3 +785,48 @@ guess cancels any read in flight — a pull's, a return's — and without a new 
 its count would stand as they were before it. No footer still, so no _See all N_ here. Walked in
 `hottestGroups.test.tsx` (the count moving with a join's re-read, and not before it lands; a refusal
 reading the row again), `hottest.test.ts` and the mapper test.
+
+**The Groups heating up page** ([#823](https://github.com/Raketa02/Raketa/issues/823); ADR-0205 §7;
+the Home rows screens §3.6, the mechanics §5.10; the words §31.14). **The line's footer reads _All
+groups ›_** (`FoldingLineFooter`, spoken _All groups heating up_), which pushes `HottestGroupsScreen`
+over Home at **`/hottest-groups`** (`HOTTEST_GROUPS_ROUTE`) — the one groups screen not under Play, so
+the shell lists it in `PUSHED_SCREENS` and inside Home's tab, as it does the people See all screens.
+**It reads `GET /hottest-groups/all?after`** (`useHottestGroupsPage`, an infinite query keyed
+`groupKeys.hottestAll()`, `LISTS_PEOPLE` like the row, since its faces are friends first): every group
+of 3 or more, the reader's own included, in the row's order, 20 to a page by the server's cursor
+(`HottestPage`, `toHottestPage`), the next read as the list nears its end. **A group a later page reads
+again is drawn once** (`joinHottestPages`): heat is worked out on every read, so one that cooled
+behind a cursor comes back. **The row and the page are two keys under one root** —
+`groupKeys.hottest()` is now `['groups', 'hottest', 'row']`, `hottestAll()` its sibling, and
+`hottestReads()` both — so a relation write cancels and re-reads the two at once, while a return to
+Home still re-reads the row alone and never a page left behind. **An end is owed until a page behind it
+draws something new**: the list says it reached its end only when it has grown since, so
+`useHottestGroupsPage` remembers an end it was asked for and asks again once the reads settle, when the
+page never landed — a write cancels the page on its way, and its re-read reads only the pages drawn —
+when a re-read was in flight, or when the page brought back only groups the list already holds
+(rankings' `owedEnd`, widened). **The frame is the people See all screens'** — the header, the states,
+the pull, the later page's failure under the list — written again here without the sport pill, since
+the page has no filter and `SeeAllScreen` and `useSeeAllPages` are `discovery`'s, keyed by player.
+With rankings' General that makes three paged lists of the same shape: a shared frame and paging hook
+are owed, to a ticket of their own, and `discovery`'s does not yet ask again for an owed end. **The
+cards are the line's `HottestGroupCard`** at the content's whole width, and **the taps are the line's**:
+the group sheet, the withdraw sheet and the chips moved out of `HottestGroupsLine` into
+`useHottestTaps`, which both draw. **A read that drops the sheet's card closes the sheet for good**, so
+a later read bringing it back opens nothing (`usePersonSheet`'s rule; until now the line's sheet came
+back by itself). **One write, both reads** (`useGroupWrites`): a join, an ask or a withdraw guesses the
+card's relation on Home's row and on every page read, wherever it was tapped — **each copy by its own
+policy**, since the two are separate reads — both reads cancelled first, as the row's was; it lands the
+answer on both, and reads both again with the Groups list and Home; a refusal puts each back where it
+stood. Leaving a group re-reads the page too. **Left as they were**: a write re-reads every page drawn,
+one after another, as See all's friend writes do; and an edit or an approval re-reads neither the row
+nor the page, as before.
+**Calls made here**: the link's spoken name; _No groups heating up right now_ for a list read empty, met
+only when every group fell under 3 since the line was read; the page draws no count. Walked in
+`hottestGroupsPage.test.tsx`: the footer opening the page, the Home tab lit and no pill; the served
+order with the line's six first; _You're in_ on the reader's own groups, past the six too; the card at
+the content's width; 20 to a page, never twice, nothing past the last; a next page a write cancelled,
+and one that brought nothing new, each read on; reading, a first and a later page refused, an empty
+list; the sheet from a card, and closed for good when a read drops it; _Join_ and _Ask to join_ on the
+page drawn at once on Home's line; a page-only card's join; a refusal; _Asked_; _You're in_; and back
+to Home with the line still open. **Not seen on a device** — a look is owed: the page's header, the full-width card, the
+gaps and the pull.

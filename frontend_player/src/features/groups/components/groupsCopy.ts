@@ -180,6 +180,19 @@ export const GROUPS_COPY = {
   hottest: {
     /** FOR YOU's line (#820) — its title, and what it is named: the row was *HOTTEST GROUPS*. */
     line: 'Groups heating up',
+    /** The open line's footer link (#823), the frame drawing its chevron: *All groups ›*. */
+    allGroups: 'All groups',
+    /** Spoken — the page it opens, the drawn words first (a call: §31.1 writes no name for it). */
+    allGroupsLabel: 'All groups heating up',
+    /** The Groups heating up page (#823; §31.14). */
+    page: {
+      title: 'Groups heating up',
+      back: 'Back to Home',
+      /** The spinner's spoken name while the first page reads. */
+      reading: 'Reading groups heating up…',
+      /** A list read empty — no group of 3 is left (a call: the line hides then, so it is rarely met). */
+      nobody: 'No groups heating up right now',
+    },
     /**
      * *Your games*, for a reader in no group, in place of *Play finds you one.* (§31.1) — pointing at
      * the line just below, which starts open for them (#820, Q38).

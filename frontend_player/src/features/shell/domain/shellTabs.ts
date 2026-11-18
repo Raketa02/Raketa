@@ -87,6 +87,8 @@ const INSIDE_A_TAB: Readonly<Partial<Record<string, TabBarKey>>> = {
   'same-level': 'home',
   // Same vibe's See all (#803).
   'same-vibe': 'home',
+  // The Groups heating up page, behind its line's *All groups ›* (#823; ADR-0205 §7).
+  'hottest-groups': 'home',
 };
 
 /**

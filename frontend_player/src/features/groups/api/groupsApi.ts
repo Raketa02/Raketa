@@ -177,6 +177,26 @@ export function getHottestGroups({ signal }: Cancellable = {}): Promise<
   });
 }
 
+/**
+ * ***Groups heating up*, a page** (#823; ADR-0205 §7) — every group with 3 or more players, the
+ * reader's own included, in the row's order, 20 to a page, read `after` the cursor the page before it
+ * named; the first page with none. `not_a_hottest_groups_page` for a cursor this server never wrote.
+ */
+export function getHottestGroupsPage(
+  after: string | undefined,
+  { signal }: Cancellable = {},
+): Promise<Schemas['HottestGroupsPageResponse']> {
+  return httpRequest({
+    method: 'GET',
+    path:
+      after === undefined
+        ? '/api/v1/hottest-groups/all'
+        : `/api/v1/hottest-groups/all?after=${encodeURIComponent(after)}`,
+    authenticated: true,
+    signal,
+  });
+}
+
 /** **Delete** — the Owner's, and only while they are its only member. */
 export function deleteGroup(groupId: string): Promise<void> {
   return httpRequest<void>({ method: 'DELETE', path: groupPath(groupId), authenticated: true });

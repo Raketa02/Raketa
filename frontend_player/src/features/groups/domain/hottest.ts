@@ -5,7 +5,7 @@
  * draws, and how a write's answer lands on the card it came from.
  */
 
-import type { GroupPerson, HottestGroup, HottestRow } from './group';
+import type { GroupPerson, HottestGroup, HottestPage, HottestRow } from './group';
 import { groupAction, type GroupAction } from './groupRules';
 import type { GroupRelation } from './vocabulary';
 
@@ -39,16 +39,33 @@ export function sheetFaces(group: HottestGroup): readonly GroupPerson[] {
 }
 
 /**
- * **The row with one card's relation moved** — what a join, an ask or a withdraw draws at once. The
- * total stands: it moves with the next read, which every such write asks for (#822).
+ * **The row, or a page of *Groups heating up*, with one card's relation moved** — what a join, an
+ * ask or a withdraw draws at once, on each (#823). The rest stands: the row's total and a page's
+ * cursor move with the next read, which every such write asks for (#822).
  */
-export function withRelation(
-  row: HottestRow,
+export function withRelation<Held extends HottestRow | HottestPage>(
+  held: Held,
   groupId: string,
   relation: GroupRelation,
-): HottestRow {
+): Held {
   return {
-    ...row,
-    groups: row.groups.map((group) => (group.id === groupId ? { ...group, relation } : group)),
+    ...held,
+    groups: held.groups.map((group) => (group.id === groupId ? { ...group, relation } : group)),
   };
+}
+
+/**
+ * ***Groups heating up*'s list** — the pages in the order read, **each group once**, where it was
+ * first drawn. Heat is worked out on every read (the mechanics §5.10), so a group that cooled behind
+ * a page's cursor is read again by the next, and a list keyed by group cannot draw it twice.
+ */
+export function joinHottestPages(pages: readonly HottestPage[]): readonly HottestGroup[] {
+  const seen = new Set<string>();
+  return pages.flatMap((page) =>
+    page.groups.filter((group) => {
+      if (seen.has(group.id)) return false;
+      seen.add(group.id);
+      return true;
+    }),
+  );
 }

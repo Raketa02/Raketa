@@ -70,6 +70,8 @@ export { HomeLevelCard } from './components/HomeLevelCard';
  * starts open.
  */
 export { useHottestGroupsLine } from './components/HottestGroupsLine';
+/** **The Groups heating up page** (#823; ADR-0205 §7) — its line's *All groups ›* pushes it over Home. */
+export { HottestGroupsScreen } from './components/HottestGroupsScreen';
 export { rereadHomeGroups } from './hooks/useHottestGroups';
 export { useInNoGroup } from './hooks/useGroups';
 /** The reads behind it — what a notice opening Home on its card marks stale (#731). */

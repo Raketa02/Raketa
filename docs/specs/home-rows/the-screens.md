@@ -26,6 +26,9 @@
 >
 > **Amended by [#822](https://github.com/Raketa02/Raketa/issues/822)** (ADR-0205 §5, §6; home
 > refactor 3, 4, 7): every line but Top 10 draws its count, and the people lines read *See all N ›*.
+>
+> **Amended by [#823](https://github.com/Raketa02/Raketa/issues/823)** (ADR-0205 §7; home refactor
+> 5): Groups heating up's footer reads *All groups ›*, to the Groups heating up page (§3.6).
 
 - **The header, *Get your level* and *Your games***, as ADR-0205 §4 orders them.
 - **Then FOR YOU** (home refactor 3, 4): the eyebrow *FOR YOU*, grey caps, letter-spaced, and five
@@ -55,8 +58,9 @@
   **its footer**: *See all N ›* on the three people lines, to their See all screens — N the line's
   count, *99+* included, though See all shows one sport at a time (#822; home refactor 7); on Top 10, the
   sport switcher, *Padel ›*, on the left, opening to the right, and *Open the rankings ›* on the
-  right ([#821](https://github.com/Raketa02/Raketa/issues/821), §7.1; home refactor 12, 13); none on
-  Groups heating up until #823's page.
+  right ([#821](https://github.com/Raketa02/Raketa/issues/821), §7.1; home refactor 12, 13); on
+  Groups heating up, ***All groups ›***, to its page ([#823](https://github.com/Raketa02/Raketa/issues/823),
+  §3.6; home refactor 5).
 - **Motion** (designed, no mock): the content unfolds and fades in over about a quarter of a second,
   fast at first and settling; the lines below slide down rather than jump; closing is a little
   shorter; and if what opened would be cut off at the bottom, the page eases down just enough to show
@@ -95,7 +99,8 @@ draws Needs your answer's sections and *Your games*.
 #### 3.1 The row (home rows 1, 21)
 
 - **Up to 6 group cards**, HOTTEST first, then GROWING, then untagged ([the mechanics §5.4](the-mechanics.md#54-order-and-the-six-q10)).
-- **No *See all***.
+- **At the open line's foot, on the right, *All groups ›*** ([#823](https://github.com/Raketa02/Raketa/issues/823);
+  home refactor 5), to the Groups heating up page (§3.6). It had no *See all* before.
 
 #### 3.2 The card (home rows 3, 3.2, 4, 5)
 
@@ -163,6 +168,32 @@ circle** top-right.
 - **People row:** up to 6 overlapping faces and *7 of your friends play here* (home rows 6), *1 of
   your friends plays here* or *11 players* (designed, no mock).
 - **Nothing on the sheet but the button opens anything.** The faces are not buttons.
+
+#### 3.6 The Groups heating up page (designed, no mock)
+
+Built by [#823](https://github.com/Raketa02/Raketa/issues/823) (ADR-0205 §7, Q18, Q35, Q36): **no mock
+draws it**, so it is made of the line's card and the people See all screens' frame (§4.4, §5.3).
+
+- **Pushed over Home** by the line's *All groups ›*, the Home tab still lit. **Back** (‹) is Home, the
+  line still open.
+- **Header:** ‹ and *Groups heating up*, the screen's title. **No sport pill**: the page has no filter.
+- **Body:** every group with 3 or more players, **in the row's order** — HOTTEST, then GROWING by heat,
+  then the rest by heat ([the mechanics §5.10](the-mechanics.md#510-its-total-and-the-groups-heating-up-page-adr-0205-6-7)) —
+  so its first six are the line's. One card to a line, **the line's card (§3.2) at the content's whole
+  width**, 9 between cards. **The reader's own groups are listed too**, their chip *You're in*.
+- **Paging:** 20 at a time, the next read as the list nears its end, as on See all. A group read again
+  by a later page — its heat moved between the two reads — is drawn once, where it first stood.
+- **Taps:** a card opens **the line's group sheet** (§3.5); the chips (§3.2's table) make the line's
+  writes, drawn at once (§3.4), and **the card moves on the line under the page too**, so the two never
+  disagree. *You're in* and *Open group* open the group page over this one.
+- **Every state is See all's:** a spinner while the first page reads, *Reading groups heating up…* to a
+  listener; a failure said with *Try again*; offline, the resume line; a later page refused, said
+  under the list with its own *Try again*; the end, where nothing more is read; and the pull, which
+  reads every page again. **An empty list** — every group dropped under 3 since the line was read —
+  reads *No groups heating up right now* *(a call)*.
+- **Spoken:** the title is the screen's header; each card is named as on the line (*Ogrody 33 Club,
+  hottest, 14 games this week, 11 players*), and each chip by what it does (*Ogrody 33 Club: Ask to
+  join*). Every target is 44 pt.
 
 ### 4. Same competitive level players
 

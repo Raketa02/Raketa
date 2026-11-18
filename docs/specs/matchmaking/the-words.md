@@ -1458,7 +1458,7 @@ the club the group plays at.
 | Where | Sentence | Note |
 | --- | --- | --- |
 | The section, under *Your games* | `FOR YOU` | the eyebrow, drawn uppercase from *For you* |
-| Hottest groups, the line | `Groups heating up` · the count `{n}` | no footer until the Groups heating up page (#823) |
+| Hottest groups, the line | `Groups heating up` · the count `{n}` · footer `All groups ›` | to the Groups heating up page ([§31.14](#3114-the-groups-heating-up-page)); spoken *All groups heating up* *(a call)* (#823) |
 | Same competitive level, the line | `Players at your level` · the count `{n}` · footer `See all {n} ›` | spoken *See all players at your level* |
 | New in Raketa, the line | `New in Raketa` · the count `{n}` · footer `See all {n} ›` | never *Rakieta*; spoken *See all new players* |
 | Same vibe, the line | `Players with your vibe` · the count `{n}` · footer `See all {n} ›` | spoken *See all same vibe players*, the screen it opens |
@@ -1607,6 +1607,21 @@ them, and the server still serves where a request was found:
 | `Show me in General` · `Players who don't know you can see your place, open your record and send you a request.` | §30.8, You | replaced by §31.12's switch (ADR-0204 §2) |
 | `Hidden from General` | §30.4, the place card | nobody is hidden from the ranking |
 | `You've sent 10 requests to new people today. Try again tomorrow.` | §30.8, §29.2 | the daily limit goes, with `daily_request_limit` |
+
+### 31.14 The Groups heating up page
+
+> Added by [#823](https://github.com/Raketa02/Raketa/issues/823) ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §7; the Home rows screens §3.6). No mock draws it. Its cards, chips and sheets keep §31.2–§31.4's
+> words, and its states those of the people See all screens.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The line's footer | `All groups ›` | the chevron drawn; spoken `All groups heating up` *(a call)*: the drawn words first, then the page they open |
+| The page's title | `Groups heating up` | the line's own title; no count on the page |
+| Its back | `Back to Home` | spoken, as on the See all screens |
+| Reading the first page | `Reading groups heating up…` | the spinner's spoken name |
+| An empty list | `No groups heating up right now` | *(a call)*: met only when every group has dropped under 3 since the line was read |
+| A page refused | the failure's own sentence · `Try again` | as on the group screens; the button only where trying again can help |
 
 ## 32. Needs your answer
 

@@ -3,7 +3,8 @@
  * ([#800](https://github.com/Raketa02/Raketa/issues/800), PRD #789; [#820](https://github.com/Raketa02/Raketa/issues/820);
  * ADR-0204 §3, ADR-0205 §5; the Home rows screens §3; the mechanics §5; the words §31.1–§31.4).
  *
- * - **The line**: first under FOR YOU, just below *Your games*, closed; open, its cards and no footer;
+ * - **The line**: first under FOR YOU, just below *Your games*, closed; open, its cards and *All
+ *   groups ›* at the foot (#823 — the page is `hottestGroupsPage.test.tsx`);
  *   hidden while the read is empty or failed, and closed and gone when it empties while open.
  * - **The card**: the tag, the figures, the growth, the faces, and the chip for each relation.
  * - **The chip's taps**: Join → *You're in* at once; Ask to join → *Asked*; Asked → the withdraw
@@ -26,7 +27,7 @@ import { HOME_COPY } from '@/features/shell/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
-import { lineNamed, lineTitles, openLine } from '@/test-support/forYou';
+import { footerParts, lineNamed, lineTitles, openLine } from '@/test-support/forYou';
 import {
   HOME_PATH,
   HOTTEST_GROUPS_PATH,
@@ -275,8 +276,8 @@ describe('the line on Home', () => {
     expect(screen.queryByTestId(`hottest-${OGRODY.id}`)).toBeNull();
   });
 
-  /** No footer until the Groups heating up page has one to open (#823). */
-  it('opens onto the cards in the read’s order, with no footer', async () => {
+  /** #823: *All groups ›* at the foot, alone at its right end — the page is its own suite. */
+  it('opens onto the cards in the read’s order, All groups › at the foot', async () => {
     hottestServer([OGRODY, KAZIMIERZ, PODGORZE]);
     await launchSignedIn();
     await openLine(HOT.line);
@@ -290,7 +291,10 @@ describe('the line on Home', () => {
       KAZIMIERZ.name,
       PODGORZE.name,
     ]);
-    expect(within(screen.getByTestId('hottest-groups')).queryByRole('link')).toBeNull();
+    const footer = within(screen.getByTestId('hottest-groups')).getByTestId('folding-line-footer');
+    expect(footerParts(footer, () => 'something else')).toEqual(['link']);
+    const link = within(footer).getByRole('link', { name: HOT.allGroupsLabel });
+    expect(within(link).getByText(HOT.allGroups)).toBeTruthy();
   });
 
   it('is hidden while the read holds nothing', async () => {

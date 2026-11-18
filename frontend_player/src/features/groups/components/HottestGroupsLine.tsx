@@ -5,57 +5,33 @@
  * mechanics §5; home rows 1, 21; home refactor 5).
  *
  * Open, up to six cards on the row frame's rail (`HomeRowRail`), **peeking** and settling on their
- * edges, in the read's order — HOTTEST, then GROWING, then untagged — and **no footer** until the
- * Groups heating up page has one to open (#823). **Hidden** while the read holds nothing, is in
- * flight, or failed (the screens §1: a line that fails is left out, and the rest of Home stands).
+ * edges, in the read's order — HOTTEST, then GROWING, then untagged — and ***All groups ›*** at the
+ * foot, to the Groups heating up page ([#823](https://github.com/Raketa02/Raketa/issues/823); ADR-0205
+ * §7; home refactor 5), pushed over Home. **Hidden** while the read holds nothing, is in flight, or
+ * failed (the screens §1: a line that fails is left out, and the rest of Home stands).
  *
  * **Its count is how many groups there are to look through** ([#822](https://github.com/Raketa02/Raketa/issues/822);
  * ADR-0205 §6): every group with 3 or more players, the reader's own included — the read's `total`,
  * drawn *99+* past 99 — never how many cards the rail holds. It moves with the read: a return after
  * thirty seconds, foregrounding, the pull, and the re-read every join, ask and withdraw asks for.
  *
- * ## The taps
- *
- * | | |
- * | --- | --- |
- * | the card | the group sheet |
- * | **Join** | a member at once — the chip reads *You're in* |
- * | **Ask to join** | a request at once — *Asked* |
- * | **Asked** | the withdraw sheet |
- * | **You're in** | the group's page |
- *
- * The sheet's one button does the same, and *Open group* closes the sheet as it opens the page.
- * **The writes are the feature's** (`useJoinGroup`, `useWithdrawJoinRequest`): each draws the card at
- * once, lands the server's answer over it, and reads again every row and read that could show the
- * group. A tap on a card whose write is still in flight is let go: the chip already says what it did.
- *
- * ## One sheet
- *
- * The group sheet and the withdraw sheet are one `BottomSheet` whose title, button and body swap
- * (`HottestGroupSheet`'s note). It draws the card **as the read now has it**, so a write or a re-read
- * moves the sheet with the card; a card the re-read dropped closes it.
+ * **A card's taps are the page's too** (`useHottestTaps`): the card opens the group sheet, and the
+ * chip joins, asks, opens the withdraw sheet or the group's page — each write drawn at once on the line
+ * and the page alike.
  */
 
 import { router } from 'expo-router';
-import { memo, useState } from 'react';
+import { memo } from 'react';
 
-import { BottomSheet, HomeRowRail, type FoldingLineParts } from '@/shared/ui';
+import { FoldingLineFooter, HomeRowRail, type FoldingLineParts } from '@/shared/ui';
 
 import type { HottestGroup } from '../domain/group';
-import type { GroupAction } from '../domain/groupRules';
-import { isJoinTap, sheetButton, type SheetButton } from '../domain/hottest';
-import {
-  useJoinGroup,
-  useRelationWritesInFlight,
-  useWithdrawJoinRequest,
-} from '../hooks/useGroupWrites';
 import { useHottestGroups } from '../hooks/useHottestGroups';
 
-import { groupRoute } from './groupRoutes';
+import { HOTTEST_GROUPS_ROUTE } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
-import { closeGroupLabel, waitingFor } from './groupsPresentation';
 import { HottestGroupCard } from './HottestGroupCard';
-import { GroupSheetBody, SheetAct, WithdrawBody } from './HottestGroupSheet';
+import { useHottestTaps } from './HottestGroupTaps';
 
 const HOT = GROUPS_COPY.hottest;
 
@@ -71,13 +47,16 @@ export function useHottestGroupsLine(): FoldingLineParts | undefined {
     count: row.total,
     testID: 'hottest-groups',
     content: <HottestGroups groups={row.groups} />,
+    footer: (
+      <FoldingLineFooter
+        link={{
+          words: HOT.allGroups,
+          label: HOT.allGroupsLabel,
+          onPress: () => router.push(HOTTEST_GROUPS_ROUTE),
+        }}
+      />
+    ),
   };
-}
-
-/** Which face the one sheet shows, and for which card. */
-interface SheetShown {
-  readonly face: 'group' | 'withdraw';
-  readonly groupId: string;
 }
 
 /** Memoised: the shell draws every line from one component, so a re-read of another line must not
@@ -87,42 +66,7 @@ const HottestGroups = memo(function HottestGroups({
 }: {
   readonly groups: readonly HottestGroup[];
 }) {
-  const join = useJoinGroup();
-  const withdraw = useWithdrawJoinRequest();
-  const [shown, setShown] = useState<SheetShown>();
-  const [open, setOpen] = useState(false);
-
-  // The cards whose write is in flight — their chips are let go until each lands.
-  const writing = useRelationWritesInFlight();
-  const onSheet = groups.find((group) => group.id === shown?.groupId);
-
-  function show(face: SheetShown['face'], groupId: string) {
-    setShown({ face, groupId });
-    setOpen(true);
-  }
-
-  function act(group: HottestGroup, action: GroupAction | SheetButton) {
-    if (writing.includes(group.id)) return;
-    if (isJoinTap(action)) {
-      join.mutate(group.id);
-      return;
-    }
-    switch (action) {
-      case 'requested':
-        show('withdraw', group.id);
-        return;
-      case 'in':
-      case 'open':
-        setOpen(false);
-        router.push(groupRoute(group.id));
-        return;
-    }
-  }
-
-  function withdrawRequest(groupId: string) {
-    setOpen(false);
-    withdraw.mutate(groupId);
-  }
+  const taps = useHottestTaps(groups);
 
   return (
     <>
@@ -132,38 +76,12 @@ const HottestGroups = memo(function HottestGroups({
             key={group.id}
             group={group}
             width={width}
-            onOpen={() => show('group', group.id)}
-            onChip={(action) => act(group, action)}
+            onOpen={() => taps.openSheet(group.id)}
+            onChip={(action) => taps.chip(group, action)}
           />
         )}
       </HomeRowRail>
-
-      {onSheet === undefined || shown === undefined ? null : (
-        // One element for both faces: swapping two would close one native window as the next opens.
-        <BottomSheet
-          visible={open}
-          onClose={() => setOpen(false)}
-          {...(shown.face === 'group'
-            ? {
-                title: onSheet.name,
-                closeLabel: closeGroupLabel(onSheet.name),
-                action: (
-                  <SheetAct
-                    button={sheetButton(onSheet)}
-                    groupName={onSheet.name}
-                    onPress={(button) => act(onSheet, button)}
-                  />
-                ),
-              }
-            : { title: waitingFor(onSheet.runBy), closeLabel: HOT.keepRequest })}
-        >
-          {shown.face === 'group' ? (
-            <GroupSheetBody group={onSheet} />
-          ) : (
-            <WithdrawBody onWithdraw={() => withdrawRequest(onSheet.id)} />
-          )}
-        </BottomSheet>
-      )}
+      {taps.sheet}
     </>
   );
 });

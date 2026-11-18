@@ -35,7 +35,15 @@ export const groupKeys = {
    * **Home's Hottest groups** (#800) — one read for every reader's row, with no parameter: the row
    * is the whole app's (the Home rows mechanics §3). A join, an ask and a withdraw rewrite it.
    */
-  hottest: () => [...groupKeys.all, 'hottest'] as const,
+  hottest: () => [...groupKeys.hottestReads(), 'row'] as const,
+  /**
+   * ***Groups heating up*, every page read** (#823) — the cursor is the infinite query's page
+   * parameter. **Beside the row, not under it**: a return to Home re-reads the row by its key and must
+   * not read a page left behind again. A join, an ask and a withdraw rewrite it as they do the row.
+   */
+  hottestAll: () => [...groupKeys.hottestReads(), 'all'] as const,
+  /** **The row and the page together** — what a relation write cancels and reads again (#823). */
+  hottestReads: () => [...groupKeys.all, 'hottest'] as const,
   /**
    * **Mutation keys**: the writes that move the reader's relation to a group — a join (or an ask)
    * and a withdraw — under one root, so Home's row can let go of a tap on any card whose write is

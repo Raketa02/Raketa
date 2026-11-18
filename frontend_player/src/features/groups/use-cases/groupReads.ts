@@ -16,6 +16,7 @@ import {
   getGroupMembers,
   getHomeClubs,
   getHottestGroups,
+  getHottestGroupsPage,
   getJoinRequests,
   getJoinSearch,
   getMyGroups,
@@ -25,6 +26,7 @@ import type {
   ClubSearch,
   Group,
   GroupMember,
+  HottestPage,
   HottestRow,
   JoinRequest,
   MyGroup,
@@ -33,6 +35,7 @@ import {
   toGroup,
   toGroupMembers,
   toHomeClubSearch,
+  toHottestPage,
   toHottestRow,
   toJoinRequests,
   toJoinSearch,
@@ -70,6 +73,17 @@ export async function readJoinRequests(
  */
 export async function readHottestGroups(options: Cancellable = {}): Promise<HottestRow> {
   return toHottestRow(await getHottestGroups(options));
+}
+
+/**
+ * ***Groups heating up*, a page** (#823) — the 20 behind `after`, or the first 20 with none, and the
+ * cursor behind them.
+ */
+export async function readHottestGroupsPage(
+  after: string | undefined,
+  options: Cancellable = {},
+): Promise<HottestPage> {
+  return toHottestPage(await getHottestGroupsPage(after, options));
 }
 
 export async function searchHomeClubs(

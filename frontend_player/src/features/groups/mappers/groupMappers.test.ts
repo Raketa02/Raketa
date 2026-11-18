@@ -6,6 +6,7 @@ import {
   toGroup,
   toGroupMembers,
   toHomeClubSearch,
+  toHottestPage,
   toHottestRow,
   toJoinRequests,
   toJoinSearch,
@@ -538,6 +539,18 @@ describe('Home’s Hottest groups', () => {
         isAdministrator: false,
       },
     ]);
+  });
+
+  /** #823: a page of Groups heating up — the row's cards, and the cursor behind them. */
+  it('reads a page of Groups heating up: its cards, and the cursor behind them', () => {
+    const page = toHottestPage({ groups: [OGRODY_HOT], next: 'cursor-20', total: 38 });
+    expect(page.groups).toEqual(toHottestRow({ groups: [OGRODY_HOT], total: 1 }).groups);
+    expect(page.next).toBe('cursor-20');
+  });
+
+  it('names no cursor on the last page', () => {
+    const last = toHottestPage({ groups: [OGRODY_HOT], next: null, total: null });
+    expect(last).not.toHaveProperty('next');
   });
 
   it('carries no tag as none, and an Owner who can no longer be named as nobody', () => {
