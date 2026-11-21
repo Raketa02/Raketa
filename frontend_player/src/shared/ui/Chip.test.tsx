@@ -13,7 +13,7 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Chip } from './Chip';
 import { theme } from './theme';
@@ -80,8 +80,10 @@ describe('what a chip announces', () => {
 });
 
 /**
- * **Busy and disabled are one dim and two facts**, which is 6.1's own shape and the reason a busy
- * chip swaps its label: the two mean opposite things, and greying is all either of them does.
+ * **Busy is 6.1's busy, whole** — the label swapped, the press blocked, and since 2026-11-21 a
+ * spinner before the word at the chip's full strength (6.1 and 6.2, amended;
+ * `docs/specs/busy-indicator/decisions.md` §3.6). The dim is disabled's alone: the two mean
+ * opposite things, and they are no longer one drawing.
  */
 describe('a chip with a press on its way', () => {
   it('draws and announces the busy word rather than the value', () => {
@@ -100,15 +102,64 @@ describe('a chip with a press on its way', () => {
     expect(pressed).not.toHaveBeenCalled();
   });
 
-  /** The dim is the sighted half of the same fact, never the whole of it (Part 13). */
-  it('is announced as busy as well as dimmed, and drops the pressed appearance with it', () => {
+  /** The spinner is the sighted half of the same fact, never the whole of it (Part 13). */
+  it('is announced as busy, drawn whole rather than dimmed, and drops the pressed appearance', () => {
     render(<Chip label="Saturday" busy busyLabel="Saving…" onPress={jest.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Saving…' }).props.accessibilityState.busy).toBe(
       true,
     );
+    expect(drawn(false).opacity).toBeUndefined();
+    expect(drawn(true).opacity).toBeUndefined();
+
+    screen.unmount();
+
+    render(<Chip label="Saturday" disabled onPress={jest.fn()} />);
     expect(drawn(false).opacity).toBe(0.4);
-    expect(drawn(true).opacity).toBe(0.4);
+  });
+
+  it('turns a spinner before the busy word, in the label’s ink, unspoken', () => {
+    render(<Chip label="Saturday" busy busyLabel="Saving…" onPress={jest.fn()} />);
+
+    const spinner = screen.UNSAFE_getByType(ActivityIndicator);
+    expect(spinner.props.color).toBe(theme.color.ink);
+    expect(spinner.props.accessibilityElementsHidden).toBe(true);
+    expect(spinner.parent?.children[0]).toBe(spinner);
+
+    screen.unmount();
+
+    render(<Chip label="Saturday" selected busy busyLabel="Saving…" onPress={jest.fn()} />);
+    expect(screen.UNSAFE_getByType(ActivityIndicator).props.color).toBe(theme.color.surface);
+  });
+
+  /** The sport's dot and the count describe the value the busy word has replaced. */
+  it('sets the dot and the count aside while the word is the busy one', () => {
+    render(
+      <Chip
+        label="Padel"
+        dot={theme.color.ink}
+        count={10}
+        busy
+        busyLabel="Starting…"
+        onPress={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByText('10')).toBeNull();
+    const sportDots = screen
+      .UNSAFE_queryAllByType(View)
+      .filter((node) => StyleSheet.flatten(node.props.style)?.width === theme.size.sportDot);
+    expect(sportDots).toHaveLength(0);
+  });
+
+  it('draws no spinner on a chip with nothing on its way, nor on a refused one', () => {
+    render(<Chip label="Saturday" onPress={jest.fn()} />);
+    expect(screen.UNSAFE_queryByType(ActivityIndicator)).toBeNull();
+
+    screen.unmount();
+
+    render(<Chip label="Saturday" disabled onPress={jest.fn()} />);
+    expect(screen.UNSAFE_queryByType(ActivityIndicator)).toBeNull();
   });
 
   it('leaves an ordinary chip saying nothing about being busy', () => {

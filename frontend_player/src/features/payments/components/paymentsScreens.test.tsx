@@ -11,6 +11,7 @@
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { ActivityIndicator } from 'react-native';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -36,6 +37,7 @@ import {
 import {
   installTransport,
   json,
+  neverResponds,
   noContent,
   type Transport,
   type Wire,
@@ -477,6 +479,21 @@ describe('state B — the method card', () => {
 
     expect(await screen.findByLabelText(step(1, 'choose', 'open'))).toBeTruthy();
     expect(screen.queryByText('Card •••• 4312')).toBeNull();
+    expect(transport.requestsTo('DELETE', PAYMENT_METHOD_PATH)).toHaveLength(1);
+  });
+
+  // `decisions.md` §3.7: the link swapped its word and nothing moved. Busy now, as a button is.
+  it('says it is removing with its word and a spinner, and takes no second press', async () => {
+    stubPaymentMethod(transport, VISA_4312);
+    transport.on('DELETE', PAYMENT_METHOD_PATH, neverResponds());
+    await onPayments('Card •••• 4312');
+
+    fireEvent.press(await screen.findByLabelText(PAYMENTS_COPY.method.remove));
+
+    const busy = await screen.findByLabelText(PAYMENTS_COPY.method.removing);
+    expect(busy.props.accessibilityState).toMatchObject({ busy: true, disabled: true });
+    expect(screen.UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
+    fireEvent.press(busy);
     expect(transport.requestsTo('DELETE', PAYMENT_METHOD_PATH)).toHaveLength(1);
   });
 

@@ -110,6 +110,7 @@ export function StartPlayingScreen() {
         {pushed ? null : (
           <AuthLink
             label={signOut.isPending ? SIGN_OUT.busyLabel : SIGN_OUT.label}
+            busy={signOut.isPending}
             onPress={() => signOut.mutate()}
           />
         )}

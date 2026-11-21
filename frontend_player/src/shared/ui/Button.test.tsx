@@ -25,8 +25,15 @@
  */
 
 import Feather from '@expo/vector-icons/Feather';
-import { act, render, screen } from '@testing-library/react-native';
-import { Pressable, StyleSheet, Text, type TextStyle, type ViewStyle } from 'react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 
 import { Button } from './Button';
 import { ReducedMotionProvider } from './overlay';
@@ -291,6 +298,137 @@ describe('the dot before the label (6.1, amended)', () => {
   it('draws none unless asked', () => {
     render(<Button label="Sign in" onPress={() => {}} />);
     expect(screen.queryByTestId('button-dot', { includeHiddenElements: true })).toBeNull();
+  });
+});
+
+/**
+ * **A busy button says it is working: a spinner before its word, at its full fill** (6.1, amended
+ * 2026-11-21, `docs/specs/busy-indicator/decisions.md`). The 40% dim drawn over a word that did not
+ * move read as a frozen screen, and it was disabled's dim besides — so busy and *you may not* were
+ * one drawing told apart only by the word. Every claim here is one conditional away from undoing
+ * itself: the dim back on busy, the spinner on a disabled button, a glyph of the idle state left
+ * beside the busy word, or the spinner stopped for a reader who asked for less motion.
+ */
+describe('a busy button (6.1, amended)', () => {
+  const spinner = () => screen.UNSAFE_queryByType(ActivityIndicator);
+
+  it('draws a spinner before the busy word, in the label’s own ink', () => {
+    render(<Button label="Sign in" busy busyLabel="Signing in…" onPress={jest.fn()} />);
+
+    const drawnSpinner = screen.UNSAFE_getByType(ActivityIndicator);
+    expect(drawnSpinner.props.color).toBe(theme.color.surface);
+    expect(screen.getByText('Signing in…')).toBeTruthy();
+    expect(screen.queryByText('Sign in')).toBeNull();
+    // Before the word, in the one row the two share.
+    expect(drawnSpinner.parent?.children[0]).toBe(drawnSpinner);
+
+    screen.unmount();
+
+    render(<Button label="Withdraw" variant="secondary" busy busyLabel="…" onPress={jest.fn()} />);
+    expect(spinner()?.props.color).toBe(theme.color.ink);
+  });
+
+  it('keeps its full fill — the 40% dim is disabled’s alone', () => {
+    render(<Button label="Sign in" busy busyLabel="Signing in…" onPress={jest.fn()} />);
+
+    expect(drawn(false).backgroundColor).toBe(theme.color.coralInk);
+    expect(drawn(false).opacity).toBeUndefined();
+    // And no pressed fill either: the press is blocked, so nothing answers the finger.
+    expect(drawn(true).backgroundColor).toBe(theme.color.coralInk);
+
+    screen.unmount();
+
+    render(<Button label="Sign in" disabled onPress={jest.fn()} />);
+    expect(drawn(false).opacity).toBe(0.4);
+    expect(spinner()).toBeNull();
+  });
+
+  it('is busy rather than disabled when it is told both', () => {
+    render(<Button label="Sign in" disabled busy busyLabel="Signing in…" onPress={jest.fn()} />);
+
+    expect(drawn(false).opacity).toBeUndefined();
+    expect(spinner()).not.toBeNull();
+  });
+
+  it('takes no press, and is named by its word with the spinner unspoken', () => {
+    const pressed = jest.fn();
+    render(<Button label="Sign in" busy busyLabel="Signing in…" onPress={pressed} />);
+
+    const button = screen.getByRole('button', { name: 'Signing in…' });
+    fireEvent.press(button);
+    expect(pressed).not.toHaveBeenCalled();
+    expect(button.props.accessibilityState).toMatchObject({ busy: true, disabled: true });
+    expect(spinner()?.props.accessibilityElementsHidden).toBe(true);
+    expect(spinner()?.props.importantForAccessibility).toBe('no-hide-descendants');
+  });
+
+  it('spins under reduced motion too — it is progress, not decoration', () => {
+    render(
+      <ReducedMotionProvider value>
+        <Button label="Sign in" busy busyLabel="Signing in…" onPress={jest.fn()} />
+      </ReducedMotionProvider>,
+    );
+
+    expect(spinner()).not.toBeNull();
+    expect(spinner()?.props.animating).not.toBe(false);
+  });
+
+  it('draws no spinner while nothing is on its way', () => {
+    render(<Button label="Sign in" onPress={jest.fn()} />);
+    expect(spinner()).toBeNull();
+  });
+
+  it('spins beside its own label when it has no busy word', () => {
+    render(<Button label="Withdraw" variant="secondary" busy onPress={jest.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Withdraw' })).toBeTruthy();
+    expect(spinner()).not.toBeNull();
+  });
+
+  /** One glyph before the word, never two; and the marks describe the idle state, not the busy one. */
+  it('takes the place of the glyph before the label and hides the marks after it', () => {
+    render(
+      <Button
+        label="Add friend"
+        variant="dark"
+        lead="plus"
+        busy
+        busyLabel="Asking…"
+        onPress={jest.fn()}
+      />,
+    );
+    expect(screen.UNSAFE_queryAllByType(Feather)).toHaveLength(0);
+    expect(spinner()).not.toBeNull();
+
+    screen.unmount();
+
+    render(
+      <Button
+        label="Friend"
+        variant="secondary"
+        marks={['tick', 'chevron']}
+        busy
+        busyLabel="Removing…"
+        onPress={jest.fn()}
+      />,
+    );
+    expect(screen.UNSAFE_queryAllByType(Feather)).toHaveLength(0);
+    expect(screen.getByText('Removing…')).toBeTruthy();
+  });
+
+  it('keeps a glossed answer’s second line under the spinning first one', () => {
+    render(
+      <Button
+        label="Competitive"
+        gloss="You are here for an even, serious game."
+        variant="onDark"
+        busy
+        onPress={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('You are here for an even, serious game.')).toBeTruthy();
+    expect(spinner()?.props.color).toBe(theme.color.surface);
   });
 });
 

@@ -10,7 +10,7 @@
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { refreshTokens } from '@/features/auth/types';
 import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/shared/lib/auth';
@@ -390,6 +390,24 @@ describe('an account that holds no profile, and does not want to play', () => {
 
     await waitFor(() => expect(screen).toHavePathname('/sign-in'));
     expect(attestations()).toEqual([]);
+  });
+
+  // `decisions.md` §3.7: the link swapped its word and still took a second press, so one sign-out
+  // could be asked twice. Busy now, as a button is — blocked, announced, and turning.
+  it('takes one press while it signs out, and says so with its word and a spinner', async () => {
+    account({ administers: [] }).install(transport);
+    transport.on('POST', '/api/v1/auth/logout', neverResponds());
+    await launchSignedIn();
+    await waitFor(() => expect(screen).toHavePathname('/start-playing'));
+
+    fireEvent.press(screen.getByRole('link', { name: 'Sign out' }));
+
+    const busy = await screen.findByRole('link', { name: 'Signing out…' });
+    expect(busy.props.accessibilityState).toMatchObject({ busy: true, disabled: true });
+    expect(screen.UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
+
+    fireEvent.press(busy);
+    expect(transport.requestsTo('POST', '/api/v1/auth/logout')).toHaveLength(1);
   });
 
   it('is not offered it when the step was pushed from the You tab, which has its own', async () => {

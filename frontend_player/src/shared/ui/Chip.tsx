@@ -35,6 +35,14 @@
  * telling them apart is the word, not a second opacity. The word is the caller's, because a chip's
  * label is a value rather than a verb and only the surface knows what it is about to become.
  *
+ * **And it moves with 6.1's busy** ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking),
+ * 2026-11-21; [`decisions.md`](../../../../docs/specs/busy-indicator/decisions.md) §3.6): the pill
+ * is drawn whole, not dimmed, and React Native's `ActivityIndicator` turns before the busy word in
+ * the label's ink — so *on its way* and *you may not* are two drawings at last, and the dim is the
+ * disabled chip's alone. The sport's dot and the count **step aside** while it turns: both describe
+ * the value the busy word has replaced, and a sport dot beside *Starting…* would be a dot without
+ * its name. Hidden from a listener, and turning under reduced motion, for the button's reasons.
+ *
  * **The disabled chip arrived late and only where a chip is genuinely refused**
  * ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-09-09,
  * [#365](https://github.com/Raketa02/Raketa/issues/365)). It is not the tag picker's answer to a
@@ -46,7 +54,15 @@
  * already said why — which is the condition the amendment attaches to it.
  */
 
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { theme } from './theme';
 
@@ -81,11 +97,12 @@ export interface ChipProps {
    */
   readonly disabled?: boolean;
   /**
-   * A press is on its way. Blocks the press, announces `busy`, and swaps the label.
+   * A press is on its way. Blocks the press, announces `busy`, swaps the label and turns a spinner
+   * before it, at the pill's full strength.
    *
-   * **A busy chip is not a disabled one**, which is 6.1's sentence: they dim identically and are
-   * told apart by the word, so {@link busyLabel} is required in practice — a `busy` chip with no
-   * word is a greyed chip saying *you may not* about something that is merely under way.
+   * **A busy chip is not a disabled one**, which is 6.1's sentence: the disabled one dims and the
+   * busy one spins. {@link busyLabel} is still required in practice — a chip's label is a value,
+   * and a spinner beside *Saturday* does not say what Saturday is becoming.
    */
   readonly busy?: boolean;
   /**
@@ -126,6 +143,9 @@ export function Chip({
   // while it announces "Saturday" hands two different apps to two different players. A caller
   // that names the chip itself owns both halves and is left alone.
   const shown = busy ? (busyLabel ?? label) : label;
+  // The label's ink, as `s.label` and its two repaints draw it: white where the pill is dark —
+  // the selected paper chip, the unselected on-dark one — and `ink` on the two light pills.
+  const ink = selected !== onDark ? theme.color.surface : theme.color.ink;
 
   return (
     <Pressable
@@ -147,11 +167,19 @@ export function Chip({
         onDark ? s.chipOnDark : undefined,
         selected ? (onDark ? s.selectedOnDark : s.selected) : undefined,
         pressed && !blocked ? s.pressed : undefined,
-        blocked ? s.disabled : undefined,
+        disabled && !busy ? s.disabled : undefined,
         style,
       ]}
     >
-      {dot === undefined ? null : (
+      {busy ? (
+        <ActivityIndicator
+          size="small"
+          color={ink}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      ) : null}
+      {busy || dot === undefined ? null : (
         <View
           style={[s.dot, { backgroundColor: dot }]}
           accessibilityElementsHidden
@@ -167,7 +195,7 @@ export function Chip({
       >
         {shown}
       </Text>
-      {count === undefined ? null : (
+      {busy || count === undefined ? null : (
         <Text style={[s.count, selected ? s.countSelected : undefined]}>{count}</Text>
       )}
     </Pressable>
@@ -204,8 +232,7 @@ const s = StyleSheet.create({
   // an identity rather than a state, so it does not invert with the pill under it.
   dot: { width: theme.size.sportDot, height: theme.size.sportDot },
   pressed: { opacity: 0.7 },
-  // 6.1's blocked row, not a second value: this app has one dim for *you may not* and for *on its
-  // way*, and the label is what tells them apart.
+  // 6.1's disabled row, not a second value — and *you may not*'s alone: a busy chip spins instead.
   disabled: { opacity: 0.4 },
   label: { ...theme.type.chip, color: theme.color.ink },
   labelOnDark: { color: theme.color.surface },

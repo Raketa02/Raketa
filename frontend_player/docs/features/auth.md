@@ -607,3 +607,8 @@ own), the rise on the second opening, and a small phone with the headline at thr
 podium is fitted with its names' line counted at the text cap, so in the smallest room it draws at
 about a third of its size and the names come out near 5 pt, which is a picture's detail, not text
 anybody must read.
+
+**Start playing's _Sign out_ is busy while it signs out** (`decisions.md` §3.7). `AuthLink` takes
+a `busy`: no press, announced busy, and 6.1's spinner before the words in their own ink. The link
+swapped its word to _Signing out…_ and still took a second press, so one sign-out could be asked
+twice; `startPlaying.test.tsx` holds the one request.
