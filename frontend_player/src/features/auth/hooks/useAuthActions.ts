@@ -34,7 +34,7 @@ import { signOut } from '../use-cases/signOut';
 import { signUp } from '../use-cases/signUp';
 
 import { authKeys } from './authKeys';
-import { currentUserQuery } from './useCurrentUser';
+import { currentUserQuery, fetchCurrentUserAtSessionStart } from './useCurrentUser';
 import { useKeepProfile } from './useLastProfile';
 
 /** What the toast says once a new password is set — the copy module's, handed in by the screen. */
@@ -47,12 +47,17 @@ export interface SetNewPasswordOptions {
  * walks the account toward whatever lockout policy the backend has. The player retries
  * by tapping the button.
  *
- * No cache write on success: the session status change is what moves the app, and the
- * profile is fetched by `useCurrentUser` once the authenticated tree renders.
+ * No cache write on success: the session status change is what moves the app. **The account
+ * is read before it changes** (`fetchCurrentUserAtSessionStart`, `decisions.md` §3.1), so the
+ * button stays busy until the entry gate can go straight to where the player belongs, rather
+ * than the gate drawing nothing while it asks.
  */
 export function useSignIn() {
+  const queryClient = useQueryClient();
+
   return useMutation<void, AppError, SignInCredentials>({
-    mutationFn: signIn,
+    mutationFn: (credentials) =>
+      signIn(credentials, () => fetchCurrentUserAtSessionStart(queryClient)),
     retry: false,
   });
 }
@@ -65,8 +70,12 @@ export function useSignIn() {
  * account that now exists.
  */
 export function useSignUp() {
+  const queryClient = useQueryClient();
+
   return useMutation<void, AppError, Registration>({
-    mutationFn: signUp,
+    // Sign-in's read, for sign-in's reason: _Creating account…_ turns until the gate can move.
+    mutationFn: (registration) =>
+      signUp(registration, () => fetchCurrentUserAtSessionStart(queryClient)),
     retry: false,
   });
 }
@@ -213,8 +222,12 @@ export function useClaimResetCode() {
  * a person whose other phone goes quiet should know why.
  */
 export function useSetNewPassword({ done }: SetNewPasswordOptions) {
+  const queryClient = useQueryClient();
+
   return useMutation<void, AppError, NewPassword>({
-    mutationFn: setNewPassword,
+    // Sign-in's read: the account before the session opens (`decisions.md` §3.1).
+    mutationFn: (password) =>
+      setNewPassword(password, () => fetchCurrentUserAtSessionStart(queryClient)),
     retry: false,
     onSuccess: () => showToast({ message: done, tone: 'ok' }),
   });
@@ -241,8 +254,12 @@ export function useClaimInvitationCode() {
  * administrator area — the place the invitation was for, and the *done* in itself.
  */
 export function useSetInvitationPassword() {
+  const queryClient = useQueryClient();
+
   return useMutation<void, AppError, InvitationPassword>({
-    mutationFn: setInvitationPassword,
+    // Sign-in's read: the account before the session opens (`decisions.md` §3.1).
+    mutationFn: (password) =>
+      setInvitationPassword(password, () => fetchCurrentUserAtSessionStart(queryClient)),
     retry: false,
   });
 }

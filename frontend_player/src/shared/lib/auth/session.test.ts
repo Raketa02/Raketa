@@ -16,8 +16,8 @@
 import { queryClient } from '@/shared/lib/query-client';
 
 import { getSessionStatus, resetSessionStatus, setSessionStatus } from './authSession';
-import { endSession } from './session';
-import { hasTokens, save } from './tokenManager';
+import { beginSession, endSession } from './session';
+import { clear, getCredential, hasTokens, save } from './tokenManager';
 
 beforeEach(async () => {
   resetSessionStatus();
@@ -28,6 +28,60 @@ beforeEach(async () => {
 
 afterEach(() => {
   queryClient.clear();
+});
+
+/**
+ * **The first read between the credentials and the status** (`docs/specs/busy-indicator/decisions.md`
+ * §3.1). Opening the status unmounts the screen whose busy button is the only thing saying the app
+ * is working, and the entry gate then drew blank paper until the account came back. So the read
+ * the gate asks first runs before the status opens: with the credentials already saved, so it goes
+ * out authenticated, and with the screen — and its spinner — still up.
+ */
+describe('beginning a session', () => {
+  const TOKENS = { accessToken: 'access-2', refreshToken: 'refresh-2' };
+
+  beforeEach(async () => {
+    await clear();
+    resetSessionStatus();
+    setSessionStatus('unauthenticated');
+  });
+
+  it('saves the credentials, reads first, and only then opens the status', async () => {
+    const seen: { readonly status: string; readonly credential: string | undefined }[] = [];
+
+    await beginSession(TOKENS, async () => {
+      seen.push({ status: getSessionStatus(), credential: getCredential()?.accessToken });
+    });
+
+    expect(seen).toEqual([{ status: 'unauthenticated', credential: 'access-2' }]);
+    expect(getSessionStatus()).toBe('authenticated');
+  });
+
+  it('opens straight away when there is nothing to read first', async () => {
+    await beginSession(TOKENS);
+
+    expect(getSessionStatus()).toBe('authenticated');
+  });
+
+  /** The gate reads the failure out of the cache and says so — the launch's own path. */
+  it('still opens when the read fails, because the credentials were good', async () => {
+    await beginSession(TOKENS, () => Promise.reject(new Error('the server is down')));
+
+    expect(hasTokens()).toBe(true);
+    expect(getSessionStatus()).toBe('authenticated');
+  });
+
+  /** A read that ended the session — a refresh refused — leaves nothing to open. */
+  it('refuses to open a session the read itself ended', async () => {
+    const ending = beginSession(TOKENS, async () => {
+      await endSession('session-invalidated');
+      throw new Error('401');
+    });
+
+    await expect(ending).rejects.toThrow('401');
+    expect(hasTokens()).toBe(false);
+    expect(getSessionStatus()).toBe('unauthenticated');
+  });
 });
 
 describe('ending a session', () => {

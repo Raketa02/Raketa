@@ -17,17 +17,43 @@ import { queryClient } from '@/shared/lib/query-client';
 
 import { setSessionStatus } from './authSession';
 import type { SignOutReason, Tokens } from './auth.types';
-import { clear, save } from './tokenManager';
+import { clear, hasTokens, save } from './tokenManager';
 
 /**
- * Persist credentials and open the session.
+ * Persist credentials and open the session — with, in between, the read the app asks first.
  *
  * Tokens are written **before** the status flips. The other order renders the
  * authenticated tree against a token manager that has not been told about the
  * credentials yet, and the first request of the new session goes out unauthenticated.
+ *
+ * **`readFirst` runs between the two** (`docs/specs/busy-indicator/decisions.md` §3.1). Opening
+ * the status unmounts the sign-in screen at once — and with it the busy button that was the only
+ * thing on screen saying the app was working — while the entry gate cannot choose where to go
+ * until the account is read, and drew blank paper until it was. Read first, and the button keeps
+ * turning through the whole wait; the gate then finds the account in the cache and goes straight
+ * there. The credentials are already saved, so the read goes out authenticated; it is injected
+ * because what it reads is a feature's, and `shared/` imports none.
+ *
+ * **A read that fails still opens the session**: the credentials were accepted, so _could not
+ * sign in_ would be untrue, and the failure is left where the gate looks — it opens on its own
+ * _We couldn't pick up where you left off_, exactly as a launch whose read failed does. **Unless
+ * the read ended the session itself** — a refused refresh runs `endSession` and takes the
+ * credentials with it — and then there is nothing to open, and the failure is the caller's to say.
  */
-export async function beginSession(tokens: Tokens): Promise<void> {
+export async function beginSession(
+  tokens: Tokens,
+  readFirst?: () => Promise<unknown>,
+): Promise<void> {
   await save(tokens);
+
+  if (readFirst !== undefined) {
+    try {
+      await readFirst();
+    } catch (error) {
+      if (!hasTokens()) throw error;
+    }
+  }
+
   setSessionStatus('authenticated');
 }
 

@@ -415,7 +415,8 @@ describe('signing out', () => {
   async function signedIn() {
     setSessionStatus('unauthenticated');
     transport.on('POST', '/api/v1/auth/login', () => json(TOKENS));
-    await signIn({ email: 'ada@example.com', password: 'correct horse' });
+    // Nothing to read first: these tests are about the way out, not the gate's first read.
+    await signIn({ email: 'ada@example.com', password: 'correct horse' }, async () => undefined);
   }
 
   it('revokes, clears the credentials and empties the cache', async () => {

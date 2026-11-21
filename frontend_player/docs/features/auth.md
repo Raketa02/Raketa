@@ -608,6 +608,31 @@ podium is fitted with its names' line counted at the text cap, so in the smalles
 about a third of its size and the names come out near 5 pt, which is a picture's detail, not text
 anybody must read.
 
+**The account is read before the session opens, so the busy button turns until the app can move**
+([`decisions.md`](../../../docs/specs/busy-indicator/decisions.md) §3.1, 2026-11-21). A form that
+opens a session — sign-in, sign-up, _Set your password_ from an invitation, _Set a new password_ —
+used to open it the moment the credentials came back. That unmounted the form at once, and with it
+the busy button that was the only thing on screen saying the app was working, while the entry gate
+could not choose where to go until `/users/me` answered and drew blank paper until it did: up to a
+request timeout of nothing, right after the press. `beginSession` now takes a **`readFirst`** and
+runs it between saving the credentials and opening the status — saved first, so the read goes out
+authenticated. Each of the four hands it `fetchCurrentUserAtSessionStart`: the one
+`currentUserQuery`, through the cache, at the ordinary `request` timeout (the button is turning,
+so the wait is an honest one), **no retry** (the gate retries, on a screen that says so),
+`networkMode: 'always'` (a paused read would hold the button busy until the connection came back)
+and `staleTime: 0`. _Signing in…_ and _Creating account…_ — the latter across register, login and
+the read — turn through the whole wait, and the gate then finds the account cached and goes
+straight to where the player belongs. **A read that fails still opens the session**: the
+credentials were accepted, so _could not sign in_ would be untrue, and the failure stays where the
+gate looks — it opens on _We couldn't pick up where you left off_, exactly as a launch whose read
+failed does. **Unless the read ended the session itself** — a refused refresh runs `endSession` and
+takes the credentials with it — and then there is nothing to open, and the form says the error.
+`theFirstRead.test.tsx` drives both forms through the route tree, noting at the instant the read
+arrives that the session is still shut and the form's button busy and turning, and at the instant
+the session opens that the account is already cached; `session.test.ts` holds the order and both
+failures. **Not seen on a device**: the spinner through the wait on a slow connection, and the
+landing with no blank frame between the form and the next screen.
+
 **Start playing's _Sign out_ is busy while it signs out** (`decisions.md` §3.7). `AuthLink` takes
 a `busy`: no press, announced busy, and 6.1's spinner before the words in their own ink. The link
 swapped its word to _Signing out…_ and still took a second press, so one sign-out could be asked
