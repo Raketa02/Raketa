@@ -8,6 +8,7 @@
  * | `setUpFirst` | nothing saved: the setup opens, and `then` lands the yes once a method is |
  * | `waits` | this yes would wait behind *Undo* — and `held` that it must wait for another to go first |
  * | `book` | the ten seconds in front of it |
+ * | `sending` | its booked yes is on its way after them — still _Booking…_ |
  * | `confirm` | a refused share's confirmation, opened on the details (#557) |
  * | `onAnswered`, `takesRefusal` | the deck's own answer handed to the fill |
  *
@@ -27,16 +28,23 @@ import {
 } from '../domain/fill';
 
 import { useFill } from './useFill';
+import { useBookingsOnTheirWay } from './useFillWrites';
 import type { AnswerOnCard } from './useGroupDeck';
 
 export function useFillYes(dealtIn: DealtIn, leave?: () => void) {
   const fill = useFill();
   const setupNeeded = usePaymentSetupNeeded();
+  const sending = useBookingsOnTheirWay();
   const where = leave === undefined ? { dealtIn } : { dealtIn, leave };
 
   return {
     /** The proposal counting down behind *Undo*, anywhere — the deck hides its card. */
     counting: fill.counting,
+    /**
+     * This card's booked yes is on its way — its ten seconds up and the answer not in. The screen
+     * keeps _Booking…_ through it, as it did through the count (`decisions.md` §3.3).
+     */
+    sending: (proposalId: string): boolean => sending.has(proposalId),
     /** Nothing is saved: open the setup, and run `then` once a method is. `true` when it opened. */
     setUpFirst: (then: () => void): boolean => {
       if (setupNeeded !== true) return false;

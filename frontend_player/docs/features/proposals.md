@@ -1579,3 +1579,17 @@ one the phone never read coming back as new; and _TO CONFIRM_ drawn from Home's 
 unit-tested in `domain/home.test.ts` and the shell's `domain/needsYourAnswer.test.ts`. The harness's
 Home serves the payments to confirm' rows unless a suite names its own (`stubHome`), as the server
 does. **Not seen on a device**: the badge on the envelope against mock 1.
+
+**A booked yes stays _Booking…_ until it lands, not only while it counts**
+([`decisions.md`](../../../docs/specs/busy-indicator/decisions.md) §3.3, 2026-11-21). The fill's
+`counting` ends at zero, which is the moment the send begins, so the details' **Pay 32 zł** and a
+rescue's **Pay 27 zł** (`TakeTheSeat`) came back pressable while the booking — the money — was still
+on its way. The booked yes now sends under its own mutation key, **`proposalKeys.bookingYeses()`**,
+nested under `answers()` so the deck's `useAnswersOnTheirWay` still counts it, and
+`useBookingsOnTheirWay` reads the cards whose send is pending off the mutation cache — not the host's
+one mutation result, because a second booking can count and send while a slow first one is still
+out. `useFillYes().sending(id)` hands it to the screen, and both buttons stay busy — 6.1's spinner and
+_Booking…_ — through the ten seconds and the send alike, taking no press. Optimistic answers are
+unchanged: the deck's card flies at once, so nothing on it needs to say it is waiting. `theFill.test.tsx`
+and `rescues.test.tsx` hold the one request behind a busy button. **Not seen on a device**: the
+handover from the count to the send, which is meant to show nothing at all.

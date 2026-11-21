@@ -33,6 +33,12 @@ export const proposalKeys = {
    */
   answers: () => [...proposalKeys.all, 'answer'] as const,
   /**
+   * **A mutation key**: the fill's booked yes, sent when its ten seconds are up — under `answers`, so
+   * the deck still sees it as an answer on its way, and its own, so the screen it was said on can
+   * keep saying _Booking…_ until it lands (`useBookingsOnTheirWay`).
+   */
+  bookingYeses: () => [...proposalKeys.answers(), 'booking'] as const,
+  /**
    * **A mutation key**: Needs your answer's visit (#819), so the envelope's badge can tell which
    * watermarks this phone has sent (`useAnswersWaiting`).
    */

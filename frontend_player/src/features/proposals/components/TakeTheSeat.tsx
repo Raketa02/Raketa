@@ -51,10 +51,12 @@ export function TakeTheSeat({
   leave,
 }: TakeTheSeatProps) {
   const fill = useFillYes(dealtIn, leave);
-  const counting = fill.counting === seat.proposalId;
+  // Through the ten seconds and then the send: _Booking…_ until the answer lands, never _Pay_ again
+  // while the money is on its way (`docs/specs/busy-indicator/decisions.md` §3.3).
+  const booking = fill.counting === seat.proposalId || fill.sending(seat.proposalId);
 
   const take = () => {
-    if (counting) return;
+    if (booking) return;
     if (fill.held(seat)) {
       showToast({ message: FILL_COPY.undo.oneAtATime, hold: 'read' });
       return;
@@ -71,7 +73,7 @@ export function TakeTheSeat({
       accessibilityLabel={paySpoken(share, heldUntilTheCutOff)}
       variant="volt"
       size={size}
-      busy={counting}
+      busy={booking}
       busyLabel={FILL_COPY.undo.booking}
       onPress={take}
     />

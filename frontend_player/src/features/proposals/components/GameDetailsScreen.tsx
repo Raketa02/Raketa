@@ -222,12 +222,15 @@ function Details({
   const withdraw = useWithdrawYes(groupId, refused);
   const leaveWaiting = useLeaveWhileWaiting(groupId, proposalId);
 
-  /** This game's yes is counting down behind *Undo*. */
-  const counting = fill.counting === proposalId;
+  /**
+   * This game's yes is booking: counting down behind *Undo*, and then on its way once the ten seconds
+   * are up — _Booking…_ through both, never _Pay_ again while the money moves (`decisions.md` §3.3).
+   */
+  const booking = fill.counting === proposalId || fill.sending(proposalId);
   /** Another booking counts, and this yes would move money too — one window at a time. */
-  const held = !counting && fill.held(yesOn);
-  /** An answer is on its way here — this game's yes counting down among them. */
-  const busy = answer.isPending || withdraw.isPending || counting;
+  const held = !booking && fill.held(yesOn);
+  /** An answer is on its way here — this game's yes booking among them. */
+  const busy = answer.isPending || withdraw.isPending || booking;
   const paused = answer.isPaused || withdraw.isPaused;
 
   /** The yes given: ten seconds behind *Undo* on the last seat, else sent at once. */
@@ -315,9 +318,9 @@ function Details({
                 <Button
                   label={yesButtonLabel(chargesAtOnce(yesOn), shareWords(details))}
                   size="lg"
-                  busy={counting || (answer.isPending && answer.variables?.said === 'yes')}
-                  busyLabel={counting ? FILL_COPY.undo.booking : undefined}
-                  disabled={held || (busy && !counting && answer.variables?.said !== 'yes')}
+                  busy={booking || (answer.isPending && answer.variables?.said === 'yes')}
+                  busyLabel={booking ? FILL_COPY.undo.booking : undefined}
+                  disabled={held || (busy && !booking && answer.variables?.said !== 'yes')}
                   onPress={sayYes}
                 />
               ) : null}

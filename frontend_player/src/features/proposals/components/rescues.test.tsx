@@ -66,6 +66,7 @@ import {
   errorResponse,
   installTransport,
   json,
+  neverResponds,
   noContent,
   type Transport,
   type Wire,
@@ -506,6 +507,24 @@ describe('the rescue seen from outside (A4.3)', () => {
     );
     expect(await screen.findByText(FILL.itsAGame.word)).toBeTruthy();
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+  });
+
+  // `docs/specs/busy-indicator/decisions.md` §3.3: at zero *Pay 27 zł* came back while the seat — the
+  // money — was still on its way.
+  it('stays Booking… after the ten seconds, while the seat is on its way, and takes no press', async () => {
+    const card = await openRescue();
+    transport.on('POST', seatsPath(card.proposal_id), neverResponds());
+
+    fireEvent.press(screen.getByRole('button', { name: PAY_HELD_UNTIL_THE_CUT_OFF }));
+    theTenSeconds();
+    await waitFor(() =>
+      expect(transport.requestsTo('POST', seatsPath(card.proposal_id))).toHaveLength(1),
+    );
+
+    const sending = screen.getByRole('button', { name: FILL.undo.booking });
+    expect(sending.props.accessibilityState).toMatchObject({ busy: true });
+    fireEvent.press(sending);
+    expect(transport.requestsTo('POST', seatsPath(card.proposal_id))).toHaveLength(1);
   });
 
   it('says the seat is gone when it was taken before the details were read', async () => {

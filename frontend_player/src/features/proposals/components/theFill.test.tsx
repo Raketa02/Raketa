@@ -71,6 +71,7 @@ import {
   errorResponse,
   installTransport,
   json,
+  neverResponds,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -752,6 +753,26 @@ describe('Pay on a game’s details, where the yes takes the last seat (Q124)', 
 
     await waitFor(() => expect(toasts()).toEqual([[COPY.refused.proposal_is_full, 'bad']]));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+  });
+
+  // `docs/specs/busy-indicator/decisions.md` §3.3: at zero the button went back to *Pay 32 zł* while
+  // the booking — money — was still on its way, a press that looked like it would send it again.
+  it('stays Booking… after the ten seconds, while the yes is on its way, and takes no press', async () => {
+    const card = bookItNow();
+    stubProposal(transport, card.proposal_id, proposalDetails(card));
+    await openGames([card]);
+    transport.on('POST', yesPath(card.proposal_id), neverResponds());
+    fireEvent.press(screen.getByRole('button', { name: COPY.details }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Pay 32 zł' }));
+
+    act(() => jest.advanceTimersByTime(10 * SECOND));
+    await waitFor(() => expect(yeses(card)).toHaveLength(1));
+
+    const sending = screen.getByRole('button', { name: FILL.undo.booking });
+    expect(sending.props.accessibilityState).toMatchObject({ busy: true });
+    expect(screen.queryByRole('button', { name: 'Pay 32 zł' })).toBeNull();
+    fireEvent.press(sending);
+    expect(yeses(card)).toHaveLength(1);
   });
 });
 
