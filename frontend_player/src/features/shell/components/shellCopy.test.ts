@@ -88,6 +88,13 @@ describe("what Play's segment says", () => {
   it('names its two pages, Groups first', () => {
     expect(Object.values(PLAY_COPY.segment)).toEqual(['Groups', 'Explore']);
   });
+
+  // #826: with `explore` off Play is the groups list under a title, and the title is the page's
+  // own name — the word the segment gives it, and the Administrator's Groups tab's.
+  it('titles Play, while Explore is off, with the name of the page it shows', () => {
+    expect(PLAY_COPY.title).toBe('Groups');
+    expect(PLAY_COPY.title).toBe(PLAY_COPY.segment.groups);
+  });
 });
 
 describe('what they refuse to say', () => {

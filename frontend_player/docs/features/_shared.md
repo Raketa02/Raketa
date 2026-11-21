@@ -525,3 +525,22 @@ cap, open and closed, none without a count, the name); the counts are walked in 
 `forYou.test.tsx`. Test support's `lineNamed` finds a line by its title whatever its count, and
 `lineNames` reads the whole names. **Not seen on a device**: the pill's size, fill and figure against
 home refactor 3, 4.
+
+**The third verb is back, and so are the second URL and `appBuild`** ([#826](https://github.com/Raketa02/Raketa/issues/826),
+[ADR-0206](../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)
+§4, §6, §8). The feature flags returned for Play's Explore, and the seams they used came back from
+`6d8d1388^` as they were. **`httpGetFromFeaturesHost`** reads the one document that is not the
+API's — the datafile, from `EXPO_PUBLIC_FEATURES_URL`, the developer's machine on the LAN today and
+a bucket later — through the same `sendOnce` every request uses, so the timeout, the correlation
+id, cancellation and the error model are the module's as always. It is a verb and not a `host`
+option on `httpRequest` because of the one thing it must not do: it is built unauthenticated, so no
+caller can send a bearer token to a host that has no use for it. It takes the `background` class.
+**`EXPO_PUBLIC_FEATURES_URL` is required again**, and `SCHEMED_URLS` names both URLs, so the scheme
+rule runs over each by the one loop and its guard cannot be written for one and forgotten for the
+other; `jest.config.js` gives the tests a second, test-only host, so a datafile request can never
+be mistaken for an API one. **`platform/appBuild.ts`** is the platform module's one plain
+_reading_ — `platform` (`ios` / `android`) and the app's own version — the two device facts a
+feature flag's rules may target, each absent rather than guessed when the build cannot say. The
+**AsyncStorage allow-list is two modules again**: the phone-preferences store and the feature
+flags' saved datafile (`features/feature_flags/api/datafileCache.ts`), and
+`scripts/test-import-boundaries.sh` asserts both, and the ban everywhere else.

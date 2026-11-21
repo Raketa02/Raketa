@@ -13,7 +13,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Slot, router, type Href } from 'expo-router';
-import { act, renderRouter } from 'expo-router/testing-library';
+import { act, renderRouter, waitFor } from 'expo-router/testing-library';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ReducedMotionProvider } from '@/shared/ui';
@@ -92,6 +92,7 @@ import ResultRoute from '@/app/(onboarding)/result/[assessmentId]';
 import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
+import { featureFlagKeys } from '@/features/feature_flags/types';
 import { HOME_COPY } from '@/features/shell/types';
 import { beginSession, setSessionStatus } from '@/shared/lib/auth';
 import {
@@ -797,6 +798,98 @@ export function stubSportsmanship(
   );
 }
 
+/**
+ * Where the feature-flag datafile is fetched from, as the fake socket sees it: the features host
+ * is stripped from the URL exactly as the API's is, and `development` is the environment
+ * `jest.config.js` sets (ADR-0206 §3, §4).
+ */
+export const DATAFILE_PATH = '/development/featurevisor-player.json';
+
+/**
+ * **The datafile the flags host serves — or none.**
+ *
+ * Not a wire type: the file is the flags repo's, not the API's, and the app checks its envelope
+ * rather than generating one. So it is described as the object it is, and a suite about a feature
+ * flag builds the one it needs.
+ *
+ * `'none'` is a 404 — what the flags repo's serve script answers for a file it has not built, and
+ * a failure the app does not retry, so a suite that says nothing about feature flags is not left
+ * with a read going round underneath it.
+ */
+export function stubDatafile(
+  transport: Transport,
+  served: Readonly<Record<string, unknown>> | 'none' = 'none',
+) {
+  transport.on('GET', DATAFILE_PATH, () =>
+    served === 'none' ? new Response('Not Found', { status: 404 }) : json(served),
+  );
+}
+
+/**
+ * **A datafile as the flags repo builds one** — each named feature on or off for everybody, which
+ * is `percentage: 100` or `0` on one `everyone` rule in the repo's YAML. Enough for every walk
+ * about a gate; a walk about *who* a rule reaches spells its own traffic.
+ *
+ * The rest is what CLI 3.11.0 emits today. `schemaVersion` is the one fact the app refuses a
+ * datafile on, so a walk about that refusal overrides it.
+ */
+export function datafileFor(
+  features: Readonly<Record<string, 'on' | 'off'>>,
+  overrides: Readonly<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
+  return {
+    schemaVersion: '2',
+    featurevisorVersion: '3.11.0',
+    revision: '1',
+    segments: {},
+    features: Object.fromEntries(
+      Object.entries(features).map(([key, state]) => [
+        key,
+        {
+          bucketBy: 'playerId',
+          traffic: [{ key: 'everyone', segments: '*', percentage: state === 'on' ? 100000 : 0 }],
+        },
+      ]),
+    ),
+    variables: {},
+    ...overrides,
+  };
+}
+
+/**
+ * **The datafile has been answered, and the answer is in hand** — the moment a toggle has
+ * *reached the app* (ADR-0206 §6).
+ *
+ * Nothing on screen says so, by design: a gate reads its feature flag once, when it mounts, so a
+ * datafile landing under a mounted screen changes nothing a player could see. A walk about a gate
+ * therefore waits on the read itself — `count` requests made, and no datafile read still running —
+ * before it mounts the screen it is asking about.
+ */
+export async function datafileSettled(transport: Transport, count = 1) {
+  await waitFor(() =>
+    expect(transport.requestsTo('GET', DATAFILE_PATH).length).toBeGreaterThanOrEqual(count),
+  );
+  await waitFor(() => expect(queryClient.isFetching({ queryKey: featureFlagKeys.all })).toBe(0));
+}
+
+/**
+ * **Explore, switched on** — for every suite that walks Play's *Groups | Explore* switcher. Since
+ * [#826](https://github.com/Raketa02/Raketa/issues/826) Play is Groups under a Groups title without
+ * a datafile; `explore` brings the switcher back.
+ *
+ * Served, launched, and **waited on before anything presses Play**: a gate reads its feature flag
+ * once, when its screen mounts, so a Play press that raced the datafile would land on the Groups
+ * title — correctly, and not what the suite is about. Call it where the suite would have called
+ * `launchSignedIn`, after `stubGate` (which serves no datafile) — and again for a relaunch: it
+ * waits on one read more than the walk had made before it.
+ */
+export async function launchWithExplore(transport: Transport, initialUrl = '/') {
+  const asked = transport.requestsTo('GET', DATAFILE_PATH).length;
+  stubDatafile(transport, datafileFor({ explore: 'on' }));
+  await launchSignedIn(initialUrl);
+  await datafileSettled(transport, asked + 1);
+}
+
 export const MY_GROUPS_PATH = '/api/v1/groups';
 
 /**
@@ -1043,6 +1136,11 @@ export const GATE_USER: Wire['MeResponse'] = {
  * **So is the Groups list** ([#512](https://github.com/Raketa02/Raketa/issues/512)): the Play tab
  * opens on Groups, so a suite that presses Play for any reason reads it.
  *
+ * **So is the feature-flag datafile**, and for the same reason: the signed-in app fetches it the
+ * moment it opens, whatever the suite is about (ADR-0206 §6). It is defaulted to **none**, which
+ * is every feature flag at its code default — the app as it ships. A suite about a feature flag
+ * calls `stubDatafile` again afterwards to serve one.
+ *
  * **So is Home's booked-games read** (#556): the bar's Home badge is its count, so the shell makes it
  * the moment the tabs are up. Defaulted to no games.
  *
@@ -1079,6 +1177,7 @@ export function stubGate(
   stubGames(transport);
   stubConversations(transport);
   stubSportsmanship(transport);
+  stubDatafile(transport);
   stubMyGroups(transport);
   stubHottestGroups(transport);
   stubNewInRaketa(transport);

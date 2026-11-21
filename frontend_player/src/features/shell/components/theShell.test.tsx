@@ -9,7 +9,9 @@
  * **stack**: what is underneath, and whether there is anything underneath at all.
  *
  * **The bar is Home · ⚡Play · You, for good** ([#576](https://github.com/Raketa02/Raketa/issues/576)):
- * the old loop's Players and Chats columns, and the flag that brought them back, are gone.
+ * the old loop's Players and Chats columns, and the feature flag that brought them back, are gone.
+ * Play's own feature flag, `explore` (#826), is walked in `theExploreGate.test.tsx`; here Play is
+ * as it ships, titled *Groups*.
  */
 
 import Feather from '@expo/vector-icons/Feather';
@@ -72,6 +74,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { forgetPhonePreferences } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  DATAFILE_PATH,
   GATE_USER,
   HOME_PATH,
   launchSignedIn,
@@ -115,8 +118,11 @@ const RATING: Wire['RatingResponse'] = {
 
 let transport: Transport;
 
-/** *The player is on Play*: its *Groups* segment, which is what the tab opens on. */
-const onPlay = () => screen.findByRole('button', { name: PLAY_COPY.segment.groups });
+/**
+ * *The player is on Play*: its *Groups* title — what the tab draws as it ships, with `explore` at
+ * its code default, off (#826). The switcher is the gate's suite and the segment suite's.
+ */
+const onPlay = () => screen.findByRole('header', { name: PLAY_COPY.title });
 
 beforeEach(() => {
   transport = installTransport();
@@ -178,9 +184,11 @@ describe('what a player lands on', () => {
 
   /**
    * **The old loop asks the server nothing** — the bar used to hold its challenges, games and
-   * plans for the session, and a flags host's datafile was fetched the moment the app opened.
+   * plans for the session. **What the gate asks for is one datafile** (#826, ADR-0206 §6): this
+   * environment's, from the features host rather than the API, with no token, read once at launch
+   * and not again by Play — the gate reads what is in hand when it mounts.
    */
-  it('reads none of the old loop’s lists, and no datafile', async () => {
+  it('reads none of the old loop’s lists, and the datafile once, from the features host', async () => {
     await launchIntoTheApp();
     pressTab('You');
     await waitFor(() => expect(screen).toHavePathname('/you'));
@@ -196,7 +204,10 @@ describe('what a player lands on', () => {
     ]) {
       expect(asked).not.toContain(old);
     }
-    expect(asked.filter((path) => path.includes('featurevisor'))).toEqual([]);
+    expect(asked.filter((path) => path.includes('featurevisor'))).toEqual([DATAFILE_PATH]);
+    const [datafile] = transport.requestsTo('GET', DATAFILE_PATH);
+    expect(datafile?.url).toBe(`https://features.test.raketa.invalid${DATAFILE_PATH}`);
+    expect(datafile?.headers.Authorization).toBeUndefined();
   });
 });
 
@@ -907,7 +918,7 @@ describe('the shell survives the gate re-reading the player', () => {
 
     expect(screen).toHavePathname('/you');
     expect(await screen.findByRole('header', { name: YOU_COPY.title })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: PLAY_COPY.segment.groups })).toBeNull();
+    expect(screen.queryByRole('header', { name: PLAY_COPY.title })).toBeNull();
     expect(screen.getAllByRole('tab')).toHaveLength(3);
   });
 
@@ -953,7 +964,7 @@ describe('the shell survives the gate re-reading the player', () => {
 
     expect(await screen.findByText(HOME_COPY.empty.line)).toBeTruthy();
     expect(screen).toHavePathname('/');
-    expect(screen.queryByRole('button', { name: PLAY_COPY.segment.groups })).toBeNull();
+    expect(screen.queryByRole('header', { name: PLAY_COPY.title })).toBeNull();
     expect(screen.getAllByRole('tab')).toHaveLength(3);
   });
 });

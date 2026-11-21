@@ -428,7 +428,8 @@ describe('going back to the Groups list', () => {
   };
 
   // #529: asked from here, let in by the Owner while still here — and back on Groups the list was
-  // the one read before, without the group, until a switch to Explore and back remounted it.
+  // the one read before, without the group, until something remounted it (a switch to Explore and
+  // back, while `explore` is on).
   it('re-reads it, so a group the reader was let into meanwhile is on it', async () => {
     stubMyGroups(transport, []);
     await openJoin();

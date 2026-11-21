@@ -56,7 +56,7 @@
  * handed to its caller rather than a provider's.
  *
  * `appBuild` is the one plain *reading*: which platform and which version of the app this is,
- * the two device facts a feature flag's rules may target (ADR-0180 §8). Nothing to decide and
+ * the two device facts a feature flag's rules may target (ADR-0206 §8). Nothing to decide and
  * nothing a test would drive, so no port.
  *
  * `permissionStateOf` is deliberately *not* re-exported. Reading a native response is the
@@ -68,6 +68,7 @@ export { useAppInBackground, useOnForeground, wireFocusManager } from './appStat
 export { useHardwareBack } from './hardwareBack';
 export { useOnReturn } from './screenReturn';
 export { openAppSettings } from './appSettings';
+export { appBuild } from './appBuild';
 export { useCopyAndSay, type CopyWords } from './copyAndSay';
 export { KEYBOARD_AVOIDANCE, dismissKeyboard, windowResizesForKeyboard } from './keyboard';
 export { useIsOnline, wireOnlineManager } from './networkState';

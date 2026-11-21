@@ -1,9 +1,11 @@
 export {
   configureHttp,
+  httpGetFromFeaturesHost,
   httpRequest,
   resetHttp,
   rotateStreamCredential,
   streamAttempt,
+  type FeaturesHostRequest,
   type HttpCredentials,
   type HttpMethod,
   type HttpRequest,

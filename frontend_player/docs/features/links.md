@@ -116,7 +116,9 @@ invitation set aside this launch; a spent invitation link opened signed in is a
 toast; the two sheets' words (_This invitation is for …_, _Set a new password?_, _Stay signed in_, _Not
 now_); a group link in the area switches a playing administrator to Player, and waits for one who does
 not play; the field shows the scheme's spelling of the link while no domain is set, and the keyboard
-stays down; and a group link lands on Play's remembered segment under Join, which may be Explore.
+stays down; and a group link lands on Play under Join — on the _Groups_ title while the `explore`
+feature flag is off, which is every phone today, and on Play's remembered segment, which may be
+Explore, only while it is on (#826).
 **A backend contract gap, open**: the club's email to an existing account opens bare `raketa://`, so
 the app cannot tell whose invitation it is — **Kuba's phone opening Tomek's _existing-account_ email
 cannot name Tomek's address**; only a new person's token link can. Naming it would need that email to

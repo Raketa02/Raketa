@@ -29,6 +29,8 @@
 
 > **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The flags' datafile cache, the first module this record's allow-list admitted, went with the feature flags (#576), so the allow-list is one module again: the phone-preferences store.
 
+> **Note — the feature flags return (2026-11-21, [#826](https://github.com/Raketa02/Raketa/issues/826)).** The AsyncStorage allow-list is **two modules again**: the feature flags' saved datafile (`features/feature_flags/api/datafileCache.ts`) is back beside the phone-preferences store, by [ADR-0206](0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §12. The datafile is public and names no player, and it is not a per-account value, so sign-out does not empty it; this record's three choices are untouched.
+
 ## Context
 
 PRD #500 asks for the app to reopen as the person left it:

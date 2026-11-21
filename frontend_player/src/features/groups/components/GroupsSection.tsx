@@ -2,8 +2,9 @@
  * **Play › Groups** — the groups the player belongs to, newest joined first, and the two ways to
  * another: **+ New** and **Join** (play 1, 38; stories 1, 5–8).
  *
- * Drawn under Play's segment, which is the tab's and the shell's; this is the page the *Groups*
- * segment shows. It scrolls on its own, below the pinned segment.
+ * Drawn under Play's head, which is the tab's and the shell's: the *Groups* title while the
+ * `explore` feature flag is off, the *Groups* segment while it is on (#826). It scrolls on its own,
+ * below the pinned head, and is the same page under either.
  *
  * **Every state has its drawing.** Nothing while the first read is on its way — the list is local
  * and quick, and a spinner that flashed for a frame would be the only thing on screen that moved.

@@ -14,7 +14,7 @@ import {
   type Transport,
 } from '@/test-support/transport';
 
-import { configureHttp, httpRequest, resetHttp } from './httpClient';
+import { configureHttp, httpGetFromFeaturesHost, httpRequest, resetHttp } from './httpClient';
 import { TIMEOUT_MS } from './timeouts';
 
 let transport: Transport;
@@ -277,5 +277,75 @@ describe('the idempotency key', () => {
       'commit-1',
       'commit-1',
     ]);
+  });
+});
+
+/**
+ * **The second host.** The feature-flag datafile is the one document this app reads from
+ * somewhere other than the API
+ * ([ADR-0206](../../../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)
+ * §4, §6), and it is read through this module for every reason the API is — the timeout, the
+ * correlation id, the error model — and one the API does not have: the host is somebody's machine on
+ * the LAN today and a public bucket tomorrow, so **it never sees the access token.**
+ */
+describe('the features host', () => {
+  const DATAFILE = '/development/featurevisor-player.json';
+
+  it('resolves the path against the configured features base URL, not the API', async () => {
+    transport.on('GET', DATAFILE, () => json({ schemaVersion: '2' }));
+
+    await httpGetFromFeaturesHost({ path: DATAFILE });
+
+    expect(transport.requests[0]?.url).toBe(`https://features.test.raketa.invalid${DATAFILE}`);
+  });
+
+  it('returns the decoded document', async () => {
+    transport.on('GET', DATAFILE, () => json({ schemaVersion: '2', revision: '7' }));
+
+    await expect(httpGetFromFeaturesHost({ path: DATAFILE })).resolves.toEqual({
+      schemaVersion: '2',
+      revision: '7',
+    });
+  });
+
+  it('never carries the access token, even with a session', async () => {
+    configureHttp(credentialsFor('token-1'));
+    transport.on('GET', DATAFILE, () => json({ schemaVersion: '2' }));
+
+    await httpGetFromFeaturesHost({ path: DATAFILE });
+
+    expect(transport.requests[0]?.headers.Authorization).toBeUndefined();
+  });
+
+  it('normalizes a failure like any other request', async () => {
+    // What the serve script answers for an environment it has not built: a 404, with a body
+    // that is not the API's envelope. It still leaves as an `AppError`, classified by status.
+    transport.on('GET', DATAFILE, () => new Response('Not Found', { status: 404 }));
+
+    await expect(httpGetFromFeaturesHost({ path: DATAFILE })).rejects.toMatchObject({
+      kind: 'not-found',
+    });
+  });
+
+  it('is a background read: nobody is looking at a spinner for it', async () => {
+    jest.useFakeTimers();
+    transport.on('GET', DATAFILE, neverResponds());
+
+    const pending = httpGetFromFeaturesHost({ path: DATAFILE });
+    const assertion = expect(pending).rejects.toMatchObject({ kind: 'timeout' });
+    let settled = false;
+    pending.then(
+      () => (settled = true),
+      () => (settled = true),
+    );
+
+    // Past the interactive timeout, and the read is still running. Asserted rather than assumed:
+    // the rejection below is a timeout under either class, so only this line tells them apart.
+    jest.advanceTimersByTime(TIMEOUT_MS.request + 1);
+    for (let hop = 0; hop < 10; hop += 1) await Promise.resolve();
+    expect(settled).toBe(false);
+
+    jest.advanceTimersByTime(TIMEOUT_MS.background);
+    await assertion;
   });
 });

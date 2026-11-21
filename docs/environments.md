@@ -85,8 +85,8 @@ a migration or a seed run — not only for a process serving HTTP.
 | backend | **any deployed environment** with `PAYMENTS_PROVIDER=fake`, or with Stripe and no `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` or `STRIPE_WEBHOOK_SECRET` | The fake saves cards that do not exist and charges nobody, so every game it booked would be one no player paid for; and a webhook nobody can verify is one anybody can forge ([ADR-0190](adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md)). A laptop runs on the fake by default, and may run Stripe without a webhook secret. |
 | backend | a **live** Stripe key (`sk_live_`, `rk_live_`) anywhere but `production`, or a **test** one (`sk_test_`, `rk_test_`) in `production` | A live key on a laptop is one setting away from a test run charging real cards; a test key in production books games nobody paid for. Whichever provider is selected, and the key is never printed. |
 | backend | a deployed environment with `BCRYPT_ROUNDS` below production's 12 | Nothing fails at a weak cost — every login still works — so the stored passwords would just be cheaper to crack, and nobody would notice. The default is 12 everywhere, and only a laptop may lower it; the test suite uses bcrypt's minimum, 4. |
-| player | `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_ENV` missing or malformed | Validated eagerly in the bootstrap sequence, so it lands on a startup screen naming the variable rather than three screens deep as a failed request. |
-| player | a deployed `EXPO_PUBLIC_API_URL` that is not `https://` | The scheme rule, below. |
+| player | `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURES_URL` or `EXPO_PUBLIC_ENV` missing or malformed | Validated eagerly in the bootstrap sequence, so it lands on a startup screen naming the variable rather than three screens deep as a failed request. |
+| player | a deployed `EXPO_PUBLIC_API_URL` or `EXPO_PUBLIC_FEATURES_URL` that is not `https://` | The scheme rule, below. |
 | club | any of `APP_ENV`, `API_URL`, `SESSION_SECRET`, `MAP_TILE_URL`, `MAP_START` or `GEOCODER_URL` missing, blank or malformed | `src/instrumentation.ts` validates them before the server takes a request and **exits** naming each. Next alone would log the error and serve 500s. `SESSION_SECRET` is at least 32 characters, because iron-session refuses a shorter one at the first seal — a refused sign-in instead of a refused start. |
 | club | a deployed `MAP_TILE_URL` that is not `https://` | The browser fetches the tiles. The scheme rule, below. |
 | public | any of `APP_ENV`, `API_URL`, `PUBLIC_SITE_URL`, `APP_STORE_URL`, `GOOGLE_PLAY_URL`, `APP_SCHEME`, `APPLE_TEAM_ID`, `IOS_BUNDLE_ID`, `ANDROID_PACKAGE` or `ANDROID_CERT_FINGERPRINTS` missing, blank or malformed | The same exit at start, for the same reason. The last four are what the app-link files are made from, so a malformed one would publish an association no phone accepts. |
@@ -150,6 +150,7 @@ question no application can answer for its operator.
 | App | Variable | Reached by | Rule |
 | --- | --- | --- | --- |
 | player | `EXPO_PUBLIC_API_URL` | a phone, over the internet | `https://` when deployed |
+| player | `EXPO_PUBLIC_FEATURES_URL` | a phone, over the internet | `https://` when deployed |
 | backend | `ALLOW_ORIGINS` entries | a browser (they *are* browser origins) | `https://` when deployed; the `*` wildcard is not an origin and is exempt |
 | backend | `PUBLIC_SITE_URL` | whoever taps a group link in a chat, or opens an invitation or a reset email | `https://` when deployed |
 | backend | `CLUB_WEBSITE_URL` | a club opening its reset email | `https://` when deployed |
@@ -158,6 +159,14 @@ question no application can answer for its operator.
 | club | `API_URL` | the website's own server | none: server to server |
 | public | `PUBLIC_SITE_URL`, `APP_STORE_URL`, `GOOGLE_PLAY_URL` | a browser, or a messenger fetching a preview | `https://` when deployed |
 | public | `API_URL` | the site's own server | none: server to server |
+
+**Why the datafile host is on the list though it serves nothing secret.** The feature-flag
+datafile is public-read by design
+([ADR-0206](adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §9),
+so the rule is not protecting its contents from being read. It is protecting them from being
+*rewritten*: a datafile fetched in the clear is a file anybody on the same café Wi-Fi can
+replace, turning a screen on or off. The rule is for integrity here, not confidentiality, and the
+client enforces both URLs in one loop so neither can be forgotten.
 
 **Why `local` is unconstrained.** The rule used to require `http://` there. That refused an
 `https://` tunnel — and `expo start --tunnel`, `cloudflared` and `tailscale funnel` all hand
@@ -291,14 +300,34 @@ Concretely:
 - A feature that is not ready is off everywhere, including production, and is turned on by
   flipping the flag — not by promoting it through environments.
 
-There is no flag system today. Featurevisor was adopted by ADR-0180 to hide the *Classic play*
-loop, and it left with that loop on 2026-10-06
-([#569](https://github.com/Raketa02/Raketa/issues/569)): the SDK, the datafile, its host and
-`EXPO_PUBLIC_FEATURES_URL` are gone, and the record was deleted with them. The rule above was
-recorded before any flag system existed so that the first one would not arrive as an
-environment branch; it held for that one and holds for the next. Whichever system comes next,
-a flag's per-environment default lives in that system's own configuration, never in a branch
-in either app.
+The flag system is Featurevisor, adopted by
+[ADR-0206](adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) — the second time:
+ADR-0180 adopted it to hide the *Classic play* loop, and it left with that loop on 2026-10-06
+([#569](https://github.com/Raketa02/Raketa/issues/569)); it came back on 2026-11-21 to keep Play's
+Explore off while it is unbuilt ([#826](https://github.com/Raketa02/Raketa/issues/826)). Its
+definitions live in a separate repository, `Raketa02/raketa-features`, whose environments are
+these four names; each builds its own datafile, and the player app reads the one for the
+environment it was built for. That is where a flag's per-environment default lives — in the
+flags repo's YAML, never in a branch in either app. The rule above was recorded before any flag
+system existed so that the first one would not arrive as an environment branch, and it holds
+for this one unchanged. The one flag today, `explore`, is off in all four.
+
+**Where the app finds its datafile.** `EXPO_PUBLIC_FEATURES_URL` is the base, and the path under
+it is the environment's name: the app fetches
+`$EXPO_PUBLIC_FEATURES_URL/<environment>/featurevisor-player.json`, for the environment it was
+built for. In `local` the base is the developer's own machine: `npm run serve` in the flags repo
+serves the built datafiles on port 3040, on all interfaces, so a physical phone is given the
+machine's LAN IP, never `localhost`, just as for the API. Later it is the bucket the flags repo's
+publish run uploads to, and moving there changes this value and no code. **Nothing is hosted
+yet**: the publish run's upload is skipped while its bucket and role are unset, so off a
+developer's machine there is no datafile, and every feature is at its code default.
+
+The variable is required and validated at launch like any other, but **the datafile is never
+waited on.** It is fetched once at launch and again on each return to the foreground, and when it
+cannot be had the app answers from the last good datafile it saved, or failing that from each
+feature's code default (ADR-0206 §6). So a host that is down or wrong shows up as flags holding
+their old or default values, never as a startup failure. That is the reason step 4 of the
+checklist below says to publish the datafile before a build points at it.
 
 ## Testing
 
@@ -426,8 +455,11 @@ The day a domain is registered, this is a configuration task rather than a redes
    there; that check, and not this paragraph, is what CI enforces. The paragraph is
    here because a checklist a human follows should say what is coming — it went eleven days
    out of date once, and the check is what makes that recoverable rather than invisible.
-4. **Set the player app's variables**: `EXPO_PUBLIC_ENV` and `EXPO_PUBLIC_API_URL`
-   (`https://`). At this point the per-environment bundle-identifier question deferred by
+4. **Set the player app's variables**: `EXPO_PUBLIC_ENV`, `EXPO_PUBLIC_API_URL` (`https://`)
+   and `EXPO_PUBLIC_FEATURES_URL` (`https://`, the flags host). Before a build points at the
+   flags host, the flags repo's publish run must have uploaded that environment's datafile
+   there: until it does, every feature silently takes its code default, and nothing refuses.
+   At this point the per-environment bundle-identifier question deferred by
    [ADR-0028](adr/0028-four-environment-model-and-typed-configuration.md) becomes live for the
    first time, because there is finally a second backend to point a second variant at.
 5. **Set the club website's variables**: `APP_ENV`, `API_URL` (server to server, so any scheme

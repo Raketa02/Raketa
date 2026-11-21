@@ -59,15 +59,17 @@ asserting it renders correctly.
 
 ## Environment
 
-- **Copy `.env.example` → `.env.local` before the first run.** `EXPO_PUBLIC_API_URL` and
-  `EXPO_PUBLIC_ENV` are both required, validated once at launch by `src/shared/config/env.ts`.
-  A missing or malformed value stops the app on a startup screen naming it — that is the
-  guardrail working, not a bug. `EXPO_PUBLIC_LINK_DOMAIN` is the one optional value — the web
-  domain the app's links live on, empty until a domain exists (`docs/features/links.md`).
+- **Copy `.env.example` → `.env.local` before the first run.** `EXPO_PUBLIC_API_URL`,
+  `EXPO_PUBLIC_FEATURES_URL` and `EXPO_PUBLIC_ENV` are all required, validated once at launch by
+  `src/shared/config/env.ts`. A missing or malformed value stops the app on a startup screen
+  naming it — that is the guardrail working, not a bug. `EXPO_PUBLIC_LINK_DOMAIN` is the one
+  optional value — the web domain the app's links live on, empty until a domain exists
+  (`docs/features/links.md`).
 - `EXPO_PUBLIC_ENV` is `local | development | staging | production`, the backend's four names,
-  and **only `local` runs today.** The environment fixes the API URL's scheme — `https://` for
-  the three deployed ones — so a laptop URL under a deployed name fails at launch naming both
-  variables.
+  and **only `local` runs today.** The environment fixes the API and features URLs' scheme —
+  `https://` for the three deployed ones — so a laptop URL under a deployed name fails at launch
+  naming both variables. **Say _feature flag_, never a bare _flag_**, for
+  `features/feature_flags`: _flag_ is the phone's two marks kept at sign-out (ADR-0200 §8).
 - `app.config.ts` is a function of that environment (it replaced `app.json`) and holds no
   logic: `src/shared/config/appIdentity.ts` is the table it calls. Expo evaluates it in
   **Node**, before Metro, so it registers sucrase's TS require hook first — delete that line and
@@ -147,10 +149,12 @@ src/
   `imagePicking.ts`, `liveStream.ts`, `haptics.ts`, `clipboard.ts`, `payments.tsx`, `push.ts`,
   `installReferrer.ts` (`expo-application`, Android's install referrer, #756), `share.ts` (React
   Native's `Share`, the one fenced name out of that module). Features depend on the port
-  and drive the fakes in `src/test-support/platform.ts`. AsyncStorage's one importer is
+  and drive the fakes in `src/test-support/platform.ts`. AsyncStorage has two importers:
   `shared/lib/preferences/phonePreferences.ts` — per-account choices, wiped at sign-out
   (ADR-0188), one per-account flag kept at sign-out (ADR-0200 §8), and one flag the phone keeps
-  for itself — _the install referrer was read_ (#756, ADR-0188's record owed). _(lint)_
+  for itself — _the install referrer was read_ (#756, ADR-0188's record owed) — and
+  `features/feature_flags/api/datafileCache.ts`, the feature flags' saved datafile (ADR-0206).
+  `@featurevisor/sdk`'s one importer is `features/feature_flags/api/featurevisor.ts`. _(lint)_
 - **`shared/` never imports a feature; a feature never deep-imports another** — go through its
   `types.ts`. _(lint)_ But do not move code to `shared/` because two files use it; keep it local
   until cross-feature ownership is proven (the third caller).
@@ -172,19 +176,20 @@ src/
 
 ### One owner per kind of state
 
-| State                     | Owner                                                                                                                            |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Anything from the backend | **TanStack Query** — never mirrored into a store                                                                                 |
-| A live frame's roster     | React state in the hook that follows the channel — not a query, not a store: it is the frame, and it is dropped with the channel |
-| A page's band on screen   | `shared/ui`'s `onScreen.ts`: followed values a page and its rows feed and a rail reads — never state, nothing redrawn            |
-| Access + refresh tokens   | `shared/lib/auth` → `expo-secure-store` (+ in-memory mirror)                                                                     |
-| Logged-in / out           | `SessionStatus`: `bootstrapping \| authenticated \| unauthenticated`                                                             |
-| Local component state     | `useState` / `useReducer`                                                                                                        |
-| Shared ephemeral UI state | Zustand, **feature-scoped first**                                                                                                |
-| Form input                | The form + one Zod schema                                                                                                        |
-| Navigation                | expo-router — a route param is not app state                                                                                     |
-| Config                    | `shared/config/env.ts`, Zod-validated at startup                                                                                 |
-| A choice the phone keeps  | `shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188); two flags, kept (ADR-0200 §8, #756)          |
+| State                       | Owner                                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Anything from the backend   | **TanStack Query** — never mirrored into a store                                                                                 |
+| A live frame's roster       | React state in the hook that follows the channel — not a query, not a store: it is the frame, and it is dropped with the channel |
+| A page's band on screen     | `shared/ui`'s `onScreen.ts`: followed values a page and its rows feed and a rail reads — never state, nothing redrawn            |
+| Access + refresh tokens     | `shared/lib/auth` → `expo-secure-store` (+ in-memory mirror)                                                                     |
+| Logged-in / out             | `SessionStatus`: `bootstrapping \| authenticated \| unauthenticated`                                                             |
+| Local component state       | `useState` / `useReducer`                                                                                                        |
+| Shared ephemeral UI state   | Zustand, **feature-scoped first**                                                                                                |
+| Form input                  | The form + one Zod schema                                                                                                        |
+| Navigation                  | expo-router — a route param is not app state                                                                                     |
+| Config                      | `shared/config/env.ts`, Zod-validated at startup                                                                                 |
+| A choice the phone keeps    | `shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188); two flags, kept (ADR-0200 §8, #756)          |
+| The feature flags' datafile | `features/feature_flags` → the saved datafile in AsyncStorage, the last readable one, kept at sign-out (ADR-0206)                |
 
 Reach for Zustand last: component-local → feature store → app-wide store, and only with a
 reason. Zustand never holds API entities, tokens, a backend cache, or a global loading flag.

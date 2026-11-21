@@ -134,6 +134,15 @@ const installReferrerImport = {
     'from src/test-support/platform.ts in a test. See #756.',
 };
 
+const featurevisorImport = {
+  group: ['@featurevisor/*'],
+  message:
+    'Only src/features/feature_flags/api/featurevisor.ts may import the Featurevisor SDK. A gate ' +
+    'asks useFeatureOnMount from @/features/feature_flags/types; one module holding the SDK is ' +
+    'what keeps its instance, its major and what a silent datafile means in one place — and ' +
+    'the flags repo pins its CLI major to this one. See docs/adr/0206 §5, §10.',
+};
+
 const observabilityVendorImports = {
   group: ['@sentry/*', 'posthog-*', '@amplitude/*', 'mixpanel-*'],
   message:
@@ -155,11 +164,12 @@ const featureImportsFromShared = {
 };
 
 const asyncStoragePath = {
-  // Tokens belong in the OS keychain, not in JS-readable storage. The one exemption is a file,
-  // not a directory: it holds the choices a player made — see its block below.
+  // Tokens belong in the OS keychain, not in JS-readable storage. The two exemptions are files,
+  // not directories: one holds a public datafile, the other the choices a player made — see
+  // their blocks below.
   name: '@react-native-async-storage/async-storage',
   message:
-    'AsyncStorage is unencrypted: never store credentials in it — use expo-secure-store through src/shared/lib/auth (docs/adr/0008). Its only importer is src/shared/lib/preferences/phonePreferences.ts, which keeps the per-account choices ADR-0188 lists (docs/adr/0188); a second need joins that allow-list by decision, not by import.',
+    'AsyncStorage is unencrypted: never store credentials in it — use expo-secure-store through src/shared/lib/auth (docs/adr/0008). Its only importers are src/features/feature_flags/api/datafileCache.ts, which keeps the public feature-flag datafile (docs/adr/0206 §6), and src/shared/lib/preferences/phonePreferences.ts, which keeps the per-account choices ADR-0188 lists (docs/adr/0188); a third need joins that allow-list by decision, not by import.',
 };
 
 /**
@@ -190,6 +200,7 @@ const CORE_PATTERNS = [
   stripeImport,
   pushImport,
   installReferrerImport,
+  featurevisorImport,
   observabilityVendorImports,
 ];
 
@@ -312,6 +323,10 @@ const SHARED_PATTERNS = [...CORE_PATTERNS, generatedImports, featureImportsFromS
 const sharedPatternsExcept = (...exemptions) =>
   SHARED_PATTERNS.filter((pattern) => !exemptions.includes(pattern));
 
+/** The same subtraction over a feature's wire layer, whose baseline is `CORE_PATTERNS`. */
+const corePatternsExcept = (...exemptions) =>
+  CORE_PATTERNS.filter((pattern) => !exemptions.includes(pattern));
+
 export default [
   ...expoConfig,
   {
@@ -431,11 +446,25 @@ export default [
     rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS, [asyncStoragePath]) },
   },
   {
-    // The phone-preferences store — the one module that may import AsyncStorage (ADR-0188 §1),
-    // one file wide like the native ports. It sits under `shared/`, so its baseline is
-    // `SHARED_PATTERNS`, and only the path ban is subtracted.
+    // The feature flags' saved datafile — one of the two modules that may import AsyncStorage
+    // (ADR-0206 §6). The path ban is subtracted and nothing else: this file is a feature's api/
+    // layer, so its baseline is `CORE_PATTERNS`, and every one of those still applies.
+    files: ['src/features/feature_flags/api/datafileCache.ts'],
+    rules: { 'no-restricted-imports': restrict(CORE_PATTERNS, [shareImportPath]) },
+  },
+  {
+    // The phone-preferences store — the other module that may import AsyncStorage (ADR-0188
+    // §1), one file wide for the datafile cache's reason. It sits under `shared/`, so its
+    // baseline is `SHARED_PATTERNS`, and only the path ban is subtracted.
     files: ['src/shared/lib/preferences/phonePreferences.ts'],
     rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS, [shareImportPath]) },
+  },
+  {
+    // The one module that wraps the Featurevisor SDK (ADR-0206 §5) — one file wide, like the
+    // native ports: the cache beside it may not evaluate a feature flag, and this may not read
+    // storage.
+    files: ['src/features/feature_flags/api/featurevisor.ts'],
+    rules: { 'no-restricted-imports': restrict(corePatternsExcept(featurevisorImport)) },
   },
   {
     // The single place fetch is configured.
@@ -496,7 +525,8 @@ export default [
     // the configuration's too: what `jest.config.js` maps reanimated's mock to.
     //
     // `afterEach` for the one hook the setup file registers for every suite: emptying the
-    // device storage a suite's walk left a player's choices in (ADR-0188).
+    // device storage a suite's walk left a player's choices, or a datafile, in (ADR-0188,
+    // ADR-0206 §6).
     files: ['jest.setup.js', 'src/test-support/reanimatedActual.js'],
     languageOptions: { globals: { jest: 'readonly', afterEach: 'readonly' } },
   },

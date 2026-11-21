@@ -17,6 +17,9 @@ importers:
       '@expo/vector-icons':
         specifier: ~14.0.4
         version: 14.0.4
+      '@featurevisor/sdk':
+        specifier: 3.8.0
+        version: 3.8.0
       '@react-native-async-storage/async-storage':
         specifier: 1.23.1
         version: 1.23.1(react-native@0.76.9(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.3.1))
@@ -1025,6 +1028,12 @@ packages:
   '@expo/xcpretty@4.4.4':
     resolution: {integrity: sha512-4aQzz9vgxcNXFfo/iyNgDDYfsU5XGKKxWxZopw0cVotHiW+U8IJbIxMaxsINs6bHhtkG3StKNPcOrn3eBuxKPw==}
     hasBin: true
+
+  '@featurevisor/sdk@3.8.0':
+    resolution: {integrity: sha512-OJhhFxllFg4q5NmfcNLeuVCTFR2fq+y2PxS/yOHPjtKrkcvAoGVlWvcPA4BlOkvnNXBHfivcXCCDD0CCty2ZUg==}
+
+  '@featurevisor/types@3.8.0':
+    resolution: {integrity: sha512-RYwH36VW8YAYCXCb0vT/4fWhK0KZFSadr25GTRxLMsSBsZTbPgDC4TGE6xjLT2CSeEXxQXOiMrHNZCiFPXdM5g==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -6791,6 +6800,12 @@ snapshots:
       '@babel/code-frame': 7.29.7
       chalk: 4.1.2
       js-yaml: 4.3.1
+
+  '@featurevisor/sdk@3.8.0':
+    dependencies:
+      '@featurevisor/types': 3.8.0
+
+  '@featurevisor/types@3.8.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

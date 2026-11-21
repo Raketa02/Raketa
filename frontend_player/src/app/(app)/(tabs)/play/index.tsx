@@ -1,5 +1,6 @@
 /**
- * Play's entry — its *Groups | Explore* segment. A directory rather than a file, because the
+ * Play's entry — the groups under a *Groups* title, or its *Groups | Explore* segment while the
+ * `explore` feature flag is on (#826). A directory rather than a file, because the
  * groups screens are `/play/…` and the bar's active column is read off that first segment.
  */
 

@@ -105,18 +105,19 @@ nothing in `shared/` may import a feature.
 
 ### One source of truth per kind of state
 
-| State                         | Owner                                                                                  |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| Remote/backend data           | **TanStack Query**                                                                     |
-| Access + refresh tokens       | `src/shared/lib/auth` → `expo-secure-store`                                            |
-| Logged-in / logged-out status | The session state machine ([Part 3](#part-3--bootstrap-and-the-session-state-machine)) |
-| Local component UI state      | `useState` / `useReducer`                                                              |
-| Shared ephemeral UI state     | Zustand, feature-scoped                                                                |
-| Form input                    | The form layer + a Zod schema                                                          |
-| Navigation state              | expo-router                                                                            |
-| Build/environment config      | `src/shared/config/env.ts`                                                             |
-| A choice the phone remembers  | `src/shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188) |
-| What of a page is on screen   | `src/shared/ui/onScreen.ts`: followed values, read when wanted — never state           |
+| State                         | Owner                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------ |
+| Remote/backend data           | **TanStack Query**                                                                         |
+| Access + refresh tokens       | `src/shared/lib/auth` → `expo-secure-store`                                                |
+| Logged-in / logged-out status | The session state machine ([Part 3](#part-3--bootstrap-and-the-session-state-machine))     |
+| Local component UI state      | `useState` / `useReducer`                                                                  |
+| Shared ephemeral UI state     | Zustand, feature-scoped                                                                    |
+| Form input                    | The form layer + a Zod schema                                                              |
+| Navigation state              | expo-router                                                                                |
+| Build/environment config      | `src/shared/config/env.ts`                                                                 |
+| A choice the phone remembers  | `src/shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188)     |
+| The feature flags' datafile   | `features/feature_flags` → the saved datafile in AsyncStorage, kept at sign-out (ADR-0206) |
+| What of a page is on screen   | `src/shared/ui/onScreen.ts`: followed values, read when wanted — never state               |
 
 Never represent the same state in two of these at once. In particular: **never copy
 Query data into Zustand**, **never put a token in Zustand**, and **never use a navigation
@@ -142,7 +143,7 @@ src/app/
         ├── index.tsx      Home, and the app's landing
         ├── booking/       a booked game's details, chat and result, pushed over Home
         ├── notices.tsx    the recent notices behind Home's bell
-        ├── play/          Groups | Explore, and a group's screens under it
+        ├── play/          the groups (or Groups | Explore, with `explore` on) and a group's screens
         └── you/           You, and a screen per row pushed over it
 ```
 
@@ -327,6 +328,16 @@ has been sent; `XMLHttpRequest` and a native uploader can, and either would be a
 transport with its own headers, timeout and rotation. So an upload reports the two stages
 it genuinely passes through — the bytes are read, then they are sent — and a screen drawing
 that never claims a percentage nobody measured.
+
+### The features host
+
+`httpGetFromFeaturesHost` is the module's third verb, and the only request the app makes to a
+host that is not the API: the feature-flag datafile, served from `EXPO_PUBLIC_FEATURES_URL`
+([ADR-0206](../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §4). It goes
+through the same `sendOnce` — timeout, correlation id, cancellation, error model — and is a verb
+rather than an option on `httpRequest` because of what it must never send: the call is built
+unauthenticated, so no bearer token can reach a machine on the LAN or a public bucket. It takes
+the `background` timeout class; nobody is waiting on it.
 
 ### Retry
 
@@ -990,10 +1001,19 @@ budget making it short.
 ```ts
 const EnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
+  EXPO_PUBLIC_FEATURES_URL: z.string().url(),
   EXPO_PUBLIC_ENV: z.enum(['local', 'development', 'staging', 'production']),
   EXPO_PUBLIC_LINK_DOMAIN: z.string().optional(), // a bare host, or nothing
 });
 ```
+
+`EXPO_PUBLIC_FEATURES_URL` is the base the feature-flag datafile is fetched from —
+`<base>/<environment>/featurevisor-player.json` — the developer's machine on the LAN today, served
+by the flags repo's `npm run serve`, and a bucket later
+([ADR-0206](../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §4). It is
+required, and it obeys the scheme rule below exactly as the API URL does, for the same reason: it
+is reached from a phone, and a datafile read in the clear is one somebody on the network can
+rewrite. Nothing is hosted yet, so off a developer's machine every feature is at its code default.
 
 `EXPO_PUBLIC_LINK_DOMAIN` is the one **optional** value: the web domain the app's links live on
 (`raketa.app`, bare), and **empty in every environment today**
@@ -1220,7 +1240,15 @@ adapter, a cache version with migrations, a maximum age, exclusion of sensitive 
 user-scoped clearing on logout, and schema-change handling. **Never store a query cache in
 SecureStore** — it is for small secrets.
 
-**The one thing persisted outside the keychain is the phone-preferences store**
+**Two things are persisted outside the keychain.** The first is the feature-flag datafile
+([ADR-0206](../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §6): the last one the app
+could read, kept raw in AsyncStorage by `features/feature_flags/api/datafileCache.ts` and read
+back at launch, so a player offline keeps the feature flags they last saw. It is not a query-cache
+persistence and none of the rules above are waived for it: it is public-read by design, names no
+player, is checked on the way out as it was on the way in, a read that fails is simply no cache,
+and sign-out leaves it, because it belongs to no account.
+
+**The second is the phone-preferences store**
 ([ADR-0188](../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)):
 `src/shared/lib/preferences/phonePreferences.ts` keeps the choices a player made on this phone —
 the Play segment since [#512](https://github.com/Raketa02/Raketa/issues/512), the last sport and
@@ -1250,10 +1278,13 @@ encodes:
 - `domain/` and `use-cases/` import no React, React Native, Expo or wire types
 - no imports from `../backend/` or any sibling app
 - `@react-native-async-storage/async-storage` is importable only by
+  `features/feature_flags/api/datafileCache.ts`, which keeps the public feature-flag datafile, and by
   `shared/lib/preferences/phonePreferences.ts`, which keeps the per-account choices ADR-0188
   lists, ADR-0200 §8's one per-account flag kept past a session, and the one flag the phone keeps
-  for itself, _the install referrer was read_ (#756) — never a credential (ADR-0008, ADR-0188 §1).
-  The feature flags' saved datafile was its other owner until the flags were removed (#576)
+  for itself, _the install referrer was read_ (#756) — never a credential (ADR-0008, ADR-0206 §12,
+  ADR-0188 §1)
+- `@featurevisor/sdk` is importable only by `features/feature_flags/api/featurevisor.ts`, the
+  one module that holds the instance (ADR-0206 §5)
 - `expo-secure-store` is importable only inside `src/shared/lib/auth/`
 - `expo-location`, `expo-image-picker`, `react-native-sse`, `expo-haptics`, `expo-clipboard` and
   `expo-application` are importable only by the port that owns each — `platform/location.ts`,
@@ -1407,11 +1438,15 @@ when the code that needs them is written — not preemptively:
 > `react-native-sse`, with the app's first live surface — pure JS over `XMLHttpRequest`, no
 > native module, and therefore nothing for an SDK bump to break
 > ([ADR-0147](../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
-> §4, [the live surface](#the-live-surface)). A feature-flag service — Featurevisor — arrived
-> with ADR-0180 and left with the one loop it hid (#576); a later one arrives on its own decision.
-> The rule it carried here still stands: build-time config and runtime product flags stay
-> separate, no `if (env === 'production')` is a rollout mechanism, and every flag has an owner,
-> purpose, default, rollout strategy and a removal condition, and is deleted after rollout. All
+> §4, [the live surface](#the-live-surface)). And so has a feature-flag service —
+> Featurevisor, pinned exactly at 3.8.0, with AsyncStorage for its saved datafile — twice: it
+> arrived with ADR-0180, left with the one loop it hid (#576), and came back with its first gate
+> since, `explore` ([ADR-0206](../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md),
+> [#826](https://github.com/Raketa02/Raketa/issues/826)). The rule it carries here stands, whole:
+> build-time config and runtime product flags stay separate, no `if (env === 'production')` is a
+> rollout mechanism, and every feature flag has an owner, purpose, default, rollout strategy and a
+> removal condition — all five beside its key in `features/feature_flags/domain/featureFlags.ts`,
+> the rollout itself in the flags repo — and is deleted after rollout. All
 > of them are
 > listed as present rather than pending — this list is what is _missing_, and an entry that
 > outlives its own arrival makes the list untrustworthy.

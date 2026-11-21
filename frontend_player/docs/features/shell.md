@@ -447,3 +447,27 @@ return after 30 seconds, foregrounding, Home's pull, a push or a write that re-r
 in `forYou.test.tsx`'s _the counts_: each line's figure, the cap, no pill on Top 10, the pill kept
 open, the spoken names, _See all N_ in the people lines' footers, and the pull and a return moving
 the figure.
+
+**Play's Explore goes behind the `explore` feature flag, off** ([#826](https://github.com/Raketa02/Raketa/issues/826),
+[ADR-0206](../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)
+§11). `PlayScreen` asks `useFeatureOnMount('explore')` **once, when it mounts**, and draws one of
+two components — the answer cannot change under either, so neither reads what the other reads.
+**Off** — the code default, and every environment's value — is the Administrator's Groups tab
+exactly: `TopSafeArea` + a pinned `ScreenHeader` titled **Groups** (`PLAY_COPY.title`; an h1, a
+header to a listener, no eyebrow, no sub-line, nothing on the right) over `GroupsSection`,
+unchanged, with **+ New** and **Join** where they are at the top of the list. No segment is drawn,
+and Explore cannot be reached: the remembered segment is the only way in, so the off branch never
+calls `usePlaySegment` — it **does not wait on the segment read and never writes it**, and a saved
+`explore` stays on the phone, the player's own choice for the day the feature flag comes on. It is
+not wrapped in `ShellScreen`, whose scroller would nest the list's. **On** is the paragraph above,
+unchanged: the prominent segment, the remembered segment, Groups first. **Anything unknown is off**
+— no datafile yet, offline, a host that never answers, a datafile refused for its `schemaVersion`
+with none saved, no signed-in player — so the switcher is drawn only on an explicit on, and a
+datafile that lands while Play is up changes nothing until Play next mounts: Explore never appears
+under the player's thumb. The bottom tab stays **Play**. The walks are
+`components/theExploreGate.test.tsx` (nothing served, served off, a saved `explore` read past and
+still saved, served on with a saved Explore reopening, a datafile arriving while Play is up, an
+unknown `schemaVersion` with and without a saved datafile, and one refused mid-session);
+`playSegment.test.tsx`'s walks run with `explore` served on (`launchWithExplore`), and
+`theShell.test.tsx` finds Play by its title. **Not seen on a device**: the title over the list, and
+the switcher back through a locally served datafile.

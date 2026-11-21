@@ -81,14 +81,20 @@ export function envelopeSpoken(count: number): string {
 }
 
 /**
- * **The Play tab's own words** — the two segments it opens on
- * ([#512](https://github.com/Raketa02/Raketa/issues/512), play mocks 1 and 3).
+ * **The Play tab's own words** — its title, and the two segments it opens on
+ * ([#512](https://github.com/Raketa02/Raketa/issues/512), play mocks 1 and 3;
+ * [#826](https://github.com/Raketa02/Raketa/issues/826)).
  *
- * The shell's rather than `groups`' because the segment is the *tab*: it names the two ways the
- * tab finds a player games, and each segment's page owns its own sentences under it. Explore draws
- * nothing yet, so it has nothing here but its name.
+ * The shell's rather than `groups`' because the title and the segment are the *tab*: they name
+ * the ways the tab finds a player games, and each segment's page owns its own sentences under it.
+ * Explore draws nothing yet, so it has nothing here but its name.
+ *
+ * **The title is drawn only while `explore` is off** — Play as it ships, the player's groups under
+ * one *Groups* title like every other screen's, as the Administrator's Groups tab is titled. With
+ * it on, the switcher is the head and there is no title.
  */
 export const PLAY_COPY = {
+  title: 'Groups',
   segment: {
     groups: 'Groups',
     explore: 'Explore',

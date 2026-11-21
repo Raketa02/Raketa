@@ -36,6 +36,11 @@ adapters), DDD, and event sourcing.
 > candidate index, *Fit* and every term of the ranking, *Search radius*, *Proposals opt-in*,
 > *Tester* and *Feature flag*. A word you remember from one of them is gone on purpose; see the
 > [ADR index](docs/adr/README.md#the-2026-10-06-classic-play-removal--the-second-gap).
+> **Feature flag came back on 2026-11-21**
+> ([ADR-0206](docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md),
+> [#826](https://github.com/Raketa02/Raketa/issues/826)) with one key, `explore`, decided in the
+> player app, and is defined in [`frontend_player/CONTEXT.md`](frontend_player/CONTEXT.md): it
+> names no domain concept. *Tester* did not come back.
 >
 > **On request and Instant were removed on 2026-10-12** ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
 > §1). **Only Raketa** is the one way a club sells

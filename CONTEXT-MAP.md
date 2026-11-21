@@ -18,10 +18,13 @@ The two web apps are the newest, each built on its own scaffold:
   an invitation or a password reset opens when the app is not installed, and the app-link files.
   No sign-in, no session. *Scaffolded by [#525](https://github.com/Raketa02/Raketa/issues/525).*
 
-Nothing outside the monorepo is part of the topology. **`Raketa02/raketa-features`**, which held
-the feature flags as Featurevisor YAML, is no longer read by anything: the flags left with the
-Classic play loop they hid ([#569](https://github.com/Raketa02/Raketa/issues/569)), and archiving
-the repository is a human step.
+Outside the monorepo, **`Raketa02/raketa-features`** holds the feature flags as Featurevisor
+YAML, and **the player app reads it again** ([#826](https://github.com/Raketa02/Raketa/issues/826)). It
+is not an app and holds no domain code: its CI builds one datafile per environment, and the
+player app fetches its own over HTTP and decides each feature flag on the device
+([ADR-0206](docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)).
+Nothing checks the two repositories against each other; a key they spell differently is a
+feature at its code default. The backend reads nothing from it.
 
 ```
                           ┌──────────────────┐

@@ -382,6 +382,49 @@ export async function httpRequest<T>(request: HttpRequest): Promise<T> {
   );
 }
 
+/** A read from the features host. Path only; the host and everything else are this module's. */
+export interface FeaturesHostRequest {
+  /** Rooted at the features host — `/local/featurevisor-player.json`. */
+  readonly path: string;
+  /** TanStack Query supplies one. Forwarded so a cancelled query stops the read. */
+  readonly signal?: AbortSignal;
+}
+
+/**
+ * **A GET from the features host** — the module's third verb, and the only request this app
+ * makes to a host that is not the API.
+ *
+ * The feature-flag datafile is served from `EXPO_PUBLIC_FEATURES_URL`
+ * ([ADR-0206](../../../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)
+ * §4, §6), and it comes through here for every reason an API response does: the timeout, the
+ * correlation id, the cancellation and the error model are written once, and a feature that
+ * fetched its own document would be the second networking path this module exists to prevent.
+ *
+ * **A verb rather than an option on `httpRequest`, because of what it must never send.** That host
+ * is somebody's machine on the LAN today and a public bucket tomorrow, and a bearer token sent to
+ * either is a credential handed to a server that has no use for it. Here that is not a field a
+ * caller could set wrong: the call is built unauthenticated, so the rotation above has nothing to
+ * rotate and a 401 is simply a failure.
+ *
+ * **A background read.** Nobody is looking at a spinner for a datafile — the app runs on the last
+ * one it had until this answers — so it takes the class for work nobody waits on.
+ */
+export async function httpGetFromFeaturesHost<T>(request: FeaturesHostRequest): Promise<T> {
+  const url = joinUrl(getEnv().featuresUrl, request.path);
+
+  return sendWithRotation<T>(false, () =>
+    sendOnce({
+      method: 'GET',
+      url,
+      body: undefined,
+      contentType: undefined,
+      authenticated: false,
+      signal: request.signal,
+      timeoutMs: TIMEOUT_MS.background,
+    }),
+  );
+}
+
 /**
  * What one **authenticated stream** attempt goes out with — a URL, the headers, and which
  * rotation the credential in them came from.

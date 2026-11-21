@@ -14,6 +14,9 @@ shared glossary [`../CONTEXT.md`](../CONTEXT.md), which all three apps obey. See
 > Chats tab, Find a game, challenges, plans and the old game card, the `/games/[id]` route, the
 > feature flags and sign-up's radius and opt-in steps left the code, and every term that named
 > only them went with them.
+>
+> **The feature flags came back on 2026-11-21** ([#826](https://github.com/Raketa02/Raketa/issues/826),
+> ADR-0206), with one key, `explore`, and without the tester mark: see **Feature flag**.
 
 ## Glossary — player-app technical terms
 
@@ -370,7 +373,11 @@ naming, the steps, Home — eight screens, and no questionnaire.
 - **Play segment** — _Groups_ or _Explore_, the two pages the Play tab opens on (#512): Groups
   is the player's groups, Explore the blank page the rebuilt Find a game grows in
   (`features/find_a_game_next`). The shell's, remembered per account by the phone-preferences
-  store, and **Groups** whenever nothing — or nothing this build recognises — was saved.
+  store, and **Groups** whenever nothing — or nothing this build recognises — was saved. **There
+  are two only while the `explore` feature flag is on** (#826, ADR-0206 §11): off — the code
+  default, and the app as it ships — Play is the groups under one _Groups_ title, with no
+  segment, and a saved `explore` is **read past and never written**, so it is still the player's
+  when the feature flag comes on.
   _Avoid_: "tab" — Play is the tab and these are its segments.
 
 A group's page is Play's too (`/play/group/[groupId]`), and its **Games** tab is the deck
@@ -798,8 +805,9 @@ it.
   "device module", "native service" — a module holding several capabilities is the utils bucket
   this app bans, and a capability is one file.
 - **Phone-preferences store** — `shared/lib/preferences`, the **choices a player made that the
-  phone keeps for them**: one key per account per value, the only AsyncStorage importer, and
-  **emptied at every sign-out** as a step of `endSession`
+  phone keeps for them**: one key per account per value, one of the two AsyncStorage importers
+  (the other is the feature flags' saved datafile), and **emptied at every sign-out** as a step of
+  `endSession`
   ([ADR-0188](../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)).
   Four values — the **Play segment** since #512, the last sport, the last profile and the booked
   games this phone has opened — and a stale or unreadable one is its default, judged by the
@@ -808,6 +816,19 @@ it.
   account (#756).
   _Avoid_: "settings", "local storage", "cache" — it holds a choice, never a copy of the server,
   and never a credential.
+- **Feature flag** — a named switch, defined in `Raketa02/raketa-features` and turned on or off by
+  a pull request there, that answers _is this feature on_ for the signed-in player, **decided on the
+  phone** by the Featurevisor SDK from the datafile built for the app's environment
+  (`features/feature_flags`, [ADR-0206](../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)).
+  Every key is declared once with its **code default**, which is what a phone with no readable
+  datafile gets; the datafile is fetched at cold start and on every return to the foreground,
+  kept on the phone as the **saved datafile**, and never waited for. **A gated screen reads it
+  once, when it mounts** (`useFeatureOnMount`). One key today, **`explore`**, off. **Not a phone
+  flag**: _the guide was shown_ and _the install referrer was read_ are marks the phone raised
+  itself and keeps (ADR-0200 §8, #756); a feature flag is decided elsewhere and only read here.
+  _Avoid_: bare "flag" for it — the phone's marks already have that word — "toggle" as a noun,
+  "kill switch" (it acts at the next mount, never instantly), and "config" (it is never derived
+  from the environment).
 - **Permission state** — the four answers a platform port gives about a capability:
   `undetermined | granted | denied | blocked`. **Denied and blocked are different
   refusals** — denied can be asked again at the moment the player understands why; blocked

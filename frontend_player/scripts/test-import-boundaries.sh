@@ -4,10 +4,11 @@
 #
 #   bash scripts/test-import-boundaries.sh      # or: pnpm test:boundaries
 #
-# Ten modules may be imported from exactly one place:
+# Eleven modules may be imported from exactly one place:
 #
 #   expo-secure-store                            → src/shared/lib/auth
-#   @react-native-async-storage/async-storage    → preferences/phonePreferences.ts
+#   @react-native-async-storage/async-storage    → feature_flags/api/datafileCache.ts
+#                                                  and preferences/phonePreferences.ts
 #   expo-location                                → platform/location.ts
 #   expo-image-picker                            → platform/imagePicking.ts
 #   react-native-sse                             → platform/liveStream.ts
@@ -16,16 +17,17 @@
 #   @stripe/stripe-react-native                  → platform/payments.tsx
 #   expo-notifications                           → platform/push.ts
 #   expo-application                             → platform/installReferrer.ts
+#   @featurevisor/sdk                            → feature_flags/api/featurevisor.ts
 #
 # And one **name** out of a module every screen imports:
 #
 #   { Share } from 'react-native'                → platform/share.ts
 #
-# AsyncStorage is banned everywhere but the phone-preferences store, which keeps the choices a
-# player made (ADR-0188). It had a second owner — the feature flags' saved datafile (ADR-0180) —
-# until the flags were removed (#576). The ban is still asserted everywhere else, the owning
-# module's own directory included, because an allow-list of one is only one while something
-# checks it.
+# AsyncStorage is banned everywhere but two modules: the phone-preferences store, which keeps the
+# choices a player made (ADR-0188), and the feature flags' saved datafile — a public file, never a
+# credential (ADR-0206 §6), back since the feature flags returned (#826). The ban is still
+# asserted everywhere else, both owning modules' own directories included, because an allow-list
+# of two is only two while something checks it.
 #
 # And one is banned everywhere *except* a feature's api/ and mappers/ layers, plus the
 # one file above that is an api/ layer without a feature to live in:
@@ -172,9 +174,18 @@ PUSH_PORT='src/shared/lib/platform/push.ts'
 REFERRER_PORT='src/shared/lib/platform/installReferrer.ts'
 OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
 
-# The phone-preferences store (ADR-0188 §1) — the one AsyncStorage importer, one file wide: its
-# own directory's barrel may not, and neither may the sign-out sequence that empties it through
-# the barrel.
+# The feature-flag seam's three edges, each an api/ file of one feature: the fetch, the saved
+# datafile (an AsyncStorage importer), and the SDK wrapper (the one Featurevisor importer). Each
+# exemption is one file wide, so the two exempt files are each probed with the other's module,
+# and the fetch beside them with both — and so is the gate's own hook.
+FLAGS_FETCH='src/features/feature_flags/api/datafileApi.ts'
+FLAGS_CACHE='src/features/feature_flags/api/datafileCache.ts'
+FLAGS_SDK='src/features/feature_flags/api/featurevisor.ts'
+FLAGS_HOOK='src/features/feature_flags/hooks/useFeatureOnMount.ts'
+
+# The phone-preferences store (ADR-0188 §1) — the other AsyncStorage importer, one file wide like
+# the first: its own directory's barrel may not, and neither may the sign-out sequence that empties
+# it through the barrel.
 PREFERENCES_STORE='src/shared/lib/preferences/phonePreferences.ts'
 PREFERENCES_OTHER='src/shared/lib/preferences/index.ts'
 
@@ -192,7 +203,8 @@ expect_blocked expo-secure-store "$OBSERVABILITY" 'src/shared/lib/auth'
 expect_allowed expo-secure-store "$AUTH"
 
 echo
-echo "unencrypted storage — @react-native-async-storage/async-storage belongs to the preferences store"
+echo "unencrypted storage — @react-native-async-storage/async-storage belongs to the saved datafile and the preferences store"
+expect_blocked @react-native-async-storage/async-storage "$FEATURE" 'datafileCache.ts'
 expect_blocked @react-native-async-storage/async-storage "$FEATURE" 'phonePreferences.ts'
 expect_blocked @react-native-async-storage/async-storage "$SCREEN" 'phonePreferences.ts'
 expect_blocked @react-native-async-storage/async-storage "$TEST" 'phonePreferences.ts'
@@ -200,8 +212,13 @@ expect_blocked @react-native-async-storage/async-storage "$SUPPORT" 'phonePrefer
 # Not even the module that owns credentials, which is the only place anyone
 # would argue for it — and the message still says why.
 expect_blocked @react-native-async-storage/async-storage "$AUTH" 'credentials'
-# A feature's wire layer, where the flags' saved datafile used to be the owner.
-expect_blocked @react-native-async-storage/async-storage "$WIRE_LAYER" 'phonePreferences.ts'
+# Another feature's wire layer, which shares the saved datafile's baseline block.
+expect_blocked @react-native-async-storage/async-storage "$WIRE_LAYER" 'datafileCache.ts'
+# One file wide: the feature-flag seam's own fetch, its SDK wrapper and its hook may not.
+expect_blocked @react-native-async-storage/async-storage "$FLAGS_FETCH" 'datafileCache.ts'
+expect_blocked @react-native-async-storage/async-storage "$FLAGS_SDK" 'datafileCache.ts'
+expect_blocked @react-native-async-storage/async-storage "$FLAGS_HOOK" 'datafileCache.ts'
+expect_allowed @react-native-async-storage/async-storage "$FLAGS_CACHE"
 # One file wide: its own directory's barrel and the platform beside it may not.
 expect_blocked @react-native-async-storage/async-storage "$PREFERENCES_OTHER" 'phonePreferences.ts'
 expect_blocked @react-native-async-storage/async-storage "$OTHER_PLATFORM_FILE" 'phonePreferences.ts'
@@ -322,10 +339,11 @@ expect_name_blocked Share react-native "$FEATURE" 'share.ts'
 expect_name_blocked Share react-native "$SCREEN" 'share.ts'
 expect_name_blocked Share react-native "$TEST" 'share.ts'
 expect_name_blocked Share react-native "$AUTH" 'share.ts'
-# One file wide: the clipboard beside it may not share, and neither may the file that is exempt
-# from the other path ban — an exemption subtracts one entry, never the list.
+# One file wide: the clipboard beside it may not share, and neither may the two files that are
+# exempt from the other path ban — an exemption subtracts one entry, never the list.
 expect_name_blocked Share react-native "$CLIPBOARD_PORT" 'share.ts'
 expect_name_blocked Share react-native "$OTHER_PLATFORM_FILE" 'share.ts'
+expect_name_blocked Share react-native "$FLAGS_CACHE" 'share.ts'
 expect_name_blocked Share react-native "$PREFERENCES_STORE" 'share.ts'
 expect_name_allowed Share react-native "$SHARE_PORT"
 # The ban is one name wide: every other name out of the module is the app's own drawing.
@@ -333,6 +351,22 @@ expect_name_allowed View react-native "$FEATURE"
 # And the port itself is still under every other ban, the storage path included.
 expect_blocked expo-clipboard "$SHARE_PORT" 'clipboard.ts'
 expect_blocked @react-native-async-storage/async-storage "$SHARE_PORT" 'phonePreferences.ts'
+
+echo
+echo "feature-flag evaluation — @featurevisor/sdk belongs to feature_flags/api/featurevisor.ts"
+expect_blocked @featurevisor/sdk "$FEATURE" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$SCREEN" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$TEST" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$WIRE_LAYER" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$OTHER_PLATFORM_FILE" 'featurevisor.ts'
+# One file wide: the cache beside it, the fetch and the gate itself go through it.
+expect_blocked @featurevisor/sdk "$FLAGS_CACHE" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$FLAGS_FETCH" 'featurevisor.ts'
+expect_blocked @featurevisor/sdk "$FLAGS_HOOK" 'featurevisor.ts'
+expect_allowed @featurevisor/sdk "$FLAGS_SDK"
+# And the SDK wrapper is still under every other ban, the storage path included.
+expect_blocked expo-location "$FLAGS_SDK" 'src/shared/lib/platform'
+expect_blocked @react-native-async-storage/async-storage "$FLAGS_SDK" 'datafileCache.ts'
 
 echo
 echo "generated wire types — api/ and mappers/, plus the live channel's frame"

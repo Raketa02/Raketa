@@ -38,8 +38,9 @@ export { HOME_COPY, PLAY_COPY } from './components/shellCopy';
 export { NEEDS_YOUR_ANSWER_COPY } from './components/shellCopy';
 
 /**
- * **Play** — the *Groups | Explore* segment and the page under it
- * ([#512](https://github.com/Raketa02/Raketa/issues/512)).
+ * **Play** — the groups under a *Groups* title, or, with the `explore` feature flag on, the
+ * *Groups | Explore* segment and the page under it ([#512](https://github.com/Raketa02/Raketa/issues/512),
+ * [#826](https://github.com/Raketa02/Raketa/issues/826)).
  */
 export { PlayScreen } from './components/PlayScreen';
 

@@ -90,6 +90,7 @@ import { useCallback } from 'react';
 
 import { administratorHome, HandoverSheet, InvitationSheet } from '@/features/administrator/types';
 import { NAMING_STEP, PLAYER_PROFILE, START_PLAYING_STEP } from '@/features/auth/types';
+import { useFeatureDatafile } from '@/features/feature_flags/types';
 import { groupReturnRoute } from '@/features/groups/types';
 import {
   EntryUnavailableScreen,
@@ -143,6 +144,10 @@ export default function AppLayout() {
   // the one site that knows a player is signed in and past onboarding. The feature owns what
   // happens; this file owns the moment (ADR-0174 §6).
   useLocationRefresh(entry.kind === 'app');
+  // And the feature flags' datafile is read, for the same branch: only a player in the app can
+  // reach a gated screen, and this is the site that knows one is. From here on it is fetched again
+  // at every return to the foreground; nothing waits for it (ADR-0206 §6).
+  useFeatureDatafile(entry.kind === 'app');
 
   // Can't happen in practice — `BootstrapGate` renders nothing until the sequence
   // resolves, so no route tree exists while the status is still `bootstrapping`. It is

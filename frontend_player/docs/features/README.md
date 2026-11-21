@@ -28,8 +28,9 @@ is referenced from the other by a sentence, not copied.
 | [`blocks.md`](blocks.md)                     | Block at the foot of a record, the confirm sheet, You › Account › Blocked players and Unblock  |
 | [`conversations.md`](conversations.md)       | A booked game's room, the optimistic send, the live layer, typing                              |
 | [`discovery.md`](discovery.md)               | Home's people rows: New in Raketa, its tiles and See all; one tap moves a person everywhere    |
+| [`feature_flags.md`](feature_flags.md)       | The datafile, its saved copy and the fallback order, the gate read once, `explore`'s record    |
 | [`friends.md`](friends.md)                   | Friend requests, Members' pills, the record's Add friend, Home; You › Friends; PLAYED WITH     |
-| [`find_a_game_next.md`](find_a_game_next.md) | The empty screen that is Play › Explore                                                        |
+| [`find_a_game_next.md`](find_a_game_next.md) | The empty screen that is Play › Explore, behind `explore`                                      |
 | [`games.md`](games.md)                       | The result argument's eight states, the score pad, a booked game's result screen               |
 | [`groups.md`](groups.md)                     | Play › Groups, New group, Join a group, a group's page, Friends                                |
 | [`links.md`](links.md)                       | The four links into the app, the reader, the held link, the sheets, the install referrer       |
@@ -40,7 +41,7 @@ is referenced from the other by a sentence, not copied.
 | [`player_profile.md`](player_profile.md)     | The flagged photo, the gender step that ends setting up, the commit                            |
 | [`player_record.md`](player_record.md)       | The record sheet a face opens, reliability in points, counts and filter, what opponents said   |
 | [`rankings.md`](rankings.md)                 | Home's trophy, the Rankings page: the sport pill, General and Friends, the card, podium, list  |
-| [`shell.md`](shell.md)                       | Three tabs over one stack, the reset, Home, the bar standing down                              |
+| [`shell.md`](shell.md)                       | Three tabs over one stack, the reset, Home, Play titled Groups or its switcher, the bar        |
 | [`sportsmanship.md`](sportsmanship.md)       | The star card at the foot of a booked game's result screen                                     |
 
 ## The map
@@ -51,7 +52,9 @@ Chats tab, Find a game, challenges, plans, the old game screen at `/games/[id]` 
 flags that hid them were deleted, with their records here (`play.md`, `challenges.md`,
 `plans.md`, `feature_flags.md`). The bar is **Home · ⚡Play · You**. What the new games shared
 with the old loop was moved first ([#574](https://github.com/Raketa02/Raketa/issues/574)) and
-lives in the features that use it.
+lives in the features that use it. **The feature flags came back on 2026-11-21**
+([#826](https://github.com/Raketa02/Raketa/issues/826)), restored from git with their record, to keep
+Play's Explore off while it is unbuilt.
 
 What exists, feature by feature:
 
@@ -59,8 +62,8 @@ What exists, feature by feature:
 startup sequence. Above that: the HTTP client with its 401 → refresh → retry rotation, the
 `AppError` family, `shared/lib/auth` over the keychain, and the features:
 
-- `shell` — the three tabs and the one stack under them; Home, Play's _Groups | Explore_ segment
-  and You are its compositions.
+- `shell` — the three tabs and the one stack under them; Home, Play — the groups under a _Groups_
+  title, or its _Groups | Explore_ segment with `explore` on — and You are its compositions.
 - `auth` — sign up (with the **adult attestation**), sign in, session restore, the naming,
   Forgot password and invitations.
 - `onboarding` — the entry gate, the level door where play begins, the sports picker, the
@@ -81,3 +84,6 @@ startup sequence. Above that: the HTTP client with its 401 → refresh → retry
 - `blocks` — Block at the foot of that sheet, and You › Account › Blocked players, where Unblock is.
 - `payments`, `notifications`, `links`, `administrator` and `find_a_game_next` (Explore's empty
   page) — each in its own record above.
+- `feature_flags` — the feature flags: the datafile from `Raketa02/raketa-features`, its saved copy,
+  the Featurevisor SDK behind one file, and the gate a screen reads once when it mounts. One key,
+  `explore`, off.
