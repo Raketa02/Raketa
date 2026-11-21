@@ -918,6 +918,17 @@ sessions.
   Android does not end when one finger lifts — the recogniser stays active on the one that
   remains and reports it as the focal point — so a pinch is over on the event's pointer
   count, never on the recogniser's end (ADR-0177 §1 as amended).
+- **Nothing above a scroll view fades or moves on Reanimated.** On Android (React Native 0.76.9,
+  Reanimated 3.16.7) a Reanimated style animating the opacity of a view above a horizontal
+  `ScrollView` — opacity alone is enough, and detaching the style once the motion has run undoes
+  nothing — leaves that scroll view's offset out of what `measure` reads (measured 2026-11-21: a
+  face the rail had scrolled 988 points in measured at 1 162 instead of 172). A press tests every
+  move of the finger against that measure, and a thumb resting on a real screen reports moves, so
+  every tile and button the rail had scrolled in took the press and dropped it;
+  `adb shell input tap` sends no move and never shows it, and `input swipe x y x y 150` does. So
+  a FOR YOU line's content fades and slides on React Native's own `Animated` on the native driver
+  (`FoldingLine`). What measured harmless above the same rail: the line's border colour, a
+  Reanimated style, and Reanimated's layout transitions on the line and its fold.
 
 ### The live surface
 

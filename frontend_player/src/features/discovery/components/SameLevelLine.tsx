@@ -32,7 +32,7 @@ import { FoldingLineFooter, HomeRowRail, type FoldingLineParts } from '@/shared/
 import { foundAtSameLevel, type SameLevelPlayer } from '../domain/sameLevel';
 import { useOnScreenReports } from '../hooks/useOnScreenReports';
 import { usePersonSheet } from '../hooks/usePersonSheet';
-import { useReaderFace } from '../hooks/useReaderFace';
+import { useReaderFace, type ReaderFace } from '../hooks/useReaderFace';
 import { useSameLevel } from '../hooks/useSameLevel';
 
 import { DISCOVERY_COPY, seeAllWords } from './discoveryCopy';
@@ -49,12 +49,15 @@ export function useSameLevelLine(): FoldingLineParts | undefined {
   const COPY = DISCOVERY_COPY.sameLevel;
   const row = useSameLevel().data;
   const onScreen = useOnScreenReports('SAME_LEVEL');
+  // Read with Home, as the row is, not when the line opens: a press that waits on a read opens late
+  // and draws the cards twice.
+  const you = useReaderFace();
   if (row === undefined || row.people.length === 0) return undefined;
   return {
     title: COPY.line,
     count: row.total,
     testID: 'same-level',
-    content: <SameLevel players={row.people} onScreen={onScreen} />,
+    content: <SameLevel players={row.people} you={you} onScreen={onScreen} />,
     footer: (
       <FoldingLineFooter
         link={{
@@ -71,12 +74,13 @@ export function useSameLevelLine(): FoldingLineParts | undefined {
  * draw this one's cards again. */
 const SameLevel = memo(function SameLevel({
   players,
+  you,
   onScreen,
 }: {
   readonly players: readonly SameLevelPlayer[];
+  readonly you: ReaderFace | undefined;
   readonly onScreen: (players: readonly SameLevelPlayer[]) => void;
 }) {
-  const you = useReaderFace();
   const comparing = usePersonSheet(players);
   const [reading, setReading] = useState<RecordOpened>();
 

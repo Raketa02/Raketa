@@ -50,11 +50,22 @@ import type {
 export const ON_SCREEN_SHARE = 0.5;
 
 /**
- * How often a scroller says where it is while it moves — ten times a second. A card that crosses
- * the screen faster than that was not seen; the end of a drag and of a fling are said whatever the
- * rate, so where a scroll comes to rest is always read.
+ * How often a scroller says where it is while it moves — **every frame**: 16, under the 17 ms below
+ * which Android throttles nothing. The end of a drag and of a fling are said too, so where a scroll
+ * comes to rest is always read.
+ *
+ * **It was ten times a second, and on Android that stopped every press on Home** (2026-11-21). React
+ * Native 0.76's Android scroll view throttles *every* scroll event by this figure, the end of a fling
+ * included (`ReactScrollViewHelper.emitScrollEvent`), so a fling, a snap or an animated `scrollTo` —
+ * a FOR YOU line revealing itself — that came to rest within 100 ms of the last sample never said it
+ * had. React Native's `ScrollView`, having heard the momentum begin and never its end, took itself
+ * for still moving and **claimed every touch that started on it** (`_isAnimating`): no tile, face,
+ * friend button, pill or line header inside reached its press until a later scroll happened to end
+ * cleanly. A larger figure here is that bug again. Being on screen has no dwell time (the Home rows
+ * mechanics §9.2), so seeing every frame is the rule read more closely, and the reporter counts a
+ * card once a day however often it is told.
  */
-export const ON_SCREEN_SAMPLE_MS = 100;
+export const ON_SCREEN_SAMPLE_MS = 16;
 
 /** A stretch of one axis — where it starts, and how long it is. */
 export interface Span {

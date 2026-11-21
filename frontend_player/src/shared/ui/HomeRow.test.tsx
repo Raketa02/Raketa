@@ -24,6 +24,7 @@ import {
   HomeRow,
   HomeRowRail,
   RailBoundsContext,
+  RailDrawsAll,
   cardsDrawnFirst,
   type HomeRowProps,
   type HomeRowRailProps,
@@ -441,5 +442,101 @@ describe('what a rail draws first', () => {
     for (let at = 0; at < 10; at += 1) {
       expect(widthOf(`card-${at}`)).toBeCloseTo(content() * theme.size.railCardRatio);
     }
+  });
+});
+
+/**
+ * **A rail draws a card again only when that card changes** (2026-11-21). A rail re-renders on its own
+ * account — its folding line opening and closing hands it a page and takes it away — and it used to
+ * draw every card anew each time: on a Galaxy A32, ten cards' posters, bars and friend buttons on
+ * every open and every close of a FOR YOU line.
+ */
+describe('what a rail draws again', () => {
+  const drawnTimes = new Map<number, number>();
+  function Card({ at, width }: { readonly at: number; readonly width: number }) {
+    drawnTimes.set(at, (drawnTimes.get(at) ?? 0) + 1);
+    return <View testID={`card-${at}`} style={{ width }} />;
+  }
+  const drawCard = (at: number, width: number) => <Card key={at} at={at} width={width} />;
+  const CARDS = [0, 1, 2];
+
+  beforeEach(() => drawnTimes.clear());
+
+  function railOn(page: ReturnType<typeof followable<Span>>, draw = drawCard) {
+    return (
+      <PageOnScreen.Provider value={page}>
+        <HomeRowRail cards={CARDS} onScreen={() => undefined}>
+          {draw}
+        </HomeRowRail>
+      </PageOnScreen.Provider>
+    );
+  }
+
+  it('draws no card again when the rail re-renders on its own account', () => {
+    render(railOn(followable<Span>()));
+    const before = CARDS.map((at) => drawnTimes.get(at));
+
+    // The page the rail is on comes and goes — its line opening, closing.
+    screen.rerender(railOn(followable<Span>()));
+    screen.rerender(railOn(followable<Span>()));
+
+    expect(CARDS.map((at) => drawnTimes.get(at))).toEqual(before);
+  });
+
+  it('draws every card again when the row draws them another way — nothing is left behind', () => {
+    const page = followable<Span>();
+    render(railOn(page));
+    const before = CARDS.map((at) => drawnTimes.get(at) ?? 0);
+
+    screen.rerender(railOn(page, (at, width) => <Card key={at} at={at} width={width} />));
+
+    expect(CARDS.map((at) => drawnTimes.get(at))).toEqual(before.map((times) => times + 1));
+  });
+
+  it('keeps each card where it was when the cards change order', () => {
+    const page = followable<Span>();
+    render(railOn(page));
+    const first = screen.getByTestId('card-2');
+
+    screen.rerender(
+      <PageOnScreen.Provider value={page}>
+        <HomeRowRail cards={[2, 0, 1]} onScreen={() => undefined}>
+          {drawCard}
+        </HomeRowRail>
+      </PageOnScreen.Provider>,
+    );
+
+    // Keyed by the row's own key, as before: the same card, not the one at its old place.
+    expect(screen.getByTestId('card-2')).toBe(first);
+  });
+});
+
+/**
+ * **In a folding line, the cards past the screen's edge wait for the unfold** (2026-11-21): drawn
+ * during it, they held the JavaScript thread through the whole motion on a Galaxy A32.
+ */
+describe('a rail in a folding line', () => {
+  const count = 10;
+  const screenWidth = () => Dimensions.get('window').width;
+  const peekingStep = () => content() * theme.size.railCardRatio + theme.space.sm;
+  const drawnCards = () => screen.queryAllByTestId(/^card-/).length;
+
+  function railIn({ unfolded }: { readonly unfolded: boolean }) {
+    return (
+      <RailDrawsAll.Provider value={unfolded}>
+        <HomeRowRail cards={Array.from({ length: count }, (_, at) => at)}>
+          {(at, width) => <View key={at} testID={`card-${at}`} style={{ width }} />}
+        </HomeRowRail>
+      </RailDrawsAll.Provider>
+    );
+  }
+
+  it('draws only what can be on screen while the line unfolds, then every card', () => {
+    const first = cardsDrawnFirst({ count, screen: screenWidth(), step: peekingStep() });
+    render(railIn({ unfolded: false }));
+    expect(drawnCards()).toBe(first);
+
+    screen.rerender(railIn({ unfolded: true }));
+    expect(drawnCards()).toBe(count);
   });
 });

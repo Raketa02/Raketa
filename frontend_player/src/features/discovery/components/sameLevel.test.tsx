@@ -363,6 +363,22 @@ describe('a card', () => {
     expect(within(bar).getByText('Developing', { includeHiddenElements: true })).toBeTruthy();
   });
 
+  it('reads your face with Home, so opening the line asks the server nothing', async () => {
+    // A press that waits on a read is a line that opens late, and draws again when it lands
+    // (2026-11-21: on a Galaxy A32 the open fired `/players/me/record` every first time).
+    levelServer();
+    await launchSignedIn();
+    await screen.findByRole('button', { name: lineNamed(COPY.line), expanded: false });
+    await waitFor(() =>
+      expect(transport.requestsTo('GET', '/api/v1/players/me/record')).toHaveLength(1),
+    );
+    const before = transport.requests.length;
+
+    await openLine(COPY.line);
+
+    expect(transport.requests.slice(before).map((r) => `${r.method} ${r.path}`)).toEqual([]);
+  });
+
   it('opens the record from the face, and a request asked there was found at the card’s sport', async () => {
     levelServer();
     await homeWithTheRow();

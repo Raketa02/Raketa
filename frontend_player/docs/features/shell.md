@@ -292,12 +292,22 @@ row's reads list people (`LISTS_PEOPLE`) and every friend write re-reads those. 
 Home rows mechanics §9.2). `HomeScreen` turns on `ShellScreen`'s **`watchesOnScreen`** — forwarded,
 not designed, and off on every other shell screen, whose scroller says nothing of where it is. With
 it on, the page's scroller hands its rows `shared/ui`'s `PageOnScreen` (`useWatchedPage`): how far
-it is scrolled and how tall it shows, sampled ten times a second and read again where a drag or a
-fling comes to rest — and **nothing while Home is not the screen in view**, a screen pushed over it,
+it is scrolled and how tall it shows, sampled every frame and read again where a drag or a fling
+comes to rest — and **nothing while Home is not the screen in view**, a screen pushed over it,
 another tab, the app in the background (`useFocusEffect` and `useAppInBackground` in a child, so a
 shell screen drawn outside a navigator never asks; coming back says the band again). Nothing drawn
 changes, and nothing re-renders as the page moves: the band is followed, not state. What a row does
 with it is `discovery`'s.
+
+**Every frame, because ten times a second stopped every press on Home on Android** (2026-11-21,
+`ON_SCREEN_SAMPLE_MS`). React Native 0.76's Android scroll view throttles _every_ scroll event by the
+page's `scrollEventThrottle`, the end of a scroll included, so a scroll that came to rest within 100
+ms of the last sample — a FOR YOU line scrolling the page to show itself, always; a fling, now and
+then — never said it had. `ScrollView`, having heard the momentum begin and never its end, took
+itself for still moving and claimed every touch that started on it: no line header, tile, face,
+friend button, pill or link on Home reached its press until the reader dragged the page. On a Galaxy
+A32, eleven of eleven presses across the five lines failed at 100 and none at 16, under which
+Android throttles nothing. A larger figure here is that bug again.
 
 **Home's header reads envelope, bell, trophy, and what waits on the player is behind the envelope**
 ([#816](https://github.com/Raketa02/Raketa/issues/816), PRD #810;

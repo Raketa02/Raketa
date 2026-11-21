@@ -13,7 +13,7 @@
 
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import {
   pressHardwareBack,
@@ -21,7 +21,7 @@ import {
   watchHardwareBack,
 } from '@/test-support/hardwareBack';
 
-import { ModalStage } from './ModalStage.android';
+import { ModalStage, type ModalStageProps } from './ModalStage.android';
 import { OverlayHost } from './overlay';
 import { theme } from './theme';
 
@@ -37,7 +37,13 @@ afterEach(() => {
 });
 
 /** An app with one sheet, opened and closed by a control of its own. */
-function App({ onRequestClose }: { readonly onRequestClose?: () => void } = {}) {
+function App({
+  onRequestClose,
+  animationType = 'none',
+}: {
+  readonly onRequestClose?: () => void;
+  readonly animationType?: ModalStageProps['animationType'];
+} = {}) {
   const [open, setOpen] = useState(false);
   return (
     <OverlayHost>
@@ -46,7 +52,7 @@ function App({ onRequestClose }: { readonly onRequestClose?: () => void } = {}) 
         <ModalStage
           visible={open}
           onRequestClose={onRequestClose ?? (() => setOpen(false))}
-          animationType="none"
+          animationType={animationType}
           layer="sheet"
         >
           <View testID="sheet">
@@ -173,6 +179,63 @@ describe('a stage under the host', () => {
     });
     expect(swallowed).toBe(true);
     expect(onRequestClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * **The arrival runs once the layer is on screen** (2026-11-21). It used to start in the effect
+ * that hands the layer to the host — a commit *before* the host draws it — so on a Galaxy A32 the
+ * player record's layer was first laid out 235 ms into a 260 ms slide, and the sheet simply
+ * appeared. Under the native driver a test sees no frames, so what it can see is when the slide is
+ * started: never before the layer is laid out, and once per arrival.
+ */
+describe('the arrival', () => {
+  const LAID_OUT = { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } };
+
+  function watchSlides(): { readonly started: () => number; readonly restore: () => void } {
+    let count = 0;
+    const timing = jest.spyOn(Animated, 'timing').mockImplementation(
+      () =>
+        ({
+          start: () => {
+            count += 1;
+          },
+          stop: () => undefined,
+          reset: () => undefined,
+        }) as Animated.CompositeAnimation,
+    );
+    return { started: () => count, restore: () => timing.mockRestore() };
+  }
+
+  it('slides only once its layer is laid out, never on a clock that ran before it was drawn', () => {
+    const slides = watchSlides();
+    render(<App animationType="slide" />);
+
+    fireEvent.press(screen.getByLabelText('Open'));
+    // In the tree, and not yet on screen: nothing may move yet.
+    expect(screen.getByTestId('modal-stage')).toBeTruthy();
+    expect(slides.started()).toBe(0);
+
+    fireEvent(screen.getByTestId('modal-stage'), 'layout', LAID_OUT);
+    expect(slides.started()).toBe(1);
+    // A later layout — a rotation, the keyboard — is not a second arrival.
+    fireEvent(screen.getByTestId('modal-stage'), 'layout', LAID_OUT);
+    expect(slides.started()).toBe(1);
+    slides.restore();
+  });
+
+  it('slides again on the next arrival', () => {
+    const slides = watchSlides();
+    render(<App animationType="slide" />);
+    fireEvent.press(screen.getByLabelText('Open'));
+    fireEvent(screen.getByTestId('modal-stage'), 'layout', LAID_OUT);
+    fireEvent.press(screen.getByLabelText('Close'));
+
+    fireEvent.press(screen.getByLabelText('Open'));
+    expect(slides.started()).toBe(1);
+    fireEvent(screen.getByTestId('modal-stage'), 'layout', LAID_OUT);
+    expect(slides.started()).toBe(2);
+    slides.restore();
   });
 });
 

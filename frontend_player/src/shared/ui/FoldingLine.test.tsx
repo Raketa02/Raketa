@@ -9,7 +9,9 @@
 
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { useState } from 'react';
+import { getAnimatedStyle } from 'react-native-reanimated';
 import {
+  Animated,
   Dimensions,
   Pressable,
   ScrollView,
@@ -71,6 +73,18 @@ function Line({
 
 const header = () => screen.getByRole('button', { name: TITLE });
 const card = () => flat(screen.getByTestId('line').props.style);
+/** The border as the UI thread draws it — the press and the open state, with no render. */
+const drawnBorder = () =>
+  (getAnimatedStyle(screen.getByTestId('line')) as { readonly borderColor?: string }).borderColor;
+const chevronTurn = () =>
+  // Hidden from a listener: the line's name says open or shut.
+  (
+    getAnimatedStyle(screen.getByTestId('line-chevron', { includeHiddenElements: true })) as {
+      readonly transform?: readonly { readonly rotate?: string }[];
+    }
+  ).transform?.[0]?.rotate;
+/** One frame, for a value set on the UI thread to be drawn. */
+const nextFrame = () => act(() => jest.advanceTimersByTime(16));
 
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());
@@ -135,15 +149,48 @@ describe('a closed line', () => {
     expect(onHeader).toHaveBeenCalledTimes(1);
   });
 
-  /** 6.6: a card pressed is its border in coral. */
+  /** 6.6: a card pressed is its border in coral — drawn on the UI thread, with no render for it. */
   it('draws its border coral while pressed', () => {
     render(<Line open={false} />);
 
     fireEvent(header(), 'pressIn');
-    expect(card().borderColor).toBe(theme.color.coral);
+    nextFrame();
+    expect(drawnBorder()).toBe(theme.color.coral);
 
     fireEvent(header(), 'pressOut');
-    expect(card().borderColor).toBe(theme.color.line);
+    nextFrame();
+    expect(drawnBorder()).toBe(theme.color.line);
+  });
+
+  /**
+   * 2026-11-21: nothing moved until the page drew the content — 350 ms after the finger on a Galaxy
+   * A32. The header answers on its own, and the page's `open` lands on the same.
+   */
+  it('answers a press at once — the border ink, the chevron turning — before the page draws anything', () => {
+    // The page never answers: whatever moves here, the header moved by itself.
+    render(<Line open={false} />);
+
+    fireEvent.press(header());
+    nextFrame();
+    expect(drawnBorder()).toBe(theme.color.ink);
+    act(() => jest.advanceTimersByTime(theme.motion.lineUnfold));
+    expect(chevronTurn()).toBe('90deg');
+    // What it holds is still the page's to draw.
+    expect(screen.queryByText('the tiles')).toBeNull();
+  });
+});
+
+describe('an open line, pressed', () => {
+  it('answers at once too — the border back to `line`, the chevron turning back', () => {
+    render(<Line open />);
+    nextFrame();
+    expect(drawnBorder()).toBe(theme.color.ink);
+
+    fireEvent.press(header());
+    nextFrame();
+    expect(drawnBorder()).toBe(theme.color.line);
+    act(() => jest.advanceTimersByTime(theme.motion.lineFold));
+    expect(chevronTurn()).toBe('0deg');
   });
 });
 
@@ -286,6 +333,71 @@ describe('closing', () => {
     act(() => jest.advanceTimersByTime(theme.motion.lineFold));
 
     expect(screen.getByText('the tiles')).toBeTruthy();
+  });
+});
+
+/**
+ * **The content's fade and slide are React Native's `Animated` on the native driver** (2026-11-21).
+ * What went wrong under a Reanimated style lives in Fabric's `measure` and Reanimated's native commits,
+ * which Jest draws neither of: a press inside a rail the line's content had scrolled was measured where
+ * its card stood before the scroll, and dropped at the first move of a resting thumb (the module note).
+ * So this holds the cure — no Reanimated style on the content, the motion on the native driver — and the
+ * device holds the proof.
+ */
+describe('the content, moving', () => {
+  const content = () => screen.getByTestId('line-content', { includeHiddenElements: true });
+
+  let timing: jest.SpyInstance<Animated.CompositeAnimation, Parameters<typeof Animated.timing>>;
+  beforeEach(() => {
+    timing = jest.spyOn(Animated, 'timing');
+  });
+  afterEach(() => timing.mockRestore());
+  /** The motions started since the last look, as far as this suite cares. */
+  const motions = () => {
+    const runs = timing.mock.calls.map(([, config]) => ({
+      toValue: config.toValue,
+      duration: config.duration,
+      useNativeDriver: config.useNativeDriver,
+    }));
+    timing.mockClear();
+    return runs;
+  };
+
+  it('fades and slides in on the native driver for `motion.lineUnfold`, and out for `motion.lineFold`', () => {
+    render(<Line open={false} />);
+    motions();
+
+    screen.rerender(<Line open />);
+    expect(motions()).toEqual([
+      { toValue: 1, duration: theme.motion.lineUnfold, useNativeDriver: true },
+    ]);
+
+    screen.rerender(<Line open={false} />);
+    expect(motions()).toEqual([
+      { toValue: 0, duration: theme.motion.lineFold, useNativeDriver: true },
+    ]);
+  });
+
+  it('carries no Reanimated style: nothing above a rail may', () => {
+    render(<Line open={false} />);
+    screen.rerender(<Line open />);
+
+    expect(content().props.jestAnimatedStyle).toBeUndefined();
+    expect(content().props.animatedStyle).toBeUndefined();
+  });
+
+  it('stands still under Reduce motion, drawn where it rests', () => {
+    const tree = (open: boolean) => (
+      <ReducedMotionProvider value>
+        <Line open={open} />
+      </ReducedMotionProvider>
+    );
+    render(tree(false));
+
+    screen.rerender(tree(true));
+
+    expect(motions()).toEqual([]);
+    expect(flat(content().props.style)).toMatchObject({ opacity: 1 });
   });
 });
 

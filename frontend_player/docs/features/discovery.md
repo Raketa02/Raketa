@@ -73,7 +73,9 @@ sheet.
 
 **The card** (`SameLevelCard`, design-system 7.34) draws the reader's face (`useReaderFace`: the id
 off the cached `/users/me`, the photo off `player_record`'s `useOwnFace`, read once per row or screen,
-never per card), _You_ and the level; the % in **the game cards' inks** by the game cards' breaks
+never per card — and **read with Home by the line's hook, open or not** (2026-11-21), so opening
+_Players at your level_ asks the server nothing and the cards are not drawn twice when it lands),
+_You_ and the level; the % in **the game cards' inks** by the game cards' breaks
 (`balanceTone`: green from 70, amber 55–69, red under 55), _EVEN_ under it always, the sport and its
 dot; the other's face, nickname and level. Under them `shared/ui`'s **`ComparisonBar`** (7.33), its
 dark paint: the Skill passport's 1,00–5,00 and four bands, a volt fill to their level, the white _YOU_

@@ -36,12 +36,15 @@
  * Opening is **one** change to the fold's height — nought, then the content's measured height — and a
  * Reanimated layout transition moves the frames there: the fold's, the line's, and **every line
  * below it**, which `FoldingLines` hands the same beat, so they slide rather than jump. Over that beat
- * one shared value fades the content in from a `space.md` above its place and turns the chevron
- * down — opacity and transform, nothing else (`RecordDetails`' mechanics, for the reason it gives:
- * under the New Architecture Reanimated 3.16 cannot write a layout prop without React's commit, and
- * skips it while React commits elsewhere). **Opening is `motion.lineUnfold`, folding the shorter
- * `motion.lineFold`**, and only once it has run is the content let go. **Under Reduce motion nothing
- * moves**: the line is open or shut at once (ADR-0205 §8).
+ * the content fades in from a `space.md` above its place and the chevron turns down — opacity and
+ * transform, nothing else (`RecordDetails`' mechanics, for the reason it gives: under the New
+ * Architecture Reanimated 3.16 cannot write a layout prop without React's commit, and skips it while
+ * React commits elsewhere). **The content's fade and slide are React Native's `Animated` on the native
+ * driver, never a Reanimated style**: a Reanimated style above a rail cost every press the rail had
+ * scrolled in, on Android (2026-11-21; `progress` below says how). **Opening is
+ * `motion.lineUnfold`, folding the shorter `motion.lineFold`**, and only once it has run is the
+ * content let go. **Under Reduce motion nothing moves**: the line is open or shut at once (ADR-0205
+ * §8).
  *
  * **As it unfolds, the page shows it** (`PageReveal`): once its content is measured — the start of the
  * unfold, its height known — if its foot would stand below the page's, the page scrolls just far
@@ -73,6 +76,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -80,10 +84,17 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  Animated as Motion,
+  Easing as MotionEasing,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import Animated, {
   Easing,
-  interpolate,
   LinearTransition,
   useAnimatedStyle,
   useSharedValue,
@@ -92,12 +103,20 @@ import Animated, {
 
 import { countFigure, withCount } from '@/shared/formatting/countFigure';
 
-import { HomeRow, RailBoundsContext, type RailBounds } from './HomeRow';
+import { HomeRow, RailBoundsContext, RailDrawsAll, type RailBounds } from './HomeRow';
 import { PageOnScreen, PageReveal, SectionOnPage, useTopOnPage, useTopWithin } from './onScreen';
 import { useReducedMotion } from './overlay';
 import { theme } from './theme';
 
 const EASE = Easing.bezierFn(
+  theme.motion.easeDecel.x1,
+  theme.motion.easeDecel.y1,
+  theme.motion.easeDecel.x2,
+  theme.motion.easeDecel.y2,
+);
+
+/** The same curve for the content's fade and slide, which run on React Native's `Animated`. */
+const SLIDE_EASE = MotionEasing.bezier(
   theme.motion.easeDecel.x1,
   theme.motion.easeDecel.y1,
   theme.motion.easeDecel.x2,
@@ -114,6 +133,11 @@ const SLIDE = theme.space.md;
 
 /** A quarter turn: the chevron points right shut and down open. */
 const TURN = 90;
+
+/** 5.1's card bounded by `line`; ADR-0205 §5's open line in `ink`; 6.6's pressed card in `coral`. */
+const BORDER_SHUT = theme.color.line;
+const BORDER_OPEN = theme.color.ink;
+const BORDER_PRESSED = theme.color.coral;
 
 /**
  * **Whether the page's last move folded a line** — what every line in a `FoldingLines` moves its frame
@@ -204,7 +228,6 @@ export function FoldingLine({
   /** The content's own height, as last measured — nought until it is, and again once let go. */
   const [full, setFull] = useState(0);
   const [header, setHeader] = useState(0);
-  const [pressed, setPressed] = useState(false);
   // A line drawn open from the start was opened under nobody: nothing to show, and its cards already
   // stand where they will.
   const revealed = useRef(open);
@@ -230,16 +253,62 @@ export function FoldingLine({
     return () => clearTimeout(timer);
   }, [open, drawn, reduced]);
 
-  const progress = useSharedValue(open ? 1 : 0);
+  /**
+   * **The content's fade and slide** — on the commit that draws it, on React Native's own `Animated`
+   * and its native driver, **never a Reanimated style** (2026-11-21). The content stands above the
+   * rail, and on Android (React Native 0.76.9, Reanimated 3.16.7) a Reanimated style fading a view
+   * above a horizontal scroll view — opacity alone will do, and taking it off after the unfold undoes
+   * nothing — leaves that scroll view's offset out of what `measure` reads: a card measured where it
+   * stood before the rail scrolled (the line's border colour, a Reanimated style above it too, measured
+   * harmless). A press tests each move of the finger against that measure, and a real
+   * thumb reports moves while it rests, so every tile, face and button the rail had scrolled in took
+   * the press and dropped it. The same fade and slide on the native driver leave the measure true.
+   */
+  const progress = useRef(new Motion.Value(open ? 1 : 0)).current;
+  /** The header's answer — where it is headed (the ink border) and its chevron's turn there. */
+  const aimed = useSharedValue(open ? 1 : 0);
+  const lit = useSharedValue(open ? 1 : 0);
+  /** Whether a finger is on the header — its border coral, with no render for it. */
+  const pressing = useSharedValue(0);
   useEffect(() => {
     const to = open ? 1 : 0;
-    progress.value = reduced
+    const duration = open ? theme.motion.lineUnfold : theme.motion.lineFold;
+    // Already on its way there when the press said so; this is the page's word, and the same.
+    if (aimed.value !== to) {
+      aimed.value = to;
+      lit.value = reduced ? to : withTiming(to, { duration, easing: EASE });
+    }
+    if (reduced) {
+      progress.setValue(to);
+      return undefined;
+    }
+    const motion = Motion.timing(progress, {
+      toValue: to,
+      duration,
+      easing: SLIDE_EASE,
+      useNativeDriver: true,
+    });
+    motion.start();
+    return () => motion.stop();
+  }, [open, reduced, progress, aimed, lit]);
+
+  /**
+   * **The header answers the press at once**, on the UI thread, before the page has drawn anything:
+   * the chevron turns and the border goes ink, or back. A press always heads where the header can
+   * tell — the open line closes, and any other opens, at once or once the open one has folded — and
+   * the page's `open` then lands on the same. Until 2026-11-21 nothing moved until the commit that
+   * draws the content, which on a Galaxy A32 came 350 ms after the finger.
+   */
+  const answerPress = () => {
+    const to = open ? 0 : 1;
+    aimed.value = to;
+    lit.value = reduced
       ? to
       : withTiming(to, {
-          duration: open ? theme.motion.lineUnfold : theme.motion.lineFold,
+          duration: open ? theme.motion.lineFold : theme.motion.lineUnfold,
           easing: EASE,
         });
-  }, [open, reduced, progress]);
+  };
 
   useEffect(() => {
     if (!open) {
@@ -255,26 +324,42 @@ export function FoldingLine({
   }, [open, reduced]);
 
   // As it unfolds, the page shows it — once per opening, and only a line pressed open.
+  const showOnPage = useCallback(
+    (content: number) => {
+      if (!open || revealed.current || !reveals || content === 0 || reveal === undefined) return;
+      const top = line.top.get();
+      if (top === undefined) return;
+      revealed.current = true;
+      reveal({ from: top, size: 2 * BORDER + header + content });
+    },
+    [open, reveals, reveal, line.top, header],
+  );
   useEffect(() => {
-    if (!open) {
-      revealed.current = false;
-      return;
-    }
-    if (revealed.current || !reveals || full === 0 || reveal === undefined) return;
-    const top = line.top.get();
-    if (top === undefined) return;
-    revealed.current = true;
-    reveal({ from: top, size: 2 * BORDER + header + full });
-  }, [open, reveals, full, header, reveal, line.top]);
+    if (!open) revealed.current = false;
+  }, [open]);
+  // The content's layout asks first (below), on the beat the unfold starts; this is for a measure
+  // already in hand when the line opens again.
+  useEffect(() => showOnPage(full), [showOnPage, full]);
 
-  // Opacity and transform only: a layout prop here would send every frame through the commit React
-  // pauses (the module note).
-  const slide = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ translateY: interpolate(progress.value, [0, 1], [-SLIDE, 0]) }],
-  }));
+  // Opacity and transform only: a layout prop cannot ride the native driver, and here would move the
+  // rail under the finger frame by frame.
+  const slide = useMemo(
+    () => ({
+      opacity: progress,
+      transform: [
+        { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [-SLIDE, 0] }) },
+      ],
+    }),
+    [progress],
+  );
   const turn = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${TURN * progress.value}deg` }],
+    transform: [{ rotate: `${TURN * lit.value}deg` }],
+  }));
+  // A colour, not a size: drawn on the UI thread with no commit, so a finger on the header costs
+  // the page no render — a render here once held every press back by a whole commit.
+  const frame = useAnimatedStyle(() => ({
+    borderColor:
+      pressing.value === 1 ? BORDER_PRESSED : aimed.value === 1 ? BORDER_OPEN : BORDER_SHUT,
   }));
 
   const bounds = useMemo<RailBounds>(
@@ -290,7 +375,8 @@ export function FoldingLine({
     <Animated.View
       layout={transition}
       onLayout={({ nativeEvent }) => line.laidOut(nativeEvent.layout.y)}
-      style={[s.line, open ? s.open : undefined, pressed ? s.pressed : undefined]}
+      // No hole in the array: Reanimated's test reading walks every entry.
+      style={open ? [s.line, s.open, frame] : [s.line, frame]}
       {...(testID === undefined ? {} : { testID })}
     >
       <View style={s.clip}>
@@ -298,9 +384,16 @@ export function FoldingLine({
           accessibilityRole="button"
           accessibilityLabel={withCount(title, count)}
           accessibilityState={{ expanded: open }}
-          onPress={onHeader}
-          onPressIn={() => setPressed(true)}
-          onPressOut={() => setPressed(false)}
+          onPress={() => {
+            answerPress();
+            onHeader();
+          }}
+          onPressIn={() => {
+            pressing.value = 1;
+          }}
+          onPressOut={() => {
+            pressing.value = 0;
+          }}
           onLayout={({ nativeEvent }) => setHeader(nativeEvent.layout.height)}
           style={s.header}
         >
@@ -309,6 +402,7 @@ export function FoldingLine({
           </Text>
           {figure === undefined ? null : <CountPill figure={figure} line={testID} />}
           <Animated.View
+            testID={testID === undefined ? undefined : `${testID}-chevron`}
             style={turn}
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
@@ -328,25 +422,32 @@ export function FoldingLine({
             accessibilityElementsHidden={!open}
             importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
           >
-            <Animated.View
+            <Motion.View
               testID={testID === undefined ? undefined : `${testID}-content`}
               style={[s.content, footer === undefined ? s.contentAlone : undefined, slide]}
               onLayout={({ nativeEvent }) => {
                 const measured = nativeEvent.layout.height;
                 // A sub-point difference is rounding, not a new height: no second move for it.
                 setFull((was) => (Math.abs(was - measured) < 0.5 ? was : measured));
+                // The page shows it now, with the unfold, rather than a render later: that render
+                // queued behind the rest of the opening and scrolled the page half a second after the
+                // line had opened (2026-11-21).
+                showOnPage(measured);
               }}
             >
               <SectionOnPage.Provider value={body.top}>
                 {/* On the page once unfolded; folding away, on none: a closed line reports nobody. */}
                 <PageOnScreen.Provider value={open && unfolded ? page : undefined}>
                   <RailBoundsContext.Provider value={bounds}>
-                    {children}
-                    {footer}
+                    {/* The cards nobody can see yet, once the motion has run — not during it. */}
+                    <RailDrawsAll.Provider value={unfolded}>
+                      {children}
+                      {footer}
+                    </RailDrawsAll.Provider>
                   </RailBoundsContext.Provider>
                 </PageOnScreen.Provider>
               </SectionOnPage.Provider>
-            </Animated.View>
+            </Motion.View>
           </Animated.View>
         ) : null}
       </View>
@@ -446,10 +547,9 @@ const s = StyleSheet.create({
     borderWidth: BORDER,
     borderRadius: theme.radius.card,
   },
-  // ADR-0205 §5: the open line has an ink border and a soft shadow (4.3's seventh).
+  // ADR-0205 §5: the open line has an ink border and a soft shadow (4.3's seventh). The border is
+  // also the `frame` style's, which draws it — and 6.6's coral while pressed — from the press itself.
   open: { borderColor: theme.color.ink, ...theme.shadow.openLine },
-  // 6.6: a card pressed is its border in coral.
-  pressed: { borderColor: theme.color.coral },
   clip: { borderRadius: theme.radius.card - BORDER, overflow: 'hidden' },
   // The h2 line and space.md above and below it: minTouch exactly.
   header: {

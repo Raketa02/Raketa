@@ -80,7 +80,15 @@
  * **It never imports a feature.** Every word, every press and every card is handed in.
  */
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  isValidElement,
+  memo,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -135,6 +143,14 @@ export interface RailBounds {
 }
 
 export const RailBoundsContext = createContext<RailBounds | undefined>(undefined);
+
+/**
+ * **Whether a rail may draw its cards past the screen's edge yet** — at once anywhere but in a folding
+ * line, which says so once it has unfolded (2026-11-21): drawn mid-unfold, the seven or so cards
+ * nobody can see yet were a commit that held the JavaScript thread through the whole motion on a
+ * Galaxy A32, and every press with it.
+ */
+export const RailDrawsAll = createContext(true);
 
 /**
  * 7.7's two geometries, Needs your answer's wider peeking card (7.7 as amended by #816), New in
@@ -208,17 +224,19 @@ export function HomeRowRail<Card>({
   const seen = useCardsOnScreen({ cards, lead: bleed, cardWidth, step, onScreen });
 
   /**
-   * Whether the cards past the screen's edge are drawn yet — once the rail has had cards for a frame.
-   * Keyed on *having* cards rather than on mounting, because a row's rail can stand empty while its
-   * read is in flight, and the cards arriving are the moment that costs.
+   * Whether the cards past the screen's edge are drawn yet — once the rail has had cards for a frame,
+   * and, in a folding line, once the line has unfolded (`RailDrawsAll`). Keyed on *having* cards
+   * rather than on mounting, because a row's rail can stand empty while its read is in flight, and
+   * the cards arriving are the moment that costs.
    */
   const [allDrawn, setAllDrawn] = useState(false);
   const hasCards = cards.length > 0;
+  const mayDrawAll = useContext(RailDrawsAll);
   useEffect(() => {
     // A plain update from the effect, never `startTransition`: React Native 0.76's renderer threw
     // on a transition started here (`Cannot read property 'add' of undefined`) and took Home down.
-    if (hasCards && !allDrawn) setAllDrawn(true);
-  }, [hasCards, allDrawn]);
+    if (hasCards && !allDrawn && mayDrawAll) setAllDrawn(true);
+  }, [hasCards, allDrawn, mayDrawAll]);
   const drawn = allDrawn
     ? cards.length
     : cardsDrawnFirst({ count: cards.length, screen: content + 2 * bleed, step });
@@ -250,13 +268,20 @@ export function HomeRowRail<Card>({
         style={{ marginHorizontal: -bleed }}
         contentContainerStyle={[s.stripContent, { paddingHorizontal: bleed }]}
       >
-        {cards.map((card, at) =>
-          at < drawn ? (
-            children(card, cardWidth)
-          ) : (
-            <View key={`${STAND_IN_KEY}${at}`} style={{ width: cardWidth }} />
-          ),
-        )}
+        {cards.map((card, at) => {
+          if (at >= drawn)
+            return <View key={`${STAND_IN_KEY}${at}`} style={{ width: cardWidth }} />;
+          const element = children(card, cardWidth);
+          return (
+            <DrawnCard
+              key={isValidElement(element) && element.key !== null ? element.key : at}
+              card={card}
+              width={cardWidth}
+              draw={children}
+              element={element}
+            />
+          );
+        })}
       </ScrollView>
       {paging && (dotsAlone || cards.length > 1) ? (
         // Held inside the rail: a card that leaves from the end — an invitation answered or run out —
@@ -283,6 +308,28 @@ export function cardsDrawnFirst({
 }): number {
   return Math.min(count, Math.ceil(screen / step) + 1);
 }
+
+interface DrawnCardProps {
+  readonly card: unknown;
+  readonly width: number;
+  readonly draw: unknown;
+  readonly element: ReactNode;
+}
+
+/**
+ * **A card the rail has drawn, drawn again only when it changes** — its card, its width, or the row's
+ * way of drawing it (2026-11-21). A rail re-renders on its own account — the page it is on coming or
+ * going as its folding line opens and closes, the rest of its cards drawn — and it used to draw every
+ * card anew each time: ten cards, each with its posters, its comparison bar and a friend button's four
+ * writes and two sheets, on every open and close of a FOR YOU line. A row that draws again hands a new
+ * `draw`, and every card follows, as before: nothing a card shows can be left behind.
+ */
+const DrawnCard = memo(
+  function DrawnCard({ element }: DrawnCardProps) {
+    return <>{element}</>;
+  },
+  (was, now) => was.card === now.card && was.width === now.width && was.draw === now.draw,
+);
 
 /** A stand-in's key, which no row's own key can be: a row keys its cards by their ids. */
 const STAND_IN_KEY = 'drawn-in-a-moment-';
