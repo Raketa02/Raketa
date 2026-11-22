@@ -25,6 +25,7 @@ import { doorRowLabel } from '@/shared/ui';
 import {
   ANIA,
   deckCard,
+  DETAILS_CARD,
   DECK_READ_AT,
   EWA,
   groupDeck,
@@ -726,13 +727,16 @@ describe('Pay on a game’s details, where the yes takes the last seat (Q124)', 
       expect(screen).toHavePathname(`/play/group/${CREW.id}/game/${card.proposal_id}`),
     );
 
-    // The last seat's yes books the game and moves money, so it says Pay with the share.
+    // The last seat's yes books the game and moves money, so it says Pay with the share — in the
+    // dark card's foot, beside Not this time (#836).
     expect(await screen.findByText('Pay 32 zł')).toBeTruthy();
+    const gameCard = screen.getByTestId(DETAILS_CARD);
     expect(screen.queryByRole('button', { name: COPY.yes })).toBeNull();
-    fireEvent.press(screen.getByRole('button', { name: 'Pay 32 zł' }));
+    expect(within(gameCard).getByRole('button', { name: COPY.no })).toBeTruthy();
+    fireEvent.press(within(gameCard).getByRole('button', { name: 'Pay 32 zł' }));
 
     expect(screen.getByText('Booking in 10 s')).toBeTruthy();
-    expect(screen.getByRole('button', { name: FILL.undo.booking })).toBeTruthy();
+    expect(within(gameCard).getByRole('button', { name: FILL.undo.booking })).toBeTruthy();
     expect(yeses(card)).toHaveLength(0);
 
     act(() => jest.advanceTimersByTime(10 * SECOND));
@@ -768,7 +772,9 @@ describe('Pay on a game’s details, where the yes takes the last seat (Q124)', 
     act(() => jest.advanceTimersByTime(10 * SECOND));
     await waitFor(() => expect(yeses(card)).toHaveLength(1));
 
-    const sending = screen.getByRole('button', { name: FILL.undo.booking });
+    const sending = within(screen.getByTestId(DETAILS_CARD)).getByRole('button', {
+      name: FILL.undo.booking,
+    });
     expect(sending.props.accessibilityState).toMatchObject({ busy: true });
     expect(screen.queryByRole('button', { name: 'Pay 32 zł' })).toBeNull();
     fireEvent.press(sending);

@@ -221,6 +221,15 @@ export function withYourYes(
   };
 }
 
+/**
+ * **The dark game card on a game's details** — the status, the tiles, the facts and, in its foot,
+ * what the reader may do now (#836). A suite asks `within` it that an action is the card's.
+ */
+export const DETAILS_CARD = 'game-details-card';
+
+/** **A game's details, the screen** — what a suite walks in reading order, the deck behind left out. */
+export const DETAILS_SCREEN = 'game-details';
+
 /** Serve a game's details — fixed, or read off the suite's own state at each request. */
 export function stubProposal(
   transport: Transport,

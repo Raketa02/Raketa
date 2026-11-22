@@ -33,6 +33,7 @@ import { useToastQueue } from '@/shared/store/toast.store';
 import {
   ANIA,
   deckCard,
+  DETAILS_CARD,
   DECK_READ_AT,
   EWA,
   groupDeck,
@@ -529,9 +530,11 @@ describe('Home while one payment is awaited (Q111)', () => {
     expect(await screen.findByText(PROPOSALS_COPY.game.status.WAITING_FOR_A_PAYMENT)).toBeTruthy();
     expect(screen.getByText('Padel')).toBeTruthy();
     expect(screen.getByLabelText('Your share, 32 zł, Confirm your payment by 10:30')).toBeTruthy();
-    expect(screen.getByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
+    // Both in the dark card's foot, under the share they act on (#836).
+    const gameCard = screen.getByTestId(DETAILS_CARD);
+    expect(within(gameCard).getByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
 
-    fireEvent.press(screen.getByRole('button', { name: FILL.confirm.title.PAY }));
+    fireEvent.press(within(gameCard).getByRole('button', { name: FILL.confirm.title.PAY }));
     expect(await screen.findByText('Confirm your payment by 10:30 to keep your seat')).toBeTruthy();
   });
 });

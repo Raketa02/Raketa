@@ -1,11 +1,13 @@
 /**
  * **A game still filling, in detail** — what a card or its **i**, a *You're In* row and a live yes
  * open (the screens A4.2, Q75; details mocks 5–10 for the layout;
- * [#553](https://github.com/Raketa02/Raketa/issues/553), [#557](https://github.com/Raketa02/Raketa/issues/557)).
+ * [#553](https://github.com/Raketa02/Raketa/issues/553), [#557](https://github.com/Raketa02/Raketa/issues/557);
+ * the order is the For-fun mocks 3–6's since [#836](https://github.com/Raketa02/Raketa/issues/836)).
  *
  * ```
  * ‹  [faces]  karol.t, zofia.b, ania.k    — or *Only you*, alone on it
  *             Padel                                              the sport and kind: the tag is the state
+ * BALANCE FORECAST  [ You + Zofia │ Ania + Ewa ]  87% Very even     the top card, read first
  * ┌ ● Filling · 1 of 4 in ─────────────────────┐   the dark card — the status, the tiles with IN,
  * │ [tile] [tile]  ── KAROL + YOU VS … ──       │   the vs line, and the court on an accent line:
  * │ [tile] [tile]                               │
@@ -13,12 +15,11 @@
  * │ ▎DAY    Saturday 3 Oct                      │
  * │ ▎TIME   16:00  until 17:00                  │
  * │ ▎YOUR SHARE  32 zł  if it fills · book by … │   — while one payment is awaited, on a line
- * └─────────────────────────────────────────────┘     under the share: Waiting for one payment ·
- *                                                     until 14:40 · Nobody pays until it's in
- * BALANCE FORECAST  [ You + Zofia │ Ania + Ewa ]  87% Very even
- * ┌ Slim overlap … the grid ────────────────────┐   once two are In: alone, who is free says nothing
- * [ I'm in ]  [ Not this time ]     — Pay 32 zł on the last seat; or [ Withdraw ], [ Leave the game ],
- *                                     [ Confirm your payment ]
+ * │                                             │     under the share: Waiting for one payment ·
+ * │ [ Not this time ] [        I'm in         ] │     until 14:40 · Nobody pays until it's in
+ * └─────────────────────────────────────────────┘   the foot: Pay 32 zł on the last seat; or
+ * ┌ Slim overlap … the grid ────────────────────┐   [ Withdraw ], [ Leave the game ], [ Confirm your
+ *                                                    payment ] · who is free once two are In
  * ```
  *
  * ## One read, and the server says what the reader may do
@@ -259,6 +260,12 @@ function Details({
   const seats = courtSeatCount(sport);
   const { top, bottom } = rowsOf(details, seats / 2);
 
+  // What the card's foot draws — one of these, by the read's `actions`.
+  const answering = actions.includes('YES') || actions.includes('NO');
+  const withdrawing = actions.includes('WITHDRAW');
+  const leaving = actions.includes('LEAVE');
+  const confirming = actions.includes('CONFIRM_PAYMENT') ? details.yourPayment : undefined;
+
   return (
     <>
       <SafeAreaView style={s.screen} edges={['top']} {...behindOverlay(reading !== undefined)}>
@@ -270,8 +277,17 @@ function Details({
           title={othersTitle(details) || COPY.game.onlyYou}
           subline={sportWords(sport, kind)}
         />
-        <ScrollView contentContainerStyle={s.body}>
-          <View style={s.game}>
+        <ScrollView contentContainerStyle={s.body} testID="game-details">
+          {/* The top card — today's forecast, for now: #839 and #840 give each kind its own. */}
+          {details.forecast === undefined ? null : (
+            <Forecast
+              pct={details.forecast.pct}
+              fold={foldOf(details) ?? 0}
+              labels={barLabels([top, bottom])}
+            />
+          )}
+
+          <View style={s.game} testID="game-details-card">
             <GameGround />
             <View accessible accessibilityRole="header">
               <CardTag
@@ -291,15 +307,70 @@ function Details({
             />
 
             <Facts details={details} at={at} />
-          </View>
 
-          {details.forecast === undefined ? null : (
-            <Forecast
-              pct={details.forecast.pct}
-              fold={foldOf(details) ?? 0}
-              labels={barLabels([top, bottom])}
-            />
-          )}
+            {/* Held while offline, and sent when the connection returns. */}
+            {paused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+
+            {/* The card's foot: what the reader may do, right under the facts it answers. */}
+            {answering || withdrawing || leaving || confirming ? (
+              <View style={s.foot}>
+                {answering ? (
+                  // Side by side: Not this time on the left at its words' width, the yes the rest.
+                  <View style={s.answers}>
+                    {actions.includes('NO') ? (
+                      <Button
+                        label={COPY.no}
+                        variant="secondary"
+                        size="lg"
+                        busy={answer.isPending && answer.variables?.said === 'no'}
+                        disabled={busy && answer.variables?.said !== 'no'}
+                        onPress={sayNo}
+                        style={actions.includes('YES') ? s.beside : s.rest}
+                      />
+                    ) : null}
+                    {actions.includes('YES') ? (
+                      <Button
+                        label={yesButtonLabel(chargesAtOnce(yesOn), shareWords(details))}
+                        size="lg"
+                        busy={booking || (answer.isPending && answer.variables?.said === 'yes')}
+                        busyLabel={booking ? FILL_COPY.undo.booking : undefined}
+                        disabled={held || (busy && !booking && answer.variables?.said !== 'yes')}
+                        onPress={sayYes}
+                        style={s.rest}
+                      />
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {withdrawing ? (
+                  <Button
+                    label={COPY.game.withdraw}
+                    variant="secondary"
+                    size="lg"
+                    busy={withdraw.isPending}
+                    disabled={busy && !withdraw.isPending}
+                    onPress={() => withdraw.mutate(proposalId)}
+                  />
+                ) : null}
+
+                {leaving ? (
+                  <LeaveTheGame leaving={LEAVING_WHILE_WAITING} act={leaveWaiting} />
+                ) : null}
+
+                {confirming ? (
+                  <Button
+                    label={
+                      FILL_COPY.confirm.title[
+                        paymentWindowAt(confirming.confirmBy, confirming.timeTo, at)
+                      ]
+                    }
+                    size="lg"
+                    onPress={() => fill.confirm(confirming, yesOn)}
+                  />
+                ) : null}
+              </View>
+            ) : null}
+          </View>
 
           {/* Who is free means something once somebody else is In to be free with. */}
           {details.inCount < 2 ? null : (
@@ -308,63 +379,6 @@ function Details({
               <OverlapGrid overlap={details.overlap} today={weekdayAt(at)} />
             </View>
           )}
-
-          {/* Held while offline, and sent when the connection returns. */}
-          {paused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
-
-          {actions.includes('YES') || actions.includes('NO') ? (
-            <View style={s.answers}>
-              {actions.includes('YES') ? (
-                <Button
-                  label={yesButtonLabel(chargesAtOnce(yesOn), shareWords(details))}
-                  size="lg"
-                  busy={booking || (answer.isPending && answer.variables?.said === 'yes')}
-                  busyLabel={booking ? FILL_COPY.undo.booking : undefined}
-                  disabled={held || (busy && !booking && answer.variables?.said !== 'yes')}
-                  onPress={sayYes}
-                />
-              ) : null}
-              {actions.includes('NO') ? (
-                <Button
-                  label={COPY.no}
-                  variant="secondary"
-                  size="lg"
-                  busy={answer.isPending && answer.variables?.said === 'no'}
-                  disabled={busy && answer.variables?.said !== 'no'}
-                  onPress={sayNo}
-                />
-              ) : null}
-            </View>
-          ) : null}
-
-          {actions.includes('WITHDRAW') ? (
-            <Button
-              label={COPY.game.withdraw}
-              variant="secondary"
-              size="lg"
-              busy={withdraw.isPending}
-              disabled={busy && !withdraw.isPending}
-              onPress={() => withdraw.mutate(proposalId)}
-            />
-          ) : null}
-
-          {actions.includes('LEAVE') ? (
-            <LeaveTheGame leaving={LEAVING_WHILE_WAITING} act={leaveWaiting} />
-          ) : null}
-
-          {actions.includes('CONFIRM_PAYMENT') && details.yourPayment !== undefined ? (
-            <Button
-              label={
-                FILL_COPY.confirm.title[
-                  paymentWindowAt(details.yourPayment.confirmBy, details.yourPayment.timeTo, at)
-                ]
-              }
-              size="lg"
-              onPress={() => {
-                if (details.yourPayment !== undefined) fill.confirm(details.yourPayment, yesOn);
-              }}
-            />
-          ) : null}
         </ScrollView>
       </SafeAreaView>
 
@@ -458,5 +472,13 @@ const s = StyleSheet.create({
   figure: { ...theme.num.xl, ...theme.tabular },
   word: { ...theme.type.cardTitle, color: theme.color.ink },
   grid: { borderRadius: theme.radius.cardDark, overflow: 'hidden', padding: theme.space.md },
-  answers: { gap: theme.space.sm },
+  foot: { gap: theme.space.sm },
+  answers: { flexDirection: 'row', gap: theme.space.sm },
+  /**
+   * *Not this time* at its words' width, and the yes takes the rest — either alone takes the row.
+   * Both shrink, by their widths, where large type would make the two overflow: React Native's
+   * `flexShrink` is 0 by default, which would squeeze the yes alone.
+   */
+  beside: { flexShrink: 1 },
+  rest: { flexGrow: 1, flexShrink: 1 },
 });

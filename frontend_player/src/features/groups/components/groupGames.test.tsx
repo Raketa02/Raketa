@@ -35,6 +35,8 @@ import {
   ANIA,
   deckCard,
   deckPath,
+  DETAILS_CARD,
+  DETAILS_SCREEN,
   DECK_READ_AT,
   EWA,
   groupDeck,
@@ -68,6 +70,7 @@ import {
   stubShare,
 } from '@/test-support/onboardingRouter';
 import { fakeClipboard, fakeHaptics, fakeShare, type FakeHaptics } from '@/test-support/platform';
+import { inOrder, partOf } from '@/test-support/readingOrder';
 import { dragTo, release, swipe } from '@/test-support/swipe';
 import { servedReliability } from '@/test-support/playerRecord';
 import {
@@ -1131,6 +1134,90 @@ describe('the game’s details', () => {
     expect(screen.getByTestId('overlap-grid')).toBeTruthy();
   });
 
+  // #836, the For-fun mocks 3–6: the top card is read first, the answers sit under the facts they
+  // answer, and Who is free follows the card.
+  it('reads the top card, then the game card with the answers in its foot, then Who is free', async () => {
+    await openDetails(
+      deckCard({
+        in_count: 2,
+        sides: { yours: [youTile(), KAROL({ is_in: true })], theirs: [ANIA(), EWA()] },
+      }),
+    );
+
+    await screen.findByText('Filling · 2 of 4 in');
+    const whoIsFree = `image:${String(screen.getByTestId('overlap-grid').props.accessibilityLabel)}`;
+    const order = [
+      `header:${COPY.game.forecast}`,
+      'header:Filling · 2 of 4 in',
+      COPY.game.where,
+      `button:${COPY.no}`,
+      `button:${COPY.yes}`,
+      whoIsFree,
+    ];
+    expect(inOrder(partOf(screen.toJSON(), DETAILS_SCREEN), order)).toEqual(order);
+  });
+
+  it('draws the answer pair in the game card’s foot, and Who is free outside it', async () => {
+    await openDetails(
+      deckCard({
+        in_count: 2,
+        sides: { yours: [youTile(), KAROL({ is_in: true })], theirs: [ANIA(), EWA()] },
+      }),
+    );
+
+    const card = await screen.findByTestId(DETAILS_CARD);
+    expect(within(card).getByText('Filling · 2 of 4 in')).toBeTruthy();
+    expect(
+      within(card).getByLabelText('Your share, 32 zł, if it fills · book by Fri 10:00'),
+    ).toBeTruthy();
+    expect(within(card).getByRole('button', { name: COPY.no })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: COPY.yes })).toBeTruthy();
+    expect(within(card).queryByTestId('overlap-grid')).toBeNull();
+    expect(within(card).queryByText(COPY.game.forecast)).toBeNull();
+  });
+
+  it('says in the card’s foot that an answer given offline is held', async () => {
+    await openDetails();
+    const card = await screen.findByTestId(DETAILS_CARD);
+
+    act(() => onlineManager.setOnline(false));
+    try {
+      fireEvent.press(within(card).getByRole('button', { name: COPY.yes }));
+
+      expect(await within(card).findByText(offlineMessage('resumes'))).toBeTruthy();
+    } finally {
+      act(() => onlineManager.setOnline(true));
+    }
+  });
+
+  it('keeps the header: the faces, the others named, and the sport — the count is the tag’s alone', async () => {
+    await openDetails();
+
+    await screen.findByText('Filling · 1 of 4 in');
+    expect(screen.getByRole('header', { name: /^karol\.t, ania\.k, ewa\.m/ })).toBeTruthy();
+    expect(screen.getByText('Padel')).toBeTruthy();
+    expect(screen.queryByText(/^Padel · \d of \d in$/)).toBeNull();
+    expect(screen.getAllByText(/\d of \d in/)).toHaveLength(1);
+  });
+
+  it('says Padel · For fun under a For-fun game’s header', async () => {
+    const card = deckCard({ kind: 'FOR_FUN', forecast: null, vibe: { pct: 82 } });
+    stubProposal(transport, card.proposal_id, proposalDetails(card));
+    await openGames((kind) =>
+      groupDeck({
+        segments: [{ kind: 'FOR_FUN', count: 1 }],
+        cards: kind === 'FOR_FUN' ? [card] : [],
+      }),
+    );
+    fireEvent.press(await screen.findByRole('button', { name: COPY.details }));
+
+    expect(await screen.findByText('Padel · For fun')).toBeTruthy();
+    expect(screen.getByRole('header', { name: /^zofia\.b, ania\.k, ewa\.m/ })).toBeTruthy();
+    expect(
+      within(screen.getByTestId(DETAILS_CARD)).getByRole('button', { name: COPY.yes }),
+    ).toBeTruthy();
+  });
+
   it('hides the overlap, and titles the header Only you, when the reader is alone In', async () => {
     await openDetails(deckCard({ in_count: 1, sides: { yours: [youTile()], theirs: [] } }));
 
@@ -1158,18 +1245,19 @@ describe('the game’s details', () => {
     );
   });
 
-  it('says yes in place, then offers Withdraw, which puts the answers back', async () => {
+  it('says yes in place, then offers Withdraw in the card’s foot, which puts the answers back', async () => {
     const shown = await openDetails();
 
     fireEvent.press(await screen.findByRole('button', { name: COPY.yes }));
 
-    expect(await screen.findByRole('button', { name: COPY.game.withdraw })).toBeTruthy();
+    const card = () => screen.getByTestId(DETAILS_CARD);
+    expect(await within(card()).findByRole('button', { name: COPY.game.withdraw })).toBeTruthy();
     expect(screen.getByText('Filling · 2 of 4 in')).toBeTruthy();
     expect(transport.requestsTo('POST', yesPath(shown.proposal_id))).toHaveLength(1);
 
     fireEvent.press(screen.getByRole('button', { name: COPY.game.withdraw }));
 
-    expect(await screen.findByRole('button', { name: COPY.yes })).toBeTruthy();
+    expect(await within(card()).findByRole('button', { name: COPY.yes })).toBeTruthy();
     expect(transport.requestsTo('DELETE', yesPath(shown.proposal_id))).toHaveLength(1);
   });
 

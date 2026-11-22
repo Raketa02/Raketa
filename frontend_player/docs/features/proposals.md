@@ -25,6 +25,21 @@ beside the faces. **Who is free is drawn once two are In** (`inCount`): alone on
 the overlap has nobody to overlap with. And no paragraph explains what a yes costs: the share and
 its line under it say it, and the first yes's payment setup says the rest.
 
+**The details read top to bottom: the top card, the game card, _Who is free_**
+([#836](https://github.com/Raketa02/Raketa/issues/836); for fun 3–6; design-system 7.22), for both
+kinds. The top card comes first — the BALANCE FORECAST card on paper, for now: #839 and #840 give
+each kind its own — then the dark game card: the status tag, the tiles, the vs line, WHERE · DAY ·
+TIME · YOUR SHARE, the offline note while an answer waits, and **what the reader may do, in the
+card's own foot**, right under the facts it answers. _Not this time_ (secondary, at its words' width)
+is on the left and the yes (primary, the rest) on the right, side by side, as mocks 4 and 6 draw
+them; _Withdraw_, _Leave the game_ and _Confirm your payment_ take that place, full width, when they
+are the state's action — _Leave_ over _Confirm_ while both are, since side by side they overflow a
+small phone. **The yes keeps its words**: _I'm in_, _Pay 32 zł_ when it completes the game,
+_Booking…_ while it books, the spinner while it is sent, held while another booking counts down —
+never the mocks' _I'm in · books it · 27 zł_. **The header keeps _Padel_ / _Padel · For fun_**, never
+their _Padel · 3 of 4 in_: the count is the status tag's alone (the For-fun record's overrides 2 and
+3). _Who is free_ follows the card. **Not seen on a device.**
+
 **Nothing the server decides is re-derived.** The order, the sides, the forecast's figure, the grade
 and every cell's shade are the read's. What the client decides is how a dealt card is drawn:
 `rowsOf` puts **the side with more people In on top, yours on a tie**, and within a row the people In,
@@ -467,12 +482,13 @@ button where the read gives none (the hour has come, the game is over). **The sa
 full game while it waits for one payment** (#625), sent as the withdrawal (`useLeaveWhileWaiting`,
 `DELETE /proposals/{id}/yes`), and the game fills again.
 
-**The filling details are `GET /proposals/{id}`** (A4.2; owed by #556). The status tag — _Filling · 2
+**The filling details are `GET /proposals/{id}`** (A4.2; owed by #556). The forecast above the card
+(since #836), then the status tag — _Filling · 2
 of 4 in_, _Waiting for one payment_ amber, _Booked_, or how it ended unfilled — WHERE with the distance
 and no court, the share with _if it fills · book by_ or _Waiting for one payment · until 14:40 · Nobody
-pays until it's in_, the forecast, the grid, the paragraph while it fills, and **the actions the read names, in its order**:
-_I'm in_ / _Not this time_, _Withdraw_, _Leave the game_, _Confirm your payment_ (the fill's
-confirmation, on the payment the read names). Nothing about the game is held by the screen: every
+pays until it's in_, and in the card's foot **the actions the read names**:
+_Not this time_ beside _I'm in_, _Withdraw_, _Leave the game_, _Confirm your payment_ (the fill's
+confirmation, on the payment the read names); the grid under the card. Nothing about the game is held by the screen: every
 answer re-reads the details (`reread` takes `proposalKeys.proposals()`), each button busy until the
 read lands. **The one fold**: whether a yes from the details books, which a card carries and the read
 does not — the deck's own rule read off the seats and the In count (`courtOfDetails`: the last seat is
