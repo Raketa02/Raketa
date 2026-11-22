@@ -29,7 +29,7 @@ hours, the one rule the proposer, posting and the rescue board ask.
 
 from __future__ import annotations
 
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from typing import final
 from uuid import UUID
@@ -37,6 +37,7 @@ from uuid import UUID
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, instant, invariant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.player_profile.domain.weekly_hours import (
     WeeklyHours,
     free_for_the_hour,
@@ -46,6 +47,7 @@ from app.modules.proposals.domain.deck import (
     CardType,
     DeckCard,
     Sides,
+    headline_of,
     hour_taken,
     week_of,
 )
@@ -198,11 +200,21 @@ def card_of_a_rescue(
     forecast: CardForecast | None,
     overlap: Overlap,
     now: Instant,
+    tags: Mapping[UUID, Collection[SocialTag]],
 ) -> DeckCard:
     """The *Seat open* card: the players *paid*, the reader in the seat that
     opened first, the court, its name and its kind (#671), **Booked** — and
-    the deadline the board says, the cut-off and then the start."""
+    the deadline the board says, the cut-off and then the start. A For-fun
+    one says the vibe of the reader with the players still on it, from
+    ``tags``, and no forecast (``docs/adr/0207`` §5): the seat is empty until
+    somebody takes it, and the table is the people there."""
 
+    shown, vibe = headline_of(
+        game.kind,
+        table=(*sides.yours, *sides.theirs),
+        forecast=forecast,
+        tags=tags,
+    )
     return DeckCard(
         proposal_id=game.booking_id,
         type=CardType.SEAT_OPEN,
@@ -214,7 +226,8 @@ def card_of_a_rescue(
         deadline=rescue_deadline(game, now=now),
         in_=(),
         sides=sides,
-        forecast=forecast,
+        forecast=shown,
+        vibe=vibe,
         overlap=overlap,
         open_seats_after_your_yes=game.open_seats - 1,
         version_count=1,

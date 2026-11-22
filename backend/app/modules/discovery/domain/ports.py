@@ -105,6 +105,15 @@ class PlayerDirectory(Protocol):
         directory has no entry for (#795)."""
         ...
 
+    async def tags_of_each(
+        self, players: Collection[UUID]
+    ) -> Mapping[UUID, frozenset[str]]:
+        """``tags_of`` for many at once, **in one statement** — what a For-fun
+        table's Social vibe is read from (``docs/adr/0207`` §11, #830).
+        Everybody asked is answered, with none for an account the directory
+        has no entry for."""
+        ...
+
     async def alike(
         self,
         mine: frozenset[str],

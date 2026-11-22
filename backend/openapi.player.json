@@ -11396,7 +11396,18 @@
                 "type": "null"
               }
             ],
-            "description": "`null` where it cannot be read: somebody on the card holds no rating in the sport, or nobody faces the reader yet."
+            "description": "How even a **competitive** card's game is forecast. **Always `null` on a `FOR_FUN` card**, which says its `vibe` instead (`docs/adr/0207` \u00a75) \u2014 its sides are still the evenest. Also `null` where it cannot be read: somebody on the card holds no rating in the sport, or nobody faces the reader yet."
+          },
+          "vibe": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckVibeSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A **`FOR_FUN`** card's Social vibe, its table everybody named on the reader's version \u2014 the people In, the reader and the names dealt, never an empty seat \u2014 and on a `SEAT_OPEN` card the reader with the players on the game. **Always `null` on a `COMPETITIVE` card**, and where nobody at the table holds a tag (#830)."
           },
           "overlap": {
             "$ref": "#/components/schemas/DeckOverlapSchema"
@@ -11421,6 +11432,7 @@
           "no_free_cancellation",
           "sides",
           "forecast",
+          "vibe",
           "overlap"
         ],
         "title": "DeckCardSchema",
@@ -11685,6 +11697,21 @@
         ],
         "title": "DeckTileSchema",
         "description": "One person on a card."
+      },
+      "DeckVibeSchema": {
+        "properties": {
+          "pct": {
+            "type": "integer",
+            "title": "Pct",
+            "description": "A whole percent, 0\u2013100, rounded half up. The bar fills to it; the app words it in its own bands."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pct"
+        ],
+        "title": "DeckVibeSchema",
+        "description": "How much the people on **this** For-fun card share (`docs/adr/0207` \u00a72):\non average, each Social tag at the table is carried by `pct` percent of the\nother players. Worked out from everybody's tags now, on every read."
       },
       "DeclarePlayIntentRequest": {
         "properties": {
@@ -13420,7 +13447,7 @@
             },
             "type": "array",
             "title": "Cards",
-            "description": "This segment's cards in the order dealt. **A card owed to the reader comes first** \u2014 the new game a club's cancel owed them, soonest first among two, with no mark (#673). Then seats open after the reader's yes (fewest first), then seat open \u203a challenge \u203a pick, then the soonest deadline, then the best forecast; the same people only at their best hour."
+            "description": "This segment's cards in the order dealt. **A card owed to the reader comes first** \u2014 the new game a club's cancel owed them, soonest first among two, with no mark (#673). **Competitive**: then seats open after the reader's yes (fewest first), then seat open \u203a challenge \u203a pick, then the soonest deadline, then the best forecast. **For fun** (`docs/adr/0207` \u00a74): then the `SEAT_OPEN` cards by vibe, then every other card by the vibe it shows (highest first), then seats open after the reader's yes, then challenge \u203a pick, then the soonest deadline. In both, the same people only at their best hour."
           }
         },
         "type": "object",

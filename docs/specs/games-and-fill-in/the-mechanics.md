@@ -464,7 +464,15 @@ Every card shows, top to bottom (the full anatomy is in [the-screens.md](the-scr
 - **The sides** — the two rows are the two sides; the *vs* line names them, and the balance bar
   names the same sides with **your side on the left** (Q70). On a rescue you take the leaver's
   seat and side.
-- **The balance forecast** — the percentage and the bar, for this version.
+- **The balance forecast** — the percentage and the bar, for this version — **on a competitive
+  card**. **A For-fun card shows its Social vibe in the forecast's place, and never a forecast**
+  (amended 2026-11-22, [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §2, §5, #830): how much the people on your version share — everybody In, you and the names
+  dealt, never an empty seat; on a rescue, you with the players on the game — on average, each
+  tag at the table carried by that share of the others. It is worked out from everybody's tags
+  **now**, on every read, and stored nowhere, so a tag edit moves it on the next read; *Open to
+  meet someone* never counts. The forecast still arranges a friendly's sides; it is only not
+  shown.
 - **The overlap grid** — the card's players' week as 7 days × 3 ranges (**Morning 07–12,
   Afternoon 12–17, Evening 17–23**): bright where everyone is free for at least one whole hour
   in the range, dim where all but one are, the game's range ringed in coral; labelled **High /
@@ -522,6 +530,34 @@ Example Padel deck (Competitive):
 | 7 | Picked for you · Mon 18:00 · nobody In yet | 3 |
 
 For singles there are only two steps: *you complete it*, then fresh.
+
+**The For-fun deck opens on the best company** (amended 2026-11-22,
+[ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+§4, #830). The order above is the **competitive** segment's, unchanged. In the **For-fun**
+segment, after the owed cards, each rule decides only between cards that tie on every rule above
+it:
+
+1. **Rescues** — a seat open on a **booked** game — ordered among themselves by Social vibe.
+2. **Every other card by the Social vibe it shows**, highest first. The shown number is
+   rounded, so two cards that show the same % tie; a card with no vibe comes last.
+3. **Seats still open after your yes, fewest first.**
+4. **Challenge, then Picked for you.**
+5. **The soonest deadline.**
+
+A full game that went back to filling before it was booked is **not** a rescue: it is dealt as
+the pick or challenge it was, and ordered by its vibe. **The same people only at their best
+hour** stays; the rules after the vibe pick the hour, since the same table shows the same vibe.
+
+Example Padel deck (For fun):
+
+| # | Card | Social vibe | Open after your yes |
+| --- | --- | --- | --- |
+| 1 | Picked for you · owed after a club's cancel · Sun 18:00 | 0% | 3 |
+| 2 | Seat open · Sat 17:00 · a booked game lost Wera | 37% | 0 |
+| 3 | Picked for you · Tue 19:00 · nobody In yet | 100% | 3 |
+| 4 | Picked for you · Thu 19:00 · Ewa In | 29% | 2 |
+| 5 | Picked for you · Wed 19:00 · nobody In yet | 29% | 3 |
+| 6 | Picked for you · Fri 19:00 · Kuba In | 0% | 2 |
 
 ### 8.3 An empty deck
 

@@ -422,6 +422,19 @@ class DeckForecastSchema(BaseModel):
     )
 
 
+class DeckVibeSchema(BaseModel):
+    """How much the people on **this** For-fun card share (`docs/adr/0207` §2):
+    on average, each Social tag at the table is carried by `pct` percent of the
+    other players. Worked out from everybody's tags now, on every read."""
+
+    pct: int = Field(
+        description=(
+            "A whole percent, 0–100, rounded half up. The bar fills to it; the "
+            "app words it in its own bands."
+        )
+    )
+
+
 class OverlapCellSchema(BaseModel):
     day: int = Field(description="ISO weekday, Monday 1.")
     range: DayRange = Field(
@@ -552,8 +565,20 @@ class DeckCardSchema(BaseModel):
     sides: DeckSidesSchema
     forecast: DeckForecastSchema | None = Field(
         description=(
-            "`null` where it cannot be read: somebody on the card holds no rating "
-            "in the sport, or nobody faces the reader yet."
+            "How even a **competitive** card's game is forecast. **Always `null` "
+            "on a `FOR_FUN` card**, which says its `vibe` instead "
+            "(`docs/adr/0207` §5) — its sides are still the evenest. Also "
+            "`null` where it cannot be read: somebody on the card holds no "
+            "rating in the sport, or nobody faces the reader yet."
+        )
+    )
+    vibe: DeckVibeSchema | None = Field(
+        description=(
+            "A **`FOR_FUN`** card's Social vibe, its table everybody named on "
+            "the reader's version — the people In, the reader and the names "
+            "dealt, never an empty seat — and on a `SEAT_OPEN` card the reader "
+            "with the players on the game. **Always `null` on a `COMPETITIVE` "
+            "card**, and where nobody at the table holds a tag (#830)."
         )
     )
     overlap: DeckOverlapSchema
@@ -587,6 +612,7 @@ class DeckCardSchema(BaseModel):
                 card.sides, reader=reader, people=people, in_=card.in_, paid=card.paid
             ),
             forecast=_forecast(card.forecast),
+            vibe=None if card.vibe is None else DeckVibeSchema(pct=card.vibe),
             overlap=_overlap(card.overlap),
         )
 
@@ -723,10 +749,14 @@ class GroupDeckResponse(BaseModel):
         description=(
             "This segment's cards in the order dealt. **A card owed to the "
             "reader comes first** — the new game a club's cancel owed them, "
-            "soonest first among two, with no mark (#673). Then seats open after "
-            "the reader's yes (fewest first), then seat open › challenge › pick, "
-            "then the soonest deadline, then the best forecast; the same people "
-            "only at their best hour."
+            "soonest first among two, with no mark (#673). **Competitive**: then "
+            "seats open after the reader's yes (fewest first), then seat open › "
+            "challenge › pick, then the soonest deadline, then the best "
+            "forecast. **For fun** (`docs/adr/0207` §4): then the `SEAT_OPEN` "
+            "cards by vibe, then every other card by the vibe it shows (highest "
+            "first), then seats open after the reader's yes, then challenge › "
+            "pick, then the soonest deadline. In both, the same people only at "
+            "their best hour."
         )
     )
 

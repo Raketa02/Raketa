@@ -163,6 +163,22 @@ class SqlAlchemyPlayerDirectory:
         )
         return frozenset(rows.all())
 
+    async def tags_of_each(
+        self, players: Collection[UUID]
+    ) -> Mapping[UUID, frozenset[str]]:
+        asked = set(players)
+        if not asked:
+            return {}
+        rows = await self._session.execute(
+            select(DirectoryTagORM.player_id, DirectoryTagORM.tag).where(
+                DirectoryTagORM.player_id.in_(asked)
+            )
+        )
+        held: dict[UUID, set[str]] = {player: set() for player in asked}
+        for player_id, tag in rows:
+            held[player_id].add(tag)
+        return {player: frozenset(tags) for player, tags in held.items()}
+
     async def alike(
         self,
         mine: frozenset[str],

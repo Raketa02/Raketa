@@ -751,8 +751,11 @@ more.**
 - **Match Fit** — the **pure engine** beside RacketSkill (`app/engines/matchfit/`). It has no
   clock, no randomness, no state and no database, and the types it is handed carry no protected
   characteristic. It no longer scores a pairing: what it computes is how even two sides would be
-  (the **Forecast** and its **Split**) and how much of the narrowest week a set of people share.
-  The stateful half — loading the ruleset, the gates, the reads off other contexts — is the
+  (the **Forecast** and its **Split**), how much of the narrowest week a set of people share, and
+  a For-fun table's **Social vibe** from the tags each person carries — handed only the tags that
+  count, since which ones don't is the Player profile's, beside its vocabulary
+  ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §11, [#830](https://github.com/Raketa02/Raketa/issues/830)). The stateful half — loading the ruleset, the gates, the reads off other contexts — is the
   **module** beside it and is deliberately not an engine
   ([ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)).
 - **Mode** — a game's **kind**: **Competitive** or **For fun**. **Two values, never three** —
@@ -830,7 +833,8 @@ more.**
   never shows a forecast, and a competitive game never shows a Social vibe. **Not Same vibe's Vibe
   %**, which is a pair's 1 − ½ⁿ and can differ for the same two players. Decided by
   [ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
-  §2 and §5, not yet built — [#830](https://github.com/Raketa02/Raketa/issues/830),
+  §2 and §5; on the **Group deck**'s cards since
+  [#830](https://github.com/Raketa02/Raketa/issues/830), and not yet built elsewhere —
   [#831](https://github.com/Raketa02/Raketa/issues/831),
   [#833](https://github.com/Raketa02/Raketa/issues/833)–[#835](https://github.com/Raketa02/Raketa/issues/835),
   [#838](https://github.com/Raketa02/Raketa/issues/838),
@@ -2109,12 +2113,19 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
 - **Group deck** — a group's Games tab: the proposals dealt to you in one sport and one
   **kind**, each drawn as **your own version** — everybody In, you, and the rest of your version
   — with its sides (the evenest arrangement the engine forecasts, you on your own), the forecast
-  for that version, an overlap grid and the court block, which names the **Kind of court** when every
+  for that version on a competitive card and the **Social vibe** of that version's table on a
+  For-fun one, never both, an overlap grid and the court block, which names the **Kind of court** when every
   free court it could be booked on is one kind. **An Owed card comes first** for each player it is
-  owed to, soonest first among owed cards (ADR-0196 §3, not yet built — [#673](https://github.com/Raketa02/Raketa/issues/673));
-  after it, ordered by the seats that would be open
+  owed to, soonest first among owed cards (ADR-0196 §3, [#673](https://github.com/Raketa02/Raketa/issues/673)).
+  **The competitive deck** is then ordered by the seats that would be open
   after your yes (fewest first), then **Seat open › Challenge › Picked for you**, then the
-  soonest deadline, then the best forecast; the same people only at their best hour. A card you
+  soonest deadline, then the best forecast. **The For-fun deck opens on the best company**: the
+  **Rescues** next, by Social vibe, then every other card by the Social vibe it shows (rounded, so
+  cards that look alike tie), then the seats open after your yes, then **Challenge › Picked for
+  you**, then the soonest deadline — a full game gone back to filling is no rescue
+  ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §4, [#830](https://github.com/Raketa02/Raketa/issues/830)). In both, the same people only at
+  their best hour. A card you
   said no to never returns; one you are In on is in *You're In*; one you took your yes back from
   is dealt again. Never dealt: a kind your Play intent does not want, a share above **Most I'll
   pay**, a week at your **Games per week**, an hour you already have a game at, a club no longer

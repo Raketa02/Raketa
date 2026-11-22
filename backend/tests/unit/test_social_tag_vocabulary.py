@@ -38,6 +38,8 @@ from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_VOCABULARY,
     SocialTag,
     SocialTagGroup,
+    UNCOUNTED_SOCIAL_TAGS,
+    counted,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -144,6 +146,24 @@ def test_the_vocabulary_is_closed_to_the_person_rather_than_the_game():
         words = set(tag.value.split("_"))
         assert not words & forbidden, tag.value
         assert "LOOKING_FOR" not in tag.value, tag.value
+
+
+def test_open_to_meet_someone_is_the_one_tag_that_does_not_count():
+    """Shown like any other and never counted — in a table's Social vibe or in
+    building one — so the For-fun deck never seats people together because of
+    that motive (``docs/adr/0207`` §2)."""
+
+    assert {tag.value for tag in UNCOUNTED_SOCIAL_TAGS} == {"OPEN_TO_MEET_SOMEONE"}
+    held = [
+        SocialTag.OPEN_TO_MEET_SOMEONE,
+        SocialTag.STAYS_FOR_A_DRINK,
+        SocialTag.HERE_TO_MEET_PLAYERS,
+    ]
+    assert counted(held) == {
+        SocialTag.STAYS_FOR_A_DRINK,
+        SocialTag.HERE_TO_MEET_PLAYERS,
+    }
+    assert counted([]) == frozenset()
 
 
 def _string_literals(path: Path) -> set[str]:

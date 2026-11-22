@@ -26,7 +26,8 @@ the club's list of them (users) — and, for rescues (#545), a pool's booked gam
 with a seat open and somebody taking one (bookings), and a refused payment
 waiting for its player (payments) — and, for posting (#546), each member's
 gender and preference (the Player profile) and the engine's level window around
-a poster (the matcher's pair rule).
+a poster (the matcher's pair rule) — and, for a For-fun table's Social vibe
+(#830), these players' tags (the player directory's copy of the profile's).
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ from app.engines.matchfit.scorable import LevelReading
 from app.kernel import Instant, Sport, invariant
 from app.modules.friends.domain.relation import FriendRelation
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.club_bookings import (
     BookedFrom,
@@ -536,6 +538,23 @@ class HomeFriendRequest:
     #: 2,90* (#814; ``docs/adr/0205`` §2). Empty when they hold none; the one in
     #: ``sport`` is ``level``.
     levels: tuple[HomeRequestLevel, ...] = ()
+
+
+@runtime_checkable
+class PlayersTags(Protocol):
+    """**These players' Social tags, as they hold them now** — what a For-fun
+    table's Social vibe is worked out from on every read, and stored nowhere
+    (``docs/adr/0207`` §2, §11; #830). One question for everybody a read
+    draws, never one per card or per person."""
+
+    async def tags_of(
+        self, players: Collection[UUID]
+    ) -> Mapping[UUID, frozenset[SocialTag]]:
+        """Everybody asked is answered: an empty set for a player who holds
+        none, or whose tags have not reached the directory yet. Every tag is
+        answered, the ones that don't count at a table included — removing
+        them is the vibe's own rule, beside the vocabulary."""
+        ...
 
 
 @runtime_checkable

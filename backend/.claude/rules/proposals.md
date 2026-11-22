@@ -125,8 +125,30 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   offer before any deadline, as `held` reads it — registered in `proposal_demands.py`), and
   `None` when they are mixed, since the first free court in the club's order is the one
   booked; a `SEAT_OPEN` card carries its booked court's kind. The details read it the same
-  way (`ProposalDetails.indoor`). A player sees it and never chooses by it. The order is
-  §8.2's four keys, the fourth read as **the forecast of the reader's version**; the same
+  way (`ProposalDetails.indoor`). A player sees it and never chooses by it. **A card says its
+  kind's own number** (#830; ADR-0207 §2, §5): a competitive card the forecast, a **For-fun
+  card its table's Social vibe and `forecast` `null`** — `DeckCard.vibe`, the wire's
+  `vibe {pct}`, `null` on Competitive — through `domain/deck.py`'s `headline_of`, which
+  both `card_of` and the rescue's `card_of_a_rescue` call. The forecast still chose the
+  friendly's sides; it is only not said. **The table** is `ReadersView.people` (In, the reader,
+  the names dealt — never an empty seat), and on a rescue the reader with the game's players
+  (never the leaver). **The vibe is worked out on every read from the tags now** —
+  `domain/vibe.py`'s `social_vibe_of`: the Player profile's `counted` drops 💘
+  (`UNCOUNTED_SOCIAL_TAGS`, beside the vocabulary), then the Match Fit engine's `social_vibe`;
+  `None` under two people or with nobody holding a tag, ordered last. **The tags are one
+  question per deck read** — `PlayersTags` (`DirectoryPlayersTags`, over Discovery's own
+  `PlayerDirectory.tags_of_each`, one statement over `discovery_player_tags`), asked only for
+  the people on For-fun cards and not at all when none is dealt, row in `proposal_demands.py`;
+  a tag edit reads into the deck after its delivery reaches the directory.
+  `tests/api/test_the_for_fun_deck.py` holds the read at **91 statements** on its world, the
+  tags one of them — a projection of everybody's tags is argued in an ADR, never added to fit
+  (ADR-0207 §11). **Each segment is ordered by its kind** (`dealt_in_order`, one kind a batch,
+  an `invariant`): the **competitive** order is §8.2's four keys, unchanged, the fourth read as
+  **the forecast of the reader's version**; the **For-fun** order (ADR-0207 §4,
+  `_for_fun_key`) is a `SEAT_OPEN` card first — a rescue, by its vibe — then the vibe the card
+  shows (the rounded number, so look-alikes tie), then the seats open after the reader's yes,
+  then challenge › pick, then the deadline, a full game gone back to filling being the pick or
+  challenge it was. In both the same
   people only at their best hour, per segment — **after the cards owed to the reader**
   (#673; Q123): a card whose `owed_card_for` names the reader is `DeckCard.owed_to_you`
   and dealt first, soonest first among owed cards, ahead of the usual order and kept over

@@ -88,10 +88,12 @@ from app.modules.proposals.domain.ports import (
     PlayerNames,
     PlayersInPlay,
     PoolOrigins,
+    PlayersTags,
     RefundReason,
     SeatRefunds,
     TagsInCommon,
 )
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.post import LevelRange
@@ -1976,3 +1978,49 @@ async def test_tags_in_common_are_counted_off_the_profiles_as_they_stand(
 
     # Today's, never the day it was asked.
     assert await implementation.build(session).in_common(tomek, [ola]) == {ola: 0}
+
+
+# --------------------------------------------------------------------------- #
+# PlayersTags — a For-fun table's Social vibe, read in one go (#830)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(PlayersTags))
+async def test_players_tags_are_everybody_s_as_they_hold_them_now(
+    implementation, client, session, mailbox
+):
+    tomek, _ = await _tagged(
+        client, "tomek", "STAYS_FOR_A_DRINK", "OPEN_TO_MEET_SOMEONE", "PLAYS_TO_WIN"
+    )
+    ola, ola_token = await _tagged(client, "ola", "STAYS_FOR_A_DRINK", "NEW_IN_TOWN")
+    halfway, _ = await _tagged(client, "halfway")
+    stranger = new_uuid()
+    await mailbox.drain()
+    tags: PlayersTags = implementation.build(session)
+
+    # Every tag held — the ones that never count at a table too — and
+    # everybody asked answered, with none for an account holding none.
+    assert await tags.tags_of([tomek, ola, halfway, stranger]) == {
+        tomek: {
+            SocialTag.STAYS_FOR_A_DRINK,
+            SocialTag.OPEN_TO_MEET_SOMEONE,
+            SocialTag.PLAYS_TO_WIN,
+        },
+        ola: {SocialTag.STAYS_FOR_A_DRINK, SocialTag.NEW_IN_TOWN},
+        halfway: frozenset(),
+        stranger: frozenset(),
+    }
+    assert await tags.tags_of([]) == {}
+
+    changed = await client.put(
+        "/api/v1/players/me/social-tags",
+        json={"social_tags": ["QUIET_AND_FOCUSED", "SHARES_A_LIFT"]},
+        headers=players.auth(ola_token),
+    )
+    assert changed.status_code == 200, changed.text
+    await mailbox.drain()
+
+    # The tags as they stand now, never as they stood on a read before.
+    assert await implementation.build(session).tags_of([ola]) == {
+        ola: {SocialTag.QUIET_AND_FOCUSED, SocialTag.SHARES_A_LIFT}
+    }

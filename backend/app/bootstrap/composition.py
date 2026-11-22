@@ -198,6 +198,7 @@ from app.modules.proposals.domain.ports import (
     UndecidedCharges,
     ClubNames as ProposalClubNames,
     TagsInCommon as ProposalsTagsInCommon,
+    PlayersTags,
     ClubTerms,
     CourtHours,
     CourtKinds,
@@ -555,6 +556,9 @@ from app.modules.friends.infrastructure.sqlalchemy_level_ask_directory import (
 )
 from app.modules.proposals.infrastructure.tags_in_common import (
     ProfileTagsInCommon,
+)
+from app.modules.proposals.infrastructure.directory_tags import (
+    DirectoryPlayersTags,
 )
 from app.modules.proposals.infrastructure.friends import (
     FriendsLevelAsksOnHome,
@@ -1940,6 +1944,7 @@ def build_read_group_deck(
         ),
         players=build_players_in_play(session, runtime=runtime, event_store=store),
         relations=build_reader_relations(session, runtime=runtime),
+        tags=build_players_tags(session),
         clock=clock,
     )
 
@@ -3370,6 +3375,13 @@ def build_home_tags_in_common(
             events=build_event_publisher(session, runtime=runtime),
         )
     )
+
+
+def build_players_tags(session: AsyncSession) -> PlayersTags:
+    """These players' Social tags now — a For-fun table's Social vibe — off
+    the player directory's copy of the profiles', in one statement
+    (``docs/adr/0207`` §11, #830)."""
+    return DirectoryPlayersTags(build_player_directory(session))
 
 
 def build_level_asks_on_home(

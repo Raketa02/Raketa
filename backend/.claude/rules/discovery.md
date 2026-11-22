@@ -234,6 +234,9 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   tag it no longer lists stands last); the domain's tags are the directory's sets. **The
   reader's own tags are the directory's too** (`tags_of`), so a tag change — theirs or the
   reader's — reads into the read after its delivery, as every field the follower writes.
+  **`tags_of_each` is the same read for many, in one statement** (#830): Proposals' deck reads
+  every For-fun table's tags through it (`DirectoryPlayersTags`, ADR-0207 §11), so the copy
+  this context keeps is the one a Social vibe is worked out from, and its lag is theirs too.
 - **Measured at 50,000** (#795; Postgres 17 in Docker on the laptop, the real adapters, the
   seeded store plus 50,000 synthetic players written straight into the directory's two tables,
   2–6 tags each at random, 40% with a padel level; her six tags): **the row 53 ms** (5

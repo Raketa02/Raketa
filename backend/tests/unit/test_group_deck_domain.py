@@ -20,15 +20,19 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Sport, instant
+from app.kernel import InvariantViolated, Sport, instant
+from app.modules.player_profile.domain.social_tags import SocialTag as T
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.deck import (
     CardForecast,
     CardType,
     CourtState,
     DeckCard,
+    SellingTerms,
     Sides,
     arrangements,
     capped_weeks,
+    card_of,
     card_type,
     cut_off_passed,
     dealt_in_order,
@@ -49,6 +53,7 @@ from app.modules.player_profile.domain.gender import Gender
 from app.modules.proposals.domain.pool import Pool, PoolKind
 from app.modules.proposals.domain.post import Who, stand_together
 from app.modules.proposals.domain.proposal import Origin, Proposal
+from app.modules.proposals.domain.vibe import social_vibe_of
 
 WARSAW = ZoneInfo("Europe/Warsaw")
 MADE_AT = instant(datetime(2026, 10, 5, 6, tzinfo=timezone.utc))
@@ -57,15 +62,23 @@ START = instant(datetime(2026, 10, 10, 17, tzinfo=WARSAW))
 
 ME, A, B, C, D, E, F, G = (uuid4() for _ in range(8))
 
+EVERY_HOUR = WeeklyHours.of_cells(
+    (day, hour) for day in range(1, 8) for hour in range(7, 23)
+)
 
-def a_pick(*versions: tuple[UUID, ...], sport: Sport = Sport.PADEL) -> Proposal:
+
+def a_pick(
+    *versions: tuple[UUID, ...],
+    sport: Sport = Sport.PADEL,
+    kind: SearchMode = SearchMode.COMPETITIVE,
+) -> Proposal:
     proposal = Proposal.make(
         proposal_id=uuid4(),
         pool=Pool(id=uuid4(), kind=PoolKind.GROUP),
         origin=Origin.PICK,
         poster_id=None,
         sport=sport,
-        kind=SearchMode.COMPETITIVE,
+        kind=kind,
         club_id=uuid4(),
         start=START,
         share_grosze=30_00,
@@ -412,12 +425,15 @@ def a_card(
     people: tuple[UUID, ...] | None = None,
     start: datetime = START,
     owed: bool = False,
+    kind: SearchMode = SearchMode.COMPETITIVE,
+    vibe: int | None = None,
 ) -> DeckCard:
     others = people if people is not None else tuple(uuid4() for _ in range(3))
     return DeckCard(
         proposal_id=uuid4(),
         type=type_,
-        kind=SearchMode.COMPETITIVE,
+        kind=kind,
+        vibe=vibe,
         challenger_id=None,
         club_id=uuid4(),
         start=instant(start),
@@ -513,6 +529,181 @@ def test_the_owed_card_is_the_one_kept_of_the_same_people_at_two_hours():
     )
 
     assert dealt_in_order([better, owed]) == (owed,)
+
+
+# --------------------------------------------------------------------------- #
+# The For-fun card and its order (docs/adr/0207 §4, §5; #830)
+# --------------------------------------------------------------------------- #
+
+
+def a_friendly(*, vibe: int | None, open_after: int = 2, **changes: object) -> DeckCard:
+    """A For-fun card showing ``vibe``, and no forecast: a friendly shows none."""
+
+    return a_card(
+        open_after=open_after,
+        kind=SearchMode.FOR_FUN,
+        vibe=vibe,
+        pct=None,
+        **changes,  # type: ignore[arg-type]
+    )
+
+
+def test_the_for_fun_deck_opens_on_the_best_company_and_falls_as_i_swipe():
+    # The vibe decides before how close a card is to filling: the 20% table
+    # my yes would book still waits behind the 85% one.
+    low = a_friendly(vibe=20, open_after=0)
+    high = a_friendly(vibe=85, open_after=3)
+    middle = a_friendly(vibe=55, open_after=1)
+
+    assert dealt_in_order([low, high, middle]) == (high, middle, low)
+
+
+def test_an_owed_card_then_the_rescues_by_vibe_then_every_other_card():
+    owed = a_friendly(vibe=10, owed=True, deadline_hours=96)
+    fitting_rescue = a_friendly(vibe=60, type_=CardType.SEAT_OPEN, open_after=0)
+    other_rescue = a_friendly(vibe=25, type_=CardType.SEAT_OPEN, open_after=0)
+    best_pick = a_friendly(vibe=100)
+
+    assert dealt_in_order([best_pick, other_rescue, owed, fitting_rescue]) == (
+        owed,
+        fitting_rescue,
+        other_rescue,
+        best_pick,
+    )
+
+
+def test_one_vibe_goes_to_the_fewest_seats_then_a_challenge_then_the_deadline():
+    later_pick = a_friendly(vibe=40, open_after=1, deadline_hours=72)
+    sooner_pick = a_friendly(vibe=40, open_after=1, deadline_hours=24)
+    challenge = a_friendly(
+        vibe=40, open_after=1, type_=CardType.CHALLENGE, deadline_hours=96
+    )
+    closest = a_friendly(vibe=40, open_after=0, deadline_hours=96)
+
+    assert dealt_in_order([later_pick, sooner_pick, challenge, closest]) == (
+        closest,
+        challenge,
+        sooner_pick,
+        later_pick,
+    )
+
+
+def test_a_full_game_gone_back_to_filling_waits_its_vibe_s_turn():
+    """Only a seat open on a **booked** game is a rescue. A full game that went
+    back to filling is dealt as the card it was — a challenge here, whose yes
+    would complete it — and is ordered by its vibe like any proposal."""
+
+    filling_again = a_friendly(vibe=30, open_after=0, type_=CardType.CHALLENGE)
+    better = a_friendly(vibe=70, open_after=3)
+
+    assert dealt_in_order([filling_again, better]) == (better, filling_again)
+
+
+def test_a_friendly_with_no_vibe_is_dealt_after_every_one_with_one():
+    unknown = a_friendly(vibe=None, open_after=0)
+    nothing_shared = a_friendly(vibe=0, open_after=3)
+
+    assert dealt_in_order([unknown, nothing_shared]) == (nothing_shared, unknown)
+
+
+def test_the_same_people_are_met_for_fun_only_at_their_best_hour():
+    people = (A, B, C)
+    sooner = a_friendly(vibe=50, open_after=2, people=people)
+    later_but_closer = a_friendly(
+        vibe=50,
+        open_after=1,
+        people=people,
+        start=datetime(2026, 10, 11, 18, tzinfo=WARSAW),
+    )
+    other = a_friendly(vibe=10)
+
+    # The same table shows the same vibe at both hours: the rules after it
+    # pick the hour.
+    assert dealt_in_order([sooner, other, later_but_closer]) == (
+        later_but_closer,
+        other,
+    )
+
+
+def test_one_batch_is_one_kind():
+    with pytest.raises(InvariantViolated):
+        dealt_in_order([a_card(open_after=1), a_friendly(vibe=50)])
+
+
+def test_a_for_fun_card_carries_its_social_vibe_and_shows_no_forecast():
+    """The forecast still arranged the sides; the card says the table's vibe
+    instead — everybody named on my version, whoever is In, and never an
+    empty seat."""
+
+    friendly = a_pick((ME, A, B), kind=SearchMode.FOR_FUN)
+    friendly.say_yes(A, at=NOW)
+    seen = view(friendly)
+    assert seen is not None and seen.people == (A, ME, B)
+    drink, laughs = T.STAYS_FOR_A_DRINK, T.LAUGHS_OFF_MISTAKES
+
+    card = card_of(
+        friendly,
+        seen,
+        sides=Sides(yours=(ME, A), theirs=(B,)),
+        forecast=CardForecast(pct=91, provisional=True),
+        weeks=[EVERY_HOUR] * 3,
+        terms=SellingTerms(cut_off_hours=24),
+        now=NOW,
+        tags={
+            ME: frozenset({drink, laughs}),
+            A: frozenset({drink, T.QUIET_AND_FOCUSED}),
+            B: frozenset({drink, laughs}),
+            # Not on my card: a name dealt to nobody's seat counts nothing.
+            C: frozenset({T.QUIET_AND_FOCUSED, T.PLAYS_TO_WIN}),
+        },
+    )
+
+    # The drink carried by all three, the laughs by two of us, A's quiet by
+    # nobody else: (1½ + 1 + 1½) ÷ 6 carryings is 66.7%.
+    assert card.vibe == 67
+    assert card.forecast is None
+
+
+def test_a_competitive_card_shows_its_forecast_and_no_vibe():
+    pick = a_pick((ME, A, B, C))
+    seen = view(pick)
+    assert seen is not None
+    shared = frozenset({T.STAYS_FOR_A_DRINK, T.LAUGHS_OFF_MISTAKES})
+
+    card = card_of(
+        pick,
+        seen,
+        sides=Sides(yours=(ME, A), theirs=(B, C)),
+        forecast=CardForecast(pct=91, provisional=False),
+        weeks=[EVERY_HOUR] * 4,
+        terms=SellingTerms(cut_off_hours=24),
+        now=NOW,
+        tags=dict.fromkeys((ME, A, B, C), shared),
+    )
+
+    assert card.forecast == CardForecast(pct=91, provisional=False)
+    assert card.vibe is None
+
+
+def test_open_to_meet_someone_is_shown_and_never_counted_at_a_table():
+    both = frozenset({T.OPEN_TO_MEET_SOMEONE, T.HERE_TO_MEET_PLAYERS})
+
+    # Counted, the two would share half of what they carry.
+    assert (
+        social_vibe_of(
+            (ME, A),
+            {ME: both, A: frozenset({T.OPEN_TO_MEET_SOMEONE, T.PLAYS_TO_WIN})},
+        )
+        == 0
+    )
+    assert social_vibe_of((ME, A), {ME: both, A: both}) == 100
+
+
+def test_somebody_whose_tags_are_not_known_carries_none_at_the_table():
+    held = frozenset({T.STAYS_FOR_A_DRINK, T.PLAYS_TO_WIN})
+
+    assert social_vibe_of((ME, A, B), {ME: held, A: held}) == 50
+    assert social_vibe_of((ME,), {ME: held}) is None
 
 
 def test_the_court_block_says_book_it_now_when_my_yes_fills_the_game():

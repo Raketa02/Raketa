@@ -196,6 +196,25 @@ SOCIAL_TAG_VOCABULARY: Mapping[SocialTagGroup, tuple[SocialTag, ...]] = (
 )
 
 
+#: **The tags that never count** — in a For-fun table's Social vibe, or in
+#: building one (``docs/adr/0207`` §2). Each is still a tag a player holds, shown
+#: wherever their tags are shown, the Social vibe card's grid included; it simply
+#: earns nothing at a table. ``OPEN_TO_MEET_SOMEONE`` is the one, because it sits
+#: at the edge of this vocabulary's rule (above): counting it would seat people
+#: together because of that motive, and For fun is a game, never a matchmaker.
+UNCOUNTED_SOCIAL_TAGS: frozenset[SocialTag] = frozenset(
+    {SocialTag.OPEN_TO_MEET_SOMEONE}
+)
+
+
+def counted(tags: Iterable[SocialTag]) -> frozenset[SocialTag]:
+    """The tags a player holds that count at a table — every one but
+    ``UNCOUNTED_SOCIAL_TAGS``, removed here before the Match Fit engine is
+    asked, so every context that asks it removes the same ones."""
+
+    return frozenset(tags) - UNCOUNTED_SOCIAL_TAGS
+
+
 @dataclass(frozen=True)
 class SocialTagSelectionBounds:
     """How many tags a selection must hold to be one.

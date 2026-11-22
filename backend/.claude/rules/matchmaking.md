@@ -37,7 +37,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   four bands, read by the record, Members and #661's filter — the six strands left, #659),
   the forecast's shapes (`Forecast`, `Split`, `SigmaCombiner`), `LevelReading`,
   `GridCell`, and `v1/group.py`'s `forecast`, `forecast_and_split`, `forecast_pct` and
-  `group_availability`. **The ruleset is two sections**: the balance rules and each kind
+  `group_availability` — and since #830 `v1/vibe.py`'s **Social vibe** of a For-fun table
+  (ADR-0207 §2, §11): `social_vibe_share`, exact (a `Fraction`, for the proposer's unrounded
+  comparison, #831), and `social_vibe`, its whole percent rounded half up
+  (`floor(100·x + ½)`); each `None` under two people or with nobody carrying a tag. It is handed
+  sets of the tags that count — compared for equality and nothing else, so no tag weighs more
+  and related tags earn nothing — and holds no vocabulary: the Player profile's `counted` drops
+  💘 before it is asked. No constant and no ruleset section: the bands are the app's. **The ruleset is two sections**: the balance rules and each kind
   of game's level tolerance, in one released dataset
   (`infrastructure/rulesets/r2026_09_15_a.py`), validated at import and never selected by
   the environment. A new number is a new dataset with a new name, never an edit.

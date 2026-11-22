@@ -155,6 +155,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   **A request from *Same vibe* has a row in two registers** (#795): Proposals'
   `TagsInCommon` and Notifications' `TagsInCommon` — each context's own port, each signed over
   the Player profile (`ProfileTagsInCommon`) — how many Social tags two players hold today.
+  **A For-fun table's Social vibe has a row in the tenth** (#830; ADR-0207 §11):
+  Proposals' `PlayersTags`, *these players' tags now*, signed by `DirectoryPlayersTags` over
+  Discovery's `PlayerDirectory.tags_of_each` — the player directory's copy, one statement for
+  everybody asked — and contracted with the tags committed over HTTP and the outbox drained,
+  as the directory hears them (💘 included: dropping it is the vibe's rule, not the port's).
   **A row carries a builder, and not always over a bare session.** Most build over a
   session; `payments_demands.py`'s and `push_demands.py`'s build over the settings, and
   `general_order_demands.py`'s over a Redis client.

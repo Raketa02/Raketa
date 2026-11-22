@@ -10,8 +10,14 @@ writes, and a card's forecast is computed for the reader's own version now.
 games they have booked — then the proposals dealt to them, filtered by those
 before anybody else is read about; then **one read per provider over the union
 of every card left**: who is still in the pool, which pairs on them fit (per kind,
-since the level window is the kind's), the forecasts of every arrangement, and
-the people. Nothing is asked per card.
+since the level window is the kind's), the forecasts of every arrangement, the
+people, and — for the For-fun cards alone — everybody's Social tags, which each
+friendly's Social vibe is worked out from in place of its forecast
+(``docs/adr/0207`` §2, §5; #830). Nothing is asked per card.
+
+**Each segment is ordered by its kind** (``domain/deck.py``): Competitive by
+§8.2's keys, For fun by the best company first — the owed cards, then the
+rescues by vibe, then every other card by the vibe it shows.
 
 **The filters** (§4.1, §5.3, §6.6): a kind the reader's Play intent does not
 want, a share above *most I'll pay*, a week at their games per week, an hour
@@ -95,6 +101,7 @@ from app.modules.proposals.domain.ports import (
     GamesAndMoneyRepository,
     PlayerFit,
     PlayersInPlay,
+    PlayersTags,
     Pools,
     ProposalDirectory,
     ProposalRepository,
@@ -172,8 +179,10 @@ class ReadGroupDeck:
         offers: RescueOffers,
         players: PlayersInPlay,
         relations: ReaderRelations,
+        tags: PlayersTags,
         clock: Clock,
     ) -> None:
+        self._tags = tags
         self._offers = offers
         self._relations = relations
         self._players = players
@@ -245,6 +254,27 @@ class ReadGroupDeck:
         people = await with_the_readers_friends(
             people, reader=reader, relations=self._relations
         )
+        # Every For-fun card says its table's Social vibe, worked out from
+        # everybody's tags now — one question for all of them, and none while
+        # no friendly is dealt (`docs/adr/0207` §2, §11). Asked whichever
+        # segment is read: the vibe orders the For-fun segment, and which of
+        # the same people's hours it keeps is what the Games badge counts.
+        tags = await self._tags.tags_of(
+            {
+                *(
+                    player
+                    for proposal, view in views
+                    if proposal.kind is SearchMode.FOR_FUN
+                    for player in view.people
+                ),
+                *(
+                    player
+                    for rescue in rescues
+                    if rescue.game.kind is SearchMode.FOR_FUN
+                    for player in (reader, *rescue.game.players)
+                ),
+            }
+        )
 
         cards: list[DeckCard] = []
         read = 0
@@ -260,6 +290,7 @@ class ReadGroupDeck:
                     weeks=[people[player].week for player in view.people],
                     terms=terms[proposal.club_id],
                     now=now,
+                    tags=tags,
                     indoor=court_kinds.get((proposal.club_id, sport, proposal.start)),
                 )
             )
@@ -277,6 +308,7 @@ class ReadGroupDeck:
                         zone=CLUB_ZONE,
                     ),
                     now=now,
+                    tags=tags,
                 )
             )
 

@@ -157,6 +157,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (was 2–6), served at `GET /player-profile/options` and re-checked by `chosen` on both writes,
   the commit and `PUT /players/me/social-tags`, under `social_tag_selection_out_of_bounds`; a
   stream's selection is folded by `recorded` and never re-counted, so a six recorded before
-  still replays. **The seed's cohort doesn't draw the eight yet** (`cohort.NOT_DRAWN_YET`,
+  still replays. **Which tags don't count at a table is a constant beside the vocabulary**
+  (ADR-0207 §2, #830): `UNCOUNTED_SOCIAL_TAGS` — 💘 `OPEN_TO_MEET_SOMEONE` alone — and
+  `counted(tags)`, which every context asking the Match Fit engine for a Social vibe calls
+  first, so they all drop the same ones; the tag is still held and shown everywhere.
+  **The seed's cohort doesn't draw the eight yet** (`cohort.NOT_DRAWN_YET`,
   `DRAWN_UP_TO` 6): drawing from 27 redraws every member's tags, and Same vibe's seed names
   members by today's overlaps, so the redraw is #832's, with its fixture diff.

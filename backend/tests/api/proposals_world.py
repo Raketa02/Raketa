@@ -212,16 +212,19 @@ async def a_member(
     card: bool = True,
     entered: EnteredCard = A_CARD,
     domain: str = "example.com",
+    tags: tuple[str, ...] | None = None,
 ) -> dict:
     """A member rated at ``mu`` in ``sports``, free every hour of the week
     unless told otherwise, with a declared intent and — unless told otherwise
     — a saved card (``entered``: a personal EU Visa that pays), addressed at
-    ``domain``."""
+    ``domain``, holding ``tags`` — or the profile commit's own two."""
 
     player_id, token = await players.register(client, name, domain=domain)
     profile: dict = {"weekly_hours": week, "gender": gender}
     if gender_preference is not None:
         profile["gender_preference"] = gender_preference
+    if tags is not None:
+        profile["social_tag_ids"] = list(tags)
     await players.commit_profile(client, token, **profile)
     for sport in sports:
         await players.rate_in(session_factory, player_id, sport, mu=mu)
@@ -268,9 +271,12 @@ async def makes(
     poster: dict | None = None,
     versions: tuple[tuple[dict, ...], ...] = (),
     posted_for: PostedFor | None = None,
+    owed_card_for: tuple[dict, ...] = (),
 ) -> UUID:
     """A game proposed the way the engine will propose one. A pick unless a
-    poster is named — for anybody, unless it says whom (#546)."""
+    poster is named — for anybody, unless it says whom (#546) — and the card
+    owed to ``owed_card_for`` after a club's cancel, as the proposer deals one
+    (#673)."""
 
     async with session_factory() as session:
         return await build_make_proposal(session, clock=clock).execute(
@@ -284,6 +290,7 @@ async def makes(
                 start=instant(start),
                 versions=[[player["id"] for player in version] for version in versions],
                 posted_for=posted_for,
+                owed_card_for=[player["id"] for player in owed_card_for],
             )
         )
 

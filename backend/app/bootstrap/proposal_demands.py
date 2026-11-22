@@ -2,7 +2,7 @@
 game's details (#542), and who signs each demand.
 
 **A register of its own**, on the rule every register here states: a new
-consumer gets a new register, not a row in somebody else's. **Twenty-four rows,
+consumer gets a new register, not a row in somebody else's. **Twenty-six rows,
 and the tuple is what is asserted over**: a player's booked games (``bookings``),
 where each booked game's result stands (``games``), how far a club is from a
 player (the Player profile and ``clubs``), what each player is called on a
@@ -28,7 +28,9 @@ the asks for a level waiting on the reader (``friends``, ``ReaderRelations``,
 the sport of the reader's latest result and their General place there
 (``rankings``, ``RankingOnHome``) — and, for a request from *Same vibe* on
 Home (#795), how many Social tags two players hold today (the Player profile,
-``TagsInCommon``) — each a fact another context
+``TagsInCommon``) — and, for a For-fun table's Social vibe (#830), these
+players' tags now (``discovery``'s player directory, ``PlayersTags``, one
+statement for everybody a read draws) — each a fact another context
 owns, read through a port declared in this context's words. The sender's court
 held at send (``SendersCourts``) asks the provider, and is contracted over HTTP
 with the fake.
@@ -71,6 +73,7 @@ from app.bootstrap.composition import (
     build_general_orders_kept_here,
     build_ranking_on_home,
     build_home_tags_in_common,
+    build_players_tags,
     build_reader_relations,
     build_friends_game_bookings,
     build_covers_at_the_cut_off,
@@ -103,6 +106,7 @@ from app.modules.proposals.domain.ports import (
     LevelAsksOnHome,
     RankingOnHome,
     TagsInCommon,
+    PlayersTags,
 )
 
 P = TypeVar("P")
@@ -134,6 +138,7 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     LevelAsksOnHome,
     RankingOnHome,
     TagsInCommon,
+    PlayersTags,
     FriendsGameBookings,
     CoversAtTheCutOff,
 )
@@ -276,6 +281,11 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=TagsInCommon,
         name="ProfileTagsInCommon",
         build=build_home_tags_in_common,
+    ),
+    RegisteredImplementation(
+        port=PlayersTags,
+        name="DirectoryPlayersTags",
+        build=build_players_tags,
     ),
 )
 

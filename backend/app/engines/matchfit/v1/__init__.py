@@ -1,7 +1,8 @@
 """Match Fit, version 1 — what the new games kept of it.
 
 **This directory is the arithmetic and nothing else.** ``group`` is the forecast
-between two sides and the hours a court shares. Every *shape* — the forecast,
+between two sides and the hours a court shares; ``vibe`` is a For-fun table's
+Social vibe (``docs/adr/0207`` §2, #830). Every *shape* — the forecast,
 the split, the ruleset — lives one directory up, because a shape outlives a
 version (``docs/adr/0015``).
 
@@ -17,10 +18,13 @@ from app.engines.matchfit.v1.group import (
     forecast_pct,
     group_availability,
 )
+from app.engines.matchfit.v1.vibe import social_vibe, social_vibe_share
 
 __all__ = [
     "forecast",
     "forecast_and_split",
     "forecast_pct",
     "group_availability",
+    "social_vibe",
+    "social_vibe_share",
 ]
