@@ -1,4 +1,4 @@
-"""The Social tag vocabulary: nineteen permanent ids, three groups, one home.
+"""The Social tag vocabulary: twenty-seven permanent ids, three groups, one home.
 
 Two claims are load-bearing here and neither is about behaviour.
 
@@ -11,9 +11,10 @@ the profiles that hold it — and that change should redden this file, be argued
 with, and then be made here too. **Adding one should redden it too**, which is
 what happened on 2026-08-26 when ``OPEN_TO_MEET_SOMEONE`` was appended to
 ``WHY_YOU_ARE_HERE`` — an addition rather than an edit, with nothing above it
-moved and nothing retired.
+moved and nothing retired. It reddened again on 2026-11-22, when ADR-0207 §7
+appended eight more, each at the end of its group (#829).
 
-**The closed-vocabulary tripwire below was not widened to admit it**, and must
+**The closed-vocabulary tripwire below was not widened to admit them**, and must
 not be for anything else either: an id that needs the guard relaxed is an id that
 belongs to a different product.
 
@@ -56,6 +57,9 @@ EXPECTED: tuple[tuple[str, tuple[str, ...]], ...] = (
             "SETTLES_UP_ON_THE_SPOT",
             "BOOKS_THE_NEXT_ONE",
             "SHARES_A_LIFT",
+            "STAYS_FOR_A_COFFEE",
+            "UP_FOR_A_BITE_AFTER",
+            "KEEPS_IN_TOUCH",
         ),
     ),
     (
@@ -67,6 +71,10 @@ EXPECTED: tuple[tuple[str, tuple[str, ...]], ...] = (
             "GENEROUS_ON_LINE_CALLS",
             "QUIET_AND_FOCUSED",
             "WARMS_UP_PROPERLY",
+            "HAPPY_TO_SWAP_PARTNERS",
+            "PATIENT_WITH_BEGINNERS",
+            "HAPPY_TO_SHARE_TIPS",
+            "BRINGS_THE_ENERGY",
         ),
     ),
     (
@@ -79,6 +87,7 @@ EXPECTED: tuple[tuple[str, tuple[str, ...]], ...] = (
             "HERE_FOR_A_REGULAR_GAME",
             "HERE_TO_GET_BACK_INTO_IT",
             "OPEN_TO_MEET_SOMEONE",
+            "NEW_IN_TOWN",
         ),
     ),
 )
@@ -94,13 +103,16 @@ def test_the_vocabulary_is_exactly_these_ids_in_their_served_order():
     assert served == EXPECTED
 
 
-def test_there_are_nineteen_tags_in_three_groups():
+def test_there_are_twenty_seven_tags_in_three_groups():
     # The groups are not evenly sized and never had to be: what was specified is
     # the three groups, and nothing renders a group's count. The even split the
     # first eighteen happened to have ended when the nineteenth was appended.
-    assert len(SocialTag) == 19
+    assert len(SocialTag) == 27
     assert len(SocialTagGroup) == 3
-    assert sum(len(tags) for tags in SOCIAL_TAG_VOCABULARY.values()) == 19
+    assert sum(len(tags) for tags in SOCIAL_TAG_VOCABULARY.values()) == 27
+    assert {
+        group.value: len(tags) for group, tags in SOCIAL_TAG_VOCABULARY.items()
+    } == {"AFTER_THE_MATCH": 9, "ON_THE_COURT": 10, "WHY_YOU_ARE_HERE": 8}
 
 
 def test_every_tag_belongs_to_exactly_one_group():

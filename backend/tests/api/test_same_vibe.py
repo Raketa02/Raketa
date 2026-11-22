@@ -218,6 +218,34 @@ async def test_the_vibe_percent_rises_with_each_shared_tag(client, mailbox, tome
     ]
 
 
+async def test_seven_shared_tags_read_99_and_eight_read_100(client, mailbox):
+    """A player may hold eight since ADR-0207 §7, so two players may share seven
+    or eight. **100 is true**: eight shared are the two players' eight, the same
+    tags on both sides."""
+
+    hers = (
+        T.STAYS_FOR_A_DRINK,
+        T.STAYS_FOR_A_COFFEE,
+        T.PLAYS_TO_WIN,
+        T.LAUGHS_OFF_MISTAKES,
+        T.PATIENT_WITH_BEGINNERS,
+        T.HERE_TO_IMPROVE,
+        T.HERE_TO_MEET_PLAYERS,
+        T.NEW_IN_TOWN,
+    )
+    ola = await a_player(client, "ola", tags(*hers))
+    await a_player(client, "seven", tags(*hers[:7], T.SHARES_A_LIFT))
+    await a_player(client, "eight", tags(*hers))
+
+    page = await see_all(client, mailbox, ola)
+
+    assert [
+        (card["nickname"], card["in_common"], card["vibe_percent"])
+        for card in page["players"]
+    ] == [("eight", 8, 100), ("seven", 7, 99)]
+    assert page["players"][0]["shared_tags"] == tags(*hers)
+
+
 async def test_a_card_carries_the_shared_tags_in_the_vocabulary_s_order(
     client, mailbox, tomek, crowd
 ):

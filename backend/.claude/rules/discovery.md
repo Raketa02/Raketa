@@ -212,7 +212,8 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   Social tag with the reader**; every tag counts the same and **skill plays no part**, so a
   reader with no level sees it too (Q14) and no level is read but See all's sport. **The vibe
   %** is 1 − ½ⁿ for n shared tags, **a half rounded up** (`vibe_percent`: 87,5 reads 88): 50,
-  75, 88, 94, 97, 98. **The order** (`VibeKey`) is more shared first, then **fewer of their
+  75, 88, 94, 97, 98, and since a player may hold eight (ADR-0207 §7, #829) 99 and 100 — 100
+  true, since eight shared are both players' eight. **The order** (`VibeKey`) is more shared first, then **fewer of their
   tags the reader doesn't hold**, then the player id. A person on the row is a `VibePlayer` —
   never a *match* (the glossary's _Avoid_ for the % is *match %*). **The row**: §9's rule, a
   good match **two shared tags or more** (`GOOD_MATCH`), a rested player a gap (#796); it reads

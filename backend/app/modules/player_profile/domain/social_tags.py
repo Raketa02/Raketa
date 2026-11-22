@@ -1,6 +1,6 @@
-"""The Social tag vocabulary: nineteen ids, three groups, closed.
+"""The Social tag vocabulary: twenty-seven ids, three groups, closed.
 
-A player describes what kind of player they are by holding **2 to 6** of these
+A player describes what kind of player they are by holding **2 to 8** of these
 (``../../../../CONTEXT.md``). The vocabulary is *closed and platform-owned* —
 never free text, never player-authored, never imported from another platform,
 and never about the person rather than the game. Age, looks, body and "looking
@@ -58,6 +58,34 @@ to a different product.
 **It is deliberately not ``HERE_TO_MEET_PLAYERS``**, which it sits beside. That
 one is about finding people to play with; this one is not, and folding the two
 would take a distinction a player drew and discard it. Both stand.
+
+**Eight more were added on 2026-11-22** (``docs/adr/0207`` §7, #829), because
+nineteen were too few to say who a player is to play with once tags build the
+For-fun tables: a coffee rather than a drink, new in town, patient with
+beginners. Each was appended at the end of its group — nothing above moved and
+nothing was retired — which makes 27: After the match 9, On the court 10, Why
+you're here 8. Each is about the game, and none needed the tripwire touched:
+
+- ``STAYS_FOR_A_COFFEE`` and ``UP_FOR_A_BITE_AFTER`` — what a player does once
+  the match is over, as ``STAYS_FOR_A_DRINK`` is. A coffee is not a drink, and
+  the two earn no credit for each other (``docs/adr/0207`` §2).
+- ``KEEPS_IN_TOUCH`` — whether the people from one game hear from them before
+  the next, which is how a game becomes a regular one.
+- ``HAPPY_TO_SWAP_PARTNERS`` — how they play a doubles evening: sides change.
+- ``PATIENT_WITH_BEGINNERS`` and ``HAPPY_TO_SHARE_TIPS`` — how they are with
+  a weaker player on their court. Neither is a level claim: the Skill rating
+  says how anybody hits, and these say how somebody plays beside it.
+- ``BRINGS_THE_ENERGY`` — what they are like while it is going on, beside
+  ``QUIET_AND_FOCUSED`` at the other end.
+- ``NEW_IN_TOWN`` — a **motive**, what ``WHY_YOU_ARE_HERE`` collects: they came
+  to find a game in a place where they don't have one yet. It says where they
+  stand with the city's courts, never where they are from.
+
+Struck in the same session, on this module's rule: a level claim (*Just starting
+out*), an intent (*Here for fun* — a tag is not a Play intent), a reliability
+claim (*Always on time* — Player Score measures it), and anything about age,
+family, job, looks, nationality or language; and *Sticks around to watch* and
+*Here to unwind*.
 """
 
 from __future__ import annotations
@@ -93,6 +121,9 @@ class SocialTag(str, Enum):
     SETTLES_UP_ON_THE_SPOT = "SETTLES_UP_ON_THE_SPOT"
     BOOKS_THE_NEXT_ONE = "BOOKS_THE_NEXT_ONE"
     SHARES_A_LIFT = "SHARES_A_LIFT"
+    STAYS_FOR_A_COFFEE = "STAYS_FOR_A_COFFEE"
+    UP_FOR_A_BITE_AFTER = "UP_FOR_A_BITE_AFTER"
+    KEEPS_IN_TOUCH = "KEEPS_IN_TOUCH"
 
     # On the court
     PLAYS_TO_WIN = "PLAYS_TO_WIN"
@@ -101,6 +132,10 @@ class SocialTag(str, Enum):
     GENEROUS_ON_LINE_CALLS = "GENEROUS_ON_LINE_CALLS"
     QUIET_AND_FOCUSED = "QUIET_AND_FOCUSED"
     WARMS_UP_PROPERLY = "WARMS_UP_PROPERLY"
+    HAPPY_TO_SWAP_PARTNERS = "HAPPY_TO_SWAP_PARTNERS"
+    PATIENT_WITH_BEGINNERS = "PATIENT_WITH_BEGINNERS"
+    HAPPY_TO_SHARE_TIPS = "HAPPY_TO_SHARE_TIPS"
+    BRINGS_THE_ENERGY = "BRINGS_THE_ENERGY"
 
     # Why you are here
     HERE_TO_IMPROVE = "HERE_TO_IMPROVE"
@@ -110,6 +145,7 @@ class SocialTag(str, Enum):
     HERE_FOR_A_REGULAR_GAME = "HERE_FOR_A_REGULAR_GAME"
     HERE_TO_GET_BACK_INTO_IT = "HERE_TO_GET_BACK_INTO_IT"
     OPEN_TO_MEET_SOMEONE = "OPEN_TO_MEET_SOMEONE"
+    NEW_IN_TOWN = "NEW_IN_TOWN"
 
 
 #: The vocabulary as it is served: groups in order, tags in order within each.
@@ -126,6 +162,9 @@ SOCIAL_TAG_VOCABULARY: Mapping[SocialTagGroup, tuple[SocialTag, ...]] = (
                 SocialTag.SETTLES_UP_ON_THE_SPOT,
                 SocialTag.BOOKS_THE_NEXT_ONE,
                 SocialTag.SHARES_A_LIFT,
+                SocialTag.STAYS_FOR_A_COFFEE,
+                SocialTag.UP_FOR_A_BITE_AFTER,
+                SocialTag.KEEPS_IN_TOUCH,
             ),
             SocialTagGroup.ON_THE_COURT: (
                 SocialTag.PLAYS_TO_WIN,
@@ -134,6 +173,10 @@ SOCIAL_TAG_VOCABULARY: Mapping[SocialTagGroup, tuple[SocialTag, ...]] = (
                 SocialTag.GENEROUS_ON_LINE_CALLS,
                 SocialTag.QUIET_AND_FOCUSED,
                 SocialTag.WARMS_UP_PROPERLY,
+                SocialTag.HAPPY_TO_SWAP_PARTNERS,
+                SocialTag.PATIENT_WITH_BEGINNERS,
+                SocialTag.HAPPY_TO_SHARE_TIPS,
+                SocialTag.BRINGS_THE_ENERGY,
             ),
             SocialTagGroup.WHY_YOU_ARE_HERE: (
                 SocialTag.HERE_TO_IMPROVE,
@@ -146,6 +189,7 @@ SOCIAL_TAG_VOCABULARY: Mapping[SocialTagGroup, tuple[SocialTag, ...]] = (
                 # the contract, and moving an existing tag is a visible change to
                 # every picker that has already rendered it.
                 SocialTag.OPEN_TO_MEET_SOMEONE,
+                SocialTag.NEW_IN_TOWN,
             ),
         }
     )
@@ -157,8 +201,8 @@ class SocialTagSelectionBounds:
     """How many tags a selection must hold to be one.
 
     The unit is in both field names: a bare ``minimum`` beside a vocabulary of
-    nineteen reads as a count of something, and which something is exactly what
-    a client would guess wrong.
+    twenty-seven reads as a count of something, and which something is exactly
+    what a client would guess wrong.
     """
 
     minimum_tags: int
@@ -194,10 +238,13 @@ class SocialTagSelectionBounds:
 #:
 #: Product confirmed **2 to 6** on 2026-08-25, the same day as the vocabulary
 #: itself. Unlike a tag id these are not on a clock: nothing persists a bound, so
-#: a later opinion is an edit here rather than a retirement.
+#: a later opinion is an edit here rather than a retirement — and the first was,
+#: on 2026-11-22: **2 to 8**, with the eight tags appended above
+#: (``docs/adr/0207`` §7). A selection of up to six recorded before it still
+#: folds, and is still one a player may choose.
 SOCIAL_TAG_SELECTION_BOUNDS = SocialTagSelectionBounds(
     minimum_tags=2,
-    maximum_tags=6,
+    maximum_tags=8,
 )
 
 

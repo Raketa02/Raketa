@@ -779,9 +779,10 @@ PROTAGONIST_TAGS: tuple[str, ...] = (
     SocialTag.WARMS_UP_PROPERLY.value,
 )
 
-#: **Hers alone: the three above and three more** — six, the most a player may
-#: hold — so *Same vibe players* (#795) shows her every overlap from one tag to
-#: six. The three more are where the cohort's own draws meet hers at each count
+#: **Hers alone: the three above and three more** — six, the most a player could
+#: hold when #795 wrote it (eight since ADR-0207 §7; what the seed draws from the
+#: new tags is #832's) — so *Same vibe players* shows her every overlap from one
+#: tag to six. The three more are where the cohort's own draws meet hers at each count
 #: (``app/seeds/same_vibe.py`` reads them back, and fails the run by name if a
 #: count goes missing); the other protagonists keep the three, and so does the
 #: cohort's close-match rule, which is about the three.

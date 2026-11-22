@@ -34,7 +34,10 @@ def player(n: int, *tags: str) -> VibePlayer:
 
 
 @pytest.mark.parametrize(
-    ("shared", "percent"), [(1, 50), (2, 75), (3, 88), (4, 94), (5, 97), (6, 98)]
+    ("shared", "percent"),
+    # 7 and 8 since a player may hold eight (ADR-0207 §7): 99,22 reads 99, and
+    # 99,61 reads 100 — true, since the two players' eight would be the same.
+    [(1, 50), (2, 75), (3, 88), (4, 94), (5, 97), (6, 98), (7, 99), (8, 100)],
 )
 def test_the_vibe_percent_closes_half_of_what_is_left_with_each_tag(shared, percent):
     assert vibe_percent(shared) == percent

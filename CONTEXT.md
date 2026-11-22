@@ -428,24 +428,28 @@ of the code because this file asks for them in that order.
   tags, photos, a week, a location and a gender are facts about a person.
 - **Social tag** — one of a **fixed, closed vocabulary** the platform owns, in three groups
   about the game: how a player is *after the match*, what they are like *on the court*, and
-  *why they are here*. A player holds **2 to 6**. Never free text, never player-authored,
+  *why they are here*. There are **27** — After the match 9, On the court 10, Why you're here 8 —
+  and a player holds **2 to 8**
+  ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §7, [#829](https://github.com/Raketa02/Raketa/issues/829): *Stays for a coffee*, *Up for a bite
+  after*, *Keeps in touch*, *Happy to swap partners*, *Patient with beginners*, *Happy to share
+  tips*, *Brings the energy* and *New in town* were appended to the nineteen, each at the end of its
+  group, and the ceiling rose from 6; a selection of up to 6 recorded before still stands). An id is
+  permanent: a new tag is appended to its group, and none is ever moved, renamed or reused. Never
+  free text, never player-authored,
   never imported from another platform, and never about the person rather than the game —
   age, looks, body and "looking for" are a different product's vocabulary. **Tags order one row and
   score nothing else**: since [ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §6 they put **Same vibe players** in order (Discovery),
   every tag counting the same, and no proposal, card, forecast or level reads one. **They will also
   build and rank For fun**
   ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
-  §1, §2 and §7, decided and not yet built —
-  [#829](https://github.com/Raketa02/Raketa/issues/829),
+  §1 and §2, decided and not yet built —
   [#830](https://github.com/Raketa02/Raketa/issues/830),
   [#831](https://github.com/Raketa02/Raketa/issues/831),
   [#832](https://github.com/Raketa02/Raketa/issues/832)): among the fours that pass the gates, a
   For-fun table is the one with the highest **Social vibe**, every tag counting the same but 💘 *Open
   to meet someone*, which is shown and never counted; a tag edit reaches the next build and pulls
-  nobody off a card already dealt. The vocabulary grows to **27** — *Stays for a coffee*, *Up for a
-  bite after*, *Keeps in touch*, *Happy to swap partners*, *Patient with beginners*, *Happy to share
-  tips*, *Brings the energy*, *New in town* appended — and a player will hold **2 to 8**. They will
-  still touch no competitive card, forecast or level.
+  nobody off a card already dealt. They will still touch no competitive card, forecast or level.
 - **Weekly hours** — a player's ordinary week as **hours per weekday, 07:00–23:00**: a grid of
   7 days × 16 one-hour cells, Monday-first. It replaced the 7 days × 3 parts of the day with
   [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5, because a court
@@ -2417,7 +2421,9 @@ replay every player's streams (ADR-0204 §10). Hottest groups belongs to **Group
 - **Same vibe players** — anyone sharing **at least one Social tag** with the reader, more shared tags
   first, ties to fewer tags not shared. Every tag counts the same, and skill plays no part. _Avoid_:
   similar players, interests.
-- **Vibe %** — **1 − ½ⁿ** for n shared tags, rounded: 50, 75, 88, 94, 97, 98. _Avoid_: match %,
+- **Vibe %** — **1 − ½ⁿ** for n shared tags, rounded: 50, 75, 88, 94, 97, 98, and since a player
+  may hold 8 ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §7) 99 for 7 and **100** for 8 — true, since 8 shared are both players' 8. _Avoid_: match %,
   similarity.
 - **Connected** — the reader is friends with a player, or has a request to them still open. Somebody
   who asked the reader is **not** connected. **Unconnected** is neither. New in Raketa orders its 10

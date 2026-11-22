@@ -18799,7 +18799,7 @@
             "maximum": 100.0,
             "minimum": 50.0,
             "title": "Vibe Percent",
-            "description": "The **vibe %**, 1 \u2212 \u00bd\u207f for n shared tags, rounded: 50, 75, 88, 94, 97, 98 for 1\u20136 \u2014 the white circle, *98%*. Every tag counts the same, and skill plays no part."
+            "description": "The **vibe %**, 1 \u2212 \u00bd\u207f for n shared tags, rounded: 50, 75, 88, 94, 97, 98, 99, 100 for 1\u20138 \u2014 the white circle, *98%*. Every tag counts the same, and skill plays no part."
           },
           "in_common": {
             "type": "integer",
@@ -19580,19 +19580,27 @@
           "SETTLES_UP_ON_THE_SPOT",
           "BOOKS_THE_NEXT_ONE",
           "SHARES_A_LIFT",
+          "STAYS_FOR_A_COFFEE",
+          "UP_FOR_A_BITE_AFTER",
+          "KEEPS_IN_TOUCH",
           "PLAYS_TO_WIN",
           "LAUGHS_OFF_MISTAKES",
           "ENCOURAGES_A_PARTNER",
           "GENEROUS_ON_LINE_CALLS",
           "QUIET_AND_FOCUSED",
           "WARMS_UP_PROPERLY",
+          "HAPPY_TO_SWAP_PARTNERS",
+          "PATIENT_WITH_BEGINNERS",
+          "HAPPY_TO_SHARE_TIPS",
+          "BRINGS_THE_ENERGY",
           "HERE_TO_IMPROVE",
           "HERE_TO_COMPETE",
           "HERE_FOR_THE_EXERCISE",
           "HERE_TO_MEET_PLAYERS",
           "HERE_FOR_A_REGULAR_GAME",
           "HERE_TO_GET_BACK_INTO_IT",
-          "OPEN_TO_MEET_SOMEONE"
+          "OPEN_TO_MEET_SOMEONE",
+          "NEW_IN_TOWN"
         ],
         "title": "SocialTag",
         "description": "The closed set of tag ids. An id here is permanent."
@@ -19661,7 +19669,7 @@
           "maximum_tags"
         ],
         "title": "SocialTagSelectionBoundsResource",
-        "description": "How many Social tags a selection must hold to be one.\n\nThe unit is in both field names: a bare ``minimum`` beside a list of\nnineteen tags reads as a count of something, and which something is exactly\nwhat a client would guess wrong."
+        "description": "How many Social tags a selection must hold to be one.\n\nThe unit is in both field names: a bare ``minimum`` beside a list of\ntwenty-seven tags reads as a count of something, and which something is\nexactly what a client would guess wrong."
       },
       "SocialTagsResponse": {
         "properties": {

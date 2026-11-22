@@ -431,8 +431,8 @@ class SameVibePlayerSchema(BaseModel):
         le=100,
         description=(
             "The **vibe %**, 1 − ½ⁿ for n shared tags, rounded: 50, 75, 88, 94, "
-            "97, 98 for 1–6 — the white circle, *98%*. Every tag counts the "
-            "same, and skill plays no part."
+            "97, 98, 99, 100 for 1–8 — the white circle, *98%*. Every tag "
+            "counts the same, and skill plays no part."
         ),
     )
     in_common: int = Field(

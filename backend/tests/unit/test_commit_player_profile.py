@@ -287,6 +287,7 @@ async def test_two_players_commit_independently(harness: Harness):
     [
         (["PLAYS_TO_WIN"], SocialTagSelectionOutOfBounds),
         (
+            # Nine: one past the ceiling of eight (ADR-0207 §7).
             [
                 "PLAYS_TO_WIN",
                 "HERE_TO_IMPROVE",
@@ -295,6 +296,8 @@ async def test_two_players_commit_independently(harness: Harness):
                 "STAYS_FOR_A_DRINK",
                 "SHARES_A_LIFT",
                 "WARMS_UP_PROPERLY",
+                "STAYS_FOR_A_COFFEE",
+                "NEW_IN_TOWN",
             ],
             SocialTagSelectionOutOfBounds,
         ),
