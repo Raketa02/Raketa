@@ -348,7 +348,8 @@ unregistered and the local store reset, so the last yes books the game at every 
   (Seats to fill and its badge; *You're In* is still `GET /players/me/live-yeses`); **the
   deck** deals a `SEAT_OPEN` card (`CourtState.BOOKED`, `court_name`, tiles `paid`) only to the
   **best fits** — the offered members whose game with them in the seat is forecast most even,
-  three per open seat, the pool's order breaking a tie — and never again to somebody who said
+  three per open seat, the pool's order breaking a tie; on a For-fun game the best company for
+  the players still on it, by the vibe first (#831, `proposals.md`) — and never again to somebody who said
   no (`POST /bookings/{id}/no`, `NoSaidToTheSeat`; the board keeps the row). Derived at every
   read: the reader's own offer is asked first, and the whole pool is read only when a seat is
   offered to them. An outsider offered the seat reads `GET /bookings/{id}` from outside — in

@@ -440,16 +440,15 @@ of the code because this file asks for them in that order.
   never imported from another platform, and never about the person rather than the game —
   age, looks, body and "looking for" are a different product's vocabulary. **Tags order one row and
   score nothing else**: since [ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §6 they put **Same vibe players** in order (Discovery),
-  every tag counting the same, and no proposal, card, forecast or level reads one. **They will also
+  every tag counting the same, and no proposal, card, forecast or level reads one. **They also
   build and rank For fun**
   ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
-  §1 and §2, decided and not yet built —
-  [#830](https://github.com/Raketa02/Raketa/issues/830),
-  [#831](https://github.com/Raketa02/Raketa/issues/831),
-  [#832](https://github.com/Raketa02/Raketa/issues/832)): among the fours that pass the gates, a
-  For-fun table is the one with the highest **Social vibe**, every tag counting the same but 💘 *Open
-  to meet someone*, which is shown and never counted; a tag edit reaches the next build and pulls
-  nobody off a card already dealt. They will still touch no competitive card, forecast or level.
+  §1 and §2 — the cards' vibe since [#830](https://github.com/Raketa02/Raketa/issues/830), the
+  building since [#831](https://github.com/Raketa02/Raketa/issues/831), and a tag edit reaching the
+  next build not yet, [#832](https://github.com/Raketa02/Raketa/issues/832)): among the fours that
+  pass the gates, a For-fun table is the one with the highest **Social vibe**, every tag counting the
+  same but 💘 *Open to meet someone*, which is shown and never counted; a tag edit pulls nobody off
+  a card already dealt. They still touch no competitive card, forecast or level.
 - **Weekly hours** — a player's ordinary week as **hours per weekday, 07:00–23:00**: a grid of
   7 days × 16 one-hour cells, Monday-first. It replaced the 7 days × 3 parts of the day with
   [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5, because a court
@@ -763,7 +762,16 @@ more.**
   still plays a game of one kind, which is exactly why it is not **Play intent**: an intent is a
   standing declaration per sport with three values, a Mode is one game's. They are separate types
   so confusing them is a compile error. It picks the **level window**'s tolerance, and a
-  competitive game is the one whose result is counted.
+  competitive game is the one whose result is counted. **It picks the scoring rule too**
+  ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §1, [#831](https://github.com/Raketa02/Raketa/issues/831)): wherever the engine names somebody
+  for a seat — a pick, the next best fits after a no, a **Post**'s open seats, a lost or owed
+  card's new one, a **Rescue**'s best fits — **Competitive** prefers the best **Forecast**, then
+  the smallest level spread; **For fun** prefers the highest **Social vibe**, compared exactly
+  before it is rounded, then the most **new faces** — pairs who have never played a game together
+  and are not friends, a preference that never moves a number — then the forecast, then the
+  spread. Skill guards a friendly through the level window and the sides, and never weighs it; the
+  gates, the hours and the courts are the same for both.
 - **Ruleset** — the named, dated set of **numbers** the level window and the forecast read: each
   Mode's **level tolerance**, and the **balance rules**. **It is not a profile.** A Player profile
   is a person's own account of themselves; a Ruleset is the product's opinion about how even a game
@@ -834,8 +842,8 @@ more.**
   %**, which is a pair's 1 − ½ⁿ and can differ for the same two players. Decided by
   [ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
   §2 and §5; on the **Group deck**'s cards since
-  [#830](https://github.com/Raketa02/Raketa/issues/830), and not yet built elsewhere —
-  [#831](https://github.com/Raketa02/Raketa/issues/831),
+  [#830](https://github.com/Raketa02/Raketa/issues/830), building For-fun tables since
+  [#831](https://github.com/Raketa02/Raketa/issues/831) (see **Mode**), and not yet built elsewhere —
   [#833](https://github.com/Raketa02/Raketa/issues/833)–[#835](https://github.com/Raketa02/Raketa/issues/835),
   [#838](https://github.com/Raketa02/Raketa/issues/838),
   [#840](https://github.com/Raketa02/Raketa/issues/840)–[#842](https://github.com/Raketa02/Raketa/issues/842).
@@ -1759,7 +1767,12 @@ charges' (**Payments**), its result the Game's (**Games**).
   leaver sat. The seat that opened first is taken first. Since ADR-0189's 2026-10-10 amendment
   (Q113, not yet built — [#640](https://github.com/Raketa02/Raketa/issues/640)) the rescuer's money
   follows the game's: held until the cut-off, or taken at once after it; and a rescuer whose card
-  is refused keeps the seat for 30 minutes, never past the start.
+  is refused keeps the seat for 30 minutes, never past the start. **Its best fits follow the
+  game's Mode** ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §1, [#831](https://github.com/Raketa02/Raketa/issues/831)): three per open seat, on a
+  competitive game the candidates whose game is forecast most even, and on a **For fun** game the
+  best company for the players still on it — the **Social vibe** of the three left plus the
+  candidate, then their new faces, then the forecast, then the level spread.
 - **Fill in** — the group's rescue board (**Seats to fill**) plus **You're In**, your own yeses
   that have not filled. It never offers a proposal that is still filling.
 - **Check-in** — *retired 2026-10-11* ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §4, not yet built —

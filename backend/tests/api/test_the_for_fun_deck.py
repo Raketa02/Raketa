@@ -312,9 +312,14 @@ async def test_the_for_fun_deck_reads_every_table_s_tags_in_one_statement(
 
 #: Everything the read above sends, measured on 2026-11-22 (#830): its pool,
 #: its cards' streams, the pair rule, the forecasts, the people, the rescue's
-#: offer — and the one read of the tags, the vibe's whole cost. A statement more
-#: than this is a change to argue here; a projection of everybody's tags is
-#: argued in an ADR (``docs/adr/0207`` §11), never added to make it fit.
+#: offer — and the one read of the tags, the vibe's whole cost. **Unmoved by
+#: #831**: Ola is the one member offered the rescue's seat, so she is its best
+#: fit whatever the rule, and the best company — the tags, who played together
+#: and who is friends with whom — is read only for a For-fun seat offered to
+#: more members than it is dealt to (``test_the_for_fun_proposer.py`` holds
+#: that read). A statement more than this is a change to argue here; a
+#: projection of everybody's tags is argued in an ADR (``docs/adr/0207`` §11),
+#: never added to make it fit.
 STATEMENTS_IN_THE_FOR_FUN_DECK_READ = 91
 
 

@@ -135,14 +135,16 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (never the leaver). **The vibe is worked out on every read from the tags now** —
   `domain/vibe.py`'s `social_vibe_of`: the Player profile's `counted` drops 💘
   (`UNCOUNTED_SOCIAL_TAGS`, beside the vocabulary), then the Match Fit engine's `social_vibe`;
-  `None` under two people or with nobody holding a tag, ordered last. **The tags are one
+  `None` under two people or with nobody holding a tag, ordered last. **The cards' tags are one
   question per deck read** — `PlayersTags` (`DirectoryPlayersTags`, over Discovery's own
   `PlayerDirectory.tags_of_each`, one statement over `discovery_player_tags`), asked only for
   the people on For-fun cards and not at all when none is dealt, row in `proposal_demands.py`;
-  a tag edit reads into the deck after its delivery reaches the directory.
+  a tag edit reads into the deck after its delivery reaches the directory. **A For-fun rescue
+  offered to the reader, and to more members than it is dealt to, asks a second** (#831): its
+  best fits are the best company among everybody offered (the rescues bullet below).
   `tests/api/test_the_for_fun_deck.py` holds the read at **91 statements** on its world, the
-  tags one of them — a projection of everybody's tags is argued in an ADR, never added to fit
-  (ADR-0207 §11). **Each segment is ordered by its kind** (`dealt_in_order`, one kind a batch,
+  tags one of them — its rescue is offered to the reader alone, so nothing is ranked — and a
+  projection of everybody's tags is argued in an ADR, never added to fit (ADR-0207 §11). **Each segment is ordered by its kind** (`dealt_in_order`, one kind a batch,
   an `invariant`): the **competitive** order is §8.2's four keys, unchanged, the fourth read as
   **the forecast of the reader's version**; the **For-fun** order (ADR-0207 §4,
   `_for_fun_key`) is a `SEAT_OPEN` card first — a rescue, by its vibe — then the vibe the card
@@ -204,10 +206,32 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`PoolClubs` — not *Reach*, which is the Radar's word), the court hours on sale and the
   hours still **held** in → the cards that **lost** their court hour, the **picks** and the
   **deals**. Tested at that seam (`tests/unit/test_the_proposer.py`) and over HTTP
-  (`tests/api/test_the_proposer.py`). Seven things are load-bearing. **Assembly, never a
+  (`tests/api/test_the_proposer.py`). Eight things are load-bearing. **Assembly, never a
   second scoring**: *most even* is the engine's own `forecast` over every way a set could
   stand; it is a rounded percent that saturates at `pct_max`, so a tie goes to the closest
-  Levels, then to join order. **Bounded**: past `CONSIDERED_AT_AN_HOUR` (12) members free
+  Levels, then to join order. **Two scoring rules, one per Mode** (#831;
+  [ADR-0207](../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §1, §3; `domain/scoring.py`'s `score_of`): **Competitive** is the above, exactly today's;
+  **For fun** ranks by the table's Social vibe **exact** (`vibe.py`'s `social_vibe_share_of`, a
+  `Fraction`, so two tables a card prints alike are told apart; `None` — nobody holds a counted
+  tag — under every 0%), then its **new faces** (`new_faces_among`: pairs not in `known`), then
+  the forecast, then the spread. The proposer asks `_score(kind, people)` wherever it ranks — a
+  pick and a lost or owed card's new one (`_best`, renamed from `_evenest`), the next best
+  fits (`_next_best`), widening and a post (`_new_versions`, `versions_of_a_post`) — so a
+  For-fun seat is never named by the forecast first, and the gates, the 12 considered, the
+  hours and the courts are untouched. 💘 builds nothing (`counted`). `propose` and
+  `versions_of_a_post` take `tags` (everybody's, 💘 included) and `known`, both defaulted, so a
+  caller that hands neither builds today's batch with every vibe `None` and every pair new.
+  `ProposeGames` reads them **once per pool for every sport, and only for whoever a For-fun
+  table could hold** (`_company`: a member whose intent wants For fun, and the people on a
+  For-fun game filling or owed — nobody at all where no friendly could be dealt) —
+  `PlayersTags` and **`PlayedWith`** (`GamesAndFriendsPlayedWith`, `infrastructure/played_with.py`:
+  Games' new `PlayedTogetherQuery` — a court played by `now`, `Game.was_played_at`, either kind —
+  and Friends' `ReadRelations.friends_among` **from each person's side**, one statement per
+  member, since Friends answers nothing about two other people; row in `proposal_demands.py`);
+  `PostAGame` reads them for a For-fun post, for the poster and the members dealing it could
+  name (`may_play` at its hour, `admitted`). Tested in `tests/unit/test_the_for_fun_proposer.py`
+  and `tests/api/test_the_for_fun_proposer.py`. **Bounded**: past `CONSIDERED_AT_AN_HOUR` (12) members free
   at once, the ones holding the fewest cards are considered — exact below it, and a big
   official group's cards spread; the walk is a bitmask clique walk ranked once per
   distinct pool, and runs off the event loop (`asyncio.to_thread`). **One card per court
@@ -442,7 +466,17 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `SeatRefunds` (`SEAT_TAKEN`). **A refused rescuer keeps a seat** for thirty minutes (#640),
   over `BookedGameChanges.keep_the_seat`/`kept_seat_ran_out`/`keeps_past`/`kept_for` — see
   `bookings.md`. The Games badge still counts cards with somebody **In**: a
-  rescue's players have paid, and are not In.
+  rescue's players have paid, and are not In. **A For-fun rescue's best fits are its best
+  company** (#831; ADR-0207 §1): `domain/rescues.py`'s `best_fits` scores each candidate by
+  `scoring.py`'s For-fun rule over **the players still on the game plus the candidate** — the
+  vibe, the new faces, the forecast (an unread one under every read one), the spread of the
+  Levels that can be read — while a competitive rescue's are the forecast alone, as before.
+  `RescueOffers.best_fits` (now taking `now`) reads the tags, `PlayedWith` (the players on the
+  game among the table) and `PlayersInPlay`'s Levels **only for a For-fun game offered to more
+  members than it is dealt to** (`room_for_best_fits`, three per open seat; below it everybody
+  offered is a best fit and `best_fits` ranks nothing), and a For-fun ranking handed no company
+  is an `invariant`. `tests/api/test_the_for_fun_proposer.py` holds what it costs a deck read:
+  a second tags statement, and one Friends statement per player left on the game.
 - **A member posts a game; posting is their yes** (#546; the mechanics §9; the screens A5):
   `application/posting.py` over `domain/post.py` (*Who* and the Level range) and
   `domain/posting_grid.py` (the grid's and the sheet's rules). Six things are load-bearing.
@@ -471,8 +505,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   would be one and leave such a name off (`view_of(may_stand=…)`), and **the sides — on the
   card, in the details and at the fill — stand a man and a woman each** (`standing_for`),
   genders read through `PlayersInPlay` only where a mixed post is on the table and never
-  said. **Dealing**: at posting, one version per full set of best fits free then, evenest
-  first, up to three, or one version with seats open (`versions_of_a_post`); after, every
+  said. **Dealing**: at posting, one version per full set of best fits free then, the best
+  first by the post's kind — the evenest, or on a For-fun post the best company, read by
+  `PostAGame` over `PlayersTags` and `PlayedWith` (#831) — up to three, or one version with
+  seats open (`versions_of_a_post`); after, every
   proposer batch keeps dealing it until its book-by with **no half-In condition** — a
   version naming fewer than its open seats takes whoever became a fit, a new full set is a
   new version while fewer than three, and a no's seat goes to next best fits of the gender

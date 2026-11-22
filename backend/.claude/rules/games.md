@@ -64,7 +64,11 @@ from the code.
   proposed, corrected or countered at or after an instant — ids over the stream index, nothing
   folded — **because a correction re-dates its side's score** and may be made again while the
   other side has not answered, so a game long past its hour can still wait on somebody; Home
-  asks it about the games older than the hour it reads from.
+  asks it about the games older than the hour it reads from. Its sixth is
+  `PlayedTogetherQuery` (#831; ADR-0207 §3): which pairs of a set of people have been on one
+  court **played** by `now` — `Game.was_played_at`, either kind, the court as it stands — so a
+  For-fun table prefers new faces; pairs and nothing else cross, and the proposer's
+  `PlayedWith` adds the friendships.
 - **It has two inward ports, and the first is a single field wide**: `PlayerNames` puts a
   **nickname** on a seat and nothing else about the person in it
   ([ADR-0141](../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md); the

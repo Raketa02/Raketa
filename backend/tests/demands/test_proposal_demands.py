@@ -89,6 +89,7 @@ from app.modules.proposals.domain.ports import (
     PlayersInPlay,
     PoolOrigins,
     PlayersTags,
+    PlayedWith,
     RefundReason,
     SeatRefunds,
     TagsInCommon,
@@ -2024,3 +2025,80 @@ async def test_players_tags_are_everybody_s_as_they_hold_them_now(
     assert await implementation.build(session).tags_of([ola]) == {
         ola: {SocialTag.QUIET_AND_FOCUSED, SocialTag.SHARES_A_LIFT}
     }
+
+
+# --------------------------------------------------------------------------- #
+# PlayedWith — who already knows whom, a For-fun table's new faces (#831)
+# --------------------------------------------------------------------------- #
+
+
+def _a_friendly_played(one: UUID, other: UUID) -> Game:
+    """A singles friendly the two played, its score put up after its hour."""
+
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=Sport.PADEL,
+        kind=GameKind.FRIENDLY,
+        window=None,
+        line_up=LineUp.of(
+            (
+                Seating(side=GameSide.A, player_id=one),
+                Seating(side=GameSide.B, player_id=other),
+            )
+        ),
+        occurred_at=_at(-72),
+        starts_at=_at(-48),
+    )
+    game.state_result(by=one, score=A_SCORE, occurred_at=_at(-47))
+    return game
+
+
+@pytest.mark.parametrize("implementation", registered(PlayedWith))
+async def test_who_knows_whom_is_a_game_played_together_or_a_friendship(
+    implementation, session
+):
+    """Ola and Kuba have played a friendly; Ewa and Tomek are friends; Ania
+    asked Piotr, which is no friendship; Zosia and Marek were friends once.
+    Every other pair is new faces to each other."""
+
+    from tests.demands.friends_world import asks, befriends, removes
+
+    ola, kuba, ewa, tomek, ania, piotr, zosia, marek = (new_uuid() for _ in range(8))
+    await _saved(session, _a_friendly_played(ola, kuba))
+    await befriends(session, ewa, tomek)
+    await asks(session, ania, piotr)
+    await befriends(session, zosia, marek)
+    await removes(session, zosia, marek)
+    played_with: PlayedWith = implementation.build(session)
+    everybody = [ola, kuba, ewa, tomek, ania, piotr, zosia, marek]
+
+    assert await played_with.known_pairs(everybody, among=everybody, now=_at()) == {
+        frozenset({ola, kuba}),
+        frozenset({ewa, tomek}),
+    }
+    # One of ``players`` and one of ``among``: a rescue asks about the people
+    # on the game among its candidates.
+    assert await played_with.known_pairs([ola], among=[kuba, ewa], now=_at()) == {
+        frozenset({ola, kuba})
+    }
+    both = await played_with.known_pairs([kuba, ewa], among=[ola, tomek], now=_at())
+    assert both == {frozenset({ola, kuba}), frozenset({ewa, tomek})}
+    assert await played_with.known_pairs([ola, kuba], among=[ewa], now=_at()) == set()
+    assert await played_with.known_pairs([], among=everybody, now=_at()) == set()
+
+
+@pytest.mark.parametrize("implementation", registered(PlayedWith))
+async def test_a_game_still_ahead_makes_nobody_known(implementation, session):
+    """Booked together for Wednesday is not played together: they are still
+    new faces until the game is."""
+
+    await _saved(session, _a_booked_game())
+    played_with: PlayedWith = implementation.build(session)
+
+    assert (
+        await played_with.known_pairs(
+            [OLA, KUBA], among=[OLA, KUBA, EWA, TOMEK], now=_at(1)
+        )
+        == set()
+    )

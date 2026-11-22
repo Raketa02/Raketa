@@ -2,7 +2,7 @@
 game's details (#542), and who signs each demand.
 
 **A register of its own**, on the rule every register here states: a new
-consumer gets a new register, not a row in somebody else's. **Twenty-six rows,
+consumer gets a new register, not a row in somebody else's. **Twenty-seven rows,
 and the tuple is what is asserted over**: a player's booked games (``bookings``),
 where each booked game's result stands (``games``), how far a club is from a
 player (the Player profile and ``clubs``), what each player is called on a
@@ -30,7 +30,9 @@ the sport of the reader's latest result and their General place there
 Home (#795), how many Social tags two players hold today (the Player profile,
 ``TagsInCommon``) — and, for a For-fun table's Social vibe (#830), these
 players' tags now (``discovery``'s player directory, ``PlayersTags``, one
-statement for everybody a read draws) — each a fact another context
+statement for everybody a read draws) — and, for building one (#831), who
+already knows whom: played a game together (``games``) or friends
+(``friends``), ``PlayedWith`` — each a fact another context
 owns, read through a port declared in this context's words. The sender's court
 held at send (``SendersCourts``) asks the provider, and is contracted over HTTP
 with the fake.
@@ -74,6 +76,7 @@ from app.bootstrap.composition import (
     build_ranking_on_home,
     build_home_tags_in_common,
     build_players_tags,
+    build_played_with,
     build_reader_relations,
     build_friends_game_bookings,
     build_covers_at_the_cut_off,
@@ -107,6 +110,7 @@ from app.modules.proposals.domain.ports import (
     RankingOnHome,
     TagsInCommon,
     PlayersTags,
+    PlayedWith,
 )
 
 P = TypeVar("P")
@@ -139,6 +143,7 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     RankingOnHome,
     TagsInCommon,
     PlayersTags,
+    PlayedWith,
     FriendsGameBookings,
     CoversAtTheCutOff,
 )
@@ -286,6 +291,11 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=PlayersTags,
         name="DirectoryPlayersTags",
         build=build_players_tags,
+    ),
+    RegisteredImplementation(
+        port=PlayedWith,
+        name="GamesAndFriendsPlayedWith",
+        build=build_played_with,
     ),
 )
 

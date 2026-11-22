@@ -160,6 +160,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   Discovery's `PlayerDirectory.tags_of_each` — the player directory's copy, one statement for
   everybody asked — and contracted with the tags committed over HTTP and the outbox drained,
   as the directory hears them (💘 included: dropping it is the vibe's rule, not the port's).
+  **Building a For-fun table adds a row to two registers** (#831; ADR-0207 §3, §11): Proposals'
+  **`PlayedWith`**, *who already knows whom* — the pairs of one of `players` and one of `among`
+  who have played a game together or are friends — signed by `GamesAndFriendsPlayedWith` over
+  Games' and Friends' own reads, contracted with a friendly played through the Game's own
+  repository, friendships through `friends_world.py`, a request and a friendship ended that
+  make nobody known, and a game still ahead that makes nobody known; and, on `games_demands.py`,
+  the **seventh** published port, **`PlayedTogetherQuery`** (`EventSourcedGameHistory`, a fourth
+  port on that class): every pair of the people asked on one court **played** by `now`
+  (`Game.was_played_at`), either kind, never a stranger on the court, never a game ahead, called
+  off or started short, and never a leaver. **Friends gets no row and no method**: Friends
+  answers nothing about two other people (`friends.md`), so the adapter asks
+  `ReadRelations.friends_among` from each person's own side.
   **A row carries a builder, and not always over a bare session.** Most build over a
   session; `payments_demands.py`'s and `push_demands.py`'s build over the settings, and
   `general_order_demands.py`'s over a Redis client.

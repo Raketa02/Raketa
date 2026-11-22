@@ -45,10 +45,10 @@ from app.modules.games.infrastructure.game_streams import streams_seating
 
 @final
 class EventSourcedGameHistory:
-    """``GameHistoryQuery``, ``GameDirectory`` and ``OpponentVarietyQuery`` over
-    ``event_store``.
+    """``GameHistoryQuery``, ``GameDirectory``, ``OpponentVarietyQuery`` and
+    ``PlayedTogetherQuery`` over ``event_store``.
 
-    **One class for three ports, because all three are one read of the log folded
+    **One class for four ports, because all four are one read of the log folded
     differently** and splitting them would run the same substring match twice for
     a screen that wants both. The ports stay separate, and each split is a rule
     rather than a filing decision: a caller that wants the counts has no business
@@ -192,6 +192,30 @@ class EventSourcedGameHistory:
         return OpponentVariety(
             distinct_counterparts=len(faces), times_on_court=met
         )
+
+    # -- PlayedTogetherQuery ----------------------------------------------
+
+    async def played_together_among(
+        self, player_ids: Collection[UUID], *, now: Instant
+    ) -> frozenset[frozenset[UUID]]:
+        """Every pair of these people on one court played by ``now``. **One
+        pass** over every stream any of them was ever seated in, narrowed to
+        the court as it stands and to the people asked about."""
+
+        wanted = set(player_ids)
+        if len(wanted) < 2:
+            return frozenset()
+        pairs: set[frozenset[UUID]] = set()
+        for game in await self._games_among(wanted):
+            if not game.was_played_at(now):
+                continue
+            on_it = sorted(game.line_up.players & wanted, key=str)
+            pairs.update(
+                frozenset((one, other))
+                for index, one in enumerate(on_it)
+                for other in on_it[index + 1 :]
+            )
+        return frozenset(pairs)
 
     # -- internals --------------------------------------------------------
 

@@ -18,10 +18,14 @@ money**, as every card is. Never to somebody on the game, nor to a leaver of it:
 a seat left is not offered back.
 
 **The deck deals it only to the best fits** (§8.1): the offered members whose
-game with them in the seat is forecast most even — **three per open seat**, the
-number a no's seat is dealt to (``NEXT_BEST_FITS_PER_SEAT``) — and the
-reader sits **on the side of the seat that opened first**, the one their *I'm
-in* takes. Derived at every read and stored nowhere, as the deck is.
+game with them in the seat is best by **its kind's rule** (``domain/scoring.py``;
+``docs/adr/0207`` §1, #831) — on a competitive game the one forecast most even,
+on a For-fun game the best company for the people still on it: the vibe of
+the three left and the candidate, then their new faces, then the forecast,
+then the level spread — **three per open seat**, the number a no's seat is
+dealt to (``NEXT_BEST_FITS_PER_SEAT``) — and the reader sits **on the side of
+the seat that opened first**, the one their *I'm in* takes. Derived at every
+read and stored nowhere, as the deck is.
 
 **One borrow, pure**: ``free_for_the_hour`` from the Player profile's weekly
 hours, the one rule the proposer, posting and the rescue board ask.
@@ -35,7 +39,7 @@ from typing import final
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Instant, instant, invariant
+from app.kernel import Instant, exhaustive, instant, invariant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
 from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.player_profile.domain.weekly_hours import (
@@ -55,6 +59,14 @@ from app.modules.proposals.domain.games_and_money import GamesAndMoney
 from app.modules.proposals.domain.home import BookedGame, BookingStage, OpenSeat
 from app.modules.proposals.domain.limits import NEXT_BEST_FITS_PER_SEAT, TIME_TO_PAY
 from app.modules.proposals.domain.overlap import Overlap
+from app.modules.proposals.domain.scoring import (
+    Score,
+    descending,
+    new_faces_among,
+    score_of,
+    spread_of,
+)
+from app.modules.proposals.domain.vibe import social_vibe_share_of
 
 
 @final
@@ -173,18 +185,72 @@ def best_fits(
     game: BookedGame,
     offered: Sequence[UUID],
     forecasts: Sequence[CardForecast | None],
+    *,
+    tags: Mapping[UUID, Collection[SocialTag]] | None = None,
+    known: Collection[frozenset[UUID]] = (),
+    levels: Mapping[UUID, float] | None = None,
 ) -> frozenset[UUID]:
     """The members the deck deals the seat to: of those offered — in the
-    pool's order — the ones whose game with them in it is forecast most even,
-    **three per open seat**; a forecast that could not be read ranks last, and
-    the pool's order breaks a tie."""
+    pool's order — the ones whose game with them in it is best by the game's
+    kind's rule, **three per open seat**; the pool's order breaks a tie.
+
+    **Competitive**: forecast most even, as ever — a forecast that could not
+    be read ranks last. **For fun** (``docs/adr/0207`` §1): the table is the
+    people still on the game and the candidate, scored by its Social vibe off
+    ``tags``, then its new faces — every pair ``known`` doesn't name — then
+    the forecast, an unread one under every read one, then the spread of its
+    ``levels``, the Levels that can be read — all three required, an
+    ``invariant``, once there is anybody to leave out."""
 
     invariant(len(offered) == len(forecasts), "a forecast per member offered")
-    ranked = sorted(
-        range(len(offered)), key=lambda index: (_unevenness(forecasts[index]), index)
-    )
-    room = NEXT_BEST_FITS_PER_SEAT * game.open_seats
+    room = room_for_best_fits(game)
+    if len(offered) <= room:
+        # Nobody to leave out, whatever the rule would say.
+        return frozenset(offered)
+    match game.kind:
+        case SearchMode.COMPETITIVE:
+            ranked = sorted(
+                range(len(offered)),
+                key=lambda index: (_unevenness(forecasts[index]), index),
+            )
+        case SearchMode.FOR_FUN:
+            invariant(
+                tags is not None and levels is not None,
+                f"{game.booking_id}'s For-fun best fits ranked without the company",
+            )
+            company = tags or {}
+            mus = levels or {}
+
+            def scored(index: int) -> Score:
+                table = (*game.players, offered[index])
+                read = forecasts[index]
+                return score_of(
+                    SearchMode.FOR_FUN,
+                    vibe=social_vibe_share_of(table, company),
+                    new_faces=new_faces_among(table, known),
+                    forecast=_UNREAD if read is None else read.pct,
+                    spread=spread_of(mus[one] for one in table if one in mus),
+                )
+
+            ranked = sorted(
+                range(len(offered)),
+                key=lambda index: (descending(scored(index)), index),
+            )
+        case _:
+            exhaustive(game.kind)
     return frozenset(offered[index] for index in ranked[:room])
+
+
+def room_for_best_fits(game: BookedGame) -> int:
+    """How many best fits the seat is dealt to: three per open seat. Offered
+    to no more than that, everybody offered is one, and nothing is ranked."""
+
+    return NEXT_BEST_FITS_PER_SEAT * game.open_seats
+
+
+#: A forecast that could not be read, under every one that could: a pct is at
+#: least nought.
+_UNREAD = -1
 
 
 def _unevenness(forecast: CardForecast | None) -> int:

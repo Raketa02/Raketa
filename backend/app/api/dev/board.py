@@ -1125,6 +1125,7 @@ async def read_rescues(
             game,
             [p for p in offered[game.booking_id] if p not in game.said_no],
             sport=sport,
+            now=now,
         )
         read.append(RescueRead(game, offered[game.booking_id], fits.players))
     return read

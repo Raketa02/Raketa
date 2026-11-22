@@ -18,9 +18,10 @@ carried by.
 from __future__ import annotations
 
 from collections.abc import Collection, Iterable, Mapping
+from fractions import Fraction
 from uuid import UUID
 
-from app.engines.matchfit.v1 import social_vibe
+from app.engines.matchfit.v1 import social_vibe, social_vibe_share
 from app.modules.player_profile.domain.social_tags import SocialTag, counted
 
 
@@ -31,3 +32,13 @@ def social_vibe_of(
     with fewer than two of them, when nothing is drawn."""
 
     return social_vibe([counted(tags.get(player, ())) for player in table])
+
+
+def social_vibe_share_of(
+    table: Iterable[UUID], tags: Mapping[UUID, Collection[SocialTag]]
+) -> Fraction | None:
+    """The same table's vibe **exact, before it is rounded** — what For fun
+    ranks tables by when it builds them (``docs/adr/0207`` §1, #831), so two
+    tables a card would print alike are still told apart."""
+
+    return social_vibe_share([counted(tags.get(player, ())) for player in table])

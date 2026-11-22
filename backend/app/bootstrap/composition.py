@@ -199,6 +199,7 @@ from app.modules.proposals.domain.ports import (
     ClubNames as ProposalClubNames,
     TagsInCommon as ProposalsTagsInCommon,
     PlayersTags,
+    PlayedWith,
     ClubTerms,
     CourtHours,
     CourtKinds,
@@ -560,6 +561,9 @@ from app.modules.proposals.infrastructure.tags_in_common import (
 from app.modules.proposals.infrastructure.directory_tags import (
     DirectoryPlayersTags,
 )
+from app.modules.proposals.infrastructure.played_with import (
+    GamesAndFriendsPlayedWith,
+)
 from app.modules.proposals.infrastructure.friends import (
     FriendsLevelAsksOnHome,
     FriendsReaderRelations,
@@ -766,6 +770,7 @@ from app.modules.games.domain.ports import (
     GameHistoryQuery,
     GameRepository,
     OpponentVarietyQuery,
+    PlayedTogetherQuery,
     PlayerNames,
     ScoredGames,
 )
@@ -2026,6 +2031,8 @@ def build_propose_games(
         make=build_make_proposal(session, clock=clock, runtime=runtime),
         deal=build_deal_version(session, clock=clock, runtime=runtime),
         undecided=build_undecided_charges(session, runtime=runtime),
+        tags=build_players_tags(session),
+        played_with=build_played_with(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
         balance=build_ruleset().balance,
@@ -2643,6 +2650,8 @@ def build_rescue_offers(
         players=build_players_in_play(session, runtime=runtime, event_store=store),
         fit=build_player_fit(session, runtime=runtime, event_store=store),
         forecasts=build_balance_forecasts(session, runtime=runtime, event_store=store),
+        tags=build_players_tags(session),
+        played_with=build_played_with(session, runtime=runtime),
     )
 
 
@@ -2851,6 +2860,8 @@ def build_post_a_game(
         guards=build_proposal_guards(session, runtime=runtime),
         directory=build_proposal_directory(session),
         make=build_make_proposal(session, clock=clock, runtime=runtime),
+        tags=build_players_tags(session),
+        played_with=build_played_with(session, runtime=runtime),
         balance=build_ruleset().balance,
         clock=clock,
     )
@@ -3382,6 +3393,18 @@ def build_players_tags(session: AsyncSession) -> PlayersTags:
     the player directory's copy of the profiles', in one statement
     (``docs/adr/0207`` §11, #830)."""
     return DirectoryPlayersTags(build_player_directory(session))
+
+
+def build_played_with(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> PlayedWith:
+    """Who already knows whom — played a game together, or friends — so a
+    For-fun table prefers new faces (``docs/adr/0207`` §3, #831): the games'
+    record and Friends' own reads, from each person's side."""
+    return GamesAndFriendsPlayedWith(
+        games=build_played_together_query(session, runtime=runtime),
+        friends=build_read_relations(session, runtime=runtime),
+    )
 
 
 def build_level_asks_on_home(
@@ -4904,6 +4927,17 @@ def build_opponent_variety_query(
     people. Typed narrowly here, it reaches only the surface that opens one
     person at a time.
     """
+    return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
+
+
+def build_played_together_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> PlayedTogetherQuery:
+    """*Which of these people have played a game together* — the pairs, over
+    the whole record, for a For-fun table's new faces (#831). The history read
+    once more, folded into pairs."""
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
 
 

@@ -9,8 +9,9 @@ player ``i`` carries and ``c_t`` how many of them carry tag ``t``::
 
 **Every surface that draws it is to call this one function**, so no two of
 them can disagree (``docs/adr/0207`` §11). The group deck's cards do since
-#830; a game's details, the booked game, the Friends card and Post a game's
-fits follow in #833–#835, and the proposer's For-fun building in #831.
+#830, and the proposer's For-fun building since #831, through the exact
+share; a game's details, the booked game, the Friends card and Post a game's
+fits follow in #833–#835.
 
 **What crosses in is the tags that count, and only identical tags are shared.**
 A tag is compared for equality and nothing else, so no tag weighs more than

@@ -27,7 +27,9 @@ with a seat open and somebody taking one (bookings), and a refused payment
 waiting for its player (payments) — and, for posting (#546), each member's
 gender and preference (the Player profile) and the engine's level window around
 a poster (the matcher's pair rule) — and, for a For-fun table's Social vibe
-(#830), these players' tags (the player directory's copy of the profile's).
+(#830), these players' tags (the player directory's copy of the profile's) —
+and, for building one (#831), who among them already knows whom (the games'
+record and Friends).
 """
 
 from __future__ import annotations
@@ -554,6 +556,29 @@ class PlayersTags(Protocol):
         none, or whose tags have not reached the directory yet. Every tag is
         answered, the ones that don't count at a table included — removing
         them is the vibe's own rule, beside the vocabulary."""
+        ...
+
+
+@runtime_checkable
+class PlayedWith(Protocol):
+    """**Who already knows whom** — every pair who are **no new faces** to each
+    other: they have played a game together — the games' own record, a court
+    played of either kind, the fact the result's *PLAYED WITH* card is drawn
+    from — or they are friends now (``docs/adr/0207`` §3, #831). Every other
+    pair is new faces, which a For-fun table prefers second, after its vibe.
+
+    **A builder's preference, and nothing else**: never a gate, never on the
+    wire, and it never moves a number a card prints. Asked only where For fun
+    is being built, and stored nowhere — a game played since, or a friendship
+    made, counts at the next build."""
+
+    async def known_pairs(
+        self, players: Collection[UUID], *, among: Collection[UUID], now: Instant
+    ) -> frozenset[frozenset[UUID]]:
+        """Every pair of one of ``players`` and one of ``among`` — two
+        different people — who have played a game by ``now`` together, or who
+        are friends now. A pool asks about everybody among everybody; a rescue
+        about the people still on the game among them and its candidates."""
         ...
 
 

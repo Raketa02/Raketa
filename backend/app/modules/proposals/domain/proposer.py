@@ -19,10 +19,20 @@ the card will print. The forecast is a whole percent and saturates for two equal
 sides, so a tie goes to **the closest Levels**, then to whoever joined first.
 **Distance stands down inside a pool**: everybody plays at the same clubs.
 
-**A court hour is dealt the most even four (or two)** of the members who may
-play it: rated in the sport, wanting the kind, free for the whole hour, able to
-afford it, with no game then and a week under their cap — and who fit every
-pair among them. As many cards as the club has courts free at
+**Each Mode scores a table by its own rule** (``domain/scoring.py``;
+``docs/adr/0207`` §1, #831). Competitive by that forecast, then the closest
+Levels — today's. **For fun by the company**: the table's Social vibe off
+everybody's tags now, compared exactly; then how many of its pairs are **new
+faces** to each other — never played together, not friends; then the forecast
+and the Levels as a tie-break. Skill guards a friendly through the pair rule's
+window, and never weighs it. 💘 builds nothing (``counted``). The rule is
+asked wherever a seat is named — a pick, a seat's next best fits, a post, a
+lost or owed card's new one — and nothing a gate decides moves.
+
+**A court hour is dealt the best four (or two) of its kind** of the members
+who may play it: rated in the sport, wanting the kind, free for the whole hour,
+able to afford it, with no game then and a week under their cap — and who fit
+every pair among them. As many cards as the club has courts free at
 that hour, **of either kind**, each for different people, and **never the same
 people twice in one batch**: hours are walked soonest first, so a four is dealt
 at its best hour and the next hour deals the next best, and within an hour the
@@ -53,13 +63,14 @@ singles each fit is a version**, so a seat a no left goes to one. **At half its
 seats In, a pick widens**: while somebody named has not swiped, its open seats
 go out as new versions, up to three in all. A next best fit fits everybody In
 and everybody dealt with them, which is what the dealer refuses otherwise; they
-are ranked by the forecast of the card they would see.
+are ranked by the kind's rule over the card they would see.
 
 **A post** (#546; §7, §9.2) is dealt **to whom it is for** — its *Who* and
 the range of the others' Levels, and on *Mixed pairs* never more than two of
 either gender on a card. At posting it goes to the poster's best fits free at
-its hour, one version per **full set** of them, the evenest first, up to three
-— or, short of a set, one version with seats open (``versions_of_a_post``).
+its hour, one version per **full set** of them, the best first by the kind's
+rule, up to three — or, short of a set, one version with seats open
+(``versions_of_a_post``).
 After, **it keeps being dealt until its book-by** and needs nobody In to widen:
 a version naming fewer than its open seats takes whoever **becomes** a fit, a
 new full set of fits is a new version while there are fewer than three, and a
@@ -94,6 +105,7 @@ from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, S
 from dataclasses import dataclass
 from datetime import date
 from itertools import combinations, groupby
+from types import MappingProxyType
 from typing import Final, final
 from uuid import UUID
 
@@ -105,6 +117,7 @@ from app.kernel import SPORT_SPECS, Instant, Sport, invariant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
 from app.modules.matchmaking.domain.balance import combine_group_sigma
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.player_profile.domain.weekly_hours import (
     WeeklyHours,
     free_for_the_hour,
@@ -125,6 +138,17 @@ from app.modules.proposals.domain.limits import (
 )
 from app.modules.proposals.domain.post import PostedFor, Who, stand_together
 from app.modules.proposals.domain.proposal import Origin, Proposal, Standing
+from app.modules.proposals.domain.scoring import (
+    Score,
+    descending,
+    new_faces_among,
+    score_of,
+    spread_of,
+)
+from app.modules.proposals.domain.vibe import social_vibe_share_of
+
+#: Nobody's tags: what a batch reads when nobody holds one, or nobody asked.
+_NO_TAGS: Final[Mapping[UUID, Collection[SocialTag]]] = MappingProxyType({})
 
 #: How far ahead the engine deals (the mechanics §4.3) — the deck's horizon,
 #: since a deck holds exactly what the engine dealt.
@@ -390,6 +414,8 @@ def propose(
     balance: BalanceRules,
     now: Instant,
     owed: Sequence[Proposal] = (),
+    tags: Mapping[UUID, Collection[SocialTag]] = _NO_TAGS,
+    known: Collection[frozenset[UUID]] = (),
 ) -> Batch:
     """The batch for one pool in one sport at ``now``.
 
@@ -401,7 +427,12 @@ def propose(
     its own book-by, and loses its court hour only when no court is left;
     ``filling`` this pool's proposals in the sport still filling at ``now``; and
     ``owed`` its games in the sport a club cancelled whose people have not been
-    dealt a new card yet."""
+    dealt a new card yet.
+
+    **What only For fun reads** (``docs/adr/0207`` §1): ``tags`` each member's
+    Social tags now — every one they hold, 💘 included, which the vibe drops
+    itself — and ``known`` every pair who are no new faces to each other:
+    they have played a game together, or they are friends."""
 
     return _Batching(
         sport=sport,
@@ -414,6 +445,8 @@ def propose(
         owed=owed,
         balance=balance,
         now=now,
+        tags=tags,
+        known=known,
     ).run()
 
 
@@ -428,13 +461,17 @@ def versions_of_a_post(
     posted_for: PostedFor,
     balance: BalanceRules,
     now: Instant,
+    tags: Mapping[UUID, Collection[SocialTag]] = _NO_TAGS,
+    known: Collection[frozenset[UUID]] = (),
 ) -> tuple[tuple[UUID, ...], ...]:
     """The names a post is dealt to when it is posted (the mechanics §9.2):
     **one version per full set** of the poster's best fits free at ``hour``,
-    the evenest first, up to three — each fitting the poster and each other —
-    or, with no full set, **one version with as many as fit**, its other seats
-    open. ``members`` the pool in its own order, the poster among them;
-    ``unfit`` every pair that may not share a court in ``kind``."""
+    the best first by the kind's rule — the evenest, or on a For-fun post the
+    best company (``tags``, ``known``, as ``propose`` reads them) — up to
+    three, each fitting the poster and each other; or, with no full set, **one
+    version with as many as fit**, its other seats open. ``members`` the pool
+    in its own order, the poster among them; ``unfit`` every pair that may not
+    share a court in ``kind``."""
 
     return _Batching(
         sport=sport,
@@ -447,16 +484,14 @@ def versions_of_a_post(
         owed=(),
         balance=balance,
         now=now,
+        tags=tags,
+        known=known,
     ).versions_of_a_post(poster, kind, hour=hour, posted_for=posted_for)
 
 
 # --------------------------------------------------------------------------- #
 # The batch
 # --------------------------------------------------------------------------- #
-
-#: A score for a set of people: the forecast of its evenest arrangement, then
-#: how close its Levels are (a narrower spread is a larger score).
-_Score = tuple[int, float]
 
 #: A set of members, as a bit per member in the pool's order — what the walk
 #: over every four is done in, since a four is asked about thousands of times
@@ -478,6 +513,8 @@ class _Batching:
         owed: Sequence[Proposal],
         balance: BalanceRules,
         now: Instant,
+        tags: Mapping[UUID, Collection[SocialTag]] = _NO_TAGS,
+        known: Collection[frozenset[UUID]] = (),
     ) -> None:
         self._seats = SPORT_SPECS[sport].players
         self._per_side = self._seats // 2
@@ -556,7 +593,12 @@ class _Batching:
         for proposal in self._live:
             for version in proposal.versions:
                 self._on_the_cards(self._mask((*proposal.yeses, *version.players)))
-        self._scores: dict[_Members, _Score] = {}
+        self._tags = tags
+        self._known = frozenset(known)
+        #: Each set's score, per kind — the rule its Mode scores it by.
+        self._scores: dict[tuple[SearchMode, _Members], Score] = {}
+        #: Each set's forecast and spread, which both rules read.
+        self._evenness: dict[_Members, tuple[int, float]] = {}
         self._ranked: dict[
             tuple[SearchMode, _Members, int, _Members], list[_Members]
         ] = {}
@@ -595,13 +637,13 @@ class _Batching:
     # ------------------------------------------------------------ fresh picks
 
     def _fill(self, kind: SearchMode, hour: CourtHourOnSale) -> None:
-        """Deal the hour its evenest fours, one per free court, each for
-        different people."""
+        """Deal the hour its best fours by the kind's rule, one per free
+        court, each for different people."""
 
         free_courts = hour.courts - self._picks_at(hour)
         pool = self._pool_at(kind, hour)
         while free_courts > 0:
-            people = self._evenest(kind, pool, self._seats, refused=self._together)
+            people = self._best(kind, pool, self._seats, refused=self._together)
             if people is None:
                 return
             self._pick(kind, hour, people)
@@ -645,9 +687,7 @@ class _Batching:
                 continue
             pool = self._pool_at(kind, hour, besides=in_)
             for size in range(self._seats, len(in_) - 1, -1):
-                people = self._evenest(
-                    kind, pool, size, must=in_, refused=self._together
-                )
+                people = self._best(kind, pool, size, must=in_, refused=self._together)
                 if people is not None:
                     self._pick(
                         kind,
@@ -844,15 +884,18 @@ class _Batching:
         beside: Sequence[UUID] | None = None,
     ) -> tuple[UUID, ...]:
         """Up to ``wanted`` of ``candidates`` for a version still held by
-        ``holders``, the best card first — each fitting the others chosen and,
-        given ``beside``, standing with the people In, them and each other."""
+        ``holders``, the best card first by the kind's rule — each fitting the
+        others chosen and, given ``beside``, standing with the people In, them
+        and each other."""
 
         kind, in_ = proposal.kind, proposal.yeses
         ranked = sorted(
             candidates,
             key=lambda player: (
-                _descending(
-                    self._score(self._mask(self._view(kind, in_, player, holders)))
+                descending(
+                    self._score(
+                        kind, self._mask(self._view(kind, in_, player, holders))
+                    )
                 ),
                 self._index[player],
             ),
@@ -877,7 +920,8 @@ class _Batching:
         sizes: Callable[[int], Iterable[int]],
     ) -> None:
         """New versions of the game while there are fewer than three: each the
-        evenest set of members who may be dealt it, with everybody In, of the
+        best set by the kind's rule of the members who may be dealt it, with
+        everybody In, of the
         first of ``sizes`` — given how many versions there are — that finds
         one."""
 
@@ -892,7 +936,7 @@ class _Batching:
                     found
                     for size in sizes(versions)
                     if (
-                        found := self._evenest(
+                        found := self._best(
                             kind,
                             pool,
                             len(in_the_pool) + size,
@@ -931,7 +975,7 @@ class _Batching:
         refused = self._refused_by(posted_for)
         versions: list[tuple[UUID, ...]] = []
         while len(versions) < VERSIONS_PER_PROPOSAL:
-            people = self._evenest(
+            people = self._best(
                 kind, pool, self._seats, must=(poster,), refused=refused
             )
             if people is None:
@@ -941,9 +985,7 @@ class _Batching:
         if not versions:
             # Short of a full set: one version, its other seats open.
             for size in range(self._seats - 1, 1, -1):
-                people = self._evenest(
-                    kind, pool, size, must=(poster,), refused=refused
-                )
+                people = self._best(kind, pool, size, must=(poster,), refused=refused)
                 if people is not None:
                     versions.append(people[1:])
                     break
@@ -1108,9 +1150,9 @@ class _Batching:
             }
         )
 
-    # --------------------------------------------------------------- evenness
+    # ------------------------------------------------- the best by the rule
 
-    def _evenest(
+    def _best(
         self,
         kind: SearchMode,
         pool: _Members,
@@ -1119,8 +1161,9 @@ class _Batching:
         must: tuple[UUID, ...] = (),
         refused: Callable[[_Members], bool] = lambda people: False,
     ) -> tuple[UUID, ...] | None:
-        """The evenest ``size`` members holding ``must`` and drawn from
-        ``pool``, every pair of them fit — ``must`` first, the rest in the
+        """The best ``size`` members by the kind's rule — the evenest for
+        Competitive, the best company for For fun — holding ``must`` and
+        drawn from ``pool``, every pair of them fit — ``must`` first, the rest in the
         pool's order — or ``None``. The first among equals, walked in the
         pool's order, so the answer is the same on every process
         (``docs/adr/0105``)."""
@@ -1150,9 +1193,10 @@ class _Batching:
         self, kind: SearchMode, pool: _Members, size: int, must: _Members
     ) -> list[_Members]:
         """Every set of ``size`` holding ``must`` and drawn from ``pool`` in
-        which every pair fits, evenest first and in the walk's order among
-        equals — once per distinct question in a batch. A clique walk, so a
-        pair that does not fit prunes everything built on it."""
+        which every pair fits, the best by the kind's rule first and in the
+        walk's order among equals — once per distinct question in a batch. A
+        clique walk, so a pair that does not fit prunes everything built on
+        it."""
 
         key = (kind, pool, size, must)
         ranked = self._ranked.get(key)
@@ -1179,15 +1223,38 @@ class _Batching:
         if need >= 0:
             extend(candidates, 0, 0)
         # Stable, so equals keep the walk's order.
-        found.sort(key=self._score, reverse=True)
+        found.sort(key=lambda people: self._score(kind, people), reverse=True)
         self._ranked[key] = found
         return found
 
-    def _score(self, people: _Members) -> _Score:
-        """The forecast of the evenest way these people could stand, then how
-        close their Levels are."""
+    def _score(self, kind: SearchMode, people: _Members) -> Score:
+        """These people at one table, by the rule their game's kind scores it
+        by (``domain/scoring.py``): the forecast and the Levels for
+        Competitive; the vibe and the new faces first for For fun."""
 
-        cached = self._scores.get(people)
+        cached = self._scores.get((kind, people))
+        if cached is not None:
+            return cached
+        pct, spread = self._evenness_of(people)
+        if kind is SearchMode.FOR_FUN:
+            table = [self._ids[index] for index in _indices(people)]
+            score = score_of(
+                kind,
+                forecast=pct,
+                spread=spread,
+                vibe=social_vibe_share_of(table, self._tags),
+                new_faces=new_faces_among(table, self._known),
+            )
+        else:
+            score = score_of(kind, forecast=pct, spread=spread)
+        self._scores[(kind, people)] = score
+        return score
+
+    def _evenness_of(self, people: _Members) -> tuple[int, float]:
+        """The forecast of the evenest way these people could stand, and how
+        far apart their Levels are."""
+
+        cached = self._evenness.get(people)
         if cached is not None:
             return cached
         levels = [self._levels[index] for index in _indices(people)]
@@ -1203,10 +1270,9 @@ class _Batching:
                 ).pct
                 for yours, theirs in _ways_to_stand(levels, self._per_side)
             )
-        mus = [level.mu for level in levels]
-        score = (pct, -(max(mus) - min(mus)))
-        self._scores[people] = score
-        return score
+        evenness = (pct, spread_of(level.mu for level in levels))
+        self._evenness[people] = evenness
+        return evenness
 
     def _mask(self, players: Iterable[UUID]) -> _Members:
         """These players as a set of members — anybody who is not one left out."""
@@ -1243,7 +1309,3 @@ def _ways_to_stand(
             )
             if 1 <= len(theirs) <= per_side:
                 yield (first, *(rest[index] for index in beside)), theirs
-
-
-def _descending(score: _Score) -> tuple[int, float]:
-    return (-score[0], -score[1])

@@ -35,7 +35,7 @@ that stopped selling between the sheet and the button refuses the post.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import TypeVar, final
@@ -86,13 +86,16 @@ from app.modules.proposals.domain.ports import (
     DeckPeople,
     ReaderRelations,
     DeckPerson,
+    PlayedWith,
     PlayerFit,
+    PlayersTags,
     Pools,
     ProposalDirectory,
     ProposalRepository,
     WherePoolsPlay,
 )
 from app.modules.proposals.domain.post import LevelRange, PostedFor
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.player_profile.domain.weekly_hours import DAYS_IN_THE_GRID
 from app.modules.proposals.domain.posting_grid import (
     WEEKS,
@@ -111,6 +114,7 @@ from app.modules.proposals.domain.proposer import (
     Member,
     admitted,
     capped_weeks_of,
+    may_play,
     versions_of_a_post,
 )
 
@@ -507,6 +511,8 @@ class PostAGame:
         guards: Guards,
         directory: ProposalDirectory,
         make: MakeProposal,
+        tags: PlayersTags,
+        played_with: PlayedWith,
         balance: BalanceRules,
         clock: Clock,
     ) -> None:
@@ -514,6 +520,8 @@ class PostAGame:
         self._guards = guards
         self._directory = directory
         self._make = make
+        self._tags = tags
+        self._played_with = played_with
         self._balance = balance
         self._clock = clock
 
@@ -538,6 +546,33 @@ class PostAGame:
             raise YouPlayThen()
         if not read.grid.fits_free_for(hour):
             raise NobodyFitsThen()
+        # A For-fun post goes to the poster's best company first
+        # (`docs/adr/0207` §1): the tags now, and who knows whom, of the poster
+        # and of the members dealing it could name — free for its hour,
+        # wanting the kind, within their Games & money, and whom it is for.
+        tags: Mapping[UUID, Collection[SocialTag]] = {}
+        known: frozenset[frozenset[UUID]] = frozenset()
+        if read.kind is SearchMode.FOR_FUN:
+            table = sorted(
+                (
+                    member.player_id
+                    for member in read.members
+                    if member.player_id == poster.player_id
+                    or (
+                        admitted(read.posted_for, member)
+                        and may_play(
+                            member,
+                            read.kind,
+                            start=hour.start,
+                            share_grosze=hour.share_grosze,
+                            capped=capped_weeks_of(member, now=now),
+                        )
+                    )
+                ),
+                key=str,
+            )
+            tags = await self._tags.tags_of(table)
+            known = await self._played_with.known_pairs(table, among=table, now=now)
         versions = await asyncio.to_thread(
             versions_of_a_post,
             sport=read.sport,
@@ -549,6 +584,8 @@ class PostAGame:
             posted_for=read.posted_for,
             balance=self._balance,
             now=now,
+            tags=tags,
+            known=known,
         )
         proposal_id = await self._make.execute(
             MakeProposalCommand(

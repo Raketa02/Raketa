@@ -261,6 +261,36 @@ class OpponentVarietyQuery(Protocol):
 
 
 @runtime_checkable
+class PlayedTogetherQuery(Protocol):
+    """*Which of these people have played a game together?* — the pairs, over
+    the whole record (#831; ``docs/adr/0207`` §3).
+
+    **For a set, and answered in pairs**: a For-fun table prefers people who
+    are new faces to each other, so its reader asks about a whole pool at once
+    and needs nothing about any game but who was on its court. **No game id, no
+    sport and no count cross**: two people either have shared an evening or
+    they have not.
+
+    **Played is the aggregate's own word** (``Game.was_played_at``): a game
+    from its entry onward — scored, argued over, or a full court nobody
+    recorded — whatever its kind, a friendly included, since meeting is not
+    evidence about a Level. A game called off, started short, or still ahead
+    put nobody on a court together, and somebody who left a game before it was
+    played was never on its court with anybody (``line_up.players``).
+
+    **Cost.** One substring read for everybody asked, then the streams found:
+    bounded by how many games these people have ever been seated in.
+    """
+
+    async def played_together_among(
+        self, player_ids: Collection[UUID], *, now: Instant
+    ) -> frozenset[frozenset[UUID]]:
+        """Every pair of these people who have been on the court of one game
+        played by ``now`` — a pair being two of them, never anybody else."""
+        ...
+
+
+@runtime_checkable
 class ConfirmedResultLedger(Protocol):
     """Every counted game that has reached an agreed score, **oldest first.**
 
@@ -701,6 +731,7 @@ __all__ = [
     "GameRepository",
     "OpponentVariety",
     "OpponentVarietyQuery",
+    "PlayedTogetherQuery",
     "PlayerNames",
     "Turnout",
 ]

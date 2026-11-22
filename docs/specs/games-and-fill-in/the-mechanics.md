@@ -228,7 +228,8 @@ Continuously, and whenever something changes (a court frees up, a member joins, 
 changes their hours), the engine looks at every free court hour in the group's reach for the
 next 14 days and asks: *which members are rated in this sport, want this kind of game, are
 free for this whole hour, and fit each other?* From those it builds the best game — the most
-even four (or two) — and deals it as a **Picked for you** card to each of its players.
+even four (or two) for a **Competitive** card, **the best company** for a **For fun** one (below)
+— and deals it as a **Picked for you** card to each of its players.
 
 > **Corrected 2026-10-06** ([#569](https://github.com/Raketa02/Raketa/issues/569)). This
 > section said the new games use *today's matchmaking engine unchanged* — level fit, predicted
@@ -249,16 +250,48 @@ The new games keep three pieces of the matchmaking engine, and nothing else of i
   Competitive window whatever the kind. A post's Level range starts from the same window.
 - **The balance forecast** — the engine's own `forecast`, which the proposer reads directly and
   everything else through `forecast_the_sides`. It picks the most even four the proposer deals
-  at an hour — a tie goes to the closest Levels — chooses the sides, ranks the next best fits for
-  a seat a *No* left and for a rescue, and is the percentage a card and a booked game's details
-  print.
+  at an hour for a Competitive card — a tie goes to the closest Levels — chooses the sides of
+  both kinds, ranks the next best fits for a seat a *No* left and for a rescue on a Competitive
+  game, breaks a For-fun tie, and is the percentage a competitive card and a booked game's
+  details print.
 - **Group availability**, which only grades a card's overlap grid (§8.1).
+
+**For fun is built by shared tags** (amended 2026-11-22,
+[ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+§1 and §3, built by [#831](https://github.com/Raketa02/Raketa/issues/831)). **Each Mode scores a
+table by its own rule**, among the fours (or twos) the gates above already let through:
+
+| Mode | Prefers, in order |
+| --- | --- |
+| **Competitive** | the best forecast · the smallest level spread — *unchanged* |
+| **For fun** | the highest **Social vibe**, compared exactly before it is rounded · the most **new faces** · the best forecast · the smallest level spread |
+
+- **A new face** is a pair who have **never played a game together** (a game played, of either
+  kind — never one still ahead, called off or started short) **and are not friends**. A table's
+  new faces are how many of its pairs are new faces to each other. It is a preference only: it
+  never moves a number a card prints, and friends still appear on For-fun cards — they lose a
+  tie to new faces.
+- **Skill is a guard on a friendly, never a weight**: the kind's level window keeps it fair, the
+  sides are still the evenest arrangement, and the forecast and the spread only break a tie. So a
+  For-fun deck's order agrees with the vibe printed on its cards.
+- **💘 *Open to meet someone* builds nothing**: it never counts in the vibe, so it never seats
+  anybody together.
+- **Wherever the engine names somebody for a For-fun seat** the rule is the same: a new pick,
+  the next best fits after a no ([§6.2](#62-a-no)), widening at half In ([§6.3](#63-a-player-who-has-not-swiped-yet)),
+  a For-fun post's versions and open seats ([§9.2](#92-what-happens-next)), a lost or owed card's
+  new one, and a For-fun **Rescue**'s best fits — read against the players still on the game plus
+  the candidate ([§10.1](#101-seats-to-fill--the-rescue-board)).
+- **No floor**: a 0% table is still dealt when nothing better fits that court hour.
+- **Nothing else moves**: the court hours on sale, free for the whole hour, the 12 considered at a
+  crowded hour, one card per free court per hour, the club order, the price and share, the
+  book-by, and Competitive dealt before For fun within an hour.
 
 Who is free is each player's **weekly hours**, read for the whole hour; which kinds they are
 dealt is their **Play intent**. **Distance stands down inside a group**: it decides only which
 clubs a player group plays at (§4.3), and it will matter again at city scale. There is no
-score and no weight, and one toggle: a player's own **reliability filter**, which is a clause of
-the pair rule and ranks nothing. What is new is the assembly (people × hour × court).
+weight, one score per Mode (above), and one toggle: a player's own **reliability filter**, which
+is a clause of the pair rule and ranks nothing. What is new is the assembly (people × hour ×
+court).
 
 > **Amended 2026-10-11** (Q118, [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
 > §6). This said *there is no score, no weight and no toggle*, and the correction of 2026-10-06
@@ -338,8 +371,9 @@ after it.
 ### 6.2 A no
 
 - A no is also **silent**. You leave that card; nothing is recorded against you.
-- Your seat is dealt, as a card, to the **next best fits** — up to 3 per open seat. The first
-  of them to say yes takes it.
+- Your seat is dealt, as a card, to the **next best fits** — up to 3 per open seat, the best by
+  the card's kind: the evenest on a Competitive card, the best company on a For fun one
+  ([§5.1](#51-what-it-does)). The first of them to say yes takes it.
 
 ### 6.3 A player who has not swiped yet
 
@@ -642,8 +676,11 @@ seat in singles, one to three in doubles — **before or after the cut-off**.
 
 - Shown to every member who **fits** (level, kind, gender preference, not blocked) and is
   **free for that hour**.
-- The same seat is also dealt as a **Seat open** card to the best fits' decks, and announced to
-  people who switched on **Fill in alerts** ([§17.2](#172-notifications)).
+- The same seat is also dealt as a **Seat open** card to the best fits' decks — three per open
+  seat, the best by the game's kind ([§5.1](#51-what-it-does)): the candidates whose game is
+  forecast most even on a Competitive game, and on a For fun game the best company for the
+  players still on it — and announced to people who switched on **Fill in alerts**
+  ([§17.2](#172-notifications)).
 - **Pay 30 zł** (Q124) takes the seat at once, because the game already exists. The money follows
   the game's: before the cut-off your share is held, or checked and held at the holding time, and
   you are free to leave until the cut-off like everyone else; after it your share is taken at once
