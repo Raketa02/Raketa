@@ -1,6 +1,9 @@
 # ADR-0089 — The Player profile context is event-sourced
 
-- **Status:** Accepted
+- **Status:** Accepted — **its *2–6 tags drawn from the live vocabulary* amended 2026-11-22 by
+  [ADR-0207](0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §7**: a player holds **2 to 8** of **27** tags, re-validated on every write as before. Old events
+  holding up to 6 stay valid.
 - **Date:** 2026-08-25
 
 > **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The proposals opt-in and the search radius are gone (#581): `ProposalsOptInAnswered` and `SearchRadiusChanged` are no longer registered, and `player_profile.created` is at version 3 without `search_radius_km`. The consent argument below was this record's deciding force and now has no subject. The aggregate stays event-sourced on the rest of its argument — a preference history, and a week nobody may see as a calendar — with one stream per player, one idempotent commit, photos by id and a served tag vocabulary.

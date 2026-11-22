@@ -111,6 +111,17 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > (*Home*, *Needs your answer*) and **Friends**; the brief, the decision log and the mocks are
 > `docs/specs/home-refactor/`.
 >
+> **For fun is built by shared social tags, without a new context**
+> ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md),
+> PRD [#827](https://github.com/Raketa02/Raketa/issues/827); decided, not yet built). **Proposals**
+> builds and ranks For-fun tables by their **Social vibe**, then new faces, with skill only a guard,
+> and opens the For-fun deck on the best company; competitive building is untouched. **Match Fit**
+> gains the Social vibe as one pure function, which Proposals and **Games** both call. The **Player
+> profile**'s vocabulary grows to 27 tags, held 2 to 8. No new table: Proposals and Games read
+> Discovery's tag rows through ports of their own. Only the backend and the player app change. The
+> terms are in `CONTEXT.md` under **Matchmaking** (*Social vibe*) and **Player profile** (*Social
+> tag*); the brief, the decision log and the mocks are `docs/specs/for-fun/`.
+>
 > **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
 > radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
 > ranking, with the feature flag that hid them
@@ -262,6 +273,8 @@ else lives one layer down. See
 │   │                            the screens, the brief and its mocks
 │   ├── specs/home-refactor/  ← Needs your answer and FOR YOU (ADR-0205): the brief, the
 │   │                            decision log and the mocks, which lead on design
+│   ├── specs/for-fun/        ← For fun built by shared tags, the Social vibe (ADR-0207): the
+│   │                            brief, the decision log and the mocks, which lead on design
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)

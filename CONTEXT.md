@@ -432,7 +432,20 @@ of the code because this file asks for them in that order.
   never imported from another platform, and never about the person rather than the game —
   age, looks, body and "looking for" are a different product's vocabulary. **Tags order one row and
   score nothing else**: since [ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §6 they put **Same vibe players** in order (Discovery),
-  every tag counting the same, and no proposal, card, forecast or level reads one.
+  every tag counting the same, and no proposal, card, forecast or level reads one. **They will also
+  build and rank For fun**
+  ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §1, §2 and §7, decided and not yet built —
+  [#829](https://github.com/Raketa02/Raketa/issues/829),
+  [#830](https://github.com/Raketa02/Raketa/issues/830),
+  [#831](https://github.com/Raketa02/Raketa/issues/831),
+  [#832](https://github.com/Raketa02/Raketa/issues/832)): among the fours that pass the gates, a
+  For-fun table is the one with the highest **Social vibe**, every tag counting the same but 💘 *Open
+  to meet someone*, which is shown and never counted; a tag edit reaches the next build and pulls
+  nobody off a card already dealt. The vocabulary grows to **27** — *Stays for a coffee*, *Up for a
+  bite after*, *Keeps in touch*, *Happy to swap partners*, *Patient with beginners*, *Happy to share
+  tips*, *Brings the energy*, *New in town* appended — and a player will hold **2 to 8**. They will
+  still touch no competitive card, forecast or level.
 - **Weekly hours** — a player's ordinary week as **hours per weekday, 07:00–23:00**: a grid of
   7 days × 16 one-hour cells, Monday-first. It replaced the 7 days × 3 parts of the day with
   [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5, because a court
@@ -798,6 +811,27 @@ more.**
   why a client may never compute one. What crosses is an input to a figure already served, never
   a second score
   ([ADR-0136](docs/adr/0136-the-split-is-evidence-for-the-forecast-not-a-second-score.md)).
+- **Social vibe** — how much of what everyone at a **For fun** table carries is shared there: on
+  average, each **Social tag** at the table is carried by that share of the *other* players. The
+  table is everyone named on the reader's version of a card — the people **In**, the reader and the
+  names dealt, never an empty seat — and the figure is
+  `round_half_up(100 × Σᵢ Σ_{t∈Tᵢ} (c_t − 1)/(n − 1) ÷ Σᵢ |Tᵢ|)`, *c_t* being how many at the table
+  carry tag *t*. So a tag all four carry counts for more than one two carry, and two pairs who share
+  everything with each other and nothing across the table read **33**, never 100. In singles it is the
+  plain overlap of the two players; with fewer than two people there is none. **Only identical tags
+  count, each the same, and 💘 *Open to meet someone* never does**, though the grid still draws it.
+  A plain fact about the table, the same number for everybody at it, worked out **live from current
+  tags** by one pure function in **Match Fit**, and stored nowhere. It builds and ranks For-fun
+  tables and is drawn on every For-fun game where a competitive one draws its **Forecast**: For fun
+  never shows a forecast, and a competitive game never shows a Social vibe. **Not Same vibe's Vibe
+  %**, which is a pair's 1 − ½ⁿ and can differ for the same two players. Decided by
+  [ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §2 and §5, not yet built — [#830](https://github.com/Raketa02/Raketa/issues/830),
+  [#831](https://github.com/Raketa02/Raketa/issues/831),
+  [#833](https://github.com/Raketa02/Raketa/issues/833)–[#835](https://github.com/Raketa02/Raketa/issues/835),
+  [#838](https://github.com/Raketa02/Raketa/issues/838),
+  [#840](https://github.com/Raketa02/Raketa/issues/840)–[#842](https://github.com/Raketa02/Raketa/issues/842).
+  _Avoid_: vibe %, match %, compatibility.
 
 **Terms this context refuses**
 - **Game format** — *mixed doubles*, *women's doubles* and the like, as a dimension of a game.

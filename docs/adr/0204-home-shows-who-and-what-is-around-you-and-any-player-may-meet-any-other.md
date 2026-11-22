@@ -6,7 +6,12 @@
   (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)): the cards that wait on the player go
   behind an envelope into *Needs your answer*, the header reads envelope, bell, trophy, and the five
   rows fold into **FOR YOU**'s lines, with counts. Every rule of the rows stands. Dated notes mark §1,
-  §3, §8 and §9.
+  §3, §8 and §9. — **§6's *tags … score nothing else* narrowed 2026-11-22 by
+  [ADR-0207](0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)**
+  (PRD [#827](https://github.com/Raketa02/Raketa/issues/827)): tags also build and rank For-fun
+  proposals and give each For-fun game a **Social vibe**, and still touch no competitive card,
+  forecast or level. A player holds 2 to 8 of 27 tags, so the vibe % gains 99 and 100. Every rule of
+  Same vibe stands. A dated note marks §6.
 - **Date:** 2026-11-14
 - **Amends [ADR-0159](0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)
   §3's admission and §4's gates** (§2):
@@ -335,6 +340,15 @@ a ranking or a history.
 **Tags now order one row and score nothing else.** The You spec's *a tag is shown, never scored* held
 because nothing read a tag but the record. This row reads them to put people in an order, and no
 proposal, card, forecast or level reads one. *A tag is not an intent* still holds.
+
+> **Narrowed 2026-11-22 by [ADR-0207](0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md) §1, §2 and §7.** **Tags also build and rank For-fun
+> proposals**: among the fours that pass the gates, For fun prefers the highest **Social vibe**, then
+> new faces, with skill only a guard. Every For-fun game carries that Social vibe, a figure about the
+> whole table worked out live from everyone's current tags. 💘 *Open to meet someone* is never
+> counted there. Tags still touch **no competitive card, forecast or level**, and *a tag is not an
+> intent* stands. The vocabulary grows to 27 and a player holds **2 to 8**, so the vibe % above gains
+> **7 → 99%** and **8 → 100%**. Every other rule of this row stands, and its Vibe % and the Social
+> vibe are different measures, named apart.
 
 ### 7. Keeping the rows alive: fresh, gaps and rest
 

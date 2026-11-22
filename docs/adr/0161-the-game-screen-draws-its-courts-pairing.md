@@ -1,6 +1,10 @@
 # ADR-0161 — The game screen draws its court's pairing, read beside the game and never on it
 
-- **Status:** Accepted
+- **Status:** Accepted — **what a friendly draws narrowed 2026-11-22 by
+  [ADR-0207](0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §5**: a For-fun game draws the **Social vibe card**, read from the same pairing, where it drew the
+  forecast with *A friendly — nothing moves.* The pairing still sends the forecast, for the apps
+  already on phones, and a counted game draws the forecast and its stakes as before.
 - **Date:** 2026-09-11
 - **Extends [ADR-0143](0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)
   a third time** — the third use of *this game has not happened*, after the challenge card and
