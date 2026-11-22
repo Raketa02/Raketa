@@ -57,7 +57,17 @@ const COPY = DISCOVERY_COPY.sameVibe;
 const HIDDEN = { includeHiddenElements: true } as const;
 
 /** The vibe % the server sends for each count — 1 − ½ⁿ, rounded (the mechanics §8.2). */
-const VIBE: Readonly<Record<number, number>> = { 1: 50, 2: 75, 3: 88, 4: 94, 5: 97, 6: 98 };
+const VIBE: Readonly<Record<number, number>> = {
+  1: 50,
+  2: 75,
+  3: 88,
+  4: 94,
+  5: 97,
+  6: 98,
+  // A player holds up to eight since ADR-0207 §7, so two can share up to eight.
+  7: 99,
+  8: 100,
+};
 
 type Held = { readonly tags: readonly SocialTagId[]; readonly sports?: readonly Wire['Sport'][] };
 
@@ -566,6 +576,77 @@ describe('a request from Same vibe, in Needs your answer', () => {
     expect(sheet.getByTestId(`friend-request-${ANIA.player_id}`)).toBeTruthy();
     expect(sheet.queryByText(/things? in common/)).toBeNull();
     expect(sheet.queryByText(/Found you through your tags/)).toBeNull();
+  });
+});
+
+/**
+ * **Eight tags, and a tag this build has never heard of** (ADR-0207 §7, #837): a player holds up to
+ * eight, so two can share eight — *100%* — and the new tags draw like any other. A served code this
+ * build has no words for is skipped on the tile and on the sheet, never drawn blank and never a crash;
+ * the count stays the server's.
+ */
+describe('eight tags, and a code this build does not know', () => {
+  const EIGHT: readonly SocialTagId[] = [
+    'STAYS_FOR_A_DRINK',
+    'STAYS_FOR_A_COFFEE',
+    'KEEPS_IN_TOUCH',
+    'PLAYS_TO_WIN',
+    'PATIENT_WITH_BEGINNERS',
+    'BRINGS_THE_ENERGY',
+    'HERE_TO_IMPROVE',
+    'NEW_IN_TOWN',
+  ];
+  /** Ola — all eight in common: 100%. */
+  const OLA = vibe(4, 'ola.w', EIGHT);
+  /** Tomek — three in common, one of them minted after this build shipped. */
+  const TOMEK: Wire['SameVibePlayerSchema'] = {
+    ...vibe(5, 'tomek.r', ['STAYS_FOR_A_COFFEE', 'NEW_IN_TOWN']),
+    vibe_percent: VIBE[3]!,
+    in_common: 3,
+    shared_tags: ['STAYS_FOR_A_COFFEE', 'SINGS_IN_THE_CAR', 'NEW_IN_TOWN'],
+  };
+  /** Wide enough for every chip a tile is handed: five to a line. */
+  const ROOMY = { lineWidth: 400, chipWidth: 60, moreWidth: 40 };
+
+  it('reads 100% for eight in common, and draws all eight on the tile and the sheet', async () => {
+    vibeServer([OLA]);
+    await homeWithTheRow();
+
+    expect(tile(OLA).getByText('100%')).toBeTruthy();
+    expect(tile(OLA).getByText('8 things in common')).toBeTruthy();
+    layOut(OLA, ROOMY);
+    for (const id of EIGHT) {
+      expect(tile(OLA).getByText(socialTagLabel(id))).toBeTruthy();
+    }
+    expect(tile(OLA).queryByText(/more$/)).toBeNull();
+
+    await openSheet(OLA);
+    for (const id of EIGHT) {
+      expect(vibeSheet().getByText(socialTagChip({ id, shared: true }))).toBeTruthy();
+    }
+  });
+
+  it('skips a code it has no words for on the tile and the sheet, and keeps the server’s count', async () => {
+    vibeServer([TOMEK]);
+    await homeWithTheRow();
+
+    expect(tile(TOMEK).getByText('3 things in common')).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: 'tomek.r, 88%, 3 things in common: Stays for a coffee, New in town',
+      }),
+    ).toBeTruthy();
+    layOut(TOMEK, ROOMY);
+    expect(tile(TOMEK).getByText(socialTagLabel('STAYS_FOR_A_COFFEE'))).toBeTruthy();
+    expect(tile(TOMEK).getByText(socialTagLabel('NEW_IN_TOWN'))).toBeTruthy();
+    expect(tile(TOMEK).getAllByTestId(/^measure-tag-/, HIDDEN)).toHaveLength(2);
+
+    // The record behind the sheet serves the same three; the record drops the one it can't name.
+    await openSheet(TOMEK);
+    const tags = within(vibeSheet().getByTestId('record-tags'));
+    expect(tags.getByText(socialTagChip({ id: 'STAYS_FOR_A_COFFEE', shared: true }))).toBeTruthy();
+    expect(tags.getByText(socialTagChip({ id: 'NEW_IN_TOWN', shared: true }))).toBeTruthy();
+    expect(tags.queryByText(/SINGS|undefined/)).toBeNull();
   });
 });
 

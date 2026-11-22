@@ -20,7 +20,7 @@ import {
   socialTagName,
   thingsInCommon,
 } from './socialTagPresentation';
-import { SOCIAL_TAG_GROUP_IDS, SOCIAL_TAG_IDS } from './socialTags';
+import { SOCIAL_TAG_GROUP_IDS, SOCIAL_TAG_IDS, type SocialTagId } from './socialTags';
 
 describe('what a tag is called', () => {
   it('gives every id this build can draw its own words', () => {
@@ -29,6 +29,40 @@ describe('what a tag is called', () => {
 
     expect(labels.every((label) => label.length > 0)).toBe(true);
     expect(new Set(labels).size).toBe(SOCIAL_TAG_IDS.length);
+  });
+
+  it('gives every id a glyph of its own', () => {
+    // The glyph's whole value is telling two chips apart at a glance, so no two ids share one.
+    const glyphs = SOCIAL_TAG_IDS.map((tagId) =>
+      socialTagLabel(tagId).slice(0, -socialTagName(tagId).length).trim(),
+    );
+
+    expect(glyphs.every((glyph) => glyph.length > 0)).toBe(true);
+    expect(new Set(glyphs).size).toBe(SOCIAL_TAG_IDS.length);
+  });
+
+  it('names the eight added by ADR-0207 in its own words', () => {
+    expect(
+      [
+        'STAYS_FOR_A_COFFEE',
+        'UP_FOR_A_BITE_AFTER',
+        'KEEPS_IN_TOUCH',
+        'HAPPY_TO_SWAP_PARTNERS',
+        'PATIENT_WITH_BEGINNERS',
+        'HAPPY_TO_SHARE_TIPS',
+        'BRINGS_THE_ENERGY',
+        'NEW_IN_TOWN',
+      ].map((tagId) => socialTagLabel(tagId as SocialTagId)),
+    ).toEqual([
+      '☕ Stays for a coffee',
+      '🍽️ Up for a bite after',
+      '📲 Keeps in touch',
+      '🔄 Happy to swap partners',
+      '🤲 Patient with beginners',
+      '💡 Happy to share tips',
+      '🎶 Brings the energy',
+      '🧳 New in town',
+    ]);
   });
 
   it('gives every group a heading naming what it is about', () => {

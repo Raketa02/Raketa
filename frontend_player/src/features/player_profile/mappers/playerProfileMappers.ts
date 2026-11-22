@@ -12,7 +12,7 @@
  *    contract; the picker renders what it is given. Filtering preserves order, which is
  *    the whole of what this file does to the list.
  *
- * The dropping is kept honest by the types: a nineteenth tag arrives through `pnpm gen:api`
+ * The dropping is kept honest by the types: a further tag arrives through `pnpm gen:api`
  * as a new member of the generated union, and this file stops compiling rather than letting
  * the tag disappear from the picker of the next build anybody ships.
  *
@@ -74,7 +74,7 @@ type DeckCountsResponse = components['schemas']['DeckCountsResponse'];
  * away from disagreeing. So the whole of the mapping is a membership test.
  *
  * **Both halves of it matter and they answer different questions.** The parameter types are
- * the compile-time half: a nineteenth tag arrives through `pnpm gen:api` as a new member of
+ * the compile-time half: a further tag arrives through `pnpm gen:api` as a new member of
  * the generated union, and `return served` stops compiling until the domain list and the
  * label table have been given it. The sets are the runtime half, for the phone that has not
  * been updated in eight months and is being served an id its build has never heard of.

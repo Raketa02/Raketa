@@ -485,6 +485,13 @@ scored**, and no proposal reads one. **A tag is not an intent**: `HERE_TO_COMPET
 > vibe % 1 − ½ⁿ ([the home rows mechanics §8](../home-rows/the-mechanics.md#8-same-vibe-players)).
 > They still score nothing else: no proposal, card, forecast or level reads one. So the tags a player
 > picks here also decide who sees them in that row.
+>
+> **Amended 2026-11-22** by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+> §7 ([#837](https://github.com/Raketa02/Raketa/issues/837)): **two to eight** ids of **twenty-seven**
+> — the eight new ones at the end of their groups. The picker opens as above with the bounds it is
+> served, so the eyebrow reads *On your card · Pick 2 to 8* and the ceiling note *8 tags is the
+> most*, on a ninth press. What ADR-0207 §1 changes about *a tag is shown, never scored* is the
+> For-fun builder's, and is amended by its own ticket.
 
 ### 3.12 Intro
 

@@ -3,7 +3,7 @@
  *
  * The ids themselves, and the words this app gives them, are
  * [`@/shared/vocabulary/socialTags`](../../../shared/vocabulary/socialTags.ts) and
- * `socialTagPresentation` beside it: Play reads the same nineteen ids off a player card, and
+ * `socialTagPresentation` beside it: Play reads the same twenty-seven ids off a player card, and
  * a second table of them is one release away from disagreeing with this one. What stays here
  * is the *response's* shape, because nothing outside this feature reads it.
  *

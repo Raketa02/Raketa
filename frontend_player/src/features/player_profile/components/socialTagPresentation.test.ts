@@ -18,8 +18,9 @@ import {
 describe('the eyebrow', () => {
   it('carries the served rule alongside the position', () => {
     // Story 18: the floor is learned by reading the screen rather than by being stopped.
-    expect(socialTagsEyebrow({ minimum: 2, maximum: 6 })).toBe(
-      'Setting up · Step 1 of 6 · Pick 2 to 6',
+    // What the platform serves since ADR-0207 §7.
+    expect(socialTagsEyebrow({ minimum: 2, maximum: 8 })).toBe(
+      'Setting up · Step 1 of 6 · Pick 2 to 8',
     );
   });
 
@@ -36,7 +37,7 @@ describe('the eyebrow', () => {
   });
 
   it('is the rule alone that the You tab cites under its own group title', () => {
-    expect(socialTagsRule({ minimum: 2, maximum: 6 })).toBe('Pick 2 to 6');
+    expect(socialTagsRule({ minimum: 2, maximum: 8 })).toBe('Pick 2 to 8');
   });
 });
 
@@ -71,7 +72,7 @@ describe('the continue control', () => {
 
 describe('the ceiling title', () => {
   it('names the served ceiling', () => {
-    expect(socialTagCeilingTitle({ minimum: 2, maximum: 6 })).toBe('6 tags is the most');
+    expect(socialTagCeilingTitle({ minimum: 2, maximum: 8 })).toBe('8 tags is the most');
     expect(socialTagCeilingTitle({ minimum: 2, maximum: 4 })).toBe('4 tags is the most');
   });
 });

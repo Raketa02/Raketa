@@ -46,7 +46,7 @@
  * **The disabled chip arrived late and only where a chip is genuinely refused**
  * ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-09-09,
  * [#365](https://github.com/Raketa02/Raketa/issues/365)). It is not the tag picker's answer to a
- * seventh tag — that step refuses out loud rather than by greying the other twelve, and 6.2's
+ * ninth tag — that step refuses out loud rather than by greying the other nineteen, and 6.2's
  * original sentence about it stands. What it is for is a control the **account** may not use: a
  * held account cannot post, and a quick chip that looked pressable and did nothing would be
  * exactly the dead end 6.1 forbids. It is `opacity: .4` and not pressable, 6.1's own disabled

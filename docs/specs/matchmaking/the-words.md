@@ -1014,6 +1014,12 @@ anything else.
 > **Amended 2026-11-07** by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §7:
 > *On your card* gains *Show me in General*, a switch. Its words are §30.8's, cited in the row marked
 > *(ADR-0203)*.
+>
+> **Amended 2026-11-22** by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+> §7 ([#837](https://github.com/Raketa02/Raketa/issues/837)): the vocabulary is **27 tags** and a
+> player picks **2 to 8**, in onboarding and on *Tags* alike. The picker's words quote the served
+> bounds, so they now read *Pick 2 to 8* and *8 tags is the most*; the eight new labels are §27.1.
+> The rows marked *(ADR-0207)* say the new words.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
@@ -1031,7 +1037,7 @@ anything else.
 | Live line, who you play with | `Matched with anyone` · `… women only` · `… men only` | **the preference only** — the gender is drawn on its own screen and nowhere else on the tab |
 | Live line, record | `Your player record, as a stranger reads it` | |
 | Live line, photos | `{n} of 3 · profile photo on court` · `{n} of 3 · profile photo not checked as on court` · `None — a court poster stands in` | |
-| Live line, tags | `{n} of 6 · {first}, {second}, +{rest}` | the names, not the emoji |
+| Live line, tags | `{n} of {max} · {first}, {second}, +{rest}` | the names, not the emoji; `{max}` is the served ceiling, *8 of 8* *(ADR-0207)* — `{n} of 6` until 2026-11-22 |
 | Live line, intro | `“{intro}”` · `None — say it in your own words` | the second quotes the step's title |
 | Live line, nickname | `{nickname}` | *(ADR-0199)* no `@` and no second line (§15); `{name} · @{nickname}` retired with the Name |
 | Passport, a card's status chip | `Initial estimate` · `Calibrating` · `Stable` | `ratingStatusLabel`, cited; drawn as a `Tag`, not a row — the result card's *Rating status* row stays under the bar as well |
@@ -1050,6 +1056,8 @@ anything else.
 | Where you play | `Your area is set` · `Your area updates each time you open Raketa; it is never finer than about a kilometre.` · `Use my location` · `Pick a club near where you play` | the permission states are the step's, cited; the middle line is static, the one written trace of the cold-start refresh, and was §26's until the radar went; *(ADR-0200)* the two ways are the location step's own, replacing `Read my area again` ([#733](https://github.com/Raketa02/Raketa/issues/733)) |
 | Who you play with | *the step's headings, labels, cost line and reach sentence* · `Save` · `Saved` | the scope sentences are not repeated |
 | Photos | *the step's, whole* | title `Your court photos`; eyebrow `On-court only — up to three`; no *Continue* |
+| Tags, the eyebrow | `On your card · Pick {min} to {max}` | *On your card · Pick 2 to 8* *(ADR-0207)*; onboarding's is `Setting up · Step 1 of 6 · Pick 2 to 8`; both quote the served bounds |
+| Tags, the ceiling | `{max} tags is the most` · `Nothing changed. Remove one you have already picked to make room for another.` | *8 tags is the most* *(ADR-0207)*, on a ninth press, pinned above the button; the step's, cited |
 | Tags, the button | `Save` · `Saved` · `Pick {n} more tag(s) to save` | the step's *to continue* becomes *to save* |
 | Intro, the buttons | `Save` · `Saved` · `Remove intro` | |
 | Nickname, the refusal | `That nickname is taken. Pick another.` | `authErrorMessage`'s, cited; the server's code |
@@ -1062,6 +1070,31 @@ step's. **What is dropped** is recorded in ADR-0179 §9 so nobody restores it as
 tab's placeholder line, the declaration section's heading and body, the week's promise note,
 the location's *why we ask*, the gender step's scope sentences, and every explanatory card of the
 first draft.
+
+### 27.1 The eight tags ADR-0207 added
+
+> Added 2026-11-22 by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+> §7 ([#837](https://github.com/Raketa02/Raketa/issues/837)). The nineteen that stood are
+> `shared/vocabulary/socialTagPresentation.ts`'s and are cited, never respelled; these eight are
+> written here because they are new. Each is **appended at the end of its group**, so the picker
+> serves them last there: After the match 9, On the court 10, Why you're here 8.
+
+| Group | Code | Chip | Spoken and in prose |
+| --- | --- | --- | --- |
+| After the match | `STAYS_FOR_A_COFFEE` | `☕ Stays for a coffee` | `Stays for a coffee` |
+| After the match | `UP_FOR_A_BITE_AFTER` | `🍽️ Up for a bite after` | `Up for a bite after` |
+| After the match | `KEEPS_IN_TOUCH` | `📲 Keeps in touch` | `Keeps in touch` |
+| On the court | `HAPPY_TO_SWAP_PARTNERS` | `🔄 Happy to swap partners` | `Happy to swap partners` |
+| On the court | `PATIENT_WITH_BEGINNERS` | `🤲 Patient with beginners` | `Patient with beginners` |
+| On the court | `HAPPY_TO_SHARE_TIPS` | `💡 Happy to share tips` | `Happy to share tips` |
+| On the court | `BRINGS_THE_ENERGY` | `🎶 Brings the energy` | `Brings the energy` |
+| Why you're here | `NEW_IN_TOWN` | `🧳 New in town` | `New in town` |
+
+**The emoji is the chip's and never the words'**, as for the nineteen: a listener hears the label
+alone, and a sentence naming a tag carries no glyph. **No two codes share a glyph.** **A code this
+build has no words for is skipped** wherever tags are drawn — the picker, the record, Same vibe's
+tiles and sheet — never a blank chip and never a crash; a count the server sent (*3 things in
+common*) stays the server's (§3).
 
 ## 28. The Games tab's door, and finding
 
@@ -1548,7 +1581,7 @@ the club the group plays at.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| The tile, the % | `{pct}` | *98%*; one of 50%, 75%, 88%, 94%, 97%, 98% |
+| The tile, the % | `{pct}` | *98%*; one of 50%, 75%, 88%, 94%, 97%, 98%, 99%, 100% — the last two since a player holds up to 8 tags (ADR-0207 §7, 2026-11-22) |
 | The tile, in common | `{n} things in common` | *6 things in common* |
 | … one | `1 thing in common` | |
 | The tile, more tags | `+{n} more` | *+2 more*, dashed |

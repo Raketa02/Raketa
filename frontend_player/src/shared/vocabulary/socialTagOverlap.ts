@@ -53,12 +53,14 @@ import type { SocialTagId } from './socialTags';
  * How many tags a row draws, which is **the profile step's own ceiling read from the other
  * side**.
  *
- * The Social tags step takes 2 to 6, so nobody can publish a seventh and this cap removes
- * nothing today. It is here because the row's layout is written against six: a served seventh
- * would be a contract change, and it should reach the reader as a shorter row rather than as a
- * card that grew a line nobody designed.
+ * The Social tags step takes 2 to 8
+ * ([ADR-0207](../../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+ * §7; 2 to 6 until then), so nobody can publish a ninth and this cap removes nothing today. It
+ * is here because the row's layout is written against eight: a served ninth would be a contract
+ * change, and it should reach the reader as a shorter row rather than as a card that grew a line
+ * nobody designed.
  */
-export const SOCIAL_TAG_ROW_CAP = 6;
+export const SOCIAL_TAG_ROW_CAP = 8;
 
 /** One tag somebody published, and whether the reader chose it too. */
 export interface SharedTag {

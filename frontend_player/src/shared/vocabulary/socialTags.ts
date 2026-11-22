@@ -28,8 +28,14 @@
  * reason lines resolve them through the same labels — which is `recoveryMessage.ts`'s own
  * stated trigger for a promotion, invoked by name in
  * [`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §1. What Play must not
- * do is re-type this list: two tables of nineteen ids drift the release after somebody
+ * do is re-type this list: two tables of twenty-seven ids drift the release after somebody
  * edits one of them.
+ *
+ * ## Twenty-seven, since ADR-0207
+ *
+ * Nineteen until [ADR-0207](../../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+ * §7 appended eight, each at the end of its group — After the match 9, On the court 10, Why
+ * you're here 8. Nothing that stood moved or retired; ids are permanent.
  *
  * What stayed behind in `player_profile` is the shape of the **served vocabulary** — a
  * group with its tags in render order — because that is the profile options response's
@@ -49,12 +55,19 @@ export const SOCIAL_TAG_IDS = [
   'SETTLES_UP_ON_THE_SPOT',
   'BOOKS_THE_NEXT_ONE',
   'SHARES_A_LIFT',
+  'STAYS_FOR_A_COFFEE',
+  'UP_FOR_A_BITE_AFTER',
+  'KEEPS_IN_TOUCH',
   'PLAYS_TO_WIN',
   'LAUGHS_OFF_MISTAKES',
   'ENCOURAGES_A_PARTNER',
   'GENEROUS_ON_LINE_CALLS',
   'QUIET_AND_FOCUSED',
   'WARMS_UP_PROPERLY',
+  'HAPPY_TO_SWAP_PARTNERS',
+  'PATIENT_WITH_BEGINNERS',
+  'HAPPY_TO_SHARE_TIPS',
+  'BRINGS_THE_ENERGY',
   'HERE_TO_IMPROVE',
   'HERE_TO_COMPETE',
   'HERE_FOR_THE_EXERCISE',
@@ -62,6 +75,7 @@ export const SOCIAL_TAG_IDS = [
   'HERE_FOR_A_REGULAR_GAME',
   'HERE_TO_GET_BACK_INTO_IT',
   'OPEN_TO_MEET_SOMEONE',
+  'NEW_IN_TOWN',
 ] as const;
 
 export type SocialTagId = (typeof SOCIAL_TAG_IDS)[number];
@@ -78,7 +92,7 @@ export function toSocialTagId(served: string): SocialTagId | undefined {
   return KNOWN_TAGS.has(served) ? (served as SocialTagId) : undefined;
 }
 
-/** The three groups the nineteen are rendered under. Each is about the game and nothing else. */
+/** The three groups the twenty-seven are rendered under. Each is about the game and nothing else. */
 export const SOCIAL_TAG_GROUP_IDS = [
   'AFTER_THE_MATCH',
   'ON_THE_COURT',

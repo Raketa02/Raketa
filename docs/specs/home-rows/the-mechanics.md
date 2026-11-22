@@ -477,7 +477,11 @@ coffee with. **Skill plays no part** (Q15).
 | --- | --- | --- | --- | --- | --- | --- |
 | Vibe % | 50% | 75% | 88% | 94% | 97% | 98% |
 
-Six is the most: a player holds at most six tags.
+Six is the most: a player holds at most six tags. *(Eight since ADR-0207 §7, below.)*
+
+> **Amended 2026-11-22** by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+> §7: a player holds up to **eight**, so the % also reaches **99%** (7 shared) and **100%** (8
+> shared) — the same formula; 100% is true, the two players' eight tags are identical.
 
 ### 8.3 Order
 

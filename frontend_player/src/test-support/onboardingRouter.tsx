@@ -553,8 +553,9 @@ export const RUNS_IN_PROGRESS_PATH = '/api/v1/assessments/in-progress';
 export const PROFILE_OPTIONS_PATH = '/api/v1/player-profile/options';
 
 /**
- * The nineteen Social tags in their three groups and the selection bounds — as
- * `GET /player-profile/options` answers.
+ * The twenty-seven Social tags in their three groups and the selection bounds, 2 to 8 — as
+ * `GET /player-profile/options` answers since ADR-0207 §7 (#829): the eight new ones at the end
+ * of their groups.
  *
  * The order here is the order the picker must render, because the picker renders what it
  * is served and sorts nothing. A suite that wants a shorter vocabulary passes its own.
@@ -570,6 +571,9 @@ export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
         { id: 'SETTLES_UP_ON_THE_SPOT' },
         { id: 'BOOKS_THE_NEXT_ONE' },
         { id: 'SHARES_A_LIFT' },
+        { id: 'STAYS_FOR_A_COFFEE' },
+        { id: 'UP_FOR_A_BITE_AFTER' },
+        { id: 'KEEPS_IN_TOUCH' },
       ],
     },
     {
@@ -581,6 +585,10 @@ export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
         { id: 'GENEROUS_ON_LINE_CALLS' },
         { id: 'QUIET_AND_FOCUSED' },
         { id: 'WARMS_UP_PROPERLY' },
+        { id: 'HAPPY_TO_SWAP_PARTNERS' },
+        { id: 'PATIENT_WITH_BEGINNERS' },
+        { id: 'HAPPY_TO_SHARE_TIPS' },
+        { id: 'BRINGS_THE_ENERGY' },
       ],
     },
     {
@@ -593,10 +601,11 @@ export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
         { id: 'HERE_FOR_A_REGULAR_GAME' },
         { id: 'HERE_TO_GET_BACK_INTO_IT' },
         { id: 'OPEN_TO_MEET_SOMEONE' },
+        { id: 'NEW_IN_TOWN' },
       ],
     },
   ],
-  social_tag_selection: { minimum_tags: 2, maximum_tags: 6 },
+  social_tag_selection: { minimum_tags: 2, maximum_tags: 8 },
 };
 
 export const PROFILE_SURFACE_PATH = '/api/v1/players/me/profile';

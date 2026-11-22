@@ -41,7 +41,7 @@ describe('what a chip reports', () => {
   });
 
   it('reports a press when it is already selected — it toggles nothing itself', () => {
-    // Selection belongs to whoever counts it: at the tags step's ceiling of six a seventh
+    // Selection belongs to whoever counts it: at the tags step's ceiling of eight a ninth
     // press has to arrive to be refused out loud, and a chip that swallowed the press of
     // a selected chip would take away removing one as well.
     const onPress = jest.fn();

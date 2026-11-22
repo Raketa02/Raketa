@@ -9000,7 +9000,7 @@ export interface components {
             photo_url: string | null;
             /**
              * Vibe Percent
-             * @description The **vibe %**, 1 − ½ⁿ for n shared tags, rounded: 50, 75, 88, 94, 97, 98 for 1–6 — the white circle, *98%*. Every tag counts the same, and skill plays no part.
+             * @description The **vibe %**, 1 − ½ⁿ for n shared tags, rounded: 50, 75, 88, 94, 97, 98, 99, 100 for 1–8 — the white circle, *98%*. Every tag counts the same, and skill plays no part.
              */
             vibe_percent: number;
             /**
@@ -9489,7 +9489,7 @@ export interface components {
          * @description The closed set of tag ids. An id here is permanent.
          * @enum {string}
          */
-        SocialTag: "STAYS_FOR_A_DRINK" | "STRAIGHT_HOME_AFTER" | "TALKS_THROUGH_THE_MATCH" | "SETTLES_UP_ON_THE_SPOT" | "BOOKS_THE_NEXT_ONE" | "SHARES_A_LIFT" | "PLAYS_TO_WIN" | "LAUGHS_OFF_MISTAKES" | "ENCOURAGES_A_PARTNER" | "GENEROUS_ON_LINE_CALLS" | "QUIET_AND_FOCUSED" | "WARMS_UP_PROPERLY" | "HERE_TO_IMPROVE" | "HERE_TO_COMPETE" | "HERE_FOR_THE_EXERCISE" | "HERE_TO_MEET_PLAYERS" | "HERE_FOR_A_REGULAR_GAME" | "HERE_TO_GET_BACK_INTO_IT" | "OPEN_TO_MEET_SOMEONE";
+        SocialTag: "STAYS_FOR_A_DRINK" | "STRAIGHT_HOME_AFTER" | "TALKS_THROUGH_THE_MATCH" | "SETTLES_UP_ON_THE_SPOT" | "BOOKS_THE_NEXT_ONE" | "SHARES_A_LIFT" | "STAYS_FOR_A_COFFEE" | "UP_FOR_A_BITE_AFTER" | "KEEPS_IN_TOUCH" | "PLAYS_TO_WIN" | "LAUGHS_OFF_MISTAKES" | "ENCOURAGES_A_PARTNER" | "GENEROUS_ON_LINE_CALLS" | "QUIET_AND_FOCUSED" | "WARMS_UP_PROPERLY" | "HAPPY_TO_SWAP_PARTNERS" | "PATIENT_WITH_BEGINNERS" | "HAPPY_TO_SHARE_TIPS" | "BRINGS_THE_ENERGY" | "HERE_TO_IMPROVE" | "HERE_TO_COMPETE" | "HERE_FOR_THE_EXERCISE" | "HERE_TO_MEET_PLAYERS" | "HERE_FOR_A_REGULAR_GAME" | "HERE_TO_GET_BACK_INTO_IT" | "OPEN_TO_MEET_SOMEONE" | "NEW_IN_TOWN";
         /**
          * SocialTagGroup
          * @description The three groups, which are about the game and nothing else.
@@ -9523,8 +9523,8 @@ export interface components {
          * @description How many Social tags a selection must hold to be one.
          *
          *     The unit is in both field names: a bare ``minimum`` beside a list of
-         *     nineteen tags reads as a count of something, and which something is exactly
-         *     what a client would guess wrong.
+         *     twenty-seven tags reads as a count of something, and which something is
+         *     exactly what a client would guess wrong.
          */
         SocialTagSelectionBoundsResource: {
             /**

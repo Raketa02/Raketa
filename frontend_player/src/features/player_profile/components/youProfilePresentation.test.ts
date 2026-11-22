@@ -83,11 +83,27 @@ describe('the live lines on your card', () => {
 
   it('counts the tags against the served ceiling and names the first two, the rest as a count', () => {
     expect(
-      tagsLine(['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'WARMS_UP_PROPERLY', 'HERE_TO_IMPROVE'], 6),
-    ).toBe('4 of 6 · Stays for a drink, Plays to win, +2');
-    expect(tagsLine(['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'], 6)).toBe(
-      '2 of 6 · Stays for a drink, Plays to win',
+      tagsLine(['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'WARMS_UP_PROPERLY', 'HERE_TO_IMPROVE'], 8),
+    ).toBe('4 of 8 · Stays for a drink, Plays to win, +2');
+    expect(tagsLine(['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'], 8)).toBe(
+      '2 of 8 · Stays for a drink, Plays to win',
     );
+    // A full eight, two of them new (ADR-0207 §7).
+    expect(
+      tagsLine(
+        [
+          'STAYS_FOR_A_COFFEE',
+          'KEEPS_IN_TOUCH',
+          'PLAYS_TO_WIN',
+          'WARMS_UP_PROPERLY',
+          'HAPPY_TO_SHARE_TIPS',
+          'HERE_TO_IMPROVE',
+          'HERE_TO_COMPETE',
+          'NEW_IN_TOWN',
+        ],
+        8,
+      ),
+    ).toBe('8 of 8 · Stays for a coffee, Keeps in touch, +6');
     // The names, never the emoji — a live line is one line of `tiny`.
     expect(tagsLine(['PLAYS_TO_WIN'], 5)).toBe('1 of 5 · Plays to win');
     expect(tagsLine(['PLAYS_TO_WIN'], 5)).not.toMatch(/🏆/u);

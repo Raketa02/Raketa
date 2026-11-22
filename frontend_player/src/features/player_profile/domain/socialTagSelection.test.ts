@@ -5,7 +5,7 @@
  * same two screens against the same two numbers — which is why they are a function of a
  * selection and the served bounds rather than state inside a screen.
  *
- * **Every case states its bounds.** The platform serves 2 and 6 today and the picker reads
+ * **Every case states its bounds.** The platform serves 2 and 8 today and the picker reads
  * them; a suite that hardcoded them would pass against a client that ignored what it was
  * served, which is the one bug these rules exist to prevent.
  */
@@ -18,16 +18,18 @@ import {
   type SocialTagSelectionBounds,
 } from './socialTagSelection';
 
-/** What the platform serves today: at least two, at most six. */
-const SERVED: SocialTagSelectionBounds = { minimum: 2, maximum: 6 };
+/** What the platform serves today: at least two, at most eight (ADR-0207 §7). */
+const SERVED: SocialTagSelectionBounds = { minimum: 2, maximum: 8 };
 
-const SIX: readonly SocialTagId[] = [
+const EIGHT: readonly SocialTagId[] = [
   'STAYS_FOR_A_DRINK',
   'BOOKS_THE_NEXT_ONE',
   'PLAYS_TO_WIN',
   'QUIET_AND_FOCUSED',
   'HERE_TO_IMPROVE',
   'HERE_TO_COMPETE',
+  'STAYS_FOR_A_COFFEE',
+  'NEW_IN_TOWN',
 ];
 
 describe('adding a tag', () => {
@@ -56,7 +58,7 @@ describe('adding a tag', () => {
 
 describe('removing a tag', () => {
   it('drops it and leaves the rest in order', () => {
-    expect(toggleSocialTag(SIX, 'PLAYS_TO_WIN', SERVED)).toEqual({
+    expect(toggleSocialTag(EIGHT, 'PLAYS_TO_WIN', SERVED)).toEqual({
       kind: 'removed',
       selection: [
         'STAYS_FOR_A_DRINK',
@@ -64,23 +66,36 @@ describe('removing a tag', () => {
         'QUIET_AND_FOCUSED',
         'HERE_TO_IMPROVE',
         'HERE_TO_COMPETE',
+        'STAYS_FOR_A_COFFEE',
+        'NEW_IN_TOWN',
       ],
     });
   });
 
   it('works at the ceiling, where adding does not', () => {
     // Story 21. The ceiling blocks adding and never blocks correcting — a player who has
-    // filled it must still be able to change their mind about one of the six.
-    expect(SIX).toHaveLength(SERVED.maximum);
-    expect(toggleSocialTag(SIX, 'HERE_TO_COMPETE', SERVED).kind).toBe('removed');
+    // filled it must still be able to change their mind about one of the eight.
+    expect(EIGHT).toHaveLength(SERVED.maximum);
+    expect(toggleSocialTag(EIGHT, 'NEW_IN_TOWN', SERVED).kind).toBe('removed');
   });
 });
 
 describe('the ceiling', () => {
-  it('refuses the seventh and changes nothing', () => {
+  it('takes the seventh and the eighth', () => {
+    // 2 to 8 since ADR-0207 §7: a player who held six adds two more.
+    const seventh = toggleSocialTag(EIGHT.slice(0, 6), 'STAYS_FOR_A_COFFEE', SERVED);
+    expect(seventh).toEqual({ kind: 'selected', selection: EIGHT.slice(0, 7) });
+
+    expect(toggleSocialTag(EIGHT.slice(0, 7), 'NEW_IN_TOWN', SERVED)).toEqual({
+      kind: 'selected',
+      selection: EIGHT,
+    });
+  });
+
+  it('refuses the ninth and changes nothing', () => {
     // Story 20, and the reason it is a refusal rather than a rotation: dropping the oldest
     // to make room removes a choice the player made without telling them.
-    const refused = toggleSocialTag(SIX, 'SHARES_A_LIFT', SERVED);
+    const refused = toggleSocialTag(EIGHT, 'SHARES_A_LIFT', SERVED);
 
     expect(refused).toEqual({ kind: 'refused', reason: 'at-the-ceiling' });
     expect(refused).not.toHaveProperty('selection');
@@ -108,7 +123,7 @@ describe('the floor', () => {
     expect(selectionStanding(['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'], SERVED)).toEqual({
       kind: 'ready',
     });
-    expect(selectionStanding(SIX, SERVED)).toEqual({ kind: 'ready' });
+    expect(selectionStanding(EIGHT, SERVED)).toEqual({ kind: 'ready' });
   });
 
   it('is the number that was served, not the number that was assumed', () => {

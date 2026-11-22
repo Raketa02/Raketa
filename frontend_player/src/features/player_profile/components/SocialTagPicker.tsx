@@ -6,13 +6,13 @@
  *
  * What a press does is the caller's: the step writes the draft, the tab holds one. The floor,
  * the ceiling and the refusal are `socialTagSelection`'s, applied by `useSocialTagPicker`
- * beside this, which both callers drive so a seventh press refuses identically on each.
+ * beside this, which both callers drive so a ninth press refuses identically on each.
  *
  * ## The chips wrap; they do not scroll sideways
  *
  * Design-system Part 8 rails chips horizontally, and that pattern is for *filters* over
  * content the player can already see. Here the chips **are** the content, and a rail would
- * hide most of nineteen options off the right edge of a screen whose whole job is to show
+ * hide most of twenty-seven options off the right edge of a screen whose whole job is to show
  * them. Wrapping is also what Part 13 asks for when the OS text size grows.
  */
 
@@ -99,7 +99,7 @@ function TagGroup({ group, selection, onPressTag }: TagGroupProps) {
           <Chip
             key={tagId}
             label={socialTagLabel(tagId)}
-            // The words without the glyph: the emoji is what makes nineteen chips findable
+            // The words without the glyph: the emoji is what makes twenty-seven chips findable
             // by eye, and reading its name aloud would announce the layout, not the choice.
             accessibilityLabel={socialTagName(tagId)}
             selected={selection.includes(tagId)}
