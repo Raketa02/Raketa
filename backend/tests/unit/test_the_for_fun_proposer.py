@@ -15,7 +15,8 @@ to meet someone* never builds anything.
 
 **Nothing in the gates moves**: who may play an hour (free for the whole of
 it), who fits whom, the twelve considered at a crowded hour, one card per free
-court, and Competitive dealt before For fun within an hour.
+court, the home club before the others, and Competitive dealt before For fun
+within an hour.
 """
 
 from __future__ import annotations
@@ -62,7 +63,7 @@ SAT_17 = warsaw(10, 17)
 SUN_17 = warsaw(11, 17)
 EVENINGS = tuple((day, hour) for day in range(1, 8) for hour in range(17, 23))
 
-HOME = uuid4()
+HOME, NEAR = uuid4(), uuid4()
 POOL = Pool(id=uuid4(), kind=PoolKind.GROUP)
 FOR_FUN = frozenset({SearchMode.FOR_FUN})
 COMPETITIVE = frozenset({SearchMode.COMPETITIVE})
@@ -99,9 +100,11 @@ def member(
     )
 
 
-def on_sale(start: Instant = SAT_17, *, courts: int = 1) -> CourtHourOnSale:
+def on_sale(
+    start: Instant = SAT_17, *, courts: int = 1, club: UUID = HOME
+) -> CourtHourOnSale:
     return CourtHourOnSale(
-        club_id=HOME,
+        club_id=club,
         sport=Sport.PADEL,
         start=start,
         courts=courts,
@@ -116,6 +119,7 @@ def batch(
     tags: Tags,
     known: Collection[frozenset[UUID]] = (),
     hours: list[CourtHourOnSale] | None = None,
+    clubs: PoolClubs | None = None,
     unfit: Collection[tuple[UUID, UUID]] = (),
     filling: tuple[Proposal, ...] = (),
     owed: tuple[Proposal, ...] = (),
@@ -126,7 +130,7 @@ def batch(
         sport=Sport.PADEL,
         members=members,
         unfit={kind: mask for kind in SearchMode},
-        clubs=PoolClubs(home_club_id=HOME),
+        clubs=clubs if clubs is not None else PoolClubs(home_club_id=HOME),
         hours=hours,
         held=[(hour.club_id, hour.start) for hour in hours],
         filling=filling,
@@ -502,6 +506,20 @@ def test_at_a_crowded_hour_the_twelve_holding_the_fewest_cards_are_considered():
     )
 
     assert [pick.named for pick in dealt.picks] == [tuple(crowd[:4])]
+
+
+def test_the_best_company_plays_at_the_home_club_first():
+    dealt = batch(
+        five(FOR_FUN),
+        tags=SHARED_BUT_E_APART,
+        hours=[on_sale(club=NEAR), on_sale()],
+        clubs=PoolClubs(home_club_id=HOME, others=(NEAR,)),
+    )
+
+    # A court at each club at the hour, and the five make one four: home's.
+    assert [(pick.club_id, people(pick)) for pick in dealt.picks] == [
+        (HOME, {"A", "B", "C", "E"})
+    ]
 
 
 def test_competitive_is_dealt_before_for_fun_one_card_a_free_court():

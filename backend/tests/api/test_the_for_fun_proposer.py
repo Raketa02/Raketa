@@ -12,6 +12,9 @@ and every claim is read back off a player's For-fun deck.
   and the evener one is dealt the next.
 - **New faces break a tie**: two friends are not seated together while a four
   of strangers shares as much.
+- **The gates hold**: the level window and the newcomer's tightening of it
+  keep out somebody who shares everything, and the sides are still the
+  evenest way round.
 - **Competitive is today's**: the same people and tags, wanting competitive,
   are dealt the evenest four first.
 - **A For-fun rescue's Seat open card goes to the best company** for the
@@ -24,7 +27,7 @@ fourteen days hold two Saturdays.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -136,10 +139,59 @@ async def test_the_for_fun_deck_is_dealt_the_highest_vibe_four(
     ]
     (zofia_s,) = await deck_of(client, people["zofia"], group, kind="FOR_FUN")
     assert zofia_s["vibe"] == {"pct": 100}
-    # The court hour, the club and the share are the club's, as ever.
+    # The court hour, the club, the share and the book-by — its release, a
+    # day ahead — are the club's, as ever.
     assert zofia_s["club"]["id"] == club
     assert zofia_s["share_grosze"] == 30_00
+    assert datetime.fromisoformat(zofia_s["deadline"]) == SATURDAY_FIVE - timedelta(
+        days=1
+    )
     assert zofia_s["type"] == "PICKED_FOR_YOU"
+
+
+async def test_the_best_company_keeps_the_newcomer_s_window_and_stands_evenest(
+    client, session_factory, payments, clock, club, mailbox
+):
+    """Everybody shares everything. Kuba at 3,2 is inside For fun's window
+    of each of them — but they are all new to Raketa, and a pair holding a
+    newcomer takes the competitive window, which Ola at 2,5 and Ania at 2,6
+    are outside of him. So there is one four, and it is not his."""
+
+    shared = (DRINK, LAUGHS, MEET)
+
+    def member(name: str, mu: float):
+        return a_member(
+            client,
+            session_factory,
+            payments,
+            name,
+            intent="FOR_FUN",
+            tags=shared,
+            mu=mu,
+        )
+
+    ola = await member("ola", 2.5)
+    rest = [
+        await member(name, mu)
+        for name, mu in (("ania", 2.6), ("marek", 2.9), ("zofia", 3.0), ("kuba", 3.2))
+    ]
+    await mailbox.drain()
+    group = await a_group(client, ola, club, *rest)
+
+    await proposes(session_factory, clock, group)
+
+    cards = await deck_of(client, ola, group, kind="FOR_FUN")
+    assert [names for _, names in dealt(cards)] == [
+        {"ola", "ania", "marek", "zofia"}
+    ] * len(cards)
+    assert cards
+    assert await deck_of(client, rest[-1], group, kind="FOR_FUN") == []
+    # The sides are still the evenest way round: Ola beside Zofia, 5,5 a side.
+    sides = cards[0]["sides"]
+    assert [{tile["nickname"] for tile in sides[side]} for side in sides] == [
+        {"ola", "zofia"},
+        {"ania", "marek"},
+    ]
 
 
 async def test_two_friends_lose_a_tie_to_a_four_of_new_faces(
