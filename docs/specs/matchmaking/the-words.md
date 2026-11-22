@@ -1680,3 +1680,27 @@ them, and the server still serves where a request was found:
 | TO CONFIRM, the time | `Confirm your payment by {HH:MM}` · `Fix your card by {HH:MM}` and under it `Nothing is paid now` | amber while it runs, written as Home writes a time; at the deadline it leaves the tile, which says `Your seat stays open until you confirm — or someone else takes it.` |
 | TO CONFIRM, the button | `Confirm` · `Fix` | at the tile's foot; spoken `Confirm your payment for {game} at {club}, {share}` · `Fix your card for …`, as the row's |
 | A link or a notice that pointed at a card here | — | opens Home with the sheet up: the friend link, a friend request's notice, a friends game invitation's. Home as it is when nothing waits by then |
+
+## 33. The Social vibe
+
+> Added 2026-11-22 by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+> §8, the player app's [#838](https://github.com/Raketa02/Raketa/issues/838). A For-fun game's
+> headline number, where the forecast is a competitive one's: how much everybody at the table shares
+> (the root [`CONTEXT.md`](../../../CONTEXT.md)'s **Social vibe**). The server sends only the %; the
+> words and their breaks are the app's, in `shared/vocabulary/socialVibePresentation.ts`, and can be
+> tuned there with no ruleset release. **It is not Same vibe's Vibe %** (§31.8), and the two are never
+> named alike.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The name | `Social vibe` | inside the bar, in italics (drawn: no italic face is loaded); never *Vibe %*, which is Same vibe's |
+| The figure | `{n}%` | §B16's one percentage shape, the server's whole percent |
+| The bands | `Great vibe` 70–100 · `Good vibe` 45–69 · `Some common ground` 20–44 · `Fresh mix` 0–19 | the lower band below a break; one ladder drives the word and the colour — volt, volt, a dimmed volt, grey — never the forecast's green / amber / red, because a vibe is not a verdict and *Fresh mix* is not a bad game |
+| The row, spoken | `Social vibe, {n} percent, {word}` · `Social vibe, 82 percent, Great vibe` | one element, an `image` (§20.2): the band's word is said, since the colour is never the only cue (§20) |
+| The deck card | the row in the forecast's place on a For-fun card, and no forecast | the Games and Fill in screens A2.3; a competitive card keeps its forecast and draws no vibe |
+| The deck card's vs line, spoken | `{side} against {side}` · `You and zofia.b against ania.k and ewa.m` | where no forecast is drawn — a For-fun card, or one the server could not forecast — the line is spoken, the top row first: the forecast's name said the sides, and the row's name does not, so a listener still hears who partners whom. Under a forecast it stays a drawing, so the sides are said once |
+
+**Where it is drawn next, and what each ticket adds.** The Social vibe card on a For-fun game's
+details (#840) draws the % with its word printed beside it and the grid of tags; the booked game and
+the game at the court draw that card (#841); the Friends card and Post a game's fits draw the % on
+For fun (#842). Each cites this section's bands and adds its own sentences here.

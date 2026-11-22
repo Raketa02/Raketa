@@ -468,6 +468,51 @@ describe('the card', () => {
     expect(screen.queryByTestId('game-countdown')).toBeNull();
   });
 
+  it('leads a For-fun card with its Social vibe, and draws no forecast even if one is sent (#838)', async () => {
+    const card = deckCard({
+      kind: 'FOR_FUN',
+      // Sent by mistake: the server stopped sending it on For fun (#830), and the card ignores it.
+      forecast: { pct: 87, provisional: false },
+      vibe: { pct: 82 },
+    });
+    await openGames((kind) =>
+      groupDeck({
+        segments: [{ kind: 'FOR_FUN', count: 1 }],
+        cards: kind === 'FOR_FUN' ? [card] : [],
+      }),
+    );
+
+    expect(await screen.findByLabelText('Social vibe, 82 percent, Great vibe')).toBeTruthy();
+    expect(screen.getByText('82%', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.queryByLabelText(/^Balance forecast/)).toBeNull();
+    expect(screen.queryByText('87%', HIDDEN_TOO)).toBeNull();
+    // With no forecast to say the sides, the vs line says them — partner and opponents.
+    expect(screen.getByLabelText('You and zofia.b against ania.k and ewa.m')).toBeTruthy();
+    // Everything else is the card it was: the ribbon, the tiles, the vs line, the grid, the court.
+    expect(screen.getByRole('header', { name: 'Picked for you' })).toBeTruthy();
+    expect(screen.getByLabelText('ania.k, level 2,68')).toBeTruthy();
+    expect(screen.getByText('You + zofia vs ania + ewa', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.getByText('Slim overlap', HIDDEN_TOO)).toBeTruthy();
+    expect(
+      screen.getByLabelText('Court available, 32 zł, Saturday 16:00 · Bonarka Arena'),
+    ).toBeTruthy();
+  });
+
+  it('keeps a competitive card’s forecast, and draws it no Social vibe (#838)', async () => {
+    await openGames(groupDeck({ cards: [deckCard({ vibe: { pct: 82 } })] }));
+
+    expect(
+      await screen.findByLabelText(
+        'Balance forecast 87%, very even: You + zofia against ania + ewa',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText(/^Social vibe/)).toBeNull();
+    expect(screen.queryByText('Social vibe', HIDDEN_TOO)).toBeNull();
+    expect(screen.queryByText('82%', HIDDEN_TOO)).toBeNull();
+    // The forecast's name says the sides, so the vs line stays a drawing: said once, not twice.
+    expect(screen.queryByLabelText('You and zofia.b against ania.k and ewa.m')).toBeNull();
+  });
+
   it('tags the people In, and nobody else', async () => {
     await openGames(
       groupDeck({

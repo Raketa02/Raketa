@@ -105,8 +105,17 @@ export interface DeckCard {
   readonly noFreeCancellation: boolean;
   /** The rows are the sides (Q70): the reader's, and the other. A side may be short of a seat. */
   readonly sides: { readonly yours: readonly DeckPerson[]; readonly theirs: readonly DeckPerson[] };
-  /** Omitted where the server could not read one — somebody unrated, or nobody facing you yet. */
+  /**
+   * Omitted where the server could not read one — somebody unrated, or nobody facing you yet. The
+   * server sends none on a For-fun card, and a card drawn there shows none (`headlineOf`).
+   */
   readonly forecast?: { readonly pct: number; readonly provisional: boolean };
+  /**
+   * **A For-fun card's Social vibe** (ADR-0207 §2): how much the people on your version share, a
+   * whole percent worked out from everybody's tags now. Omitted on a competitive card, and where
+   * nobody at the table holds a tag.
+   */
+  readonly vibe?: { readonly pct: number };
   readonly overlap: Overlap;
 }
 
@@ -456,6 +465,34 @@ export function withOnTop(
 ): readonly DeckCard[] {
   const top = cards.find((card) => card.proposalId === proposalId);
   return top === undefined ? cards : [top, ...cards.filter((card) => card !== top)];
+}
+
+// ---------------------------------------------------------------------------
+// The number a card leads with
+// ---------------------------------------------------------------------------
+
+/** The row under the vs line: Competitive's forecast, or For fun's Social vibe. */
+export type Headline =
+  | { readonly kind: 'forecast'; readonly pct: number }
+  | { readonly kind: 'vibe'; readonly pct: number };
+
+/**
+ * **Which number a card leads with** — the kind's own, and never the other's (ADR-0207 §5).
+ *
+ * A competitive card leads with its forecast; a For-fun card with its Social vibe. **A For-fun card
+ * draws no forecast even if one is sent**: the server stopped sending it there (#830), and an older
+ * read cached or a future slip must not put a verdict on a game played for company. A competitive
+ * card draws no vibe for the same reason the other way. `undefined` where the server sent the kind's
+ * number none — somebody unrated, nobody facing you yet, or nobody at the table holding a tag — and
+ * the row is not drawn.
+ */
+export function headlineOf(
+  card: Pick<DeckCard, 'kind' | 'forecast' | 'vibe'>,
+): Headline | undefined {
+  if (card.kind === 'forFun') {
+    return card.vibe === undefined ? undefined : { kind: 'vibe', pct: card.vibe.pct };
+  }
+  return card.forecast === undefined ? undefined : { kind: 'forecast', pct: card.forecast.pct };
 }
 
 // ---------------------------------------------------------------------------

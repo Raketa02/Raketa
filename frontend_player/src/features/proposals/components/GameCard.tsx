@@ -11,6 +11,7 @@
  * │ [ tile ] [ tile ]                         │
  * │ 4 people are In on this game              │  only when dealt in versions
  * │ 87%  [ You + Zofia │ Ania + Ewa ]         │  the forecast: the server's figure, your side left
+ * │ 67%  [ Social vibe ██████████░░░░ ]       │  — or, on For fun, its Social vibe (`headlineOf`)
  * │            Slim overlap                   │  OverlapGrid
  * │  M  T  W  T  F  S  S …                    │
  * │ ┌ Court available            32 zł ┐     │  CourtBlock
@@ -31,8 +32,17 @@
  * record (the screens A2.2). **The card is not one element to a listener**, as the Players card is:
  * its tiles are buttons of their own, and an element that swallowed them would take the records
  * out of a screen reader's reach. So the card's parts speak for themselves — the ribbon, each
- * tile, the forecast, the grid, the court block — and the details are reached by the **i** under
- * the stage, which is the accessible path the drag never is (ADR-0169 §3's rule, kept).
+ * tile, the forecast or the Social vibe, the grid, the court block — and the details are reached
+ * by the **i** under the stage, which is the accessible path the drag never is (ADR-0169 §3's
+ * rule, kept).
+ *
+ * ## Each kind leads with its own number
+ *
+ * Below the vs line a competitive card draws its forecast and a For-fun card its Social vibe
+ * (ADR-0207 §5, #838) — `headlineOf` decides, and a For-fun card draws no forecast even if one is
+ * sent. The row is `shared/ui`'s `SocialVibeRow`, in the forecast row's place and height, so the
+ * rest of the card is the card it was. The forecast's name says the sides and the row's does not,
+ * so where no forecast is drawn the vs line is spoken instead (`speaksSides`).
  *
  * ## The countdown runs from the read
  *
@@ -51,7 +61,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { formatPercent } from '@/shared/formatting/ratingFormat';
-import { BALANCE_FIGURE, BalanceBar, theme } from '@/shared/ui';
+import { BALANCE_FIGURE, BalanceBar, SocialVibeRow, theme } from '@/shared/ui';
 import { balanceTone } from '@/shared/vocabulary/balancePresentation';
 import type { Weekday } from '@/shared/vocabulary/week';
 
@@ -60,6 +70,7 @@ import {
   countdownOf,
   courtTagOf,
   foldOf,
+  headlineOf,
   inAcrossVersions,
   ribbonOf,
   rowsOf,
@@ -106,6 +117,7 @@ export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson 
   const urgent = countdown.kind === 'minutes' && ribbon.kind !== 'seatOpen';
   const labels = barLabels([top, bottom]);
   const acrossVersions = inAcrossVersions(card);
+  const headline = headlineOf(card);
 
   const drawing = (
     <>
@@ -141,6 +153,7 @@ export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson 
           singles={seatsPerSide === 1}
           completes={completesIt(card)}
           fill
+          speaksSides={headline?.kind !== 'forecast'}
           {...(isRescue(card) ? { rescue: { share: shareWords(card) } } : {})}
           {...(onPerson === undefined ? {} : { onPerson })}
         />
@@ -151,8 +164,10 @@ export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson 
 
         <View style={s.hair} />
 
-        {card.forecast === undefined ? null : (
-          <Forecast pct={card.forecast.pct} fold={foldOf(card) ?? 0} labels={labels} />
+        {headline === undefined ? null : headline.kind === 'vibe' ? (
+          <SocialVibeRow pct={headline.pct} />
+        ) : (
+          <Forecast pct={headline.pct} fold={foldOf(card) ?? 0} labels={labels} />
         )}
 
         <OverlapGrid overlap={card.overlap} today={today} />

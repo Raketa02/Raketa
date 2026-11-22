@@ -70,6 +70,7 @@ import {
   TILE_HINT,
   openSeatLabel,
   openSeatUnder,
+  sidesSpoken,
   tileLabel,
   tileName,
   vsLine,
@@ -91,6 +92,13 @@ export interface GameTilesProps {
   readonly fill: boolean;
   /** A rescue: your tile is the open seat, offered at this share (*27 zł*). */
   readonly rescue?: { readonly share: string };
+  /**
+   * **The card says its sides nowhere else** — no forecast is drawn, whose name says them: a
+   * For-fun card's Social vibe (#838), or a card the server could not forecast. The *vs* line is
+   * then spoken (`sidesSpoken`), so a listener still hears who partners whom. Absent, it is a
+   * drawing.
+   */
+  readonly speaksSides?: boolean;
 }
 
 export function GameTiles({
@@ -101,6 +109,7 @@ export function GameTiles({
   onPerson,
   fill,
   rescue,
+  speaksSides = false,
 }: GameTilesProps) {
   const tile = (seat: DeckSeat, at: number) =>
     rescue !== undefined && seat.kind === 'person' && seat.person.isYou ? (
@@ -126,12 +135,16 @@ export function GameTiles({
   return (
     <View style={[s.tiles, fill ? s.fill : undefined]}>
       <View style={[s.row, fill ? s.fill : undefined]}>{top.seats.map(tile)}</View>
-      {/* The sides as a line, between the rows. Decorative to a listener: every tile names its
-          person, and the card's sides are said once in the forecast's name. */}
+      {/* The sides as a line, between the rows. Decorative to a listener where the forecast's
+          name says the sides; spoken where nothing else does (`speaksSides`) — said once. */}
       <View
         style={s.vs}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
+        {...(speaksSides
+          ? { accessible: true, accessibilityLabel: sidesSpoken(top, bottom) }
+          : {
+              accessibilityElementsHidden: true,
+              importantForAccessibility: 'no-hide-descendants',
+            })}
       >
         <View style={s.rule} />
         <Text style={s.vsWords} numberOfLines={1}>

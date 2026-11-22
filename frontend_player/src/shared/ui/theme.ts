@@ -308,6 +308,20 @@ const color = {
    *  4,74, where `coral` there is 2,99. A mark would take `coral`; these are words. */
   gameCoral: '#F08975',
 
+  /** THE SOCIAL VIBE'S TWO LOWER BANDS ON THE CARD (#838; ADR-0207 §8–§9, docs/design-system.md
+   *  7.38, Part 16 2026-11-22). The vibe's four bands are one hue family and never the forecast's
+   *  green / amber / red: *Great* and *Good vibe* are `volt`, *Some common ground* this dimmed volt,
+   *  *Fresh mix* this grey — each the bar's fill and the figure's colour at once, as `volt` is. No
+   *  mock draws them: they are DERIVED. The dimmed volt is `volt` at 0,6 over the card's ground
+   *  half-way down, 4,6° off volt's hue; the grey is `night`'s family (198°) at a luminance a
+   *  shade under the dimmed volt's, so *Fresh mix* never reads brighter than *Some common ground*. What they carry,
+   *  computed half-way down: the figure 5,31 and 5,05 (past AA, where `gameGreen` is large text
+   *  only); `ink` — *Social vibe* inside the fill — 6,06 and 5,77 on them; against the track
+   *  (`onDarkTag` over the ground) 3,43 and 3,26, a mark's 3:1. Derived in gameGround.test.ts. The
+   *  paper card's olive inks are #840's. Drawn by `SocialVibeRow` alone, on the game card's ground. */
+  gameVoltDim: '#8BA140',
+  gameGrey: '#8A969B',
+
   /** THE POSTING GRID'S TWO MIDDLE GREENS (#558; the Games & Fill in screens A5.2, A10;
    *  docs/design-system.md 7.28, Part 16 2026-10-02). The grid's ramp runs `paper2` (nobody who
    *  fits) → `mintSoft` (a few, no court) → `gridLight` (a full game's worth, no court) →
@@ -735,6 +749,10 @@ const radius = {
   rangeSquare: 9,
   timeSquare: 8,
   balanceBar: 8,
+  /** The Social vibe row's bar — 7.38 (#838). MEASURED: mock 1's corner turns over 4–5 pixels of a
+   *  21-pixel bar, mock 2's over 6–7 of 28, so 4 at 18. A soft corner, not the balance bar's near
+   *  pill: the mocks draw a filled gauge, and its fill's square end is the value. */
+  socialVibe: 4,
   fit: 7,
   /** The record block's run-of-form square — 7.13. Eight points wants a soft corner, not a
    *  rounded one: five of these in a row are a *run*, and at `tag`'s 6 they read as five
@@ -759,6 +777,13 @@ const SPORT_DOT = 6;
 
 /** How far a finger travels across before a swipe row — and the deck — claims the touch. See `swipeRow`. */
 const SWIPE_INTENT = 12;
+
+/**
+ * An italic's slant, in degrees, where the app draws one — no italic face is loaded, so a word or a
+ * mark that the mocks set in italics leans by a skew instead. One angle, so two italics never
+ * disagree: Top 10's mark and count (`topTen.lean`) and the Social vibe's name (`socialVibe.lean`).
+ */
+const ITALIC_LEAN = -12;
 
 const size = {
   btn: 34, // 32 tertiary-in-card · 34 default · 40 screen action · 42 result primary
@@ -956,6 +981,14 @@ const size = {
    *  the component that draws it, and this one's mapping-and-clamp lives in `BalanceBar.tsx`
    *  the same way. What is here is geometry. */
   balanceBar: { sm: 16, md: 18, lg: 24 },
+  /** The Social vibe row — 7.38 (#838; ADR-0207 §9.4, for fun 1–2). MEASURED off the two mocks,
+   *  with the figure at `num.xl` as the unit: in mock 1 its digits stand 18 pixels and the bar 21,
+   *  which at `num.xl`'s 15,4pt figures is 18 — the forecast bar's `md`, so the card's rows stand
+   *  where they stood. `inset` is where *Social vibe* starts inside the bar: 14 pixels of mock 2's
+   *  28-pixel bar, so 9 (`space.sm`). `lean` is the slant the name takes as an italic would — no
+   *  italic Archivo is loaded, so it is drawn, as Top 10's mark and count lean, at the one angle the
+   *  app draws an italic at (`ITALIC_LEAN`). */
+  socialVibe: { bar: 18, inset: space.sm, lean: ITALIC_LEAN },
   /** The switch — 6.12. The track and the knob are UI §G1's measured 40 x 23 and 18, and the
    *  inset is the arithmetic between them rather than a fourth number. The ROW is the touch
    *  surface, exactly as 6.11's is: a 23pt track is well under the 44pt minimum, and a
@@ -1578,7 +1611,7 @@ const size = {
     outline: 1.5,
     edge: 0.75,
     chipMark: 8,
-    lean: -12,
+    lean: ITALIC_LEAN,
     figure: { advance: 0.625, top: 0.699, foot: 0.012 },
   },
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */

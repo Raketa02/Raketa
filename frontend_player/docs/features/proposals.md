@@ -10,7 +10,8 @@ the mechanics (§6–§8) and
 
 **The deck is one read, and a game's details are another.** `GET /pools/{id}/deck?sport&kind` — the
 pool filed under the group's id — is the deck: the segments, the badge, the capped weeks and the
-cards in the order dealt, each the reader's own version with its sides, forecast, overlap and court.
+cards in the order dealt, each the reader's own version with its sides, forecast — or on For fun its
+Social vibe — overlap and court.
 A game's details (`GameDetailsScreen`, `/play/group/[groupId]/game/[proposalId]?sport&kind`) are
 **`GET /proposals/{id}`** since #557 (#542 serves it): who is In, the sides, the club and its
 distance, the status and **what the reader may do now** — see the #557 section below. Until #557 the
@@ -110,9 +111,27 @@ theirs, a short side read as its present member (the engine's own provisional). 
 the server's. **Owed to the backend**: serving the signed gap on `DeckForecastSchema`, which would
 make the fold the engine's too.
 
+**A For-fun card leads with its Social vibe, and never with a forecast**
+([#838](https://github.com/Raketa02/Raketa/issues/838); ADR-0207 §5, §8; for fun 1–2). Below the
+tiles and the vs line, where a competitive card draws its forecast, a For-fun card draws
+`shared/ui`'s `SocialVibeRow`: the deck's `vibe.pct` beside a 0–100 bar filled to it, with _Social
+vibe_ inside, spoken _Social vibe, 82 percent, Great vibe_. **`headlineOf` (`domain/deck.ts`) is the
+rule**: the kind's own number or nothing, so a For-fun card draws no forecast even if one is sent,
+and a competitive card no vibe. The row keeps the forecast row's height, so the ribbon, tiles, vs
+line, grid and court block stand where they stood. **The vs line speaks where no forecast is
+drawn** (`GameTiles`' `speaksSides`): the forecast's name said the sides, the row's does not, so on
+For fun — and on a card the server could not forecast — the line is read as _You and zofia.b against
+ania.k and ewa.m_ (`sidesSpoken`); under a forecast it stays a drawing, said once. **The bands are the app's**
+(`shared/vocabulary/socialVibePresentation.ts`, the words §33): _Great vibe_ 70+, _Good vibe_ 45+,
+_Some common ground_ 20+, _Fresh mix_ below, drawn volt, volt, `gameVoltDim`, `gameGrey` — never the
+forecast's green / amber / red. The figure is the server's, never derived here. **Not seen on a
+device**: the row against for fun 1–2, the two lower bands' colours, and the name's two colours
+where a short fill ends inside it.
+
 **The card is not one element.** Its tiles are buttons — each opens `PlayerRecordSheet`, a press
 where the Players deck asks for a long one — so the card's parts speak for themselves (the ribbon a
-header, each tile, the forecast, the grid as one sentence, the court block) and the details are
+header, each tile, the forecast — or the Social vibe and the vs line — the grid as one sentence, the
+court block) and the details are
 reached by the **i**, the accessible path the drag never is.
 
 **Money prints whole złoty without grosze** (`formatZloty`: _32 zł_, _27,50 zł_ when there are some)

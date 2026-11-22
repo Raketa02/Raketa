@@ -85,6 +85,13 @@ describe('a card', () => {
     for (const other of read?.sides.theirs ?? []) expect(other).not.toHaveProperty('friend');
   });
 
+  it('reads a For-fun card’s Social vibe, and nothing where the server sent none (#838)', () => {
+    const fun = toDeckCard(deckCard({ kind: 'FOR_FUN', forecast: null, vibe: { pct: 82 } }));
+    expect(fun?.vibe).toEqual({ pct: 82 });
+    expect(fun).not.toHaveProperty('forecast');
+    expect(toDeckCard(deckCard({ vibe: null }))).not.toHaveProperty('vibe');
+  });
+
   it('reads a challenge whose poster withdrew as nobody named', () => {
     expect(
       toDeckCard(deckCard({ type: 'CHALLENGE', challenger: null }))?.challenger,

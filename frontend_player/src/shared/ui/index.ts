@@ -162,6 +162,7 @@ export {
 } from './SeatFace';
 export { Segment, type SegmentOption, type SegmentProps } from './Segment';
 export { SocialTagRow, type SocialTagRowProps } from './SocialTagRow';
+export { SOCIAL_VIBE_ON_DARK, SocialVibeRow, type SocialVibeRowProps } from './SocialVibeRow';
 export {
   ALL_SPORTS,
   SportPillFrame,

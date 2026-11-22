@@ -12,6 +12,7 @@ import {
   findingAfterTheDoor,
   findingAfterTheQuestion,
   foldOf,
+  headlineOf,
   intentAnswering,
   inAcrossVersions,
   refusalOutcome,
@@ -345,6 +346,29 @@ describe('the forecast’s fold', () => {
       foldOf(card({ sides: { yours: [YOU], theirs: [person('Ania', { level: undefined })] } })),
     ).toBeUndefined();
     expect(foldOf(card({ sides: { yours: [YOU], theirs: [] } }))).toBeUndefined();
+  });
+});
+
+describe('the number a card leads with (ADR-0207 §5, #838)', () => {
+  it('is the forecast on a competitive card, and never a vibe', () => {
+    expect(headlineOf(card())).toEqual({ kind: 'forecast', pct: 87 });
+    expect(headlineOf(card({ vibe: { pct: 60 } }))).toEqual({ kind: 'forecast', pct: 87 });
+  });
+
+  it('is the Social vibe on a For-fun card, and never a forecast — even one sent', () => {
+    expect(headlineOf(card({ kind: 'forFun', vibe: { pct: 82 } }))).toEqual({
+      kind: 'vibe',
+      pct: 82,
+    });
+    expect(headlineOf(card({ kind: 'forFun', forecast: undefined, vibe: { pct: 35 } }))).toEqual({
+      kind: 'vibe',
+      pct: 35,
+    });
+  });
+
+  it('is nothing where the server sent its kind’s number none', () => {
+    expect(headlineOf(card({ forecast: undefined, vibe: { pct: 60 } }))).toBeUndefined();
+    expect(headlineOf(card({ kind: 'forFun' }))).toBeUndefined();
   });
 });
 

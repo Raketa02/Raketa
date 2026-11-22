@@ -134,6 +134,8 @@ export function deckCard(extra: Partial<Wire['DeckCardSchema']> = {}): Wire['Dec
     no_free_cancellation: false,
     sides: { yours: [youTile(), ZOFIA()], theirs: [ANIA(), EWA()] },
     forecast: { pct: 87, provisional: false },
+    // A competitive card's — a For-fun card sends a vibe and no forecast (#830).
+    vibe: null,
     overlap: {
       grade: 'SLIM',
       cells: overlapCells({ '6:AFTERNOON': 'BRIGHT', '5:EVENING': 'DIM' }),

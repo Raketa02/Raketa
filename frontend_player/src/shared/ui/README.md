@@ -144,7 +144,12 @@ in the count pill, _99+_ past 99 (`shared/formatting`'s `countFigure`), and said
 control, link and `over`, which only those rows used — the pill now stands in the footer — and
 `HomeRowRail` takes its bounds from a line (`RailBounds`). A section's top on the page composes
 through what holds it (`useTopOnPage`), and a page that watches shows what a line unfolds
-(`PageReveal`).
+(`PageReveal`). And by For fun's Social vibe ([#838](https://github.com/Raketa02/Raketa/issues/838)):
+`SocialVibeRow` (7.38) — the % beside a 0–100 bar filled to it, _Social vibe_ inside, coloured by
+`shared/vocabulary`'s `socialVibeBand`. **It came down ahead of its second caller**, as ADR-0207 §9.4
+decides: it is the deck card's row, the Friends card's next (#842), and a part of the Social vibe
+card, which the game at the court draws in `games` (#841) — so it is built where both features reach
+it rather than copied out of `proposals` later.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

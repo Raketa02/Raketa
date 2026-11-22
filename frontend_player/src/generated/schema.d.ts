@@ -4309,8 +4309,10 @@ export interface components {
              */
             no_free_cancellation: boolean;
             sides: components["schemas"]["DeckSidesSchema"];
-            /** @description `null` where it cannot be read: somebody on the card holds no rating in the sport, or nobody faces the reader yet. */
+            /** @description How even a **competitive** card's game is forecast. **Always `null` on a `FOR_FUN` card**, which says its `vibe` instead (`docs/adr/0207` §5) — its sides are still the evenest. Also `null` where it cannot be read: somebody on the card holds no rating in the sport, or nobody faces the reader yet. */
             forecast: components["schemas"]["DeckForecastSchema"] | null;
+            /** @description A **`FOR_FUN`** card's Social vibe, its table everybody named on the reader's version — the people In, the reader and the names dealt, never an empty seat — and on a `SEAT_OPEN` card the reader with the players on the game. **Always `null` on a `COMPETITIVE` card**, and where nobody at the table holds a tag (#830). */
+            vibe: components["schemas"]["DeckVibeSchema"] | null;
             overlap: components["schemas"]["DeckOverlapSchema"];
         };
         /**
@@ -4452,6 +4454,19 @@ export interface components {
              * @description **Your** friend — the *FRIEND* tag (`docs/adr/0202` §2). Only your own friends ever carry it: nothing here says who else is friends with whom. `false` on your own tile.
              */
             friend: boolean;
+        };
+        /**
+         * DeckVibeSchema
+         * @description How much the people on **this** For-fun card share (`docs/adr/0207` §2):
+         *     on average, each Social tag at the table is carried by `pct` percent of the
+         *     other players. Worked out from everybody's tags now, on every read.
+         */
+        DeckVibeSchema: {
+            /**
+             * Pct
+             * @description A whole percent, 0–100, rounded half up. The bar fills to it; the app words it in its own bands.
+             */
+            pct: number;
         };
         /**
          * DeclarePlayIntentRequest
@@ -5505,7 +5520,7 @@ export interface components {
             capped_weeks: components["schemas"]["CappedWeekSchema"][];
             /**
              * Cards
-             * @description This segment's cards in the order dealt. **A card owed to the reader comes first** — the new game a club's cancel owed them, soonest first among two, with no mark (#673). Then seats open after the reader's yes (fewest first), then seat open › challenge › pick, then the soonest deadline, then the best forecast; the same people only at their best hour.
+             * @description This segment's cards in the order dealt. **A card owed to the reader comes first** — the new game a club's cancel owed them, soonest first among two, with no mark (#673). **Competitive**: then seats open after the reader's yes (fewest first), then seat open › challenge › pick, then the soonest deadline, then the best forecast. **For fun** (`docs/adr/0207` §4): then the `SEAT_OPEN` cards by vibe, then every other card by the vibe it shows (highest first), then seats open after the reader's yes, then challenge › pick, then the soonest deadline. In both, the same people only at their best hour.
              */
             cards: components["schemas"]["DeckCardSchema"][];
         };

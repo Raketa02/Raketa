@@ -113,6 +113,11 @@ export function toForecast(wire: Schemas['DeckForecastSchema'] | null): Pick<Dec
   return wire === null ? {} : { forecast: { pct: wire.pct, provisional: wire.provisional } };
 }
 
+/** A For-fun card's Social vibe, or nothing — always nothing on a competitive card (#830). */
+export function toVibe(wire: Schemas['DeckVibeSchema'] | null): Pick<DeckCard, 'vibe'> {
+  return wire === null ? {} : { vibe: { pct: wire.pct } };
+}
+
 /**
  * One card — or nothing, for a card whose game cell names no weekday: the ring would have
  * nowhere to go, and a card drawn without its game's own cell says less than the read did.
@@ -139,6 +144,7 @@ export function toDeckCard(wire: Schemas['DeckCardSchema']): DeckCard | undefine
     noFreeCancellation: wire.no_free_cancellation,
     sides: toDeckSides(wire.sides),
     ...toForecast(wire.forecast),
+    ...toVibe(wire.vibe),
     overlap,
   };
 }
