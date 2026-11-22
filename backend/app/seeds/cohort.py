@@ -129,28 +129,14 @@ CELLS: Final = tuple(
     for day in range(1, DAYS_IN_THE_GRID + 1)
     for hour in HOURS_OF_THE_DAY
 )
-#: **The eight ADR-0207 §7 appended are not drawn yet**, and the ceiling a close
-#: match fills to stays six (``DRAWN_UP_TO``). Drawing from 27 redraws every
-#: member's tags, and the Same vibe layer names members by the overlaps this
-#: draw gives her (``app/seeds/same_vibe.py``). Handing seeded players the new
-#: tags, and the redraw with its fixture diff, are #832's.
+#: **All twenty-seven, ADR-0207 §7's eight included** (#832), and a close match
+#: fills up to the served ceiling of eight. Adding the eight redrew every
+#: member's tags — the population diff #832 reviewed — and the Same vibe layer
+#: names members by the overlaps this draw gives her (``app/seeds/same_vibe.py``).
 #:
-#: Through the enum and never as strings, for ``PROTAGONIST_TAGS``' reason. The
-#: nineteen keep the enum's order, so ``rng.sample`` draws what it drew.
-NOT_DRAWN_YET: Final = frozenset(
-    {
-        SocialTag.STAYS_FOR_A_COFFEE,
-        SocialTag.UP_FOR_A_BITE_AFTER,
-        SocialTag.KEEPS_IN_TOUCH,
-        SocialTag.HAPPY_TO_SWAP_PARTNERS,
-        SocialTag.PATIENT_WITH_BEGINNERS,
-        SocialTag.HAPPY_TO_SHARE_TIPS,
-        SocialTag.BRINGS_THE_ENERGY,
-        SocialTag.NEW_IN_TOWN,
-    }
-)
-TAGS: Final = tuple(tag.value for tag in SocialTag if tag not in NOT_DRAWN_YET)
-DRAWN_UP_TO: Final = 6
+#: Through the enum and never as strings, for ``PROTAGONIST_TAGS``' reason, in
+#: the enum's order, so ``rng.sample`` draws the same for the same vocabulary.
+TAGS: Final = tuple(tag.value for tag in SocialTag)
 
 #: The three ranges a day's hours are grouped into — the Player profile's own
 #: (``DAY_RANGES``; the mechanics §9.1, Q71).
@@ -1276,17 +1262,14 @@ def _tags(handle: str, position: int, seed: int) -> tuple[str, ...]:
     rng = _rng(handle, "tags", seed)
     if _is_a_close_match(position):
         # Hers first and the rest of the draw into **what is left of the
-        # selection bound**, read off the profile's own value object. Taking
-        # three and then drawing the usual two-to-five on top reaches eight,
-        # which is not a number of tags a player may hold — and the commit
-        # refuses it half way through a run, with the questionnaire already
-        # written. The bound is asked rather than copied for the reason the tag
-        # ids are: one home, and a literal here drifts the day it moves. Its
-        # rise to eight is not drawn yet (``DRAWN_UP_TO``), and the smaller of
-        # the two still keeps a draw inside the bound if the bound falls.
-        room = min(SOCIAL_TAG_SELECTION_BOUNDS.maximum_tags, DRAWN_UP_TO) - len(
-            PROTAGONIST_TAGS
-        )
+        # selection bound**, read off the profile's own value object. Three
+        # and the usual two-to-five on top fit the eight a player may hold
+        # today; under a lower ceiling they wouldn't, and the commit would
+        # refuse the member half way through a run, with the questionnaire
+        # already written. The bound is asked rather than copied for the reason
+        # the tag ids are: one home, and a literal here drifts the day it moves
+        # — as it did, from six to eight (#829, drawn since #832).
+        room = SOCIAL_TAG_SELECTION_BOUNDS.maximum_tags - len(PROTAGONIST_TAGS)
         low, high = MEMBER_TAG_COUNT
         elsewhere = [tag for tag in TAGS if tag not in PROTAGONIST_TAGS]
         drawn = set(PROTAGONIST_TAGS) | set(

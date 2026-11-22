@@ -16,7 +16,7 @@ from app.application.events import DeliveryContext
 from app.modules.bookings.domain.events import CourtMoved
 from app.modules.clubs.domain.club_courts_events import ExceptionAdded
 from app.modules.groups.domain.events import GroupJoined, GroupLeft
-from app.modules.player_profile.domain.events import WeeklyHoursSet
+from app.modules.player_profile.domain.events import SocialTagsChanged, WeeklyHoursSet
 from app.modules.proposals.application.handlers import MarkDueForProposing
 from app.modules.proposals.application.propose_games import Due, DueForProposing
 from app.modules.proposals.domain.events import NoSaid
@@ -48,6 +48,26 @@ async def test_each_change_is_noted_where_it_matters_and_a_take_forgets_it():
     )
     assert due.take() == Due()
     assert not Due().anything
+
+
+async def test_a_tag_edit_is_a_change_to_one_player_in_every_pool_they_are_in():
+    """#832; ``docs/adr/0207`` §2: a For-fun table is built by everybody's tags
+    now, so an edit is a change to whom the next build seats beside them."""
+
+    due = DueForProposing()
+    marks = MarkDueForProposing(due)
+    player = uuid4()
+
+    await marks(
+        SocialTagsChanged(
+            player_id=player,
+            social_tags=("STAYS_FOR_A_COFFEE", "STAYS_FOR_A_DRINK"),
+            occurred_at=NOW,
+        ),
+        CONTEXT,
+    )
+
+    assert due.take() == Due(players=frozenset({player}))
 
 
 async def test_a_change_to_what_a_club_sells_is_everywhere_and_leaving_is_nothing():

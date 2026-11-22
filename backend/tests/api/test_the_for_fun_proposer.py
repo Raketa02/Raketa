@@ -19,6 +19,9 @@ and every claim is read back off a player's For-fun deck.
   are dealt the evenest four first.
 - **A For-fun rescue's Seat open card goes to the best company** for the
   players still on the game, never the first evenly matched member to join.
+- **A tag edit reaches the next build** (#832, §2): it makes the editor's
+  pools due, the short tick deals from the new tags, and a card already dealt
+  keeps every name while its vibe follows the edit.
 
 The club sells one padel court on Saturdays at 17:00, at 30 zł a seat; the
 clock stands on **Monday 5 October 2026, 08:00 in Kraków**, so the engine's
@@ -35,7 +38,8 @@ import pytest
 from app.api.dependencies import get_clock
 from app.bootstrap.composition import build_propose_games
 from app.engines.matchfit.core import SearchMode
-from app.modules.proposals.application.propose_games import Proposed
+from app.modules.proposals.application.propose_games import DueForProposing, Proposed
+from tests.api import players_world as players
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
@@ -240,6 +244,127 @@ async def test_the_same_people_wanting_competitive_are_dealt_the_evenest_first(
         (SATURDAY_FIVE, {"ola", "ania", "marek", "kuba"}),
         (NEXT_SATURDAY, {"ola", "ania", "marek", "zofia"}),
     ]
+
+
+# --------------------------------------------------------------------------- #
+# A tag edit reaches the next build (#832; docs/adr/0207 §2)
+# --------------------------------------------------------------------------- #
+
+COFFEE, QUIET = "STAYS_FOR_A_COFFEE", "QUIET_AND_FOCUSED"
+#: Ola's, before and after she adds ☕ in the You tab.
+OLA_S = (DRINK, LAUGHS)
+OLA_S_WITH_A_COFFEE = (COFFEE, DRINK, LAUGHS)
+
+
+async def coffee_drinkers(
+    client, session_factory, payments, mailbox, clock, club
+) -> tuple[dict[str, dict], UUID, UUID]:
+    """Ola stays for a drink and laughs off mistakes; the other four all stay
+    for a coffee — Ania and Marek for a drink too, Kuba quiet and focused, Wera
+    here to meet players. Everybody at 2,5, so the forecast ties every four and
+    only the vibe tells them apart. Ola's group, and the first Saturday's card
+    dealt to her, Ania, Marek and Kuba — at 50%."""
+
+    def member(name: str, tags: tuple[str, ...]):
+        return a_member(
+            client, session_factory, payments, name, intent="FOR_FUN", tags=tags
+        )
+
+    people = {
+        "ola": await member("ola", OLA_S),
+        "ania": await member("ania", (COFFEE, DRINK)),
+        "marek": await member("marek", (COFFEE, DRINK)),
+        "kuba": await member("kuba", (COFFEE, QUIET)),
+        "wera": await member("wera", (COFFEE, MEET)),
+    }
+    await mailbox.drain()
+    group = await a_group(
+        client, people["ola"], club, *(p for n, p in people.items() if n != "ola")
+    )
+    dealt_already = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        kind=SearchMode.FOR_FUN,
+        versions=((people["ola"], people["ania"], people["marek"], people["kuba"]),),
+    )
+    return people, group, dealt_already
+
+
+async def the_tick(session_factory, clock, due: DueForProposing) -> list[UUID]:
+    """The short tick, as the job runs it: the pools a delivery made due, each
+    dealt. Which pools they were."""
+
+    await players.deliver_the_outbox(session_factory, proposer_due=due)
+    async with session_factory() as session:
+        proposer = build_propose_games(session, clock=clock)
+        pools = await proposer.pools_due(due.take())
+        for pool_id in pools:
+            await proposer.execute(pool_id)
+    return pools
+
+
+async def test_a_tag_edit_makes_her_pools_due_and_the_next_four_is_built_from_it(
+    client, session_factory, payments, clock, club, mailbox
+):
+    """Before her edit Ola shares only a drink with two of them, and the next
+    four is the coffee four without her (the test below). Once she stays for a
+    coffee too, the tick deals the next Saturday from her new tags — and the
+    card she was already dealt keeps every name, only its vibe moving."""
+
+    people, group, dealt_already = await coffee_drinkers(
+        client, session_factory, payments, mailbox, clock, club
+    )
+    (before,) = await deck_of(client, people["kuba"], group, kind="FOR_FUN")
+    assert before["vibe"] == {"pct": 50}
+    due = DueForProposing()
+    await players.deliver_the_outbox(session_factory, proposer_due=due)
+    due.take()
+
+    edited = await client.put(
+        "/api/v1/players/me/social-tags",
+        json={"social_tags": list(OLA_S_WITH_A_COFFEE)},
+        headers=people["ola"]["headers"],
+    )
+    assert edited.status_code == 200, edited.text
+
+    assert await the_tick(session_factory, clock, due) == [group]
+    cards = await deck_of(client, people["ola"], group, kind="FOR_FUN")
+    assert dealt(cards) == [
+        (SATURDAY_FIVE, {"ola", "ania", "marek", "kuba"}),
+        (NEXT_SATURDAY, {"ola", "ania", "marek", "wera"}),
+    ]
+    assert cards[0]["proposal_id"] == str(dealt_already)
+    assert [card["vibe"] for card in cards] == [{"pct": 67}, {"pct": 67}]
+    # Kuba isn't on the new four, and his card is the one he was dealt, names
+    # and all — at the vibe her coffee gives it now.
+    (after,) = await deck_of(client, people["kuba"], group, kind="FOR_FUN")
+    assert (after["proposal_id"], names_on(after)) == (
+        before["proposal_id"],
+        names_on(before),
+    )
+    assert after["vibe"] == {"pct": 67}
+
+
+async def test_without_her_edit_the_next_four_is_the_coffee_four_without_her(
+    client, session_factory, payments, clock, club, mailbox
+):
+    """The world above with nothing edited: the next Saturday goes to the four
+    who share the coffee (58%), and Ola holds only the card she was dealt."""
+
+    people, group, _ = await coffee_drinkers(
+        client, session_factory, payments, mailbox, clock, club
+    )
+
+    await proposes(session_factory, clock, group)
+
+    # The better company first: 58% over the 50% dealt already.
+    assert dealt(await deck_of(client, people["ania"], group, kind="FOR_FUN")) == [
+        (NEXT_SATURDAY, {"ania", "marek", "kuba", "wera"}),
+        (SATURDAY_FIVE, {"ola", "ania", "marek", "kuba"}),
+    ]
+    assert len(await deck_of(client, people["ola"], group, kind="FOR_FUN")) == 1
 
 
 async def test_a_for_fun_seat_open_card_goes_to_the_best_company_for_the_three_left(

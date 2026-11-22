@@ -139,7 +139,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   question per deck read** — `PlayersTags` (`DirectoryPlayersTags`, over Discovery's own
   `PlayerDirectory.tags_of_each`, one statement over `discovery_player_tags`), asked only for
   the people on For-fun cards and not at all when none is dealt, row in `proposal_demands.py`;
-  a tag edit reads into the deck after its delivery reaches the directory. **A For-fun rescue
+  a tag edit reads into the deck after its delivery reaches the directory, and makes the
+  editor's pools due for the next build (#832, below). **Seeded** in her For-fun tennis deck
+  (`app/seeds/for_fun.py`, `seeds.md`): a card in each of the app's four bands. **A For-fun rescue
   offered to the reader, and to more members than it is dealt to, asks a second** (#831): its
   best fits are the best company among everybody offered (the rescues bullet below).
   `tests/api/test_the_for_fun_deck.py` holds the read at **91 statements** on its world, the
@@ -291,8 +293,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   jobs — the sweep over every pool (`GroupDirectory.every`) and a short tick over the pools
   a delivered change made due (`DueForProposing`, fed per delivery run by
   `MarkDueForProposing`: a joining, a player's week, intent, first rating, Games & money or
-  reliability filter, a swipe, anything a club changes about what it sells — which is everywhere). The due set
-  is process memory and best effort; the sweep is the guarantee. **And at a member's
+  reliability filter, **Social tags** (#832; ADR-0207 §2 — whom a For-fun table seats beside
+  them; a card already dealt keeps every name, and only its vibe moves), a swipe, anything a
+  club changes about what it sells — which is everywhere). The due set
+  is process memory and best effort; the sweep is the guarantee. **The tags are the one
+  input read off a copy the same delivery writes** — Discovery's directory, in that
+  delivery's transaction — so a tick that takes the mark in the moment before the commit
+  builds from the tags as they were, and the sweep and every later build read the new ones
+  (`tests/api/test_the_for_fun_proposer.py` walks an edit: due, the next four built from it,
+  the card dealt before it keeping its names). **And at a member's
   request**, for one pool, from `POST /pools/{id}/deal` (#739, above) — the short tick still
   runs the pool the intent change made due, and deals nothing the route already dealt.
 - **Every face carries the reader's *friend* tag, and Home the friend requests** (#745;

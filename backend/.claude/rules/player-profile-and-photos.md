@@ -161,6 +161,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (ADR-0207 §2, #830): `UNCOUNTED_SOCIAL_TAGS` — 💘 `OPEN_TO_MEET_SOMEONE` alone — and
   `counted(tags)`, which every context asking the Match Fit engine for a Social vibe calls
   first, so they all drop the same ones; the tag is still held and shown everywhere.
-  **The seed's cohort doesn't draw the eight yet** (`cohort.NOT_DRAWN_YET`,
-  `DRAWN_UP_TO` 6): drawing from 27 redraws every member's tags, and Same vibe's seed names
-  members by today's overlaps, so the redraw is #832's, with its fixture diff.
+  **The seed's cohort draws from all twenty-seven, up to eight** (#832): the redraw moved
+  every member's tags and nothing else in `cohort.json`, Same vibe's seed picked her last
+  three tags and its two names again, and a store seeded before it is given the new draw
+  through *Edit tags*' own use case (`seeds.md`).

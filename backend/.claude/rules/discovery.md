@@ -257,12 +257,16 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   have rows in their context's register.
 - **Seeded by `app/seeds/same_vibe.py`**, after Same competitive level: **no player of its
   own** — she holds six tags (`catalog.HER_TAGS`, the protagonists' three and three more where
-  the cohort's own draws meet hers at every count: `cohort-d-01` all six, `cohort-a-13` and
-  `cohort-a-16` five), the ranking's crowd shares two and the New in Raketa joiners one — and
-  **a request each way from the row**, each pair read first: she asks `cohort-a-13`
-  (`SHE_ASKS`, five in common) and `cohort-d-01` (`ASKS_HER`, six) asks her. **A store seeded
-  before #795** committed her three, and the commit is idempotent, so the layer gives her the
-  six through *Edit tags*' own `ChangeSocialTags`, which records nothing once they are hers.
+  the cohort's own draws meet hers at every count: `cohort-a-01` all six, `cohort-a-15` and
+  `cohort-d-07` five — re-picked, two of them among ADR-0207's eight, when #832 redrew the
+  cohort from all twenty-seven tags), the ranking's crowd shares two, the For-fun deck's four
+  five to one, and the New in Raketa joiners none — and
+  **a request each way from the row**, each pair read first: she asks `cohort-a-15`
+  (`SHE_ASKS`, five in common) and `cohort-a-01` (`ASKS_HER`, six) asks her. **A store seeded
+  before #795** committed her three — and one seeded before #832 her old six — and the commit
+  is idempotent, so the layer gives her the six through *Edit tags*' own `ChangeSocialTags`,
+  which records nothing once they are hers; the runner does the same for every cohort member
+  whose stored tags aren't their row's (`_ensure_the_drawn_tags`, `seeds.md`).
   `assert_same_vibe` reads her row and every See all page among the screens and fails the run
   by name unless the row holds `min(10, See all)`, sits inside See all in the rule's order,
   **every count from one to six is in See all**, a friend shares two tags or more, and — **on
