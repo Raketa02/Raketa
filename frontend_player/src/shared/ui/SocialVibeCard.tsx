@@ -19,11 +19,11 @@
  *
  * ## Two features, one card
  *
- * A game still filling opens on it (`proposals`, #840) and a booked game and the game at the court
- * draw it next (`games`, #841) — two features that may not import each other, so it is here, as the
- * Balance forecast block is. **It came down ahead of its second caller**, as the row did (#838):
- * ADR-0207 §6 decides the same card is drawn on all three screens, so it is built where both
- * features reach it rather than copied out of `proposals` by #841. Each hands it a `SocialVibeGrid` read off its own read; **the card
+ * A game still filling opens on it (`proposals`, #840), and a booked game draws it — before its
+ * hour and at the court — where *A friendly — nothing moves.* stood (`games`' `GamePairingCard`,
+ * #841): two features that may not import each other, so it is here, as the Balance forecast block
+ * is. **It came down ahead of its second caller**, as the row did (#838), because ADR-0207 §6
+ * decides the same card is drawn on all three screens. Each hands it a `SocialVibeGrid` read off its own read; **the card
  * derives nothing**: which people are the columns and in what order, and which rows somebody else
  * shares, are the feature's rule. It only paints what it is handed, in its band's colours.
  *

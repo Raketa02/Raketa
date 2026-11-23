@@ -5,16 +5,16 @@
  * [#415](https://github.com/Raketa02/Raketa/issues/415)'s acceptance criteria for the block are
  * assertions in this file and opinions nowhere else — present with a forecast and absent without
  * one with no sentence saying why, the gap's sign as served, the bar's labels for doubles and
- * singles, the word and the tone per band, the counted and the friendly sentence, two stake tiles
- * or none, and a read that never fires on a result arm. The words are `gamePresentation.ts`' and
- * `shared/vocabulary/balancePresentation.ts`'.
+ * singles, the word and the tone per band, the counted sentence, two stake tiles or none, no
+ * forecast at all on a friendly (#841), and a read that never fires on a result arm. The words are
+ * `gamePresentation.ts`' and `shared/vocabulary/balancePresentation.ts`'.
  *
  * It walked the old loop's game screen at `/games/[id]` until that route was removed
  * ([#576](https://github.com/Raketa02/Raketa/issues/576)); the block is the same one, drawn on a
  * booked game's details (#556), so the walk is the details' now.
  */
 
-import { screen, waitFor, within } from 'expo-router/testing-library';
+import { act, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -37,6 +37,8 @@ import {
   stubPairing,
 } from '@/test-support/onboardingRouter';
 import { installTransport, type Transport, type Wire } from '@/test-support/transport';
+
+import { gameKeys } from '../hooks/gameKeys';
 
 import {
   BALANCE_FORECAST,
@@ -310,14 +312,24 @@ describe('the sentence, and the tiles', () => {
     expect(screen.getByText('−0,08')).toBeTruthy();
   });
 
-  /** A friendly: the sentence says nothing moves, and no tile is drawn — the wire omits the pair. */
-  it('says a friendly moves nothing, and draws no tile', async () => {
+  /**
+   * A friendly draws no forecast at all (#841, ADR-0207 §5) — not *A friendly — nothing moves.*, and
+   * not the forecast the pairing still sends for older apps. Its Social vibe card, drawn in the
+   * block's place, is walked in `proposals`' `bookedForFunGame.test.tsx`.
+   */
+  it('draws no forecast, sentence or tile on a friendly', async () => {
     await openTheGame({
       games: [game({ kind: 'FRIENDLY' })],
       court: pairing({ at_stake: undefined }),
     });
 
-    expect(await screen.findByText(forecastSentence('FRIENDLY')!)).toBeTruthy();
+    await waitFor(() =>
+      expect(queryClient.getQueryState(gameKeys.pairing(GAME))?.status).toBe('success'),
+    );
+    // The answer reaches the card on Query's next notify tick, a timer under the fake clock.
+    act(() => jest.advanceTimersByTime(0));
+    expect(screen.queryByText(BALANCE_FORECAST)).toBeNull();
+    expect(screen.queryByText('A friendly — nothing moves.')).toBeNull();
     expect(screen.queryByText(WIN_TILE)).toBeNull();
     expect(screen.queryByText(LOSE_TILE)).toBeNull();
   });

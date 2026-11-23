@@ -971,7 +971,7 @@ new is the block's own frame. The players card's words went with the card
 | The forecast block's eyebrow | `BALANCE FORECAST` | stored as words, drawn uppercase |
 | Between the two strengths | `gap` | lower case — a unit rather than a heading |
 | Under the figure, counted | `A counted game — a confirmed score moves everybody’s level.` | `worthLine`'s fact in the forecast's register — *movement*, beside the number that says how even — and not that sentence again four cards apart |
-| Under the figure, friendly | `A friendly — nothing moves.` | the negative, kept: true whether or not anything reads it |
+| Under the figure, friendly | ~~`A friendly — nothing moves.`~~ | **retired 2026-11-23 by #841**: a For-fun game draws the Social vibe card in the block's place (§33.1), so no forecast is drawn for it to stand under |
 | Under the figure, unreadable kind | *nothing* | §3's drop — the figure stands and the clause goes |
 | The stake tiles | `If you win` · `If you lose` | *if*, because on a game the result has not happened |
 
@@ -986,6 +986,11 @@ anything else.
 > moved with it below both features, to the player app's `shared/vocabulary/forecastPresentation.ts`
 > (the eyebrow, `gap`, the counted sentence, the two tiles, and §24.8's three spoken names);
 > `gamePresentation.ts` cites them and keeps the friendly's. Never drawn on For fun (ADR-0207 §5).
+>
+> **Amended 2026-11-23** ([#841](https://github.com/Raketa02/Raketa/issues/841)): **a booked For-fun
+> game draws the Social vibe card in the block's place** (§33.1), before its hour and at the court,
+> so the friendly's sentence is said nowhere and `gamePresentation.ts` keeps it no longer. A booked
+> competitive game is unchanged.
 
 ---
 
@@ -1711,8 +1716,9 @@ them, and the server still serves where a request was found:
 | Post a game's fit, spoken | `{name}, level {level}, Social vibe, {n} percent, {word}` · `zofia.b, level 2,69, Social vibe, 83 percent, Great vibe` | added 2026-11-23 by #842: the row's own sentence after the Level, *friend* after the name as before; a competitive fit keeps `a {pct} % even game` |
 
 **Where it is drawn next, and what each ticket adds.** The Social vibe card on a For-fun game's
-details (#840) draws the % with its word printed beside it and the grid of tags; the booked game and
-the game at the court draw that card (#841); the Friends card and Post a game's fits draw the % on
+details (#840) draws the % with its word printed beside it and the grid of tags; the booked game,
+before its hour and at the court, draws that card where the forecast's _A friendly — nothing
+moves._ stood, with the same words (#841, §25); the Friends card and Post a game's fits draw the % on
 For fun (#842, the rows above). Each cites this section's bands and adds its own sentences here.
 
 ### 33.1 The Social vibe card

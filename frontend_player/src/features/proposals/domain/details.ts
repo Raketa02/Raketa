@@ -15,7 +15,14 @@ import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { SocialVibeColumn, SocialVibeGrid } from '@/shared/vocabulary/socialVibeGrid';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { rowsOf, youAreIn, type DeckCard, type DeckPerson, type Overlap } from './deck';
+import {
+  rowsOf,
+  youAreIn,
+  type DeckCard,
+  type DeckPerson,
+  type DeckRow,
+  type Overlap,
+} from './deck';
 import type { YesOn, YourPayment } from './fill';
 import { deadlineAhead, paymentWindowAt, type Deadline, type YourTime } from './home';
 import type { CardType, CourtState, GameKind, ProposalStatus, ReaderAction } from './vocabulary';
@@ -177,7 +184,7 @@ function vibeGridOf(
   vibe: DetailsVibe,
   details: Pick<ProposalDetails, 'sides' | 'seats'>,
 ): SocialVibeGrid {
-  const columns = columnsOf(details);
+  const columns = vibeColumnsOf(rowsOf(details, details.seats / 2));
   return {
     pct: vibe.pct,
     columns,
@@ -192,8 +199,19 @@ function vibeGridOf(
   };
 }
 
-function columnsOf(details: Pick<ProposalDetails, 'sides' | 'seats'>): readonly SocialVibeColumn[] {
-  const { top, bottom } = rowsOf(details, details.seats / 2);
+/**
+ * **The Social vibe card's columns, off the tiles' own rows** — you first, then the others as the
+ * tiles stand, each with the face and the name the tile draws (ADR-0207 §6). A seat still open is
+ * nobody. The details' grid reads it, and so does a booked game's (#841), which hands it to the
+ * Game's pairing card in `games`: the Game's seats carry neither the tiles' order nor a photograph.
+ */
+export function vibeColumnsOf({
+  top,
+  bottom,
+}: {
+  readonly top: DeckRow;
+  readonly bottom: DeckRow;
+}): readonly SocialVibeColumn[] {
   const seated = [top, bottom].flatMap((row) =>
     row.seats.flatMap((seat) => (seat.kind === 'person' ? [seat.person] : [])),
   );

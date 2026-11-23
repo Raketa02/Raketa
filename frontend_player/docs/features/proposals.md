@@ -82,8 +82,8 @@ the vibe card and never a forecast, even one a read sent; competitive on its for
 vibe; nothing at all where the read sends none — fewer than two named, or nobody holding a tag that
 counts. A tag code this build can't name is left off by the mapper (ADR-0207 §7). **The card is
 `shared/ui`'s `SocialVibeCard`**, handed a `SocialVibeGrid` (`shared/vocabulary/socialVibeGrid.ts`),
-because the booked game and the game at the court draw it next (#841, `games`): the columns and the
-shared rows are each feature's rule, the paint the card's. **Live**: a tag saved in the You tab
+because a booked game draws it too (#841, `games`, below): the columns and the shared rows are each
+feature's rule, the paint the card's. **Live**: a tag saved in the You tab
 (`useChangeSocialTags`) marks every deck read and every details read stale, beside the record — the
 vibe is worked out on every read and stored nowhere — so a game reopened draws the new rows and
 number. Walked in `forFunDetails.test.tsx`. **Not seen on a device**: the card against for fun 7, the
@@ -405,8 +405,31 @@ with the court and the distance, DAY, TIME to the read's `ends_at`, and the mone
 (`moneyRow`); once the hour has come, today's **We played** / **Confirm the result**, which opens
 today's game screen at the Game the booking opened (`BookedGameResult`, `/booking/[id]/result`:
 `GameScreen` with the score leading and its three Classic slots empty); and the Game's own
-forecast (`games`' `GameForecast`) while the booking says to draw it. The filling details and the booked ones share `GameFacts` and
+pairing (`games`' `GamePairingCard`) while the booking says to draw it. The filling details and the booked ones share `GameFacts` and
 `OthersFaces`.
+
+**A booked For-fun game draws the Social vibe card where _A friendly — nothing moves._ stood**
+([#841](https://github.com/Raketa02/Raketa/issues/841); ADR-0207 §5, §6; the backend's #835), so a
+For-fun game reads the same before and after it is booked. The card under the game card is the
+**kind's**, chosen in `games` (`pairingCardOf`) off the Game's own pairing: For fun draws the vibe
+card — the court's number, and a row for each of your tags with a dot under everybody who carries it
+— and ignores the forecast the pairing still sends for older apps; competitive draws the Balance
+forecast and its stakes, unchanged. **On the same occasions, and to the same people, as the forecast
+was**: the booking's `shows_forecast` still decides whether the card is drawn at all — the game
+booked, and the game at the court (`NEEDS_RESULT`, its first half hour's door _Who's here_), every
+seat filled — and nothing where the pairing sends no vibe (a seat open, nobody holding a tag that
+counts), with no forecast standing in. **The columns are the tiles'**: this feature hands `games` the
+people as the tiles above stand, you first (`vibeColumnsOf`, shared with the details' grid), with
+the faces the booking carries — the Game's seats hold neither that order nor a photograph — and
+`games` sets the dots off the pairing's carriers. **On For fun the vs line is spoken**
+(`GameTiles`' `speaksSides`): the forecast's split row said who partners whom, and the vibe card
+does not. **Live**: a tag saved in the You tab marks the Game's pairing stale too, as it does the
+deck and the details, so the game reopened draws the new rows and number. Walked in
+`bookedForFunGame.test.tsx` — the booked game, the same game at the court, a competitive one
+unchanged, and a tag edit. **A call**: _the game at the court_ (ADR-0207 §5's table) is read as
+these details at the game's hour, the one surface that draws the court's pairing there — the result
+screen _Who's here_ opens (`BookedGameResult`) has drawn no pairing since Classic play left (#576),
+and §5's _no wider_ keeps it so. **Not seen on a device**: the card under a booked game's card.
 
 **The chat is reached from the details** (A4.4, §14.3) — and, since #619, from the Home card's
 bubble too (Q100, below). _Chat_ is drawn while the

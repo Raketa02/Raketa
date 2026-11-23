@@ -14,7 +14,9 @@
  *
  * **The rules stay in the features.** Which people are the columns and in what order, and which
  * rows another player shares, are read off each feature's own read: `proposals/domain/details.ts`
- * builds one from `GET /proposals/{id}`. The card derives nothing; it draws what it is handed.
+ * builds one from `GET /proposals/{id}`, and `games/domain/pairing.ts` one from the Game's
+ * `GET /games/{id}/pairing` over the columns the booked game's tiles hand it (#841). The card
+ * derives nothing; it draws what it is handed.
  */
 
 import type { SocialTagId } from './socialTags';

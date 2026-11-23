@@ -918,19 +918,20 @@ export {
 } from '@/shared/vocabulary/forecastPresentation';
 
 /**
- * **What a confirmed score does**, under the percentage — the counted game moves everybody, the
- * friendly moves nobody. `undefined` for a kind this build cannot read: the sentence is dropped
- * and the figure above it still stands, which is §3's split applied to a clause that keys no
- * total. It is `worthLine`'s fact in the forecast's register — *movement*, beside the number that
- * says how even — and not that sentence again, because the two sit on one screen four cards
- * apart and a reader who has read one should not be told it twice in the same words.
+ * **What a confirmed score does**, under the percentage — a counted game moves everybody's level.
+ * `undefined` for a kind this build cannot read: the sentence is dropped and the figure above it
+ * still stands, which is §3's split applied to a clause that keys no total. It is `worthLine`'s
+ * fact in the forecast's register — *movement*, beside the number that says how even — and not
+ * that sentence again, because the two sit on one screen four cards apart and a reader who has read
+ * one should not be told it twice in the same words. The sentence is the block's
+ * (`COUNTED_GAME_SENTENCE`): a competitive game's details say it too.
  *
- * **The counted sentence is the block's** (`COUNTED_GAME_SENTENCE`): a competitive game's details
- * say it too. The friendly is this feature's alone: the details never draw the block on For fun.
+ * **A friendly has no sentence, because it has no forecast** (#841, ADR-0207 §5): a For-fun game
+ * draws the Social vibe card where *A friendly — nothing moves.* stood (`pairingCardOf`), so the
+ * negative went with the block it stood under.
  */
 export function forecastSentence(kind: GameKind | undefined): string | undefined {
-  if (kind === undefined) return undefined;
-  return kind === 'COUNTED' ? COUNTED_GAME_SENTENCE : 'A friendly — nothing moves.';
+  return kind === 'COUNTED' ? COUNTED_GAME_SENTENCE : undefined;
 }
 
 /**

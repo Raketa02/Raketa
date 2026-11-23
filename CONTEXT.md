@@ -856,9 +856,9 @@ more.**
   whole court's, and a row for each of the reader's tags) since
   [#835](https://github.com/Raketa02/Raketa/issues/835); drawn by the app on the deck card
   ([#838](https://github.com/Raketa02/Raketa/issues/838)), the details
-  ([#840](https://github.com/Raketa02/Raketa/issues/840)) and the Friends card and Post a game
-  ([#842](https://github.com/Raketa02/Raketa/issues/842)), and not yet on the booked game —
-  [#841](https://github.com/Raketa02/Raketa/issues/841).
+  ([#840](https://github.com/Raketa02/Raketa/issues/840)), the Friends card and Post a game
+  ([#842](https://github.com/Raketa02/Raketa/issues/842)), and the booked game, before its hour and
+  at the court ([#841](https://github.com/Raketa02/Raketa/issues/841)).
   _Avoid_: vibe %, match %, compatibility.
 
 **Terms this context refuses**

@@ -8,7 +8,7 @@
  *
  * **What is exported is what has a caller**, and since the old loop's game card, its rail and the
  * `/games/[id]` route were removed ([#576](https://github.com/Raketa02/Raketa/issues/576)) every
- * caller is a booked game's: its result screen, its forecast on the details, and the writes that
+ * caller is a booked game's: its result screen, its pairing's card on the details, and the writes that
  * say the games list is out of date. The result argument's fold, the score's shape, the copy deck
  * and the writes stay internal.
  */
@@ -28,12 +28,13 @@ export { GameScreen, type BookedFacts, type GameScreenProps } from './components
 export { tapsAreOpen } from './domain/attendance';
 
 /**
- * **The forecast block alone**, for a surface that draws its own people — a booked game's details
- * (#556), whose tiles come from the booking with *paid* on each. One read of
+ * **The pairing's card alone**, for a surface that draws its own people — a booked game's details
+ * (#556), whose tiles come from the booking with *paid* on each: the forecast and its stakes on a
+ * competitive game, the Social vibe card on a For-fun one (#841, ADR-0207 §5). One read of
  * `GET /games/{game_id}/pairing` ([ADR-0161](../../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)),
- * absent when the pairing is refused.
+ * absent when the pairing is refused or sends nothing for the kind to draw.
  */
-export { GameForecast, type GameForecastProps } from './components/GameForecast';
+export { GamePairingCard, type GamePairingCardProps } from './components/GamePairingCard';
 
 /**
  * **The forecast's own heading**, exported for the suite that walks a booked game's details: a test

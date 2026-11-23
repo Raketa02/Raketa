@@ -4630,7 +4630,7 @@ yours    only you: no band · vibeGrey words, the regular weight · a line dot
 **For fun's full card, where a competitive game draws its Balance forecast**
 ([#840](https://github.com/Raketa02/Raketa/issues/840); ADR-0207 §6, §8, §9.1–§9.3; for fun 7,
 which leads over 5 and 6). `SocialVibeCard` in `shared/ui`, drawn first on a For-fun game's details
-([7.22](#722-the-game-card)) and next on the booked game and at the court (#841). It is handed a
+([7.22](#722-the-game-card)) and on a booked one, before its hour and at the court, under the game card (#841). It is handed a
 `SocialVibeGrid` and derives nothing: the columns' order and which rows are shared are each
 feature's rule. **The top is the deck card's number** (7.38's bands, `socialVibeBand`), the bar full
 width below the figure and its word, as mock 7 draws it — not beside the word, as the brief said —

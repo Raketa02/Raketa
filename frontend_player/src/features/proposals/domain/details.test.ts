@@ -1,10 +1,11 @@
-import type { DeckPerson } from './deck';
+import { rowsOf, type DeckPerson } from './deck';
 import {
   completesTheGame,
   courtOfDetails,
   detailsCanRunOut,
   paymentDueOf,
   topCardOf,
+  vibeColumnsOf,
   yesOnDetails,
   type ProposalDetails,
 } from './details';
@@ -303,5 +304,48 @@ describe('topCardOf — For fun opens on the Social vibe card (#840, ADR-0207 §
   /** The read sends none where fewer than two are named, or nobody holds a tag that counts. */
   it('is nothing where the read sends no vibe', () => {
     expect(forFun(undefined)).toBeUndefined();
+  });
+});
+
+describe('vibeColumnsOf — a booked game’s Social vibe columns, off its tiles (#841)', () => {
+  /** A booked four: everybody In, so your side is the top row and each side stands as dealt. */
+  const booked = {
+    yours: [
+      person('piotr', { isIn: true, name: 'piotr.s' }),
+      person('me', { isYou: true, isIn: true, name: 'ola.k', photoUrl: 'https://img/me' }),
+    ],
+    theirs: [
+      person('ines', { isIn: true, name: 'ines.d', photoUrl: 'https://img/ines' }),
+      person('bartek', { isIn: true }),
+    ],
+  };
+
+  it('is you first, then the others as the tiles stand', () => {
+    const columns = vibeColumnsOf(rowsOf({ sides: booked }, 2));
+
+    expect(columns.map((column) => column.playerId)).toEqual(['me', 'piotr', 'ines', 'bartek']);
+  });
+
+  /** The faces the tiles draw: the photograph where there is one, the name where they are named. */
+  it('carries each face and name the tiles carry, and nothing for one never named', () => {
+    const columns = vibeColumnsOf(rowsOf({ sides: booked }, 2));
+
+    expect(columns).toEqual([
+      { playerId: 'me', isYou: true, name: 'ola.k', photoUrl: 'https://img/me' },
+      { playerId: 'piotr', isYou: false, name: 'piotr.s' },
+      { playerId: 'ines', isYou: false, name: 'ines.d', photoUrl: 'https://img/ines' },
+      { playerId: 'bartek', isYou: false },
+    ]);
+  });
+
+  /** A seat open is nobody: no column stands for it. */
+  it('draws no column for an open seat', () => {
+    const short = { ...booked, theirs: [person('ines', { isIn: true, name: 'ines.d' })] };
+
+    expect(vibeColumnsOf(rowsOf({ sides: short }, 2)).map((column) => column.playerId)).toEqual([
+      'me',
+      'piotr',
+      'ines',
+    ]);
   });
 });

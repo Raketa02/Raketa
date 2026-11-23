@@ -26,11 +26,22 @@
  * is omitted on a friendly — *meaningless rather than unavailable* — and where the rule has
  * nothing to move. `seats` names whoever holds a rating, in the court's own order; somebody
  * unrated is simply not in it, and their row draws a handle with no Level under it.
+ *
+ * ## A For-fun game carries its Social vibe, and draws it in the forecast's place
+ *
+ * [#841](https://github.com/Raketa02/Raketa/issues/841) (ADR-0207 §5, §12; the backend's #835):
+ * `vibe` is a For-fun game's alone — omitted on a competitive game, while a seat is open, and where
+ * nobody on the court holds a tag that counts. The forecast is **still sent** on For fun, for the
+ * apps already on phones, and this build ignores it there: **the kind decides the card**
+ * ({@link pairingCardOf}), never which blocks happened to arrive.
  */
 
 import type { AppError } from '@/shared/errors';
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
+import type { SocialVibeColumn, SocialVibeGrid } from '@/shared/vocabulary/socialVibeGrid';
 
 import type { GameSeat } from './game';
+import type { GameKind } from './vocabulary';
 
 /** How even the game is forecast to be, **in your direction** — the served evenness, whole or not. */
 export interface PairingForecast {
@@ -78,6 +89,95 @@ export interface Pairing {
   readonly atStake?: AtStake;
   /** One row per seat whose person holds a rating, in the court's own order. */
   readonly seats: readonly PairingSeat[];
+  /**
+   * A **For-fun** game's Social vibe and your tags' rows (#835). Never sent on a competitive game,
+   * while a seat is open, nor where nobody on the court holds a tag that counts.
+   */
+  readonly vibe?: PairingVibe;
+}
+
+/**
+ * **How much the whole court shares, and who shares yours** — the number its card and its details
+ * showed before the last yes, and one row per tag **you** hold, in the vocabulary's order, 💘 too
+ * (ADR-0207 §6). Worked out from everybody's tags on every read, and stored nowhere.
+ */
+export interface PairingVibe {
+  /** A whole percent: the court's number. */
+  readonly pct: number;
+  /** Your tags this build can name — a code it doesn't know is left off by the mapper. */
+  readonly rows: readonly PairingVibeRow[];
+}
+
+export interface PairingVibeRow {
+  readonly tag: SocialTagId;
+  /**
+   * Everybody on the court who carries it, **in your direction** — you, the rest of your side, the
+   * other side. Never resorted here: the grid's dots stand in its own columns' order.
+   */
+  readonly carriedBy: readonly string[];
+}
+
+/**
+ * **The card the court's pairing draws** — the kind's own: a competitive game's forecast, its split
+ * and what is at stake; a For-fun game's Social vibe card with its grid (#841, ADR-0207 §5).
+ */
+export type PairingCard =
+  | {
+      readonly kind: 'forecast';
+      readonly forecast: PairingForecast;
+      readonly split: PairingSplit;
+      readonly atStake?: AtStake;
+    }
+  | { readonly kind: 'vibe'; readonly grid: SocialVibeGrid };
+
+/**
+ * **The kind's own card, or nothing** (ADR-0207 §5). A For-fun game draws its **Social vibe** where
+ * *A friendly — nothing moves.* stood, and the forecast #835 still sends for older apps is ignored;
+ * any other game draws its forecast, the stakes inside it when the pairing sends them — and a vibe a
+ * read sent anyway is not drawn. A kind this build cannot read keeps today's drawing, the forecast.
+ * Nothing where the pairing sends nothing to draw, with no reason beside the absence (ADR-0161 §4).
+ *
+ * **The columns are handed in** — you first, then the others as the composer's tiles stand (ADR-0207
+ * §6), each with the face the composer holds: the Game's seats carry neither an order the tiles
+ * follow nor a photograph.
+ */
+export function pairingCardOf(
+  kind: GameKind | undefined,
+  pairing: Pairing,
+  columns: readonly SocialVibeColumn[],
+): PairingCard | undefined {
+  if (kind === 'FRIENDLY') {
+    return pairing.vibe === undefined
+      ? undefined
+      : { kind: 'vibe', grid: vibeGridOf(pairing.vibe, columns) };
+  }
+  if (pairing.forecast === undefined || pairing.split === undefined) return undefined;
+  return {
+    kind: 'forecast',
+    forecast: pairing.forecast,
+    split: pairing.split,
+    ...(pairing.atStake === undefined ? {} : { atStake: pairing.atStake }),
+  };
+}
+
+/**
+ * **The Social vibe card's grid**: a dot under every carrier, in the columns' order, and a row
+ * **shared** when somebody else with a column carries it — a dot nobody can see would be a band
+ * that claims more than the row shows. The rows are the read's, never resorted here.
+ */
+function vibeGridOf(vibe: PairingVibe, columns: readonly SocialVibeColumn[]): SocialVibeGrid {
+  return {
+    pct: vibe.pct,
+    columns,
+    rows: vibe.rows.map((row) => {
+      const dots = columns.map((column) => row.carriedBy.includes(column.playerId));
+      return {
+        tag: row.tag,
+        dots,
+        shared: columns.some((column, at) => !column.isYou && dots[at] === true),
+      };
+    }),
+  };
 }
 
 /** The court split in two, each half in the reader's order. */

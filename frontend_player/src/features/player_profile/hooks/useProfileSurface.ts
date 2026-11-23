@@ -26,6 +26,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { gameKeys } from '@/features/games/types';
 import { playerRecordKeys } from '@/features/player_record/types';
 import { proposalKeys } from '@/features/proposals/types';
 import type { AppError } from '@/shared/errors';
@@ -122,7 +123,8 @@ export function useDeclarePlayIntent() {
  * **And every read that draws a Social vibe is stale** (ADR-0207 §2, #840): the vibe is worked out
  * from everybody's tags on every read and stored nowhere, so a For-fun card's %, a game's details
  * with your tags' rows — and the Fill in, posting and Friends reads under each group's deck root —
- * move with the edit. Invalidated, never patched: the number is the server's.
+ * and a booked For-fun game's pairing, with its court's vibe (#841), move with the edit.
+ * Invalidated, never patched: the number is the server's.
  *
  * **Marked stale, and not read again now** (`refetchType: 'none'`). The server reads everybody's
  * tags from Discovery's directory, a copy the outbox writes after this save has answered — so a deck
@@ -144,6 +146,7 @@ export function useChangeSocialTags() {
       void client.invalidateQueries({ queryKey: playerRecordKeys.all });
       void client.invalidateQueries({ queryKey: proposalKeys.decks(), refetchType: 'none' });
       void client.invalidateQueries({ queryKey: proposalKeys.proposals(), refetchType: 'none' });
+      void client.invalidateQueries({ queryKey: gameKeys.pairings(), refetchType: 'none' });
     },
   });
 }

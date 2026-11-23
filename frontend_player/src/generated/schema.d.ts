@@ -1263,11 +1263,13 @@ export interface paths {
         };
         /**
          * The game's pairing
-         * @description **The game screen's forecast, split, stakes and Levels, computed when you ask.** Nothing here is stored on the game, and nothing on `GET /games` changes: a seat there still carries a name and nothing else.
+         * @description **The game screen's forecast, split, stakes, Levels and — on For fun — Social vibe, computed when you ask.** Nothing here is stored on the game, and nothing on `GET /games` changes: a seat there still carries a name and nothing else.
          *
          *     **Read in your direction.** `split.gap` is your side's strength minus theirs, and `at_stake` is what a counted result would do to *your* Level — the rating engine's own rule read forward, side against side, so it is the pair the result will deliver.
          *
-         *     **Three blocks, each omitted on its own ground.** `forecast` and `split` are omitted together when the pairing cannot be computed — somebody on the court holds no rating in the sport, or a seat could not be priced — and there is deliberately no reason beside the absence. `at_stake` is omitted on a friendly, where a counted result is meaningless rather than unavailable, and where the rule has nothing to move or nothing to price against — you hold no rating in the sport, or nobody across the net does. `seats` names the Level of everybody the platform holds one for.
+         *     **Each block is omitted on its own ground.** `forecast` and `split` are omitted together when the pairing cannot be computed — somebody on the court holds no rating in the sport, or a seat could not be priced — and there is deliberately no reason beside the absence. `at_stake` is omitted on a friendly, where a counted result is meaningless rather than unavailable, and where the rule has nothing to move or nothing to price against — you hold no rating in the sport, or nobody across the net does. `seats` names the Level of everybody the platform holds one for.
+         *
+         *     **A For-fun game carries its Social vibe** (`vibe`, #835): the court's number — the one its card and its details showed — and a row for each of your tags, naming who on the court carries it, worked out from everybody's tags now. Omitted on a competitive game, while a seat is open, and where nobody holds a tag that counts. The forecast is still sent on a For-fun game, for the apps already on phones; draw the vibe in its place.
          *
          *     **Only while the game is awaiting an entry.** After *we played* — or after the entry window closed on silence — the route refuses, because a pairing is a claim about a game that has not happened.
          */
@@ -5252,16 +5254,22 @@ export interface components {
          *     refuses once it has. Nothing on `GET /games` changes: a seat there still
          *     carries a name and nothing else.
          *
-         *     **Three blocks, and each is omitted on its own ground.** `forecast` and
+         *     **Four blocks, and each is omitted on its own ground.** `forecast` and
          *     `split` go together — one computation — and are omitted when the pairing
          *     cannot be computed: somebody on the court holds no rating in the sport, or
          *     a seat could not be priced. There is no reason beside the absence; draw
          *     nothing and say nothing. `at_stake` is omitted on a friendly, where a
          *     counted result is *meaningless rather than unavailable*, and where the rule
          *     has nothing to move or nothing to price against — you hold no rating in
-         *     the sport, or nobody across the net does. `seats` names the Level of
+         *     the sport, or nobody across the net does. `vibe` is a For-fun game's alone
+         *     (#835): omitted on a competitive game, while a seat is open, and where
+         *     nobody on the court holds a tag that counts. `seats` names the Level of
          *     everybody the platform holds one for, and a court with an unrated member
          *     still names the rated ones.
+         *
+         *     **A For-fun game still carries its forecast**, for the apps already on
+         *     phones; an app that draws the vibe draws it in the forecast's place and
+         *     ignores the forecast (`docs/adr/0207` §12).
          */
         GamePairingResponse: {
             /**
@@ -5276,6 +5284,8 @@ export interface components {
             split?: components["schemas"]["GamePairingSplitSchema"];
             /** @description What a counted result would do to your Level. **Omitted on a friendly** — meaningless rather than unavailable — and omitted where you hold no rating in this sport, or nobody on the other side does. A side with one unrated seat is priced over the people on it who are rated, because that is what the result will do. Never a pair of zeros. */
             at_stake?: components["schemas"]["GamePairingAtStakeSchema"];
+            /** @description A For-fun game's Social vibe: the court's number and a row for each of your tags. **Omitted on a competitive game**, while a seat is open — the court that will play is not yet known — and where nobody on the court holds a tag that counts. Worked out from everybody's tags now, so a tag edit moves it on the next read. */
+            vibe?: components["schemas"]["GamePairingVibeSchema"];
             /**
              * Seats
              * @description One row per seat whose person holds a rating in this sport, in the court's own order. Somebody unrated is simply not here.
@@ -5333,6 +5343,42 @@ export interface components {
             their_side: number;
             /** Gap */
             gap: number;
+        };
+        /**
+         * GamePairingVibeRowSchema
+         * @description One row of the Social vibe card's grid: one of **your** tags, and who on
+         *     the court carries it.
+         *
+         *     Named for its surface rather than reusing the details' row: a second class
+         *     of that name would rename it in the contract (``docs/adr/0159``).
+         */
+        GamePairingVibeRowSchema: {
+            /** @description A tag's code — the app owns its emoji and label, and skips a code it doesn't know. */
+            tag: components["schemas"]["SocialTag"];
+            /**
+             * Carried By
+             * @description Everybody on the court who carries it, **in your direction**: you first, then the rest of your side, then the other side — each side in the order `GET /games` lists the game's seats in, which names everybody (`seats` here leaves out the unrated). Never empty: you carry every row. Only you: the row is yours alone.
+             */
+            carried_by: string[];
+        };
+        /**
+         * GamePairingVibeSchema
+         * @description A For-fun game's **Social vibe card** (`docs/adr/0207` §5, §6): how much
+         *     the whole court shares, and who shares yours. Worked out from everybody's
+         *     tags now, on every read, and stored nowhere — the number its card and its
+         *     details showed before it was booked.
+         */
+        GamePairingVibeSchema: {
+            /**
+             * Pct
+             * @description How much the whole court shares, counting everyone's tags — the card's own number. 0–100, rounded half up.
+             */
+            pct: number;
+            /**
+             * Rows
+             * @description One per tag **you** hold, in the vocabulary's order — 💘 `OPEN_TO_MEET_SOMEONE` too, drawn like any other row though it never counts in `pct`. None of the others' tags you don't hold.
+             */
+            rows: components["schemas"]["GamePairingVibeRowSchema"][];
         };
         /**
          * GameSchema

@@ -20,7 +20,7 @@
  *
  * ## Two features, one block
  *
- * `games` draws it through `GameForecast`, which a booked game's details compose while the full
+ * `games` draws it through `GamePairingCard`, which a booked game's details compose while the full
  * game awaits its entry; **a competitive game's details open on it** (`proposals`, #839), the top
  * card a player reads before saying yes. Two features that may not import each other draw it, so
  * it came here from `games` — ADR-0207 §6's own decision — with its tiles and its words
@@ -33,9 +33,9 @@
  * **there is deliberately no reason beside the absence**: the surface that composes this draws
  * nothing and says nothing. So the props require both halves, and this component holds no branch
  * for their absence — a block that could be mounted with nothing to draw would be a block somebody
- * eventually gives a sentence to. Whether it is drawn at all is the composer's: the details never
- * draw it on For fun (ADR-0207 §5); a booked For-fun game still draws it, with the friendly's
- * sentence, until its Social vibe card takes the place (#841).
+ * eventually gives a sentence to. Whether it is drawn at all is the composer's: **never on For
+ * fun** (ADR-0207 §5) — the details open on the Social vibe card, and a booked For-fun game draws
+ * that card in this block's place (#841), so *A friendly — nothing moves.* is said nowhere.
  *
  * ## No arithmetic, and the bar is fed the served gap
  *

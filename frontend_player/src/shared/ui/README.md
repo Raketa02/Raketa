@@ -148,18 +148,18 @@ through what holds it (`useTopOnPage`), and a page that watches shows what a lin
 `SocialVibeRow` (7.38) — the % beside a 0–100 bar filled to it, _Social vibe_ inside, coloured by
 `shared/vocabulary`'s `socialVibeBand`. **It came down ahead of its second caller**, as ADR-0207 §9.4
 decides: it is the deck card's row, the Friends card's (#842), and a part of the Social vibe
-card, which the game at the court draws in `games` (#841) — so it is built where both features reach
+card, which a booked game draws in `games` (#841) — so it is built where both features reach
 it rather than copied out of `proposals` later. And by a competitive game's details
 ([#839](https://github.com/Raketa02/Raketa/issues/839)): **`ForecastBlock`** — _BALANCE FORECAST_,
 both side levels and the gap, 7.11's bar, the % and its word, the sentence, and **`StakeTiles`**
 (7.14 as amended: _If you win_ / _If you lose_, two or none) — moved here from `games`, unchanged,
-because the booked game (`games`' `GameForecast`) and the details (`proposals`) both draw it
+because the booked game (`games`' `GamePairingCard`) and the details (`proposals`) both draw it
 (ADR-0207 §6). Its words are `shared/vocabulary/forecastPresentation.ts`'. And by a For-fun game's
 details ([#840](https://github.com/Raketa02/Raketa/issues/840)): **`SocialVibeCard`** (7.39) —
 _SOCIAL VIBE_, the % and its word over a full-width bar, then the grid of your tags with a dot under
 each carrier, on paper in `voltPale` and the olive inks. It is handed a `SocialVibeGrid`
 (`shared/vocabulary/socialVibeGrid.ts`) and derives nothing, because the details (`proposals`) and
-the booked game (`games`, #841) each build one from their own read.
+the booked game (`games`' `GamePairingCard`, #841) each build one from their own read.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

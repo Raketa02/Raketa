@@ -18,8 +18,16 @@
  * │ ▎       · free to leave until then          │
  * └─────────────────────────────────────────────┘
  * [ We played ]                                     the result, once the hour has come
- * BALANCE FORECAST …                                the Game's own forecast (details 9)
+ * BALANCE FORECAST …  /  SOCIAL VIBE …              the Game's own pairing, as its kind's card
  * ```
+ *
+ * **The pairing's card is the kind's** (#841, ADR-0207 §5): a competitive game draws the Balance
+ * forecast and its stakes, as it always did; **a For-fun game draws the Social vibe card** its
+ * details opened on before the last yes, where *A friendly — nothing moves.* stood — so a For-fun
+ * game reads the same before and after it is booked, and at the court. It is `games`'
+ * `GamePairingCard`, drawn on the same occasions as the forecast was (`showsForecast`); its columns
+ * are the tiles' own people, in the tiles' order (`vibeColumnsOf`), and on For fun the vs line is
+ * spoken, since the vibe card does not say who partners whom and the forecast's split row did.
  *
  * **Nothing to show at the desk** (ADR-0195): players walk straight to the court, so the details
  * carry no QR code and no check-in code, on the game's day or any other.
@@ -104,13 +112,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { OPEN_THE_CHAT, useBookingRoom } from '@/features/conversations/types';
-import { GameForecast, tapsAreOpen } from '@/features/games/types';
+import { GamePairingCard, tapsAreOpen } from '@/features/games/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { formatZloty } from '@/shared/formatting/ratingFormat';
 import { showToast } from '@/shared/store/toast.store';
 import { behindOverlay, Button, courtSeatCount, ScreenHeader, theme } from '@/shared/ui';
 
 import { peopleOn, rowsOf, type DeckPerson } from '../domain/deck';
+import { vibeColumnsOf } from '../domain/details';
 import { confirmationOf, paymentToConfirmOn, yesOnRescue } from '../domain/fill';
 import { seatsShown, twoWayLeaveIn } from '../domain/friendsGame';
 import {
@@ -312,6 +321,8 @@ function Booked({
               fill={false}
               onPerson={setReading}
               {...(rescue === undefined ? {} : { rescue: { share } })}
+              // For fun draws no forecast, whose split row said the sides — so the line says them.
+              speaksSides={game.kind === 'forFun'}
             />
 
             <GameFacts facts={facts} accent={ink} />
@@ -361,7 +372,11 @@ function Booked({
           )}
 
           {game.showsForecast && me !== undefined && game.gameId !== undefined ? (
-            <GameForecast gameId={game.gameId} playerId={me} />
+            <GamePairingCard
+              gameId={game.gameId}
+              playerId={me}
+              columns={vibeColumnsOf({ top, bottom })}
+            />
           ) : null}
 
           {rescue === undefined || toConfirm !== undefined ? null : (
