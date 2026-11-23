@@ -15,13 +15,23 @@
 
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
-import { Pressable, Text, type ViewStyle } from 'react-native';
+import {
+  Dimensions,
+  Pressable,
+  StyleSheet,
+  Text,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { getAnimatedStyle, ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
+import { SafeAreaProvider, type Rect } from 'react-native-safe-area-context';
 
 import type { SystemBarsPort } from '@/shared/lib/platform';
 import { ReducedMotionProvider, theme, useCoveredBySplash } from '@/shared/ui';
 import { fakeSystemBars } from '@/test-support/platform';
 
+import { splashGeometry, WORDMARK_FACE } from './domain/splashGeometry';
+import type { SplashFace } from './fonts';
 import { LaunchGate } from './LaunchGate';
 import type { LaunchWindow } from './launchWindow';
 import { useSplashHold } from './splashHold';
@@ -31,6 +41,8 @@ const FADE_AT = 2600;
 const FADE_AT_REDUCED = 900;
 const FADE = 500;
 const GLOW_IN = 390;
+/** The lockup's short fade-in, under both variants until the ball flies (#855, #856). */
+const LOCKUP_IN = 150;
 
 /** A few frames of a 60 Hz screen: long enough for an animation started on a tick to show. */
 const A_FEW_FRAMES = 50;
@@ -43,7 +55,16 @@ const HIDDEN_TOO = { includeHiddenElements: true } as const;
 
 const SPLASH = 'drawn-splash';
 const GLOW = 'splash-glow';
+const GROUND = 'splash-ground';
+const LOCKUP = 'splash-lockup';
+const DOT = 'splash-dot';
 const APP = 'app-root';
+
+/** The phone's full screen, as React Native's own test setup reports it. */
+const SCREEN = Dimensions.get('screen');
+
+/** A view that covers the whole screen, as an iPhone's does. */
+const WHOLE_SCREEN: Rect = { x: 0, y: 0, width: SCREEN.width, height: SCREEN.height };
 
 const LAYOUT = { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } };
 
@@ -91,6 +112,27 @@ interface Launch {
   readonly run?: () => Promise<void>;
   readonly reduced?: boolean;
   readonly app?: ReactNode;
+  /**
+   * Where the app's view stands on the screen, as the root's safe-area provider reports it —
+   * `null` for a tree with no provider above the gate at all.
+   */
+  readonly view?: Rect | null;
+  /** The wordmark's face. The device's — already loaded, as jest's font registry says — if unsaid. */
+  readonly face?: SplashFace;
+}
+
+/** A face the phone does not have yet: it loads when the test says so, or fails to. */
+function faceStillLoading(): SplashFace & {
+  readonly arrive: () => Promise<void>;
+  readonly fail: () => Promise<void>;
+} {
+  const loading = deferred();
+  return {
+    loaded: () => false,
+    load: () => loading.promise,
+    arrive: () => act(async () => loading.resolve()),
+    fail: () => act(async () => loading.reject(new Error('the face could not be read'))),
+  };
 }
 
 /** Says, in words, whether the splash still covers the tree it is drawn in. */
@@ -101,24 +143,34 @@ function Covered() {
 /**
  * The tree the root renders. **Under reduced motion the OS has said so to Reanimated too**, which
  * every animation consults unless told otherwise — so a fade that took the OS's word would jump
- * to its end on a phone, and this is where it would show.
+ * to its end on a phone, and this is where it would show. The safe-area provider is the root's,
+ * above the gate, with the view's place on the screen as its frame.
  */
 function tree(
-  { run, reduced = false, app = <TheApp /> }: Launch,
+  { run, reduced = false, app = <TheApp />, view = WHOLE_SCREEN, face }: Launch,
   launchWindow: LaunchWindow,
   systemBars: SystemBarsPort,
 ) {
-  return (
+  const gate = (
     <ReducedMotionProvider value={reduced}>
       {reduced ? <ReducedMotionConfig mode={ReduceMotion.Always} /> : null}
       <LaunchGate
         run={run ?? (() => Promise.resolve())}
         launchWindow={launchWindow}
         systemBars={systemBars}
+        splashFace={face}
       >
         {app}
       </LaunchGate>
     </ReducedMotionProvider>
+  );
+  if (view === null) return gate;
+  return (
+    <SafeAreaProvider
+      initialMetrics={{ frame: view, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}
+    >
+      {gate}
+    </SafeAreaProvider>
   );
 }
 
@@ -602,5 +654,190 @@ describe('under reduced motion', () => {
 
     clockTo(FADE_AT + FADE);
     expect(splashIsUp()).toBe(false);
+  });
+});
+
+/**
+ * **The lockup** (#855): *Rakieta* and its volt dot, centred together on the whole screen. Where each
+ * letter stands is the geometry's, tested on its own (`domain/splashGeometry.test.ts`) and pinned to
+ * the font (`splashWordmark.test.ts`); what this suite holds is that the splash draws what it says,
+ * on the phone it finds — the screen, and where the app's view starts on it.
+ */
+describe('the lockup', () => {
+  /** The letters the splash sets, in the order it draws them. */
+  function letters() {
+    return screen.queryAllByText(/^[A-Za-z]$/, HIDDEN_TOO);
+  }
+
+  function styleOf(testIDOrElement: string | ReturnType<typeof screen.getByTestId>): TextStyle {
+    const element =
+      typeof testIDOrElement === 'string'
+        ? screen.getByTestId(testIDOrElement, HIDDEN_TOO)
+        : testIDOrElement;
+    return StyleSheet.flatten(element.props.style) as TextStyle;
+  }
+
+  /** Where the geometry puts everything, for this suite's screen and a view at `view`. */
+  function placedFor(view: Rect) {
+    return splashGeometry(
+      { screen: SCREEN, view },
+      {
+        face: WORDMARK_FACE,
+        fontSize: theme.type.splashWord.fontSize,
+        letterSpacing: theme.type.splashWord.letterSpacing,
+      },
+    );
+  }
+
+  it('sets Rakieta as seven letters in pure white, the volt dot after them', async () => {
+    await launchReady();
+
+    expect(letters().map((letter) => letter.props.children)).toEqual([
+      'R',
+      'a',
+      'k',
+      'i',
+      'e',
+      't',
+      'a',
+    ]);
+    letters().forEach((letter) => {
+      expect(styleOf(letter).color).toBe(theme.color.surface);
+      expect(styleOf(letter).fontFamily).toBe(theme.type.splashWord.fontFamily);
+      expect(styleOf(letter).fontSize).toBe(42);
+    });
+    expect(styleOf(DOT).backgroundColor).toBe(theme.color.volt);
+    expect(styleOf(DOT).width).toBe(12);
+    expect(styleOf(DOT).height).toBe(12);
+  });
+
+  it('keeps its size whatever the phone’s text size, and tracks its letters itself', async () => {
+    await launchReady();
+
+    letters().forEach((letter) => {
+      expect(letter.props.allowFontScaling).toBe(false);
+      // The tracking is in where each letter stands; on a lone letter it would only move it.
+      expect(styleOf(letter).letterSpacing).toBeUndefined();
+      expect(styleOf(letter).lineHeight).toBeUndefined();
+    });
+  });
+
+  it('is in place within 0,15 s of the splash’s first layout', async () => {
+    launch();
+    expect(opacityOf(LOCKUP)).toBe(0);
+
+    layOutTheSplash();
+    await settle();
+
+    clockTo(LOCKUP_IN / 2);
+    expect(opacityOf(LOCKUP)).toBeGreaterThan(0);
+    expect(opacityOf(LOCKUP)).toBeLessThan(1);
+
+    clockTo(LOCKUP_IN + A_FEW_FRAMES);
+    expect(opacityOf(LOCKUP)).toBe(1);
+  });
+
+  it('comes in the same way under reduced motion — a fade, not a cut', async () => {
+    launch({ reduced: true });
+    layOutTheSplash();
+    await settle();
+
+    clockTo(LOCKUP_IN / 2);
+    expect(opacityOf(LOCKUP)).toBeGreaterThan(0);
+    expect(opacityOf(LOCKUP)).toBeLessThan(1);
+
+    clockTo(LOCKUP_IN + A_FEW_FRAMES);
+    expect(opacityOf(LOCKUP)).toBe(1);
+  });
+
+  it('stands each letter and the dot where the geometry puts them on this screen', async () => {
+    await launchReady();
+    const placed = placedFor(WHOLE_SCREEN);
+
+    letters().forEach((letter, i) => {
+      expect(styleOf(letter).left).toBe(placed.letters[i]!.x);
+      expect(styleOf(letter).top).toBe(placed.letters[i]!.y);
+    });
+    expect(styleOf(DOT).left).toBe(placed.dot.x - 6);
+    expect(styleOf(DOT).top).toBe(placed.dot.y - 6);
+  });
+
+  it('is centred on the screen, not on a view that starts below an opaque status bar', async () => {
+    const STATUS_BAR = 24;
+    const NAVIGATION_BAR = 48;
+    const view = {
+      x: 0,
+      y: STATUS_BAR,
+      width: SCREEN.width,
+      height: SCREEN.height - STATUS_BAR - NAVIGATION_BAR,
+    };
+    await launchReady({ view });
+
+    // The dot's centre, back on the screen: the floor, 14 pt under the screen's own midline.
+    const dot = styleOf(DOT);
+    expect(Number(dot.top) + 6 + STATUS_BAR).toBeCloseTo(SCREEN.height / 2 + 14, 9);
+    expect(dot.left).toBe(placedFor(view).dot.x - 6);
+    expect(styleOf(letters()[0]!).top).toBe(placedFor(view).letters[0]!.y);
+  });
+
+  it('takes the view to cover the screen where no safe-area provider says otherwise', async () => {
+    await launchReady({ view: null });
+    const placed = placedFor(WHOLE_SCREEN);
+
+    expect(letters()).toHaveLength(7);
+    expect(styleOf(DOT).left).toBe(placed.dot.x - 6);
+    expect(styleOf(DOT).top).toBe(placed.dot.y - 6);
+  });
+
+  it('lays the ground and its glow out in the whole screen’s box, from above such a view', async () => {
+    const view = { x: 0, y: 24, width: SCREEN.width, height: SCREEN.height - 24 };
+    await launchReady({ view });
+
+    expect(styleOf(GROUND)).toMatchObject({
+      left: 0,
+      top: -24,
+      width: SCREEN.width,
+      height: SCREEN.height,
+    });
+  });
+
+  it('sets no letter before its face has loaded, and comes in once it has', async () => {
+    const face = faceStillLoading();
+    launch({ face });
+    layOutTheSplash();
+    await settle();
+
+    clockTo(LOCKUP_IN + A_FEW_FRAMES);
+    expect(letters()).toHaveLength(0);
+    expect(opacityOf(LOCKUP)).toBe(0);
+
+    await face.arrive();
+    const arrivedAt = Date.now() - splashLaidOutAt;
+    expect(letters()).toHaveLength(7);
+
+    clockTo(arrivedAt + LOCKUP_IN + A_FEW_FRAMES);
+    expect(opacityOf(LOCKUP)).toBe(1);
+  });
+
+  it('sets no letter in a face that could not be read, and comes in as its dot alone', async () => {
+    const face = faceStillLoading();
+    launch({ face });
+    layOutTheSplash();
+
+    await face.fail();
+    const failedAt = Date.now() - splashLaidOutAt;
+
+    clockTo(failedAt + LOCKUP_IN + A_FEW_FRAMES);
+    expect(letters()).toHaveLength(0);
+    expect(screen.getByTestId(DOT, HIDDEN_TOO)).toBeTruthy();
+    expect(opacityOf(LOCKUP)).toBe(1);
+  });
+
+  it('fades with the rest of the splash, and goes with it', async () => {
+    await launchReady();
+
+    clockTo(FADE_AT + FADE);
+    expect(screen.queryByTestId(LOCKUP, HIDDEN_TOO)).toBeNull();
+    expect(letters()).toHaveLength(0);
   });
 });

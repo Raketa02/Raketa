@@ -115,7 +115,9 @@ review comment and a test description all use the same word.
   plain `#0B2B33` field with no icon (`app.config.ts`, the splash-screen plugin), the drawn splash's edge
   colour, so the two read as one field. _Avoid_: "native splash" as if it were the app's splash.
 - **Drawn splash** — the first screen of every cold open, drawn rather than played from a file
-  (`DrawnSplash`): today its ground, a radial glow on `splashGroundEdge`. It swallows every touch
+  (`DrawnSplash`): its ground, a radial glow on `splashGroundEdge`, and the **lockup** — _Rakieta_
+  and its `volt` dot, centred as one on the full screen rather than on the app's view, the word's
+  seven letters placed from Archivo 800's own numbers (`splashGeometry`, #855). It swallows every touch
   until it is gone and plays once per JavaScript process; while it **covers** the tree
   (`useCoveredBySplash`), iOS's modal stage is held back and a toast's hold does not start. Not
   sign-in's _It's a game!_ picture, which `auth` calls its stage's splash (`StageSplash`).

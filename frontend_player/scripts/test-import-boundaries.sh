@@ -411,5 +411,18 @@ expect_blocked @/features/player_record/domain/record 'src/features/onboarding/d
 expect_allowed @/features/player_record/types "$FEATURE"
 
 echo
+echo "a domain/ layer — pure, a feature's and a shared module's alike"
+# A shared module's domain/ carries both sets of bans in one block of its own, written after
+# shared/'s, which would otherwise replace it: the splash's geometry is the first (#855).
+SHARED_DOMAIN='src/shared/lib/bootstrap/domain/placeholder.ts'
+expect_blocked react-native 'src/features/onboarding/domain/placeholder.ts' 'pure TypeScript'
+expect_blocked react-native "$SHARED_DOMAIN" 'pure TypeScript'
+expect_blocked react "$SHARED_DOMAIN" 'pure TypeScript'
+expect_blocked expo-font "$SHARED_DOMAIN" 'pure TypeScript'
+expect_blocked @/features/auth/types "$SHARED_DOMAIN" 'never import a feature'
+# …and only domain/: the module around it loads the splash's face itself (`fonts.ts`).
+expect_allowed expo-font 'src/shared/lib/bootstrap/placeholder.ts'
+
+echo
 printf '%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" = 0 ] || exit 1

@@ -109,7 +109,9 @@ as the splash's alone. Neither is a dark mode, and neither is a licence for anot
   Part 16). A word that wants to be that
   large is a Part 16 decision, not a `fontSize` and not a second use of `yesWord`. `numeral`
   (108/800) is no exception to reach for: it is Top 10's place, a picture of a number behind each
-  card and hidden from a listener (#805, 3.3, 7.36) — one use.
+  card and hidden from a listener (#805, 3.3, 7.36) — one use. Nor is `splashWord` (42/800): the
+  drawn splash's _Rakieta_, seven letters placed by its geometry, a fixed size whatever the OS
+  text size (#855, ADR-0209 §5, 3.3, Part 13) — one use.
 - **The pill is the chip's**, and _It's a game!_'s two buttons and the friend pills — Members'
   (#753), the Friends page's (#754), the picker's ask (#758) and the worded friend button's _+ Add
   friend_ (#801) — and Home's Hottest groups chips (#800), through

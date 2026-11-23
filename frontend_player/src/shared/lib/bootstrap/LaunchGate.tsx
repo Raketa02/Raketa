@@ -48,6 +48,7 @@ import { SplashCoverProvider, useReducedMotion } from '@/shared/ui/overlay';
 import { theme } from '@/shared/ui/theme';
 
 import { DrawnSplash } from './DrawnSplash';
+import { deviceSplashFace, type SplashFace } from './fonts';
 import { firstScreenReady, LAUNCH_CLOCK } from './launchClock';
 import { LAUNCH_COPY } from './launchCopy';
 import { deviceLaunchWindow, pinLaunchWindow, type LaunchWindow } from './launchWindow';
@@ -93,6 +94,8 @@ export interface LaunchGateProps {
   readonly launchWindow?: LaunchWindow;
   /** The phone's status and navigation bars. The device's, unless a test hands the gate a fake. */
   readonly systemBars?: SystemBarsPort;
+  /** The wordmark's face, which the splash loads itself. The device's, unless a test hands one. */
+  readonly splashFace?: SplashFace;
 }
 
 export function LaunchGate({
@@ -100,6 +103,7 @@ export function LaunchGate({
   run,
   launchWindow = deviceLaunchWindow,
   systemBars = deviceSystemBars,
+  splashFace = deviceSplashFace,
 }: LaunchGateProps) {
   // **Decided once, before the first frame**, and never switched mid-play. The provider's first
   // answer is already the OS's — read synchronously as the process started — so this is never the
@@ -255,7 +259,12 @@ export function LaunchGate({
       {/* Last, so it is drawn over everything the root draws: the overlay host, the toast host and
           the environment badge are all inside the tree above. */}
       {splashGone ? null : (
-        <DrawnSplash reduced={reduced} opacity={shown} onFirstLayout={onSplashLayout} />
+        <DrawnSplash
+          reduced={reduced}
+          opacity={shown}
+          face={splashFace}
+          onFirstLayout={onSplashLayout}
+        />
       )}
     </View>
   );

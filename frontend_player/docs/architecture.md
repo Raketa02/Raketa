@@ -251,6 +251,12 @@ behind it, and when the sequence resolves the tree — or the startup failure sc
 - **Reduced motion is decided once, before the first frame**, from the OS's answer —
   `ReducedMotionProvider` starts from the setting as the process started, never a provisional
   `false` — and never switched mid-play.
+- **The splash loads its wordmark's face itself, as it starts** (ADR-0209 §2, #855). The
+  sequence loads every face last, behind the session check, so the splash asks for Archivo 800 at
+  once (`fonts.ts`, `SplashFace`) and sets no letter before it is there; the sequence's own order
+  is unchanged. Its letters are placed on the **full screen** by a pure geometry
+  (`bootstrap/domain/splashGeometry.ts`), offset by where the app's view starts on it, which it
+  reads from the root's safe-area frame.
 - **Until it is gone the splash swallows every touch**, and it sits above everything the root
   draws: the overlay host, the toasts and the environment badge. The tree beneath takes no touch
   and is hidden from a screen reader. **It plays once per JavaScript process**, a dev reload

@@ -385,6 +385,16 @@ export default [
     rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS) },
   },
 
+  // --- a shared module's domain/ is pure as a feature's is, and still shared ----
+  // After the block above, which would otherwise replace it: both sets of bans, so the splash's
+  // geometry (`shared/lib/bootstrap/domain/`) imports neither React nor a device nor a feature.
+  {
+    files: ['src/shared/lib/*/domain/**'],
+    rules: {
+      'no-restricted-imports': restrict([...PURE_PATTERNS, featureImportsFromShared], PURE_PATHS),
+    },
+  },
+
   // --- the sanctioned exceptions ----------------------------------------------
   {
     // The single chokepoint for credentials (ADR-0008).

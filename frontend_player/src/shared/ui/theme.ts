@@ -632,6 +632,18 @@ const type = {
    *  rows 25.3 draws them. Drawn as SVG text — no line box — so it carries no `lineHeight`. ONE USE:
    *  a second surface that wants a figure this size reopens the Top 10 row in Part 16. */
   numeral: { fontFamily: font.sans[800], fontSize: 108, letterSpacing: -16 },
+  /** THE SPLASH'S WORDMARK — *Rakieta*, white, over the drawn splash's ground, and nothing else's
+   *  ([ADR-0209](../../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)
+   *  §5; [#855](https://github.com/Raketa02/Raketa/issues/855); 3.3, Part 16 2026-11-23). The
+   *  product owner's brief to the point: Archivo at its heaviest loaded weight, 42, tracked −4 %
+   *  (−1,68). A fixed size on every phone that ignores the OS text size, because a logo is a logo.
+   *  **Not a text role**: its seven letters are placed one by one from Archivo 800's own advances
+   *  and kerning (`shared/lib/bootstrap/domain/splashGeometry.ts`, pinned against the font by
+   *  `splashWordmark.test.ts`), so the TRACKING IS THE GEOMETRY'S to apply between letters and is
+   *  never set on a letter's text, and it has no `lineHeight`: each letter stands in the face's own
+   *  line box, whose midline is the screen's. ONE USE: a second surface that wants a word this size
+   *  reopens the splash's row in Part 16. */
+  splashWord: { fontFamily: font.sans[800], fontSize: 42, letterSpacing: -1.68 },
   /** THE DECK'S TWO STAMPS — *LET'S PLAY* and *NOT TODAY*, outlined words rotated over the card
    *  under the thumb, invisible at rest (ADR-0169 §3, §7). The heaviest weight the app loads at
    *  22, TRACKED WIDE rather than tight — +0,05em, 1,1 — because a rubber stamp is set spaced

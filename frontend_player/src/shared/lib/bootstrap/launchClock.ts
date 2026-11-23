@@ -16,6 +16,12 @@ export const LAUNCH_CLOCK = {
   fade: 500,
   /** The glow coming on, over the ball's first fall, so the flat launch window lightens into it. */
   glowIn: 390,
+  /**
+   * The lockup coming in — the word and its dot, in place — once the splash has laid out and the
+   * wordmark's face is there. Under both variants until the ball flies (#856); then under reduced
+   * motion only, which is the brief's *"almost instantly"*.
+   */
+  lockupIn: 150,
 } as const;
 
 /** What the fade waits for, besides its earliest start. */
