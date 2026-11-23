@@ -7049,7 +7049,7 @@
           "proposals"
         ],
         "summary": "A game still filling",
-        "description": "The game details of a proposal, for anybody dealt it \u2014 a card's **i**, a You're In row, a payment to confirm: who is In (the **IN** tags), the sides and their forecast, the club and its distance **with no court number** (one is given at booking), the share and the book-by, the overlap grid, and **what the reader may do now** (`actions`). A reader still deciding sees their own card as the deck deals it; a reader In sees everybody In. Answered for a game that has ended too, with nothing to do; a `FILLED` game's booking has the same id. Nothing is recorded.",
+        "description": "The game details of a proposal, for anybody dealt it \u2014 a card's **i**, a You're In row, a payment to confirm: who is In (the **IN** tags), the sides, **the kind's own card** \u2014 a competitive game's forecast with each side's level and the gap, and what is at stake for you (`at_stake`, the booked game's own pair); a For-fun game's Social vibe and your tags' rows (`vibe`) \u2014 the club and its distance **with no court number** (one is given at booking), the share and the book-by, the overlap grid, and **what the reader may do now** (`actions`). A reader still deciding sees their own card as the deck deals it; a reader In sees everybody In. Answered for a game that has ended too, with nothing to do; a `FILLED` game's booking has the same id. Nothing is recorded.",
         "operationId": "read_proposal_details_api_v1_proposals__proposal_id__get",
         "security": [
           {
@@ -11745,6 +11745,113 @@
         ],
         "title": "DepartureResponse",
         "description": "*Leave the game*, done."
+      },
+      "DetailsAtStakeSchema": {
+        "properties": {
+          "win_delta": {
+            "type": "number",
+            "title": "Win Delta",
+            "description": "Above nought, never nought."
+          },
+          "loss_delta": {
+            "type": "number",
+            "title": "Loss Delta",
+            "description": "Below nought, never nought."
+          }
+        },
+        "type": "object",
+        "required": [
+          "win_delta",
+          "loss_delta"
+        ],
+        "title": "DetailsAtStakeSchema",
+        "description": "What a **counted** result on this game would do to your Level \u2014 *If you\nwin +0,08 \u00b7 If you lose \u22120,07* \u2014 priced by the very function a booked\ngame's pairing prices its `at_stake` with, on the sides drawn here, so it\nis the pair that applies once the game is booked (`docs/adr/0207` \u00a76)."
+      },
+      "DetailsForecastSchema": {
+        "properties": {
+          "pct": {
+            "type": "integer",
+            "title": "Pct"
+          },
+          "provisional": {
+            "type": "boolean",
+            "title": "Provisional",
+            "description": "A seat is empty and was read as matching its partner."
+          },
+          "your_side": {
+            "type": "number",
+            "title": "Your Side",
+            "description": "Your side's strength, on the scale Levels are read on \u2014 the engine's, never the mean of the people on it."
+          },
+          "their_side": {
+            "type": "number",
+            "title": "Their Side",
+            "description": "The other side's strength."
+          },
+          "gap": {
+            "type": "number",
+            "title": "Gap",
+            "description": "`your_side \u2212 their_side`, **signed and served**, so nobody subtracts two rounded figures the engine subtracted unrounded."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pct",
+          "provisional",
+          "your_side",
+          "their_side",
+          "gap"
+        ],
+        "title": "DetailsForecastSchema",
+        "description": "How even the game drawn is forecast, **with the two side strengths it\nwas read from** \u2014 a competitive game's full forecast (`docs/adr/0207` \u00a76):\neach side's level, the gap and the bar's % \u2014 the figures a booked game's\npairing prints as `forecast` and `split`, for the same people standing the\nsame way. **One computation**: while a seat is empty the % is `provisional`,\nread as if the missing player matched their partner, and so are the side\nstrengths beside it."
+      },
+      "DetailsVibeRowSchema": {
+        "properties": {
+          "tag": {
+            "$ref": "#/components/schemas/SocialTag",
+            "description": "A tag's code \u2014 the app owns its emoji and label, and skips a code it doesn't know."
+          },
+          "carried_by": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Carried By",
+            "description": "Everybody on your version who carries it \u2014 **you first**, then the others in the tiles' order (`sides.yours`, then `sides.theirs`). Never empty: you carry every row. Only you: the row is yours alone."
+          }
+        },
+        "type": "object",
+        "required": [
+          "tag",
+          "carried_by"
+        ],
+        "title": "DetailsVibeRowSchema",
+        "description": "One row of the Social vibe card's grid: one of **your** tags, and who\nat the table carries it."
+      },
+      "DetailsVibeSchema": {
+        "properties": {
+          "pct": {
+            "type": "integer",
+            "title": "Pct",
+            "description": "The card's own number, counting everyone's tags \u2014 the % swiped on is the % looked at. 0\u2013100, rounded half up."
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/DetailsVibeRowSchema"
+            },
+            "type": "array",
+            "title": "Rows",
+            "description": "One per tag **you** hold, in the vocabulary's order \u2014 \ud83d\udc98 `OPEN_TO_MEET_SOMEONE` too, drawn like any other row though it never counts in `pct`. None of the others' tags you don't hold."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pct",
+          "rows"
+        ],
+        "title": "DetailsVibeSchema",
+        "description": "A For-fun game's **Social vibe card** (`docs/adr/0207` \u00a76): how much the\nwhole table shares, and who shares yours. Worked out from everybody's tags\nnow, on every read, and stored nowhere."
       },
       "Direction": {
         "type": "string",
@@ -17753,13 +17860,35 @@
           "forecast": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/DeckForecastSchema"
+                "$ref": "#/components/schemas/DetailsForecastSchema"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "How even the game drawn is forecast \u2014 `null` where it cannot be read."
+            "description": "How even a **competitive** game drawn is forecast, with each side's level and the signed gap. **Always `null` on For fun** (`docs/adr/0207` \u00a75), whose sides it still arranged; `null` too where it cannot be read \u2014 somebody on it holds no level in the sport."
+          },
+          "at_stake": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DetailsAtStakeSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a counted result would do to **your** Level, on `sides` \u2014 **two values or none**, as on a booked game. `null` on For fun; while a seat is open (the court that will play isn't known yet); once the game is no longer yours to play \u2014 you said no, no longer fit, wait on a paused yes, or it ended; once it is booked, whose stakes are `GET /games/{game_id}/pairing`'s; and where there is nothing to price: you hold no level in the sport, or nobody across the net does."
+          },
+          "vibe": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DetailsVibeSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A **For-fun** game's Social vibe and the grid's rows. `null` on Competitive, and where the card draws none: fewer than two people named, or nobody at the table holding a tag that counts."
           },
           "overlap": {
             "$ref": "#/components/schemas/DeckOverlapSchema"
@@ -17789,10 +17918,12 @@
           "time_to",
           "sides",
           "forecast",
+          "at_stake",
+          "vibe",
           "overlap"
         ],
         "title": "ProposalDetailsResponse",
-        "description": "A game still filling, as the reader opens it \u2014 the deck's card turned\ninto a screen."
+        "description": "A game still filling, as the reader opens it \u2014 the deck's card turned\ninto a screen. **What it says about the game follows the kind**\n(`docs/adr/0207` \u00a75, \u00a76): a competitive game `forecast` and `at_stake`,\nwith `vibe` `null`; a For-fun game `vibe`, with `forecast` and `at_stake`\n`null`."
       },
       "ProposalStatus": {
         "type": "string",

@@ -296,7 +296,7 @@ class SocialTagSelection:
 
     def __post_init__(self) -> None:
         invariant(
-            list(self.tags) == _in_vocabulary_order(set(self.tags)),
+            list(self.tags) == in_vocabulary_order(set(self.tags)),
             "a social tag selection was built outside `chosen` or `recorded`",
         )
 
@@ -325,7 +325,7 @@ class SocialTagSelection:
             raise DuplicateSocialTag()
         if not SOCIAL_TAG_SELECTION_BOUNDS.contains(len(unique)):
             raise SocialTagSelectionOutOfBounds()
-        return cls(tags=tuple(_in_vocabulary_order(unique)))
+        return cls(tags=tuple(in_vocabulary_order(unique)))
 
     @classmethod
     def from_ids(cls, ids: Iterable[str]) -> "SocialTagSelection":
@@ -351,7 +351,7 @@ class SocialTagSelection:
         hear about rather than a bound somebody moved.
         """
 
-        return cls(tags=tuple(_in_vocabulary_order(_parsed(ids))))
+        return cls(tags=tuple(in_vocabulary_order(_parsed(ids))))
 
     @property
     def ids(self) -> tuple[str, ...]:
@@ -375,11 +375,13 @@ def _parsed(ids: Iterable[str]) -> list[SocialTag]:
     return tags
 
 
-def _in_vocabulary_order(tags: Iterable[SocialTag]) -> list[SocialTag]:
+def in_vocabulary_order(tags: Iterable[SocialTag]) -> list[SocialTag]:
     """`tags` arranged as the vocabulary declares them, groups included.
 
     Reads ``SOCIAL_TAG_VOCABULARY`` rather than the enum, so the one order that
-    is part of the contract is the one order a selection is stored in.
+    is part of the contract is the one order a selection is stored in — and
+    the order every other list of tags is drawn in, a For-fun game's grid
+    included (``docs/adr/0207`` §7, #833).
     """
 
     held = set(tags)

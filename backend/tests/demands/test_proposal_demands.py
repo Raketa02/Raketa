@@ -23,6 +23,7 @@ import pytest
 import pytest_asyncio
 
 from app.bootstrap.composition import (
+    build_at_stake_query,
     build_booking_repository,
     build_clock,
     build_domain_event_store,
@@ -90,10 +91,13 @@ from app.modules.proposals.domain.ports import (
     PoolOrigins,
     PlayersTags,
     PlayedWith,
+    ReadersStakes,
     RefundReason,
     SeatRefunds,
+    Stakes,
     TagsInCommon,
 )
+from app.modules.proposals.domain.deck import Sides
 from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
@@ -2101,4 +2105,73 @@ async def test_a_game_still_ahead_makes_nobody_known(implementation, session):
             [OLA, KUBA], among=[OLA, KUBA, EWA, TOMEK], now=_at(1)
         )
         == set()
+    )
+
+
+# --------------------------------------------------------------------------- #
+# ReadersStakes — what a competitive game puts at stake for its reader (#833)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(ReadersStakes))
+async def test_the_readers_stakes_are_the_booked_court_s_own_pair(
+    implementation, client, session_factory, session
+):
+    """**The very pair a booked game's pairing prints** — ``rating``'s rule
+    read forward through ``AtStakeQuery``, side against side — however the
+    sides are handed over."""
+
+    ola = await _rated(client, session_factory, "ola", mu=2.2)
+    kuba = await _rated(client, session_factory, "kuba", mu=2.4)
+    ewa = await _rated(client, session_factory, "ewa", mu=2.6)
+    tomek = await _rated(client, session_factory, "tomek", mu=2.7)
+    stakes: ReadersStakes = implementation.build(session)
+
+    read = await stakes.at_stake(
+        ola, sides=Sides(yours=(ola, tomek), theirs=(kuba, ewa)), sport=Sport.PADEL
+    )
+
+    court = await build_at_stake_query(session).counted_game_deltas_on_court(
+        player_id=ola,
+        own_side=[ola, tomek],
+        opposing_side=sorted([kuba, ewa]),
+        sport=Sport.PADEL,
+    )
+    assert court is not None
+    assert read == Stakes(win_delta=court.win_delta, loss_delta=court.loss_delta)
+    assert (
+        await stakes.at_stake(
+            ola, sides=Sides(yours=(tomek, ola), theirs=(ewa, kuba)), sport=Sport.PADEL
+        )
+        == read
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(ReadersStakes))
+async def test_nothing_is_at_stake_with_nothing_to_move_or_to_price_against(
+    implementation, client, session_factory, session
+):
+    """Two values or none: a reader with no level in the sport, or nobody
+    across the net with one, reads no pair — never a pair of noughts."""
+
+    ola = await _rated(client, session_factory, "ola", mu=2.5)
+    kuba = await _rated(client, session_factory, "kuba", mu=2.7)
+    unrated = new_uuid()
+    stakes: ReadersStakes = implementation.build(session)
+
+    def singles(reader: UUID, other: UUID) -> Sides:
+        return Sides(yours=(reader,), theirs=(other,))
+
+    priced = await stakes.at_stake(ola, sides=singles(ola, kuba), sport=Sport.PADEL)
+    assert priced is not None and priced.win_delta > 0 > priced.loss_delta
+    assert (
+        await stakes.at_stake(ola, sides=singles(ola, unrated), sport=Sport.PADEL)
+        is None
+    )
+    assert (
+        await stakes.at_stake(unrated, sides=singles(unrated, ola), sport=Sport.PADEL)
+        is None
+    )
+    assert (
+        await stakes.at_stake(ola, sides=singles(ola, kuba), sport=Sport.TENNIS) is None
     )

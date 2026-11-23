@@ -1127,6 +1127,14 @@ The same screen serves two more readers (Q75, Q96):
   **Withdraw** if you are In; and while it waits for one payment, **Leave the game** with its sheet
   ([§13](#13-leaving-a-game)). No Chat. Until Q121 it could also read *Waiting for the club*, with
   *nobody pays until Bonarka confirms* and *Bonarka answers by 20:45*.
+  **What it says about the game follows the kind** (amended 2026-11-23, ADR-0207 §6, #833): a
+  **competitive** game the full forecast — each side's level and the signed gap beside the % — and
+  **what is at stake for you**, priced by the booked game's own stakes function on your version's
+  evenest sides, two values or none (none while a seat is open or once the game is no longer
+  yours to play); a **For-fun** game its **Social
+  vibe** — the card's number — and a row for each of your tags, in the vocabulary's order and 💘
+  included, naming everybody on your version who carries it, you first. Neither kind shows the
+  other's.
 - **A rescue, seen by a member who is not in it** (a Seat open card or a Seats to fill row):
   the paid tiles, the dashed *You?* tile, the court number, and **Pay 27 zł** (Q124) — said as
   *held until the cut-off* before it, and *paid now* after it (Q113). No Chat, no Leave.

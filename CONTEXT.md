@@ -111,7 +111,12 @@ A rating is **never only a number**.
   zero when either party holds no rating in that sport. **On a game it is read for the reader,
   side against side** — every seat is known once a line-up is frozen, so the pair is the one
   the result will deliver, and a four's figure is not the card's head-to-head one
-  ([ADR-0161](docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)).
+  ([ADR-0161](docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)). **And on a
+  competitive game still filling, in its details, before the reader answers** — by the same
+  function, on the reader's version's evenest sides, so the pair seen before a yes is the pair
+  that applies once the game is booked; only once every seat is named, never on the deck card
+  ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §6, [#833](https://github.com/Raketa02/Raketa/issues/833)).
 - **Result update** — what a **confirmed counted result** does to the two or four Levels that
   played it. A result is **evidence about the gap between two people**, fused by inverse
   variance like every other kind, so *how surprising it was* moves the Level and the certainty
@@ -843,8 +848,10 @@ more.**
   [ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
   §2 and §5; on the **Group deck**'s cards since
   [#830](https://github.com/Raketa02/Raketa/issues/830), building For-fun tables since
-  [#831](https://github.com/Raketa02/Raketa/issues/831) (see **Mode**), and not yet built elsewhere —
-  [#833](https://github.com/Raketa02/Raketa/issues/833)–[#835](https://github.com/Raketa02/Raketa/issues/835),
+  [#831](https://github.com/Raketa02/Raketa/issues/831) (see **Mode**), in a For-fun game's details
+  since [#833](https://github.com/Raketa02/Raketa/issues/833) — the card's number and a row for each
+  of the reader's tags, naming who at the table carries it — and not yet built elsewhere —
+  [#834](https://github.com/Raketa02/Raketa/issues/834), [#835](https://github.com/Raketa02/Raketa/issues/835),
   [#838](https://github.com/Raketa02/Raketa/issues/838),
   [#840](https://github.com/Raketa02/Raketa/issues/840)–[#842](https://github.com/Raketa02/Raketa/issues/842).
   _Avoid_: vibe %, match %, compatibility.

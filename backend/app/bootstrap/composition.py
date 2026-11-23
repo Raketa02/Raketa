@@ -199,6 +199,7 @@ from app.modules.proposals.domain.ports import (
     ClubNames as ProposalClubNames,
     TagsInCommon as ProposalsTagsInCommon,
     PlayersTags,
+    ReadersStakes,
     PlayedWith,
     ClubTerms,
     CourtHours,
@@ -229,6 +230,9 @@ from app.modules.proposals.infrastructure.event_sourced_needs_your_answer_visits
 )
 from app.modules.proposals.infrastructure.matcher_balance_forecasts import (
     MatcherBalanceForecasts,
+)
+from app.modules.proposals.infrastructure.matcher_readers_stakes import (
+    MatcherReadersStakes,
 )
 from app.modules.proposals.application.answers import (
     ConfirmPayment,
@@ -1836,6 +1840,16 @@ def build_balance_forecasts(
         ),
         ruleset=build_ruleset(),
     )
+
+
+def build_readers_stakes(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReadersStakes:
+    """What a competitive game still filling puts at stake for its reader —
+    the booked game's own stakes function, over ``rating``'s result-update
+    rule (:func:`build_at_stake_query`), so the pair seen before a yes is the
+    pair that applies once booked (``docs/adr/0207`` §6, #833)."""
+    return MatcherReadersStakes(build_at_stake_query(session, runtime=runtime))
 
 
 def build_club_terms(
@@ -3505,6 +3519,8 @@ def build_read_proposal_details(
         players=build_players_in_play(session, runtime=runtime),
         wanted=build_wanted_kinds(session, runtime=runtime),
         relations=build_reader_relations(session, runtime=runtime),
+        tags=build_players_tags(session),
+        stakes=build_readers_stakes(session, runtime=runtime),
         clock=clock,
     )
 

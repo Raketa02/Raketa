@@ -450,7 +450,40 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   game still filling is *waiting for a payment*** (#625) — no club confirms a game — and says
   until when (`payment_due_by`). The `actions` are what the routes would take: `YES`/`NO`,
   `WITHDRAW`, `LEAVE` while a payment is awaited, `CONFIRM_PAYMENT` (with `your_payment`) for a refused share, nothing
-  once it is over or the answer is final (a no, `NO_LONGER_FITS`, a paused yes). **Home's
+  once it is over or the answer is final (a no, `NO_LONGER_FITS`, a paused yes). **What the
+  details say about the game follows the kind** (#833; ADR-0207 §5, §6; `_what_it_says`):
+  - **competitive** — `forecast` gains each side's strength and the signed gap
+    (`DetailsForecastSchema`: `your_side`, `their_side`, `gap`, off `CardForecast.levels`, the
+    engine's split `MatcherBalanceForecasts` now hands back with every forecast, the reader's side
+    first), and **`at_stake`** (`win_delta`, `loss_delta`) for the reader on the drawn sides —
+    the reader's version's evenest — through **`ReadersStakes`** (`MatcherReadersStakes`, row in
+    `proposal_demands.py`), which calls the matcher's `at_stake_on_the_court`: **the one
+    function a booked game's pairing prices its `at_stake` with** (`GamesCourtPairing._deltas`
+    calls it too), which hands the rule the court in one order — the player, partners sorted,
+    the other side sorted — so the two readings agree to the last digit. Asked only **while the
+    game is still the reader's to play** — any `actions` at all: In, free to answer, or a payment
+    to confirm — **and once every seat is named** (`stakes_are_priced`): a reader who said no, no
+    longer fits or waits on a paused yes, and a game over or booked (whose stakes are the booking
+    pairing's, its court free to change after the fill), read none, and a court with a seat open
+    is priced nothing (ADR-0162 §3) — calls made after #833's review; two values or none,
+    singles too; `vibe` `null`. On a provisional forecast the side strengths are as provisional
+    as the % (one computation). A call: the fill picks its
+    sides from the first In's arrangements and the details from the reader's, so on a forecast
+    **tie** the two could stand a different way round (and price differently) — as the deck's
+    sides already could;
+  - **For fun** — `forecast` and `at_stake` `null`, and **`vibe`** `{pct, rows[{tag,
+    carried_by}]}` (`domain/vibe.py`'s `table_vibe_of`): `pct` is the card's own
+    (`social_vibe_of` over the same table), each row one of **the reader's** tags in the
+    vocabulary's order (the Player profile's `in_vocabulary_order`, public since), 💘 included,
+    `carried_by` the reader first then whoever else carries it in the tiles' order; `null`
+    exactly when the card draws no vibe. The tags are one `PlayersTags` question, asked only for
+    a For-fun game.
+
+  Tested over HTTP in `tests/api/test_the_game_details_by_kind.py` (the rows, their order, the
+  carriers, 💘, the card's pct, a tag edit; the levels and gap; **filled, the pairing's stakes
+  and split equal**; singles; a seat open; a reader who said no; a filled game; neither kind's
+  fields on the other) and the pure rules
+  in `tests/unit/test_the_details_by_kind.py`. **Home's
   badge counts the payments to confirm** beside the cards that need the reader (`owed_by`,
   shared with the TO CONFIRM read).
   **Home's read is bounded** (#613): it sends only what Home draws — live games, games that

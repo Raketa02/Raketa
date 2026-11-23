@@ -160,6 +160,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   Discovery's `PlayerDirectory.tags_of_each` — the player directory's copy, one statement for
   everybody asked — and contracted with the tags committed over HTTP and the outbox drained,
   as the directory hears them (💘 included: dropping it is the vibe's rule, not the port's).
+  **A competitive game's details add a row to the tenth** (#833; ADR-0207 §6): Proposals'
+  **`ReadersStakes`**, what a counted result would do to the reader's Level on the sides drawn,
+  signed by `MatcherReadersStakes` over the booked game's own stakes function
+  (`at_stake_on_the_court`, through the matcher's `AtStakeQuery`), contracted against
+  `AtStakeQuery`'s court read whatever the sides' order, and absent with nothing to move or to
+  price against.
   **Building a For-fun table adds a row to two registers** (#831; ADR-0207 §3, §11): Proposals'
   **`PlayedWith`**, *who already knows whom* — the pairs of one of `players` and one of `among`
   who have played a game together or are friends — signed by `GamesAndFriendsPlayedWith` over

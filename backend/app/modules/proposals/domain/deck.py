@@ -293,12 +293,33 @@ class SellingTerms:
 
 @final
 @dataclass(frozen=True, slots=True)
+class SideLevels:
+    """The two side strengths a forecast was read from, **the reader's side
+    first** — the engine's, never a mean of the people on a side — and the
+    signed gap between them, which is what a competitive game's details print
+    beside the % (``docs/adr/0207`` §6, #833)."""
+
+    yours: float
+    theirs: float
+
+    @property
+    def gap(self) -> float:
+        """``yours − theirs``: below nought when the other side is stronger."""
+
+        return self.yours - self.theirs
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class CardForecast:
     """How even the engine forecasts a card's game, as a whole percent, and
-    whether a seat was assumed to match its partner to say so."""
+    whether a seat was assumed to match its partner to say so — and the two
+    side strengths it was read from, wherever the engine read it (``None``
+    from a reader that has no strengths to hand, as a test's)."""
 
     pct: int
     provisional: bool
+    levels: SideLevels | None = None
 
 
 def arrangements(

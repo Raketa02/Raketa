@@ -51,5 +51,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `AccountHoldQuery` (`NoHoldsExist`) and `AccountStatusQuery` (`UsersAccountStatus`) fail
   **closed** and are the player record's gates (`AccountGates`); `AtStakeQuery`
   (`RatingResultUpdateRule`) fails **soft** and prices a booked game's court side against
-  side. `PlayerScoreQuery`, `MatchHistoryQuery`, `HalfBuiltCourtQuery` and
+  side — read through `application/at_stake.py`'s `at_stake_on_the_court` (#833), which both
+  the booked game's pairing and a competitive game's details (`proposals`'
+  `MatcherReadersStakes`) call, and which hands the rule the court in one order (the player,
+  partners sorted, the other side sorted), so the two agree to the last digit. `PlayerScoreQuery`, `MatchHistoryQuery`, `HalfBuiltCourtQuery` and
   `SharedCourtQuery` were read by the searches alone and went with them.

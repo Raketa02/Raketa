@@ -23,7 +23,8 @@ from uuid import UUID
 from pydantic import AwareDatetime, BaseModel, Field
 
 from app.engines.matchfit.core import ReliabilityBand, SearchMode
-from app.kernel import Instant, Sport, instant
+from app.kernel import Instant, Sport, instant, invariant
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.booking_details import BookingDetails
 from app.modules.proposals.application.friends_card import (
@@ -56,6 +57,7 @@ from app.modules.proposals.domain.deck import (
     Sides,
 )
 from app.modules.proposals.domain.details import ProposalStatus, ReaderAction
+from app.modules.proposals.domain.vibe import TableVibe
 from app.modules.proposals.domain.friends_card import CourtForFriends
 from app.modules.proposals.domain.games_and_money import (
     GAMES_PER_WEEK,
@@ -88,6 +90,7 @@ from app.modules.proposals.domain.ports import (
     HomeLevelAsk,
     HomeRanking,
     PaymentRefusal,
+    Stakes,
 )
 from app.modules.proposals.domain.proposal import TimeTo
 from app.modules.proposals.domain.post import LevelRange, Who
@@ -2271,9 +2274,122 @@ def _your_payment(details: ProposalDetails) -> YourPaymentSchema | None:
     )
 
 
+class DetailsForecastSchema(DeckForecastSchema):
+    """How even the game drawn is forecast, **with the two side strengths it
+    was read from** — a competitive game's full forecast (`docs/adr/0207` §6):
+    each side's level, the gap and the bar's % — the figures a booked game's
+    pairing prints as `forecast` and `split`, for the same people standing the
+    same way. **One computation**: while a seat is empty the % is `provisional`,
+    read as if the missing player matched their partner, and so are the side
+    strengths beside it."""
+
+    your_side: float = Field(
+        description=(
+            "Your side's strength, on the scale Levels are read on — the "
+            "engine's, never the mean of the people on it."
+        )
+    )
+    their_side: float = Field(description="The other side's strength.")
+    gap: float = Field(
+        description=(
+            "`your_side − their_side`, **signed and served**, so nobody "
+            "subtracts two rounded figures the engine subtracted unrounded."
+        )
+    )
+
+
+class DetailsAtStakeSchema(BaseModel):
+    """What a **counted** result on this game would do to your Level — *If you
+    win +0,08 · If you lose −0,07* — priced by the very function a booked
+    game's pairing prices its `at_stake` with, on the sides drawn here, so it
+    is the pair that applies once the game is booked (`docs/adr/0207` §6)."""
+
+    win_delta: float = Field(description="Above nought, never nought.")
+    loss_delta: float = Field(description="Below nought, never nought.")
+
+
+class DetailsVibeRowSchema(BaseModel):
+    """One row of the Social vibe card's grid: one of **your** tags, and who
+    at the table carries it."""
+
+    tag: SocialTag = Field(
+        description=(
+            "A tag's code — the app owns its emoji and label, and skips a code "
+            "it doesn't know."
+        )
+    )
+    carried_by: list[UUID] = Field(
+        description=(
+            "Everybody on your version who carries it — **you first**, then "
+            "the others in the tiles' order (`sides.yours`, then "
+            "`sides.theirs`). Never empty: you carry every row. Only you: the "
+            "row is yours alone."
+        )
+    )
+
+
+class DetailsVibeSchema(BaseModel):
+    """A For-fun game's **Social vibe card** (`docs/adr/0207` §6): how much the
+    whole table shares, and who shares yours. Worked out from everybody's tags
+    now, on every read, and stored nowhere."""
+
+    pct: int = Field(
+        description=(
+            "The card's own number, counting everyone's tags — the % swiped on "
+            "is the % looked at. 0–100, rounded half up."
+        )
+    )
+    rows: list[DetailsVibeRowSchema] = Field(
+        description=(
+            "One per tag **you** hold, in the vocabulary's order — 💘 "
+            "`OPEN_TO_MEET_SOMEONE` too, drawn like any other row though it "
+            "never counts in `pct`. None of the others' tags you don't hold."
+        )
+    )
+
+
+def _details_forecast(forecast: CardForecast | None) -> DetailsForecastSchema | None:
+    if forecast is None:
+        return None
+    levels = invariant(
+        forecast.levels,
+        "a forecast the engine read always carries the strengths it read",
+    )
+    return DetailsForecastSchema(
+        pct=forecast.pct,
+        provisional=forecast.provisional,
+        your_side=levels.yours,
+        their_side=levels.theirs,
+        gap=levels.gap,
+    )
+
+
+def _details_at_stake(stakes: Stakes | None) -> DetailsAtStakeSchema | None:
+    if stakes is None:
+        return None
+    return DetailsAtStakeSchema(
+        win_delta=stakes.win_delta, loss_delta=stakes.loss_delta
+    )
+
+
+def _details_vibe(vibe: TableVibe | None) -> DetailsVibeSchema | None:
+    if vibe is None:
+        return None
+    return DetailsVibeSchema(
+        pct=vibe.pct,
+        rows=[
+            DetailsVibeRowSchema(tag=row.tag, carried_by=list(row.carried_by))
+            for row in vibe.rows
+        ],
+    )
+
+
 class ProposalDetailsResponse(BaseModel):
     """A game still filling, as the reader opens it — the deck's card turned
-    into a screen."""
+    into a screen. **What it says about the game follows the kind**
+    (`docs/adr/0207` §5, §6): a competitive game `forecast` and `at_stake`,
+    with `vibe` `null`; a For-fun game `vibe`, with `forecast` and `at_stake`
+    `null`."""
 
     proposal_id: UUID
     pool_id: UUID
@@ -2361,9 +2477,32 @@ class ProposalDetailsResponse(BaseModel):
             "everybody In — the client draws the open seats empty."
         )
     )
-    forecast: DeckForecastSchema | None = Field(
+    forecast: DetailsForecastSchema | None = Field(
         description=(
-            "How even the game drawn is forecast — `null` where it cannot be read."
+            "How even a **competitive** game drawn is forecast, with each "
+            "side's level and the signed gap. **Always `null` on For fun** "
+            "(`docs/adr/0207` §5), whose sides it still arranged; `null` too "
+            "where it cannot be read — somebody on it holds no level in the "
+            "sport."
+        )
+    )
+    at_stake: DetailsAtStakeSchema | None = Field(
+        description=(
+            "What a counted result would do to **your** Level, on `sides` — "
+            "**two values or none**, as on a booked game. `null` on For fun; "
+            "while a seat is open (the court that will play isn't known yet); "
+            "once the game is no longer yours to play — you said no, no longer "
+            "fit, wait on a paused yes, or it ended; once it is booked, whose "
+            "stakes are `GET /games/{game_id}/pairing`'s; and where there is "
+            "nothing to price: you hold no level in the sport, or nobody "
+            "across the net does."
+        )
+    )
+    vibe: DetailsVibeSchema | None = Field(
+        description=(
+            "A **For-fun** game's Social vibe and the grid's rows. `null` on "
+            "Competitive, and where the card draws none: fewer than two "
+            "people named, or nobody at the table holding a tag that counts."
         )
     )
     overlap: DeckOverlapSchema
@@ -2404,7 +2543,9 @@ class ProposalDetailsResponse(BaseModel):
                 people=details.people,
                 in_=details.view.in_,
             ),
-            forecast=_forecast(details.forecast),
+            forecast=_details_forecast(details.forecast),
+            at_stake=_details_at_stake(details.at_stake),
+            vibe=_details_vibe(details.vibe),
             overlap=_overlap(details.overlap),
         )
 

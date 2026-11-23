@@ -683,7 +683,48 @@ class BalanceForecasts(Protocol):
         self, options: Sequence[Sides], *, sport: Sport
     ) -> Sequence[CardForecast | None]:
         """One forecast per arrangement, in their order. ``None`` where somebody
-        on it holds no rating in the sport, or where a side is empty."""
+        on it holds no rating in the sport, or where a side is empty. **Each
+        forecast carries the two side strengths it was read from**
+        (``CardForecast.levels``, the arrangement's ``yours`` first): a
+        competitive game's details print them, and serve no forecast at all
+        without them (#833)."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Stakes:
+    """What a counted result would do to the reader's Level — *If you win
+    +0,08 · If you lose −0,07* — both signed, and **neither nought**: where
+    there is nothing to price there is no answer at all."""
+
+    win_delta: float
+    loss_delta: float
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.win_delta > 0 > self.loss_delta,
+            "a counted result that changes nothing or moves the wrong way: "
+            f"+{self.win_delta} / {self.loss_delta}",
+        )
+
+
+@runtime_checkable
+class ReadersStakes(Protocol):
+    """**What a competitive game puts at stake for the reader**, before they
+    answer it (``docs/adr/0207`` §6, #833) — priced by **the very function a
+    booked game's pairing prices its stakes with**, so the pair seen before a
+    yes is the pair that applies once the game is booked. A rule of ``rating``'s,
+    read forward; nothing here computes it."""
+
+    async def at_stake(
+        self, reader: UUID, *, sides: Sides, sport: Sport
+    ) -> Stakes | None:
+        """The pair for ``reader``, who stands on ``sides.yours``, the other
+        side across the net. ``None`` where the rule has nothing to move — the
+        reader holds no rating in the sport — or nothing to price against —
+        nobody across the net holds one — and where it could not be read: it
+        fails soft, costing the block and never the screen."""
         ...
 
 

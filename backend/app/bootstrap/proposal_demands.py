@@ -2,7 +2,7 @@
 game's details (#542), and who signs each demand.
 
 **A register of its own**, on the rule every register here states: a new
-consumer gets a new register, not a row in somebody else's. **Twenty-seven rows,
+consumer gets a new register, not a row in somebody else's. **Twenty-eight rows,
 and the tuple is what is asserted over**: a player's booked games (``bookings``),
 where each booked game's result stands (``games``), how far a club is from a
 player (the Player profile and ``clubs``), what each player is called on a
@@ -32,7 +32,10 @@ Home (#795), how many Social tags two players hold today (the Player profile,
 players' tags now (``discovery``'s player directory, ``PlayersTags``, one
 statement for everybody a read draws) — and, for building one (#831), who
 already knows whom: played a game together (``games``) or friends
-(``friends``), ``PlayedWith`` — each a fact another context
+(``friends``), ``PlayedWith`` — and, for a competitive game's details (#833),
+what a counted result would do to the reader's Level, by the booked game's own
+stakes function over ``rating``'s result-update rule (``ReadersStakes``) — each
+a fact another context
 owns, read through a port declared in this context's words. The sender's court
 held at send (``SendersCourts``) asks the provider, and is contracted over HTTP
 with the fake.
@@ -78,6 +81,7 @@ from app.bootstrap.composition import (
     build_players_tags,
     build_played_with,
     build_reader_relations,
+    build_readers_stakes,
     build_friends_game_bookings,
     build_covers_at_the_cut_off,
 )
@@ -111,6 +115,7 @@ from app.modules.proposals.domain.ports import (
     TagsInCommon,
     PlayersTags,
     PlayedWith,
+    ReadersStakes,
 )
 
 P = TypeVar("P")
@@ -144,6 +149,7 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     TagsInCommon,
     PlayersTags,
     PlayedWith,
+    ReadersStakes,
     FriendsGameBookings,
     CoversAtTheCutOff,
 )
@@ -296,6 +302,11 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=PlayedWith,
         name="GamesAndFriendsPlayedWith",
         build=build_played_with,
+    ),
+    RegisteredImplementation(
+        port=ReadersStakes,
+        name="MatcherReadersStakes",
+        build=build_readers_stakes,
     ),
 )
 

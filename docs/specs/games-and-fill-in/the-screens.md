@@ -323,6 +323,24 @@ One screen (details 5–10, from Part 1), three readers.
 
 ### A4.2 A game still filling (Q75)
 
+**The top card is the kind's own** (amended 2026-11-23, ADR-0207 §6, #833; the details read
+serves it, the player app draws it in #839 and #840):
+
+- **Competitive** opens on the **Balance forecast card** a booked game draws: each side's level,
+  *gap* and the signed gap (`forecast.your_side`, `their_side`, `gap`), the bar, the % and its
+  word, *A counted game — a confirmed score moves everybody's level.*, and **If you win / If you
+  lose** for you (`at_stake`). The stakes are priced **by the booked game's own function** on your
+  version's evenest sides — the sides the tiles show — so they are the stakes that apply once the
+  game is booked; **two tiles or none**, as on a booked game: none while a seat is open, none
+  once the game is no longer yours to play (you said no, no longer fit, or it ended — and once
+  it is booked, the booked game's screen draws them), none where you or everybody across the net
+  holds no level. Singles too. Never on the deck card. No vibe.
+- **For fun** opens on the **Social vibe card**: the card's own % (`vibe.pct`, the number swiped
+  on) and its word, and the grid — a column per person on your version, you first, then the tiles'
+  order; **a row per tag you hold** (`vibe.rows`), in the vocabulary's order, 💘 included; a dot
+  under everybody who carries it (`carried_by`), so your column has a dot on every row. Live: it
+  follows everybody's tags now. No forecast and no stakes.
+
 Same layout. Status *Filling · 2 of 4 in* (and for a game that had filled, *Seat open* or *Waiting
 for one payment*, as on [A8](#a8-home)); tiles with IN tags; WHERE shows the club and distance, no
 court number, and *Indoor* or *Outdoor* when every free court it could be booked on is of that kind

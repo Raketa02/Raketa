@@ -96,7 +96,10 @@ from the code.
   number for one court**, and a test says so. Three things are decided in the adapter and each
   is an absence rather than a number: a seat with no rating in the sport leaves the forecast
   **omitted, never provisional**; `at_stake` is omitted on a friendly and on a game is priced
-  **side against side** through `AtStakeQuery`'s court-shaped read; and the seats' Levels come
+  **side against side** through `AtStakeQuery`'s court-shaped read — by the matcher's
+  `at_stake_on_the_court`, **the one function a competitive game still filling prices its
+  details' stakes with too** (#833, `proposals.md`), so the pair seen before a yes is this one;
+  and the seats' Levels come
   from `rating`'s **published** read (`RatedPlayerQuery.published_for`). `GET /games` is
   untouched: a seat there still carries a name and nothing else.
 - **A booked game is a game with an hour** (#541, `bookings.md`). `GamePlanned.starts_at`
