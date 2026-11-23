@@ -1363,7 +1363,7 @@ every fact read through the owning context's published port, and one rule of its
 
 - **The player record** — a *person*, not a pairing: it answers *who is this* about one. It is a
   **route**, live, about one person, and read at most a few times a day — opened from a face on a
-  Games card, a game's details, Fill in, Post a game or a group's Members list — and, since
+  Games card, a game's details, Fill in, You’re in, Post a game or a group's Members list — and, since
   [ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md), from the Rankings page; since [ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md), from any face in
   Home's rows, and read by the **vibe sheet**. **It shows all of the subject's photos** (ADR-0204 §2).
 - **A disclosure** — the thing that entitles a reader to open a record. Three strands, and
@@ -1785,8 +1785,19 @@ charges' (**Payments**), its result the Game's (**Games**).
   competitive game the candidates whose game is forecast most even, and on a **For fun** game the
   best company for the players still on it — the **Social vibe** of the three left plus the
   candidate, then their new faces, then the forecast, then the level spread.
-- **Fill in** — the group's rescue board (**Seats to fill**) plus **You're In**, your own yeses
-  that have not filled. It never offers a proposal that is still filling.
+- **Fill in** — the group's rescue board: the **Rescues** you fit and are free for, one tab of a
+  group page. It never offers a proposal that is still filling. Today it also draws your own yeses
+  as a second section, *You're In*, under the rescues' heading *Seats to fill*.
+  [#844](https://github.com/Raketa02/Raketa/issues/844) decided, and has not yet built, that the
+  yeses become a tab of their own, **You’re in**, so Fill in holds only the rescues, and neither tab
+  has a heading. _Avoid_: Seats to fill, for the tab.
+- **You’re in** — your own **Live yeses** in that group and sport that have not filled: picks,
+  challenges and your own posts, never a rescue (a taken rescue is on Home). It is a group page's
+  tab beside **Fill in**, the tab **Post a game** floats over, and where a post lands. Spelled with
+  a lower-case *i* and a curly apostrophe, like *Fill in*. **Decided and not yet built**
+  ([#844](https://github.com/Raketa02/Raketa/issues/844)); until it is, the same rows are Fill in's
+  second section. _Avoid_: You're In. Not Hottest groups' *You're in* chip, which means you're a
+  member.
 - **Check-in** — *retired 2026-10-11* ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §4, not yet built —
   [#651](https://github.com/Raketa02/Raketa/issues/651)–[#653](https://github.com/Raketa02/Raketa/issues/653)).
   A club scanning a player's QR code, or typing its short code, at the desk on the day; optional
@@ -1802,7 +1813,7 @@ charges' (**Payments**), its result the Game's (**Games**).
   (since Q113, also the **Time to fix the card**) ran out. (Until 2026-10-12 a full game could also
   fall back while it waited for its On request club, [ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md).) That second
   kind is not a rescue: its seat is offered only in decks, as any proposal still filling, and it
-  is in *You're In* as well. It is booked when it refills, and is called off, nobody paid, if its
+  is on *You’re in* as well. It is booked when it refills, and is called off, nobody paid, if its
   book-by passes first.
   The second kind is decided and not yet built ([#624](https://github.com/Raketa02/Raketa/issues/624)).
   _Avoid_: called off for a game that is only filling again.
@@ -2054,7 +2065,7 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   game fills.
 - **Live yes** — a yes on a game that has not filled, across pools; a post counts as one. **No
   cap** on how many (removed 2026-10-05): games per week and one game per hour bound what they
-  can book.
+  can book. Your live yeses in one group and sport are that group page's **You’re in** tab.
 - **Post** — a proposal a member created by picking the hour and the court; posting is the
   poster's yes. At most two live per player. It is dealt to whom it is for — its *Who* and a level
   range that starts from the poster's **level window** — and to other players it reads as a
@@ -2151,7 +2162,7 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
   §4, [#830](https://github.com/Raketa02/Raketa/issues/830)). In both, the same people only at
   their best hour. A card you
-  said no to never returns; one you are In on is in *You're In*; one you took your yes back from
+  said no to never returns; one you are In on is on *You’re in*; one you took your yes back from
   is dealt again. Never dealt: a kind your Play intent does not want, a share above **Most I'll
   pay**, a week at your **Games per week**, an hour you already have a game at, a club no longer
   selling, or a card with somebody In you may not share a court with. **The switch shows both

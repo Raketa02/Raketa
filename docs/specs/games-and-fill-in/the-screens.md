@@ -29,7 +29,7 @@
 >
 > **A later ruling the mocks predate (Q125):** a group page has three tabs, *Games · Fill in · Friends*, and the group's
 > header opens *Info* as its own screen ([A1](#a1-where-things-live)). Wherever a mock draws a fourth
-> tab, *Info*, read three.
+> tab, *Info*, read three. *(Four since PRD #844, below; Info is still not one of them.)*
 >
 > **A later ruling the mocks predate (Q126):** a player is named by their **nickname**, never with
 > an @ ([ADR-0199](../../adr/0199-a-player-is-known-by-their-nickname.md)), so wherever a mock prints a name — *Karol T.*, *Oscar
@@ -40,6 +40,18 @@
 > **A later ruling the mocks predate (Q127):** the Competitive / For fun switch always shows both
 > kinds, and the kind the player's intent doesn't want is a dimmed door to changing it. No mock
 > draws the door, its panel or the finding state ([A1](#a1-where-things-live), [A2.1](#a21-states)).
+>
+> **A later decision the mocks predate (PRD [#844](https://github.com/Raketa02/Raketa/issues/844),
+> 2026-11-23; decided, built by [#847](https://github.com/Raketa02/Raketa/issues/847)–[#850](https://github.com/Raketa02/Raketa/issues/850)):**
+> a group page has **four** tabs, *Games · Fill in · You’re in · Friends*. Fill in
+> holds only the rescues, You’re in the player's own live yeses, neither has a section heading, and
+> **+ Post a game** floats on You’re in. Wherever a mock draws Fill in's two sections or the button
+> over Fill in (mocks 11 and 14), read two tabs ([A3](#a3-fill-in-and-youre-in)). **A tab's badge
+> counts what the player hasn't seen, and the tab on screen draws none** ([A1](#a1-where-things-live),
+> [ADR-0208](../../adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)):
+> wherever a mock draws a badge on the selected tab (mocks 1 and 11), read none.
+> The split's own mocks, its decision log and its two overrides are in
+> [`docs/specs/fill-in-split/`](../fill-in-split/README.md), cited as *split mock 1* to *3*.
 
 ---
 
@@ -52,9 +64,31 @@
   were the older loop, hidden behind a *Classic play* flag and then removed on 2026-10-06
   ([#569](https://github.com/Raketa02/Raketa/issues/569)).
 - **Group page** (mock 1): header (back, monogram, name, *n members · home club*, the sport pill
-  on the right), then the tabs **Games · Fill in · Friends** (Q125; the mocks draw a fourth, *Info*):
-  - **Games** badge — cards where somebody is already In with you (mock 1: *Games 4*).
-  - **Fill in** badge — the number of *Seats to fill* rows (mock 11: *Fill in 1*).
+  on the right), then the tabs **Games · Fill in · You’re in · Friends** (#844, split mock 3; Q125's
+  three until then, and the mocks' *Info* is not a tab). The page opens on Games, and which tab it
+  was on isn't kept between visits:
+  - **Games** badge — cards where somebody is already In with you, across both kinds, that you
+    haven't seen (mock 1 draws *Games 4*, on the selected tab: see below).
+  - **Fill in** badge — the rescues you haven't seen (mock 11 draws *Fill in 1*, on the selected
+    tab).
+  - **You’re in** badge — your live yeses in this group and sport that you haven't seen (split
+    mock 3: *You’re in 3*). Friends has none.
+  - **A badge counts what you haven't seen** (#844,
+    [ADR-0208](../../adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)).
+    - **What a tab shows is seen while it is on screen**, and a row arriving while you're on it is
+      seen at once. On Fill in and You’re in that is everything the tab counts. **On Games it is the
+      cards of the kind the switch is on**, the whole deck of that kind, not only the top card; the
+      other kind's cards stay unseen until the switch moves to it.
+    - **The tab on screen draws no badge**, whatever it counts (mocks 1 and 11 and split mocks 1
+      and 2 draw one: an override). So a player on Games never sees the Games badge, even while the
+      other kind holds cards they haven't seen; once they leave Games, its badge counts those.
+    - A row is known by its id: a rescue by its booking, a yes by its proposal, a Games card by
+      its id. A row that only changes never counts again; only a row you haven't had on screen
+      brings the badge back.
+    - What was seen is kept on the phone, per account, and forgotten at sign-out. Until it is read
+      no badge is drawn, and no badge holds anything up. The mark is the coral corner badge, as
+      before; a count of 0 draws nothing. Spoken, a badged tab says its count is new: *Fill in, 2
+      new seats to fill*.
   - **The header opens Info** (Q125). The monogram, the name with its official mark and *n members ·
     home club* are one button, which pushes **Info** over the page as its own screen. The back arrow
     and the sport pill keep their own taps; while the sport filter's bar is open it covers the
@@ -68,14 +102,14 @@
   scrolls. Its header is the page's own without the sport pill, and it is not a button. Back returns
   to the tab the player left.
   - **Re-reads.** Info re-reads the group when it opens, on a pull, and on coming back from Members
-    or Edit group. The page's pull on Games and Fill in re-reads the group and its games; Friends has
+    or Edit group. The page's pull on Games, Fill in and You’re in re-reads the group and its games; Friends has
     no pull. The page doesn't re-read on coming back from Info, because Edit group already writes the
     group into the page's read.
-  - **A member who must add a sport** sees *Add a sport* on all three tabs. The header still opens
+  - **A member who must add a sport** sees *Add a sport* on all four tabs. The header still opens
     Info, and the way out is there.
 - **A member rated in nothing** (Q126, [ADR-0200](../../adr/0200-a-level-is-asked-where-play-begins.md) §2–§6). Sign-up asks no skill
   question, so this is the common first visit.
-  - **In a player group**, **Games, Fill in, Friends, Post a game and Members** each show one door
+  - **In a player group**, **Games, Fill in, You’re in, Friends, Post a game and Members** each show one door
     in place of their content: ***Get your level — pick the sports you play, a few questions
     each***. It opens *Which sports do you play?* over every sport, with nothing ticked. After each
     sport, *Your rating* offers ***Rate {next sport}*** and ***Done for now***; the last offers
@@ -213,9 +247,9 @@ this game* — counting the yeses on every version.
 
 | You swipe… | On… | What happens |
 | --- | --- | --- |
-| right | a card that won't fill | Your tile gains IN for the others; the card leaves your deck; the yes appears in **Fill in › You're In**. Nothing charged. |
+| right | a card that won't fill | Your tile gains IN for the others; the card leaves your deck; the yes appears on **You’re in** (#844; *Fill in › You're In* until then), and that tab's badge counts it until you look. Nothing charged. |
 | right | *Book it now* | Toast **"Booking in 10 s · Undo"** with a draining ring. At zero: everyone's share held together → **It's a game!** (taken at once only for a game booked after its cut-off), at every club ([the mechanics §11](the-mechanics.md#11-the-moment-a-game-fills), Q113, Q121). |
-| right | a rescue | The same toast; at zero your share is held (taken at once after the cut-off) → **It's a game!**; the game is in **Home**. A refused card keeps the seat yours for 30 minutes ([the mechanics §10.1](the-mechanics.md#101-seats-to-fill--the-rescue-board)). |
+| right | a rescue | The same toast; at zero your share is held (taken at once after the cut-off) → **It's a game!**; the game is in **Home**. A refused card keeps the seat yours for 30 minutes ([the mechanics §10.1](the-mechanics.md#101-fill-in--the-rescue-board)). |
 | right | without a saved method | The **payment setup** ([A7.3](#a73-payments)) opens as a sheet; the yes lands when it finishes, or is dropped if you close it. |
 | left | anything | The card leaves; silent; never on your record. |
 
@@ -238,16 +272,68 @@ this game* — counting the yeses on every version.
   [the mechanics §12.2](the-mechanics.md#122-when-a-game-fills), Q109, Q113). The seat is held for
   them either way.
 
-## A3. Fill in (mock 11)
+## A3. Fill in and You’re in
 
-Paper background; sections only when they have rows; the coral **+ Post a game** FAB (mock 14)
-floats bottom-right, always. **Rated in nothing**, in a player group, the tab is the door
-([A1](#a1-where-things-live), Q126) in place of both sections; the FAB still floats, and Post a
-game shows the same door.
+> **Rewritten 2026-11-23 for PRD [#844](https://github.com/Raketa02/Raketa/issues/844).** Until
+> then this was one tab, Fill in (mock 11), stacking two sections under the headings *SEATS TO
+> FILL · N* and *YOU'RE IN · N*, with the FAB floating over it always. The split is drawn by
+> [split mocks 1 and 2](../fill-in-split/README.md#which-mock-shows-what).
 
-### A3.1 SEATS TO FILL · N — the rescue row (mock 12)
+Two tabs, side by side in the bar, **each owning one list**. The rows are today's rows, drawn,
+ordered and tapped exactly as before ([A3.1](#a31-the-rescue-row-mock-12),
+[A3.2](#a32-the-yes-row-mock-13)). **Neither tab has a section heading**: the tab's name does that
+job. Paper background on both.
 
-Coral 1.5 pt border.
+**Fill in** (split mock 1) holds **only the rescues** you fit and are free for, soonest first, each
+leaving at its deadline by itself.
+
+- **No + Post a game** floats here (split mock 1 draws one: an override).
+- **Empty** — the one line ***No seats to fill right now***, whether You’re in is empty or not.
+  Fill in never draws the group's starting card, which tells you to post, because the button no
+  longer lives here. (The level door and the *add a sport* card still stand in its place, as below.)
+- **Its read is its own**: the muted spinner while nothing is drawn yet, the amber offline note that
+  resumes, and the refusal with why and its retry. None of it touches You’re in.
+- Its badge counts the rescues you haven't seen ([A1](#a1-where-things-live)).
+
+**You’re in** (split mock 2) holds **only your live yeses in this group and sport**: picks,
+challenges and your own posts still filling, never a rescue (a taken rescue goes to Home, Q76).
+Soonest first.
+
+- **The coral + Post a game FAB** (mock 14) **floats bottom-right here, and only here**. It floats
+  over the level door too, and it isn't drawn while an official group's *add a sport* card stands
+  in the tab.
+- **Empty:**
+  - **when both tabs are empty**, the group's starting card: *No games yet* (*No games yet — it’s
+    just you* for the only member), *Post the first game…*, and the link's doors. It is drawn only
+    once **both** reads, the rescues and your live yeses, have said there is nothing, never as a
+    first frame;
+  - **when only this tab is empty**, the one line ***You haven’t said yes to a game here yet***.
+- **Withdraw** takes the yes back in place: the row leaves and the tab stays put. Withdrawing the
+  last one leaves the tab on its empty state, without navigating.
+- **Its read is its own**: the live yeses, then each row's game for its squares. The spinner reads
+  *Reading You’re in*; the offline note and the refusal with its retry are as on Fill in.
+- **The live yeses are read as the page opens**, not when the tab is drawn, because the tab's badge
+  needs them. It is the read the tab makes anyway, shared with You › Payments, made earlier and in
+  parallel: it never delays anything, and the tab usually opens already read. It is now made on
+  every page open, including visits that never open You’re in (the log's
+  [§12 call 2](../fill-in-split/decisions.md#12-calls-made-without-asking-flagged-to-the-user),
+  accepted in PRD #844; its fallback, a badge drawn only once that read is already cached, was not
+  taken).
+- Its badge counts the yeses you haven't seen ([A1](#a1-where-things-live)): a yes you gave by
+  swiping on the deck counts until you look; your own post doesn't, because you land on it.
+
+**Both tabs:**
+
+- **Rated in nothing**, in a player group, each tab is the door ([A1](#a1-where-things-live), Q126)
+  in place of its list or its empty state. The FAB still floats on You’re in, and Post a game shows
+  the same door. In an official group whose sports you aren't rated in, each tab is its *add a
+  sport* card instead.
+- **The pull** is the page's one control, as on Games: it re-reads everything, whichever tab you
+  pull on.
+
+### A3.1 The rescue row (mock 12)
+
+Coral 1.5 pt border. On **Fill in**.
 
 - **Title** — *Padel · Saturday 16:00* (+ *· friendly* for For fun). Tap the upper block → the
   rescue's details (non-member view, [A4.3](#a43-a-rescue-seen-from-outside-q96)).
@@ -260,9 +346,9 @@ Coral 1.5 pt border.
   *held until the cut-off* before it, *paid now* after it (Q113). Lost race → toast *"Someone just
   took it"*.
 
-### A3.2 YOU'RE IN · N — your row (mock 13)
+### A3.2 The yes row (mock 13)
 
-Mint 1.5 pt border. Picks, challenges and posts — never rescues (Q76).
+Mint 1.5 pt border. On **You’re in**. Picks, challenges and posts — never rescues (Q76).
 
 - **Title** — *Padel · Saturday 15:00*. Tap → the game's details (filling view).
 - **Subtitle** — *Bonarka Arena · **book by Saturday 13:00***. (Until Q121, while an *On request*
@@ -369,14 +455,18 @@ took the seat"*.
 
 ## A5. Post a game (mock 15)
 
-Full screen over the group, scrolling; the bottom bar stays visible. Back chevron → Fill in, the
-draft kept while you stay in the group.
+Full screen over the group, scrolling; the bottom bar stays visible. It opens from two doors,
+You’re in's **+ Post a game** and Games' *Nothing picked right now*, and **opening it doesn't turn
+the page** (#844; until then it turned the page to Fill in as it opened). The tab the page stood on
+is its origin. **Back** (the chevron, the hardware back or a swipe) returns to that tab, and the
+back control names it: ***Back to You’re in*** / ***Back to Games*** (it was *Back to Fill in*).
+The draft is kept while you stay in the group.
 
 ### A5.1 The controls (mocks 16–19)
 
 | Section | Control | Behaviour |
 | --- | --- | --- |
-| **SPORT** | chip row, each with its sport colour dot and the count of group members rated in it (*Padel 10*) | Only sports you're rated in that the group plays. Selecting resets the level range and clears the pick. Rated in nothing, in a player group: the door ([A1](#a1-where-things-live), Q126). Rated in none of the group's sports: *"Get rated in padel to post here"* with its button per sport, as today, which now begins the questions and returns here (Q80, Q126). |
+| **SPORT** | chip row, each with its sport colour dot and the count of group members rated in it (*Padel 10*) | Only sports you're rated in that the group plays. Selecting resets the level range and clears the pick. Rated in nothing, in a player group: the door ([A1](#a1-where-things-live), Q126). Rated in none of the group's sports: *"Get rated in padel to post here"* with its button per sport, as today, which now begins the questions (Q80, Q126). A pass begun here, from the door or this card, returns to **You’re in**, where the button lives (#844; it returned to Fill in). |
 | **KIND** | *Competitive* / *For fun · friendly* | Defaults to your intent. Re-filters the fits; the grid updates live. |
 | **WHO** | *Anyone / Men / Women / Mixed pairs* | *Mixed pairs* only for padel and badminton. Men / Women / Mixed count only members with a gender set; nobody whose own preference excludes the game is ever dealt it. |
 | **LEVEL** · *narrow it, not widen it* | two steppers | Seeded with **the engine's range for the kind** around your level (Q78). − / + move a bound 0,05 inward only; pushing outward bounces with *"You can narrow it, not widen it"*. |
@@ -425,7 +515,7 @@ A bottom sheet (on `ModalStage`, never a React Native `Modal`):
   each*. Tap → picks it (ring + ✓ on the cell); a new pick replaces the old.
 - **ALREADY HAPPENING HERE** — first **rescues** you fit (*Padel · Sunday 20:00*, *Kuba · Centrum
   Ruchu · Court 2 · 30 zł each*, the squares, *any level ✓ · you are free ✓*, **Pay 30 zł**,
-  spoken *held until the cut-off* before it and *paid now* after it, as on [A3.1](#a31-seats-to-fill--n--the-rescue-row-mock-12)
+  spoken *held until the cut-off* before it and *paid now* after it, as on [A3.1](#a31-the-rescue-row-mock-12)
   — Q113, Q124); then **posts still filling** you fit (no court number, **I'm in**; **Pay 27 zł** on
   a post's last seat, because your yes fills it — Q124) (Q79, Q93).
 
@@ -434,8 +524,13 @@ A bottom sheet (on `ModalStage`, never a React Native `Modal`):
 Full-width coral button, disabled (pale) until a court is picked, with the helper *"Pick an hour
 with a court on the map first."* Tapping it: your yes is recorded, up to three versions are
 dealt as *"[You] challenged you"* cards, their *Challenges for you* alert fires, and you land on
-**Fill in › You're In**. Guards, each shown under the button in place of the helper: no saved
-method (the setup opens), two live posts already, games per week already booked that week.
+**You’re in**, whichever door you came through (#844; *Fill in › You're In* until then), with the
+toast *Posted — N of your best fits have it.* Your post doesn't raise You’re in's badge: you are
+looking at it. **Joining a post** from the slot sheet lands on You’re in too; **joining a rescue**
+from it runs *It's a game!* and Home as before, and leaves the page on You’re in. Guards, each
+shown under the button in place of the helper: no saved method (the setup opens), two live posts
+already (*You already have 2 posts live — withdraw one in You’re in to post again.*), games per
+week already booked that week.
 
 ## A6. The You tab: Your week (mock 36)
 
@@ -569,7 +664,7 @@ must answer, *Bonarka Arena answers by 20:45 · Nobody pays until it confirms*, 
 open · books when it's full · nobody paid*, mirroring a booked game's *Seat open*. It is booked when
 it refills, and reads *Called off · nobody paid* if its book-by passes first. (At an *On request*
 club, until Q121, it read *… is asked again when it's full*, and *Waiting for the club* on
-refilling.) It is in *You're In* too ([A3.2](#a32-youre-in--n--your-row-mock-13)).
+refilling.) It is on *You’re in* too ([A3.2](#a32-the-yes-row-mock-13)).
 
 **Waiting for one payment** (Q111) is on all four's Home while one player's time to fix the card
 or time to pay runs: *Waiting for one payment · until 14:40 · Nobody pays until it's in*, the same
@@ -686,7 +781,7 @@ row, and there is no *mark all*. The app icon carries no number until push is on
   green*), each with its Soft / Ink / Line and contrast per §15.2. `#E2F3EC` is `mintSoft`,
   `#0C8F6B` is `mint`.
 - **New components** — the game card (dark, three types), the mini overlap grid, the court block
-  with its three tags, the Undo toast with a draining ring, the rescue and You're In rows, the
+  with its three tags, the Undo toast with a draining ring, the rescue and You’re in rows, the
   posting grid cell (nine states), the slot sheet, the hour grid (7 × 16), the numbered setup
   checklist, the method card, the receipt row, the on/off chip.
 - **Changed** — peeking deck cards fade; the group page's Competitive / For fun switch appears on
@@ -881,7 +976,8 @@ The shape is ADR-0189 §5. What each app needs from it:
 Per reader, never stored as aggregates: the **group deck** (cards addressed to you, an owed card
 first, ordered by [the mechanics §8.2](the-mechanics.md#82-the-order), filtered by games-per-week and
 most-I'll-pay, each card carrying *indoor*, *outdoor* or neither, Q122–Q123),
-**Fill in** (Seats to fill you fit and are free for; You're In), **Home**, **Payments** (live
+**Fill in** (the rescues you fit and are free for; the **You’re in** tab is the live yeses below,
+filtered on the phone to the group and sport, #844), **Home**, **Payments** (live
 yeses across pools, receipts), the **posting grid** (per range: best-hour count, court
 availability, happening-here), the **slot sheet**, the club's **Bookings** (each court with its
 kind), the **cancel preview** (moves to a named court of a named kind, or called off — Q122),
@@ -923,7 +1019,7 @@ proposals' needs, per club and hour.
   also told the desk, after an Accept (Q112).
   At a holding, it opens the player's seat as a rescue; on a rescue, it
   offers the seat again.
-- **Rescue dealing** — on every `SeatLeft`: Seats to fill, Seat open cards, Fill in alerts.
+- **Rescue dealing** — on every `SeatLeft`: Fill in's rescues, Seat open cards, Fill in alerts.
 - **How did it go?** (Q119, Q120) — every 30 seconds, as the other money and seat jobs: tells the
   players of every Competitive booked game whose hour has ended. For fun games are told nothing.
 - **Levels** (Q119) — a result settled by an acceptance is settled for rating from the outbox, for
@@ -987,7 +1083,7 @@ adapter**, and **nothing a mock shows is hard-coded**. On top of today's cohort 
 - **Members** with hourly weekly hours, spread so the posting grid shows every cell state.
 - **For a protagonist**, in one group and sport: fresh picks; picks with 1, 2 and 3 In (one *Book
   it now*); a challenge with momentum and one whose poster withdrew; rescues before and after the
-  cut-off; a post of their own in You're In; booked games
+  cut-off; a post of their own on You’re in; booked games
   (one before, one after the cut-off, one on the day, and since Q113 one filled far ahead with its
   seats checked); since Q114 the evening nobody recorded reads *Played · no score*, and the
   protagonist's Player reliability is in points (Q117); a called-off game; receipts and a refund; a week at the
@@ -1012,9 +1108,9 @@ adapter**, and **nothing a mock shows is hard-coded**. On top of today's cohort 
 | `player/8_picked_for_you_no_friends_not_all_in.png` | A pick with one In, no friends |
 | `player/9_competitive_forfun_tap.png` | The switch |
 | `player/10_game_card_singles.png` | A singles pick |
-| `player/11_fill_in_tap_general.png` | Fill in with both sections and the FAB |
+| `player/11_fill_in_tap_general.png` | Fill in with both sections and the FAB — two tabs since #844 ([split mocks 1 and 2](../fill-in-split/README.md)) |
 | `player/12_fill_in_sets_to_fill_row.png` | The rescue row |
-| `player/13_fill_in_youre_in_row.png` | The You're In row |
+| `player/13_fill_in_youre_in_row.png` | The yes row, now on You’re in |
 | `player/14_post_game_button.png` | The FAB |
 | `player/15_post_a_game_screen_general.png` | The posting screen |
 | `player/16`–`19` | Sport, kind, who, level |

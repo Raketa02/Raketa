@@ -122,6 +122,17 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > terms are in `CONTEXT.md` under **Matchmaking** (*Social vibe*) and **Player profile** (*Social
 > tag*); the brief, the decision log and the mocks are `docs/specs/for-fun/`.
 >
+> **You’re in becomes its own tab, without a new context**
+> ([ADR-0208](docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md),
+> PRD [#844](https://github.com/Raketa02/Raketa/issues/844); decided, not yet built). A group page
+> has four tabs, Games · Fill in · You’re in · Friends: **Fill in** keeps the rescues, the player's
+> live yeses move to **You’re in**, and Post a game floats there. The badges count what the player
+> hasn't seen, and the phone remembers which rows were seen, per account (ADR-0208). The one
+> contract change is additive: **Proposals**' group deck read carries the ids of the cards with
+> somebody In. Only the backend and the player app change. The terms are in `CONTEXT.md` under
+> **Bookings** (*Fill in*, *You’re in*); the decision log and the mocks are
+> `docs/specs/fill-in-split/`, and the specs it amends are `docs/specs/games-and-fill-in/`.
+>
 > **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
 > radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
 > ranking, with the feature flag that hid them
@@ -275,6 +286,8 @@ else lives one layer down. See
 │   │                            decision log and the mocks, which lead on design
 │   ├── specs/for-fun/        ← For fun built by shared tags, the Social vibe (ADR-0207): the
 │   │                            brief, the decision log and the mocks, which lead on design
+│   ├── specs/fill-in-split/  ← Fill in and You’re in as two tabs, unseen badges (ADR-0208):
+│   │                            the decision log and the mocks, which lead on design
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)
