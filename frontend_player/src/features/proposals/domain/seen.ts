@@ -2,13 +2,13 @@
  * **What a group page's tabs count: the rows the player hasn't seen**
  * ([ADR-0208](../../../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md),
  * [#849](https://github.com/Raketa02/Raketa/issues/849); split Q2b, Q10). Beside the Fill in rules
- * (`fillIn.ts`), because Fill in and You’re in are the tabs it counts today; Games joins them with
- * the deck's ids (#850).
+ * (`fillIn.ts`), because Fill in and You’re in were the first tabs it counted; Games joined them
+ * with the deck's ids (#850).
  *
- * Pure. A row is known by its id — a rescue by its booking, a yes by its proposal — so **a row that
- * only changed** (a join, a deadline moved) **keeps its id and stays seen**, and only an id the
- * player has not had on screen counts. The phone keeps the result (the phone-preferences store); it
- * decides nothing.
+ * Pure. A row is known by its id — a rescue by its booking, a yes or a card by its proposal — so **a
+ * row that only changed** (a join, a new version, a deadline moved) **keeps its id and stays seen**,
+ * and only an id the player has not had on screen counts. The phone keeps the result (the
+ * phone-preferences store); it decides nothing.
  *
  * **A badge is a nudge, not a ledger** — the product owner's rule over every choice here: it never
  * costs a request or a wait, and where being exact would, the simpler rule wins.
@@ -16,11 +16,31 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import { GAME_KINDS, type GameKind } from './vocabulary';
+
 /**
- * **The tabs that count unseen rows** — Fill in's rescues and You’re in's live yeses. The group
- * page's own tab names, spelled here because the page reads this feature and never the reverse.
+ * **The lists of seen rows a group page keeps** — Fill in's rescues, You’re in's live yeses, and
+ * Games' cards with somebody In, **one list per kind** (ADR-0208 §1, #850): the group page's three
+ * badged tabs, by its own names, spelled here because the page reads this feature and never the
+ * reverse.
+ *
+ * **Games is per kind because the deck is read per kind.** A look cuts its list back to the ids the
+ * read on screen counts, and the other kind's read — held from an earlier visit — can be older
+ * than a card seen since: one list for both was cut back to it, and a card she had just looked at
+ * was new again (the code review's catch). Each kind's list is cut back only by its own kind's
+ * read, and the badge counts against both.
  */
-export type SeenTab = 'fillIn' | 'youreIn';
+export type SeenTab = 'fillIn' | 'youreIn' | GamesSeen;
+
+/** **Games' list for one kind** — the cards of that kind seen on the deck. */
+export type GamesSeen = `games.${GameKind}`;
+
+export function gamesSeen(kind: GameKind): GamesSeen {
+  return `games.${kind}`;
+}
+
+/** **What the Games badge is counted against** — both kinds' lists, since it counts both kinds. */
+export const GAMES_SEEN: readonly GamesSeen[] = GAME_KINDS.map(gamesSeen);
 
 /**
  * **A tab's badge** — the ids it counts now, minus the ids seen (ADR-0208 §1). 0 draws nothing, and
@@ -52,7 +72,10 @@ export function sameSeen(a: readonly string[], b: readonly string[]): boolean {
   return one.size === other.size && [...one].every((id) => other.has(id));
 }
 
-/** **Where a tab's seen ids are kept** — one entry per group, sport and tab (ADR-0208 §1). */
+/**
+ * **Where a list of seen ids is kept** — one entry per group, sport and tab, and on Games per kind
+ * (ADR-0208 §1).
+ */
 export function seenEntry(groupId: string, sport: Sport, tab: SeenTab): string {
   return `${groupId}.${sport}.${tab}`;
 }

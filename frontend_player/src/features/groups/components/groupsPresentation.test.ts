@@ -20,6 +20,7 @@ import {
   requestTags,
   emptySeatLabel,
   fillInTabLabel,
+  gamesTabLabel,
   friendSeatLabel,
   seatMoreLine,
   takeOffLabel,
@@ -139,6 +140,12 @@ describe('the group page’s sentences', () => {
   it('says the You’re in tab with its new games, one or many', () => {
     expect(youreInTabLabel(1)).toBe('You’re in, 1 new game');
     expect(youreInTabLabel(3)).toBe('You’re in, 3 new games');
+  });
+
+  // #850: Games counts what is new too — the cards with somebody In you haven't seen.
+  it('says the Games tab with its new cards with somebody In', () => {
+    expect(gamesTabLabel(1)).toBe('Games, 1 new with somebody In');
+    expect(gamesTabLabel(4)).toBe('Games, 4 new with somebody In');
   });
 
   // #848: Post a game's chevron names the tab a back-out returns to — the one it was opened from.

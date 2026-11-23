@@ -54,6 +54,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import { resolveKind, withoutCard, type Finding, type GroupDeck } from '../domain/deck';
 import { isRescue, type DealtIn, type YesAnswer, type YesOn } from '../domain/fill';
+import { GAMES_SEEN } from '../domain/seen';
 import type { GameKind } from '../domain/vocabulary';
 import { answerCard, withdrawYes, type AnswerToCard } from '../use-cases/answers';
 import { dealTheGroupNow } from '../use-cases/dealNow';
@@ -61,6 +62,7 @@ import { readGroupDeck } from '../use-cases/deckReads';
 
 import { proposalKeys } from './proposalKeys';
 import { useLatest } from './useLatest';
+import { useUnseenCount } from './useSeenRows';
 
 function deckQuery(groupId: string, sport: Sport, kind: GameKind, enabled = true) {
   return {
@@ -83,12 +85,18 @@ export function useGroupDeck(groupId: string, sport: Sport, chosen: GameKind) {
   return { read: kind === chosen ? asked : corrected, kind };
 }
 
-/** **The Games tab's badge** — cards where somebody is already In with you, across the segments. */
+/**
+ * **The Games tab's badge** — the cards where somebody is already In with you, across both kinds,
+ * that you haven't seen on either kind's list (#850, ADR-0208): the ids off the deck read the tab
+ * draws, so the count costs no second request and nothing reads the other kind's deck. `GamesDeck`
+ * marks what it shows, on the list of the kind it shows.
+ */
 export function useGamesBadge(groupId: string, sport: Sport, chosen: GameKind): number {
-  return useGroupDeck(groupId, sport, chosen).read.data?.gamesBadge ?? 0;
+  const counted = useGroupDeck(groupId, sport, chosen).read.data?.inCardIds;
+  return useUnseenCount(groupId, sport, GAMES_SEEN, counted);
 }
 
-/** Take a card off the read it was dealt on — its segment's count and the badge following it. */
+/** Take a card off the read it was dealt on — its segment's count and the badge's ids following. */
 export function dropCard(
   client: QueryClient,
   {

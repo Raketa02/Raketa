@@ -154,11 +154,12 @@ export function groupCardLabel(group: {
 }
 
 /**
- * *Games, 4 with somebody In* — the group page's Games tab, spoken with its count: the cards where
- * somebody is already In with you (#553, the screens A1).
+ * *Games, 4 new with somebody In* — the group page's Games tab, spoken with its badge: the cards
+ * where somebody is already In with you, of either kind, that you haven't seen there yet (#553, the
+ * screens A1; *new* since #850, ADR-0208).
  */
 export function gamesTabLabel(cards: number): string {
-  return `${GROUPS_COPY.group.tabs.games}, ${cards} with somebody In`;
+  return `${GROUPS_COPY.group.tabs.games}, ${cards} new with somebody In`;
 }
 
 /**

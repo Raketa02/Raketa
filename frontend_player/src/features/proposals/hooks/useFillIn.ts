@@ -61,7 +61,7 @@ export function useFillInBadge(groupId: string, sport: Sport): number {
   return useUnseenCount(
     groupId,
     sport,
-    'fillIn',
+    ['fillIn'],
     seats === undefined ? undefined : rescueIds(seats),
   );
 }

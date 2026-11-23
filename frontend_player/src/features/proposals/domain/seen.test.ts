@@ -1,4 +1,12 @@
-import { afterALook, sameSeen, seenEntry, seenFrom, unseenCount } from './seen';
+import {
+  GAMES_SEEN,
+  afterALook,
+  gamesSeen,
+  sameSeen,
+  seenEntry,
+  seenFrom,
+  unseenCount,
+} from './seen';
 
 const GROUP = 'a0000000-0000-4000-8000-000000000005';
 const OTHER_GROUP = 'a0000000-0000-4000-8000-000000000099';
@@ -72,12 +80,19 @@ describe('where a tab’s seen ids are kept', () => {
     const entries = [
       seenEntry(GROUP, 'padel', 'fillIn'),
       seenEntry(GROUP, 'padel', 'youreIn'),
+      // Games' is per kind (#850): each kind's list is cut back by its own kind's read alone.
+      seenEntry(GROUP, 'padel', gamesSeen('competitive')),
+      seenEntry(GROUP, 'padel', gamesSeen('forFun')),
       seenEntry(GROUP, 'tennis', 'fillIn'),
       seenEntry(OTHER_GROUP, 'padel', 'fillIn'),
     ];
 
     expect(new Set(entries).size).toBe(entries.length);
     expect(seenEntry(GROUP, 'padel', 'fillIn')).toBe(seenEntry(GROUP, 'padel', 'fillIn'));
+  });
+
+  it('counts the Games badge against both kinds’ lists', () => {
+    expect(GAMES_SEEN).toEqual([gamesSeen('competitive'), gamesSeen('forFun')]);
   });
 });
 

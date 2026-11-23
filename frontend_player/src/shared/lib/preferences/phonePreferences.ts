@@ -71,10 +71,10 @@ export type PhonePreference =
   | SeenRowsPreference;
 
 /**
- * **The rows a player has seen on a group page's tab** (ADR-0208) — the ids on Fill in and You’re in
- * (and Games, from #850) that were on screen, which is what a tab's badge is counted against: one
- * JSON list of ids **per group, sport and tab**, each under its own key, `seenRows.` and then the
- * entry `proposals` spells. Per account and forgotten at sign-out, like the rest of the table; only
+ * **The rows a player has seen on a group page's tab** (ADR-0208) — the ids on Games, Fill in and
+ * You’re in that were on screen, which is what a tab's badge is counted against: one JSON list of
+ * ids **per group, sport and tab**, and on Games per kind (#850), each under its own key,
+ * `seenRows.` and then the entry `proposals` spells. Per account and forgotten at sign-out, like the rest of the table; only
  * ids, cut back to the ones the tab still counts every time it is written (§2), so it never grows
  * past the tab; and **read and written without waiting** (§5) — the one value here whose read no
  * screen holds its first frame for.

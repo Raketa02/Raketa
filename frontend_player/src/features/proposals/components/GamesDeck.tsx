@@ -109,6 +109,18 @@
  *
  * **Offline is not a refusal.** The answer is held until the connection returns
  * (`networkMode: 'online'`), the card stays gone, and the amber note says the answer resumes.
+ *
+ * ## What the deck shows is seen (#850, ADR-0208)
+ *
+ * The page's Games badge counts the cards with somebody In that the player hasn't seen, across both
+ * kinds, off this read's ids (`useGamesBadge`). **The deck marks the whole of the kind on screen**,
+ * on that kind's own list — every card the read dealt, not only the one on top, and the ones this
+ * build cannot draw too (`dealtIds`), which only a visit can clear — whenever they change while the
+ * page is in view (`inView`) with nothing over the deck: no player's record, nothing of the fill's,
+ * neither the door's panel nor finding over its area. The other kind's cards are never among them,
+ * so they stay new until the switch moves there; a notice's card is seen as any visit is, once the
+ * page has moved the switch to its kind. A card that only changed — a join, a new version — keeps
+ * its id and stays seen.
  */
 
 import { router } from 'expo-router';
@@ -156,9 +168,11 @@ import {
   type Finding,
 } from '../domain/deck';
 import { isRescue, type DealtIn } from '../domain/fill';
+import { gamesSeen } from '../domain/seen';
 import type { GameKind } from '../domain/vocabulary';
 import { fortnightOf, gameDayOf, weekdayAt } from '../domain/when';
 import { useDeckClock } from '../hooks/useDeckClock';
+import { useFill } from '../hooks/useFill';
 import { useFillYes } from '../hooks/useFillYes';
 import {
   useAnswerCard,
@@ -168,6 +182,7 @@ import {
   useGroupDeck,
 } from '../hooks/useGroupDeck';
 import { useLatest } from '../hooks/useLatest';
+import { useSeeRows } from '../hooks/useSeenRows';
 
 import { DeckAnswers } from './DeckAnswers';
 import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
@@ -218,6 +233,11 @@ export interface GamesDeckProps {
    * the tab lays itself out. Absent, nothing pulls.
    */
   readonly refreshControl?: ReactElement<RefreshControlProps>;
+  /**
+   * Whether the page is the screen in view — nothing pushed over it (`useScreenInView`). What the
+   * deck shows is seen only while it is (#850).
+   */
+  readonly inView: boolean;
 }
 
 /** The card on its way out, and the answer that sent it there. */
@@ -234,11 +254,14 @@ export function GamesDeck({
   empty,
   onTop,
   refreshControl,
+  inView,
 }: GamesDeckProps) {
   const { read, kind } = useGroupDeck(groupId, sport, chosen);
   const drop = useDropCard(groupId, sport, kind);
   const dealtIn: DealtIn = { groupId, sport, kind };
   const fill = useFillYes(dealtIn);
+  /** What the fill has up over the phone — *It's a game!* or one of its sheets covers the deck. */
+  const fillOver = useFill().over;
 
   const [leaving, setLeaving] = useState<Leaving | undefined>(undefined);
   /** The player whose record is open — a tile's press. */
@@ -290,6 +313,27 @@ export function GamesDeck({
   );
 
   const deck = read.data;
+  // Open while the door tapped is still a door on this sport's read — a read that now shows the
+  // kind closes it, and a panel opened on another sport is not this one's.
+  const panel =
+    deck === undefined || door === undefined || door.sport !== sport
+      ? undefined
+      : doorPanel(deck.segments, door.kind);
+  // What the deck shows is seen while it is on screen (#850): every card the read of the kind on
+  // screen dealt, whenever they change while the page is in view with nothing over the deck — no
+  // record's sheet, nothing of the fill's, neither the door's panel nor finding over its area. On
+  // that kind's own list, so a read of one kind never cuts back what was seen on the other.
+  useSeeRows(
+    groupId,
+    sport,
+    gamesSeen(kind),
+    deck === undefined ? undefined : { onScreen: deck.dealtIds, counted: deck.inCardIds },
+    inView &&
+      reading === undefined &&
+      fillOver === 'none' &&
+      panel === undefined &&
+      finding === undefined,
+  );
   const readAt = read.dataUpdatedAt;
   // The read's instant, moving on while a card counts down — see `useDeckClock`.
   const at = useDeckClock(readAt, deck !== undefined && anyCountingDown(deck.cards, readAt));
@@ -434,11 +478,6 @@ export function GamesDeck({
           accessibilityLabel: segmentSpoken(side.kind, side.count),
         },
   );
-  // Open while the door tapped is still a door on this sport's read — a read that now shows the
-  // kind closes it, and a panel opened on another sport is not this one's.
-  const panel =
-    door === undefined || door.sport !== sport ? undefined : doorPanel(deck.segments, door.kind);
-
   /**
    * A door opens its panel and moves nothing; a live kind is the page's choice, as ever. While an
    * answer is on its way, or its games are being found, the switch is still: finding lands it.

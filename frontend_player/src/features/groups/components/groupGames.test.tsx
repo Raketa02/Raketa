@@ -327,11 +327,8 @@ describe('the states around the deck', () => {
     ).toBeTruthy();
   });
 
-  it('counts the cards somebody is In on, on the Games tab', async () => {
-    await openGames(groupDeck({ cards: [deckCard()], games_badge: 4 }));
-
-    expect(await screen.findByRole('button', { name: 'Games, 4 with somebody In' })).toBeTruthy();
-  });
+  // The Games tab's badge — what is new with somebody In, across both kinds — is walked in
+  // `groupBadges.test.tsx` (#850): the tab on screen draws none.
 
   it('says why a read failed, and reads again on the retry', async () => {
     let refused = false;

@@ -363,6 +363,9 @@ export function groupDeck(
   extra: Partial<Wire['GroupDeckResponse']> = {},
 ): Wire['GroupDeckResponse'] {
   const cards = extra.cards ?? [];
+  // The cards the badge counts, by id (#846): this deck's own, since a suite deals one segment —
+  // `bothKinds` deals two.
+  const inCardIds = extra.in_card_ids ?? somebodyIn(cards);
   return {
     pool_id: 'a0000000-0000-4000-8000-000000000011',
     sport: 'PADEL',
@@ -371,14 +374,50 @@ export function groupDeck(
       { kind: 'COMPETITIVE', count: cards.filter((card) => card.kind === 'COMPETITIVE').length },
       { kind: 'FOR_FUN', count: cards.filter((card) => card.kind === 'FOR_FUN').length },
     ],
-    games_badge: cards.filter((card) => card.in_count > 0).length,
-    // The cards the badge counts, by id (#846): this deck's own, since a suite deals one segment.
-    in_card_ids: cards.filter((card) => card.in_count > 0).map((card) => card.proposal_id),
+    // Kept for older installed apps, always the ids' number — and never read since #850.
+    games_badge: inCardIds.length,
+    in_card_ids: inCardIds,
     games_per_week: 2,
     capped_weeks: [],
     cards,
     ...extra,
   };
+}
+
+/**
+ * The ids of the cards with somebody In with the reader, in the order dealt — never a `SEAT_OPEN`
+ * card's, whose players have paid and are not In (#846).
+ */
+function somebodyIn(cards: readonly Wire['DeckCardSchema'][]): string[] {
+  return cards
+    .filter((card) => card.in_count > 0 && card.type !== 'SEAT_OPEN')
+    .map((card) => card.proposal_id);
+}
+
+/**
+ * **A deck that deals both kinds, as the server does** — each kind's read deals its own cards, and
+ * every read carries what the server counts across both: the switch's two counts, and the cards
+ * with somebody In (#846), Competitive first, so the ids are the same whichever kind is read. Hand
+ * it to `stubGroupDeck`.
+ */
+export function bothKinds({
+  competitive = [],
+  forFun = [],
+}: {
+  readonly competitive?: readonly Wire['DeckCardSchema'][];
+  readonly forFun?: readonly Wire['DeckCardSchema'][];
+}): (kind: Wire['SearchMode'] | undefined) => Wire['GroupDeckResponse'] {
+  const inCardIds = [...somebodyIn(competitive), ...somebodyIn(forFun)];
+  return (kind) =>
+    groupDeck({
+      kind: kind ?? 'COMPETITIVE',
+      segments: [
+        { kind: 'COMPETITIVE', count: competitive.length },
+        { kind: 'FOR_FUN', count: forFun.length },
+      ],
+      cards: [...(kind === 'FOR_FUN' ? forFun : competitive)],
+      in_card_ids: inCardIds,
+    });
 }
 
 /**

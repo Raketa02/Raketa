@@ -136,8 +136,20 @@ export interface CappedWeek {
 export interface GroupDeck {
   /** Empty while the reader has declared no intent for the sport — the question replaces the deck. */
   readonly segments: readonly DeckSegment[];
-  /** Cards where somebody is already In with the reader, across the segments. */
-  readonly gamesBadge: number;
+  /**
+   * **What the Games badge counts** (#846, #850): the cards where somebody is already In with the
+   * reader, by id, **across every segment shown** — the kind not read too, which is how the badge
+   * counts both kinds off one read. Never a rescue's. The badge is the ones not yet seen (`seen.ts`).
+   */
+  readonly inCardIds: readonly string[];
+  /**
+   * **Every card this read dealt, by id** — the ones this build cannot draw too, which `cards`
+   * leaves out: what a look at Games marks seen (#850), the whole deck of the kind on screen and not
+   * only the card on top. A card with somebody In that this build cannot draw is counted all the
+   * same, and without this it could never be seen — a badge no visit clears (the code review's
+   * catch).
+   */
+  readonly dealtIds: readonly string[];
   readonly gamesPerWeek: number;
   readonly cappedWeeks: readonly CappedWeek[];
   /** In the order dealt. */
@@ -564,8 +576,12 @@ export function weekCapOf(
 
 /**
  * **The deck without one card** — the card an answer took off it, dropped from the read the moment
- * it has flown, with its segment's count and the badge following it. The next read is the server's
- * and settles both; this is what keeps the counts honest in between.
+ * it has flown, with its segment's count following it. The next read is the server's and settles
+ * both; this is what keeps the switch's count honest in between.
+ *
+ * **The badge's ids are left to the server** (#850): the card was on screen, so it is seen and
+ * counts for nothing, and a seen list cut back to an edit made before the server had the answer
+ * would forget it — new again if a refusal puts it back (the code review's catch).
  */
 export function withoutCard(deck: GroupDeck, proposalId: string): GroupDeck {
   const card = deck.cards.find((dealt) => dealt.proposalId === proposalId);
@@ -576,7 +592,6 @@ export function withoutCard(deck: GroupDeck, proposalId: string): GroupDeck {
     segments: deck.segments.map((segment) =>
       segment.kind === card.kind ? { ...segment, count: Math.max(0, segment.count - 1) } : segment,
     ),
-    gamesBadge: card.inCount > 0 ? Math.max(0, deck.gamesBadge - 1) : deck.gamesBadge,
   };
 }
 

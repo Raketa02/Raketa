@@ -53,9 +53,11 @@ export interface GamesTabProps {
   readonly onTop?: string;
   /** The page's pull, which the deck puts on whichever scroller it is in. */
   readonly refreshControl?: ReactElement<RefreshControlProps>;
+  /** Whether the page is the screen in view — what the deck shows is seen only while it is (#850). */
+  readonly inView: boolean;
 }
 
-export function GamesTab({ group, sport, onTop, refreshControl }: GamesTabProps) {
+export function GamesTab({ group, sport, onTop, refreshControl, inView }: GamesTabProps) {
   const chosen = useGameIntent((state) => state.intent);
   const choose = useGameIntent((state) => state.choose);
 
@@ -65,6 +67,7 @@ export function GamesTab({ group, sport, onTop, refreshControl }: GamesTabProps)
       sport={sport}
       chosen={chosen}
       onChoose={choose}
+      inView={inView}
       empty={<StartingCard group={group} sport={sport} />}
       {...(onTop === undefined ? {} : { onTop })}
       {...(refreshControl === undefined ? {} : { refreshControl })}

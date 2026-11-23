@@ -24,17 +24,18 @@
  * tab and spoken with the header — so an Owner on Games knows somebody is asking without opening
  * Info. Nobody else's page reads the requests, so nobody else's tile carries a count.
  *
- * **The Games tab counts the cards where somebody is already In with you** (#553, the screens A1,
- * mock 1's *Games 4*): the same badge, off the deck's own read — the one the tab draws, for the
- * sport the page is on and the kind its switch stands on, so the two never disagree and the count
- * costs no second request. **The *Fill in* tab counts its rescues** (#557, mock 11's *Fill in 1*) —
- * read for the page's sport — **and *You’re in* its rows** (#847): the reader's live yeses in this
- * group and sport, read as the page opens so the badge has it, never holding up the page or a tab
- * switch (`useYoureInBadge`). **Both count what the player hasn't seen** (#849, ADR-0208): a tab's
- * rows are seen while it is on screen — which is why the page is told whether it is the screen in
- * view (`inView`, read by the route file) and hands that to the two boards, which mark what they
- * draw — and **the tab on screen draws no badge** (split override 2). Games keeps its plain count, on
- * the tab shown too, until #850.
+ * **The Games tab counts the cards where somebody is already In with you, of either kind** (#553,
+ * the screens A1, mock 1's *Games 4*; across both kinds since #850): the same badge, off the deck's
+ * own read — the one the tab draws, for the sport the page is on and the kind its switch stands on,
+ * whose ids are both kinds' — so the count costs no second request and nothing reads the other
+ * kind's deck. **The *Fill in* tab counts its rescues** (#557, mock 11's *Fill in 1*) — read for the
+ * page's sport — **and *You’re in* its rows** (#847): the reader's live yeses in this group and
+ * sport, read as the page opens so the badge has it, never holding up the page or a tab switch
+ * (`useYoureInBadge`). **All three count what the player hasn't seen** (#849, #850, ADR-0208): a
+ * tab's rows are seen while it is on screen — which is why the page is told whether it is the screen
+ * in view (`inView`, read by the route file) and hands that to the deck and the two boards, which
+ * mark what they draw; on Games, every card of the kind the switch is on, so the other kind's stay
+ * new until the switch moves there — and **the tab on screen draws no badge** (split override 2).
  *
  * **Fill in and You’re in are `proposals`' boards** (#557, split into a tab each by #847, PRD #844):
  * Fill in holds only the rescues, and says *No seats to fill right now* with none; You’re in holds only
@@ -91,7 +92,7 @@
  */
 
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -145,7 +146,7 @@ interface GroupTabsProps {
 
 /**
  * The tab bar — with Games', Fill in's and You’re in's counts once there is a sport to read them for,
- * and none on the tab selected but Games' (#849).
+ * and none on the tab selected (#849, #850).
  */
 function GroupTabs({ sport, ...props }: GroupTabsProps & { readonly sport: Sport | undefined }) {
   return sport === undefined ? (
@@ -168,12 +169,12 @@ function TabsWithCounts({
   // the same read, usually opens already read.
   const yeses = useYoureInBadge(groupId, sport);
   const counted = TABS.map((option) => {
+    // The tab on screen draws no badge (split override 2): what it shows is seen while it is shown —
+    // on Games too, where the other kind's new cards show once the player leaves (ADR-0208).
+    if (option.key === selected) return option;
     if (option.key === 'games' && games > 0) {
       return { ...option, badge: games, accessibilityLabel: gamesTabLabel(games) };
     }
-    // The tab on screen draws no badge (split override 2): what it shows is seen while it is shown.
-    // Games still counts while selected until its own ids are seen too (#850).
-    if (option.key === selected) return option;
     if (option.key === 'fillIn' && seats > 0) {
       return { ...option, badge: seats, accessibilityLabel: fillInTabLabel(seats) };
     }
@@ -234,10 +235,16 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
   // which is read off the phone — so it is never read for one kind and then another.
   const card = arrival?.card;
   const kind = arrival?.kind;
+  // The card whose kind the switch has been moved to. Until it has, the deck sees nothing (#850): on
+  // a page whose reads are still cached, the deck is drawn for the kind the switch stood on a frame
+  // before this effect moves it, and would mark cards the player never had on screen.
+  const [arrivedAt, setArrivedAt] = useState<string | undefined>(undefined);
+  const arrived = card === undefined || arrivedAt === card;
   useEffect(() => {
     if (kind === undefined) return;
     show(groupId, 'games');
     useGameIntent.getState().choose(kind);
+    setArrivedAt(card);
   }, [card, kind, groupId, show]);
 
   // And the tab a pass returned to is the page's, held where every screen over the page reads it —
@@ -297,6 +304,8 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
                   <GamesTab
                     group={group}
                     sport={playing}
+                    // A notice's deck sees nothing until the switch stands on its kind.
+                    inView={inView && arrived}
                     refreshControl={pullControl}
                     {...(card === undefined ? {} : { onTop: card })}
                   />
@@ -312,7 +321,7 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
                   ) : needsALevel ? (
                     <LevelDoor from={fromAGroup(groupId, tab)} />
                   ) : sport === undefined ? null : (
-                    <TabBody tab={tab} group={group} sport={sport} inView={inView} />
+                    <TabBody tab={tab} group={group} sport={sport} inView={inView && arrived} />
                   )}
                 </ScrollView>
               )}
@@ -344,7 +353,7 @@ function TabBody({
 }) {
   switch (tab) {
     case 'games':
-      return <GamesTab group={group} sport={sport} />;
+      return <GamesTab group={group} sport={sport} inView={inView} />;
     case 'fillIn':
       return <FillInBoard groupId={group.id} sport={sport} inView={inView} />;
     case 'youreIn':

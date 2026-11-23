@@ -121,7 +121,7 @@ the yes charges at once, every yes with the share after it since Q124) and the t
 
 **An answer flies on the press and the server settles it.** The card in flight is held by `GamesDeck`
 (component state), so a re-read landing mid-flight cannot pull it off the stage; when it has flown it
-is dropped from the cached read (`withoutCard`, its segment's count and the badge following), and the
+is dropped from the cached read (`withoutCard`, its segment's count following), and the
 answer settling re-reads every deck of the group. **A refusal is a toast**, handled on the mutation
 rather than on the call — TanStack drops a `mutate` call's own callbacks when a later call is made,
 and a player answers the next card before the last reply lands — and `refusalOutcome` decides the
@@ -585,6 +585,46 @@ fill's overlays, the phone's write or the selected tab's rule each turns a walk 
 race is not walked — it needs the bar's and the board's ticks to land in a given order. **Not walked: a phone read that is
 held** — a suite cannot hold the store without importing AsyncStorage, which the lint fence keeps to
 two modules — so _no badge until read_ is `useUnseenCount`'s one line, read, not run.
+
+**The Games badge counts what the reader hasn't seen too, across both kinds**
+([#850](https://github.com/Raketa02/Raketa/issues/850), ADR-0208; PRD #844). The same rule and the
+same phone memory as Fill in's and You’re in's, on the deck read's new field:
+
+- **The ids are the read's `in_card_ids`** (#846): the cards with somebody In with the reader across
+  every segment the intent shows — the kind not read too, Competitive first, never a rescue's. The
+  mapper reads them into `GroupDeck.inCardIds`, and **`games_badge` is no longer read**: `GroupDeck`
+  has no such field, and the number stays on the wire for older installed apps. **`useGamesBadge` is
+  `useUnseenCount`** over those ids, off the deck read the tab already makes for the kind the switch
+  is on: no extra request, and nothing reads the other kind's deck.
+- **A list per kind** (`gamesSeen(kind)`, ADR-0208 §1), and the badge counted against both
+  (`GAMES_SEEN`; `useUnseenCount` takes the lists a badge is counted against). A first cut kept one
+  list for both, which a look cut back to whatever read was drawn — and **the other kind's read,
+  held from an earlier visit, can be older than a card seen since**, so moving the switch there made
+  a card she had just looked at new again (the code review's catch). Each kind's list is cut back
+  only by its own kind's read now, which is the newest that kind has.
+- **The deck marks the whole of the kind on screen** (`GamesDeck`, `useSeeRows`): **every card the
+  read dealt** (`GroupDeck.dealtIds`) — not only the top one, and the ones this build cannot draw
+  too, which `cards` leaves out but the ids still count, so a visit to their kind clears them rather
+  than a badge no visit could — whenever they change while the page is `inView` and nothing is over
+  the deck: no player's record, nothing of the fill's (`useFill().over`), and neither the door's
+  panel nor _Finding…_ over its area. The other kind's cards keep what they had — new, or seen on an
+  earlier visit — and move only when the switch does.
+- **A notice's card is seen as any visit is** — but only once the switch stands on its kind. The page
+  moves the switch in an effect, which runs after the deck's own, so on a page whose reads are still
+  cached the deck is drawn for one frame on the kind the switch stood on; `GroupScreen` hands the
+  deck `inView` false until it has moved the switch (the code review's catch).
+- **`withoutCard` leaves the ids to the server**: the answered card was on screen and is seen, and a
+  seen list cut back to an edit made before the server had the answer would forget it — new again
+  when a refusal puts the card back. The switch's count still follows at once.
+
+Walked in `groupBadges.test.tsx` and mutation-checked: marking both kinds' ids, marking only the top
+card, marking only the drawn cards, one list for both kinds, dropping the page's cover, the record
+sheet, the fill's overlays or the notice's wait, and a badge on the selected Games tab each turns a
+walk red. **Not walked: the door's panel and _Finding…_ as covers** — a card dealt under either is
+marked once it lifts, and only the app dying in between would show the difference; they are followed
+because they hide the cards, and cost nothing. **Left as it was**: a record opened from the only card
+goes when a re-read empties the deck, and comes back by itself with the next card (`reading` is
+never cleared) — older than this, and the marking follows it, since the sheet is over the cards.
 
 **A rescue is a card the deck already drew, now answered at its booking.** A _Seat open_ card's id is
 its booking's (#545): the yes is `POST /bookings/{id}/seats` and the no `POST /bookings/{id}/no`

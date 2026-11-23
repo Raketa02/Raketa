@@ -409,13 +409,15 @@ describe('answering', () => {
       { kind: 'competitive', count: 2 },
       { kind: 'forFun', count: 1 },
     ],
-    gamesBadge: 1,
+    // The cards with somebody In, across both kinds (#846): 'a' here, and 'f' on For fun.
+    inCardIds: ['a', 'f'],
+    dealtIds: ['a', 'b'],
     gamesPerWeek: 2,
     cappedWeeks: [],
     cards: [card({ proposalId: 'a', inCount: 1 }), card({ proposalId: 'b' })],
   };
 
-  it('drops an answered card, with its segment’s count and the badge following it', () => {
+  it('drops an answered card, with its segment’s count following it', () => {
     const after = withoutCard(deck, 'a');
 
     expect(after.cards.map((dealt) => dealt.proposalId)).toEqual(['b']);
@@ -423,11 +425,15 @@ describe('answering', () => {
       { kind: 'competitive', count: 1 },
       { kind: 'forFun', count: 1 },
     ]);
-    expect(after.gamesBadge).toBe(0);
   });
 
-  it('leaves the badge where nobody else was In', () => {
-    expect(withoutCard(deck, 'b').gamesBadge).toBe(1);
+  // #850's review: a seen card is cut from the seen list only by the server's read, never by an
+  // answer it may yet refuse.
+  it('leaves the badge’s ids, and the dealt ids, to the server’s next read', () => {
+    const after = withoutCard(deck, 'a');
+
+    expect(after.inCardIds).toEqual(['a', 'f']);
+    expect(after.dealtIds).toEqual(['a', 'b']);
   });
 
   it('changes nothing for a card that is not on the deck', () => {

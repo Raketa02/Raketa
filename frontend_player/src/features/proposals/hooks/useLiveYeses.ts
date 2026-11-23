@@ -42,7 +42,7 @@ export function useYoureInBadge(groupId: string, sport: Sport): number {
   return useUnseenCount(
     groupId,
     sport,
-    'youreIn',
+    ['youreIn'],
     yeses === undefined ? undefined : yesIds(yesesIn(yeses, groupId, sport)),
   );
 }

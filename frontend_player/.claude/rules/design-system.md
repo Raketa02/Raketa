@@ -72,8 +72,8 @@ as the splash's alone. Neither is a dark mode, and neither is a licence for anot
 - **§1.2's coral list is closed at six** — primary button, active tab, level mark, onboarding
   progress fill, hot tag, the tab bar's badge (the same mark at a segment's size, `CornerBadge`,
   counts a group page's Games, Fill in and You’re in and an Owner's requests on the group's tile —
-  one meaning, every surface; on Fill in and You’re in it counts what is **new since you last
-  looked**, and the tab on screen draws none, #849). A sixth-and-a-half is not a
+  one meaning, every surface; on Games, Fill in and You’re in it counts what is **new since you
+  last looked**, and the tab on screen draws none, #849, #850). A sixth-and-a-half is not a
   taste call: pick the meaning and you will land on `amber` or on `ink`, which is where the
   row stripe and the rail's current dot both landed.
 - **A `Tag`'s dot is the sport's and only the sport's — except on Home's game card, where it is

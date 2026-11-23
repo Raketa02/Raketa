@@ -1,12 +1,15 @@
 /**
  * **A group page's badges count what the player hasn't seen, and the phone remembers what they
- * have** — Fill in's and You’re in's ([#849](https://github.com/Raketa02/Raketa/issues/849),
+ * have** — Fill in's and You’re in's ([#849](https://github.com/Raketa02/Raketa/issues/849)), and
+ * Games' across both kinds ([#850](https://github.com/Raketa02/Raketa/issues/850);
  * [ADR-0208](../../../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md);
- * PRD #844; split override 2). Games keeps its plain count until #850.
+ * PRD #844; split override 2).
  *
  * A tab's rows are seen while it is on screen — the page in view, nothing pushed over it and no
- * record's sheet up — and the tab on screen draws no badge. A row is known by its id, so one that
- * only changed stays seen, and only a new one brings the badge back.
+ * record's sheet up — and the tab on screen draws no badge. On Games that is the deck of the kind
+ * the switch is on, every card of it, so the other kind's stay new until the switch moves there. A
+ * row is known by its id, so one that only changed stays seen, and only a new one brings the badge
+ * back.
  *
  * The real route tree from Play › Groups, with `fetch` and the platform edges faked. *A relaunch* is
  * the process ending and a new one starting: the Query cache and the session go, and what the phone
@@ -25,18 +28,24 @@ import { clearStoredTokens, endSession, resetSessionStatus } from '@/shared/lib/
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import {
+  ANIA,
   DECK_READ_AT,
+  EWA,
   KAROL,
+  KUBA,
+  bothKinds,
   deckCard,
   fillIn,
-  groupDeck,
   liveYes,
+  overlapCells,
   proposalDetails,
+  proposalPath,
   seatsPath,
   seatToFill,
   stubFillIn,
   stubGroupDeck,
   stubProposal,
+  yesPath,
   youTile,
 } from '@/test-support/groupDeck';
 import {
@@ -67,6 +76,8 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+
+import { useGameIntent } from '../store/gameIntent.store';
 
 const RATING: Wire['RatingResponse'] = {
   sport: 'PADEL',
@@ -111,12 +122,17 @@ let transport: Transport;
 let rescues: Wire['SeatToFillSchema'][];
 /** What the live yeses serve at each read. */
 let yeses: Wire['LiveYesSchema'][];
+/** What the crew's deck deals at each read, per kind — every read with both kinds' ids (#846). */
+let dealt: Parameters<typeof bothKinds>[0];
 
-/** The crew's page, its Fill in and the live yeses, each read off the suite's state as it is asked. */
+/**
+ * The crew's page, its deck, its Fill in and the live yeses, each read off the suite's state as it is
+ * asked.
+ */
 function serve() {
   stubMyGroups(transport, [CREW]);
   transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(PAGE));
-  stubGroupDeck(transport, CREW.id, groupDeck());
+  stubGroupDeck(transport, CREW.id, (kind) => bothKinds(dealt)(kind));
   stubFillIn(transport, CREW.id, () => fillIn(rescues));
   transport.on('GET', LIVE_YESES_PATH, () => json<Wire['LiveYesesResponse']>({ yeses }));
 }
@@ -125,6 +141,9 @@ beforeEach(() => {
   transport = installTransport();
   rescues = [];
   yeses = [];
+  dealt = {};
+  // The deck's switch, which a new process opens on Competitive.
+  useGameIntent.setState({ intent: 'competitive' });
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
   stubProfileOptions(transport);
   stubProfileSurface(transport);
@@ -157,11 +176,12 @@ async function launchOnThePage() {
   await waitFor(() => expect(screen).toHavePathname(GROUP_PATH));
 }
 
-/** The process ends and a new one starts — on the crew's page again. */
+/** The process ends and a new one starts — on the crew's page again, its switch on Competitive. */
 async function relaunch() {
   screen.unmount();
   queryClient.clear();
   resetSessionStatus();
+  useGameIntent.setState({ intent: 'competitive' });
   await launchOnThePage();
 }
 
@@ -201,6 +221,24 @@ function yesHere(extra: Partial<Wire['LiveYesSchema']> = {}): Wire['LiveYesSchem
   });
   stubProposal(transport, yes.proposal_id, proposalDetails(card));
   return yes;
+}
+
+/** A player's record, served for the sheet a held poster or a pressed tile opens. */
+function stubRecord(player: Wire['DeckTileSchema']) {
+  transport.on('GET', `/api/v1/players/${player.player_id}/record`, () =>
+    json<Wire['PlayerRecordResponse']>({
+      is_self: false,
+      relation: 'NONE',
+      can_add_friend: true,
+      nickname: player.nickname ?? 'karol.t',
+      photos: [],
+      area_code: 'A+050612+0019938',
+      social_tags: [],
+      sports: [{ sport: 'PADEL', level: 2.75, band: 'Established' }],
+      reliability: servedReliability({ player_score: 88, band: 'HIGH', is_new: false }),
+      variety: { distinct_opponents: 3, times_on_court: 3 },
+    }),
+  );
 }
 
 /** A re-read of a tab's read while the player is elsewhere — what an answer in the group sets off. */
@@ -342,20 +380,7 @@ describe('Fill in’s badge — the rescues you haven’t seen', () => {
 
   it('does not see a rescue that arrives while a player’s record is open over the tab', async () => {
     const karol = KAROL();
-    transport.on('GET', `/api/v1/players/${karol.player_id}/record`, () =>
-      json<Wire['PlayerRecordResponse']>({
-        is_self: false,
-        relation: 'NONE',
-        can_add_friend: true,
-        nickname: 'karol.t',
-        photos: [],
-        area_code: 'A+050612+0019938',
-        social_tags: [],
-        sports: [{ sport: 'PADEL', level: 2.75, band: 'Established' }],
-        reliability: servedReliability({ player_score: 88, band: 'HIGH', is_new: false }),
-        variety: { distinct_opponents: 3, times_on_court: 3 },
-      }),
-    );
+    stubRecord(karol);
     const first = seatToFill();
     rescues = [first];
     await launchOnThePage();
@@ -544,6 +569,40 @@ describe('what the phone remembers, and for whom (ADR-0208)', () => {
     expect(await tabNamed('You’re in, 1 new game', false)).toBeTruthy();
   });
 
+  it('keeps Games’ seen cards across a relaunch — only a card dealt since is new', async () => {
+    const fun = forFunIn();
+    dealt = { forFun: [fun] };
+    await launchOnThePage();
+    await switchToForFun(fun);
+    await visit(FILL_IN);
+    expect(await tabNamed('Games', false)).toBeTruthy();
+
+    dealt = { forFun: [fun, forFunIn()] };
+    await relaunch();
+    await visit(FILL_IN);
+
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+  });
+
+  it('forgets Games’ seen cards when the player signs out', async () => {
+    const fun = forFunIn();
+    dealt = { forFun: [fun] };
+    await launchOnThePage();
+    await switchToForFun(fun);
+    await visit(FILL_IN);
+    expect(await tabNamed('Games', false)).toBeTruthy();
+
+    screen.unmount();
+    await endSession('requested');
+    queryClient.clear();
+    resetSessionStatus();
+    useGameIntent.setState({ intent: 'competitive' });
+    await launchOnThePage();
+    await visit(FILL_IN);
+
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+  });
+
   it('starts somebody else on this phone with nothing seen', async () => {
     rescues = [seatToFill()];
     await launchOnThePage();
@@ -562,11 +621,300 @@ describe('what the phone remembers, and for whom (ADR-0208)', () => {
   });
 });
 
-describe('Games, until its own ids are seen (#850)', () => {
-  it('keeps its plain count, on the tab shown too', async () => {
-    stubGroupDeck(transport, CREW.id, groupDeck({ cards: [deckCard()], games_badge: 4 }));
+// ---------------------------------------------------------------------------
+// Games
+// ---------------------------------------------------------------------------
+
+/** A card Kuba has said yes to — somebody In with you. */
+function kubaIn(extra: Partial<Wire['DeckCardSchema']> = {}): Wire['DeckCardSchema'] {
+  return deckCard({
+    in_count: 1,
+    sides: { yours: [youTile(), KUBA({ is_in: true })], theirs: [ANIA(), EWA()] },
+    ...extra,
+  });
+}
+
+/** The same on For fun, which sends a vibe and no forecast (#830). */
+const forFunIn = (extra: Partial<Wire['DeckCardSchema']> = {}) =>
+  kubaIn({ kind: 'FOR_FUN', forecast: null, vibe: { pct: 82 }, ...extra });
+
+const rereadDecks = () => reread(proposalKeys.group(CREW.id));
+
+/** The deck's switch on Competitive, as the page opens — its read drawn. */
+const onCompetitive = () => screen.findByRole('button', { name: /^Competitive, /, selected: true });
+
+/** The deck's switch moved to For fun, and the card drawn there. */
+async function switchToForFun(card: Wire['DeckCardSchema']) {
+  fireEvent.press(await screen.findByRole('button', { name: /^For fun, / }));
+  expect(await screen.findByTestId(`game-card-${card.proposal_id}`)).toBeTruthy();
+}
+
+const GAMES_NEW = 'Games, 1 new with somebody In';
+
+describe('Games’ badge — the cards with somebody In you haven’t seen, across both kinds (#850)', () => {
+  it('counts the other kind’s card, says it is new, and draws nothing on the tab shown', async () => {
+    dealt = { forFun: [forFunIn()] };
     await launchOnThePage();
 
-    expect(await tabNamed('Games, 4 with somebody In', true)).toBeTruthy();
+    // On Games, on Competitive: the tab shown draws no badge, even for the other kind's card.
+    expect(await onCompetitive()).toBeTruthy();
+    act(() => jest.advanceTimersByTime(0));
+    expect(drawnCount(await tabNamed('Games', true))).toBeNull();
+
+    await visit(FILL_IN);
+
+    const counted = await tabNamed(GAMES_NEW, false);
+    expect(drawnCount(counted)?.props.children).toBe(1);
+  });
+
+  it('marks the whole deck of the kind on screen, not only the card on top', async () => {
+    dealt = { competitive: [kubaIn(), kubaIn()], forFun: [forFunIn()] };
+    await launchOnThePage();
+    expect(await onCompetitive()).toBeTruthy();
+
+    await visit(FILL_IN);
+
+    // Both Competitive cards were seen as the page opened; the For-fun one was not.
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+  });
+
+  it('is not cleared by a visit on the other kind — Marta’s walk', async () => {
+    // Her switch is on Competitive, and Kuba says yes on a For-fun card: Games 1.
+    dealt = { forFun: [forFunIn()] };
+    await launchOnThePage();
+    await visit(FILL_IN);
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+
+    // She opens Games on Competitive and leaves: still Games 1.
+    await visit(GAMES);
+    expect(await onCompetitive()).toBeTruthy();
+    await visit(FILL_IN);
+
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+  });
+
+  it('is cleared by switching to the kind', async () => {
+    const fun = forFunIn();
+    dealt = { forFun: [fun] };
+    await launchOnThePage();
+    await visit(FILL_IN);
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+
+    // She opens Games, switches to For fun and leaves: the badge is gone.
+    await visit(GAMES);
+    await switchToForFun(fun);
+    await visit(FILL_IN);
+
+    expect(drawnCount(await tabNamed('Games', false))).toBeNull();
+  });
+
+  it('keeps a card that only changed seen, and comes back for a new one', async () => {
+    const fun = forFunIn();
+    dealt = { forFun: [fun] };
+    await launchOnThePage();
+    await switchToForFun(fun);
+    await visit(FILL_IN);
+    expect(await tabNamed('Games', false)).toBeTruthy();
+
+    // The seen card gains Ania's yes and a new version; a new card with somebody In is dealt on
+    // Competitive, which the switch is not on.
+    dealt = {
+      competitive: [kubaIn()],
+      forFun: [{ ...fun, in_count: 2, version_count: 2 }],
+    };
+    await rereadDecks();
+
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+  });
+
+  // The code review's catch: one list for both kinds was cut back to whatever kind's read was drawn,
+  // and the other kind's read held from an earlier visit can be older than the card she has seen.
+  it('keeps a card seen when the switch moves to a kind whose read is older than it', async () => {
+    const fun = deckCard({ kind: 'FOR_FUN', forecast: null, vibe: { pct: 82 } });
+    dealt = { forFun: [fun] };
+    await launchOnThePage();
+    // A look at For fun, nobody In anywhere — its read stays in the cache.
+    await switchToForFun(fun);
+    fireEvent.press(screen.getByRole('button', { name: /^Competitive, / }));
+    expect(await onCompetitive()).toBeTruthy();
+
+    // Kuba says yes on a Competitive card, which a re-read brings while she is looking at it.
+    const seenHere = kubaIn();
+    dealt = { competitive: [seenHere], forFun: [fun] };
+    await rereadDecks();
+    expect(await screen.findByTestId(`game-card-${seenHere.proposal_id}`)).toBeTruthy();
+
+    // On For fun again, its read from before the yes is drawn first, then read again.
+    await switchToForFun(fun);
+    await visit(FILL_IN);
+
+    expect(drawnCount(await tabNamed('Games', false))).toBeNull();
+  });
+
+  // The code review's catch: a notice's kind reaches the switch a frame after the deck is drawn, and
+  // a deck the page had read for the kind the switch stood on would be marked though never seen.
+  it('leaves the kind the switch stood on unseen when a notice opens the page over its read', async () => {
+    const fun = deckCard({ kind: 'FOR_FUN', forecast: null, vibe: { pct: 82 } });
+    dealt = { forFun: [fun] };
+    await launchOnThePage();
+    await visit(FILL_IN);
+
+    // While she is on Fill in, Kuba says yes on a Competitive card: the tab bar's read has it.
+    dealt = { competitive: [kubaIn()], forFun: [fun] };
+    await rereadDecks();
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+
+    // Back to the list. The cache keeps what the page read — the suite's navigation runs every
+    // pending timer, its collection among them, so it is put back as five minutes would leave it.
+    const kept = queryClient
+      .getQueryCache()
+      .findAll()
+      .map((query) => [query.queryKey, query.state.data] as const);
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    for (const [queryKey, data] of kept) {
+      if (data !== undefined) queryClient.setQueryData(queryKey, data);
+    }
+
+    // A notice's tap opens the deck at the For-fun card.
+    act(() =>
+      router.push({
+        pathname: '/play/group/[groupId]',
+        params: { groupId: CREW.id, sport: 'padel', kind: 'forFun', card: fun.proposal_id },
+      }),
+    );
+    expect(await screen.findByTestId(`game-card-${fun.proposal_id}`)).toBeTruthy();
+    await visit(FILL_IN);
+
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+  });
+
+  // The code review's catch: a card this build cannot draw — its game on a day it does not know —
+  // is counted all the same, and a visit to its kind is what clears it.
+  it('clears a card this build cannot draw with a visit to its kind', async () => {
+    const drawn = forFunIn();
+    const undrawable = forFunIn({
+      overlap: { grade: 'HIGH', cells: overlapCells(), game: { day: 0, range: 'EVENING' } },
+    });
+    dealt = { forFun: [drawn, undrawable] };
+    await launchOnThePage();
+    await visit(FILL_IN);
+    expect(await tabNamed('Games, 2 new with somebody In', false)).toBeTruthy();
+
+    await visit(GAMES);
+    await switchToForFun(drawn);
+    expect(screen.queryByTestId(`game-card-${undrawable.proposal_id}`)).toBeNull();
+    await visit(FILL_IN);
+
+    expect(drawnCount(await tabNamed('Games', false))).toBeNull();
+  });
+
+  it('does not see a card dealt while a game’s details cover the page', async () => {
+    const first = forFunIn();
+    dealt = { forFun: [first] };
+    transport.on('GET', proposalPath(first.proposal_id), neverResponds());
+    await launchOnThePage();
+    await switchToForFun(first);
+    fireEvent.press(screen.getByRole('button', { name: 'Game details' }));
+    await waitFor(() => expect(screen).toHavePathname(`${GROUP_PATH}/game/${first.proposal_id}`));
+
+    // A second For-fun card reaches the deck, and is drawn on it, under the details.
+    const second = forFunIn();
+    dealt = { forFun: [first, second] };
+    await rereadDecks();
+    expect(await drawnUnder(`game-card-${second.proposal_id}`)).toBeTruthy();
+
+    // Android kills the app there; the page opens on Competitive again, as a new process does.
+    await relaunch();
+    await visit(FILL_IN);
+
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+  });
+
+  it('does not see a card dealt while a player’s record is open over the deck', async () => {
+    const ania = ANIA();
+    stubRecord(ania);
+    const first = forFunIn();
+    dealt = { forFun: [first] };
+    await launchOnThePage();
+    await switchToForFun(first);
+    fireEvent.press(await screen.findByLabelText(/^ania\.k, /));
+    expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
+
+    const second = forFunIn();
+    dealt = { forFun: [first, second] };
+    await rereadDecks();
+    expect(await drawnUnder(`game-card-${second.proposal_id}`)).toBeTruthy();
+    await relaunch();
+    await visit(FILL_IN);
+
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+  });
+
+  it('does not see a card dealt while It’s a game! is up over the deck', async () => {
+    const last = forFunIn();
+    const bookingId = 'a1000000-0000-4000-8000-000000000008';
+    transport.on('POST', yesPath(last.proposal_id), () =>
+      json<Wire['YesAnswerResponse']>({
+        proposal_id: last.proposal_id,
+        open_seats: 0,
+        booked: { booking_id: bookingId, game_id: 'a1000000-0000-4000-8000-000000000009' },
+        your_payment: null,
+      }),
+    );
+    transport.on('GET', bookingPath(bookingId), () =>
+      json(bookingDetails({ booking_id: bookingId, pool_id: CREW.id })),
+    );
+    dealt = { forFun: [last] };
+    await launchOnThePage();
+    await switchToForFun(last);
+
+    // Her free vote is the one that fills it — and the deck re-read after it deals a card nobody
+    // has seen.
+    const next = forFunIn();
+    dealt = { forFun: [next] };
+    fireEvent.press(screen.getByRole('button', { name: 'I’m in' }));
+    expect(await screen.findByTestId('its-a-game')).toBeTruthy();
+    expect(await drawnUnder(`game-card-${next.proposal_id}`)).toBeTruthy();
+    await relaunch();
+    await visit(FILL_IN);
+
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+  });
+
+  it('leaves a notice’s card’s kind seen, like any visit', async () => {
+    const fun = forFunIn();
+    dealt = { competitive: [kubaIn()], forFun: [fun] };
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    fireEvent.press(await screen.findByLabelText('Play'));
+
+    // A notice's tap opens the deck at the For-fun card, the switch moved to its kind (#559).
+    act(() =>
+      router.push({
+        pathname: '/play/group/[groupId]',
+        params: { groupId: CREW.id, sport: 'padel', kind: 'forFun', card: fun.proposal_id },
+      }),
+    );
+    expect(await screen.findByTestId(`game-card-${fun.proposal_id}`)).toBeTruthy();
+    await visit(FILL_IN);
+
+    // The For-fun cards were seen; the Competitive one was never on screen.
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+  });
+
+  it('never reads the server’s count', async () => {
+    stubGroupDeck(transport, CREW.id, (kind) => ({
+      ...bothKinds({ forFun: [forFunIn()] })(kind),
+      // Kept on the wire for older installed apps, and saying something else here.
+      games_badge: 4,
+    }));
+    // `stubGroupDeck` serves an empty Fill in too; the suite's own is put back.
+    stubFillIn(transport, CREW.id, () => fillIn(rescues));
+    await launchOnThePage();
+
+    await visit(FILL_IN);
+
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
   });
 });

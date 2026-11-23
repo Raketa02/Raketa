@@ -615,10 +615,32 @@ badge back; spoken _Fill in, 2 new seats to fill_ and _You’re in, 3 new games_
 the route file reads (`useScreenInView`, the navigator's focus — read there and handed in, as the
 hook's own rule asks) and `GroupScreen` hands each board as `inView`. **Remembered on the phone**,
 per account, across a relaunch and Android killing the app, and forgotten at sign-out; the first run
-shows today's counts until each tab is visited. **Games is untouched**: its plain count stands, on
-the selected tab too, until #850 gives it the deck's ids. Walked in `groupBadges.test.tsx`. **Not
-seen on a device**: a badge clearing on a visit and staying cleared after the app is killed are
-asked for a look (the split's §17).
+shows today's counts until each tab is visited. **Games was untouched** — its plain count stood, on
+the selected tab too — until #850 gave it the deck's ids (below). Walked in `groupBadges.test.tsx`.
+**Not seen on a device**: a badge clearing on a visit and staying cleared after the app is killed
+are asked for a look (the split's §17).
+
+**The Games badge counts the cards with somebody In that the player hasn't seen, across both
+kinds** ([#850](https://github.com/Raketa02/Raketa/issues/850), ADR-0208; PRD #844, split Q2b, Q10).
+Until then it was the server's `games_badge`, which never cleared and was drawn on the selected tab
+too. Now it is the deck read's ids (`in_card_ids`, #846, across both kinds) minus the ids seen, read
+off the deck the tab already draws — **no extra request, and nothing reads the other kind's deck**;
+`games_badge` stays on the wire and is not read. **Seen per kind**: while Games is on screen the deck
+marks every card of the kind its switch is on, not only the top one, so the other kind's cards stay
+new until the switch moves there — Marta, on Competitive, opens Games and leaves with _Games 1_ still
+there for Kuba's For-fun yes, and it goes once she has switched to For fun. A notice that opens the
+deck at a card leaves its kind seen, like any visit, because the switch moves there first. **The tab
+on screen draws no badge**, now on Games too: `TabsWithCounts` skips the selected tab for all three
+(split override 2), so the other kind's new cards show only once the player leaves Games — ADR-0208's
+ruling. Spoken _Games, 4 new with somebody In_ (`gamesTabLabel`). This feature's part is the tab bar
+and handing `inView` to `GamesTab`, which hands it to the deck — **false while a notice's kind is
+still on its way to the switch** (`arrived`): the page moves the switch in an effect that runs after
+the deck's, and on a page whose reads are cached the deck would otherwise mark the kind the switch
+stood on for one frame (the code review's catch). The marking is `proposals.md`'s.
+Walked in `groupBadges.test.tsx` (the other kind's card, a visit on one kind, the switch, a changed
+card, an older read of the other kind, a card this build cannot draw, a relaunch, sign-out, a
+notice's card on a cold and a warm cache, and the details, a record and _It's a game!_ over the
+deck). **Not seen on a device.**
 
 **Games and Fill in re-read on a pull** (2026-10-12, asked by the product owner; You’re in too since
 #847, the same control re-reading everything whichever tab is pulled). Until then only Info

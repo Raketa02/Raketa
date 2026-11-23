@@ -143,13 +143,37 @@ describe('the deck', () => {
       { kind: 'competitive', count: 2 },
       { kind: 'forFun', count: 0 },
     ]);
-    expect(read.gamesBadge).toBe(1);
+    expect(read.inCardIds).toEqual([first.proposal_id]);
     expect(read.gamesPerWeek).toBe(2);
     expect(read.cappedWeeks).toEqual([{ startsOn: '2026-09-28', booked: 2 }]);
     expect(read.cards.map((card) => card.proposalId)).toEqual([
       first.proposal_id,
       second.proposal_id,
     ]);
+  });
+
+  // #850: the app counts the ids, across both kinds, and the server's number stays on the wire for
+  // older installed apps — never read, so a number that disagrees with the ids changes nothing.
+  it('reads the badge’s ids across both kinds, and never the server’s count', () => {
+    const forFun = 'c0000000-0000-4000-8000-0000000000f1';
+    const read = toGroupDeck(groupDeck({ in_card_ids: [forFun], games_badge: 4 }));
+
+    expect(read.inCardIds).toEqual([forFun]);
+    expect(read).not.toHaveProperty('gamesBadge');
+  });
+
+  // #850's review: a card this build cannot draw is still counted, so a look must be able to see it.
+  it('keeps the id of every card dealt, the ones it cannot draw too', () => {
+    const drawn = deckCard({ in_count: 1 });
+    const undrawable = deckCard({
+      in_count: 1,
+      overlap: { grade: 'HIGH', cells: overlapCells(), game: { day: 0, range: 'EVENING' } },
+    });
+    const read = toGroupDeck(groupDeck({ cards: [drawn, undrawable] }));
+
+    expect(read.cards.map((card) => card.proposalId)).toEqual([drawn.proposal_id]);
+    expect(read.dealtIds).toEqual([drawn.proposal_id, undrawable.proposal_id]);
+    expect(read.inCardIds).toEqual([drawn.proposal_id, undrawable.proposal_id]);
   });
 
   it('writes the kind back in the wire’s spelling', () => {

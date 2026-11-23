@@ -164,7 +164,11 @@ function toCappedWeek(wire: Schemas['CappedWeekSchema']): CappedWeek {
 export function toGroupDeck(wire: Schemas['GroupDeckResponse']): GroupDeck {
   return {
     segments: wire.segments.map(toSegment),
-    gamesBadge: wire.games_badge,
+    // The ids, across both kinds (#850); `games_badge`, their number, stays on the wire for older
+    // installed apps and is not read.
+    inCardIds: wire.in_card_ids,
+    // Every card dealt, the ones `toDeckCard` cannot draw too — what a look marks seen.
+    dealtIds: wire.cards.map((card) => card.proposal_id),
     gamesPerWeek: wire.games_per_week,
     cappedWeeks: wire.capped_weeks.map(toCappedWeek),
     cards: wire.cards.map(toDeckCard).filter((card): card is DeckCard => card !== undefined),

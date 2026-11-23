@@ -1,7 +1,9 @@
 /**
  * **The rows seen on a group page's tab** — what its badge is counted against, and the tab marking
  * what it has on screen ([ADR-0208](../../../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md),
- * [#849](https://github.com/Raketa02/Raketa/issues/849)). Fill in and You’re in today; Games from #850.
+ * [#849](https://github.com/Raketa02/Raketa/issues/849)). Fill in and You’re in, and Games since
+ * [#850](https://github.com/Raketa02/Raketa/issues/850) — a list per kind, its badge counted
+ * against both.
  *
  * **Kept per account on the phone** (`shared/lib/preferences`, one list per group, sport and tab) and
  * forgotten at sign-out; held in the query cache for the session, never in a store, as the opened
@@ -17,7 +19,7 @@
  *   nothing retries, as the last sport's is.
  */
 
-import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useQueries, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { useReaderId } from '@/features/auth/types';
@@ -42,24 +44,32 @@ function seenQuery(account: string, preference: SeenRowsPreference) {
 
 /**
  * **A tab's badge** — the ids it counts now (`counted`, `undefined` until its read has answered),
- * minus the ids seen (`unseenCount`). 0 — nothing drawn — until both are in.
+ * minus the ids seen on its lists (`unseenCount`): Fill in's one, You’re in's one, or Games' two, one
+ * per kind (`GAMES_SEEN`). 0 — nothing drawn — until all of them are in.
  */
 export function useUnseenCount(
   groupId: string,
   sport: Sport,
-  tab: SeenTab,
+  lists: readonly SeenTab[],
   counted: readonly string[] | undefined,
 ): number {
   // Whose phone memory this is — read from the cache once, and never observed (`useReaderId`).
   const account = useReaderId();
-  const read = useQuery({
-    ...seenQuery(account ?? '', seenRowsPreference(groupId, sport, tab)),
-    enabled: account !== undefined,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+  const reads = useQueries({
+    queries: lists.map((list) => ({
+      ...seenQuery(account ?? '', seenRowsPreference(groupId, sport, list)),
+      enabled: account !== undefined,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    })),
   });
   // A phone that cannot tell whose memory to read has nothing kept: nothing seen (ADR-0208 §4).
-  const seen = account === undefined ? [] : read.data;
+  const seen =
+    account === undefined
+      ? []
+      : reads.every((read) => read.data !== undefined)
+        ? reads.flatMap((read) => read.data ?? [])
+        : undefined;
   return counted === undefined || seen === undefined ? 0 : unseenCount(counted, seen);
 }
 
