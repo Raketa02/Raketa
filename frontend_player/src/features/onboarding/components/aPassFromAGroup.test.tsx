@@ -17,8 +17,8 @@
  * Every assertion is about what a player can see or what left the device.
  */
 
-import { useNavigation } from 'expo-router';
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
+import { router, useNavigation } from 'expo-router';
+import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { refreshTokens } from '@/features/auth/types';
 import { GROUPS_COPY } from '@/features/groups/types';
@@ -442,8 +442,10 @@ describe('a pass begun on an official group’s card', () => {
 });
 
 describe('a pass begun on Post a game’s card', () => {
+  // Opened here with nothing under it, Post a game came from no tab — and the pass still returns
+  // to You’re in, where the button lives and a post lands (#848), never to Games.
   it(
-    'ends back on the group, on You’re in, where every way back from Post a game lands (#847)',
+    'ends back on the group, on You’re in, where Post a game’s button lives (#848)',
     async () => {
       stubAnia([KAZIMIERZ]);
       await launchSignedIn(`/play/group/${KAZIMIERZ.id}/post`);
@@ -455,6 +457,24 @@ describe('a pass begun on Post a game’s card', () => {
 
       await expectTheGroup(KAZIMIERZ, TABS.youreIn);
       expect(await screen.findByLabelText('Sport: Padel')).toBeTruthy();
+    },
+    WALK_TIMEOUT,
+  );
+
+  it(
+    'ends on You’re in when Post a game was opened over the page on Games, not back on Games',
+    async () => {
+      stubAnia([KAZIMIERZ]);
+      await openTheGroup(KAZIMIERZ);
+      expect(await tab(TABS.games, true)).toBeTruthy();
+
+      act(() => router.push(`/play/group/${KAZIMIERZ.id}/post`));
+      expect(await screen.findByText('Get rated in padel to post here')).toBeTruthy();
+      fireEvent.press(screen.getByRole('button', { name: 'Rate Padel' }));
+      await rate(PADEL_RUN);
+      fireEvent.press(screen.getByLabelText(backTo(KAZIMIERZ)));
+
+      await expectTheGroup(KAZIMIERZ, TABS.youreIn);
     },
     WALK_TIMEOUT,
   );

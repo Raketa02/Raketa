@@ -34,6 +34,7 @@ import {
   identityLine,
   membersAtClub,
   peopleLine,
+  postAGameBackLabel,
   waitingFor,
   membersLine,
   seatsFilledLabel,
@@ -131,6 +132,14 @@ describe('the group page’s sentences', () => {
   it('says the You’re in tab with its count, one game or many (#847)', () => {
     expect(youreInTabLabel(1)).toBe('You’re in, 1 game');
     expect(youreInTabLabel(3)).toBe('You’re in, 3 games');
+  });
+
+  // #848: Post a game's chevron names the tab a back-out returns to — the one it was opened from.
+  it('names the tab Post a game backs out to', () => {
+    expect(postAGameBackLabel('youreIn')).toBe('Back to You’re in');
+    expect(postAGameBackLabel('games')).toBe('Back to Games');
+    expect(postAGameBackLabel('fillIn')).toBe('Back to Fill in');
+    expect(postAGameBackLabel('friends')).toBe('Back to Friends');
   });
 
   const card = (kind: GamesCard['kind'], rated: number, seats: number): GamesCard => ({

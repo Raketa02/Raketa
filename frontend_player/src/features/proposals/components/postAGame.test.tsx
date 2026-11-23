@@ -1,7 +1,8 @@
 /**
  * ***Post a game*, walked** — from a group's page, every control, each of the grid's nine looks, a
- * cell's sheet, the guards on the button and the round trip back to *You’re in*
- * ([#558](https://github.com/Raketa02/Raketa/issues/558); the screens A5; mocks 15–35; the
+ * cell's sheet, the guards on the button, the way back to the tab it was opened from and the landing
+ * on *You’re in* ([#558](https://github.com/Raketa02/Raketa/issues/558),
+ * [#848](https://github.com/Raketa02/Raketa/issues/848); the screens A5; mocks 15–35; the
  * mechanics §9; the backend's #546).
  *
  * The real route tree from Play › Groups, with `fetch`, the payment provider's phone half and the
@@ -44,6 +45,7 @@ import {
 import { bookedSides, bookingDetails, stubBooking } from '@/test-support/home';
 import {
   GATE_USER,
+  LIVE_YESES_PATH,
   PAYMENT_TERMS_IN_FORCE,
   launchSignedIn,
   resetClipboard,
@@ -244,7 +246,27 @@ async function openPosting(cells?: Parameters<typeof serveTheCrew>[0]) {
   await screen.findByTestId('posting-grid-week-1');
 }
 
+/** From Games' *Nothing picked right now*, its third door (Q96) — the screen up, the grid read. */
+async function openPostingFromGames() {
+  serveTheCrew();
+  await openThePage();
+  expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: POST_A_GAME }));
+  await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}/post`));
+  await screen.findByTestId('posting-grid-week-1');
+}
+
+/** The two doors, each with the tab it is on — the origin a back-out returns to. */
+const DOORS = [
+  ['You’re in’s floating button', 'You’re in', openPosting],
+  ['Games’ Nothing picked right now', 'Games', openPostingFromGames],
+] as const;
+
 const POST_A_GAME = 'Post a game';
+
+/** The page's tab, selected — hidden too, for the page under *It's a game!*. */
+const onTab = (name: string) =>
+  screen.findByRole('button', { name: new RegExp(`^${name}`), selected: true, ...HIDDEN_TOO });
 
 const cellOf = (day: string, range: Wire['DayRange']) =>
   screen.getByTestId(`posting-cell-${day}-${range}`);
@@ -291,50 +313,90 @@ describe('opening Post a game (mock 14, A5)', () => {
     expect(screen.getByLabelText('Play')).toBeTruthy();
   });
 
-  it('goes back to You’re in by its chevron, which names it', async () => {
-    await openPosting();
+  it('is Nothing picked right now’s third door too (Q96)', async () => {
+    await openPostingFromGames();
 
-    fireEvent.press(screen.getByLabelText('Back to You’re in'));
+    expect(screen.getByRole('header', { name: COPY.title })).toBeTruthy();
+  });
+});
 
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
-    expect(await screen.findByRole('button', { name: /^You’re in/, selected: true })).toBeTruthy();
+/**
+ * **Backing out returns to the tab Post a game was opened from** (#848, PRD #844): opening it leaves
+ * the page under it alone, so every way back — the chevron, and the navigator's own pop, which is
+ * what the hardware back and the swipe both are — finds the page where the player left it. The
+ * chevron names that tab, drawn as the chevron and spoken by its name.
+ */
+describe('backing out of Post a game (#848)', () => {
+  it.each(DOORS)('opened from %s, the chevron is Back to %s', async (_door, origin, open) => {
+    await open();
+
+    expect(screen.getByRole('button', { name: `Back to ${origin}` })).toBeTruthy();
+    expect(screen.queryByLabelText('Back to Fill in')).toBeNull();
   });
 
-  // Q125: Info is pushed over the page, so the page's tab is still the one Post a game turned it to.
-  it('leaves the page on You’re in under Info, so back from Info is You’re in too', async () => {
-    await openPosting();
-    fireEvent.press(screen.getByLabelText(COPY.back));
-    expect(await screen.findByRole('button', { name: /^You’re in/, selected: true })).toBeTruthy();
+  it.each(DOORS)('opened from %s, the chevron returns to %s', async (_door, origin, open) => {
+    await open();
 
-    fireEvent.press(await screen.findByHintText(GROUPS_COPY.group.openInfo));
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}/info`));
-    fireEvent.press(await screen.findByRole('button', { name: GROUPS_COPY.info.back }));
+    fireEvent.press(screen.getByLabelText(`Back to ${origin}`));
 
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
-    expect(await screen.findByRole('button', { name: /^You’re in/, selected: true })).toBeTruthy();
+    expect(await onTab(origin)).toBeTruthy();
   });
 
-  it('is Nothing picked right now’s third door, and back from it is You’re in too (Q96, #847)', async () => {
-    serveTheCrew();
-    await openThePage();
-    expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+  it.each(DOORS)(
+    'opened from %s, the hardware back and the swipe return to %s',
+    async (_door, origin, open) => {
+      await open();
 
-    fireEvent.press(screen.getByRole('button', { name: POST_A_GAME }));
+      act(() => router.back());
+
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+      expect(await onTab(origin)).toBeTruthy();
+    },
+  );
+
+  // Q125: Info is pushed over the page, so the page's tab is still the one Post a game came from.
+  it.each(DOORS)(
+    'opened from %s, leaves the page on %s under Info, so back from Info is there too',
+    async (_door, origin, open) => {
+      await open();
+      act(() => router.back());
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+      expect(await onTab(origin)).toBeTruthy();
+
+      fireEvent.press(await screen.findByHintText(GROUPS_COPY.group.openInfo));
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}/info`));
+      fireEvent.press(await screen.findByRole('button', { name: GROUPS_COPY.info.back }));
+
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+      expect(await onTab(origin)).toBeTruthy();
+    },
+  );
+
+  it('names the tab it came from each time it opens — Games, then You’re in', async () => {
+    await openPostingFromGames();
+    fireEvent.press(screen.getByLabelText('Back to Games'));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+
+    fireEvent.press(await screen.findByRole('button', { name: /^You’re in/ }));
+    fireEvent.press(await screen.findByRole('button', { name: POST_A_GAME }));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}/post`));
-    fireEvent.press(await screen.findByLabelText(COPY.back));
 
-    expect(await screen.findByRole('button', { name: /^You’re in/, selected: true })).toBeTruthy();
+    expect(await screen.findByLabelText('Back to You’re in')).toBeTruthy();
+    expect(screen.queryByLabelText('Back to Games')).toBeNull();
   });
+});
 
+describe('the draft', () => {
   it('keeps the draft while the player stays in the group, and forgets it once they leave', async () => {
     await openPosting();
     fireEvent.press(screen.getByRole('button', { name: 'Women' }));
-    fireEvent.press(screen.getByLabelText(COPY.back));
+    fireEvent.press(screen.getByLabelText('Back to You’re in'));
     fireEvent.press(await screen.findByRole('button', { name: POST_A_GAME }));
 
     expect(await screen.findByRole('button', { name: 'Women', selected: true })).toBeTruthy();
 
-    fireEvent.press(screen.getByLabelText(COPY.back));
+    fireEvent.press(screen.getByLabelText('Back to You’re in'));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
     fireEvent.press(await screen.findByLabelText(GROUPS_COPY.group.back));
     await waitFor(() => expect(screen).toHavePathname('/play'));
@@ -998,70 +1060,103 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
     expect(within(fillingRow).getByRole('button', { name: PROPOSALS_COPY.yes })).toBeTruthy();
   });
 
-  it('joins a post still filling — a free yes — and lands on You’re in', async () => {
-    await openPosting();
-    const post = postStillFilling();
-    stubPostingSlot(transport, CREW.id, postingSlot({ posts: [post] }));
-    transport.on('POST', yesPath(post.proposal_id), () =>
-      json<Wire['YesAnswerResponse']>({
+  it.each(DOORS)(
+    'opened from %s, joins a post still filling — a free yes — and lands on You’re in with it',
+    async (_door, _origin, open) => {
+      await open();
+      const post = postStillFilling();
+      const mine = liveYes({
         proposal_id: post.proposal_id,
-        open_seats: 1,
-        booked: null,
-        your_payment: null,
-      }),
-    );
-    fireEvent.press(cellOf(SAT, 'EVENING'));
+        pool_id: CREW.id,
+        starts_at: post.starts_at,
+      });
+      stubPostingSlot(transport, CREW.id, postingSlot({ posts: [post] }));
+      transport.on('POST', yesPath(post.proposal_id), () => {
+        stubLiveYeses(transport, [mine]);
+        return json<Wire['YesAnswerResponse']>({
+          proposal_id: post.proposal_id,
+          open_seats: 1,
+          booked: null,
+          your_payment: null,
+        });
+      });
+      stubProposal(
+        transport,
+        post.proposal_id,
+        proposalDetails(
+          deckCard({
+            proposal_id: post.proposal_id,
+            in_count: 2,
+            sides: { yours: [youTile({ is_in: true })], theirs: [] },
+          }),
+        ),
+      );
+      fireEvent.press(cellOf(SAT, 'EVENING'));
 
-    fireEvent.press(
-      within(await screen.findByTestId(`slot-post-${post.proposal_id}`)).getByRole('button', {
-        name: PROPOSALS_COPY.yes,
-      }),
-    );
+      fireEvent.press(
+        within(await screen.findByTestId(`slot-post-${post.proposal_id}`)).getByRole('button', {
+          name: PROPOSALS_COPY.yes,
+        }),
+      );
 
-    await waitFor(() =>
-      expect(transport.requestsTo('POST', yesPath(post.proposal_id))).toHaveLength(1),
-    );
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
-    expect(await screen.findByRole('button', { name: /^You’re in/, selected: true })).toBeTruthy();
-  });
+      await waitFor(() =>
+        expect(transport.requestsTo('POST', yesPath(post.proposal_id))).toHaveLength(1),
+      );
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+      expect(await onTab('You’re in')).toBeTruthy();
+      expect(await screen.findByTestId(`youre-in-${post.proposal_id}`)).toBeTruthy();
+    },
+  );
 
-  it('takes a rescue’s seat through the fill — paid, It’s a game! — and lands on You’re in', async () => {
-    // The harness runs every pending timer on a navigation, so the ten seconds behind *Undo* are
-    // spent on the way back to the page (`theFill.test.tsx` walks the window itself).
-    await openPosting();
-    const rescue = seatToFill();
-    stubPostingSlot(transport, CREW.id, postingSlot({ rescues: [rescue] }));
-    transport.on('POST', seatsPath(rescue.booking_id), () =>
-      json<Wire['YesAnswerResponse']>({
-        proposal_id: rescue.booking_id,
-        open_seats: 0,
-        booked: { booking_id: rescue.booking_id, game_id: GAME_ID },
-        your_payment: null,
-      }),
-    );
-    // A sheet's rescue holds no sides, as a row's does not: the faces are the booking's.
-    stubBooking(
-      transport,
-      bookingDetails({ booking_id: rescue.booking_id, game_id: GAME_ID, pool_id: CREW.id }),
-    );
-    fireEvent.press(cellOf(SAT, 'EVENING'));
+  // The harness runs every pending timer on a navigation, so the ten seconds behind *Undo* are spent
+  // on the way back to the page (`theFill.test.tsx` walks the window itself).
+  it.each(DOORS)(
+    'opened from %s, takes a rescue’s seat — paid, It’s a game! — and leaves the page under on You’re in',
+    async (_door, _origin, open) => {
+      await open();
+      const rescue = seatToFill();
+      stubPostingSlot(transport, CREW.id, postingSlot({ rescues: [rescue] }));
+      transport.on('POST', seatsPath(rescue.booking_id), () =>
+        json<Wire['YesAnswerResponse']>({
+          proposal_id: rescue.booking_id,
+          open_seats: 0,
+          booked: { booking_id: rescue.booking_id, game_id: GAME_ID },
+          your_payment: null,
+        }),
+      );
+      // A sheet's rescue holds no sides, as a row's does not: the faces are the booking's.
+      stubBooking(
+        transport,
+        bookingDetails({ booking_id: rescue.booking_id, game_id: GAME_ID, pool_id: CREW.id }),
+      );
+      fireEvent.press(cellOf(SAT, 'EVENING'));
 
-    fireEvent.press(
-      await screen.findByRole('button', { name: 'Pay 27 zł, held until the cut-off' }),
-    );
+      fireEvent.press(
+        await screen.findByRole('button', { name: 'Pay 27 zł, held until the cut-off' }),
+      );
 
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
-    act(() => jest.advanceTimersByTime(10 * SECOND));
-    await waitFor(() =>
-      expect(transport.requestsTo('POST', seatsPath(rescue.booking_id))).toHaveLength(1),
-    );
-    const [, partner] = bookedSides().yours;
-    expect(
-      await screen.findByRole('header', {
-        name: `${FILL_COPY.itsAGame.word} You and ${partner?.nickname ?? ''} against ines.d and bartek.l`,
-      }),
-    ).toBeTruthy();
-  });
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+      act(() => jest.advanceTimersByTime(10 * SECOND));
+      await waitFor(() =>
+        expect(transport.requestsTo('POST', seatsPath(rescue.booking_id))).toHaveLength(1),
+      );
+      const [, partner] = bookedSides().yours;
+      expect(
+        await screen.findByRole('header', {
+          name: `${FILL_COPY.itsAGame.word} You and ${partner?.nickname ?? ''} against ines.d and bartek.l`,
+        }),
+      ).toBeTruthy();
+      expect(await onTab('You’re in')).toBeTruthy();
+
+      fireEvent.press(screen.getByRole('button', { name: FILL_COPY.itsAGame.later }));
+
+      await waitFor(() => expect(screen.queryByText(FILL_COPY.itsAGame.word)).toBeNull());
+      expect(screen).toHavePathname(`/play/group/${CREW.id}`);
+      expect(
+        await screen.findByRole('button', { name: /^You’re in/, selected: true }),
+      ).toBeTruthy();
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -1069,30 +1164,80 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
 // ---------------------------------------------------------------------------
 
 describe('Post — you’re In (mock 33, A5.4)', () => {
-  it('posts the controls and the court picked, says how many best fits have it, and lands on You’re in', async () => {
-    await openPosting();
-    const mine = liveYes({
-      proposal_id: postedAnswer().proposal_id,
-      pool_id: CREW.id,
-      starts_at: '2026-10-03T15:00:00Z',
+  it.each(DOORS)(
+    'opened from %s, a post lands on You’re in, with the new game there and the toast',
+    async (_door, _origin, open) => {
+      await open();
+      const mine = liveYes({
+        proposal_id: postedAnswer().proposal_id,
+        pool_id: CREW.id,
+        starts_at: '2026-10-03T15:00:00Z',
+      });
+      transport.on('POST', postsPath(CREW.id), () => {
+        stubLiveYeses(transport, [mine]);
+        return json(postedAnswer(), 201);
+      });
+      stubProposal(
+        transport,
+        mine.proposal_id,
+        proposalDetails(
+          deckCard({
+            proposal_id: mine.proposal_id,
+            type: 'CHALLENGE',
+            challenger: { player_id: GATE_USER.id, nickname: GATE_USER.nickname ?? null },
+            in_count: 1,
+            sides: { yours: [youTile({ is_in: true })], theirs: [] },
+          }),
+        ),
+      );
+      await pickSaturdayEvening();
+
+      fireEvent.press(postButton());
+
+      await waitFor(() => expect(posts()).toHaveLength(1));
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+      expect(toasts()).toContain('Posted — 5 of your best fits have it.');
+      expect(await onTab('You’re in')).toBeTruthy();
+      expect(await screen.findByTestId(`youre-in-${mine.proposal_id}`)).toBeTruthy();
+    },
+  );
+
+  it('a post settled after the player backed out leaves the page on the tab they backed out to', async () => {
+    await openPostingFromGames();
+    // The post is answered at once, and settles only once the re-reads it starts have — one of
+    // them held here. (A held post would be timed out by the navigation: the harness runs every
+    // pending timer on one.)
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
     });
     transport.on('POST', postsPath(CREW.id), () => {
-      stubLiveYeses(transport, [mine]);
+      transport.on('GET', LIVE_YESES_PATH, async () => {
+        await held;
+        return json<Wire['LiveYesesResponse']>({ yeses: [] });
+      });
       return json(postedAnswer(), 201);
     });
-    stubProposal(
-      transport,
-      mine.proposal_id,
-      proposalDetails(
-        deckCard({
-          proposal_id: mine.proposal_id,
-          type: 'CHALLENGE',
-          challenger: { player_id: GATE_USER.id, nickname: GATE_USER.nickname ?? null },
-          in_count: 1,
-          sides: { yours: [youTile({ is_in: true })], theirs: [] },
-        }),
-      ),
-    );
+    await pickSaturdayEvening();
+    fireEvent.press(postButton());
+    await waitFor(() => expect(posts()).toHaveLength(1));
+
+    fireEvent.press(screen.getByLabelText('Back to Games'));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+    expect(toasts()).toEqual([]);
+    release();
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(5 * SECOND);
+    });
+
+    await waitFor(() => expect(toasts()).toContain('Posted — 5 of your best fits have it.'));
+    expect(await onTab('Games')).toBeTruthy();
+    expect(screen).toHavePathname(`/play/group/${CREW.id}`);
+  });
+
+  it('posts the controls and the court picked', async () => {
+    await openPosting();
+    transport.on('POST', postsPath(CREW.id), () => json(postedAnswer(), 201));
     fireEvent.press(screen.getByRole('button', { name: 'Women' }));
     fireEvent.press(screen.getByLabelText(COPY.levelKeys.lowUp));
     await waitFor(() => expect(lastGridAsk()).toMatchObject({ who: 'WOMEN', level_low: '2.61' }));
@@ -1110,9 +1255,6 @@ describe('Post — you’re In (mock 33, A5.4)', () => {
       starts_at: '2026-10-03T15:00:00Z',
     });
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
-    expect(toasts()).toContain('Posted — 5 of your best fits have it.');
-    expect(await screen.findByRole('button', { name: /^You’re in/, selected: true })).toBeTruthy();
-    expect(await screen.findByTestId(`youre-in-${mine.proposal_id}`)).toBeTruthy();
   });
 
   it('starts the next post from nothing', async () => {
@@ -1130,7 +1272,11 @@ describe('Post — you’re In (mock 33, A5.4)', () => {
   });
 
   it.each([
-    ['live_posts_exhausted', { cap: 2 }, COPY.refused.live_posts_exhausted],
+    [
+      'live_posts_exhausted',
+      { cap: 2 },
+      'You already have 2 posts live — withdraw one in You’re in to post again.',
+    ],
     [
       'games_per_week_booked',
       { week: '2026-09-28' },

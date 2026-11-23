@@ -39,7 +39,7 @@ import {
 } from '../domain/group';
 import { adminTagged, type GroupExit, type GroupRunner } from '../domain/groupInfo';
 import type { GroupKind } from '../domain/vocabulary';
-import type { GamesCard } from '../domain/groupPage';
+import type { GamesCard, GroupTab } from '../domain/groupPage';
 import type { GroupAction } from '../domain/groupRules';
 import { isJoinTap } from '../domain/hottest';
 
@@ -172,6 +172,14 @@ export function fillInTabLabel(seats: number): string {
  */
 export function youreInTabLabel(yeses: number): string {
   return `${GROUPS_COPY.group.tabs.youreIn}, ${counted(yeses, 'game', 'games')}`;
+}
+
+/**
+ * *Back to Games* — *Post a game*'s chevron, naming the tab a back-out returns to: the one the page
+ * stood on when it opened (#848). The tab's own word, so the two can never disagree.
+ */
+export function postAGameBackLabel(origin: GroupTab): string {
+  return `Back to ${GROUPS_COPY.group.tabs[origin]}`;
 }
 
 /**

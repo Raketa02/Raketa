@@ -14,9 +14,10 @@
  * door into the onboarding pass (ADR-0179 §3) — for that one sport, **begun on this group**: it
  * starts the questionnaire, and the pass ends back here, on the tab the card was pressed on, with
  * the chip on the sport just rated — not on the passport ([#729](https://github.com/Raketa02/Raketa/issues/729),
- * ADR-0200 §3, §5). Each host hands in the tab: the page its own, *Post a game* Fill in (where every
- * way back from it lands), Members the page's beneath it. The start's wait and its failure are said
- * here, beside the buttons, as the passport says them.
+ * ADR-0200 §3, §5). Each host hands in the tab: the page its own, *Post a game* You’re in (where its
+ * button lives and a post lands, whichever tab it was opened from — #848), Members the page's
+ * beneath it. The start's wait and its failure are said here, beside the buttons, as the passport
+ * says them.
  *
  * The page's dark card, like every starting tab's (`LinkCard`): the remedy is the one bright door.
  */

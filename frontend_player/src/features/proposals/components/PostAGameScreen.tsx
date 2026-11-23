@@ -33,13 +33,19 @@
  * (the fill's, `setUpFirst`) and the post goes once a method is; a guard the server answers with is
  * said in the helper's place (`postRefusal`) — the live yeses, two live posts, the week's games, a
  * game at that hour, nobody free, the court gone. **Posted**, the draft is forgotten, a toast says how
- * many best fits have it, and the player is back on the group's page — which went to You’re in when
- * this screen opened (#847's interim), so You’re in is where they land, by this or by any way back.
+ * many best fits have it, and the player **lands** on the group's page on You’re in, where the new
+ * game is (`onLanded`, #848) — from either door.
+ *
+ * **Backing out is not landing** (#848): the chevron, the hardware back and the swipe return to the
+ * page as it was, on the tab this screen was opened from, which the chevron names (`backLabel`) —
+ * both the group page's to know, so both are handed in. A post settling after the player backed out
+ * toasts and leaves the page where they are.
  *
  * **Joining from a sheet** is the fill's, as every yes is: a rescue's *Pay 30 zł* counts its ten
  * seconds behind *Undo* and pays; a post's *I'm in* is a free vote — or, on its last seat, *Pay 32
- * zł* and the fill too (`waitsForUndo` on *Book it now*, Q124). The sheet closes first, then the player goes back to Fill
- * in, the toast following them there.
+ * zł* and the fill too (`waitsForUndo` on *Book it now*, Q124). The sheet closes first, then the
+ * player lands on You’re in, as a post does — the post's yes is there, and a rescue's *It's a game!*
+ * rises over the page with the page left on You’re in under it — the toast following them there.
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -128,8 +134,12 @@ export interface PostAGameScreenProps {
   readonly openingSport: Sport;
   /** The kind the group's switch stands on — corrected by the reader's intent. */
   readonly chosen: GameKind;
-  /** Back to the group's page — on You’re in, which it went to when this screen opened (#847). */
+  /** The chevron's name — the tab a back-out returns to (*Back to Games*, #848). */
+  readonly backLabel: string;
+  /** Back to the group's page as it was, on the tab this screen was opened from. */
   readonly onLeave: () => void;
+  /** Back to the group's page on You’re in — after a post, or a join from a sheet (#848). */
+  readonly onLanded: () => void;
 }
 
 /** Doubles — four on the court — where *Mixed pairs* is offered. Read off the court's seats. */
@@ -142,7 +152,9 @@ export function PostAGameScreen({
   sports,
   openingSport,
   chosen,
+  backLabel,
   onLeave,
+  onLanded,
 }: PostAGameScreenProps) {
   const draft = usePostDraftStore((state) => draftFor(state, groupId));
   const keepIn = usePostDraftStore((state) => state.keep);
@@ -183,8 +195,8 @@ export function PostAGameScreen({
   const guard = guarded !== undefined && guarded.pick === draft.pick ? guarded.words : undefined;
   const readAt = grid.data === undefined ? Date.now() : Date.parse(grid.data.readAt);
 
-  // Leave only from a screen still up: a post settling after the player went back must not pop
-  // the group's page too.
+  // Land only from a screen still up: a post settling after the player backed out must neither pop
+  // the group's page too nor turn it under them.
   const here = useRef(true);
   useEffect(
     () => () => {
@@ -192,9 +204,9 @@ export function PostAGameScreen({
     },
     [],
   );
-  const leave = useCallback(() => {
-    if (here.current) onLeave();
-  }, [onLeave]);
+  const land = useCallback(() => {
+    if (here.current) onLanded();
+  }, [onLanded]);
 
   const fill = useFill();
   const fillYes = useFillYes({ groupId, sport, kind });
@@ -203,7 +215,7 @@ export function PostAGameScreen({
     onPosted: (posted) => {
       forget(groupId);
       showToast({ message: postedToast(posted) });
-      leave();
+      land();
     },
     onRefused: (error, asked) => {
       if (error.code === 'payment_method_required') fill.setUpThen(() => sendLater.current());
@@ -259,7 +271,7 @@ export function PostAGameScreen({
     }
     const go = () => {
       landPostLater.current(card);
-      leave();
+      land();
     };
     if (fillYes.setUpFirst(go)) return;
     go();
@@ -275,7 +287,7 @@ export function PostAGameScreen({
     }
     const go = () => {
       fill.book({ card: seat, dealtIn: { groupId, sport: row.sport, kind: row.kind } });
-      leave();
+      land();
     };
     if (fillYes.setUpFirst(go)) return;
     go();
@@ -315,7 +327,7 @@ export function PostAGameScreen({
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.screen} {...behindOverlay(overlay)}>
-        <ScreenHeader title={COPY.title} onBack={onLeave} backLabel={COPY.back} />
+        <ScreenHeader title={COPY.title} onBack={onLeave} backLabel={backLabel} />
         <ScrollView contentContainerStyle={s.body}>
           <Control label={COPY.sport}>
             <ScrollView

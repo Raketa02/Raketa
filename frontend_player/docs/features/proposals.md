@@ -725,7 +725,9 @@ _It's a game!_ off the booking's read (a sheet's rescue holds no sides, as a row
 post's _I'm in_ is `POST /proposals/{id}/yes` — a free vote, or **on its last seat a _Book it now_
 behind the ten seconds**, as on a card (`yesOnPost`, read off the seats as the details' rule is) — and
 a refusal is the deck's toast (`post_not_open_to_you`
-has words now). Then the player goes back to the group's page, the toast following them there.
+has words now). Then the player **lands** on the group's page on You’re in, as a post does
+(`onLanded`, #848) — a post's yes is on the tab, and a rescue's _It's a game!_ rises over the page
+with the page left on You’re in under it — the toast following them there.
 
 **Post — you're In** (A5.4) is shut until a court is picked, with _Pick an hour with a court on the
 map first._ under it; once picked, the line says the post (_Saturday 17:00 · Ogrody 33 · 27 zł each
@@ -734,11 +736,16 @@ guard the server answers with is said in the helper's place, announced, **for th
 about** — a new pick, a removed one or a new sport clears it: `payment_method_required` (and the
 setup), `live_posts_exhausted`, `games_per_week_booked`
 (the week), `you_play_then`, `nobody_fits_then`, `court_hour_not_for_sale`. Posted, the draft is
-forgotten, _Posted — 5 of your best fits have it._ is toasted, and the player is back on the page on
-**You’re in** — the page turned to You’re in under the screen when it opened (Fill in › its yeses
-section until #847; `groups`' `groupTab.store`), so every way back lands there, and the back control
-says _Back to You’re in_. A post settling after the player has
-left does not pop the page as well. Not retried: a second post is a second game. **No
+forgotten, _Posted — 5 of your best fits have it._ is toasted, and the player **lands** on the page
+on **You’re in**, where the new game is, from either door (#848; until then the page was turned
+there under the screen as it opened — Fill in › its yeses section until #847). **Backing out is not
+landing**: the chevron, the hardware back and the swipe return to the page on the tab the screen was
+opened from, and the chevron names it — _Back to You’re in_ or _Back to Games_. Both are the group
+page's to know (`groups`' `groupTab.store`), so the screen is handed the chevron's name
+(`backLabel`), the way back (`onLeave`) and the landing (`onLanded`), and turns no page itself. A
+post settling after the player has backed out toasts, and neither pops the page nor turns it. **The
+two-live-posts guard** says _You already have 2 posts live — withdraw one in You’re in to post
+again._, the tab's own spelling (it said _You’re In_). Not retried: a second post is a second game. **No
 `Idempotency-Key`**: the button is busy while the post is in flight, and the server refuses a second
 post at an hour the poster already plays (`you_play_then`) — so a duplicate is refused, never booked. **Challenge cards**
 (_Kuba Wiśniewski challenged you_, _The group challenged you_) are #553's and unchanged; the suite

@@ -19,6 +19,7 @@
  */
 
 import { onlineManager } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { refreshTokens } from '@/features/auth/types';
@@ -385,6 +386,30 @@ describe('a player rated in nothing, in a player group', () => {
       await expectTheDoor();
       // Not the official group's card, which names sports the group declares.
       expect(screen.queryByText(/^Get rated in /)).toBeNull();
+    },
+    WALK_TIMEOUT,
+  );
+
+  // #848: a pass begun on Post a game returns to You’re in — where its button lives and a post
+  // lands — whichever tab Post a game was opened over; here, Games.
+  it(
+    'rates from Post a game’s door and lands back on You’re in, even opened over Games',
+    async () => {
+      stubAnia([WEDNESDAY]);
+      await openTheGroup(WEDNESDAY);
+      expect(await tab(TABS.games, true)).toBeTruthy();
+
+      act(() => router.push(`/play/group/${WEDNESDAY.id}/post`));
+      await waitFor(() => expect(screen).toHavePathname(`/play/group/${WEDNESDAY.id}/post`));
+      await expectTheDoor();
+      fireEvent.press(screen.getByRole('button', { name: 'Pick your sports' }));
+      await waitFor(() => expect(screen).toHavePathname('/sports'));
+      fireEvent.press(await screen.findByLabelText('Padel'));
+      fireEvent.press(screen.getByLabelText('Rate 1 sport'));
+      await rate(PADEL_RUN);
+      fireEvent.press(screen.getByLabelText(`Back to ${WEDNESDAY.name}`));
+
+      await expectTheGroup(WEDNESDAY, TABS.youreIn);
     },
     WALK_TIMEOUT,
   );

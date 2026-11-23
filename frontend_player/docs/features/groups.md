@@ -304,7 +304,7 @@ and they are the deeper responders, which leaves the tile a direct child of the 
 filter's `cover` measures it. **While the filter's bar is open it covers the tile**, over a backdrop
 across the page, so a tap there is the bar's. Info is **pushed over the page** at
 `/play/group/[groupId]/info`, so the page stays mounted under it with its tab in `groupTab.store`:
-**back from Info is the tab the player left** — You’re in after _Post a game_ (Fill in until #847), the deck at a notice's
+**back from Info is the tab the player left** — the tab _Post a game_ was opened from after backing out of it, You’re in after a post (#848), the deck at a notice's
 card. Members and Edit group are pushed over Info now, so back from each is Info. **Not seen on a
 device**: the row's pressed look, and the badge on the 36pt tile and beside the open bar, are asked
 for a look.
@@ -594,9 +594,8 @@ _add a sport_ card stands in the tab; You’re in's rows leave room for it, Fill
 **The tab bar counts You’re in** — a plain count of its rows for now, as Games and Fill in count,
 spoken _You’re in, 3 games_ (`useYoureInBadge`) — so **the live-yeses read starts as the page opens**,
 from the tab bar, rather than when the tab is drawn: the read the tab makes anyway, made earlier, and
-it holds up neither the page nor a tab switch. **Interim**: _Post a game_ turns the page to You’re in
-as it opens rather than Fill in, its back control says _Back to You’re in_, and a pass begun from its
-door or card returns to You’re in; #848 replaces the turn with landing only on a post. Walked in
+it holds up neither the page nor a tab switch. #847 had _Post a game_ turn the page to You’re in as it
+opened, an interim #848 replaced (below). Walked in
 `groupFillIn.test.tsx` and `groupYoureIn.test.tsx`. **Not seen on a device**: four tabs with badges on
 a 320pt phone and at a large text size, which the split's log estimates at about 69pt a tab against
 about 55pt for _You’re in_, are asked for a look.
@@ -621,11 +620,32 @@ the screens A5). Both doors — the floating button (Fill in's then, You’re in
 sport filter (`useGroupSport`), each sport's rated count off the group's roster, the page's sport and
 the switch's kind; a reader rated in none of an official group's sports gets `AddSportCard` with _Get
 rated in padel to post here_ (Q80). **Which tab the page is on is now a store** (`groupTab.store`)
-rather than its state: _Post a game_ turns the page to Fill in **as it opens**, unseen under it, so
-the chevron, the hardware back and the swipe all land on the yeses, as A5 asked whichever door was
-used — to You’re in since #847, which holds them. The page forgets its entry — and the post's draft (`forgetPostDraft`) — when it goes, so it
+rather than its state, because _Post a game_ reads it and moves it from over the page. Until #848 it
+turned the page to Fill in **as it opened** (You’re in from #847), so every way back landed on the
+yeses. The page forgets its entry — and the post's draft (`forgetPostDraft`) — when it goes, so it
 still always opens on Games (story 51, ADR-0188 §5). The record of the screen is
 [`proposals.md`](proposals.md); its walk `proposals/components/postAGame.test.tsx`.
+
+**_Post a game_ backs out to the tab it came from, and a post lands on You’re in**
+([#848](https://github.com/Raketa02/Raketa/issues/848), PRD #844; the screens A5). **Opening it no
+longer turns the page.** `PostAGamePage` reads the page's tab once, as it opens — the store's entry,
+or Games while the page has not moved off its opening tab — and that is the **origin**: the chevron,
+the hardware back and the swipe all uncover the page as it was, on that tab, and back from Info after
+it is that tab too. **The chevron names it**, _Back to You’re in_ or _Back to Games_
+(`postAGameBackLabel`, the tab's own word, so the two cannot disagree); it replaced _Back to You’re
+in_ for every door. The screen draws the chevron and nothing else, so the name is what a listener
+hears — no mock draws the control, and the header's look is unchanged. **A post lands on You’re in**,
+from either door, with the new game on the tab and _Posted — N of your best fits have it._ over it;
+**so does a join from a cell's sheet** — a post's yes is on the tab, and a rescue's _It's a game!_
+rises over the page with the page left on You’re in under it. Landing is the only thing that moves
+the page: the store is set to You’re in, unseen, a moment before the screen goes. With no page under
+it (opened by a link), a back-out opens the page on Games and a landing on You’re in. **Calls made
+here**: a post that settles after the player has already backed out toasts and leaves the page on
+the tab they backed out to — neither popping the page nor turning it under them; and an origin of
+Fill in or Friends, which no door opens from today, is named and returned to like any tab. **A pass
+begun from its level door or _add a sport_ card returns to You’re in**, whichever tab it was opened
+from — where the button lives and a post lands. Walked in `postAGame.test.tsx` (both doors, each way
+back, each landing) and the onboarding suites (the pass's return, opened over Games).
 
 **A group's page opens at a card when a notice says so** ([#559](https://github.com/Raketa02/Raketa/issues/559);
 the screens A9: _the deck opens with the card on top_). The route reads an **arrival** beside the

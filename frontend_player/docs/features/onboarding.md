@@ -176,8 +176,9 @@ asks for the name — `useReturningGroup`, then `groups`' `useGroupName`, the pa
 its key — and hands it in; while it is unread the control says _Back to the group_. **Two doors
 begin a group pass.** `useAddASport(from)` takes its origin: the passport hands
 `FROM_THE_PASSPORT`, and the official group's card (`AddSportCard`) its group and the tab to come
-back to — the page its own, _Post a game_ You’re in (Fill in until #847: where it turns the page
-under it, and where every way back from it lands), Members the tab the page beneath it is on. And **the picker takes one from
+back to — the page its own, _Post a game_ You’re in (where its button lives and a post lands,
+whichever tab it was opened from — #848; Fill in until #847), Members the tab the page beneath it is
+on. And **the picker takes one from
 its route**: `/sports?groupId=…&tab=…`, checked by `groups`' `parseGroupPlace`, anything else being
 onboarding's own picker. Nothing in the app opens it yet; it is the seam #730's door calls. The
 picker now begins its pass **on the start's success**, as the chip does, so a failed start from
@@ -185,7 +186,8 @@ inside the app leaves no pass behind. **The card's buttons say _Rate Padel_**, a
 PRD and ADR-0200 §3 quote them and as the passport's chip says it; _Add Padel_ was the wording of
 a pass that ended on the passport. **Calls made here**: a pass from Members returns to the page,
 not to Members; a pass from _Post a game_ returns to You’re in (Fill in until #847), not to _Post a
-game_. **A group's fourth tab** (#847): You’re in is a pass's origin like any tab, and the route
+game_ — and not to the tab _Post a game_ was opened from, which only a back-out returns to (#848):
+opened over Games, the pass still ends on You’re in. **A group's fourth tab** (#847): You’re in is a pass's origin like any tab, and the route
 names it `youreIn`. A tab this build does not know is still dropped: the picker reads it as no
 group (`parseGroupPlace`), and a page route opens on Games (`parseGroupRouteParams`). **Not seen on a
 device**: the frame between the gate mounting Home and the group's page pushed over Play.
@@ -215,7 +217,8 @@ gate's _resume_ would leave a run set aside alone, and _continue later_ now just
 **The level door** (`LevelDoor`, exported with `DoorOrigin`) is the one dark card a player rated
 in nothing meets in a player group, on Games, Fill in, You’re in, Friends, _Post a game_ and Members —
 drawn by `groups` where its `needsALevel` says so, with the pass returning to the tab it stood
-on (_Post a game_'s to You’re in — Fill in until #847 — Members' to the page's tab, as #729's card does). `levelDoor`
+on (_Post a game_'s to You’re in, whichever tab it was opened from — #848; Fill in until #847 —
+Members' to the page's tab, as #729's card does). `levelDoor`
 is its rule: no run → _Get your level — Pick the sports you play, a few questions each._ with
 _Pick your sports_, opening `/sports?groupId&tab` (`sportsPickerRoute`); a run left halfway →
 _Carry on with your padel questions — You're on question 5._ with _Carry on_, beginning a pass

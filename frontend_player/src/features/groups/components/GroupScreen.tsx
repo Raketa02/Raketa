@@ -40,10 +40,11 @@
  * (#558): the game it makes appears on that tab.
  *
  * **Which tab it is on is the page's store** (`groupTab.store`, #558) rather than its state, because
- * *Post a game* turns it to You’re in from over the page, so every way back lands there (#847's
- * interim, until a post alone lands there and a back-out returns to the tab it came from); the
- * entry, and the post's draft with it, go when the page does. A screen pushed over the page — Info,
- * a game's details — leaves it where it was, so back is the tab the player left.
+ * *Post a game* reads it and moves it from over the page (#848): the tab it was opened from is where
+ * a back-out returns, and the chevron's name, and **a post — or a join from a cell's sheet — lands
+ * on You’re in**, turned under it; the entry, and the post's draft with it, go when the page does. A
+ * screen pushed over the page — Info, a game's details — leaves it where it was, so back is the tab
+ * the player left.
  *
  * **Games lays itself out** (#553): the deck fills the page between the switch and its three
  * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are

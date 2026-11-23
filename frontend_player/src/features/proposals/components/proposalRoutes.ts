@@ -32,9 +32,10 @@ export function rescueRoute(groupId: string, bookingId: string) {
 }
 
 /**
- * ***Post a game*** (#558) — pushed over the group's page from Fill in's floating button or *Nothing
- * picked right now*'s third door, under Play like a game's details, so *back* is the group. Only the
- * group rides in the route: the draft is the store's, and the sport and kind are the page's.
+ * ***Post a game*** (#558) — pushed over the group's page from You’re in's floating button or *Nothing
+ * picked right now*'s third door, under Play like a game's details, so *back* is the group, on the
+ * tab it was opened from, and a post lands on You’re in (#848). Only the group rides in the route:
+ * the draft is the store's, the sport and kind are the page's, and so is the tab it came from.
  */
 export function postAGameRoute(groupId: string) {
   return { pathname: '/play/group/[groupId]/post', params: { groupId } } as const;

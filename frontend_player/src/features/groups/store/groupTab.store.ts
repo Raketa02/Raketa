@@ -2,12 +2,12 @@
  * **Which tab a group's page is on** — held for as long as the page is up, and dropped with it
  * ([#558](https://github.com/Raketa02/Raketa/issues/558)).
  *
- * It was the page's own state, and one screen pushed over the page now has to move it: ***Post a
- * game*** lands the player on **You’re in** — after a post, and by every way back — whether the
- * screen was opened from You’re in's button or from the Games tab. So the screen sets the page's tab
- * to You’re in **when it opens** — under it, unseen — and the chevron, the hardware back and the
- * swipe all arrive there (#847's interim: it was Fill in, which held the yeses, until the split).
- * Any of the four tabs is an entry (`GROUP_TABS`).
+ * It was the page's own state, and one screen pushed over the page has to read it and move it:
+ * ***Post a game*** reads the tab the page stands on as it opens — its **origin**, which a back-out
+ * returns to and its chevron names (*Back to Games*) — and leaves it alone until **a post lands**, or
+ * a join from a cell's sheet does: then it sets the page's tab to **You’re in**, under it, unseen, a
+ * moment before it uncovers it, so the player sees the game they made (#848; #847 set it on opening).
+ * Any of the four tabs is an entry (`GROUP_TABS`); none means the page is on its opening tab.
  *
  * **The page still always opens on Games** (story 51; ADR-0188 §5 keeps no tab): it forgets its
  * entry when it goes, so the next time it is opened there is nothing to restore. One entry per
