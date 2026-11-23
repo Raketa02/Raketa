@@ -169,7 +169,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `proposals.games_and_money_set` / v1). Games per week and *one game per hour* read
   **`BookedGames`**, answered off the bookings (#541); API tests may override
   `get_booked_games`. A withdrawn yes is dealt again. The seed fails if her deck would be
-  empty (`assert_the_group_deck`, beside the screens battery). **Its filters are one
+  empty (`assert_the_group_deck`, beside the screens battery). **Around the deck, the Games
+  badge and the ids it counts** (#846;
+  [ADR-0208](../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)):
+  `games_badge` is the cards with somebody In with the reader **across every segment the
+  intent shows, the one not asked for too**, and `in_card_ids` is those cards by their
+  `proposal_id` — the id each carries when its segment is the one dealt — Competitive first,
+  each segment in its dealt order, so the list is the same whichever segment is read and its
+  length is always the badge. A `SEAT_OPEN` card is never among them: a rescue's players have
+  paid, and are not In. Both come off the segments the read already builds, so they add no
+  statement. The phone counts the ids it has not had on screen (ADR-0208), and
+  `games_badge` stays on the wire for older installed apps — as does Fill in's `badge`,
+  whose rows the app now counts itself. **Its filters are one
   method** (`ReadGroupDeck.deal_to`), and `shows` asks them of one card for one reader:
   Notifications' *You complete it* and challenges go only where the deck shows the card
   (#549), so a new filter added anywhere but `deal_to` is one an alert would not know.

@@ -39,8 +39,10 @@ reader sits in the seat that opened first; the players read *paid*.
 **Around the deck**: a count per segment the reader's intent shows — none while
 they have declared nothing, which is the question that replaces the deck — the
 Games badge (cards with somebody already In, across those segments — a rescue's
-players have paid, and are not In), and the weeks at the cap, so the tab can say
-*your games this week are booked*.
+players have paid, and are not In) and the ids of the cards it counts, the
+segment not dealt included, so the phone can tell which are new (#846;
+``docs/adr/0208``), and the weeks at the cap, so the tab can say *your games
+this week are booked*.
 
 **Across groups** (``ReadDeckCounts``, #739; Q127): how many cards each kind
 deals the reader in one sport, summed over every group they are in — what the
@@ -134,6 +136,10 @@ class GroupDeck:
     #: Cards with somebody already In with the reader, across those segments —
     #: a rescue's players have paid, and are not In.
     games_badge: int
+    #: The cards ``games_badge`` counts, by id (#846; ``docs/adr/0208``):
+    #: the segments in the switch's order, each in the order dealt — so the
+    #: same list whichever segment is asked for. Its length is ``games_badge``.
+    in_card_ids: tuple[UUID, ...]
     games_per_week: int
     capped_weeks: tuple[CappedWeek, ...]
     #: The requested segment's cards, in the order they are dealt.
@@ -317,6 +323,11 @@ class ReadGroupDeck:
             for kind in shown
         }
         dealt_now = segments.get(command.kind, ())
+        # Every segment shown, not only the one dealt: the badge is the tab's,
+        # and the phone tells the new ones from these ids (`docs/adr/0208`).
+        in_card_ids = tuple(
+            card.proposal_id for kind in shown for card in segments[kind] if card.in_
+        )
         return GroupDeck(
             pool_id=pool.id,
             sport=sport,
@@ -324,7 +335,8 @@ class ReadGroupDeck:
             segments=tuple(
                 DeckSegment(kind=kind, count=len(segments[kind])) for kind in shown
             ),
-            games_badge=sum(1 for kind in shown for card in segments[kind] if card.in_),
+            games_badge=len(in_card_ids),
+            in_card_ids=in_card_ids,
             games_per_week=deal.games_per_week,
             capped_weeks=deal.capped,
             cards=dealt_now,

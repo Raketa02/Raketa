@@ -330,12 +330,13 @@ async def read_payments_to_confirm(
         "reader in this group — the pool is filed under the group's id — each "
         "as **the reader's own version**, with its sides, forecast and overlap "
         "computed now. **Never dealt**: a card the reader said no to, one they are "
-        "In on (it is in *You're In*), a kind their Play intent does not want, a "
-        "share above their *most I'll pay*, a week at their games per week, an "
-        "hour they already have a game at, a club no longer selling, and a card "
-        "with somebody In they may not share a court with. Around the deck: a "
-        "count per segment, the Games badge and the capped weeks. Nothing is "
-        "recorded."
+        "In on (it is on the group page's *You're in* tab), a kind their Play "
+        "intent does not want, a share above their *most I'll pay*, a week at "
+        "their games per week, an hour they already have a game at, a club no "
+        "longer selling, and a card with somebody In they may not share a court "
+        "with. Around the deck: a count per segment, the Games badge and the ids "
+        "of the cards it counts — both segments' — and the capped weeks. Nothing "
+        "is recorded."
     ),
 )
 async def read_group_deck(

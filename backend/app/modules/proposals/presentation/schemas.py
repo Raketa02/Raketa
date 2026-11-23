@@ -743,7 +743,20 @@ class GroupDeckResponse(BaseModel):
     games_badge: int = Field(
         description=(
             "The tab's badge: cards where somebody is already In with the reader, "
-            "across the segments."
+            "across the segments. **Kept for older installed apps**: the app "
+            "counts `in_card_ids`, and this is always their number."
+        )
+    )
+    in_card_ids: list[UUID] = Field(
+        description=(
+            "**What the app counts for the Games badge** (#846; `docs/adr/0208`): "
+            "the cards with somebody already In with the reader, **across every "
+            "segment shown — the one not asked for too** — each by its "
+            "`proposal_id`, the id the card carries when its segment is the one "
+            "dealt. A `SEAT_OPEN` card is never among them: a rescue's players "
+            "have paid, and are not In. Empty when nobody is In; as many as "
+            "`games_badge`. Competitive first, each segment in the order dealt, "
+            "so the list is the same whichever segment is read."
         )
     )
     games_per_week: int
@@ -779,6 +792,7 @@ class GroupDeckResponse(BaseModel):
                 for segment in deck.segments
             ],
             games_badge=deck.games_badge,
+            in_card_ids=list(deck.in_card_ids),
             games_per_week=deck.games_per_week,
             capped_weeks=[
                 CappedWeekSchema(starts_on=week.starts_on, booked=week.booked)
@@ -2647,14 +2661,21 @@ class FillInResponse(BaseModel):
     read_at: datetime = Field(
         description="The instant every row and deadline here was read against."
     )
-    badge: int = Field(description="The tab's badge: the Seats to fill rows.")
+    badge: int = Field(
+        description=(
+            "The tab's badge: the Seats to fill rows. **Kept for older installed "
+            "apps**: the app counts the rows, `seats_to_fill` (`docs/adr/0208`), "
+            "and this is always their number."
+        )
+    )
     seats_to_fill: list[SeatToFillSchema] = Field(
         description=(
             "Every rescue in the group the reader fits — the pair rule, the "
             "kind their intent wants, free for the hour in their week, no game "
             "of theirs then, within their Games & money — **soonest first**, "
             "before or after the cut-off. Never a game still filling: that is "
-            "the deck's. *You're In* is `GET /players/me/live-yeses`."
+            "the deck's. The reader's own live yeses are the group page's "
+            "*You're in* tab, read from `GET /players/me/live-yeses`."
         )
     )
 
