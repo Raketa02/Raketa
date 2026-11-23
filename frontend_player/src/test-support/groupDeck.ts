@@ -372,6 +372,8 @@ export function groupDeck(
       { kind: 'FOR_FUN', count: cards.filter((card) => card.kind === 'FOR_FUN').length },
     ],
     games_badge: cards.filter((card) => card.in_count > 0).length,
+    // The cards the badge counts, by id (#846): this deck's own, since a suite deals one segment.
+    in_card_ids: cards.filter((card) => card.in_count > 0).map((card) => card.proposal_id),
     games_per_week: 2,
     capped_weeks: [],
     cards,

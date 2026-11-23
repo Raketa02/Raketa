@@ -2584,7 +2584,7 @@ export interface paths {
         };
         /**
          * A group's deck
-         * @description The **Games** tab for one sport and segment: the cards dealt to the reader in this group — the pool is filed under the group's id — each as **the reader's own version**, with its sides, forecast and overlap computed now. **Never dealt**: a card the reader said no to, one they are In on (it is in *You're In*), a kind their Play intent does not want, a share above their *most I'll pay*, a week at their games per week, an hour they already have a game at, a club no longer selling, and a card with somebody In they may not share a court with. Around the deck: a count per segment, the Games badge and the capped weeks. Nothing is recorded.
+         * @description The **Games** tab for one sport and segment: the cards dealt to the reader in this group — the pool is filed under the group's id — each as **the reader's own version**, with its sides, forecast and overlap computed now. **Never dealt**: a card the reader said no to, one they are In on (it is on the group page's *You're in* tab), a kind their Play intent does not want, a share above their *most I'll pay*, a week at their games per week, an hour they already have a game at, a club no longer selling, and a card with somebody In they may not share a court with. Around the deck: a count per segment, the Games badge and the ids of the cards it counts — both segments' — and the capped weeks. Nothing is recorded.
          */
         get: operations["read_group_deck_api_v1_pools__pool_id__deck_get"];
         put?: never;
@@ -4703,12 +4703,12 @@ export interface components {
             read_at: string;
             /**
              * Badge
-             * @description The tab's badge: the Seats to fill rows.
+             * @description The tab's badge: the Seats to fill rows. **Kept for older installed apps**: the app counts the rows, `seats_to_fill` (`docs/adr/0208`), and this is always their number.
              */
             badge: number;
             /**
              * Seats To Fill
-             * @description Every rescue in the group the reader fits — the pair rule, the kind their intent wants, free for the hour in their week, no game of theirs then, within their Games & money — **soonest first**, before or after the cut-off. Never a game still filling: that is the deck's. *You're In* is `GET /players/me/live-yeses`.
+             * @description Every rescue in the group the reader fits — the pair rule, the kind their intent wants, free for the hour in their week, no game of theirs then, within their Games & money — **soonest first**, before or after the cut-off. Never a game still filling: that is the deck's. The reader's own live yeses are the group page's *You're in* tab, read from `GET /players/me/live-yeses`.
              */
             seats_to_fill: components["schemas"]["SeatToFillSchema"][];
         };
@@ -5641,9 +5641,14 @@ export interface components {
             segments: components["schemas"]["DeckSegmentSchema"][];
             /**
              * Games Badge
-             * @description The tab's badge: cards where somebody is already In with the reader, across the segments.
+             * @description The tab's badge: cards where somebody is already In with the reader, across the segments. **Kept for older installed apps**: the app counts `in_card_ids`, and this is always their number.
              */
             games_badge: number;
+            /**
+             * In Card Ids
+             * @description **What the app counts for the Games badge** (#846; `docs/adr/0208`): the cards with somebody already In with the reader, **across every segment shown — the one not asked for too** — each by its `proposal_id`, the id the card carries when its segment is the one dealt. A `SEAT_OPEN` card is never among them: a rescue's players have paid, and are not In. Empty when nobody is In; as many as `games_badge`. Competitive first, each segment in the order dealt, so the list is the same whichever segment is read.
+             */
+            in_card_ids: string[];
             /** Games Per Week */
             games_per_week: number;
             /**
