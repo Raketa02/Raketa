@@ -1,6 +1,11 @@
 # ADR-0187 — Four deployables: the club website and the public site live in this repo
 
-- **Status:** Accepted
+- **Status:** Accepted — **§8 amended 2026-11-23 by
+  [ADR-0209](0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)** (PRD
+  [#852](https://github.com/Raketa02/Raketa/issues/852)), with one exception to *"The brand is
+  Raketa, everywhere"*: the player app's drawn splash spells its wordmark **Rakieta**. The
+  launcher's name and every string stay *Raketa*, and the mocks' *Rakieta* is still read as Raketa
+  everywhere else.
 - **Date:** 2026-09-25
 - **Amends [ADR-0005](0005-three-app-monorepo-ownership-boundaries.md): four deployables.** Its
   decision is unchanged: fully independent apps, HTTP only, no shared source and no workspace, and

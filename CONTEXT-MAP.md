@@ -133,6 +133,16 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > **Bookings** (*Fill in*, *You’re in*); the decision log and the mocks are
 > `docs/specs/fill-in-split/`, and the specs it amends are `docs/specs/games-and-fill-in/`.
 >
+> **The drawn splash touches no context**
+> ([ADR-0209](docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md),
+> PRD [#852](https://github.com/Raketa02/Raketa/issues/852); decided, not yet built). On every cold
+> open a volt ball bounces into the **Rakieta** wordmark, and startup runs behind it instead of
+> holding the native splash. A launch that already knows it has no internet doesn't send the launch
+> check. Only the player app changes: no backend change and no contract change. *Rakieta* is the
+> splash's drawn wordmark only; the launcher's name and every string stay **Raketa** (ADR-0187 §8,
+> amended).
+> The brief, the decision log and the mock are `docs/specs/splash-screen/`.
+>
 > **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
 > radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
 > ranking, with the feature flag that hid them
@@ -288,6 +298,8 @@ else lives one layer down. See
 │   │                            brief, the decision log and the mocks, which lead on design
 │   ├── specs/fill-in-split/  ← Fill in and You’re in as two tabs, unseen badges (ADR-0208):
 │   │                            the decision log and the mocks, which lead on design
+│   ├── specs/splash-screen/  ← the drawn splash, startup behind it (ADR-0209): the brief, the
+│   │                            decision log and the mock, which lead on design
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)
