@@ -544,3 +544,32 @@ feature flag's rules may target, each absent rather than guessed when the build 
 **AsyncStorage allow-list is two modules again**: the phone-preferences store and the feature
 flags' saved datafile (`features/feature_flags/api/datafileCache.ts`), and
 `scripts/test-import-boundaries.sh` asserts both, and the ban everywhere else.
+
+**The tenth port is the system bars** ([#857](https://github.com/Raketa02/Raketa/issues/857),
+[ADR-0209](../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md);
+decision log Q12). `SystemBarsPort` has **two acts**, `paint(ground)` and `restore()`, and one
+caller: the launch gate paints the bars as the splash starts and restores them as its fade starts,
+under both variants. It is handed in, as the launch window is, so it has no provider. **It is the
+first port split into platform files.** `systemBars.ts` is an iPhone's, light status-bar content
+alone. `systemBars.android.ts` is Android's and the one importer of `expo-navigation-bar` (4.0.9,
+installed with `npx expo install`), a lint ban that `pnpm test:boundaries` drives. The gate checks
+no platform.
+
+- **The status bar is painted on React Native's own stack**: one entry, pushed after the root
+  layout's dark bar and popped on restore. What is left is whatever the screens ask for, so a
+  restore is exactly today's look on any first screen, sign-in's light bar included. A screen
+  mounted under the splash pushes later and wins; today that is only sign-in's stage, whose bar is
+  light and, on Android, transparent over the splash's own edge. Android's paint leaves the bar's
+  translucency alone, so nothing under it moves.
+- **The navigation bar has no stack**, so each of Android's paints first reads what the bar shows:
+  the colour (`#rrggbb`, no alpha) and whether the buttons are light. Its restore writes that look
+  back. Every read and write waits for the one before, so a paint never reads the night a restore
+  is still undoing. It reads at every paint rather than once, because Android can recreate the
+  window under the same JavaScript. A look the phone will not read is never painted over.
+- **`fakeSystemBars()`** holds what the bars show (`painted`) and every change (`changes`), and
+  behaves as the device does: a second paint, or a restore with nothing painted, changes nothing.
+  Suites: `LaunchGate.test.tsx` (when: at the start, at the fade's start and not before, under both
+  variants, through a hold and a failed launch) and `systemBars.test.ts` (what each adapter writes,
+  over a stand-in for `expo-navigation-bar`).
+- **Not seen on a device.** It is a native change, so it needs a fresh build, and it needs a look on
+  the A32 (three-button navigation) and an iPhone.

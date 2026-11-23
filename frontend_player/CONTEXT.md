@@ -106,7 +106,9 @@ review comment and a test description all use the same word.
   draws the **drawn splash** on its first render, lets the **launch window** go on the splash's
   first layout, runs the bootstrap sequence behind it, mounts the tree underneath when the
   sequence resolves, and fades the splash at the later of 2.6 s (0.9 s under reduced motion) and
-  the first screen being ready. Nothing renders a route tree before the sequence resolves, which
+  the first screen being ready. While the splash is up it holds the phone's **system bars**,
+  painted the field's edge as the splash starts and restored as the fade starts (#857). Nothing
+  renders a route tree before the sequence resolves, which
   is what keeps the tri-state from showing. _Avoid_: "splash gate" — it was the bootstrap gate's
   hold on `expo-splash-screen` until startup ended, and **startup is never held now**.
 - **Launch window** — the OS's own splash, drawn from the tap until the first JavaScript frame: a
@@ -120,6 +122,12 @@ review comment and a test description all use the same word.
 - **Hold** — a screen under the drawn splash declaring itself blank (`useSplashHold`), so the fade
   waits for it. The entry gate holds while its decision is _pending_. A hold delays only the fade,
   and once the fade has begun nothing stops it.
+- **System bars** — the phone's status bar and, on Android, its navigation bar, behind the tenth
+  platform port (`SystemBarsPort`, #857). While the drawn splash is up they are **painted** its
+  edge colour with light icons. As the fade starts they are **restored**: the status bar to
+  whatever the screens' own status bars ask for, the navigation bar to the system's own look.
+  _Avoid_: "status bar" for the pair. An iPhone has only the one, and the navigation bar is the
+  half that differs.
 - **Token manager** — the module in `shared/lib/auth` owning raw token values and their
   **in-memory mirror** (read from the keychain once at bootstrap; written back atomically
   on every change). _Avoid_: "token store" — it is not a Zustand store and never will be.

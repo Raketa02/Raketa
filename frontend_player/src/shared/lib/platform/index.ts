@@ -58,6 +58,13 @@
  * read before any screen exists — by a bootstrap step the root layout supplies — so it is a value
  * handed to its caller rather than a provider's.
  *
+ * **The tenth is the system bars** (#857): the status bar and Android's navigation bar, painted the
+ * drawn splash's edge colour while it is up and given back as its fade starts (ADR-0209). The
+ * navigation bar is native, and *painted until the fade, not after* is a rule a fake can follow. The
+ * platforms differ, so the port is two files: `systemBars.ts` for an iPhone and
+ * `systemBars.android.ts`, the only importer of `expo-navigation-bar`. Its one caller is the launch
+ * gate, which is handed it as it is handed the launch window, so it has no provider either.
+ *
  * `appBuild` is the one plain *reading* of what the device is: which platform and which version
  * of the app this is, the two device facts a feature flag's rules may target (ADR-0206 §8).
  * Nothing to decide and nothing a test would drive, so no port.
@@ -134,3 +141,4 @@ export {
 export { PaymentsProvider, usePayments, type PaymentsProviderProps } from './PaymentsProvider';
 export { devicePush, type PushNotice, type PushPort } from './push';
 export { PushProvider, usePush, type PushProviderProps } from './PushProvider';
+export { deviceSystemBars, type SystemBarsPort } from './systemBars';

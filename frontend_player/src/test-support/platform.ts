@@ -65,6 +65,7 @@ import type {
   PickedImage,
   PushNotice,
   PushPort,
+  SystemBarsPort,
 } from '@/shared/lib/platform';
 
 /** The bits every port fake shares: what the state is, and what asking would make it. */
@@ -432,6 +433,44 @@ export function fakeInstallReferrer(referrer: string | null): FakeInstallReferre
     },
   };
   return port;
+}
+
+/**
+ * **The phone's system bars, as a fake** (#857). It holds what the bars show now and every change
+ * they went through, so a suite can say *painted from the start, restored when the fade starts,
+ * not before*.
+ *
+ * It behaves as the device's port does: a second paint before a restore changes nothing, and so
+ * does a restore with nothing painted. Neither act throws.
+ */
+export interface FakeSystemBars extends SystemBarsPort {
+  /** The ground the bars are painted, or `null` while they show the app's own look. */
+  readonly painted: string | null;
+  /** Every change the bars went through, oldest first. */
+  readonly changes: readonly ('painted' | 'restored')[];
+}
+
+export function fakeSystemBars(): FakeSystemBars {
+  let painted: string | null = null;
+  const changes: ('painted' | 'restored')[] = [];
+  return {
+    get painted() {
+      return painted;
+    },
+    get changes() {
+      return changes;
+    },
+    paint: (ground) => {
+      if (painted !== null) return;
+      painted = ground;
+      changes.push('painted');
+    },
+    restore: () => {
+      if (painted === null) return;
+      painted = null;
+      changes.push('restored');
+    },
+  };
 }
 
 /**

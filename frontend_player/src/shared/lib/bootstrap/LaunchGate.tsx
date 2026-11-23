@@ -12,6 +12,11 @@
  * When the sequence resolves, **the tree mounts underneath the splash** — or the startup failure
  * does, if it rejected — and the first screen starts its own requests under the motion.
  *
+ * **While the splash is up, the phone's bars belong to it** (#857). They are painted the field's
+ * edge colour with light icons as the splash starts, so it reads edge to edge, and restored to
+ * exactly the app's own look as the fade starts. What that means on each phone is the system bars
+ * port's (`shared/lib/platform/systemBars.ts`); the gate checks no platform.
+ *
  * **The fade starts at the later of** 2.6 s (0.9 s under reduced motion) and the first screen being
  * ready: the sequence settled, the tree laid out, and no hold standing (`splashHold.tsx`). It is a
  * linear 0.5 s fade of the whole splash, after which the splash unmounts. Until then **it swallows
@@ -26,10 +31,19 @@
  * — config that is missing or malformed has no in-app recovery — and the same fade reveals it.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Easing, ReduceMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { deviceSystemBars, type SystemBarsPort } from '@/shared/lib/platform';
 import { SplashCoverProvider, useReducedMotion } from '@/shared/ui/overlay';
 import { theme } from '@/shared/ui/theme';
 
@@ -77,9 +91,16 @@ export interface LaunchGateProps {
   readonly run: () => Promise<void>;
   /** The OS launch window. The device's, unless a test hands the gate a fake. */
   readonly launchWindow?: LaunchWindow;
+  /** The phone's status and navigation bars. The device's, unless a test hands the gate a fake. */
+  readonly systemBars?: SystemBarsPort;
 }
 
-export function LaunchGate({ children, run, launchWindow = deviceLaunchWindow }: LaunchGateProps) {
+export function LaunchGate({
+  children,
+  run,
+  launchWindow = deviceLaunchWindow,
+  systemBars = deviceSystemBars,
+}: LaunchGateProps) {
   // **Decided once, before the first frame**, and never switched mid-play. The provider's first
   // answer is already the OS's — read synchronously as the process started — so this is never the
   // provisional `false` an asynchronous read would give (ADR-0209 §2).
@@ -105,6 +126,25 @@ export function LaunchGate({ children, run, launchWindow = deviceLaunchWindow }:
     return () => pending.forEach(clearTimeout);
   }, []);
 
+  // **The bars painted are the bars restored**: the port handed over first, as with the sequence.
+  const bars = useRef(systemBars);
+
+  // Painted as the splash starts, in its first commit, before its first layout lets the launch
+  // window go. That is just after the root's own status bar has mounted, in the same commit: the
+  // splash's entry is on top, and React Native sends the phone the two merged, never the root's dark
+  // bar first. Android's navigation bar follows a few native round trips later, so it may turn night
+  // a moment after the field shows; that is for the look on the A32.
+  //
+  // **Never after the fade has begun.** A fast refresh re-runs this effect on a gate that keeps its
+  // clock, and nothing would restore a second paint. A gate unmounted before its fade leaves the
+  // bars as it found them.
+  useLayoutEffect(() => {
+    if (clock.current.fadeBegun) return;
+    const painted = bars.current;
+    painted.paint(theme.color.splashGroundEdge);
+    return () => painted.restore();
+  }, []);
+
   /** Begins the fade if both its conditions now hold, and never twice. */
   const fadeIfDue = useCallback(() => {
     const now = clock.current;
@@ -120,6 +160,10 @@ export function LaunchGate({ children, run, launchWindow = deviceLaunchWindow }:
       reduceMotion: ReduceMotion.Never,
     });
     timers.current.push(setTimeout(() => setSplashGone(true), LAUNCH_CLOCK.fade));
+    // The bars go back as the fade starts, under the fading splash, so the app's own look is there
+    // for the screen that appears rather than switching once it has. After the fade and its timer
+    // have started, so nothing the port does could keep the splash up.
+    bars.current.restore();
   }, [shown]);
 
   // **The sequence runs once per mount**, which is once per process: the one handed over first. A

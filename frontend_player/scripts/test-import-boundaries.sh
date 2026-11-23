@@ -4,7 +4,7 @@
 #
 #   bash scripts/test-import-boundaries.sh      # or: pnpm test:boundaries
 #
-# Eleven modules may be imported from exactly one place:
+# Twelve modules may be imported from exactly one place:
 #
 #   expo-secure-store                            → src/shared/lib/auth
 #   @react-native-async-storage/async-storage    → feature_flags/api/datafileCache.ts
@@ -17,6 +17,7 @@
 #   @stripe/stripe-react-native                  → platform/payments.tsx
 #   expo-notifications                           → platform/push.ts
 #   expo-application                             → platform/installReferrer.ts
+#   expo-navigation-bar                          → platform/systemBars.android.ts
 #   @featurevisor/sdk                            → feature_flags/api/featurevisor.ts
 #
 # And one **name** out of a module every screen imports:
@@ -172,6 +173,11 @@ SHARE_PORT='src/shared/lib/platform/share.ts'
 PAYMENTS_PORT='src/shared/lib/platform/payments.tsx'
 PUSH_PORT='src/shared/lib/platform/push.ts'
 REFERRER_PORT='src/shared/lib/platform/installReferrer.ts'
+# The system bars are one port in two files, one per platform. The Android file alone owns the
+# navigation bar, so the iPhone file beside it is probed as any other platform file is.
+SYSTEM_BARS_PORT='src/shared/lib/platform/systemBars.android.ts'
+SYSTEM_BARS_IPHONE='src/shared/lib/platform/systemBars.ts'
+LAUNCH_GATE='src/shared/lib/bootstrap/LaunchGate.tsx'
 OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
 
 # The feature-flag seam's three edges, each an api/ file of one feature: the fetch, the saved
@@ -332,6 +338,22 @@ expect_blocked expo-application "$OTHER_PLATFORM_FILE" 'installReferrer.ts'
 expect_allowed expo-application "$REFERRER_PORT"
 # And the port itself is still under every other ban.
 expect_blocked expo-notifications "$REFERRER_PORT" 'push.ts'
+
+echo
+echo "the system bars — expo-navigation-bar belongs to platform/systemBars.android.ts"
+expect_blocked expo-navigation-bar "$FEATURE" 'systemBars.android.ts'
+expect_blocked expo-navigation-bar "$SCREEN" 'systemBars.android.ts'
+expect_blocked expo-navigation-bar "$TEST" 'systemBars.android.ts'
+expect_blocked expo-navigation-bar "$SUPPORT" 'systemBars.android.ts'
+expect_blocked expo-navigation-bar "$AUTH" 'systemBars.android.ts'
+# One file wide: the port's iPhone file may not paint a navigation bar, nor may the launch gate
+# that calls the port, nor any other platform file.
+expect_blocked expo-navigation-bar "$SYSTEM_BARS_IPHONE" 'systemBars.android.ts'
+expect_blocked expo-navigation-bar "$LAUNCH_GATE" 'systemBars.android.ts'
+expect_blocked expo-navigation-bar "$OTHER_PLATFORM_FILE" 'systemBars.android.ts'
+expect_allowed expo-navigation-bar "$SYSTEM_BARS_PORT"
+# And the port itself is still under every other ban.
+expect_blocked expo-application "$SYSTEM_BARS_PORT" 'installReferrer.ts'
 
 echo
 echo "the share sheet — { Share } from react-native belongs to platform/share.ts"

@@ -134,6 +134,16 @@ const installReferrerImport = {
     'from src/test-support/platform.ts in a test. See #756.',
 };
 
+const navigationBarImport = {
+  group: ['expo-navigation-bar'],
+  message:
+    'Only src/shared/lib/platform/systemBars.android.ts may import expo-navigation-bar. The ' +
+    'navigation bar is native and a write replaces what it shows, so one file reads the ' +
+    "system's own look before painting and gives exactly that back — use the SystemBarsPort " +
+    'from @/shared/lib/platform, and fakeSystemBars() from src/test-support/platform.ts in a ' +
+    'test. See #857.',
+};
+
 const featurevisorImport = {
   group: ['@featurevisor/*'],
   message:
@@ -200,6 +210,7 @@ const CORE_PATTERNS = [
   stripeImport,
   pushImport,
   installReferrerImport,
+  navigationBarImport,
   featurevisorImport,
   observabilityVendorImports,
 ];
@@ -438,6 +449,12 @@ export default [
     // native ports (#756).
     files: ['src/shared/lib/platform/installReferrer.ts'],
     rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(installReferrerImport)) },
+  },
+  {
+    // The system bars on Android — the navigation bar's one importer, and one file wide like the
+    // other native ports: the port's iPhone file, `systemBars.ts`, may not reach for it (#857).
+    files: ['src/shared/lib/platform/systemBars.android.ts'],
+    rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(navigationBarImport)) },
   },
   {
     // The share sheet — one verb, one file, the clipboard's exemption with the path ban

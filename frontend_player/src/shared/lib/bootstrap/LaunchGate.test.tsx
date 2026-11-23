@@ -4,9 +4,10 @@
  * §1–§3).
  *
  * The gate is handed a fake sequence (a deferred promise the test resolves), a fake launch window
- * that counts its releases, and reduced motion through the provider's `value`, never the OS. Every
- * assertion is something a player or the next screen could observe: whether the splash is drawn,
- * how much of it shows, whether the app is underneath, whether a press lands.
+ * that counts its releases, the system bars' fake (#857), and reduced motion through the provider's
+ * `value`, never the OS. Every assertion is something a player or the next screen could observe:
+ * whether the splash is drawn, how much of it shows, whether the app is underneath, whether a press
+ * lands, what the phone's bars show.
  *
  * **The times are the brief's, spelled here** rather than read from the gate's own constants: a
  * clock that drifted from 2.6 s should turn this red, not move it along.
@@ -17,7 +18,9 @@ import type { ReactNode } from 'react';
 import { Pressable, Text, type ViewStyle } from 'react-native';
 import { getAnimatedStyle, ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 
-import { ReducedMotionProvider, useCoveredBySplash } from '@/shared/ui';
+import type { SystemBarsPort } from '@/shared/lib/platform';
+import { ReducedMotionProvider, theme, useCoveredBySplash } from '@/shared/ui';
+import { fakeSystemBars } from '@/test-support/platform';
 
 import { LaunchGate } from './LaunchGate';
 import type { LaunchWindow } from './launchWindow';
@@ -100,11 +103,19 @@ function Covered() {
  * every animation consults unless told otherwise — so a fade that took the OS's word would jump
  * to its end on a phone, and this is where it would show.
  */
-function tree({ run, reduced = false, app = <TheApp /> }: Launch, launchWindow: LaunchWindow) {
+function tree(
+  { run, reduced = false, app = <TheApp /> }: Launch,
+  launchWindow: LaunchWindow,
+  systemBars: SystemBarsPort,
+) {
   return (
     <ReducedMotionProvider value={reduced}>
       {reduced ? <ReducedMotionConfig mode={ReduceMotion.Always} /> : null}
-      <LaunchGate run={run ?? (() => Promise.resolve())} launchWindow={launchWindow}>
+      <LaunchGate
+        run={run ?? (() => Promise.resolve())}
+        launchWindow={launchWindow}
+        systemBars={systemBars}
+      >
         {app}
       </LaunchGate>
     </ReducedMotionProvider>
@@ -114,11 +125,15 @@ function tree({ run, reduced = false, app = <TheApp /> }: Launch, launchWindow: 
 /** The process starts: the root renders the gate, and nothing has laid out yet. */
 function launch(options: Launch = {}) {
   const launchWindow = fakeLaunchWindow();
-  const view = render(tree(options, launchWindow));
+  const systemBars = fakeSystemBars();
+  const view = render(tree(options, launchWindow, systemBars));
   return {
     launchWindow,
+    systemBars,
+    unmount: view.unmount,
     /** The same gate, re-rendered with a different tree or setting — never remounted. */
-    rerender: (next: Launch) => view.rerender(tree({ ...options, ...next }, launchWindow)),
+    rerender: (next: Launch) =>
+      view.rerender(tree({ ...options, ...next }, launchWindow, systemBars)),
   };
 }
 
@@ -431,6 +446,99 @@ describe('the fade', () => {
     clockTo(FADE_AT * 3);
 
     expect(splashIsUp()).toBe(false);
+  });
+});
+
+/**
+ * **While the splash is up, the phone's bars belong to it** (#857): painted the field's edge with
+ * light icons, so it reads edge to edge, and given back as the fade starts — under the fading
+ * splash, not after it has gone. What each phone does with a paint is the port's; this suite holds
+ * the gate to *when*.
+ */
+describe('the system bars', () => {
+  const EDGE = theme.color.splashGroundEdge;
+
+  it('are painted the splash’s edge as it starts, before its first layout', () => {
+    const startup = deferred();
+    const { systemBars, launchWindow } = launch({ run: () => startup.promise });
+
+    expect(launchWindow.released).toBe(0);
+    expect(systemBars.painted).toBe(EDGE);
+    expect(systemBars.changes).toEqual(['painted']);
+  });
+
+  it('stay painted until the fade starts at 2.6 s, and are restored as it starts', async () => {
+    const { systemBars } = await launchReady();
+
+    clockTo(FADE_AT - 1);
+    expect(systemBars.painted).toBe(EDGE);
+
+    clockTo(FADE_AT);
+    expect(systemBars.painted).toBeNull();
+    expect(systemBars.changes).toEqual(['painted', 'restored']);
+    // As the fade starts: the splash is still up, fading over the app.
+    expect(splashIsUp()).toBe(true);
+  });
+
+  it('are restored as the fade starts at 0.9 s under reduced motion', async () => {
+    const { systemBars } = await launchReady({ reduced: true });
+
+    clockTo(FADE_AT_REDUCED - 1);
+    expect(systemBars.painted).toBe(EDGE);
+
+    clockTo(FADE_AT_REDUCED);
+    expect(systemBars.painted).toBeNull();
+    expect(splashIsUp()).toBe(true);
+  });
+
+  it('stay painted while the still lockup holds, and are restored when the fade starts', async () => {
+    const startup = deferred();
+    const { systemBars } = launch({ run: () => startup.promise });
+    layOutTheSplash();
+
+    clockTo(4000);
+    expect(systemBars.painted).toBe(EDGE);
+
+    await act(async () => startup.resolve());
+    expect(systemBars.painted).toBe(EDGE);
+
+    layOutTheApp();
+    expect(systemBars.painted).toBeNull();
+  });
+
+  it('are restored when a failed launch is revealed, as for any first screen', async () => {
+    const { systemBars } = launch({ run: () => Promise.reject(new Error('Invalid config')) });
+    layOutTheSplash();
+    await settle();
+    layOutTheApp();
+
+    clockTo(FADE_AT - 1);
+    expect(systemBars.painted).toBe(EDGE);
+
+    clockTo(FADE_AT);
+    expect(systemBars.painted).toBeNull();
+  });
+
+  it('are restored by a gate that goes before its fade, leaving them as it found them', async () => {
+    const { systemBars, unmount } = await launchReady();
+
+    clockTo(1000);
+    unmount();
+
+    expect(systemBars.painted).toBeNull();
+    expect(systemBars.changes).toEqual(['painted', 'restored']);
+  });
+
+  it('are painted once and restored once, whatever the root and the tree do afterwards', async () => {
+    const { systemBars, rerender } = await launchReady();
+
+    rerender({ app: <TheApp /> });
+    clockTo(FADE_AT + FADE);
+    rerender({ app: <BlankUntil answered={false} /> });
+    rerender({ reduced: true });
+    clockTo(FADE_AT * 3);
+
+    expect(systemBars.changes).toEqual(['painted', 'restored']);
   });
 });
 

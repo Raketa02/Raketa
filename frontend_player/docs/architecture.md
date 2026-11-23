@@ -256,6 +256,11 @@ behind it, and when the sequence resolves the tree — or the startup failure sc
   and is hidden from a screen reader. **It plays once per JavaScript process**, a dev reload
   included — never on a fast refresh, a return from the background or a sign-out — and the
   sequence runs once with it.
+- **While the splash is up, the phone's bars belong to it** (#857). The gate paints them as the
+  splash starts and restores them as the fade starts, through the system bars port
+  (`shared/lib/platform/systemBars.ts`). On Android both bars take the field's edge, `#0B2B33`,
+  with light icons. On an iPhone the status bar shows light content. Restoring gives back exactly
+  the app's own look: the status bar the screens ask for, and the system's own navigation bar.
 - **What drawing last cannot cover reads `useCoveredBySplash`** (`shared/ui`). iOS's modal stage
   is a native window above the whole app, so a sheet the first screen opens at once is presented
   only as the splash goes; Android's is a layer in the tree, covered with it. A toast raised under
@@ -901,6 +906,12 @@ sessions.
   ([`docs/features/_shared.md`](features/_shared.md)). The eighth is **`PushPort` over
   `expo-notifications`** ([#559](https://github.com/Raketa02/Raketa/issues/559)): the permission, the
   push token, a push arriving while the app is open and a push tapped, with `fakePush()` beside it.
+  The ninth is the install referrer over `expo-application`
+  ([#756](https://github.com/Raketa02/Raketa/issues/756)). The tenth is **`SystemBarsPort`**
+  ([#857](https://github.com/Raketa02/Raketa/issues/857)): the status and navigation bars, which
+  the launch gate paints for the drawn splash and restores as it fades. It is the first port
+  split into platform files, `systemBars.ts` for an iPhone and `systemBars.android.ts`, the one
+  importer of `expo-navigation-bar`, with `fakeSystemBars()` beside them.
 - **A screen reaches a port through its context** — `useLocation()` /
   `useImagePicking()` / `useLiveStream()`, each defaulting to the real device, so nothing
   in the app wires anything up and a test wraps the tree in the device it wants. A screen

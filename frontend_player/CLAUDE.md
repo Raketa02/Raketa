@@ -145,11 +145,13 @@ src/
   `player_record`, `payments`, `notifications`, `friends`, `auth` and `rankings` do this).
 - **One chokepoint per capability**, each the only importer of its module: `shared/lib/auth`
   (keychain), `shared/lib/http` (`fetch`, the 401 → refresh → retry rotation, timeouts as named
-  classes), and nine platform ports in `shared/lib/platform/` — `location.ts`,
+  classes), and ten platform ports in `shared/lib/platform/` — `location.ts`,
   `imagePicking.ts`, `liveStream.ts`, `haptics.ts`, `clipboard.ts`, `payments.tsx`, `push.ts`,
   `installReferrer.ts` (`expo-application`, Android's install referrer, #756), `share.ts` (React
-  Native's `Share`, the one fenced name out of that module). Features depend on the port
-  and drive the fakes in `src/test-support/platform.ts`. AsyncStorage has two importers:
+  Native's `Share`, the one fenced name out of that module), `systemBars.ts` (the status and
+  navigation bars the launch gate paints for the splash and restores as it fades, #857: two
+  adapters, the iPhone's and `systemBars.android.ts`, the one importer of `expo-navigation-bar`).
+  Features depend on the port and drive the fakes in `src/test-support/platform.ts`. AsyncStorage has two importers:
   `shared/lib/preferences/phonePreferences.ts` — per-account choices, wiped at sign-out
   (ADR-0188), one per-account flag kept at sign-out (ADR-0200 §8), and one flag the phone keeps
   for itself — _the install referrer was read_ (#756, ADR-0188's record owed) — and
