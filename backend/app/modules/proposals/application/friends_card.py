@@ -30,11 +30,17 @@ arrangements, the evenest by the engine's own forecast (``BalanceForecasts``),
 or the sides sent — the overlap of the line-up's weeks at the court's hour,
 and the club's cut-off for that hour, which the send sheet's *until Fri 10:00*
 is.
+
+**It says its kind's own number** (``docs/adr/0207`` §5, #834), as a deck card
+does (``headline_of``): Competitive the forecast of the sides drawn, For fun the
+**Social vibe of the line-up** — the reader and every friend seated, however
+they stand — and no forecast, which still chose the friendly's sides. The tags
+are one ``PlayersTags`` question, asked only on For fun.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from typing import final
 from uuid import UUID
@@ -42,12 +48,18 @@ from uuid import UUID
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Clock, Instant, Sport, instant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.proposals.application.commands import (
     FriendsLineUpCommand,
     ReadFriendsCardCommand,
 )
 from app.modules.proposals.application.members import ReadMembers
-from app.modules.proposals.domain.deck import CardForecast, Sides, cut_off_of
+from app.modules.proposals.domain.deck import (
+    CardForecast,
+    Sides,
+    cut_off_of,
+    headline_of,
+)
 from app.modules.proposals.domain.errors import (
     CannotPlayTogether,
     CourtHourIncomplete,
@@ -75,6 +87,7 @@ from app.modules.proposals.domain.ports import (
     ClubTerms,
     CourtHours,
     PlayerFit,
+    PlayersTags,
     Pools,
     ReaderRelations,
     WherePoolsPlay,
@@ -212,8 +225,11 @@ class FriendsCard:
     read: FriendsLineUpRead
     kind: SearchMode
     sides: Sides
-    #: ``None`` where it cannot be read.
+    #: A competitive card's — ``None`` on For fun, and where it cannot be read.
     forecast: CardForecast | None
+    #: A For-fun card's Social vibe of the line-up — ``None`` on Competitive,
+    #: and where nobody at the table holds a counted tag.
+    vibe: int | None
     #: The court picked, or the one proposed — ``None`` with no court in the
     #: horizon.
     court: CourtForFriends | None
@@ -232,12 +248,14 @@ class ReadFriendsCard:
         *,
         line_up: ReadFriendsLineUp,
         forecasts: BalanceForecasts,
+        tags: PlayersTags,
         clubs: ClubNames,
         terms: ClubTerms,
         clock: Clock,
     ) -> None:
         self._line_up = line_up
         self._forecasts = forecasts
+        self._tags = tags
         self._clubs = clubs
         self._terms = terms
         self._clock = clock
@@ -255,6 +273,15 @@ class ReadFriendsCard:
             await self._forecasts.forecasts(options, sport=read.sport),
             partner=command.partner_id,
         )
+        everybody = read.line_up.everybody
+        tags: Mapping[UUID, Collection[SocialTag]] = (
+            await self._tags.tags_of(everybody)
+            if command.kind is SearchMode.FOR_FUN
+            else {}
+        )
+        forecast, vibe = headline_of(
+            command.kind, table=everybody, forecast=forecast, tags=tags
+        )
         if court_id is None or starts_at is None:
             court = proposed_court(read.courts)
         else:
@@ -266,6 +293,7 @@ class ReadFriendsCard:
             kind=command.kind,
             sides=sides,
             forecast=forecast,
+            vibe=vibe,
             court=court,
             overlap=None
             if court is None

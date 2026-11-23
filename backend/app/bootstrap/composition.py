@@ -2848,10 +2848,12 @@ def build_read_posting_slot(
     runtime: EventRuntime | None = None,
 ) -> ReadPostingSlot:
     """One cell's sheet: the fits free then, the free courts, and what is
-    already happening there (#546)."""
+    already happening there (#546) — a For-fun post's fits ranked by the
+    poster's Social vibe with each (#834)."""
     return ReadPostingSlot(
         posting=build_read_posting(session, booked=booked, runtime=runtime),
         forecasts=build_balance_forecasts(session, runtime=runtime),
+        tags=build_players_tags(session),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
         distances=build_club_distances(session, runtime=runtime),
@@ -2909,10 +2911,12 @@ def build_read_friends_card(
     runtime: EventRuntime | None = None,
 ) -> ReadFriendsCard:
     """The friends card (#750): the line-up's sides by the engine's own
-    forecast, its weeks' overlap and a court — a read, recording nothing."""
+    forecast, its weeks' overlap and a court — a read, recording nothing — and
+    on For fun the line-up's Social vibe off their tags (#834)."""
     return ReadFriendsCard(
         line_up=build_read_friends_line_up(session, booked=booked, runtime=runtime),
         forecasts=build_balance_forecasts(session, runtime=runtime),
+        tags=build_players_tags(session),
         clubs=build_proposal_club_names(session),
         terms=build_club_terms(session, runtime=runtime),
         clock=clock,

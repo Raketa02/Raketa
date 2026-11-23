@@ -46,6 +46,7 @@ from app.modules.proposals.application.posting import (
     Posted,
     PostingSlot,
     PostingWeek,
+    SlotFit,
 )
 from app.modules.proposals.application.rescues import FillIn
 from app.modules.proposals.domain.deck import (
@@ -615,7 +616,7 @@ class DeckCardSchema(BaseModel):
                 card.sides, reader=reader, people=people, in_=card.in_, paid=card.paid
             ),
             forecast=_forecast(card.forecast),
-            vibe=None if card.vibe is None else DeckVibeSchema(pct=card.vibe),
+            vibe=_vibe(card.vibe),
             overlap=_overlap(card.overlap),
         )
 
@@ -665,6 +666,10 @@ def _forecast(forecast: CardForecast | None) -> DeckForecastSchema | None:
     if forecast is None:
         return None
     return DeckForecastSchema(pct=forecast.pct, provisional=forecast.provisional)
+
+
+def _vibe(pct: int | None) -> DeckVibeSchema | None:
+    return None if pct is None else DeckVibeSchema(pct=pct)
 
 
 def _overlap(overlap: Overlap) -> DeckOverlapSchema:
@@ -2812,7 +2817,9 @@ class PostingGridResponse(BaseModel):
 
 
 class SlotFitSchema(BaseModel):
-    """One of the poster's best fits free then — *2,75 · 93*."""
+    """One of the poster's best fits free then — *2,75 · 93*, the second
+    figure being the kind's own number: how even, or on a For-fun post how
+    much the two of them share."""
 
     player_id: UUID
     nickname: str | None = Field(
@@ -2832,8 +2839,18 @@ class SlotFitSchema(BaseModel):
     )
     forecast: DeckForecastSchema | None = Field(
         description=(
-            "How even a game of the poster and them is forecast — `null` where "
-            "it cannot be read."
+            "How even a game of the poster and them is forecast. **Always "
+            "`null` on a `FOR_FUN` post**, which says its `vibe` instead "
+            "(`docs/adr/0207` §5). Also `null` where it cannot be read."
+        )
+    )
+    vibe: DeckVibeSchema | None = Field(
+        description=(
+            "On a **`FOR_FUN`** post, the Social vibe of **the poster and "
+            "them**, worked out from the two's tags now — and the fits are "
+            "ranked by it, highest first, a tie falling to the forecast and "
+            "then the pool's order (#834). **Always `null` on a `COMPETITIVE` "
+            "post**, and where neither holds a tag."
         )
     )
 
@@ -2896,7 +2913,11 @@ class PostingSlotResponse(BaseModel):
     open_seats: int
     cell: PostingCellSchema = Field(description="The headline's cell.")
     fits: list[SlotFitSchema] = Field(
-        description="The best fits free at the cell's best hour, best fit first."
+        description=(
+            "The best fits free at the cell's best hour, best fit first: the "
+            "most even game, or on a `FOR_FUN` post the highest `vibe`, a tie "
+            "falling to the most even."
+        )
     )
     free_courts: list[FreeCourtSchema] = Field(
         description="**Home club first**, then by hour. Tapping one picks it."
@@ -2918,16 +2939,17 @@ class PostingSlotResponse(BaseModel):
         reader = read.poster.player_id
         people = slot.people
 
-        def fit_of(player_id: UUID, forecast: CardForecast | None) -> SlotFitSchema:
-            person = people.get(player_id)
+        def fit_of(fit: SlotFit) -> SlotFitSchema:
+            person = people.get(fit.player_id)
             return SlotFitSchema(
-                player_id=player_id,
+                player_id=fit.player_id,
                 nickname=None if person is None else person.nickname,
                 photo_id=None if person is None else person.photo_id,
                 photo_url=None if person is None else person.photo_url,
                 level=None if person is None else person.level,
                 friend=person is not None and person.friend,
-                forecast=_forecast(forecast),
+                forecast=_forecast(fit.forecast),
+                vibe=_vibe(fit.vibe),
             )
 
         return cls(
@@ -2941,7 +2963,7 @@ class PostingSlotResponse(BaseModel):
             level_range=LevelRangeSchema.of(read.posted_for.levels),
             open_seats=read.open_seats,
             cell=PostingCellSchema.of(slot.cell),
-            fits=[fit_of(fit.player_id, fit.forecast) for fit in slot.fits],
+            fits=[fit_of(fit) for fit in slot.fits],
             free_courts=[
                 FreeCourtSchema(
                     club=BookedClubSchema(
@@ -3120,7 +3142,21 @@ class FriendsCardResponse(BaseModel):
         )
     )
     forecast: DeckForecastSchema | None = Field(
-        description="*87% · Very even* for these sides; `null` where it cannot be read."
+        description=(
+            "*87% · Very even* for these sides. **Always `null` when `kind` is "
+            "`FOR_FUN`**, which says its `vibe` instead (`docs/adr/0207` §5) — "
+            "its sides are still the evenest. Also `null` where it cannot be "
+            "read."
+        )
+    )
+    vibe: DeckVibeSchema | None = Field(
+        description=(
+            "When `kind` is **`FOR_FUN`**, the Social vibe of the line-up — "
+            "the reader and every friend seated, however they stand, so a swap "
+            "never moves it; worked out from everybody's tags now (#834). "
+            "Flipping the kind switch flips the card's number. **Always `null` "
+            "on `COMPETITIVE`**, and where nobody seated holds a tag."
+        )
     )
     court: FriendsCourtSchema | None = Field(
         description=(
@@ -3157,6 +3193,7 @@ class FriendsCardResponse(BaseModel):
                 yours=list(card.sides.yours), theirs=list(card.sides.theirs)
             ),
             forecast=_forecast(card.forecast),
+            vibe=_vibe(card.vibe),
             court=None
             if card.court is None
             else FriendsCourtSchema.from_row(card.court, club_names=names),

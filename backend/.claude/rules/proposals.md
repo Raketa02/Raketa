@@ -532,7 +532,17 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   club, taking new cards, before its book-by — **and the court source's own, hour by hour**
   (`PoolClubs.offered`, #746): an official group's grid and sheet list another club only
   where its club is full then, each such row `FreeCourtSchema.home_club_full`, and a post
-  there at any other hour is `court_hour_not_for_sale`. **Who it is for is stored on it**
+  there at any other hour is `court_hour_not_for_sale`. **The sheet's fits say the kind's
+  own number for the poster and each** (#834; ADR-0207 §5; `ReadPostingSlot`, `SlotFit`):
+  a competitive post's the forecast of the two, most even first, `vibe` `null` — as before;
+  a **For-fun** post's `vibe`, `social_vibe_of` over the two through `headline_of`, and
+  `forecast` `null` — **ranked by it**, highest first, on the printed number (so
+  look-alikes tie, as in the deck's order), a tie falling to today's order: the most even
+  (the forecast still computed, only not said), then the pool's; an unread number last.
+  The tags are one `PlayersTags` question, for the poster and the fits free then, on For
+  fun only. It is the pair's vibe, never the table's a post would be dealt by — the post's
+  versions are still built as the best company of the whole table (`versions_of_a_post`).
+  **Who it is for is stored on it**
   (`ProposalMade.who`, `level_low`, `level_high`, defaulted for older streams, which read as
   *for anybody*): the range starts as **the engine's own window** around the poster —
   `PlayerFit.level_window`, the matcher's `level_tolerance` through the same
@@ -594,7 +604,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `arrangements` of the line-up in the order sent and `evenest` over `BalanceForecasts`,
   the first among equals — or the sides sent, named by **`partner_id`** (the friend
   beside the reader; doubles only, else `sides_not_of_the_line_up`), a call: the reader
-  always stands on their own side (Q70), so a partner names every way to stand. **The
+  always stands on their own side (Q70), so a partner names every way to stand. **The card
+  says its kind's own number** (#834; ADR-0207 §5), through the deck's `headline_of`:
+  **Competitive** the forecast of the sides drawn, `vibe` `null`; **For fun** `vibe` — the
+  Social vibe of **the line-up**, everybody seated, `social_vibe_of` over
+  `LineUp.everybody`, so a swap (`partner_id`) never moves it — and `forecast` `null`,
+  though the forecast still chose the evenest sides. The tags are one `PlayersTags`
+  question, asked only on For fun. **The
   courts are the court source's**, `PoolClubs.offered` over `CourtHours.on_sale` from now
   to now + the deck's 14 days, **one row per free court** — `CourtHourOnSale.free`, the
   courts named in the club's order (`CourtOnSale`, the first being the one a booking

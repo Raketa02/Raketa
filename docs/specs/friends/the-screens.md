@@ -272,6 +272,10 @@ tile as a request (§6.2). It changes in three ways:
   word, the balance bar with your side on the left, the overlap grid with its grade, and the court
   panel (*Court available*, the share in volt, *Sat 10:00 · Ogrody 33 · Court 3*, the kind of court,
   and *Ogrody 33 is full at 10:00* on another club's court).
+- **On For fun** (amended 2026-11-23, ADR-0207 §5, #834): the **Social vibe row** (ADR-0207 mock 2)
+  stands where the percentage, its word and the balance bar were, the card's `vibe.pct`: the four's
+  vibe, worded and coloured by the app's four bands. **No forecast is drawn.** Flipping the switch
+  flips the number; the *vs* line, the overlap and the court stay as they are.
 - **Buttons**: **Send game and pay 25 zł** (volt), **Pick a different court** (dark).
 - **The court and the card always name the same sides** ([README](README.md#overrides), note 3).
 - **Refused**: *These four can't all play together. Swap someone.* in the card's place; no buttons.

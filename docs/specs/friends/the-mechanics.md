@@ -366,8 +366,15 @@ seat and **+ Friends** under it.
 **The moment every seat is filled**, Raketa builds the **friends card** under the court, with a
 loading state while it works. It is the deck's card **without the player tiles**:
 
-- the sides, *YOU + EWA VS MAGDA + ANIA*, and the balance, *87% · Very even*, for the sides on the
-  court;
+- the sides, *YOU + EWA VS MAGDA + ANIA*, and **the kind's own number** (amended 2026-11-23,
+  [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §5, [#834](https://github.com/Raketa02/Raketa/issues/834)):
+  - on **Competitive**, the balance, *87% · Very even*, for the sides on the court;
+  - on **For fun**, the **Social vibe** of the four, how much the line-up shares, worked out from
+    everybody's tags now. It is the same however they stand, so a swap never moves it. **No
+    forecast** is shown, though the forecast still seats them in the evenest sides.
+
+  Flipping the kind switch flips the number, and nothing else on the card;
 - the **overlap grid** of the four's weeks, graded *High / Good / Slim overlap*;
 - the **court panel**: *Court available · Sat 10:00 · Ogrody 33 · Court 3 · 25 zł each*, with the kind
   of court, and *Ogrody 33 is full at 10:00* on another club's court;

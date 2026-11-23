@@ -12391,7 +12391,18 @@
                 "type": "null"
               }
             ],
-            "description": "*87% \u00b7 Very even* for these sides; `null` where it cannot be read."
+            "description": "*87% \u00b7 Very even* for these sides. **Always `null` when `kind` is `FOR_FUN`**, which says its `vibe` instead (`docs/adr/0207` \u00a75) \u2014 its sides are still the evenest. Also `null` where it cannot be read."
+          },
+          "vibe": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckVibeSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When `kind` is **`FOR_FUN`**, the Social vibe of the line-up \u2014 the reader and every friend seated, however they stand, so a swap never moves it; worked out from everybody's tags now (#834). Flipping the kind switch flips the card's number. **Always `null` on `COMPETITIVE`**, and where nobody seated holds a tag."
           },
           "court": {
             "anyOf": [
@@ -12437,6 +12448,7 @@
           "home_club",
           "sides",
           "forecast",
+          "vibe",
           "court",
           "overlap",
           "cut_off"
@@ -17637,7 +17649,7 @@
             },
             "type": "array",
             "title": "Fits",
-            "description": "The best fits free at the cell's best hour, best fit first."
+            "description": "The best fits free at the cell's best hour, best fit first: the most even game, or on a `FOR_FUN` post the highest `vibe`, a tie falling to the most even."
           },
           "free_courts": {
             "items": {
@@ -19713,7 +19725,18 @@
                 "type": "null"
               }
             ],
-            "description": "How even a game of the poster and them is forecast \u2014 `null` where it cannot be read."
+            "description": "How even a game of the poster and them is forecast. **Always `null` on a `FOR_FUN` post**, which says its `vibe` instead (`docs/adr/0207` \u00a75). Also `null` where it cannot be read."
+          },
+          "vibe": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckVibeSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "On a **`FOR_FUN`** post, the Social vibe of **the poster and them**, worked out from the two's tags now \u2014 and the fits are ranked by it, highest first, a tie falling to the forecast and then the pool's order (#834). **Always `null` on a `COMPETITIVE` post**, and where neither holds a tag."
           }
         },
         "type": "object",
@@ -19724,10 +19747,11 @@
           "photo_url",
           "level",
           "friend",
-          "forecast"
+          "forecast",
+          "vibe"
         ],
         "title": "SlotFitSchema",
-        "description": "One of the poster's best fits free then \u2014 *2,75 \u00b7 93*."
+        "description": "One of the poster's best fits free then \u2014 *2,75 \u00b7 93*, the second\nfigure being the kind's own number: how even, or on a For-fun post how\nmuch the two of them share."
       },
       "SocialTag": {
         "type": "string",

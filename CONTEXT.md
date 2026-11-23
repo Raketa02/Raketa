@@ -850,8 +850,10 @@ more.**
   [#830](https://github.com/Raketa02/Raketa/issues/830), building For-fun tables since
   [#831](https://github.com/Raketa02/Raketa/issues/831) (see **Mode**), in a For-fun game's details
   since [#833](https://github.com/Raketa02/Raketa/issues/833) — the card's number and a row for each
-  of the reader's tags, naming who at the table carries it — and not yet built elsewhere —
-  [#834](https://github.com/Raketa02/Raketa/issues/834), [#835](https://github.com/Raketa02/Raketa/issues/835),
+  of the reader's tags, naming who at the table carries it — on the **Friends card** (the
+  line-up's) and Post a game's best fits (the poster's with each, which ranks a For-fun post's fits)
+  since [#834](https://github.com/Raketa02/Raketa/issues/834), and not yet built elsewhere —
+  [#835](https://github.com/Raketa02/Raketa/issues/835),
   [#838](https://github.com/Raketa02/Raketa/issues/838),
   [#840](https://github.com/Raketa02/Raketa/issues/840)–[#842](https://github.com/Raketa02/Raketa/issues/842).
   _Avoid_: vibe %, match %, compatibility.
@@ -2184,7 +2186,8 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   Good / Slim** by the hours everybody shares over the narrowest week. Never one person's week.
 - **Friends card** — the card a fixed line-up of friends gets on a group's Friends tab before it is
   sent: the deck's card without its tiles — the evenest sides (or the sides the sender swapped to),
-  the forecast, the overlap grid, and a court with the share. Its court is **the soonest hour still
+  the forecast — or on For fun the line-up's **Social vibe** and no forecast (ADR-0207 §5) — the
+  overlap grid, and a court with the share. Its court is **the soonest hour still
   sellable, up to 14 days ahead, where all are free, a court is free under the pool's court rule and
   none has a game**; failing that, where most are free. *Find a court* lists every such court in the
   window, by how many of them are free. Blocks and a level in the sport apply; **the level window,

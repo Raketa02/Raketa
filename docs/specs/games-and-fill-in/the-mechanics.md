@@ -629,7 +629,14 @@ The **Post a game** button in Fill in walks through:
    - Outside your own weekly hours: dimmed and dashed, still pickable.
 6. **Court** — tapping a cell opens its sheet: your best fits free then, and the **free courts**
    in that range, home club first — each with its hour, club, distance, share, book-by and its
-   own *"n free"*. Tapping a court picks it (one hour, one court). **Already happening here**
+   own *"n free"*. **Each fit carries the kind's own number for the two of you** (amended
+   2026-11-23, [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+   §5, [#834](https://github.com/Raketa02/Raketa/issues/834)):
+   - on a **competitive** post, how even a game of you two is forecast, most even first, as
+     before;
+   - on a **For-fun** post, your **Social vibe** together, worked out from your two sets of tags
+     now. The fits are **ranked by it**, highest first, and a tie falls to the competitive order:
+     the most even, then the group's. No forecast is shown. Tapping a court picks it (one hour, one court). **Already happening here**
    lists, first, **rescues** at that time you fit (**Pay 27 zł**, booked at once: held until
    the cut-off, or paid at once after it) and then
    **posts still filling** you fit (**I'm in**, free until it fills; **Pay 27 zł** on a post's

@@ -415,7 +415,11 @@ A bottom sheet (on `ModalStage`, never a React Native `Modal`):
 - **Title** — *Saturday evening*.
 - **Headline** — a mint count badge + *"5 of your best fits free then"* · *"only 2 fit · may not
   fill"* · *"Nobody who fits is free then"* (+ *· outside your hours*).
-- **The fits** — horizontal cards (poster, level, name, *2,75 · 93*); tap → record.
+- **The fits** — horizontal cards (poster, level, name, *2,75 · 93*); tap → record. The second
+  figure is the post's kind's own number (amended 2026-11-23, ADR-0207 §5, #834). On a competitive
+  post it is the % even (`forecast.pct`). On a **For-fun** post it is **the Social vibe of the two
+  of you** (`vibe.pct`), coloured by its band, never a forecast, and the cards come **best vibe
+  first**, in the server's order.
 - **FREE COURTS · HOME CLUB FIRST** — one row per free court hour: the hour (mono), the club,
   *2,4 km · 27 zł if it fills · book by Saturday 15:00*, its own *"4 free"* (Q77), and *27 zł
   each*. Tap → picks it (ring + ✓ on the cell); a new pick replaces the old.
