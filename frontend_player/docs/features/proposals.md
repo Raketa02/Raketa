@@ -27,8 +27,8 @@ its line under it say it, and the first yes's payment setup says the rest.
 
 **The details read top to bottom: the top card, the game card, _Who is free_**
 ([#836](https://github.com/Raketa02/Raketa/issues/836); for fun 3–6; design-system 7.22), for both
-kinds. The top card comes first — the BALANCE FORECAST card on paper, for now: #839 and #840 give
-each kind its own — then the dark game card: the status tag, the tiles, the vs line, WHERE · DAY ·
+kinds. The top card comes first — the kind's own (below; For fun's is #840's, and draws nothing until
+then) — then the dark game card: the status tag, the tiles, the vs line, WHERE · DAY ·
 TIME · YOUR SHARE, the offline note while an answer waits, and **what the reader may do, in the
 card's own foot**, right under the facts it answers. _Not this time_ (secondary, at its words' width)
 is on the left and the yes (primary, the rest) on the right, side by side, as mocks 4 and 6 draw
@@ -39,6 +39,27 @@ _Booking…_ while it books, the spinner while it is sent, held while another bo
 never the mocks' _I'm in · books it · 27 zł_. **The header keeps _Padel_ / _Padel · For fun_**, never
 their _Padel · 3 of 4 in_: the count is the status tag's alone (the For-fun record's overrides 2 and
 3). _Who is free_ follows the card. **Not seen on a device.**
+
+**A competitive game's details open on the full Balance forecast, with what is at stake**
+([#839](https://github.com/Raketa02/Raketa/issues/839); ADR-0207 §6; for fun 3–4). Before saying
+yes the reader reads both sides' levels with _gap_ and the signed gap between them, the bar with the
+sides' names, the % and its word, _A counted game — a confirmed score moves everybody's level._, and
+_If you win +0,08 · If you lose −0,07_ — **two tiles or none**. It is **the booked game's own block**,
+moved to `shared/ui` (`ForecastBlock`, `StakeTiles`) with its words
+(`shared/vocabulary/forecastPresentation.ts`) since two features draw it (ADR-0207 §6), so the two
+screens draw one thing. It is drawn from the details read (#833): the forecast with `your_side`,
+`their_side` and `gap`, fed to the bar as served — the deck card's `foldOf` is not used here, so **the
+details' bar can lean a little differently from the card's**, which reads the tiles' mean Levels until
+the deck card is served a gap too (owed to the backend; _The bar's fold_, below) — and `at_stake`, which the server sends only while every
+seat is named and the game is still the reader's to play, so an open seat, a reader who said no or a
+game that ended draws the block without tiles. The bar's labels are `barLabels`' stems, the split
+row's spoken name `forecastSides`' whole nicknames, both off one split of the court. **The kind
+decides the card** (`topCardOf`): **never on For fun**, even if a read sent a forecast — the deck
+card's `headlineOf` rule — and nothing at all, with nothing said, where the read could not forecast
+the game. A **provisional** figure (a seat open, read as matching its partner) is drawn as served, as
+the deck card and the details drew it before; the booked game never receives one. **The deck card is
+unchanged**: no stakes there. Walked in `competitiveDetails.test.tsx`; the booked game's
+`forecastBlock.test.tsx` passed untouched. **Not seen on a device.**
 
 **Nothing the server decides is re-derived.** The order, the sides, the forecast's figure, the grade
 and every cell's shade are the read's. What the client decides is how a dealt card is drawn:
@@ -482,8 +503,8 @@ button where the read gives none (the hour has come, the game is over). **The sa
 full game while it waits for one payment** (#625), sent as the withdrawal (`useLeaveWhileWaiting`,
 `DELETE /proposals/{id}/yes`), and the game fills again.
 
-**The filling details are `GET /proposals/{id}`** (A4.2; owed by #556). The forecast above the card
-(since #836), then the status tag — _Filling · 2
+**The filling details are `GET /proposals/{id}`** (A4.2; owed by #556). The kind's top card above the
+card (since #836; a competitive game's full forecast and stakes since #839), then the status tag — _Filling · 2
 of 4 in_, _Waiting for one payment_ amber, _Booked_, or how it ended unfilled — WHERE with the distance
 and no court, the share with _if it fills · book by_ or _Waiting for one payment · until 14:40 · Nobody
 pays until it's in_, and in the card's foot **the actions the read names**:

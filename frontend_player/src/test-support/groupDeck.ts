@@ -201,9 +201,37 @@ export function proposalDetails(
     payment_due_by: null,
     time_to: null,
     sides: card.sides,
-    forecast: card.forecast,
+    forecast: detailsForecast(card),
+    // A suite that walks the stakes or the Social vibe card serves them (#833).
+    at_stake: null,
+    vibe: null,
     overlap: card.overlap,
     ...extra,
+  };
+}
+
+/**
+ * **The card's forecast as the details read it** (#833): the card's figure, with the two side
+ * strengths beside it — here each side's mean tile Level (the engine's are its own; a fixture's
+ * need only agree with the tiles) — and the gap between them, subtracted unrounded as the engine
+ * does. None where the server would send none: For fun, an empty side, or somebody unrated.
+ */
+function detailsForecast(card: Wire['DeckCardSchema']): Wire['DetailsForecastSchema'] | null {
+  if (card.forecast === null) return null;
+  const strength = (tiles: readonly Tile[]): number | undefined => {
+    const levels = tiles.map((one) => one.level);
+    if (levels.length === 0 || levels.some((level) => level === null)) return undefined;
+    return (levels as readonly number[]).reduce((sum, level) => sum + level, 0) / levels.length;
+  };
+  const yours = strength(card.sides.yours);
+  const theirs = strength(card.sides.theirs);
+  if (yours === undefined || theirs === undefined) return null;
+  const hundredths = (value: number) => Math.round(value * 100) / 100;
+  return {
+    ...card.forecast,
+    your_side: hundredths(yours),
+    their_side: hundredths(theirs),
+    gap: hundredths(yours - theirs),
   };
 }
 

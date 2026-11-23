@@ -79,3 +79,42 @@ describe('a game still filling, in detail', () => {
     expect(toProposalDetails(wire)).toBeUndefined();
   });
 });
+
+describe('the kind’s own card (#833, #839)', () => {
+  it('reads a competitive game’s full forecast — the figure, both sides and the signed gap — and what is at stake', () => {
+    const wire = proposalDetails(deckCard(), {
+      forecast: { pct: 73, provisional: false, your_side: 2.65, their_side: 2.74, gap: -0.09 },
+      at_stake: { win_delta: 0.08, loss_delta: -0.07 },
+    });
+
+    expect(toProposalDetails(wire)).toMatchObject({
+      forecast: {
+        pct: 73,
+        provisional: false,
+        split: { yourSide: 2.65, theirSide: 2.74, gap: -0.09 },
+      },
+      atStake: { winDelta: 0.08, lossDelta: -0.07 },
+    });
+  });
+
+  // An older server (before #833) sends the card's forecast and no `at_stake`: no block — never a
+  // block of blanks, and never a read that fails over a field it did not know to send.
+  it('reads no forecast and no stakes from an older server’s read', () => {
+    const { at_stake: _unsent, ...older } = proposalDetails(deckCard());
+    const wire = {
+      ...older,
+      forecast: { pct: 87, provisional: false },
+    } as unknown as Wire['ProposalDetailsResponse'];
+
+    expect(toProposalDetails(wire)).not.toHaveProperty('forecast');
+    expect(toProposalDetails(wire)).not.toHaveProperty('atStake');
+    expect(toProposalDetails(wire)).toMatchObject({ status: 'FILLING' });
+  });
+
+  it('reads no forecast and no stakes where the read sends none', () => {
+    const wire = proposalDetails(deckCard(), { forecast: null, at_stake: null });
+
+    expect(toProposalDetails(wire)).not.toHaveProperty('forecast');
+    expect(toProposalDetails(wire)).not.toHaveProperty('atStake');
+  });
+});

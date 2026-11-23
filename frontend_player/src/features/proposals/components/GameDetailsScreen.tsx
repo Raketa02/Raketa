@@ -7,7 +7,12 @@
  * ```
  * ‹  [faces]  karol.t, zofia.b, ania.k    — or *Only you*, alone on it
  *             Padel                                              the sport and kind: the tag is the state
- * BALANCE FORECAST  [ You + Zofia │ Ania + Ewa ]  87% Very even     the top card, read first
+ * ┌ BALANCE FORECAST ───────────────────────────┐   the top card, read first — a competitive game's
+ * │ 2,65            gap −0,09             2,74 │   full forecast (`shared/ui`'s `ForecastBlock`,
+ * │ [ You + Zofia ▓▓▓▓▓░░░░░░░░ Ania + Ewa ]   │   #839; for fun 3): both sides and the gap, the
+ * │ 73%  Fairly even · A counted game — …      │   bar, the % and its word, the counted sentence,
+ * │ [ If you win +0,08 ] [ If you lose −0,07 ] │   and the stakes — two tiles or none. Never on
+ * └─────────────────────────────────────────────┘   For fun, whose Social vibe card is #840's
  * ┌ ● Filling · 1 of 4 in ─────────────────────┐   the dark card — the status, the tiles with IN,
  * │ [tile] [tile]  ── KAROL + YOU VS … ──       │   the vs line, and the court on an accent line:
  * │ [tile] [tile]                               │
@@ -24,7 +29,8 @@
  *
  * ## One read, and the server says what the reader may do
  *
- * **`GET /proposals/{id}`** (#542) is the whole of it: who is In, the sides and their forecast, the
+ * **`GET /proposals/{id}`** (#542) is the whole of it: who is In, the sides, the kind's own card — a
+ * competitive game's forecast with both side strengths, the gap and what is at stake (#833) — the
  * club and its distance, the share and the book-by, the overlap, the status — *Filling · 2 of 4
  * in*, *Waiting for one payment* in amber, booked, or how it ended unfilled — and **`actions`, what
  * the reader may do now**, in the screen's order. *Waiting for one payment* (#625, #626; Q111)
@@ -62,39 +68,31 @@
 
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { offlineMessage, type AppError } from '@/shared/errors';
-import { formatDistanceKm, formatPercent } from '@/shared/formatting/ratingFormat';
+import { formatDistanceKm } from '@/shared/formatting/ratingFormat';
 import { showToast } from '@/shared/store/toast.store';
 import {
-  BALANCE_INK,
-  BalanceBar,
   behindOverlay,
   Button,
-  Card,
   courtSeatCount,
+  ForecastBlock,
   Note,
   ScreenHeader,
   theme,
 } from '@/shared/ui';
-import { balanceLabel, balanceTone, balanceWord } from '@/shared/vocabulary/balancePresentation';
+import { COUNTED_GAME_SENTENCE } from '@/shared/vocabulary/forecastPresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import {
-  chargesAtOnce,
-  foldOf,
-  peopleOn,
-  refusalOutcome,
-  rowsOf,
-  type DeckPerson,
-} from '../domain/deck';
+import { chargesAtOnce, peopleOn, refusalOutcome, rowsOf, type DeckPerson } from '../domain/deck';
 import {
   completesTheGame,
   detailsCanRunOut,
   paymentDueOf,
+  topCardOf,
   yesOnDetails,
   type ProposalDetails,
 } from '../domain/details';
@@ -113,6 +111,7 @@ import {
   detailsDay,
   detailsShareWords,
   detailsStatus,
+  forecastSides,
   othersTitle,
   refusalMessage,
   shareWords,
@@ -259,6 +258,7 @@ function Details({
   const at = useReadClock(details.readAt, receivedAt, detailsCanRunOut(details));
   const seats = courtSeatCount(sport);
   const { top, bottom } = rowsOf(details, seats / 2);
+  const topCard = topCardOf(details);
 
   // What the card's foot draws — one of these, by the read's `actions`.
   const answering = actions.includes('YES') || actions.includes('NO');
@@ -278,12 +278,16 @@ function Details({
           subline={sportWords(sport, kind)}
         />
         <ScrollView contentContainerStyle={s.body} testID="game-details">
-          {/* The top card — today's forecast, for now: #839 and #840 give each kind its own. */}
-          {details.forecast === undefined ? null : (
-            <Forecast
-              pct={details.forecast.pct}
-              fold={foldOf(details) ?? 0}
+          {/* The top card, the kind's own: a competitive game's full forecast and what is at
+              stake (#839). For fun draws none here — its Social vibe card is #840's. */}
+          {topCard === undefined ? null : (
+            <ForecastBlock
+              forecast={topCard.forecast}
+              split={topCard.forecast.split}
+              {...(topCard.atStake === undefined ? {} : { stake: topCard.atStake })}
               labels={barLabels([top, bottom])}
+              names={forecastSides([top, bottom])}
+              sentence={COUNTED_GAME_SENTENCE}
             />
           )}
 
@@ -426,37 +430,6 @@ function Facts({ details, at }: { readonly details: ProposalDetails; readonly at
   return <GameFacts facts={facts} accent={PROPOSAL_STATUS_INK[details.status]} />;
 }
 
-/** BALANCE FORECAST on paper — the bar, your side left, and the figure with its word (details 9). */
-function Forecast({
-  pct,
-  fold,
-  labels,
-}: {
-  readonly pct: number;
-  readonly fold: number;
-  readonly labels: readonly [string, string];
-}) {
-  const tone = balanceTone(pct);
-  return (
-    <Card style={s.forecast}>
-      <Text accessibilityRole="header" style={s.eyebrow}>
-        {COPY.game.forecast}
-      </Text>
-      <BalanceBar
-        advantage={fold}
-        tone={tone}
-        size="md"
-        labels={labels}
-        accessibilityLabel={balanceLabel(pct)}
-      />
-      <View style={s.reading} accessible accessibilityLabel={balanceLabel(pct)}>
-        <Text style={[s.figure, { color: BALANCE_INK[tone] }]}>{formatPercent(pct)}</Text>
-        <Text style={s.word}>{balanceWord(pct)}</Text>
-      </View>
-    </Card>
-  );
-}
-
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   body: { padding: theme.size.gutter, gap: theme.space.sm },
@@ -466,11 +439,6 @@ const s = StyleSheet.create({
     padding: theme.space.md,
     gap: theme.space.md,
   },
-  forecast: { gap: theme.space.sm },
-  eyebrow: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
-  reading: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
-  figure: { ...theme.num.xl, ...theme.tabular },
-  word: { ...theme.type.cardTitle, color: theme.color.ink },
   grid: { borderRadius: theme.radius.cardDark, overflow: 'hidden', padding: theme.space.md },
   foot: { gap: theme.space.sm },
   answers: { flexDirection: 'row', gap: theme.space.sm },

@@ -16,6 +16,7 @@ import { codeMessage, type AppError } from '@/shared/errors';
 import { counted } from '@/shared/formatting/counted';
 import { handleStem } from '@/shared/formatting/playerName';
 import { formatLevel, formatPercent, formatZloty } from '@/shared/formatting/ratingFormat';
+import { sentenceList } from '@/shared/formatting/sentenceList';
 import { dayDate } from '@/shared/date/calendarDay';
 import { platformClock, platformDay } from '@/shared/date/platformZone';
 import { dayLabel, dayName } from '@/shared/vocabulary/availabilityPresentation';
@@ -188,16 +189,29 @@ export function sidesSpoken(top: DeckRow, bottom: DeckRow): string {
  * *Ania + Ewa* (the screens A2.3, Q70; the game screen's `barLabels` rule).
  */
 export function barLabels(rows: readonly [DeckRow, DeckRow]): readonly [string, string] {
-  const yours = rows.find((row) => row.yours);
-  const theirs = rows.find((row) => !row.yours);
-  const you = peopleIn(yours ?? { yours: true, seats: [] });
-  const ordered = [...you.filter((one) => one.isYou), ...you.filter((one) => !one.isYou)];
-  return [
-    ordered.map(stem).join(SIDE_JOIN),
-    peopleIn(theirs ?? { yours: false, seats: [] })
-      .map(stem)
-      .join(SIDE_JOIN),
-  ];
+  const [yours, theirs] = yoursThenTheirs(rows);
+  return [yours.map(stem).join(SIDE_JOIN), theirs.map(stem).join(SIDE_JOIN)];
+}
+
+/**
+ * **The forecast's two sides as a sentence names them** — yours then theirs, *You* first, every
+ * nickname whole over *and* — the split row's spoken name on a competitive game's details (#839).
+ * `barLabels` is the drawing and this is the register a listener gets; both are read off one split
+ * of the court, so they cannot disagree about who is where. An open seat is not said.
+ */
+export function forecastSides(rows: readonly [DeckRow, DeckRow]): readonly [string, string] {
+  const [yours, theirs] = yoursThenTheirs(rows);
+  const whole = (person: DeckPerson) => (person.isYou ? COPY.you : spoken(person));
+  return [sentenceList(yours.map(whole)), sentenceList(theirs.map(whole))];
+}
+
+/** The people on your row — you first — and on theirs, in the rows' own order. */
+function yoursThenTheirs(
+  rows: readonly [DeckRow, DeckRow],
+): readonly [readonly DeckPerson[], readonly DeckPerson[]] {
+  const yours = peopleIn(rows.find((row) => row.yours) ?? { yours: true, seats: [] });
+  const theirs = peopleIn(rows.find((row) => !row.yours) ?? { yours: false, seats: [] });
+  return [[...yours.filter((one) => one.isYou), ...yours.filter((one) => !one.isYou)], theirs];
 }
 
 /**

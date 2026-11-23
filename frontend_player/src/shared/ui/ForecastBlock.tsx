@@ -1,7 +1,9 @@
 /**
- * **`BALANCE FORECAST`** — the court's pairing on the game screen's plan lead, drawn to mock 7
+ * **`BALANCE FORECAST`** — a game's full forecast on paper: each side's level and the gap, the bar,
+ * the % and its word, what a confirmed score does, and what is at stake
  * ([#415](https://github.com/Raketa02/Raketa/issues/415),
- * [ADR-0161](../../../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)).
+ * [ADR-0161](../../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md); for fun 3,
+ * [#839](https://github.com/Raketa02/Raketa/issues/839), ADR-0207 §6).
  *
  * ```
  * BALANCE FORECAST                                  eyebrow
@@ -16,22 +18,33 @@
  * └──────────────┘  └───────────────┘
  * ```
  *
+ * ## Two features, one block
+ *
+ * `games` draws it through `GameForecast`, which a booked game's details compose while the full
+ * game awaits its entry; **a competitive game's details open on it** (`proposals`, #839), the top
+ * card a player reads before saying yes. Two features that may not import each other draw it, so
+ * it came here from `games` — ADR-0207 §6's own decision — with its tiles and its words
+ * (`shared/vocabulary/forecastPresentation.ts`), and draws the same for both. What each hands it is
+ * its own read's: the booked game the Game's pairing, the details `GET /proposals/{id}`.
+ *
  * ## It is handed a forecast, or it is not drawn
  *
  * ADR-0161 §4 omits the forecast and the split together when the pairing cannot be computed, and
  * **there is deliberately no reason beside the absence**: the surface that composes this draws
- * nothing and says nothing (`CourtPairing`). So the props require both halves, and this component
- * holds no branch for their absence — a block that could be mounted with nothing to draw would be
- * a block somebody eventually gives a sentence to.
+ * nothing and says nothing. So the props require both halves, and this component holds no branch
+ * for their absence — a block that could be mounted with nothing to draw would be a block somebody
+ * eventually gives a sentence to. Whether it is drawn at all is the composer's: the details never
+ * draw it on For fun (ADR-0207 §5); a booked For-fun game still draws it, with the friendly's
+ * sentence, until its Social vibe card takes the place (#841).
  *
  * ## No arithmetic, and the bar is fed the served gap
  *
- * `the-play-screens.md` §5: the gap, the percentage and the deltas are the server's. The bar
- * takes the **signed** gap as its `advantage` and maps it on 7.11's one fixed scale — exactly as
- * the builder's forecast card feeds it — and the tone is the served figure's through
- * `balanceTone`. The word beside the figure is `balanceWord`'s, because the bar is a colour and
- * Part 13 forbids colour as the only signal. Those three are cited from `shared/vocabulary` rather
- * than re-spelled: three copies of §B9's breaks is where one of them becomes `>`.
+ * `the-play-screens.md` §5: the gap, the percentage and the deltas are the server's. The bar takes
+ * the **signed** gap as its `advantage` and maps it on 7.11's one fixed scale, and the tone is the
+ * served figure's through `balanceTone`. The word beside the figure is `balanceWord`'s, because the
+ * bar is a colour and Part 13 forbids colour as the only signal. Those three are cited from
+ * `shared/vocabulary` rather than re-spelled: three copies of §B9's breaks is where one of them
+ * becomes `>`.
  *
  * ## Four elements, and the bar is not one of them
  *
@@ -44,20 +57,28 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
-import { BalanceBar, BALANCE_INK, Card, theme } from '@/shared/ui';
 import { balanceLabel, balanceTone, balanceWord } from '@/shared/vocabulary/balancePresentation';
+import {
+  BALANCE_FORECAST,
+  GAP_WORD,
+  readingLabel,
+  splitLabel,
+  stakeLabel,
+  type ForecastSplit,
+  type ForecastStake,
+} from '@/shared/vocabulary/forecastPresentation';
 
-import type { AtStake, PairingForecast, PairingSplit } from '../domain/pairing';
-
-import { readingLabel, splitLabel, stakeLabel } from './gameAccessibility';
-import { BALANCE_FORECAST, GAP_WORD } from './gamePresentation';
+import { BALANCE_INK, BalanceBar } from './BalanceBar';
+import { Card } from './Card';
 import { StakeTiles } from './StakeTiles';
+import { theme } from './theme';
 
 export interface ForecastBlockProps {
-  readonly forecast: PairingForecast;
-  readonly split: PairingSplit;
+  /** How even the game is forecast to be, in your direction — the served figure, whole or not. */
+  readonly forecast: { readonly pct: number };
+  readonly split: ForecastSplit;
   /** Absent on a friendly and where the rule has nothing to price: no tile is drawn. */
-  readonly stake?: AtStake;
+  readonly stake?: ForecastStake;
   /** The bar's two labels — stems, yours then theirs. */
   readonly labels: readonly [string, string];
   /** The same two sides as a sentence names them, for the split row's spoken name. */
@@ -83,7 +104,7 @@ export function ForecastBlock({
       </Text>
 
       {/* **Signed, as it was served.** The sign is which way the game leans, and taking it off
-          would be this screen doing arithmetic over a number it was handed. */}
+          would be this block doing arithmetic over a number it was handed. */}
       <View accessible accessibilityLabel={splitLabel(names, split)} style={s.split}>
         <Text style={[s.side, s.sideLevel]}>{formatLevel(split.yourSide)}</Text>
         <View style={s.gap}>

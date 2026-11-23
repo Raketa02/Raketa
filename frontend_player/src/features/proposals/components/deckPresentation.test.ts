@@ -16,6 +16,7 @@ import {
   courtLine,
   detailsShareWords,
   fillingStatus,
+  forecastSides,
   gameDayWords,
   inOnGameLine,
   payLabel,
@@ -110,6 +111,20 @@ describe('the sides', () => {
 
   it('labels the bar with your side on the left, you first', () => {
     expect(barLabels([top, bottom])).toEqual(['You + zofia', 'karol + ania']);
+  });
+
+  // The forecast's split row is spoken in a sentence's register — nicknames whole, over *and* —
+  // where the bar under it draws stems over `+` (#839, the-words §24.8).
+  it('names the forecast’s two sides whole, yours first and you first in it', () => {
+    expect(forecastSides([top, bottom])).toEqual(['You and zofia.b', 'karol.t and ania.k']);
+
+    const singles = rowsOf({ sides: { yours: [YOU], theirs: [person('ania.k')] } }, 1);
+    expect(forecastSides([singles.top, singles.bottom])).toEqual(['You', 'ania.k']);
+
+    // A seat nobody can name is said with our own word; an open seat is not said at all.
+    const nameless: DeckPerson = { playerId: 'gone', isYou: false, level: 2.7, isIn: true };
+    const short = rowsOf({ sides: { yours: [YOU], theirs: [nameless] } }, 2);
+    expect(forecastSides([short.top, short.bottom])).toEqual(['You', 'somebody']);
   });
 
   it('says a tile’s person, their Level, and In', () => {

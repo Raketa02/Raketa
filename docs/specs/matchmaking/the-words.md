@@ -980,6 +980,13 @@ pairing cannot be computed, and *there is deliberately no reason beside the abse
 absent entirely, the tiles with it, and nothing on the screen says *unrated*, *unavailable* or
 anything else.
 
+> **Amended 2026-11-23** ([#839](https://github.com/Raketa02/Raketa/issues/839), ADR-0207 §6): **a
+> competitive game's details open on the same block**, before the yes — the same words, the counted
+> sentence on every game they draw it for, and the same four elements as §24.8. The block's words
+> moved with it below both features, to the player app's `shared/vocabulary/forecastPresentation.ts`
+> (the eyebrow, `gap`, the counted sentence, the two tiles, and §24.8's three spoken names);
+> `gamePresentation.ts` cites them and keeps the friendly's. Never drawn on For fun (ADR-0207 §5).
+
 ---
 
 ## 26. The radar

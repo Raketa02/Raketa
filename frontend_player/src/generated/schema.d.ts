@@ -2458,7 +2458,7 @@ export interface paths {
         };
         /**
          * A game still filling
-         * @description The game details of a proposal, for anybody dealt it — a card's **i**, a You're In row, a payment to confirm: who is In (the **IN** tags), the sides and their forecast, the club and its distance **with no court number** (one is given at booking), the share and the book-by, the overlap grid, and **what the reader may do now** (`actions`). A reader still deciding sees their own card as the deck deals it; a reader In sees everybody In. Answered for a game that has ended too, with nothing to do; a `FILLED` game's booking has the same id. Nothing is recorded.
+         * @description The game details of a proposal, for anybody dealt it — a card's **i**, a You're In row, a payment to confirm: who is In (the **IN** tags), the sides, **the kind's own card** — a competitive game's forecast with each side's level and the gap, and what is at stake for you (`at_stake`, the booked game's own pair); a For-fun game's Social vibe and your tags' rows (`vibe`) — the club and its distance **with no court number** (one is given at booking), the share and the book-by, the overlap grid, and **what the reader may do now** (`actions`). A reader still deciding sees their own card as the deck deals it; a reader In sees everybody In. Answered for a game that has ended too, with nothing to do; a `FILLED` game's booking has the same id. Nothing is recorded.
          */
         get: operations["read_proposal_details_api_v1_proposals__proposal_id__get"];
         put?: never;
@@ -4488,6 +4488,91 @@ export interface components {
         DepartureResponse: {
             /** @description `BEFORE_THE_CUT_OFF` — nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` — the seat stays paid and is offered to others until the start; refunded, less exactly the fee kept on the payment, when somebody takes it — emailed that figure now, or none while the fee is not yet known (#641). `WHILE_WAITING_FOR_A_PAYMENT` — on a game `WAITING_FOR_A_PAYMENT` (#625): nobody had paid, the yes is withdrawn, the leaver's hold is let go, and the payer's time runs on — the game is `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn. */
             left: components["schemas"]["Leaving"];
+        };
+        /**
+         * DetailsAtStakeSchema
+         * @description What a **counted** result on this game would do to your Level — *If you
+         *     win +0,08 · If you lose −0,07* — priced by the very function a booked
+         *     game's pairing prices its `at_stake` with, on the sides drawn here, so it
+         *     is the pair that applies once the game is booked (`docs/adr/0207` §6).
+         */
+        DetailsAtStakeSchema: {
+            /**
+             * Win Delta
+             * @description Above nought, never nought.
+             */
+            win_delta: number;
+            /**
+             * Loss Delta
+             * @description Below nought, never nought.
+             */
+            loss_delta: number;
+        };
+        /**
+         * DetailsForecastSchema
+         * @description How even the game drawn is forecast, **with the two side strengths it
+         *     was read from** — a competitive game's full forecast (`docs/adr/0207` §6):
+         *     each side's level, the gap and the bar's % — the figures a booked game's
+         *     pairing prints as `forecast` and `split`, for the same people standing the
+         *     same way. **One computation**: while a seat is empty the % is `provisional`,
+         *     read as if the missing player matched their partner, and so are the side
+         *     strengths beside it.
+         */
+        DetailsForecastSchema: {
+            /** Pct */
+            pct: number;
+            /**
+             * Provisional
+             * @description A seat is empty and was read as matching its partner.
+             */
+            provisional: boolean;
+            /**
+             * Your Side
+             * @description Your side's strength, on the scale Levels are read on — the engine's, never the mean of the people on it.
+             */
+            your_side: number;
+            /**
+             * Their Side
+             * @description The other side's strength.
+             */
+            their_side: number;
+            /**
+             * Gap
+             * @description `your_side − their_side`, **signed and served**, so nobody subtracts two rounded figures the engine subtracted unrounded.
+             */
+            gap: number;
+        };
+        /**
+         * DetailsVibeRowSchema
+         * @description One row of the Social vibe card's grid: one of **your** tags, and who
+         *     at the table carries it.
+         */
+        DetailsVibeRowSchema: {
+            /** @description A tag's code — the app owns its emoji and label, and skips a code it doesn't know. */
+            tag: components["schemas"]["SocialTag"];
+            /**
+             * Carried By
+             * @description Everybody on your version who carries it — **you first**, then the others in the tiles' order (`sides.yours`, then `sides.theirs`). Never empty: you carry every row. Only you: the row is yours alone.
+             */
+            carried_by: string[];
+        };
+        /**
+         * DetailsVibeSchema
+         * @description A For-fun game's **Social vibe card** (`docs/adr/0207` §6): how much the
+         *     whole table shares, and who shares yours. Worked out from everybody's tags
+         *     now, on every read, and stored nowhere.
+         */
+        DetailsVibeSchema: {
+            /**
+             * Pct
+             * @description The card's own number, counting everyone's tags — the % swiped on is the % looked at. 0–100, rounded half up.
+             */
+            pct: number;
+            /**
+             * Rows
+             * @description One per tag **you** hold, in the vocabulary's order — 💘 `OPEN_TO_MEET_SOMEONE` too, drawn like any other row though it never counts in `pct`. None of the others' tags you don't hold.
+             */
+            rows: components["schemas"]["DetailsVibeRowSchema"][];
         };
         /**
          * Direction
@@ -8281,7 +8366,10 @@ export interface components {
         /**
          * ProposalDetailsResponse
          * @description A game still filling, as the reader opens it — the deck's card turned
-         *     into a screen.
+         *     into a screen. **What it says about the game follows the kind**
+         *     (`docs/adr/0207` §5, §6): a competitive game `forecast` and `at_stake`,
+         *     with `vibe` `null`; a For-fun game `vibe`, with `forecast` and `at_stake`
+         *     `null`.
          */
         ProposalDetailsResponse: {
             /**
@@ -8362,8 +8450,12 @@ export interface components {
             time_to: components["schemas"]["TimeTo"] | null;
             /** @description Everybody drawn, the reader on their own side: for a reader still deciding, their own card as the deck deals it; for a reader In, everybody In — the client draws the open seats empty. */
             sides: components["schemas"]["DeckSidesSchema"];
-            /** @description How even the game drawn is forecast — `null` where it cannot be read. */
-            forecast: components["schemas"]["DeckForecastSchema"] | null;
+            /** @description How even a **competitive** game drawn is forecast, with each side's level and the signed gap. **Always `null` on For fun** (`docs/adr/0207` §5), whose sides it still arranged; `null` too where it cannot be read — somebody on it holds no level in the sport. */
+            forecast: components["schemas"]["DetailsForecastSchema"] | null;
+            /** @description What a counted result would do to **your** Level, on `sides` — **two values or none**, as on a booked game. `null` on For fun; while a seat is open (the court that will play isn't known yet); once the game is no longer yours to play — you said no, no longer fit, wait on a paused yes, or it ended; once it is booked, whose stakes are `GET /games/{game_id}/pairing`'s; and where there is nothing to price: you hold no level in the sport, or nobody across the net does. */
+            at_stake: components["schemas"]["DetailsAtStakeSchema"] | null;
+            /** @description A **For-fun** game's Social vibe and the grid's rows. `null` on Competitive, and where the card draws none: fewer than two people named, or nobody at the table holding a tag that counts. */
+            vibe: components["schemas"]["DetailsVibeSchema"] | null;
             overlap: components["schemas"]["DeckOverlapSchema"];
         };
         /**

@@ -31,6 +31,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { theme } from '@/shared/ui';
+import { BALANCE_FORECAST, LOSE_TILE, WIN_TILE } from '@/shared/vocabulary/forecastPresentation';
 import {
   ANIA,
   deckCard,
@@ -1074,9 +1075,9 @@ describe('the game’s details', () => {
       sides: { yours: [youTile(), KAROL({ is_in: true })], theirs: [ANIA(), EWA()] },
     });
 
-  async function openDetails(shown = card()) {
+  async function openDetails(shown = card(), read: Partial<Wire['ProposalDetailsResponse']> = {}) {
     let dealt = [shown];
-    const deciding = proposalDetails(shown);
+    const deciding = proposalDetails(shown, read);
     stubProposal(transport, shown.proposal_id, () =>
       dealt.length === 0 ? withYourYes(deciding) : deciding,
     );
@@ -1147,7 +1148,7 @@ describe('the game’s details', () => {
     await screen.findByText('Filling · 2 of 4 in');
     const whoIsFree = `image:${String(screen.getByTestId('overlap-grid').props.accessibilityLabel)}`;
     const order = [
-      `header:${COPY.game.forecast}`,
+      `header:${BALANCE_FORECAST}`,
       'header:Filling · 2 of 4 in',
       COPY.game.where,
       `button:${COPY.no}`,
@@ -1173,7 +1174,22 @@ describe('the game’s details', () => {
     expect(within(card).getByRole('button', { name: COPY.no })).toBeTruthy();
     expect(within(card).getByRole('button', { name: COPY.yes })).toBeTruthy();
     expect(within(card).queryByTestId('overlap-grid')).toBeNull();
-    expect(within(card).queryByText(COPY.game.forecast)).toBeNull();
+    expect(within(card).queryByText(BALANCE_FORECAST)).toBeNull();
+  });
+
+  // #839: what is at stake is the details' — the deck card behind keeps its forecast row, and no
+  // stake is drawn there.
+  it('draws what is at stake on the details, and never on the deck card', async () => {
+    const shown = await openDetails(card(), { at_stake: { win_delta: 0.08, loss_delta: -0.07 } });
+
+    const details = await screen.findByTestId(DETAILS_SCREEN);
+    expect(within(details).getByText(WIN_TILE)).toBeTruthy();
+    expect(within(details).getByText(LOSE_TILE)).toBeTruthy();
+
+    const onTheDeck = screen.getByTestId(`game-card-${shown.proposal_id}`, HIDDEN_TOO);
+    expect(within(onTheDeck).getByTestId('game-forecast', HIDDEN_TOO)).toBeTruthy();
+    expect(within(onTheDeck).queryByText(WIN_TILE, HIDDEN_TOO)).toBeNull();
+    expect(within(onTheDeck).queryByText(LOSE_TILE, HIDDEN_TOO)).toBeNull();
   });
 
   it('says in the card’s foot that an answer given offline is held', async () => {

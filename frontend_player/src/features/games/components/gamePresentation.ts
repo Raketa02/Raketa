@@ -73,6 +73,7 @@ import { counted } from '@/shared/formatting/counted';
 import { handleStem, playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 import { sentenceList } from '@/shared/formatting/sentenceList';
 import { dayName } from '@/shared/vocabulary/availabilityPresentation';
+import { COUNTED_GAME_SENTENCE } from '@/shared/vocabulary/forecastPresentation';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -904,20 +905,17 @@ export const RUB_OUT_LABEL = 'Rub out';
 // ---------------------------------------------------------------------------
 
 /**
- * The forecast block's eyebrow. **Stored as words and drawn uppercase** by the eyebrow style,
- * for `formatEyebrow`'s reason: a second copy in the string would reach a screen reader as
- * letters.
+ * **The forecast block's own words are `shared/vocabulary`'s** — the eyebrow, *gap*, the counted
+ * sentence and the two tiles — since the block moved to `shared/ui` when a competitive game's
+ * details drew it too ([#839](https://github.com/Raketa02/Raketa/issues/839)). They are
+ * cited here because this screen says them, and a suite reads them off this feature's copy deck.
  */
-export const BALANCE_FORECAST = 'Balance forecast';
-
-/**
- * The word between the two side strengths, and the whole of what the middle column says.
- *
- * Lower case, because it is a unit rather than a heading: the two figures either side of it are
- * the sentence. The builder's forecast card says the same word in the same place, and it is
- * spelled here rather than borrowed because it is a word this screen says and §25 lists.
- */
-export const GAP_WORD = 'gap';
+export {
+  BALANCE_FORECAST,
+  GAP_WORD,
+  LOSE_TILE,
+  WIN_TILE,
+} from '@/shared/vocabulary/forecastPresentation';
 
 /**
  * **What a confirmed score does**, under the percentage — the counted game moves everybody, the
@@ -926,17 +924,14 @@ export const GAP_WORD = 'gap';
  * total. It is `worthLine`'s fact in the forecast's register — *movement*, beside the number that
  * says how even — and not that sentence again, because the two sit on one screen four cards
  * apart and a reader who has read one should not be told it twice in the same words.
+ *
+ * **The counted sentence is the block's** (`COUNTED_GAME_SENTENCE`): a competitive game's details
+ * say it too. The friendly is this feature's alone: the details never draw the block on For fun.
  */
 export function forecastSentence(kind: GameKind | undefined): string | undefined {
   if (kind === undefined) return undefined;
-  return kind === 'COUNTED'
-    ? 'A counted game — a confirmed score moves everybody’s level.'
-    : 'A friendly — nothing moves.';
+  return kind === 'COUNTED' ? COUNTED_GAME_SENTENCE : 'A friendly — nothing moves.';
 }
-
-/** The two stake tiles' names. *If*, because on a game the result has not happened. */
-export const WIN_TILE = 'If you win';
-export const LOSE_TILE = 'If you lose';
 
 /**
  * The bar's two labels — **stems**, yours then theirs.

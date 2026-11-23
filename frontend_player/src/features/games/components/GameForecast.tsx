@@ -9,13 +9,19 @@
  * block, absent on the same ground — no game in the list yet, a pairing with no forecast, a read
  * in flight or failed — with no sentence beside the absence (ADR-0161 §4). Whether it is drawn at
  * all is the composer's: a booking draws it while the full game awaits its entry.
+ *
+ * **The block is `shared/ui`'s** since a competitive game's details drew it too
+ * ([#839](https://github.com/Raketa02/Raketa/issues/839), ADR-0207 §6); what this feature hands it
+ * is its own read — the Game's pairing — and its own words for the kind (`forecastSentence`). A
+ * booked For-fun game is a `FRIENDLY` one and still draws it here, until #841's Social vibe card.
  */
+
+import { ForecastBlock } from '@/shared/ui';
 
 import type { Game } from '../domain/game';
 import { useGame } from '../hooks/useGames';
 import { usePairing } from '../hooks/usePairing';
 
-import { ForecastBlock } from './ForecastBlock';
 import { barLabels, forecastSentence, sideNames } from './gamePresentation';
 
 export interface GameForecastProps {

@@ -82,6 +82,7 @@ export {
   type FoldingLineProps,
   type FoldingLinesProps,
 } from './FoldingLine';
+export { ForecastBlock, type ForecastBlockProps } from './ForecastBlock';
 export { Guide, type GuideProps, type GuideStep } from './Guide';
 export { Hairline, type HairlineProps, type HairlineVariant } from './Hairline';
 export {
@@ -173,6 +174,7 @@ export {
 } from './SportPillFrame';
 export { Star, STAR_FILL, type StarProps } from './Star';
 export { StarRow, type StarNames, type StarRowProps } from './StarRow';
+export { StakeTiles, type StakeTilesProps } from './StakeTiles';
 export { StatBox, StatFigure, StatRow, type StatBoxProps, type StatBoxVariant } from './StatBox';
 export { Switch, type SwitchProps } from './Switch';
 export { SwipeRow, type RevealedControl, type SwipeRowProps } from './SwipeRow';

@@ -29,22 +29,16 @@
  * court*.
  */
 
-import { formatLevel, formatSignedLevel } from '@/shared/formatting/ratingFormat';
-import { balanceLabel } from '@/shared/vocabulary/balancePresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Score } from '../domain/game';
-import type { AtStake, PairingSplit } from '../domain/pairing';
 import type { ScoreDraft, ScoreKey } from '../domain/score';
 import type { GameSide } from '../domain/vocabulary';
 
 import {
   ACCEPT_LABEL,
   COUNTER_LABEL,
-  GAP_WORD,
-  LOSE_TILE,
   RUB_OUT_LABEL,
-  WIN_TILE,
   setLabel,
   setsCounted,
   spokenScore,
@@ -125,33 +119,8 @@ export function submitLabelFor(visible: string, draft: ScoreDraft, sport: Sport)
 }
 
 // ---------------------------------------------------------------------------
-// The court's pairing — the forecast block and the players card (the-words.md §24.8)
+// The court's pairing (the-words.md §24.8)
 // ---------------------------------------------------------------------------
 
-/**
- * The split row's spoken name — **the two sides and the gap, in the order the row prints them**:
- * `You and kasia.w 2,70, tomek.p and marek b 2,71, gap −0,01`.
- *
- * The names are the sentence's, handles whole over *and*, where the bar under the row draws stems
- * over `+`: a listener hears the register a sentence is in. The bar itself announces nothing —
- * it would be the fourth reading of one fact, §20.1's merge and 6.8's double announcement — and
- * carries its own name on the element for the one case something reaches it directly.
- */
-export function splitLabel(names: readonly [string, string], split: PairingSplit): string {
-  const yours = `${names[0]} ${formatLevel(split.yourSide)}`;
-  const theirs = `${names[1]} ${formatLevel(split.theirSide)}`;
-  return `${yours}, ${theirs}, ${GAP_WORD} ${formatLevel(split.gap)}`;
-}
-
-/**
- * The reading's spoken name: the balance word and its figure — §20.4's order, the word first
- * because the bar is a colour — then the sentence about what a score does, where there is one.
- */
-export function readingLabel(pct: number, sentence: string | undefined): string {
-  return sentence === undefined ? balanceLabel(pct) : `${balanceLabel(pct)}. ${sentence}`;
-}
-
-/** The two tiles as one element: **two clauses or none**, the pair being the fact. */
-export function stakeLabel(stake: AtStake): string {
-  return `${WIN_TILE} ${formatSignedLevel(stake.winDelta)}, ${LOSE_TILE} ${formatSignedLevel(stake.lossDelta)}`;
-}
+// The forecast block's three spoken names — the split row, the reading, the stake tiles — went to
+// `shared/vocabulary/forecastPresentation.ts` with the block (#839).

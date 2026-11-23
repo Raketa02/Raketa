@@ -61,8 +61,69 @@ export interface ProposalDetails {
    * everybody In once they are In — the open seats drawn empty.
    */
   readonly sides: DeckCard['sides'];
-  readonly forecast?: DeckCard['forecast'];
+  /**
+   * A **competitive** game's full forecast — the deck's figure with the two side strengths it was
+   * read from (#833). Never sent on For fun, nor where somebody on it holds no level in the sport.
+   */
+  readonly forecast?: DetailsForecast;
+  /** What a counted result would do to **your** Level — the pair, or absent (see {@link AtStake}). */
+  readonly atStake?: AtStake;
   readonly overlap: Overlap;
+}
+
+/**
+ * **How even the game drawn is forecast, and the two side strengths it was read from** — the
+ * figures a booked game's pairing prints as its forecast and its split, for the same people standing
+ * the same way (ADR-0207 §6). One computation: while a seat is empty the % is `provisional`, and so
+ * are the strengths.
+ */
+export interface DetailsForecast {
+  readonly pct: number;
+  readonly provisional: boolean;
+  readonly split: {
+    readonly yourSide: number;
+    readonly theirSide: number;
+    /** `yourSide − theirSide`, **signed and served** — never subtracted here. */
+    readonly gap: number;
+  };
+}
+
+/**
+ * **What a counted result on this game would do to your Level** — *If you win +0,08 · If you lose
+ * −0,07*, priced as a booked game's pairing prices it. Two values or none: absent while a seat is
+ * open, once the game is no longer yours to play, once it is booked, and where there is nothing to
+ * price.
+ */
+export interface AtStake {
+  readonly winDelta: number;
+  readonly lossDelta: number;
+}
+
+/**
+ * **The card the details open on, above the game card** — the kind's own: a competitive game's
+ * full forecast with what is at stake (#839; for fun 3). For fun's Social vibe card is #840's.
+ */
+export type DetailsTopCard = {
+  readonly kind: 'forecast';
+  readonly forecast: DetailsForecast;
+  readonly atStake?: AtStake;
+};
+
+/**
+ * **The kind's own card, or nothing.** A competitive game opens on its forecast, the stakes inside
+ * it when the read sends them; **a For-fun game never draws a forecast** (ADR-0207 §5), even if a
+ * read sent one — the deck card's rule (`headlineOf`) read on the details. Nothing where the read
+ * could not forecast the game: the stakes are drawn inside the forecast or not at all.
+ */
+export function topCardOf(
+  details: Pick<ProposalDetails, 'kind' | 'forecast' | 'atStake'>,
+): DetailsTopCard | undefined {
+  if (details.kind !== 'competitive' || details.forecast === undefined) return undefined;
+  return {
+    kind: 'forecast',
+    forecast: details.forecast,
+    ...(details.atStake === undefined ? {} : { atStake: details.atStake }),
+  };
 }
 
 /**

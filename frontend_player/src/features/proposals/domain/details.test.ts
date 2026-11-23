@@ -4,6 +4,7 @@ import {
   courtOfDetails,
   detailsCanRunOut,
   paymentDueOf,
+  topCardOf,
   yesOnDetails,
   type ProposalDetails,
 } from './details';
@@ -132,5 +133,35 @@ describe('detailsCanRunOut — a deadline the money row names that leaves by its
     expect(detailsCanRunOut(details())).toBe(false);
     expect(detailsCanRunOut(details({ paymentDueBy: TWENTY_TO_THREE }))).toBe(true);
     expect(detailsCanRunOut(details({ yourPayment: yours }))).toBe(true);
+  });
+});
+
+describe('topCardOf — the competitive details open on the full forecast (#839, ADR-0207 §6)', () => {
+  const forecast = {
+    pct: 73,
+    provisional: false,
+    split: { yourSide: 2.65, theirSide: 2.74, gap: -0.09 },
+  };
+  const atStake = { winDelta: 0.08, lossDelta: -0.07 };
+
+  it('is the forecast and both stakes on a competitive game', () => {
+    expect(topCardOf(details({ forecast, atStake }))).toEqual({
+      kind: 'forecast',
+      forecast,
+      atStake,
+    });
+  });
+
+  it('is the forecast alone where the read sends no stakes', () => {
+    expect(topCardOf(details({ forecast }))).toEqual({ kind: 'forecast', forecast });
+  });
+
+  it('is nothing where the read could not forecast the game — stakes or not', () => {
+    expect(topCardOf(details())).toBeUndefined();
+    expect(topCardOf(details({ atStake }))).toBeUndefined();
+  });
+
+  it('is never the forecast on For fun, even when the read sends one', () => {
+    expect(topCardOf(details({ kind: 'forFun', forecast, atStake }))).toBeUndefined();
   });
 });
