@@ -4,9 +4,9 @@
  * through the real route tree with only `fetch` faked.
  *
  * Ania signed up in eight screens and answered no skill question. She joins Kuba's player group
- * *Wednesday padel*, rated in nothing, and every way of playing there — Games, Fill in, Friends,
- * *Post a game* and Members — shows one door: *Get your level — pick the sports you play, a few
- * questions each*. It opens *Which sports do you play?* with nothing ticked; she picks padel and
+ * *Wednesday padel*, rated in nothing, and every way of playing there — Games, Fill in, You’re in,
+ * Friends, *Post a game* and Members — shows one door: *Get your level — pick the sports you play,
+ * a few questions each*. It opens *Which sports do you play?* with nothing ticked; she picks padel and
  * tennis, rates both (*Rate Tennis* between them) and lands back on the tab she pressed it on, with
  * both sports on the chip. On Games, *Your usual game at Padel* comes next.
  *
@@ -347,7 +347,7 @@ async function chipSports(on: string): Promise<string[]> {
 
 describe('a player rated in nothing, in a player group', () => {
   it(
-    'meets the door on Games, Fill in and Friends, with no chip over any of them',
+    'meets the door on Games, Fill in, You’re in and Friends, with no chip over any of them',
     async () => {
       stubAnia([WEDNESDAY]);
       await openTheGroup(WEDNESDAY);
@@ -355,6 +355,8 @@ describe('a player rated in nothing, in a player group', () => {
       // Games, which the page opens on.
       await expectTheDoor();
       await openTab(TABS.fillIn);
+      await expectTheDoor();
+      await openTab(TABS.youreIn);
       await expectTheDoor();
       await openTab(TABS.friends);
       await expectTheDoor();
@@ -365,14 +367,18 @@ describe('a player rated in nothing, in a player group', () => {
   );
 
   it(
-    'meets it on Post a game, which still floats over Fill in’s door',
+    'meets it on Post a game, which still floats over You’re in’s door — and only there',
     async () => {
       stubAnia([WEDNESDAY]);
       await openTheGroup(WEDNESDAY);
       await openTab(TABS.fillIn);
       await expectTheDoor();
+      expect(screen.queryByTestId('post-a-game-fab')).toBeNull();
+      await openTab(TABS.youreIn);
+      await expectTheDoor();
 
-      // The screens A3: the FAB floats always, and *Post a game* shows the same door.
+      // The screens A3: the FAB floats over You’re in's door, and *Post a game* shows the same door.
+      expect(screen.getByTestId('post-a-game-fab')).toBeTruthy();
       fireEvent.press(await screen.findByRole('button', { name: /Post a game/ }));
 
       await waitFor(() => expect(screen).toHavePathname(`/play/group/${WEDNESDAY.id}/post`));

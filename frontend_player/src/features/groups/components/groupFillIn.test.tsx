@@ -1,8 +1,10 @@
 /**
- * **A group's Fill in tab, walked** — *Seats to fill* and *You're In* on the group page, the tab's
- * badge, a rescue taken from its row and a yes withdrawn from its own
- * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A1, A3; mocks 11–14; the
- * mechanics §10).
+ * **A group's Fill in tab, walked** — the rescues the reader is offered, the tab's badge, its empty
+ * line and its own read, and a rescue taken from its row
+ * ([#557](https://github.com/Raketa02/Raketa/issues/557), split by
+ * [#847](https://github.com/Raketa02/Raketa/issues/847); the screens A1, A3, A3.1; split mock 1;
+ * mocks 12 and 14; the mechanics §10). The reader's own yeses are the tab beside it, You’re in
+ * (`groupYoureIn.test.tsx`).
  *
  * The real route tree from Play › Groups, with `fetch`, the payment provider's phone half and the
  * platform edges faked. **The ten seconds are walked by advancing the fake clock past them, never by
@@ -11,10 +13,12 @@
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { onlineManager } from '@tanstack/react-query';
 import { RefreshControl } from 'react-native';
 
 import { RECORD_TITLE } from '@/features/player_record/types';
-import { FILL_COPY, FILL_IN_COPY, PROPOSALS_COPY } from '@/features/proposals/types';
+import { FILL_COPY, FILL_IN_COPY, PROPOSALS_COPY, proposalKeys } from '@/features/proposals/types';
+import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
@@ -23,25 +27,18 @@ import {
   DECK_READ_AT,
   KAROL,
   KUBA,
-  deckCard,
   fillIn,
   fillInPath,
   groupDeck,
   liveYes,
-  proposalDetails,
-  proposalPath,
   seatToFill,
   seatsPath,
   stubFillIn,
   stubGroupDeck,
-  stubProposal,
-  yesPath,
-  youTile,
 } from '@/test-support/groupDeck';
 import { bookedSides, bookingDetails } from '@/test-support/home';
 import {
-  GATE_USER,
-  HOME_PATH,
+  LIVE_YESES_PATH,
   bookingPath,
   launchSignedIn,
   resetClipboard,
@@ -65,7 +62,8 @@ import {
   errorResponse,
   installTransport,
   json,
-  noContent,
+  neverResponds,
+  type Responder,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -110,9 +108,6 @@ const PAGE: Wire['GroupResponse'] = {
   is_administrator: false,
 };
 
-/** A yes the reader said in another group — never this tab's. */
-const ELSEWHERE = 'a0000000-0000-4000-8000-000000000099';
-
 let transport: Transport;
 
 beforeEach(() => {
@@ -129,6 +124,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  onlineManager.setOnline(true);
   transport.restore();
   resetShare();
   resetClipboard();
@@ -152,25 +148,33 @@ async function openPage(rows: () => readonly Wire['SeatToFillSchema'][] = () => 
   await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
 }
 
-async function openFillIn(rows?: () => readonly Wire['SeatToFillSchema'][]) {
-  await openPage(rows);
-  fireEvent.press(await screen.findByRole('button', { name: /^Fill in/ }));
+/** The crew's page with Fill in answered by this responder — refused, held — rather than rows. */
+async function openPageServing(responder: Responder) {
+  stubMyGroups(transport, [CREW]);
+  transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(PAGE));
+  stubGroupDeck(transport, CREW.id, groupDeck());
+  transport.on('GET', fillInPath(CREW.id), responder);
+  await launchSignedIn();
+  jest.setSystemTime(DECK_READ_AT);
+  fireEvent.press(await screen.findByLabelText('Play'));
+  fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
+  await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
 }
 
-/** A yes of the reader's on a game still filling in the crew — and its game, read in detail. */
-function yesInTheCrew(details: Partial<Wire['ProposalDetailsResponse']> = {}) {
-  const yes = liveYes({ pool_id: CREW.id });
-  const card = deckCard({
-    proposal_id: yes.proposal_id,
-    starts_at: yes.starts_at,
-    share_grosze: yes.share_grosze,
-    deadline: yes.book_by,
-    in_count: 1,
-    sides: { yours: [youTile({ is_in: true })], theirs: [] },
-  });
-  stubProposal(transport, yes.proposal_id, proposalDetails(card, details));
-  return yes;
+const FILL_IN = /^Fill in/;
+
+async function pressFillIn() {
+  fireEvent.press(await screen.findByRole('button', { name: FILL_IN }));
+  expect(await screen.findByRole('button', { name: FILL_IN, selected: true })).toBeTruthy();
 }
+
+async function openFillIn(rows?: () => readonly Wire['SeatToFillSchema'][]) {
+  await openPage(rows);
+  await pressFillIn();
+}
+
+/** The floating *+ Post a game* — You’re in's alone since #847. */
+const fab = () => screen.queryByTestId('post-a-game-fab');
 
 const toasts = () => useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone]);
 
@@ -178,21 +182,20 @@ const toasts = () => useToastQueue.getState().queue.map((toast) => [toast.messag
 // The tab
 // ---------------------------------------------------------------------------
 
-describe('the Fill in tab (mock 11)', () => {
+describe('the Fill in tab (split mock 1)', () => {
   it('counts the seats to fill on its tab, from whichever tab the page is on', async () => {
     await openPage(() => [seatToFill()]);
 
     expect(await screen.findByRole('button', { name: 'Fill in, 1 seat to fill' })).toBeTruthy();
   });
 
-  it('draws Seats to fill, then You’re In — this group’s yeses in this sport only', async () => {
+  it('draws only the rescues, with no heading and nothing floating — the yeses are You’re in’s', async () => {
     const row = seatToFill();
-    const yes = yesInTheCrew();
-    stubLiveYeses(transport, [yes, liveYes({ pool_id: ELSEWHERE })]);
+    const yes = liveYes({ pool_id: CREW.id });
+    stubLiveYeses(transport, [yes]);
     await openFillIn(() => [row]);
 
-    expect(await screen.findByRole('header', { name: 'Seats to fill · 1' })).toBeTruthy();
-    const rescue = screen.getByTestId(`seat-to-fill-${row.booking_id}`);
+    const rescue = await screen.findByTestId(`seat-to-fill-${row.booking_id}`);
     expect(within(rescue).getByText('Padel · Saturday 16:00')).toBeTruthy();
     expect(within(rescue).getByText('fills by Fri 16:00')).toBeTruthy();
     expect(within(rescue).getAllByTestId(/^fill-in-poster-/)).toHaveLength(3);
@@ -203,70 +206,62 @@ describe('the Fill in tab (mock 11)', () => {
       within(rescue).getByRole('button', { name: 'Pay 27 zł, held until the cut-off' }),
     ).toBeTruthy();
 
-    expect(await screen.findByRole('header', { name: 'You’re In · 1' })).toBeTruthy();
-    const mine = screen.getByTestId(`youre-in-${yes.proposal_id}`);
-    expect(within(mine).getByText('Padel · Saturday 15:00')).toBeTruthy();
-    expect(within(mine).getByText('book by Thu 10:00')).toBeTruthy();
-    // You, In — and three seats still open on the game, once its details are read; then Withdraw.
-    expect(await within(mine).findByTestId(`fill-in-poster-${GATE_USER.id}`)).toBeTruthy();
-    expect(within(mine).getAllByTestId('fill-in-open-seat')).toHaveLength(3);
-    expect(within(mine).getByRole('button', { name: COPY.withdraw })).toBeTruthy();
-    expect(screen.queryAllByTestId(/^youre-in-/)).toHaveLength(1);
+    expect(screen.queryByRole('header', { name: /Seats to fill|You’re In/i })).toBeNull();
+    expect(screen.queryByTestId(`youre-in-${yes.proposal_id}`)).toBeNull();
+    expect(fab()).toBeNull();
   });
 
-  it('draws only the sections with rows', async () => {
-    await openFillIn(() => [seatToFill()]);
-
-    expect(await screen.findByRole('header', { name: 'Seats to fill · 1' })).toBeTruthy();
-    expect(screen.queryByText(/You’re In/)).toBeNull();
-  });
-
-  it('is the group’s starting card with nothing in either, and Post a game floats, open (#558)', async () => {
+  it('says No seats to fill right now with nothing to fill — never the starting card, nor Post a game', async () => {
     await openFillIn();
 
-    expect(await screen.findByText(GROUPS_COPY.fillIn.others)).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: GROUPS_COPY.fillIn.postAGame, disabled: false }),
-    ).toBeTruthy();
+    expect(await screen.findByText(COPY.noSeats)).toBeTruthy();
+    expect(screen.queryByText(GROUPS_COPY.youreIn.others)).toBeNull();
+    expect(screen.queryByText(GROUPS_COPY.youreIn.postAGameDrawn)).toBeNull();
+    expect(fab()).toBeNull();
   });
 
-  it('keeps You’re In when Seats to fill could not be read, and says why in its place', async () => {
-    const yes = yesInTheCrew();
-    stubLiveYeses(transport, [yes]);
-    stubMyGroups(transport, [CREW]);
-    transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(PAGE));
-    stubGroupDeck(transport, CREW.id, groupDeck());
-    transport.on('GET', fillInPath(CREW.id), () => errorResponse(429, 'rate_limited'));
-    await launchSignedIn();
-    jest.setSystemTime(DECK_READ_AT);
-    fireEvent.press(await screen.findByLabelText('Play'));
-    fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
-    fireEvent.press(await screen.findByRole('button', { name: /^Fill in/ }));
+  it('shows its own muted spinner while its read is on its way', async () => {
+    await openPageServing(neverResponds());
+    await pressFillIn();
 
-    expect(await screen.findByRole('header', { name: 'You’re In · 1' })).toBeTruthy();
-    expect(await screen.findByRole('alert', {}, { timeout: 30 * SECOND })).toBeTruthy();
-    expect(screen.queryByText(GROUPS_COPY.fillIn.others)).toBeNull();
+    expect(await screen.findByLabelText(COPY.reading)).toBeTruthy();
+    expect(screen.queryByText(COPY.noSeats)).toBeNull();
+  });
+
+  it('says it resumes when its read is held offline', async () => {
+    await openPage();
+    act(() => {
+      onlineManager.setOnline(false);
+      queryClient.removeQueries({ queryKey: proposalKeys.fillIn(CREW.id, 'padel') });
+    });
+    await pressFillIn();
+
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    expect(screen.queryByText(COPY.noSeats)).toBeNull();
   });
 
   it('says why the read failed, and reads again on the retry', async () => {
     let refused = true;
-    stubMyGroups(transport, [CREW]);
-    transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(PAGE));
-    stubGroupDeck(transport, CREW.id, groupDeck());
-    transport.on('GET', fillInPath(CREW.id), () =>
+    await openPageServing(() =>
       refused ? errorResponse(503, 'block_state_unavailable') : json(fillIn([seatToFill()])),
     );
-    await launchSignedIn();
-    jest.setSystemTime(DECK_READ_AT);
-    fireEvent.press(await screen.findByLabelText('Play'));
-    fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
-    fireEvent.press(await screen.findByRole('button', { name: /^Fill in/ }));
+    await pressFillIn();
 
     // A 503 is retried before it is said, so the note waits for the retries to run out.
     expect(await screen.findByRole('alert', {}, { timeout: 30 * SECOND })).toBeTruthy();
+    expect(screen.queryByText(COPY.noSeats)).toBeNull();
     refused = false;
     fireEvent.press(screen.getByRole('button', { name: PROPOSALS_COPY.readAgain }));
-    expect(await screen.findByRole('header', { name: 'Seats to fill · 1' })).toBeTruthy();
+    expect(await screen.findByTestId(/^seat-to-fill-/)).toBeTruthy();
+  });
+
+  it('keeps its rows when You’re in’s read is refused', async () => {
+    const row = seatToFill();
+    transport.on('GET', LIVE_YESES_PATH, () => errorResponse(429, 'rate_limited'));
+    await openFillIn(() => [row]);
+
+    expect(await screen.findByTestId(`seat-to-fill-${row.booking_id}`)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
@@ -276,28 +271,28 @@ describe('pulling Fill in', () => {
   const control = () => pageBody().UNSAFE_getByType(RefreshControl);
   const pull = () => fireEvent(control(), 'refresh');
 
-  it('reads both sections again — a seat offered meanwhile, a yes said on another phone', async () => {
+  it('reads everything again — a seat offered meanwhile, a yes said on another phone', async () => {
     let rows: Wire['SeatToFillSchema'][] = [];
     await openFillIn(() => rows);
-    expect(await screen.findByText(GROUPS_COPY.fillIn.others)).toBeTruthy();
+    expect(await screen.findByText(COPY.noSeats)).toBeTruthy();
 
     rows = [seatToFill()];
-    stubLiveYeses(transport, [yesInTheCrew()]);
+    stubLiveYeses(transport, [liveYes({ pool_id: CREW.id })]);
     await act(async () => {
       pull();
     });
 
-    expect(await screen.findByRole('header', { name: 'Seats to fill · 1' })).toBeTruthy();
-    expect(await screen.findByRole('header', { name: 'You’re In · 1' })).toBeTruthy();
-    // And the tab's badge with it, which is Seats to fill's own count.
+    expect(await screen.findByTestId(`seat-to-fill-${rows[0]?.booking_id ?? ''}`)).toBeTruthy();
+    // And the tabs' badges with it: Seats to fill's own count, and You’re in's.
     expect(screen.getByRole('button', { name: 'Fill in, 1 seat to fill' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'You’re in, 1 game' })).toBeTruthy();
     await waitFor(() => expect(control().props.refreshing).toBe(false));
   });
 
   it('takes off a row gone meanwhile', async () => {
     let rows = [seatToFill()];
     await openFillIn(() => rows);
-    expect(await screen.findByRole('header', { name: 'Seats to fill · 1' })).toBeTruthy();
+    expect(await screen.findByTestId(/^seat-to-fill-/)).toBeTruthy();
 
     // Somebody else took the seat.
     rows = [];
@@ -305,25 +300,8 @@ describe('pulling Fill in', () => {
       pull();
     });
 
-    expect(await screen.findByText(GROUPS_COPY.fillIn.others)).toBeTruthy();
-    expect(screen.queryByText(/Seats to fill/)).toBeNull();
-  });
-
-  it('reads the group with it — the starting card counts who joined meanwhile', async () => {
-    let page: Wire['GroupResponse'] = { ...PAGE, member_count: 1 };
-    await openFillIn();
-    transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(page));
-    await act(async () => {
-      pull();
-    });
-    expect(await screen.findByText(GROUPS_COPY.fillIn.alone)).toBeTruthy();
-
-    page = { ...PAGE, member_count: 2 };
-    await act(async () => {
-      pull();
-    });
-
-    expect(await screen.findByText(GROUPS_COPY.fillIn.others)).toBeTruthy();
+    expect(await screen.findByText(COPY.noSeats)).toBeTruthy();
+    expect(screen.queryByTestId(/^seat-to-fill-/)).toBeNull();
   });
 });
 
@@ -462,92 +440,5 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
     fireEvent(await screen.findByTestId(`fill-in-poster-${karol.player_id}`), 'longPress');
 
     expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// A You're In row
-// ---------------------------------------------------------------------------
-
-describe('a You’re In row (A3.2, mock 13)', () => {
-  it('withdraws the yes, free and silent, and the row leaves with it', async () => {
-    const yes = yesInTheCrew();
-    stubLiveYeses(transport, [yes]);
-    transport.on('DELETE', yesPath(yes.proposal_id), () => {
-      stubLiveYeses(transport, []);
-      return noContent();
-    });
-    await openFillIn();
-
-    fireEvent.press(await screen.findByRole('button', { name: COPY.withdraw }));
-
-    await waitFor(() =>
-      expect(transport.requestsTo('DELETE', yesPath(yes.proposal_id))).toHaveLength(1),
-    );
-    await waitFor(() => expect(screen.queryByTestId(`youre-in-${yes.proposal_id}`)).toBeNull());
-    expect(await screen.findByText(GROUPS_COPY.fillIn.others)).toBeTruthy();
-  });
-
-  /**
-   * **A full game gone back to filling is on Home too** (#629; Q106), and *Withdraw* here takes it
-   * off — so the withdrawal reads Home again, which the shell holds all session.
-   */
-  it('reads Home again once the yes is withdrawn — a game filling again leaves it', async () => {
-    const yes = yesInTheCrew();
-    stubLiveYeses(transport, [yes]);
-    transport.on('DELETE', yesPath(yes.proposal_id), () => noContent());
-    await openFillIn();
-
-    const withdraw = await screen.findByRole('button', { name: COPY.withdraw });
-    await waitFor(() => expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(0));
-    const before = transport.requestsTo('GET', HOME_PATH).length;
-    fireEvent.press(withdraw);
-
-    await waitFor(() =>
-      expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(before),
-    );
-  });
-
-  it('hides Withdraw while the full game waits for one payment — Leave is on its details', async () => {
-    const yes = yesInTheCrew({ status: 'WAITING_FOR_A_PAYMENT', actions: ['LEAVE'], in_count: 4 });
-    stubLiveYeses(transport, [yes]);
-    await openFillIn();
-
-    expect(await screen.findByText('book by Thu 10:00')).toBeTruthy();
-    expect(screen.queryByText(/waiting for the club|answers by/)).toBeNull();
-    await waitFor(() =>
-      expect(transport.requestsTo('GET', proposalPath(yes.proposal_id)).length).toBeGreaterThan(0),
-    );
-    expect(screen.queryByRole('button', { name: COPY.withdraw })).toBeNull();
-  });
-
-  it('offers no Withdraw until its game’s details say it may — a withdrawal while a payment is awaited is a departure', async () => {
-    const yes = liveYes({ pool_id: CREW.id });
-    stubLiveYeses(transport, [yes]);
-    transport.on('GET', proposalPath(yes.proposal_id), () => errorResponse(429, 'rate_limited'));
-    await openFillIn();
-
-    expect(await screen.findByText('book by Thu 10:00')).toBeTruthy();
-    await waitFor(() =>
-      expect(transport.requestsTo('GET', proposalPath(yes.proposal_id)).length).toBeGreaterThan(0),
-    );
-    expect(screen.queryByRole('button', { name: COPY.withdraw })).toBeNull();
-  });
-
-  it('opens the game’s details from its upper block', async () => {
-    const yes = yesInTheCrew();
-    stubLiveYeses(transport, [yes]);
-    await openFillIn();
-
-    fireEvent.press(
-      await screen.findByRole('button', {
-        name: 'Padel · Saturday 15:00, Bonarka Arena, book by Thu 10:00',
-      }),
-    );
-
-    await waitFor(() =>
-      expect(screen).toHavePathname(`/play/group/${CREW.id}/game/${yes.proposal_id}`),
-    );
-    expect(await screen.findByText('Filling · 1 of 4 in')).toBeTruthy();
   });
 });

@@ -3,15 +3,7 @@ import { setDeviceZone } from '@/test-support/deviceZone';
 import type { SeatToFill } from '../domain/fillIn';
 import type { LiveYes } from '../domain/liveYes';
 
-import {
-  rowTitle,
-  seatRowLabel,
-  seatWhen,
-  seatsToFillHeader,
-  yesRowLabel,
-  yesWhen,
-  youreInHeader,
-} from './fillInPresentation';
+import { rowTitle, seatRowLabel, seatWhen, yesRowLabel, yesWhen } from './fillInPresentation';
 
 beforeAll(() => setDeviceZone('America/New_York'));
 
@@ -47,13 +39,6 @@ const yes = (extra: Partial<LiveYes> = {}): LiveYes => ({
 });
 
 const SATURDAY = { kind: 'weekday', weekday: 6 } as const;
-
-describe('the sections’ heads (mock 11)', () => {
-  it('count their rows', () => {
-    expect(seatsToFillHeader(1)).toBe('Seats to fill · 1');
-    expect(youreInHeader(2)).toBe('You’re In · 2');
-  });
-});
 
 describe('rowTitle — Padel · Saturday 16:00 (A3.1, A3.2)', () => {
   it('names the sport, the day as the court block does and the hour — and a friendly as one', () => {

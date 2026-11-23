@@ -167,6 +167,14 @@ export function fillInTabLabel(seats: number): string {
 }
 
 /**
+ * *You’re in, 3 games* — the You’re in tab, spoken with its count: the reader's live yeses in this
+ * group and sport (#847). A plain count for now, as Games' and Fill in's are.
+ */
+export function youreInTabLabel(yeses: number): string {
+  return `${GROUPS_COPY.group.tabs.youreIn}, ${counted(yeses, 'game', 'games')}`;
+}
+
+/**
  * A home-club search result's head, spoken — the whole head is the one tap. The groups drawn under
  * it are rows of their own and speak for themselves.
  */

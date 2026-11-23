@@ -172,7 +172,7 @@ export interface PostingSlot {
   readonly posts: readonly PostStillFilling[];
 }
 
-/** **The post, In with its poster** — its id is the game's, in *You're In*. */
+/** **The post, In with its poster** — its id is the game's, in *You’re in*. */
 export interface Posted {
   readonly proposalId: string;
   /** How many versions it was dealt in, up to three. */

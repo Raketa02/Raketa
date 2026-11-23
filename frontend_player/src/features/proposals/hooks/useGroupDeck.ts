@@ -184,13 +184,13 @@ function unlessAFailedRequest(error: unknown): void {
 
 /**
  * **A pull on the group page's Games or Fill in** — what a yes settling re-reads (`reread`): the
- * group's decks and its Fill in, the games' details *You're In*'s rows draw their squares from, and
- * the live yeses that are *You're In*. Only the reads on screen go out at once; the rest are marked
+ * group's decks and its Fill in, the games' details *You’re in*'s rows draw their squares from, and
+ * the live yeses that are *You’re in*. Only the reads on screen go out at once; the rest are marked
  * stale. Settles once they have, so the pull's spinner stops when the tab is drawn again.
  */
 export function useRereadGroupGames(groupId: string): () => Promise<void> {
   const client = useQueryClient();
-  return () => reread(client, groupId, { yeses: true }).then(() => undefined);
+  return () => reread(client, groupId, { yeses: 'wait' }).then(() => undefined);
 }
 
 /** What a caller is told of a refused write — the refusal, and which answer it refused. */
@@ -242,7 +242,8 @@ export function useAnswerCard<Card extends YesOn = YesOn>(
       if (answer !== null) handlers.current.onAnswered?.(answer, asked);
     },
     onError: (error, asked) => handlers.current.onRefused?.(error, asked),
-    onSettled: (_answer, _error, { said }) => reread(client, groupId, { yeses: said === 'yes' }),
+    onSettled: (_answer, _error, { said }) =>
+      reread(client, groupId, { yeses: said === 'yes' ? 'start' : 'leave' }),
   });
 }
 
@@ -267,16 +268,23 @@ export function useWithdrawYes(groupId: string, onRefused?: OnRefused<string>) {
  * yeses when the answer could have moved them — a yes adds one and a withdraw takes one away (You ›
  * Payments, #554); a no never touched a yes. Awaited, so the answer is pending until the deck or the
  * details on screen have been read again — **in turn** (`readAgainInTurn`).
+ *
+ * **The live yeses are waited for only where they are drawn** (`yeses: 'wait'`): a pull, whose
+ * spinner stops once every tab is read, and a withdrawal, whose row stays busy until it leaves You’re
+ * in. An answer only **starts** their read (`'start'`): the page's tab bar reads them on every tab
+ * for You’re in's badge (#847), so waiting would hold a deck's card hidden and a *Booking…* busy for
+ * a badge's read, retries and all — and a badge never holds anything up.
  */
 export function reread(
   client: QueryClient,
   groupId: string,
-  { yeses }: { readonly yeses: boolean },
+  { yeses }: { readonly yeses: 'wait' | 'start' | 'leave' },
 ) {
+  if (yeses === 'start') void readAgainInTurn(client, proposalKeys.liveYeses());
   return Promise.all([
     readAgainInTurn(client, proposalKeys.group(groupId)),
     readAgainInTurn(client, proposalKeys.proposals()),
-    ...(yeses ? [readAgainInTurn(client, proposalKeys.liveYeses())] : []),
+    ...(yeses === 'wait' ? [readAgainInTurn(client, proposalKeys.liveYeses())] : []),
   ]);
 }
 
@@ -334,7 +342,7 @@ function answeredCard(asked: unknown): string | undefined {
  */
 export function rereadAfterWithdrawing(client: QueryClient, groupId: string) {
   return Promise.all([
-    reread(client, groupId, { yeses: true }),
+    reread(client, groupId, { yeses: 'wait' }),
     client.invalidateQueries({ queryKey: proposalKeys.home() }),
   ]);
 }

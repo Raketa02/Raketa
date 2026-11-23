@@ -518,13 +518,19 @@ describe('an official group’s page for a player rated in none of its sports', 
     expect(screen.queryByRole('button', { name: COPY.link.share })).toBeNull();
   });
 
-  it('shows the same card in place of Fill in and Friends, with no game to post', async () => {
+  it('shows the same card in place of Fill in, You’re in and Friends, with no game to post', async () => {
     await openPage();
     await screen.findByText(ADD_HEADLINE);
 
     await openTab(COPY.group.tabs.fillIn);
     expect(screen.getByText(ADD_HEADLINE)).toBeTruthy();
-    expect(screen.queryByText(COPY.fillIn.postAGameDrawn)).toBeNull();
+    expect(screen.queryByText(COPY.youreIn.postAGameDrawn)).toBeNull();
+
+    // + Post a game floats on You’re in alone, and not while the card stands in the tab (#847).
+    await openTab(COPY.group.tabs.youreIn);
+    expect(screen.getByText(ADD_HEADLINE)).toBeTruthy();
+    expect(screen.queryByText(COPY.youreIn.postAGameDrawn)).toBeNull();
+    expect(screen.queryByTestId('post-a-game-fab')).toBeNull();
 
     await openTab(COPY.group.tabs.friends);
     expect(screen.getByText(ADD_HEADLINE)).toBeTruthy();

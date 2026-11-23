@@ -6,6 +6,7 @@ import {
   standingSeats,
   yesOnRow,
   yesesIn,
+  youreInEmpty,
   type SeatToFill,
 } from './fillIn';
 
@@ -60,7 +61,7 @@ describe('yesOnRow — what the fill holds for a row’s I’m in', () => {
   });
 });
 
-describe('yesesIn — You’re In (§10.2)', () => {
+describe('yesesIn — You’re in (§10.2)', () => {
   it('is the live yeses of this group in this sport, in the list’s order', () => {
     const here = yes({ proposalId: 'p-1' });
     const later = yes({ proposalId: 'p-2' });
@@ -74,7 +75,7 @@ describe('yesesIn — You’re In (§10.2)', () => {
   });
 });
 
-describe('squaresOfYes — a You’re In row’s squares (A3.2)', () => {
+describe('squaresOfYes — a You’re in row’s squares (A3.2)', () => {
   const person = (playerId: string, isIn: boolean): DeckPerson => ({
     playerId,
     isYou: playerId === 'me',
@@ -95,10 +96,28 @@ describe('squaresOfYes — a You’re In row’s squares (A3.2)', () => {
   });
 });
 
-describe('mayWithdraw — Withdraw on a You’re In row', () => {
+describe('mayWithdraw — Withdraw on a You’re in row', () => {
   it('is offered only once the details say so — never while a payment is awaited, nor before the read', () => {
     expect(mayWithdraw({ actions: ['WITHDRAW'] })).toBe(true);
     expect(mayWithdraw({ actions: ['LEAVE'] })).toBe(false);
     expect(mayWithdraw(undefined)).toBe(false);
+  });
+});
+
+describe('youreInEmpty — You’re in with no yes (#847, split Q3)', () => {
+  it('is the starting card only once Fill in has said there is nothing too', () => {
+    expect(youreInEmpty([], false)).toBe('startingCard');
+  });
+
+  it('is the one line while Fill in has a rescue', () => {
+    expect(youreInEmpty([row()], false)).toBe('line');
+  });
+
+  it('is the one line while Fill in could not say — the card needs both reads', () => {
+    expect(youreInEmpty(undefined, true)).toBe('line');
+  });
+
+  it('waits while Fill in’s read is on its way — never the card as a first frame', () => {
+    expect(youreInEmpty(undefined, false)).toBe('waiting');
   });
 });

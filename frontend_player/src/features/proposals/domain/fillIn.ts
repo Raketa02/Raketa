@@ -1,7 +1,7 @@
 /**
- * **A group's Fill in tab** — *Seats to fill*, the rescues the reader is offered, and *You're In*,
- * their own yeses on games still filling ([#557](https://github.com/Raketa02/Raketa/issues/557);
- * the screens A3; the mechanics §10).
+ * **A group's Fill in and You’re in tabs** — the rescues the reader is offered, on Fill in, and their
+ * own yeses on games still filling, on You’re in ([#557](https://github.com/Raketa02/Raketa/issues/557),
+ * a tab each since #847; the screens A3; the mechanics §10).
  *
  * Pure. Which rescues the reader fits and is free for, in what order and until when, is the
  * server's (`GET /pools/{id}/fill-in`, #545); which yeses are live is the live yeses' (#539). What
@@ -69,7 +69,7 @@ export function yesOnRow(row: Pick<SeatToFill, 'bookingId'>): YesOn {
 }
 
 /**
- * ***You're In*** (§10.2) — the reader's live yeses in this group and sport, in the list's order:
+ * ***You’re in*** (§10.2) — the reader's live yeses in this group and sport, in the list's order:
  * picks, challenges and posts, never a rescue, which goes straight to Home.
  */
 export function yesesIn(
@@ -81,7 +81,24 @@ export function yesesIn(
 }
 
 /**
- * **A You're In row's squares** — everybody In on the game, the reader among them, then a dashed
+ * **What You’re in draws with no yes of the reader's** (#847; the screens A3; split Q3) — the group's
+ * starting card only once Fill in has said there is nothing too, since the card tells you to post
+ * and both lists are empty; one line, *You haven’t said yes to a game here yet*, while Fill in has a
+ * rescue or could not say; and nothing yet — the spinner — while Fill in's read is on its way, so the
+ * starting card is never a first frame. `rescues` are the ones standing, `undefined` until read.
+ */
+export type YoureInEmpty = 'startingCard' | 'line' | 'waiting';
+
+export function youreInEmpty(
+  rescues: readonly SeatToFill[] | undefined,
+  rescuesHeld: boolean,
+): YoureInEmpty {
+  if (rescues === undefined) return rescuesHeld ? 'line' : 'waiting';
+  return rescues.length === 0 ? 'startingCard' : 'line';
+}
+
+/**
+ * **A You’re in row's squares** — everybody In on the game, the reader among them, then a dashed
  * square per seat still open: the game's own details, read for the row.
  */
 export function squaresOfYes(details: Pick<ProposalDetails, 'sides' | 'seats' | 'inCount'>): {
@@ -95,7 +112,7 @@ export function squaresOfYes(details: Pick<ProposalDetails, 'sides' | 'seats' | 
 }
 
 /**
- * **Whether a You're In row offers *Withdraw*** — only once its game's details say the reader may:
+ * **Whether a You’re in row offers *Withdraw*** — only once its game's details say the reader may:
  * while the full game waits for one payment they say *Leave* instead (A3.2, #625), and a withdrawal
  * then would leave the game with no sheet in front of it. Nothing before the details are read.
  */

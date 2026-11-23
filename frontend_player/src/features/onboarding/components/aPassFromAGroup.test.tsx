@@ -318,12 +318,13 @@ const backTo = (group: Wire['MyGroupSchema']) => `Back to ${group.name}`;
 // ---------------------------------------------------------------------------
 
 describe('a pass begun on an official group’s card', () => {
-  it(
-    'ends back on the group, on the tab it began on, with the chip on padel',
-    async () => {
+  // You’re in is a tab of its own since #847, and a pass begun there returns there.
+  it.each([TABS.fillIn, TABS.youreIn])(
+    'ends back on the group, on the tab it began on (%s), with the chip on padel',
+    async (began) => {
       stubAnia([KAZIMIERZ]);
       await openTheGroup(KAZIMIERZ);
-      await openTab(TABS.fillIn);
+      await openTab(began);
 
       fireEvent.press(await screen.findByRole('button', { name: 'Rate Padel' }));
       await rate(PADEL_RUN);
@@ -333,7 +334,7 @@ describe('a pass begun on an official group’s card', () => {
       expect(screen.queryByLabelText('See your ratings')).toBeNull();
       fireEvent.press(screen.getByLabelText(backTo(KAZIMIERZ)));
 
-      await expectTheGroup(KAZIMIERZ, TABS.fillIn);
+      await expectTheGroup(KAZIMIERZ, began);
       // The chip stands on the sport just rated, and the card is gone: she plays here now.
       expect(await screen.findByLabelText('Sport: Padel')).toBeTruthy();
       expect(screen.queryByRole('button', { name: 'Rate Padel' })).toBeNull();
@@ -442,7 +443,7 @@ describe('a pass begun on an official group’s card', () => {
 
 describe('a pass begun on Post a game’s card', () => {
   it(
-    'ends back on the group, on Fill in, where every way back from Post a game lands',
+    'ends back on the group, on You’re in, where every way back from Post a game lands (#847)',
     async () => {
       stubAnia([KAZIMIERZ]);
       await launchSignedIn(`/play/group/${KAZIMIERZ.id}/post`);
@@ -452,7 +453,7 @@ describe('a pass begun on Post a game’s card', () => {
       await rate(PADEL_RUN);
       fireEvent.press(screen.getByLabelText(backTo(KAZIMIERZ)));
 
-      await expectTheGroup(KAZIMIERZ, TABS.fillIn);
+      await expectTheGroup(KAZIMIERZ, TABS.youreIn);
       expect(await screen.findByLabelText('Sport: Padel')).toBeTruthy();
     },
     WALK_TIMEOUT,

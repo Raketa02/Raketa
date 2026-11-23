@@ -33,8 +33,8 @@
  * (the fill's, `setUpFirst`) and the post goes once a method is; a guard the server answers with is
  * said in the helper's place (`postRefusal`) — the live yeses, two live posts, the week's games, a
  * game at that hour, nobody free, the court gone. **Posted**, the draft is forgotten, a toast says how
- * many best fits have it, and the player is back on the group's page — which went to Fill in when this
- * screen opened, so *You're In* is where they land, by this or by any way back.
+ * many best fits have it, and the player is back on the group's page — which went to You’re in when
+ * this screen opened (#847's interim), so You’re in is where they land, by this or by any way back.
  *
  * **Joining from a sheet** is the fill's, as every yes is: a rescue's *Pay 30 zł* counts its ten
  * seconds behind *Undo* and pays; a post's *I'm in* is a free vote — or, on its last seat, *Pay 32
@@ -128,7 +128,7 @@ export interface PostAGameScreenProps {
   readonly openingSport: Sport;
   /** The kind the group's switch stands on — corrected by the reader's intent. */
   readonly chosen: GameKind;
-  /** Back to the group's page — on Fill in, which it went to when this screen opened. */
+  /** Back to the group's page — on You’re in, which it went to when this screen opened (#847). */
   readonly onLeave: () => void;
 }
 

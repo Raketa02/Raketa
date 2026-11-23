@@ -278,7 +278,7 @@ export function getProposal(
 
 /**
  * **A group's Fill in tab** for one sport (#545) — *Seats to fill*, soonest first, and the tab's
- * badge. *You're In* is the live yeses. `pool_not_found` for no such group and one the reader is not
+ * badge. *You’re in* is the live yeses. `pool_not_found` for no such group and one the reader is not
  * in; `block_state_unavailable` (503) when who fits whom could not be read.
  */
 export function getFillIn(

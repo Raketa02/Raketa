@@ -16,7 +16,8 @@ const PAYMENT_FIRST = 'A post needs a saved way to pay first — nothing is char
 
 export const POSTING_COPY = {
   title: 'Post a game',
-  back: 'Back to Fill in',
+  /** Every way back lands on You’re in while Post a game turns the page there (#847's interim). */
+  back: 'Back to You’re in',
   sport: 'Sport',
   kind: 'Kind',
   who: 'Who',

@@ -1,6 +1,6 @@
 /**
- * **A group's page** — its header with the sport filter, and three tabs, Games, Fill in and
- * Friends (play 14–17, 39–55; #512, #513; Q125), each drawn for a sport. **The header is the door
+ * **A group's page** — its header with the sport filter, and four tabs, **Games · Fill in · You’re in
+ * · Friends** (play 14–17, 39–55; #512, #513; Q125; #847, split mock 3), each drawn for a sport. **The header is the door
  * to Info** (`GroupHeader`), the group's own screen since Q125.
  *
  * Reached from a card on the Groups list, and **replacing** New group once a group is created, so
@@ -8,14 +8,13 @@
  * create's answer seeded its read — with *Group created* over it.
  *
  * **It always opens on Games** (story 51) — which tab it was on is not kept (ADR-0188 §5) — and
- * **on the sport last picked anywhere in Play**, which is (`useGroupSport`). Games, Fill in and
- * Friends are all drawn for that sport, and the pill in the header changes it for every one of
- * them at once.
+ * **on the sport last picked anywhere in Play**, which is (`useGroupSport`). All four tabs are drawn
+ * for that sport, and the pill in the header changes it for every one of them at once.
  *
  * **The filter's bar floats over the header and the page under it** — `SportFilterPage`'s, which
  * Members shares — so while it is open, a tap on the tile is the bar's rather than Info's. On an
  * official group it lists only the sports the group declares (#519); a member rated in none of them
- * gets `AddSportCard` on all three tabs, and the header still opens Info, where the way out is — it
+ * gets `AddSportCard` on all four tabs, and the header still opens Info, where the way out is — it
  * is not a sport's.
  *
  * **The header opens Info** (Q125): the tile, the name with the official mark and *N members · Home
@@ -28,15 +27,21 @@
  * **The Games tab counts the cards where somebody is already In with you** (#553, the screens A1,
  * mock 1's *Games 4*): the same badge, off the deck's own read — the one the tab draws, for the
  * sport the page is on and the kind its switch stands on, so the two never disagree and the count
- * costs no second request. **The *Fill in* tab counts its *Seats to fill*** (#557, mock 11's *Fill
- * in 1*) — the rescue board's own badge, read for the page's sport.
+ * costs no second request. **The *Fill in* tab counts its rescues** (#557, mock 11's *Fill in 1*) —
+ * the rescue board's own badge, read for the page's sport — **and *You’re in* its rows** (#847): the
+ * reader's live yeses in this group and sport, a plain count for now, read as the page opens so the
+ * badge has it, never holding up the page or a tab switch (`useYoureInBadge`).
  *
- * **Fill in is `proposals`' board** (#557): *Seats to fill* and *You're In*, and — with neither — the
- * starting card a group has always drawn there (`FillInTab`), handed in as the Games tab hands in
- * its own. *+ Post a game* floats over the page's corner and opens *Post a game* (#558).
+ * **Fill in and You’re in are `proposals`' boards** (#557, split into a tab each by #847, PRD #844):
+ * Fill in holds only the rescues, and says *No seats to fill right now* with none; You’re in holds only
+ * the reader's live yeses, and — once neither tab has a row — the starting card a group has always
+ * drawn (`YoureInTab`), handed in as the Games tab hands in its own. Neither has a heading. **+ Post a
+ * game floats over You’re in's corner, and only there** (split override 1), and opens *Post a game*
+ * (#558): the game it makes appears on that tab.
  *
  * **Which tab it is on is the page's store** (`groupTab.store`, #558) rather than its state, because
- * *Post a game* turns it to Fill in from over the page, so every way back lands on *You're In*; the
+ * *Post a game* turns it to You’re in from over the page, so every way back lands there (#847's
+ * interim, until a post alone lands there and a back-out returns to the tab it came from); the
  * entry, and the post's draft with it, go when the page does. A screen pushed over the page — Info,
  * a game's details — leaves it where it was, so back is the tab the player left.
  *
@@ -44,11 +49,12 @@
  * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are
  * not a deck — the question, the starting card.
  *
- * **A player rated in nothing meets one door** (#730, ADR-0200 §2): in a player group, Games, Fill
- * in and Friends each draw onboarding's `LevelDoor` in place of their content — *Get your level*,
- * or *Carry on with your padel questions* with a run left halfway — and the pass it begins returns
- * to the tab it stood on. No sport pill is drawn until she holds a rating. **On Fill in, *+ Post a
- * game* still floats over the door** (the screens A3), and *Post a game* draws the same door.
+ * **A player rated in nothing meets one door** (#730, ADR-0200 §2): in a player group, each of the
+ * four tabs draws onboarding's `LevelDoor` in place of its content — *Get your level*, or *Carry on
+ * with your padel questions* with a run left halfway — and the pass it begins returns to the tab it
+ * stood on. No sport pill is drawn until she holds a rating. **On You’re in, *+ Post a game* still
+ * floats over the door** (the screens A3), and *Post a game* draws the same door; it is not drawn
+ * while an official group's *add a sport* card stands in the tab.
  *
  * **The chip ends with *+ Another sport*** while a sport is left to offer (#731, ADR-0200 §4): the
  * picker over the sports she is unrated in — an official group's own, or any — for a pass that
@@ -64,13 +70,13 @@
  * stands on that sport until the player picks another — never saved as a pick — the switch moves
  * to the card's kind, the page is on Games, and the deck draws the card first while it is dealt.
  *
- * **Games and Fill in pull** — the group, for the header and the starting cards, and every read
- * `proposals` draws the two tabs from (`useRereadGroupGames`): the decks, Fill in, *You're In*'s
- * yeses and their games. One control and one spinner for the page; Fill in's is the page's
- * scroller's, and Games', which lays itself out, is handed to the deck, which puts it on whichever
- * scroller it is in. Friends keeps none. **The page does not re-read on the way back** — it did for
- * Info alone, which re-reads itself now (Q125); the three tabs are drawn for a sport and read their
- * own rows.
+ * **Games, Fill in and You’re in pull** — the group, for the header and the starting cards, and every
+ * read `proposals` draws the three tabs from (`useRereadGroupGames`): the decks, Fill in, the live
+ * yeses and their games, whichever tab is pulled. One control and one spinner for the page: Fill
+ * in's and You’re in's is the page's scroller's, and Games', which lays itself out, is handed to the
+ * deck, which puts it on whichever scroller it is in. Friends keeps none. **The page does not re-read on the way back** — it did for
+ * Info alone, which re-reads itself now (Q125); the tabs are drawn for a sport and read their own
+ * rows.
  *
  * **Every state has its drawing.** While the read is on its way the header has only its way back.
  * `group_not_found` is one sentence, because the server gives the same answer for *no such group*
@@ -86,11 +92,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LevelDoor, fromAGroup } from '@/features/onboarding/types';
 import {
-  FillInStack,
+  FillInBoard,
+  YoureInBoard,
   forgetPostDraft,
   useFillInBadge,
   useGamesBadge,
   useRereadGroupGames,
+  useYoureInBadge,
 } from '@/features/proposals/types';
 import { codeMessage } from '@/shared/errors';
 import { Segment, theme, type SegmentOption } from '@/shared/ui';
@@ -106,19 +114,19 @@ import { useGameIntent } from '../store/gameIntent.store';
 import { useGroupTab } from '../store/groupTab.store';
 
 import { AddSportCard } from './AddSportCard';
-import { FillInTab, PostAGame } from './FillInTab';
 import { FriendsTab } from './FriendsTab';
 import { GamesTab } from './GamesTab';
 import { GroupHeader } from './GroupHeader';
 import { anotherSportRoute, groupInfoRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
-import { fillInTabLabel, gamesTabLabel } from './groupsPresentation';
+import { fillInTabLabel, gamesTabLabel, youreInTabLabel } from './groupsPresentation';
 import { ReadFailure } from './ReadFailure';
 import { SportFilterPage } from './SportFilterPage';
+import { PostAGame, YoureInTab } from './YoureInTab';
 
 const COPY = GROUPS_COPY.group;
 
-/** The three tabs' words — read at load, so from the import-free copy module (`groupsCopy.ts`). */
+/** The four tabs' words — read at load, so from the import-free copy module (`groupsCopy.ts`). */
 const TABS: readonly SegmentOption<GroupTab>[] = GROUP_TABS.map((key) => ({
   key,
   label: GROUPS_COPY.group.tabs[key],
@@ -130,7 +138,7 @@ interface GroupTabsProps {
   readonly onSelect: (tab: GroupTab) => void;
 }
 
-/** The tab bar — with Games' and Fill in's counts once there is a sport to read them for. */
+/** The tab bar — with Games', Fill in's and You’re in's counts once there is a sport to read them for. */
 function GroupTabs({ sport, ...props }: GroupTabsProps & { readonly sport: Sport | undefined }) {
   return sport === undefined ? (
     <Segment options={TABS} selected={props.selected} onSelect={props.onSelect} style={s.tabs} />
@@ -148,12 +156,18 @@ function TabsWithCounts({
   const chosen = useGameIntent((state) => state.intent);
   const games = useGamesBadge(groupId, sport, chosen);
   const seats = useFillInBadge(groupId, sport);
+  // The live yeses are read here, as the page opens, so You’re in's badge has them — and the tab,
+  // the same read, usually opens already read.
+  const yeses = useYoureInBadge(groupId, sport);
   const counted = TABS.map((option) => {
     if (option.key === 'games' && games > 0) {
       return { ...option, badge: games, accessibilityLabel: gamesTabLabel(games) };
     }
     if (option.key === 'fillIn' && seats > 0) {
       return { ...option, badge: seats, accessibilityLabel: fillInTabLabel(seats) };
+    }
+    if (option.key === 'youreIn' && yeses > 0) {
+      return { ...option, badge: yeses, accessibilityLabel: youreInTabLabel(yeses) };
     }
     return option;
   });
@@ -180,7 +194,8 @@ export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
   const setTab = (next: GroupTab) => show(groupId, next);
   const reread = useGroupReread(groupId);
   const rereadGames = useRereadGroupGames(groupId);
-  // The group, for the header and the starting cards, and the games drawn on Games and Fill in.
+  // The group, for the header and the starting cards, and the games drawn on Games, Fill in and
+  // You’re in.
   const { refreshing, pull } = usePull(() =>
     Promise.all([reread(), rereadGames()]).then(() => undefined),
   );
@@ -245,7 +260,7 @@ export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
         )}
       >
         {(sport, toAdd, needsALevel) => {
-          // The sport the three sport tabs are drawn for — none while the reader must add one.
+          // The sport the four tabs are drawn for — none while the reader must add one.
           const playing = toAdd.length === 0 ? sport : undefined;
           return group === undefined ? (
             read.error === null ? null : (
@@ -285,8 +300,9 @@ export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
                   )}
                 </ScrollView>
               )}
-              {tab === 'fillIn' && toAdd.length === 0 ? (
-                <View style={s.postAGame}>
+              {/* You’re in's alone (split override 1): the game it makes appears on that tab. */}
+              {tab === 'youreIn' && toAdd.length === 0 ? (
+                <View testID="post-a-game-fab" style={s.postAGame}>
                   <PostAGame groupId={groupId} />
                 </View>
               ) : null}
@@ -298,7 +314,7 @@ export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
   );
 }
 
-/** The two scrolled tabs drawn for the filter's sport; Games lays itself out. */
+/** The scrolled tabs drawn for the filter's sport; Games lays itself out. */
 function TabBody({
   tab,
   group,
@@ -312,7 +328,9 @@ function TabBody({
     case 'games':
       return <GamesTab group={group} sport={sport} />;
     case 'fillIn':
-      return <FillInStack groupId={group.id} sport={sport} empty={<FillInTab group={group} />} />;
+      return <FillInBoard groupId={group.id} sport={sport} />;
+    case 'youreIn':
+      return <YoureInBoard groupId={group.id} sport={sport} empty={<YoureInTab group={group} />} />;
     case 'friends':
       return <FriendsTab group={group} sport={sport} />;
   }

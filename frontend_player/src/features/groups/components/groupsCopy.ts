@@ -54,8 +54,11 @@ export const GROUPS_COPY = {
     refused: {
       group_not_found: 'This group isn’t one of yours.',
     },
-    /** The page's three tabs (Q125) — no counts: nothing claims news that does not exist. */
-    tabs: { games: 'Games', fillIn: 'Fill in', friends: 'Friends' },
+    /**
+     * The page's four tabs (Q125, #847) — no counts: nothing claims news that does not exist.
+     * *You’re in* takes a lower-case *i* and the curly apostrophe, like *Fill in* (split mock 3).
+     */
+    tabs: { games: 'Games', fillIn: 'Fill in', youreIn: 'You’re in', friends: 'Friends' },
     /** The header is the door to Info (Q125): the tile, the name and the line under it. */
     openInfo: 'Opens Info',
   },
@@ -73,8 +76,11 @@ export const GROUPS_COPY = {
     justYou: 'Just you so far',
     nothingPicked: 'Nothing picked right now',
   },
-  /** The Fill in tab (play 45–47). */
-  fillIn: {
+  /**
+   * The group's starting card (play 45–47), on You’re in since #847 — Fill in's until then — and the
+   * floating *+ Post a game* over that tab.
+   */
+  youreIn: {
     alone: 'No games yet — it’s just you',
     others: 'No games yet',
     line: 'Post the first game and it is the first thing people see when they arrive with the link. Or send the link and let somebody else post.',

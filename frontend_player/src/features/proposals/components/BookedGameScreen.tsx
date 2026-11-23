@@ -64,7 +64,7 @@
  *   your card*** under the card opens the same confirmation.
  * - **A full game gone back to filling** (Q106, #629) — *Seat open* in amber, no court and no Chat,
  *   the share nobody pays over *1 seat open · books when it's full · nobody paid*; its way out is a game still filling's, ***Withdraw***, free and never on the record, as
- *   on a *You're In* row — no sheet in front of it, and back to Home, which no longer holds it.
+ *   on a *You’re in* row — no sheet in front of it, and back to Home, which no longer holds it.
  * - **A rescue seen from outside** (A4.3, #545) — opened from a *Seat open* card or a *Seats to fill*
  *   row, by a member the open seat is offered to: the players *paid*, the reader in the dashed seat
  *   that opened (*You complete it* on the last one, *You?* while more are open), the court, the share

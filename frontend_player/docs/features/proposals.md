@@ -499,7 +499,7 @@ only rescues — booked games that lost a player, the reader fits and is free fo
 leaving at its deadline on the read's clock (`standingSeats`). A row (`SeatToFillRow`, framed `coral`):
 _Padel · Saturday 16:00_ (_· friendly_ for For fun), the club and, bold, _fills by Fri 16:00_ before
 the cut-off or _offered until the start_ after it — the read says which; the players' posters (a hold
-opens the record), a dashed **?** per open seat, and a volt **Pay 27 zł**. _You're In_ is the
+opens the record), a dashed **?** per open seat, and a volt **Pay 27 zł**. _You’re in_ is the
 reader's live yeses in this group and sport (`yesesIn`); a row (`YoureInRow`, framed `mint`) is the
 yes's game, club and _book by Sat 13:00_ with **its squares read off the game's own details**
 (`useProposal`: everybody In, then the open seats dashed) and _Withdraw_ **only once those details
@@ -509,6 +509,33 @@ with no sheet in front of it. One read a row, because the live yes does not carr
 Each row's upper block opens its game. Sections only when they have rows; with neither, the group's
 starting card. The tab's badge is the read's `badge`, filed under the group's root
 (`proposalKeys.fillIn`), so every answer in the group and every changed limit re-reads it.
+
+**Fill in and You’re in are a board each since #847** ([#847](https://github.com/Raketa02/Raketa/issues/847),
+PRD #844; the screens A3; split mocks 1 and 2). The rows above are unchanged; what changed is the page
+round them. **`FillInBoard` is the Fill in tab**: the rescues alone, read through `useSeatsToFill`
+(the read, its clock, and the rows standing on it), with no heading, the muted spinner (_Reading Fill
+in_), the offline note and the refusal with its retry (`HeldRead`), and — with no rescue — one line
+in 10.1's empty look, _No seats to fill right now_, never the starting card. **`YoureInBoard` is the
+You’re in tab**: the live yeses in the list's order, soonest first, with no heading, its own spinner
+(_Reading You’re in_), note and refusal, read on the list's own clock (its `dataUpdatedAt`, as You ›
+Payments reads it). **Empty, it draws what the page hands in (`empty`, the starting card) only once
+Fill in's read has said there is nothing too** — it asks the same query the Fill in tab and its badge
+read, so that costs no request — with the spinner while Fill in's read is on its way, and otherwise
+_You haven’t said yes to a game here yet_, including while Fill in's read could not say. _Withdraw_
+on the last row leaves the tab on that state. **The You’re in badge is `useYoureInBadge`**: the rows'
+count, plain for now, which the page's tab bar reads, so the live-yeses read starts as the page opens.
+**So an answer no longer waits for the live yeses** (`reread`'s `yeses: 'start'`): with the badge
+observing them on every tab, an awaited re-read would hold a deck's card hidden and a _Booking…_ busy
+for a badge's read, retries and all — the code review's catch — and a badge never holds anything up.
+A pull and a withdrawal still wait (`'wait'`): the pull's spinner stops once every tab is read, and a
+withdrawn row stays busy until it leaves. The empty state's rule is the domain's (`youreInEmpty`), and
+You’re in asks Fill in's read with `retryOnMount: false`, so opening it never re-asks a refused read
+whose refusal only Fill in draws.
+The two headings and their presentation functions went (`seatsToFillHeader`, `youreInHeader`).
+**Made easy first, with no behaviour change** (89cc83c5): the board was split into the two, each
+owning its read, while Fill in still stacked both, and the Fill in suite passed unchanged — which
+found one trap: **a board mounted on a refused read reads it again** (Query's retry on mount), so a
+stack that unmounted a board with each refusal asked for ever; it keeps both mounted.
 
 **A rescue is a card the deck already drew, now answered at its booking.** A _Seat open_ card's id is
 its booking's (#545): the yes is `POST /bookings/{id}/seats` and the no `POST /bookings/{id}/no`
@@ -607,7 +634,7 @@ backend's #545 note); the push and in-app notices of a seat opening (#549, #559)
 enabled (#558, below). **Owed to the backend**: ~~a `called_off_reason` for the club's own cancel and
 for a full game a player left~~ — both came: the club's cancel is `CANCELLED_BY_THE_CLUB` (#547), and a
 full game a player left is no longer called off but stays on the others' Home as _Seat open_ (#624,
-#629, below); and who is In on the live yes, which would save _You're In_ its read a row. **Nothing here has been seen on a
+#629, below); and who is In on the live yes, which would save _You’re in_ its read a row. **Nothing here has been seen on a
 device.**
 
 **Posting a game is this feature's** ([#558](https://github.com/Raketa02/Raketa/issues/558); the
@@ -708,8 +735,9 @@ about** — a new pick, a removed one or a new sport clears it: `payment_method_
 setup), `live_posts_exhausted`, `games_per_week_booked`
 (the week), `you_play_then`, `nobody_fits_then`, `court_hour_not_for_sale`. Posted, the draft is
 forgotten, _Posted — 5 of your best fits have it._ is toasted, and the player is back on the page on
-**Fill in › You're In** — the page turned to Fill in under the screen when it opened
-(`groups`' `groupTab.store`), so every way back lands there. A post settling after the player has
+**You’re in** — the page turned to You’re in under the screen when it opened (Fill in › its yeses
+section until #847; `groups`' `groupTab.store`), so every way back lands there, and the back control
+says _Back to You’re in_. A post settling after the player has
 left does not pop the page as well. Not retried: a second post is a second game. **No
 `Idempotency-Key`**: the button is busy while the post is in flight, and the server refuses a second
 post at an hour the poster already plays (`you_play_then`) — so a duplicate is refused, never booked. **Challenge cards**
@@ -812,7 +840,7 @@ that list on the group page any more.
 ([#615](https://github.com/Raketa02/Raketa/issues/615); the backend's #613; the mechanics §14.1, the
 screens A4.2 and A8). Either details' money row draws the card's line word for word, on a line of its
 own under the share: the booked details opened from the card, and the filling details opened from a
-_You're In_ row (`GameFacts`' `below`). It first ran on after the figure, so the card and its details
+_You’re in_ row (`GameFacts`' `below`). It first ran on after the figure, so the card and its details
 said one thing two ways; the user ruled it under the figure, as Home draws it (2026-10-09). **Every
 booked money row has drawn its words under the figure since** — _PAID 40 zł_ over _Paid · 38,40 zł back if
 you leave by Wed 19:00_, the seat open, why a game is off, the rescue's _fills by_ — the user's
@@ -909,12 +937,12 @@ is booked.
 
 **Its way out is a game still filling's** (#629). The details draw _Seat open_ with no court and no
 Chat, and the share over the card's line. At the foot, **_Withdraw_** stands where _Leave the game_
-does, since the read gives no `leaving`. It is free and never on the record, as on a _You're In_
+does, since the read gives no `leaving`. It is free and never on the record, as on a _You’re in_
 row, with no sheet and no toast: `DELETE /proposals/{id}/yes` with the booking's id, which is the
 game's (`useWithdrawFillingAgain`), then back to Home, which no longer holds the game. It is gone
 once the game is called off. A refused withdrawal (the game ended, or filled again meanwhile) is
 a toast, and the booking is read again so the details draw what it is now. **Every withdrawal reads
-Home again** (`rereadAfterWithdrawing`), so _Withdraw_ on the game's _You're In_ row takes the card
+Home again** (`rereadAfterWithdrawing`), so _Withdraw_ on the game's _You’re in_ row takes the card
 off Home too.
 
 **Calls made here, open for the product owner**:
@@ -928,7 +956,7 @@ off Home too.
   that didn't fill again in time and for a seat that opened after the book-by. _A seat was open past
   its last moment to book_ is true of both. The notice says the first as _It didn't fill again before
   its last moment to book_. The lost court uses the notice's own words.
-- **No toast after _Withdraw_**, as on a _You're In_ row: the details close onto a Home without the
+- **No toast after _Withdraw_**, as on a _You’re in_ row: the details close onto a Home without the
   card.
 
 **Owed by the root**: the root `CONTEXT.md`'s **Seat open** still says _decided and not yet built
@@ -1230,7 +1258,7 @@ confirm a booking, and a desk that is shut until 16:00 called off every game tha
 morning, so every club now books the moment the last yes lands. **What went**, with the wire's
 `waiting_for_the_club`, `club_confirms`, `answer_by` (the score's own `answer_by` stays), `HomeStatus`'
 and `ProposalStatus`' `WAITING_FOR_THE_CLUB`, `TURNED_DOWN`, and `CalledOffReason`'s `REFUSED` and
-`NO_ANSWER`: the _Waiting for the club_ tag and its amber _waiting for the club_ on a _You're In_ row;
+`NO_ANSWER`: the _Waiting for the club_ tag and its amber _waiting for the club_ on a _You’re in_ row;
 _answers by_ on Home, the details, the rail's clock and _It's a game!_ (`answerByAhead`,
 `answersByWords`, `waitingWords`, `itsAGameWaiting`, `ItsAGameAtTheClub` and its since-mount read,
 `useBookingSinceMount`); the fill's `waiting` outcome; _said no_ and _didn't answer in time_

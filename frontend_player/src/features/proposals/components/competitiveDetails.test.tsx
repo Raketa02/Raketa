@@ -8,7 +8,7 @@
  * / If you lose* — two tiles or none. The block is the booked game's own (`shared/ui`'s
  * `ForecastBlock`), drawn from the details read, and **never on For fun**.
  *
- * The screen is launched at its route: what opens it — the card, its **i**, a *You're In* row — is
+ * The screen is launched at its route: what opens it — the card, its **i**, a *You’re in* row — is
  * `groups/components/groupGames.test.tsx`'s.
  */
 

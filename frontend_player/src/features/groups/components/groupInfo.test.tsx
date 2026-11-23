@@ -949,7 +949,7 @@ describe('leaving and deleting', () => {
   it('is Info’s alone — no tab of the page draws it', async () => {
     await openPage({ members: KAZIMIERZ });
 
-    for (const name of ['Games', 'Fill in', 'Friends']) {
+    for (const name of ['Games', 'Fill in', 'You’re in', 'Friends']) {
       fireEvent.press(await tab(name));
       await tab(name, true);
       expect(screen.queryByRole('button', { name: COPY.info.leave })).toBeNull();

@@ -408,13 +408,18 @@ describe('the fast filter', () => {
 });
 
 describe('the tab bar', () => {
-  // Q125: Info is the group's own screen, opened from the header — not a fourth tab.
-  it('is Games · Fill in · Friends, with no counts, and opens on Games', async () => {
+  // #847 (split mock 3): You’re in is a tab of its own. Q125: Info is the group's own screen, opened
+  // from the header — not a fifth tab.
+  it('is Games · Fill in · You’re in · Friends, with no counts, and opens on Games', async () => {
     await openGroup();
 
     expect(await tab('Games', true)).toBeTruthy();
-    expect(await tab('Fill in', false)).toBeTruthy();
-    expect(await tab('Friends', false)).toBeTruthy();
+    const names = screen
+      .getAllByRole('button', { name: /^(Games|Fill in|You’re in|Friends)$/ })
+      .map((one) => one.props.accessibilityLabel as string);
+    // In this order, and the label is lower-case *i* with the curly apostrophe.
+    expect(names).toEqual(['Games', 'Fill in', 'You’re in', 'Friends']);
+    expect(await tab('You’re in', false)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^Info/ })).toBeNull();
   });
 });
@@ -591,11 +596,11 @@ describe('Games', () => {
   });
 });
 
-describe('Fill in', () => {
+describe('You’re in, with nothing on it or on Fill in (#847)', () => {
   it('is just you while nobody else has joined, with the link and the button to come', async () => {
     await openGroup();
 
-    await openTab('Fill in');
+    await openTab('You’re in');
 
     expect(await screen.findByText('No games yet — it’s just you')).toBeTruthy();
     expect(
@@ -607,14 +612,14 @@ describe('Fill in', () => {
     expect(screen.getByRole('button', { name: COPY.link.copy })).toBeTruthy();
     // Open since #558: the one coral door on the page.
     expect(
-      screen.getByRole('button', { name: COPY.fillIn.postAGame, disabled: false }),
+      screen.getByRole('button', { name: COPY.youreIn.postAGame, disabled: false }),
     ).toBeTruthy();
   });
 
   it('drops “just you” once others have joined', async () => {
     await openGroup(MY_RAKETA_GROUP, pageOf(MY_RAKETA_GROUP, { member_count: 3 }));
 
-    await openTab('Fill in');
+    await openTab('You’re in');
 
     expect(await screen.findByText('No games yet')).toBeTruthy();
     expect(screen.queryByText('No games yet — it’s just you')).toBeNull();
@@ -622,7 +627,7 @@ describe('Fill in', () => {
 
   it('shares the link from here too', async () => {
     await openGroup();
-    await openTab('Fill in');
+    await openTab('You’re in');
 
     fireEvent.press(await screen.findByRole('button', { name: COPY.link.share }));
 

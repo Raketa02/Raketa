@@ -831,7 +831,7 @@ const size = {
    *  segment beside it prints whole. */
   segDoorOpacity: 0.8,
   /** A segment's count — the tab bar's badge (`tabBar.badge`) at the segment's size (#529),
-   *  `CornerBadge`: a group page's Games and Fill in, and the group's tile on its page and on Info,
+   *  `CornerBadge`: a group page's Games, Fill in and You’re in (#847), and the group's tile on its page and on Info,
    *  counting the requests waiting on an Owner (Q125). **16, and it is
    *  `num.tiny`'s own line box**, the digit role one step under the tab bar's `num.xs` — the
    *  segment's label is 10,5 where the tab bar's is 12, so the mark comes down with it rather

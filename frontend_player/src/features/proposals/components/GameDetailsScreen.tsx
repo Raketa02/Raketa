@@ -1,5 +1,5 @@
 /**
- * **A game still filling, in detail** — what a card or its **i**, a *You're In* row and a live yes
+ * **A game still filling, in detail** — what a card or its **i**, a *You’re in* row and a live yes
  * open (the screens A4.2, Q75; details mocks 5–10 for the layout;
  * [#553](https://github.com/Raketa02/Raketa/issues/553), [#557](https://github.com/Raketa02/Raketa/issues/557);
  * the order is the For-fun mocks 3–6's since [#836](https://github.com/Raketa02/Raketa/issues/836)).

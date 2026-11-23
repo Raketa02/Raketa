@@ -3,10 +3,11 @@
  * ([#558](https://github.com/Raketa02/Raketa/issues/558)).
  *
  * It was the page's own state, and one screen pushed over the page now has to move it: ***Post a
- * game*** lands the player on **Fill in › You're In** — after a post, and by every way back, since
- * A5 says *back → Fill in* whether the screen was opened from Fill in or from the Games tab. So the
- * screen sets the page's tab to Fill in **when it opens** — under it, unseen — and the chevron, the
- * hardware back and the swipe all arrive there.
+ * game*** lands the player on **You’re in** — after a post, and by every way back — whether the
+ * screen was opened from You’re in's button or from the Games tab. So the screen sets the page's tab
+ * to You’re in **when it opens** — under it, unseen — and the chevron, the hardware back and the
+ * swipe all arrive there (#847's interim: it was Fill in, which held the yeses, until the split).
+ * Any of the four tabs is an entry (`GROUP_TABS`).
  *
  * **The page still always opens on Games** (story 51; ADR-0188 §5 keeps no tab): it forgets its
  * entry when it goes, so the next time it is opened there is nothing to restore. One entry per

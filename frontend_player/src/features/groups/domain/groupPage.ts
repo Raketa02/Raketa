@@ -16,10 +16,13 @@ import { SPORTS, type Sport } from '@/shared/vocabulary/sport';
 import type { Group, GroupPerson, SportRoster } from './group';
 
 /**
- * The group page's three tabs, each drawn for a sport (Q125: Info is the group's own screen, opened
- * from the header). It always opens on Games (ADR-0188 §5: which tab is not kept).
+ * The group page's four tabs, each drawn for a sport (Q125: Info is the group's own screen, opened
+ * from the header): **Games · Fill in · You’re in · Friends** — the rescues and the reader's own live
+ * yeses a tab each since #847 (PRD #844, split mock 3), where Fill in had stacked both. It always
+ * opens on Games (ADR-0188 §5: which tab is not kept). A route naming a tab not in this list is
+ * dropped, and the page opens as it always does (`groupRouteParams`).
  */
-export const GROUP_TABS = ['games', 'fillIn', 'friends'] as const;
+export const GROUP_TABS = ['games', 'fillIn', 'youreIn', 'friends'] as const;
 
 export type GroupTab = (typeof GROUP_TABS)[number];
 

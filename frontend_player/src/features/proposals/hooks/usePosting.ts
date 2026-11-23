@@ -19,7 +19,7 @@
  *
  * ## A post re-reads what it changed, and is never retried
  *
- * Posting is the poster's yes: it adds a live yes, a game to *You're In* and a dealt challenge to
+ * Posting is the poster's yes: it adds a live yes, a game to *You’re in* and a dealt challenge to
  * every deck of the group — so on success the group's root (its decks, its Fill in and every grid),
  * every game's details and the live yeses are read again. Not retried, the route's own rule: a
  * second post is a second game.

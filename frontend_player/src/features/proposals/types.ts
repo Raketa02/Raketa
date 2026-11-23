@@ -28,15 +28,17 @@ export { GamesAndMoneyScreen } from './components/GamesAndMoneyScreen';
 export { LiveYeses } from './components/LiveYeses';
 export { PaymentsToConfirm } from './components/PaymentsToConfirm';
 export { useGamesBadge } from './hooks/useGroupDeck';
-/** What the group page's pull re-reads on Games and on Fill in — the two tabs this feature draws. */
+/** What the group page's pull re-reads on Games, Fill in and You’re in — the tabs this feature draws. */
 export { useRereadGroupGames } from './hooks/useGroupDeck';
 /**
- * **A group's Fill in tab** (#557) — *Seats to fill* and *You're In*, drawn by the group page as its
- * Fill in tab, with the badge its tab reads; the page hands in the starting card for a tab with no
- * rows, as it does the Games tab's.
+ * **A group's Fill in and You’re in tabs** (#557, split by #847) — the rescues, and the reader's own
+ * live yeses, each drawn by the group page as a tab of its own with the badge its tab reads. The page
+ * hands You’re in the starting card it draws once neither tab has a row, as it does the Games tab's.
  */
-export { FillInStack, type FillInStackProps } from './components/FillInStack';
+export { FillInBoard, type FillInBoardProps } from './components/FillInBoard';
+export { YoureInBoard, type YoureInBoardProps } from './components/YoureInBoard';
 export { useFillInBadge } from './hooks/useFillIn';
+export { useYoureInBadge } from './hooks/useLiveYeses';
 export { FILL_IN_COPY } from './components/fillInCopy';
 export { parseGameDetailsParams } from './schemas/gameDetailsParams';
 export type { GameKind } from './domain/vocabulary';

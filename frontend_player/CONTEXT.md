@@ -238,7 +238,7 @@ naming, the steps, Home — eight screens, and no questionnaire.
   — that is one Assessment, and a pass is a sequence of them; **"session"** — that is the auth
   session, and the two have different lifetimes; also "onboarding state", "wizard".
 - **Level door** — the one dark card a player rated in nothing meets **in a player group**, in
-  place of Games, Fill in and Friends, _Post a game_ and Members (`LevelDoor`, onboarding's;
+  place of Games, Fill in, You’re in and Friends, _Post a game_ and Members (`LevelDoor`, onboarding's;
   `needsALevel`, groups') — ADR-0200 §2. It offers one of two things, by `levelDoor`'s rule:
   **_Get your level_** — _pick the sports you play, a few questions each_ — opening the picker
   over every sport with nothing ticked; or, with a run left halfway, **_Carry on with your padel

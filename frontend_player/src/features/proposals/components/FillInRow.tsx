@@ -4,8 +4,9 @@
  * colour, the upper block — the title over the club and the bold *when* — as one door to the game's
  * details, and the foot under it, the squares left and the act right.
  *
- * *Seats to fill* is framed in `coral` and *You're In* in `mint`: a rescue is the group's one
- * emergency, the rescue ribbon's meaning (§1.2), and a yes standing is settled (1.3).
+ * A rescue, on Fill in, is framed in `coral` and a yes, on You’re in, in `mint` (two tabs since #847):
+ * a rescue is the group's one emergency, the rescue ribbon's meaning (§1.2), and a yes standing is
+ * settled (1.3).
  */
 
 import type { ReactNode } from 'react';

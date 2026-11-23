@@ -40,7 +40,7 @@ import type { Group } from '../domain/group';
 import { gamesCard, rosterFor } from '../domain/groupPage';
 import { useGameIntent } from '../store/gameIntent.store';
 
-import { PostAGame } from './FillInTab';
+import { PostAGame } from './YoureInTab';
 import { gamesHeadline, gamesLine, seatsFilledLabel } from './groupsPresentation';
 import { LinkCard } from './LinkCard';
 

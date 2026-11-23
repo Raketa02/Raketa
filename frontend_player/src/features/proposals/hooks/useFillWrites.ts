@@ -64,7 +64,8 @@ export function useBookingYes(handlers: FillHandlers<BookAsk>) {
       if (answer !== null) latest.current.onAnswered(answer, ask);
     },
     onError: (error, ask) => latest.current.onRefused(error, ask),
-    onSettled: (_answer, _error, { dealtIn }) => reread(client, dealtIn.groupId, { yeses: true }),
+    onSettled: (_answer, _error, { dealtIn }) =>
+      reread(client, dealtIn.groupId, { yeses: 'start' }),
   });
 }
 
@@ -94,7 +95,7 @@ export function useConfirmPaymentYes(handlers: FillHandlers<ConfirmAsk>) {
     onError: (error, ask) => latest.current.onRefused(error, ask),
     onSettled: (_answer, _error, { dealtIn }) =>
       Promise.all([
-        reread(client, dealtIn.groupId, { yeses: true }),
+        reread(client, dealtIn.groupId, { yeses: 'start' }),
         client.invalidateQueries({ queryKey: proposalKeys.paymentsToConfirm() }),
         // Home's badge counts every payment to confirm (#556).
         client.invalidateQueries({ queryKey: proposalKeys.home() }),

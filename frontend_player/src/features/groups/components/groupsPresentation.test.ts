@@ -38,6 +38,7 @@ import {
   membersLine,
   seatsFilledLabel,
   shareMessage,
+  youreInTabLabel,
   yourSeatLabel,
 } from './groupsPresentation';
 
@@ -127,6 +128,11 @@ describe('a club’s line', () => {
 });
 
 describe('the group page’s sentences', () => {
+  it('says the You’re in tab with its count, one game or many (#847)', () => {
+    expect(youreInTabLabel(1)).toBe('You’re in, 1 game');
+    expect(youreInTabLabel(3)).toBe('You’re in, 3 games');
+  });
+
   const card = (kind: GamesCard['kind'], rated: number, seats: number): GamesCard => ({
     kind,
     rated,

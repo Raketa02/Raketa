@@ -10,7 +10,7 @@
  * pale volt band; a row only she has is grey. **No forecast, ever**, on For fun.
  *
  * The screen is launched at its route, as `competitiveDetails.test.tsx` launches it: what opens it —
- * the card, its **i**, a *You're In* row — is `groups/components/groupGames.test.tsx`'s.
+ * the card, its **i**, a *You’re in* row — is `groups/components/groupGames.test.tsx`'s.
  */
 
 import { router } from 'expo-router';

@@ -42,7 +42,7 @@
  * A number that means *how many are waiting* is the Chats badge's job, and `badge` draws it:
  * `CornerBadge`, the same `coralInk` pill with a white tabular digit at the segment's own size,
  * overlapping the segment's top-right corner so it belongs to that view rather than sitting beside
- * it (a group page's Games and Fill in). Out of the layout, so a count arriving moves nothing.
+ * it (a group page's Games, Fill in and You’re in). Out of the layout, so a count arriving moves nothing.
  * **It announces nothing**: the caller puts the count in the option's `accessibilityLabel`, as the
  * tab bar puts it on the column's, and a badge that spoke too would be one number read twice.
  *

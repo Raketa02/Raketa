@@ -8,16 +8,17 @@
  * group's declared sports), **each with how many members are rated in it** (the group's roster,
  * *Padel 10*); the sport the page is on; and the kind its switch stands on (`gameIntent.store`).
  *
- * **It turns the page under it to Fill in as it opens** (`groupTab.store`): A5's *back → Fill in*
- * holds for every way back — the chevron, the hardware back, the swipe — and after a post *You're In*
- * is where the player lands, whether they came from Fill in's button or from *Nothing picked right
- * now* on Games.
+ * **It turns the page under it to You’re in as it opens** (`groupTab.store`; #847's interim, Fill in
+ * until then): every way back — the chevron, the hardware back, the swipe — lands there, and so does
+ * a post, whether the player came from You’re in's button or from *Nothing picked right now* on
+ * Games. The ticket after it (#848) leaves the page alone on opening, lands only a post on You’re in,
+ * and backs out to the tab Post a game came from.
  *
  * **Rated in none of the group's sports** (an official group's, #519), there is nothing to post:
  * *Get rated in padel to post here*, with the passport's *Add a sport* for each (Q80) — whose pass
- * returns to the group, on Fill in (#729). **Rated in nothing, in a player group**, it is the door
- * where play begins instead (#730, ADR-0200 §2): every way of playing asks the same thing, and the
- * pass it begins returns to Fill in too. While the group or the phone is still being read, the
+ * returns to the group, on You’re in (#729, #847). **Rated in nothing, in a player group**, it is the
+ * door where play begins instead (#730, ADR-0200 §2): every way of playing asks the same thing, and the
+ * pass it begins returns to You’re in too. While the group or the phone is still being read, the
  * header alone; a refused read says why with the retry.
  */
 
@@ -48,9 +49,9 @@ export function PostAGamePage({ groupId }: { readonly groupId: string }) {
   const { sports, sport, toAdd, needsALevel } = useGroupSport(group?.declaredSports);
   const chosen = useGameIntent((state) => state.intent);
 
-  // The page under this one goes to Fill in now, unseen, so every way back arrives there.
+  // The page under this one goes to You’re in now, unseen, so every way back arrives there.
   useEffect(() => {
-    useGroupTab.getState().show(groupId, 'fillIn');
+    useGroupTab.getState().show(groupId, 'youreIn');
   }, [groupId]);
 
   const leave = () => {
@@ -96,15 +97,15 @@ export function PostAGamePage({ groupId }: { readonly groupId: string }) {
         ) : sports === undefined ? (
           <ActivityIndicator accessibilityLabel={POSTING_COPY.opening} color={theme.color.muted} />
         ) : needsALevel ? (
-          // A player group, rated in nothing: the door, returning to Fill in for the card's reason.
-          <LevelDoor from={fromAGroup(groupId, 'fillIn')} />
+          // A player group, rated in nothing: the door, returning to You’re in for the card's reason.
+          <LevelDoor from={fromAGroup(groupId, 'youreIn')} />
         ) : (
-          // A pass begun here returns to the group on Fill in — where this screen put the page
+          // A pass begun here returns to the group on You’re in — where this screen put the page
           // under it, and where every way back from it lands (#729).
           <AddSportCard
             sports={unrated}
             groupId={groupId}
-            tab="fillIn"
+            tab="youreIn"
             headline={rateToPostHeadline(unrated)}
           />
         )}
