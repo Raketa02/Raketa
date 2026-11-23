@@ -17,6 +17,10 @@ great-circle distance, in metres — so an attendance tap can be measured agains
 the place the game is played. The world for it is a booked game, filled the way
 a group fills one.
 
+**And the Social tags of the people on a court** (``TagsOnTheCourt``, #835):
+what a For-fun game's pairing works its Social vibe out from, every tag held,
+committed over HTTP and heard by the player directory through the outbox.
+
 **The demands this port exists for are the ones easiest to satisfy wrongly**
 (``docs/adr/0161``). The forecast and the split are read *in the reader's
 direction*, so the case that matters most is one court read by two people on
@@ -40,7 +44,13 @@ from app.bootstrap.game_demands import (
 )
 from app.kernel import InvariantViolated, Sport
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
-from app.modules.games.domain.ports import CourtPairing, GameClub, GameClubs
+from app.modules.games.domain.ports import (
+    CourtPairing,
+    GameClub,
+    GameClubs,
+    TagsOnTheCourt,
+)
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
 from tests.api.proposals_world import (
@@ -484,3 +494,61 @@ async def test_a_booking_that_does_not_exist_has_no_club(
 
         assert await port.of(nowhere) is None
         assert await port.metres_from(nowhere, latitude=0.0, longitude=0.0) is None
+
+
+# ---------------------------------------------------------------------------
+# The Social tags of the people on a court (#835)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(TagsOnTheCourt))
+async def test_the_tags_on_the_court_are_everybody_s_as_they_hold_them_now(
+    implementation, client, session_factory, mailbox
+):
+    """**What a For-fun game's Social vibe is worked out from** (#835): every
+    tag each person holds — 💘 too, since leaving it out is the vibe's rule
+    and not the port's — and everybody asked answered, with none for somebody
+    holding none or unknown to the provider. Committed over HTTP and heard
+    through the outbox, as the player directory hears them."""
+
+    async def tagged(name: str, *held: str) -> tuple[UUID, str]:
+        player_id, token = await players.register(client, name)
+        if held:
+            await players.commit_profile(client, token, social_tag_ids=list(held))
+        return player_id, token
+
+    tomek, _ = await tagged(
+        "tomek", "STAYS_FOR_A_DRINK", "OPEN_TO_MEET_SOMEONE", "PLAYS_TO_WIN"
+    )
+    ola, ola_token = await tagged("ola", "STAYS_FOR_A_DRINK", "NEW_IN_TOWN")
+    halfway, _ = await tagged("halfway")
+    stranger = new_uuid()
+    await mailbox.drain()
+
+    async with session_factory() as session:
+        tags = _port(implementation, session)
+        assert await tags.held_by([tomek, ola, halfway, stranger]) == {
+            tomek: {
+                SocialTag.STAYS_FOR_A_DRINK,
+                SocialTag.OPEN_TO_MEET_SOMEONE,
+                SocialTag.PLAYS_TO_WIN,
+            },
+            ola: {SocialTag.STAYS_FOR_A_DRINK, SocialTag.NEW_IN_TOWN},
+            halfway: frozenset(),
+            stranger: frozenset(),
+        }
+        assert await tags.held_by([]) == {}
+
+    changed = await client.put(
+        "/api/v1/players/me/social-tags",
+        json={"social_tags": ["QUIET_AND_FOCUSED", "SHARES_A_LIFT"]},
+        headers=players.auth(ola_token),
+    )
+    assert changed.status_code == 200, changed.text
+    await mailbox.drain()
+
+    # The tags as they stand now, never as they stood on a read before.
+    async with session_factory() as session:
+        assert await _port(implementation, session).held_by([ola]) == {
+            ola: {SocialTag.QUIET_AND_FOCUSED, SocialTag.SHARES_A_LIFT}
+        }

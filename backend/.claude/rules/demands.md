@@ -97,7 +97,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `bookings`; it went with desk check-in (#651). **Its second row now is `GameClubs`**
   (#657): where a booked game's club is — its name and map point, and how far a position is
   from it in great-circle metres — signed by `bookings` (`BookedGameClubs`), so an attendance
-  tap is measured against the place the game is played.
+  tap is measured against the place the game is played. **Its third is `TagsOnTheCourt`**
+  (#835, below): the Social tags on a For-fun court, signed over Discovery's player directory.
   **The twelfth, `bookings_demands.py`, is what Bookings publishes** (#544), beside its
   consumer register as `games_demands.py` stands beside `game_demands.py`: who kept the booked
   games they held a seat on (`BookingHistoryQuery`), *keeps plans*' input.
@@ -178,6 +179,16 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   off or started short, and never a leaver. **Friends gets no row and no method**: Friends
   answers nothing about two other people (`friends.md`), so the adapter asks
   `ReadRelations.friends_among` from each person's own side.
+  **A booked For-fun game's Social vibe adds a third row to `game_demands.py`** (#835;
+  ADR-0207 §11 — *Games declares its own tags port*): **`TagsOnTheCourt`**, the Social tags
+  of the people on a court as they hold them now (`held_by`), signed by
+  `DirectoryTagsOnTheCourt` (`games/infrastructure/directory_tags.py`) over Discovery's
+  `PlayerDirectory.tags_of_each` — the copy and the one statement Proposals' `PlayersTags`
+  reads, so a card and its booked game read one tag set — and contracted as `PlayersTags` is:
+  the tags committed over HTTP and the outbox drained, 💘 included, everybody asked answered
+  (none for an account holding none or unknown), and a tag edit read after its delivery. A
+  second port over the same read rather than a row naming Proposals' type: each consumer
+  declares its demand in its own words, and `games` imports no Proposals type.
   **A row carries a builder, and not always over a bare session.** Most build over a
   session; `payments_demands.py`'s and `push_demands.py`'s build over the settings, and
   `general_order_demands.py`'s over a Redis client.

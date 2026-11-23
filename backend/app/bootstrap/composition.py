@@ -777,7 +777,9 @@ from app.modules.games.domain.ports import (
     PlayedTogetherQuery,
     PlayerNames,
     ScoredGames,
+    TagsOnTheCourt,
 )
+from app.modules.games.infrastructure.directory_tags import DirectoryTagsOnTheCourt
 from app.modules.games.infrastructure.event_sourced_confirmed_results import (
     EventSourcedConfirmedResults,
 )
@@ -4840,6 +4842,14 @@ def build_game_court_pairing(
         ruleset=build_ruleset(),
         at_stake=build_at_stake_query(session, runtime=runtime),
     )
+
+
+def build_tags_on_the_court(session: AsyncSession) -> TagsOnTheCourt:
+    """The Social tags of the people on a court now — a booked For-fun game's
+    Social vibe — off the player directory's copy of the profiles', in one
+    statement (``docs/adr/0207`` §11, #835): the copy a For-fun card's vibe is
+    read from too (:func:`build_players_tags`)."""
+    return DirectoryTagsOnTheCourt(build_player_directory(session))
 
 
 def build_game_clubs(

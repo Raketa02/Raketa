@@ -292,15 +292,16 @@ async def read_games(
     },
     summary="The game's pairing",
     description=(
-        "**The game screen's forecast, split, stakes and Levels, computed when "
-        "you ask.** Nothing here is stored on the game, and nothing on "
+        "**The game screen's forecast, split, stakes, Levels and — on For fun "
+        "— Social vibe, computed when you ask.** Nothing here is stored on the "
+        "game, and nothing on "
         "`GET /games` changes: a seat there still carries a name and nothing "
         "else.\n\n"
         "**Read in your direction.** `split.gap` is your side's strength minus "
         "theirs, and `at_stake` is what a counted result would do to *your* "
         "Level — the rating engine's own rule read forward, side against side, "
         "so it is the pair the result will deliver.\n\n"
-        "**Three blocks, each omitted on its own ground.** `forecast` and "
+        "**Each block is omitted on its own ground.** `forecast` and "
         "`split` are omitted together when the pairing cannot be computed — "
         "somebody on the court holds no rating in the sport, or a seat could "
         "not be priced — and there is deliberately no reason beside the "
@@ -309,6 +310,13 @@ async def read_games(
         "to move or nothing to price against — you hold no rating in the sport, "
         "or nobody across the net does. `seats` names the Level of everybody "
         "the platform holds one for.\n\n"
+        "**A For-fun game carries its Social vibe** (`vibe`, #835): the "
+        "court's number — the one its card and its details showed — and a row "
+        "for each of your tags, naming who on the court carries it, worked "
+        "out from everybody's tags now. Omitted on a competitive game, while "
+        "a seat is open, and where nobody holds a tag that counts. The "
+        "forecast is still sent on a For-fun game, for the apps already on "
+        "phones; draw the vibe in its place.\n\n"
         "**Only while the game is awaiting an entry.** After *we played* — or "
         "after the entry window closed on silence — the route refuses, because "
         "a pairing is a claim about a game that has not happened."
@@ -571,10 +579,21 @@ def _pairing(one: GamePairingRead) -> GamePairingResponse:
     A pairing the port could not read at all — ``None`` — draws exactly what a
     pairing with nothing in it draws: nothing, with the seats empty. The wire
     does not tell the two apart, by decision (``docs/adr/0161`` §4).
+
+    A For-fun game's vibe is read beside the pairing and drawn on its own
+    ground (#835), so it crosses whether or not the Levels could be read.
     """
 
     pairing = one.pairing
     fields: dict[str, Any] = {"read_at": one.read_at, "seats": []}
+    if one.vibe is not None:
+        fields["vibe"] = {
+            "pct": one.vibe.pct,
+            "rows": [
+                {"tag": row.tag, "carried_by": list(row.carried_by)}
+                for row in one.vibe.rows
+            ],
+        }
     if pairing is None:
         return GamePairingResponse.model_validate(fields)
     fields["seats"] = [
