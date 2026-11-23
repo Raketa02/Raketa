@@ -1706,11 +1706,14 @@ them, and the server still serves where a request was found:
 | The row, spoken | `Social vibe, {n} percent, {word}` · `Social vibe, 82 percent, Great vibe` | one element, an `image` (§20.2): the band's word is said, since the colour is never the only cue (§20) |
 | The deck card | the row in the forecast's place on a For-fun card, and no forecast | the Games and Fill in screens A2.3; a competitive card keeps its forecast and draws no vibe |
 | The deck card's vs line, spoken | `{side} against {side}` · `You and zofia.b against ania.k and ewa.m` | where no forecast is drawn — a For-fun card, or one the server could not forecast — the line is spoken, the top row first: the forecast's name said the sides, and the row's name does not, so a listener still hears who partners whom. Under a forecast it stays a drawing, so the sides are said once |
+| The Friends card | the row where the forecast's figure, word and bar stood, on For fun, and no forecast | added 2026-11-23 by #842; the friends screens §7.2. The line-up's vibe, so a swap never moves it; flipping the kind switch flips the number. Its vs line is spoken as the deck card's is, wherever no forecast is drawn |
+| Post a game's fit, drawn | `{level} · {n}%` · `2,69 · 83%` | added 2026-11-23 by #842; the Games and Fill in screens A5.3. On a For-fun post the second figure is the Social vibe of the poster and that player, the `%` in its band's ink on paper (the Social vibe card's olive, a dimmed olive, grey) and the Level `muted`; a competitive post keeps `{level} · {pct}` with no `%` (`2,75 · 93`) |
+| Post a game's fit, spoken | `{name}, level {level}, Social vibe, {n} percent, {word}` · `zofia.b, level 2,69, Social vibe, 83 percent, Great vibe` | added 2026-11-23 by #842: the row's own sentence after the Level, *friend* after the name as before; a competitive fit keeps `a {pct} % even game` |
 
 **Where it is drawn next, and what each ticket adds.** The Social vibe card on a For-fun game's
 details (#840) draws the % with its word printed beside it and the grid of tags; the booked game and
 the game at the court draw that card (#841); the Friends card and Post a game's fits draw the % on
-For fun (#842). Each cites this section's bands and adds its own sentences here.
+For fun (#842, the rows above). Each cites this section's bands and adds its own sentences here.
 
 ### 33.1 The Social vibe card
 

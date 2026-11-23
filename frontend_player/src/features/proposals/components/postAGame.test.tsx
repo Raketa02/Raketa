@@ -14,6 +14,7 @@
 
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 
 import { PAYMENTS_COPY } from '@/features/payments/types';
 import { RECORD_TITLE } from '@/features/player_record/types';
@@ -24,8 +25,10 @@ import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { theme } from '@/shared/ui';
 import {
+  ANIA,
   DECK_READ_AT,
   KAROL,
+  KUBA,
   ZOFIA,
   groupDeck,
   liveYes,
@@ -74,6 +77,7 @@ import {
   OGRODY,
   THIN,
   askedOf,
+  forFunFit,
   freeCourt,
   postStillFilling,
   postedAnswer,
@@ -263,6 +267,10 @@ const bound = (key: string) =>
 const shut = (element: {
   readonly props: { readonly accessibilityState?: { readonly disabled?: boolean } };
 }) => element.props.accessibilityState?.disabled === true;
+
+/** The colour a text is drawn in, as its own style sets it. */
+const inkOf = (element: { readonly props: { readonly style?: unknown } }) =>
+  (StyleSheet.flatten(element.props.style as StyleProp<TextStyle>) as TextStyle | undefined)?.color;
 
 /** Open Saturday evening's sheet and pick its first court. */
 async function pickSaturdayEvening() {
@@ -744,6 +752,69 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
     ).toBeTruthy();
     const zofia = screen.getByTestId(`slot-fit-${ZOFIA().player_id}`);
     expect(within(zofia).queryByText(PROPOSALS_COPY.friendSpoken)).toBeNull();
+  });
+
+  // #842 (ADR-0207 §5): a For-fun post's fit says the Social vibe of the poster and them.
+  it('lines a For-fun post’s fits level · Social vibe, the % in its band’s ink, in the server’s order', async () => {
+    await openPosting();
+    // The server's order: the highest vibe first (#834) — not the Levels' (2,80 · 2,75 · 2,69 · 2,68).
+    stubPostingSlot(
+      transport,
+      CREW.id,
+      postingSlot({
+        kind: 'FOR_FUN',
+        fits: [
+          forFunFit(ZOFIA(), 83),
+          forFunFit(KUBA(), 60),
+          forFunFit(KAROL(), 36),
+          forFunFit(ANIA(), 14),
+        ],
+      }),
+    );
+    fireEvent.press(screen.getByRole('button', { name: 'For fun, a friendly' }));
+    await waitFor(() => expect(lastGridAsk()?.kind).toBe('FOR_FUN'));
+
+    // The other kind's grid is not drawn under it: the cell is back once For fun's is read.
+    fireEvent.press(await screen.findByTestId(`posting-cell-${SAT}-EVENING`));
+
+    const fits = within(await screen.findByTestId('slot-fits'));
+    expect(slotAsks().at(-1)?.kind).toBe('FOR_FUN');
+    expect(
+      fits.getAllByRole('button').map((fit) => fit.props.accessibilityLabel as string),
+    ).toEqual([
+      'zofia.b, level 2,69, Social vibe, 83 percent, Great vibe',
+      'kuba.w, level 2,80, Social vibe, 60 percent, Good vibe',
+      'karol.t, level 2,75, Social vibe, 36 percent, Some common ground',
+      'ania.k, level 2,68, Social vibe, 14 percent, Fresh mix',
+    ]);
+    expect(fits.getByText('2,69 · 83%')).toBeTruthy();
+    expect(fits.getByText('2,68 · 14%')).toBeTruthy();
+    // The % in its band's ink on paper, the Social vibe card's; the Level stays muted.
+    expect(inkOf(fits.getByText('83%'))).toBe(theme.color.oliveInk);
+    expect(inkOf(fits.getByText('60%'))).toBe(theme.color.oliveInk);
+    expect(inkOf(fits.getByText('36%'))).toBe(theme.color.oliveInkDim);
+    expect(inkOf(fits.getByText('14%'))).toBe(theme.color.vibeGrey);
+    expect(inkOf(fits.getByText('2,69 · 83%'))).toBe(theme.color.muted);
+  });
+
+  it('lines a competitive post’s fits as before — level · % even, and no Social vibe', async () => {
+    await openPosting();
+
+    fireEvent.press(cellOf(SAT, 'EVENING'));
+
+    const fits = within(await screen.findByTestId('slot-fits'));
+    expect(slotAsks().at(-1)?.kind).toBe('COMPETITIVE');
+    expect(inkOf(fits.getByText('2,75 · 93'))).toBe(theme.color.muted);
+    expect(
+      fits.getAllByRole('button').map((fit) => fit.props.accessibilityLabel as string),
+    ).toEqual([
+      'karol.t, level 2,75, a 93 % even game',
+      'zofia.b, level 2,69, a 95 % even game',
+      'ania.k, level 2,68, a 99 % even game',
+      'ewa.m, level 2,60, a 91 % even game',
+      'kuba.w, level 2,80, a 96 % even game',
+    ]);
+    expect(fits.queryByText(/%$/)).toBeNull();
   });
 
   it('warns a thin cell may not fill, and says it outside the player’s hours', async () => {

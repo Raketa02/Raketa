@@ -147,7 +147,7 @@ through what holds it (`useTopOnPage`), and a page that watches shows what a lin
 (`PageReveal`). And by For fun's Social vibe ([#838](https://github.com/Raketa02/Raketa/issues/838)):
 `SocialVibeRow` (7.38) — the % beside a 0–100 bar filled to it, _Social vibe_ inside, coloured by
 `shared/vocabulary`'s `socialVibeBand`. **It came down ahead of its second caller**, as ADR-0207 §9.4
-decides: it is the deck card's row, the Friends card's next (#842), and a part of the Social vibe
+decides: it is the deck card's row, the Friends card's (#842), and a part of the Social vibe
 card, which the game at the court draws in `games` (#841) — so it is built where both features reach
 it rather than copied out of `proposals` later. And by a competitive game's details
 ([#839](https://github.com/Raketa02/Raketa/issues/839)): **`ForecastBlock`** — _BALANCE FORECAST_,

@@ -4894,8 +4894,10 @@ export interface components {
             home_club: components["schemas"]["DeckClubSchema"];
             /** @description The evenest way the line-up can stand, or the sides sent (`partner_id`). */
             sides: components["schemas"]["FriendsCardSidesSchema"];
-            /** @description *87% · Very even* for these sides; `null` where it cannot be read. */
+            /** @description *87% · Very even* for these sides. **Always `null` when `kind` is `FOR_FUN`**, which says its `vibe` instead (`docs/adr/0207` §5) — its sides are still the evenest. Also `null` where it cannot be read. */
             forecast: components["schemas"]["DeckForecastSchema"] | null;
+            /** @description When `kind` is **`FOR_FUN`**, the Social vibe of the line-up — the reader and every friend seated, however they stand, so a swap never moves it; worked out from everybody's tags now (#834). Flipping the kind switch flips the card's number. **Always `null` on `COMPETITIVE`**, and where nobody seated holds a tag. */
+            vibe: components["schemas"]["DeckVibeSchema"] | null;
             /** @description The court picked (`court_id` and `starts_at`), or the one proposed: the soonest hour where the whole line-up is free, failing that the soonest where most of them are. `null` when no court is free in the next 14 days — the card's place says so, and *Pick a different court* is gone. */
             court: components["schemas"]["FriendsCourtSchema"] | null;
             /** @description The line-up's weeks, the court's hour ringed; `null` with no court, which draws no card. */
@@ -8295,7 +8297,7 @@ export interface components {
             cell: components["schemas"]["PostingCellSchema"];
             /**
              * Fits
-             * @description The best fits free at the cell's best hour, best fit first.
+             * @description The best fits free at the cell's best hour, best fit first: the most even game, or on a `FOR_FUN` post the highest `vibe`, a tie falling to the most even.
              */
             fits: components["schemas"]["SlotFitSchema"][];
             /**
@@ -9561,7 +9563,9 @@ export interface components {
         };
         /**
          * SlotFitSchema
-         * @description One of the poster's best fits free then — *2,75 · 93*.
+         * @description One of the poster's best fits free then — *2,75 · 93*, the second
+         *     figure being the kind's own number: how even, or on a For-fun post how
+         *     much the two of them share.
          */
         SlotFitSchema: {
             /**
@@ -9588,8 +9592,10 @@ export interface components {
              * @description **Your** friend — the *FRIEND* tag (`docs/adr/0202` §2); only your own friends ever carry it.
              */
             friend: boolean;
-            /** @description How even a game of the poster and them is forecast — `null` where it cannot be read. */
+            /** @description How even a game of the poster and them is forecast. **Always `null` on a `FOR_FUN` post**, which says its `vibe` instead (`docs/adr/0207` §5). Also `null` where it cannot be read. */
             forecast: components["schemas"]["DeckForecastSchema"] | null;
+            /** @description On a **`FOR_FUN`** post, the Social vibe of **the poster and them**, worked out from the two's tags now — and the fits are ranked by it, highest first, a tie falling to the forecast and then the pool's order (#834). **Always `null` on a `COMPETITIVE` post**, and where neither holds a tag. */
+            vibe: components["schemas"]["DeckVibeSchema"] | null;
         };
         /**
          * SocialTag

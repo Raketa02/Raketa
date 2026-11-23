@@ -485,10 +485,15 @@ export type Headline =
  * card draws no vibe for the same reason the other way. `undefined` where the server sent the kind's
  * number none — somebody unrated, nobody facing you yet, or nobody at the table holding a tag — and
  * the row is not drawn.
+ *
+ * **One rule for every compact surface** (ADR-0207 §5): the deck card, the Friends card, and a fit
+ * on Post a game's sheet, whose kind is the post's (#842) — so it takes only the two numbers.
  */
-export function headlineOf(
-  card: Pick<DeckCard, 'kind' | 'forecast' | 'vibe'>,
-): Headline | undefined {
+export function headlineOf(card: {
+  readonly kind: GameKind;
+  readonly forecast?: { readonly pct: number };
+  readonly vibe?: { readonly pct: number };
+}): Headline | undefined {
   if (card.kind === 'forFun') {
     return card.vibe === undefined ? undefined : { kind: 'vibe', pct: card.vibe.pct };
   }

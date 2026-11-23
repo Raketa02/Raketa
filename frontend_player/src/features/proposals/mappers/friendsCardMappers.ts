@@ -4,7 +4,8 @@
  * stop here and in `api/`.
  *
  * The deck's narrowings, borrowed whole: a club with no name, a forecast the server could not
- * read, and an overlap whose game cell names no weekday (`toClub`, `toForecast`, `toOverlap`). A
+ * read, a For-fun card's Social vibe — none from an older server, which sends no `vibe` — and an
+ * overlap whose game cell names no weekday (`toClub`, `toForecast`, `toVibe`, `toOverlap`). A
  * `null` becomes a field left off — *no court in the next 14 days* is a card with no `court`.
  * **Two fields stay on the wire**: a row's `free_count`, which the busy list already says, and the
  * card's `cut_off`, which is the send sheet's (#759).
@@ -21,7 +22,7 @@ import type {
   FriendsCourts,
 } from '../domain/friendsCard';
 
-import { toClub, toForecast, toOverlap, toWireKind } from './deckMappers';
+import { toClub, toForecast, toKind, toOverlap, toVibe, toWireKind } from './deckMappers';
 
 type Schemas = components['schemas'];
 
@@ -42,9 +43,11 @@ export function toFriendsCourt(wire: Schemas['FriendsCourtSchema']): FriendsCour
 export function toFriendsCard(wire: Schemas['FriendsCardResponse']): FriendsCard {
   const overlap = wire.overlap === null ? undefined : toOverlap(wire.overlap);
   return {
+    kind: toKind(wire.kind),
     homeClub: toClub(wire.home_club),
     sides: { yours: [...wire.sides.yours], theirs: [...wire.sides.theirs] },
     ...toForecast(wire.forecast),
+    ...toVibe(wire.vibe),
     ...(wire.court === null ? {} : { court: toFriendsCourt(wire.court) }),
     ...(overlap === undefined ? {} : { overlap }),
     ...(wire.cut_off === null ? {} : { cutOff: wire.cut_off }),

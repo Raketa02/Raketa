@@ -9,10 +9,10 @@
  *
  * The Social vibe is For fun's headline number where the forecast is Competitive's (ADR-0207 §5),
  * so its bands sit beside `balancePresentation`'s, below every feature that draws the number: the
- * deck card and the Social vibe card (#840) today, the Friends card and Post a game's fits next. **One ladder
- * drives both the word and the tone**, from one hue family — volt, a dimmed volt, then grey. The
- * forecast's green / amber / red is not reused: a vibe is not a verdict, and *Fresh mix* is not a
- * bad game.
+ * deck card, the Social vibe card (#840), the Friends card and Post a game's fits (#842). **One
+ * ladder drives both the word and the tone**, from one hue family — volt, a dimmed volt, then grey.
+ * The forecast's green / amber / red is not reused: a vibe is not a verdict, and *Fresh mix* is not
+ * a bad game.
  *
  * **The thresholds are the app's presentation** (ADR-0207 §8). The server sends only the %, and the
  * breaks can be tuned here once real numbers exist, with no ruleset release. Which colour each tone
@@ -51,6 +51,15 @@ const BANDS: readonly (readonly [number, SocialVibeBand])[] = [
 
 /** Below every floor. Named rather than inlined, so the fourth band is as findable as three. */
 const FRESH_MIX: SocialVibeBand = { word: 'Fresh mix', tone: 'grey' };
+
+/**
+ * **The figure every mark draws** — the served %, held to 0–100 and whole. The server sends a whole
+ * 0–100, so this only holds a slip to the scale rather than drawing *130%*, and it is applied once,
+ * before anything is banded, printed or said, so the figure, its band and its words never disagree.
+ */
+export function socialVibeShown(pct: number): number {
+  return Math.round(Math.min(100, Math.max(0, pct)));
+}
 
 /**
  * *Great vibe* · *Good vibe* · *Some common ground* · *Fresh mix*, each with its tone.

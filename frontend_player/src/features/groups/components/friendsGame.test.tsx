@@ -190,9 +190,14 @@ function query(request: RecordedRequest): URLSearchParams {
   return new URL(`https://test${request.path}`).searchParams;
 }
 
+/** The line-up's Social vibe on For fun (#834) — *Good vibe*, whoever stands beside whom. */
+const LINE_UP_VIBE = 67;
+
 /**
  * The card: the evenest sides are you and ewa.m against the other two — or, after a swap, the
- * partner sent beside you. A court picked comes back as the card's.
+ * partner sent beside you. A court picked comes back as the card's. **Each kind says its own
+ * number**, as the server does (#834): *87%* on Competitive, the Social vibe and no forecast on For
+ * fun.
  */
 function cardFor(request: RecordedRequest): Wire['FriendsCardResponse'] {
   const asked = query(request);
@@ -202,16 +207,18 @@ function cardFor(request: RecordedRequest): Wire['FriendsCardResponse'] {
   const court = ROWS.find(
     (one) => one.court_id === courtId && one.starts_at === asked.get('starts_at'),
   );
+  const kind = asked.get('kind') as Wire['SearchMode'];
   return {
     pool_id: GROUP.id,
     sport: asked.get('sport') as Wire['Sport'],
-    kind: asked.get('kind') as Wire['SearchMode'],
+    kind,
     home_club: HOME,
     sides:
       partner === undefined
         ? { yours: [ME], theirs: friends }
         : { yours: [ME, partner], theirs: friends.filter((one) => one !== partner) },
-    forecast: { pct: 87, provisional: false },
+    forecast: kind === 'FOR_FUN' ? null : { pct: 87, provisional: false },
+    vibe: kind === 'FOR_FUN' ? { pct: LINE_UP_VIBE } : null,
     court: court ?? PROPOSED,
     overlap: OVERLAP,
     cut_off: '2026-10-02T08:00:00Z',
@@ -328,7 +335,35 @@ describe('the switch', () => {
     expect(lastCardAsked().get('partner_id')).toBe(EWA);
     expect(await seatNamed('Your side, your partner, ewa.m, level 2,60')).toBeTruthy();
   });
+
+  // #842 (ADR-0207 §5): the card's number is the kind's own, and the switch flips it.
+  it('flips the card’s number with the kind — the forecast on Competitive, the Social vibe on For fun', async () => {
+    await openFriendsTab();
+    await seat(MAGDA, EWA, ANIA);
+
+    let card = await screen.findByTestId('friends-card');
+    expect(within(card).getByTestId('friends-card-forecast')).toBeTruthy();
+    expect(within(card).getByText('87%')).toBeTruthy();
+    expect(within(card).queryByLabelText(VIBE_SPOKEN)).toBeNull();
+
+    fireEvent.press(await tab(COPY.friends.forFun, false));
+
+    expect(await screen.findByLabelText(VIBE_SPOKEN)).toBeTruthy();
+    card = screen.getByTestId('friends-card');
+    expect(within(card).getByText('67%')).toBeTruthy();
+    expect(within(card).queryByTestId('friends-card-forecast')).toBeNull();
+    expect(within(card).queryByText('87%')).toBeNull();
+
+    fireEvent.press(await tab(COPY.friends.competitive, false));
+
+    expect(await screen.findByTestId('friends-card-forecast')).toBeTruthy();
+    expect(within(screen.getByTestId('friends-card')).getByText('87%')).toBeTruthy();
+    expect(screen.queryByLabelText(VIBE_SPOKEN)).toBeNull();
+  });
 });
+
+/** The line-up's Social vibe as its row says it — the figure, then the band's word. */
+const VIBE_SPOKEN = `Social vibe, ${LINE_UP_VIBE} percent, Good vibe`;
 
 describe('the picker', () => {
   it('opens from an empty seat with no tabs, Done at its foot and + Add friends at its head', async () => {
@@ -605,6 +640,38 @@ describe('the card', () => {
     expect(within(card).getByText('25 zł each')).toBeTruthy();
     expect(within(card).getByText('Saturday 10:00 · Ogrody 33 · Court 3 · indoor')).toBeTruthy();
     expect(within(card).getByRole('button', { name: CARD.pickACourt })).toBeTruthy();
+  });
+
+  // #842 (ADR-0207 §5): For fun's card says the line-up's Social vibe, and draws no forecast.
+  it('on For fun, draws the Social vibe row where the forecast stood, and says the sides itself', async () => {
+    useFriendsGame.setState({ kind: 'forFun', lineUps: {} });
+    await openFriendsTab();
+
+    await seat(MAGDA, EWA, ANIA);
+
+    const card = await screen.findByTestId('friends-card');
+    expect(within(card).getByLabelText(VIBE_SPOKEN)).toBeTruthy();
+    expect(within(card).getByText('67%')).toBeTruthy();
+    expect(within(card).queryByTestId('friends-card-forecast')).toBeNull();
+    expect(within(card).queryByText('Very even')).toBeNull();
+    // With no forecast to name them, the vs line says the sides to a listener.
+    expect(within(card).getByLabelText('You and ewa.m against magda.p and ania.k')).toBeTruthy();
+    // The rest of the card is the competitive one's.
+    expect(within(card).getByTestId('overlap-grid')).toBeTruthy();
+    expect(within(card).getByText(CARD.courtAvailable)).toBeTruthy();
+    expect(within(card).getByRole('button', { name: CARD.pickACourt })).toBeTruthy();
+  });
+
+  it('on Competitive, leaves the vs line a drawing — the forecast’s name says the sides', async () => {
+    await openFriendsTab();
+
+    await seat(MAGDA, EWA, ANIA);
+
+    const card = await screen.findByTestId('friends-card');
+    expect(within(card).queryByLabelText('You and ewa.m against magda.p and ania.k')).toBeNull();
+    expect(within(card).getByTestId('friends-card-forecast').props.accessibilityLabel).toContain(
+      'You + ewa against magda + ania',
+    );
   });
 
   it('says so in one line when no court is free in the next 14 days', async () => {

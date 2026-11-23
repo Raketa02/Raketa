@@ -52,6 +52,7 @@ import {
   socialVibeBand,
   socialVibeColumnName,
   socialVibeRowSpoken,
+  socialVibeShown,
   socialVibeSpoken,
   type SocialVibeTone,
 } from '@/shared/vocabulary/socialVibePresentation';
@@ -64,7 +65,9 @@ import { theme } from './theme';
 /**
  * Each band's figure **on paper** — olive ink for *Great* and *Good vibe*, a dimmed olive for *Some
  * common ground*, the grey for *Fresh mix* (ADR-0207 §8). Volt as a foreground on paper is ~1,3:1,
- * so the figure cannot be the fill's colour here, as it is on the dark card.
+ * so the figure cannot be the fill's colour here, as it is on the dark card. **The Social vibe's
+ * figure on paper wherever it is printed**: a For-fun fit's % on Post a game's sheet reads it too
+ * (#842), on the same `surface`.
  */
 export const SOCIAL_VIBE_CARD_FIGURE: Readonly<Record<SocialVibeTone, string>> = {
   volt: theme.color.oliveInk,
@@ -86,9 +89,8 @@ export interface SocialVibeCardProps {
 }
 
 export function SocialVibeCard({ grid }: SocialVibeCardProps) {
-  // One number for every mark, as on the row: the server sends a whole 0–100, and this only holds
-  // a slip to the scale rather than drawing *130%*.
-  const pct = Math.round(Math.min(100, Math.max(0, grid.pct)));
+  // One number for every mark, as on the row.
+  const pct = socialVibeShown(grid.pct);
   const band = socialVibeBand(pct);
 
   return (

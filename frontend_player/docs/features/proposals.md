@@ -181,7 +181,8 @@ tiles and the vs line, where a competitive card draws its forecast, a For-fun ca
 `shared/ui`'s `SocialVibeRow`: the deck's `vibe.pct` beside a 0–100 bar filled to it, with _Social
 vibe_ inside, spoken _Social vibe, 82 percent, Great vibe_. **`headlineOf` (`domain/deck.ts`) is the
 rule**: the kind's own number or nothing, so a For-fun card draws no forecast even if one is sent,
-and a competitive card no vibe. The row keeps the forecast row's height, so the ribbon, tiles, vs
+and a competitive card no vibe — the Friends card and Post a game's fits read it too (#842), so it
+takes only the two numbers and the kind. The row keeps the forecast row's height, so the ribbon, tiles, vs
 line, grid and court block stand where they stood. **The vs line speaks where no forecast is
 drawn** (`GameTiles`' `speaksSides`): the forecast's name said the sides, the row's does not, so on
 For fun — and on a card the server could not forecast — the line is read as _You and zofia.b against
@@ -638,7 +639,7 @@ other refusal the shared retry; offline, the amber _resumes_.
 _Nobody who fits is free then_, a courtless one _No court is free then — every game needs a court._
 — and is read for the controls the grid was read with: the headline (_5 of your best fits free
 then_, _only 2 fit · may not fill_ where a court is free and fewer than a full game are, each with
-_· outside your hours_), the fits (7.16's card panels, the name whole, _2,75 · 93_), the free courts
+_· outside your hours_), the fits (7.16's card panels, the name whole, _2,75 · 93_ — the kind's own number, below), the free courts
 home club first with their own _4 free_, and **Already happening here**: rescues (_Pay 30 zł_)
 then posts still filling (no court number, _I'm in_, and _Pay 32 zł_ on a post's last seat, Q124). **A court tapped is the pick**, replacing the
 last, and the sheet closes so the ringed cell and the open button are what follows; on the picked
@@ -651,6 +652,22 @@ hour — and the club's name and the share under the button are read off the pic
 copied into the store. **A fit opens their record in the
 sheet's place** — two sheets are never up at once, BuilderScreen's rule — and closing it brings the
 sheet back.
+
+**A fit's second figure is the post's kind's own number** (#842; ADR-0207 §5, over #834's `vibe`).
+The fits are lined by the kind the sheet was read for (`PostingSlot.kind`, the read's own, as the
+Friends card's), and `fitLine` / `fitSpoken` lead through the deck card's `headlineOf`, so one rule
+says which number every compact surface draws: a competitive post keeps
+_2,75 · 93_ and _a 93 % even game_, unchanged; **a For-fun post's fit reads _2,69 · 83%_, the Social
+vibe of the poster and that player**, spoken _zofia.b, level 2,69, Social vibe, 83 percent, Great
+vibe_ — the row's own sentence — and draws no forecast, even one a read sent. The figure is the
+row's and the card's (`socialVibeShown`: whole, held to 0–100, banded as printed). **The % is coloured by
+its band on paper** with the Social vibe card's figure inks (`SOCIAL_VIBE_CARD_FIGURE`: `oliveInk`,
+`oliveInkDim`, `vibeGrey`, each past AA on the sheet's `surface`); the Level and the dot stay
+`muted`, so the line is one `num.tiny` with the figure a nested span. **The fits stand in the
+server's order** — on For fun the highest vibe first, a tie to the most even (#834) — and nothing
+here sorts them. **No mock draws it** (the for-fun mocks' README): designed from ADR-0207 §9.4,
+which makes the row's number Post a game's figure, with the % sign the row prints, since a bare
+figure would read as the forecast's. **Not seen on a device**: the olive figures at `num.tiny`.
 
 **Joining from the sheet is the fill's** (`useFill`, `useFillYes`): the sheet closes first, so the
 payment setup never opens over it; a rescue counts its ten seconds behind _Undo_ and pays, raising
@@ -1383,6 +1400,20 @@ calls, _Somebody here has no padel level yet. Swap someone._ and _Somebody here 
 more. Seat someone else._ **A court picked that is no longer for sale** is handed back
 (`onCourtGone`) and the card asks again for one it proposes, saying nothing (a call). Anything else:
 why, with _Try again_.
+
+**The number is the kind's own, and the switch flips it** (#842; ADR-0207 §5, over #834's `vibe`).
+The card carries the kind it was read for (`FriendsCard.kind`) and leads through the deck's own
+`headlineOf`: on Competitive the forecast, as above; on **For fun the Social vibe row**
+(`SocialVibeRow`, 7.38) where the figure, its word and the bar stood — the line-up's vibe, everybody
+seated however they stand, so a swap never moves it — and **no forecast, even one a read sent**. The
+switch is part of the card's key, so a flip reads the card again and the number flips with it. **No
+mock draws it** (the for-fun mocks' README): the row is the deck card's, drawn as-is — the % beside
+its 0–100 bar rather than friends 9's centred figure — since ADR-0207 §9.4 makes it the Friends
+card's row too, and the rest of the card does not move. **The vs line is spoken where no forecast is
+drawn** (`sidesSpoken`, _You and ewa.m against magda.p and ania.k_), the deck card's rule: the
+forecast's name says the sides and the vibe row's does not — which also gives a competitive card the
+server could not forecast its sides, which it said nowhere before. **Not seen on a device**: the row
+in the card's column, between the vs line and the overlap grid.
 
 **The court panel is `CourtBlock`, with three props the deck leaves off**: the tag's words (§29.6's
 _Court available_), the share as _25 zł each_, and _Ogrody 33 is full at 10:00_ under the line on

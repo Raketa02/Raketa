@@ -95,14 +95,23 @@ export interface PostingGrid {
   readonly days: readonly PostingDay[];
 }
 
-/** One of the poster's best fits free then — *2,75 · 93*. */
+/**
+ * One of the poster's best fits free then — *2,75 · 93*, or on a For-fun post *2,75 · 67%*: the
+ * second figure is the kind's own number (the deck's `headlineOf`, ADR-0207 §5).
+ */
 export interface SlotFit {
   readonly playerId: string;
   readonly name?: string;
   readonly photoUrl?: string;
   readonly level?: number;
-  /** How even a game of the poster and them is forecast. */
-  readonly forecastPct?: number;
+  /** How even a game of the poster and them is forecast. The server sends none on For fun. */
+  readonly forecast?: { readonly pct: number };
+  /**
+   * **On a For-fun post, the Social vibe of the poster and them** (#834), worked out from the two's
+   * tags now; the fits come ranked by it. Absent on a competitive post, and where neither holds a
+   * tag.
+   */
+  readonly vibe?: { readonly pct: number };
   /** The reader's own friend — *friend* under the name (#753; Q68). Present only when they are. */
   readonly friend?: true;
 }
@@ -142,13 +151,18 @@ export interface PostStillFilling {
 
 /** **A cell's sheet** (A5.3). */
 export interface PostingSlot {
+  /** The kind it was read for — which number its fits are lined with (the deck's `headlineOf`). */
+  readonly kind: GameKind;
   readonly day: string;
   readonly range: DayRange;
   readonly readAt: string;
   readonly openSeats: number;
   /** The headline's cell. */
   readonly cell: PostingCell;
-  /** The best fits free at the cell's best hour, best fit first. */
+  /**
+   * The best fits free at the cell's best hour, best fit first — on a For-fun post the highest
+   * Social vibe first (#834). Drawn in the order served, never re-sorted.
+   */
   readonly fits: readonly SlotFit[];
   /** Home club first, then by hour. */
   readonly freeCourts: readonly FreeCourt[];

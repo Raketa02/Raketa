@@ -37,9 +37,9 @@
  * vibe, 82 percent, Great vibe* (ADR-0207 §8): the band's word is said, since the colour is never
  * the only cue (Part 13), and the figure is drawn.
  *
- * **On dark only.** The deck card draws it; the Friends card draws it next (#842), on the same
- * ground. The Social vibe card on paper (`SocialVibeCard`, #840) draws its own bar — full width
- * under the % and its word, with no name inside — in the same fills, with olive inks for the figure.
+ * **On dark only.** The deck card draws it, and a For-fun Friends card (#842) on the same ground.
+ * The Social vibe card on paper (`SocialVibeCard`, #840) draws its own bar — full width under the %
+ * and its word, with no name inside — in the same fills, with olive inks for the figure.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -48,6 +48,7 @@ import { formatPercent } from '@/shared/formatting/ratingFormat';
 import {
   SOCIAL_VIBE,
   socialVibeBand,
+  socialVibeShown,
   socialVibeSpoken,
   type SocialVibeTone,
 } from '@/shared/vocabulary/socialVibePresentation';
@@ -70,9 +71,8 @@ export interface SocialVibeRowProps {
 }
 
 export function SocialVibeRow({ pct }: SocialVibeRowProps) {
-  // One number for every mark: the figure printed is the fill, the word and the name. The server
-  // sends a whole 0–100, so this only holds a slip to the scale rather than drawing *130%*.
-  const filled = Math.round(Math.min(100, Math.max(0, pct)));
+  // One number for every mark: the figure printed is the fill, the word and the name.
+  const filled = socialVibeShown(pct);
   const colour = SOCIAL_VIBE_ON_DARK[socialVibeBand(filled).tone];
 
   return (

@@ -12,6 +12,7 @@ import {
   socialVibeBand,
   socialVibeColumnName,
   socialVibeRowSpoken,
+  socialVibeShown,
   socialVibeSpoken,
 } from './socialVibePresentation';
 
@@ -27,6 +28,14 @@ describe('the bands', () => {
     [0, 'Fresh mix', 'grey'],
   ] as const)('reads %i%% as %s, in %s', (pct, word, tone) => {
     expect(socialVibeBand(pct)).toEqual({ word, tone });
+  });
+
+  // One number for every mark (#842): a slip to the scale is held, and the figure is whole.
+  it('shows the served % whole and held to 0–100, so the figure, the band and the words agree', () => {
+    expect(socialVibeShown(67)).toBe(67);
+    expect(socialVibeShown(69.6)).toBe(70);
+    expect(socialVibeShown(130)).toBe(100);
+    expect(socialVibeShown(-4)).toBe(0);
   });
 
   it('gives every percentage a word, because the tone is not allowed to be the only cue', () => {

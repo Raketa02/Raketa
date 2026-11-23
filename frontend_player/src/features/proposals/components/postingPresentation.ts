@@ -16,10 +16,22 @@ import { platformClock, weekdayOf } from '@/shared/date/platformZone';
 import type { AppError } from '@/shared/errors';
 import { codeMessage } from '@/shared/errors';
 import { counted } from '@/shared/formatting/counted';
-import { formatDistanceKm, formatLevel, formatZloty } from '@/shared/formatting/ratingFormat';
+import {
+  formatDistanceKm,
+  formatLevel,
+  formatPercent,
+  formatZloty,
+} from '@/shared/formatting/ratingFormat';
 import { dayLabel } from '@/shared/vocabulary/availabilityPresentation';
+import {
+  socialVibeBand,
+  socialVibeShown,
+  socialVibeSpoken,
+  type SocialVibeTone,
+} from '@/shared/vocabulary/socialVibePresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import { headlineOf, type Headline } from '../domain/deck';
 import type { SeatToFill } from '../domain/fillIn';
 import {
   cellFill,
@@ -33,7 +45,7 @@ import {
   type PostStillFilling,
   type SlotFit,
 } from '../domain/posting';
-import type { DayRange } from '../domain/vocabulary';
+import type { DayRange, GameKind } from '../domain/vocabulary';
 import { calendarDayOf, gameDayOf } from '../domain/when';
 
 import { LINE_JOIN, clubName, gameDayWords, shortMoment } from './deckPresentation';
@@ -159,13 +171,34 @@ export function slotHeadline(cell: PostingCell): {
   return { count: cell.fitsFree, words: `${words}${outside}` };
 }
 
-/** *2,75 · 93* — a fit's Level and how even a game with them is forecast. */
-export function fitLine(fit: SlotFit): string | undefined {
-  const parts = [
-    fit.level === undefined ? undefined : formatLevel(fit.level),
-    fit.forecastPct === undefined ? undefined : String(fit.forecastPct),
-  ].filter((part): part is string => part !== undefined);
-  return parts.length === 0 ? undefined : parts.join(LINE_JOIN);
+/**
+ * A part of a fit's line, drawn between `LINE_JOIN`s — the Level, then the kind's own figure. On a
+ * For-fun post the figure carries its band, whose ink on paper it is drawn in.
+ */
+export interface FitLinePart {
+  readonly text: string;
+  readonly vibe?: SocialVibeTone;
+}
+
+/**
+ * *2,75 · 93* — a fit's Level and how even a game with them is forecast; on a For-fun post *2,75 ·
+ * 67%*, the Social vibe of the two of you, its % coloured by band (ADR-0207 §5, #842). **The kind's
+ * own number or none** (`headlineOf`): a forecast a For-fun read sent anyway is not drawn. Empty:
+ * nothing to line.
+ */
+export function fitLine(fit: SlotFit, kind: GameKind): readonly FitLinePart[] {
+  const number = headlineOf({ ...fit, kind });
+  return [
+    ...(fit.level === undefined ? [] : [{ text: formatLevel(fit.level) }]),
+    ...(number === undefined ? [] : [figurePart(number)]),
+  ];
+}
+
+/** The kind's own figure — a Social vibe drawn as the row draws it: whole, held, in its band. */
+function figurePart(number: Headline): FitLinePart {
+  if (number.kind === 'forecast') return { text: String(number.pct) };
+  const shown = socialVibeShown(number.pct);
+  return { text: formatPercent(shown), vibe: socialVibeBand(shown).tone };
 }
 
 /** A fit's nickname — whole, never cut (ADR-0199 §1); the unknown's mark without one. */
@@ -173,13 +206,23 @@ export function fitName(fit: SlotFit): string {
   return fit.name ?? '?';
 }
 
-/** *karol.t, level 2,75, a 93 % even game* — a fit, spoken. */
-export function fitSpoken(fit: SlotFit): string {
+/**
+ * *karol.t, level 2,75, a 93 % even game* — a fit, spoken; on a For-fun post *zofia.b, level 2,69,
+ * Social vibe, 83 percent, Great vibe*, the row's own words (`socialVibeSpoken`).
+ */
+export function fitSpoken(fit: SlotFit, kind: GameKind): string {
+  const number = headlineOf({ ...fit, kind });
   return [
     fitName(fit),
     ...(fit.friend === true ? [PROPOSALS_COPY.friendSpoken] : []),
     ...(fit.level === undefined ? [] : [`level ${formatLevel(fit.level)}`]),
-    ...(fit.forecastPct === undefined ? [] : [`a ${fit.forecastPct} % even game`]),
+    ...(number === undefined
+      ? []
+      : [
+          number.kind === 'vibe'
+            ? socialVibeSpoken(socialVibeShown(number.pct))
+            : `a ${number.pct} % even game`,
+        ]),
   ].join(SPOKEN_JOIN);
 }
 

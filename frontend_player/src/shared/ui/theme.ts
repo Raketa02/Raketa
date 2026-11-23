@@ -327,7 +327,8 @@ const color = {
 
   /** THE SOCIAL VIBE CARD'S PAPER PAINT (#840; ADR-0207 §8–§9, docs/design-system.md 7.39,
    *  Part 16 2026-11-23) — the card a For-fun game's details open on, on `surface`. ADR-0207 §9's
-   *  named exceptions, and drawn by `SocialVibeCard` alone.
+   *  named exceptions, drawn by `SocialVibeCard` — and the three figure inks by a For-fun fit's %
+   *  on Post a game's sheet, also on `surface` (#842, `SOCIAL_VIBE_CARD_FIGURE`), nowhere else.
    *
    *  `voltPale` — A SHARED ROW'S BAND, MEASURED off for fun 7 to the pixel. Against 1.2's *volt has
    *  no soft and needs none*: the mock's grid reads across a pale volt band, so the band is one,
