@@ -35,7 +35,7 @@ export { useRereadGroupGames } from './hooks/useGroupDeck';
  * Fill in tab, with the badge its tab reads; the page hands in the starting card for a tab with no
  * rows, as it does the Games tab's.
  */
-export { FillInBoard, type FillInBoardProps } from './components/FillInBoard';
+export { FillInStack, type FillInStackProps } from './components/FillInStack';
 export { useFillInBadge } from './hooks/useFillIn';
 export { FILL_IN_COPY } from './components/fillInCopy';
 export { parseGameDetailsParams } from './schemas/gameDetailsParams';

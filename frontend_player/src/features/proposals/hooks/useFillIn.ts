@@ -14,16 +14,31 @@ import { useQuery } from '@tanstack/react-query';
 import type { AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { FillIn } from '../domain/fillIn';
+import { standingSeats, type FillIn, type SeatToFill } from '../domain/fillIn';
 import { readFillIn } from '../use-cases/fillIn';
 
 import { proposalKeys } from './proposalKeys';
+import { useReadClock } from './useHome';
 
 export function useFillIn(groupId: string, sport: Sport) {
   return useQuery<FillIn, AppError>({
     queryKey: proposalKeys.fillIn(groupId, sport),
     queryFn: ({ signal }) => readFillIn(groupId, sport, { signal }),
   });
+}
+
+/**
+ * **The rescues still offered, on the read's clock** — the read, the clock, running while a row is
+ * offered so a row leaves at its deadline by itself, and the rows standing at it: `undefined` until
+ * the read has answered.
+ */
+export function useSeatsToFill(groupId: string, sport: Sport) {
+  const read = useFillIn(groupId, sport);
+  const board = read.data;
+  const now = useReadClock(board?.readAt, read.dataUpdatedAt, (board?.seatsToFill.length ?? 0) > 0);
+  const seats: readonly SeatToFill[] | undefined =
+    board === undefined ? undefined : standingSeats(board.seatsToFill, now);
+  return { read, now, seats };
 }
 
 /** **The Fill in tab's badge** — the *Seats to fill* rows (the screens A1, mock 11). */

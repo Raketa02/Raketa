@@ -86,7 +86,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LevelDoor, fromAGroup } from '@/features/onboarding/types';
 import {
-  FillInBoard,
+  FillInStack,
   forgetPostDraft,
   useFillInBadge,
   useGamesBadge,
@@ -312,7 +312,7 @@ function TabBody({
     case 'games':
       return <GamesTab group={group} sport={sport} />;
     case 'fillIn':
-      return <FillInBoard groupId={group.id} sport={sport} empty={<FillInTab group={group} />} />;
+      return <FillInStack groupId={group.id} sport={sport} empty={<FillInTab group={group} />} />;
     case 'friends':
       return <FriendsTab group={group} sport={sport} />;
   }
