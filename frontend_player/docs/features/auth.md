@@ -325,7 +325,29 @@ it, so what arrives is a cancellation rather than the 401. The session machine a
 `unauthenticated`, and the launch says the same rather than opening the session again. **Not
 covered**: a launch that starts on an expired access token refreshes with the ordinary `request`
 budget — the rotation is single-flight and shared, so there is no caller to take a class from.
-**Not seen on a device.**
+**Not seen on a device.** **Amended 2026-11-23: the check is not sent when the phone already knows
+it is offline** ([#858](https://github.com/Raketa02/Raketa/issues/858),
+[ADR-0209](../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md) §4).
+On a captive portal or a _connected, no internet_ network the check could only wait out its five
+seconds and land the player on _We couldn't pick up where you left off_. `restoreSession` now takes
+reachability as a second argument, beside the read — `readReachability` from the network-state
+module, which the root layout hands in, because a use-case may not import the network module — and
+reads it once, before the check. **Known offline is the online manager's own rule**: no connection,
+or reachability known false. Then the check is not sent, the session is kept, the tokens are
+untouched and **nothing is written** — no synthesised failure — so the gate's own read pauses and
+says _Waiting for a connection_, moving on by itself when the connection returns; under the drawn
+splash that is 2.6 s rather than about 5 s. The skip holds only if the manager agrees by the time the
+gate reads, so `readReachability` is **the manager's belief, once it has its first answer**: it waits
+for the answer the bootstrap asked for when it wired the manager — never a second read that could
+disagree — and returns the belief as it stands, so a connection that came back while the keychain
+was read is sent its check. A change heard while the first answer was being asked is newer than it,
+and the answer no longer overwrites it. An undecided answer (`null`) counts as reachable, as does a
+read that fails, and so does no answer within a second (`REACHABILITY_ANSWER_WITHIN_MS`, so a native
+call that never settles cannot hold the splash): the check is then sent exactly as above, whatever
+the cache believes. The trade is ADR-0209's: a phone wrongly reporting no internet waits on _Waiting
+for a connection_ until the platform changes its mind. **Not covered**: when the connection returns,
+the gate's resumed read is _pending_ with no failure to keep, so the gate draws nothing until it is
+answered. **Not seen on a device.**
 
 **Sign-in is drawn on the stage, and nothing it does changed**
 ([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783; design system 12.2). A dark hero

@@ -25,6 +25,7 @@ import { readTheInstallReferrerOnce } from '@/features/links/types';
 import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
 import { LaunchGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
+import { readReachability } from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
 import { OverlayHost, ReducedMotionProvider, ToastHost } from '@/shared/ui';
 
@@ -47,9 +48,15 @@ function wireCredentialsStep(): void {
  * launch: bootstrap already asked the server who this is, so the first screen should not
  * ask again. And a failure is the gate's first answer: a launch that could not reach the
  * server opens on a screen saying so, never on an empty one asking again.
+ *
+ * **The phone's reachability comes from the network-state module** (ADR-0209 §4): what the online
+ * manager believes once it has its first answer, which the use-case reads before the check and may
+ * not import. On a phone that already knows it is offline the check is not sent, and the manager
+ * agrees by then — so the gate's own read pauses and says it is waiting, rather than the launch
+ * waiting five seconds first.
  */
 async function restoreSessionStep(): Promise<void> {
-  await restoreSession(() => fetchCurrentUserAtLaunch(queryClient));
+  await restoreSession(() => fetchCurrentUserAtLaunch(queryClient), readReachability);
 }
 
 /**

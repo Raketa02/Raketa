@@ -15,6 +15,7 @@ import {
   type SessionStatus,
 } from '@/shared/lib/auth';
 import { AppError } from '@/shared/errors';
+import type { Reachability } from '@/shared/lib/platform';
 
 import type { AuthenticatedUser } from '../domain/AuthenticatedUser';
 
@@ -29,13 +30,15 @@ export interface RestoredSession {
 }
 
 /**
- * Three outcomes, and the third is the one that is easy to get wrong.
+ * Three outcomes, and a fourth that is the third learnt early — and the third is the one that is
+ * easy to get wrong.
  *
  * | What happened                        | What it means                          |
  * |--------------------------------------|----------------------------------------|
  * | No stored credentials                | Nobody is signed in.                    |
  * | The server rejected the token        | The session is genuinely over.          |
  * | The server never answered            | We learned nothing. Keep the session.   |
+ * | The phone already knows it's offline | Nothing to learn. Keep it, don't ask.   |
  *
  * That third row is the lift, the train, the tunnel. Signing a player out because a
  * request timed out destroys a perfectly valid session and costs them their password —
@@ -53,15 +56,31 @@ export interface RestoredSession {
  * library, while the read's two answers both belong in the cache the entry gate reads — the
  * player, so the first screen asks nothing, and the failure, so the gate opens on it instead
  * of asking again behind an empty screen.
+ *
+ * **The fourth row is the third, asked of the phone first** (ADR-0209 §4). On a captive portal or
+ * a *connected, no internet* network the phone already knows the check cannot succeed, and sending
+ * it only waits out the `launch` budget to learn so. So **reachability is handed in too**, read once
+ * before the check — the online manager's belief, from the network-state module, which a use-case
+ * may not import — and on `unreachable` the check is not sent and the session is kept. **Nothing
+ * is written**: no synthesised failure in the cache, so the gate's own read pauses on the online
+ * manager, which already agrees, and the gate says *Waiting for a connection* and moves on by
+ * itself when the connection returns. `undecided` and a read that fails are no reason to skip:
+ * the check goes exactly as it did before.
  */
 export async function restoreSession(
   readThePlayer: () => Promise<AuthenticatedUser>,
+  readReachability: () => Promise<Reachability>,
 ): Promise<RestoredSession> {
   const tokens = await readStoredTokens();
 
   if (tokens === undefined) {
     setSessionStatus('unauthenticated');
     return { status: 'unauthenticated' };
+  }
+
+  if (await phoneKnowsItIsOffline(readReachability)) {
+    setSessionStatus('authenticated');
+    return { status: 'authenticated' };
   }
 
   try {
@@ -87,5 +106,16 @@ export async function restoreSession(
     // about whether this session is valid.
     setSessionStatus('authenticated');
     return { status: 'authenticated' };
+  }
+}
+
+/** Only a known `unreachable` skips the check; a read that fails says nothing about the network. */
+async function phoneKnowsItIsOffline(
+  readReachability: () => Promise<Reachability>,
+): Promise<boolean> {
+  try {
+    return (await readReachability()) === 'unreachable';
+  } catch {
+    return false;
   }
 }

@@ -28,6 +28,7 @@ import {
   wireHttpCredentials,
 } from '@/shared/lib/auth';
 import { TIMEOUT_MS } from '@/shared/lib/http';
+import { readReachability, wireOnlineManager } from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
 import { fetchCurrentUserAtLaunch, refreshTokens, restoreSession } from '@/features/auth/types';
 import {
@@ -99,6 +100,23 @@ const OPENING_STEP: Wire['AssessmentStepResponse'] = {
 /** The first profile step's eyebrow — where every launch owed the steps lands. */
 const STEP_ONE = /^Setting up · Step 1 of 6/;
 
+/** The phone's connectivity, faked in `jest.setup.js` as a working connection that never changes. */
+const native = jest.requireMock('expo-network') as { getNetworkStateAsync: jest.Mock };
+
+let unwireTheNetwork: (() => void) | undefined;
+
+/**
+ * **The bootstrap's wiring of the online manager**, as the launch meets it: the platform's first
+ * answer is `firstAnswer` — a working connection unless a case says otherwise — and the launch's
+ * reachability is what the manager then believes.
+ */
+function wireTheNetwork(
+  firstAnswer = { isConnected: true, isInternetReachable: true as boolean | null },
+) {
+  native.getNetworkStateAsync.mockResolvedValueOnce(firstAnswer);
+  unwireTheNetwork = wireOnlineManager();
+}
+
 let transport: Transport;
 
 const stubGate = (options?: Parameters<typeof stubGateWith>[1]) => stubGateWith(transport, options);
@@ -128,6 +146,8 @@ afterEach(() => {
   transport.restore();
   resetLocation();
   queryClient.clear();
+  unwireTheNetwork?.();
+  unwireTheNetwork = undefined;
   onlineManager.setOnline(true);
 });
 
@@ -319,7 +339,8 @@ describe('where a launch lands', () => {
     transport.on('GET', ME_PATH, networkFailure());
     await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
     // The root layout's step, composed as it composes it.
-    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient));
+    wireTheNetwork();
+    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient), readReachability);
 
     stubGate();
     renderRouter(ONBOARDING_ROUTES, { initialUrl: '/' });
@@ -337,7 +358,8 @@ describe('where a launch lands', () => {
     stubGate();
     transport.on('GET', ME_PATH, networkFailure());
     await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
-    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient));
+    wireTheNetwork();
+    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient), readReachability);
     onlineManager.setOnline(false);
 
     stubGate();
@@ -345,6 +367,29 @@ describe('where a launch lands', () => {
 
     expect(screen.getByText("You're offline. This will load as soon as you're back.")).toBeTruthy();
     expect(screen.queryByText("We couldn't pick up where you left off")).toBeNull();
+
+    onlineManager.setOnline(true);
+
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
+  });
+
+  it('says it is waiting when the launch already knew it was offline, and asked nothing', async () => {
+    // ADR-0209 §4. The phone's first answer is *no internet* — a captive portal — so the launch
+    // sends no check and leaves nothing in the cache. The gate's own read is what answers, and it
+    // pauses only because the online manager already agrees by the time it reads: the launch's
+    // answer is the manager's own belief, composed here as the root layout composes it.
+    stubGate();
+    wireTheNetwork({ isConnected: true, isInternetReachable: false });
+    await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient), readReachability);
+
+    renderRouter(ONBOARDING_ROUTES, { initialUrl: '/' });
+
+    expect(screen.getByText('Waiting for a connection')).toBeTruthy();
+    expect(screen.getByText("You're offline. This will load as soon as you're back.")).toBeTruthy();
+    expect(screen.queryByText("We couldn't pick up where you left off")).toBeNull();
+    expect(transport.requestsTo('GET', ME_PATH)).toEqual([]);
+    expect(splashHoldsStanding()).toBe(0);
 
     onlineManager.setOnline(true);
 

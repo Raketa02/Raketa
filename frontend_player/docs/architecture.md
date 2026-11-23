@@ -224,7 +224,7 @@ native process starts                          (the OS launch window: a plain ni
    → read + Zod-validate public runtime config (fail fast on bad config)
    → wire focusManager / onlineManager to native state
    → read credentials from SecureStore
-   → restore + validate/refresh the session
+   → restore + validate/refresh the session    (not asked when the phone already knows it is offline — ADR-0209 §4)
    → start reading the install referrer        (Android, first launch only; never awaited — #756)
    → initialise authenticated app state
    → load fonts

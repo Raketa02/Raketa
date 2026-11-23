@@ -2,9 +2,12 @@
  * The platform module: everything this app knows about the device it is running on.
  *
  * App lifecycle and connectivity are *wirings* — called once by the bootstrap sequence,
- * after which nothing consults them again. The four ports below are the other kind: an
- * interface a feature depends on, with one implementation that talks to the device and one
- * fake that a test drives (`src/test-support/platform.ts`).
+ * after which nothing consults them again but through Query's managers. Connectivity keeps one
+ * reading beside its wiring: `readReachability`, what the online manager believes once it has its
+ * first answer, which the launch reads before its session check and skips the check on when the
+ * phone knows it is offline (ADR-0209 §4). The ports below are the other kind: an interface a
+ * feature depends on, with one implementation that talks to the device and one fake that a test
+ * drives (`src/test-support/platform.ts`).
  *
  * `useHardwareBack` is a third kind and small enough to say so here: a **hook over a device
  * gesture**, with no port under it because `BackHandler` is React Native's own and not an
@@ -55,9 +58,9 @@
  * read before any screen exists — by a bootstrap step the root layout supplies — so it is a value
  * handed to its caller rather than a provider's.
  *
- * `appBuild` is the one plain *reading*: which platform and which version of the app this is,
- * the two device facts a feature flag's rules may target (ADR-0206 §8). Nothing to decide and
- * nothing a test would drive, so no port.
+ * `appBuild` is the one plain *reading* of what the device is: which platform and which version
+ * of the app this is, the two device facts a feature flag's rules may target (ADR-0206 §8).
+ * Nothing to decide and nothing a test would drive, so no port.
  *
  * `permissionStateOf` is deliberately *not* re-exported. Reading a native response is the
  * ports' own work, and a caller with a use for it is a caller that got hold of a native
@@ -71,7 +74,13 @@ export { openAppSettings } from './appSettings';
 export { appBuild } from './appBuild';
 export { useCopyAndSay, type CopyWords } from './copyAndSay';
 export { KEYBOARD_AVOIDANCE, dismissKeyboard, windowResizesForKeyboard } from './keyboard';
-export { useIsOnline, wireOnlineManager } from './networkState';
+export {
+  REACHABILITY_ANSWER_WITHIN_MS,
+  readReachability,
+  useIsOnline,
+  wireOnlineManager,
+  type Reachability,
+} from './networkState';
 
 export { ensurePermission, type AskablePermission, type PermissionState } from './permission';
 

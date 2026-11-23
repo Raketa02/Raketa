@@ -48,7 +48,9 @@ export interface BootstrapSteps {
    */
   readonly wireCredentials: () => void;
   /**
-   * Reads the keychain and asks the server whether what it found is still a session.
+   * Reads the keychain and asks the server whether what it found is still a session — unless
+   * the phone already knows it is offline, as the online manager believes once it has the first
+   * answer `wirePlatformManagers` asked for (ADR-0209 §4). So that step stays before this one.
    *
    * Supplied by the root layout rather than defaulted here: it belongs to the auth
    * feature, and `shared/` may never import a feature.
