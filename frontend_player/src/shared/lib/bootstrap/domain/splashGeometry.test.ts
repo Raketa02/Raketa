@@ -157,3 +157,174 @@ describe('a view that does not cover the whole screen', () => {
     expect(at.screen).toEqual({ x: 0, y: -STATUS_BAR, width: W, height: H });
   });
 });
+
+/**
+ * **The ball's path** (#856; decision log §4, Q4 and Q5): the brief's keyframes on every phone. The
+ * heights are the brief's as written, and every sideways distance is the brief's times one factor,
+ * `k = (dotX − 0.10·W) / 292`, so the first landing sits 10 % in from the left edge, where the mock
+ * draws it — 292 pt left of the dot is off-screen on every phone from 360 to 430 pt.
+ *
+ * **The brief's table, spelled here**: a keyframe that drifted from it turns this red.
+ */
+const BRIEF = [
+  { kind: 'start', at: 0, left: 292 },
+  { kind: 'landing', at: 390, left: 292, squash: { width: 1.4, height: 0.65 } },
+  { kind: 'liftoff', at: 460, left: 288 },
+  { kind: 'peak', at: 720, left: 202, up: 150 },
+  { kind: 'landing', at: 980, left: 122, squash: { width: 1.3, height: 0.72 } },
+  { kind: 'liftoff', at: 1050, left: 118 },
+  { kind: 'peak', at: 1230, left: 62, up: 62 },
+  { kind: 'landing', at: 1400, left: 12, squash: { width: 1.2, height: 0.8 } },
+  { kind: 'liftoff', at: 1470, left: 10 },
+  { kind: 'peak', at: 1580, left: 2, up: 16 },
+  { kind: 'settled', at: 1680, left: 0 },
+] as const;
+
+/** How far a landing presses the ball into the floor. */
+const PRESS = 2;
+/** The ball's radius: it is the dot. */
+const RADIUS = DOT / 2;
+
+describe.each(PHONES)(
+  'the ball’s path on a $width × $height phone ($build)',
+  ({ width, height }) => {
+    const at = splashGeometry(fullScreen(width, height), SETTING);
+    const { ball, dot, floor } = at;
+    const kinds = (kind: string) => ball.filter((frame) => frame.kind === kind);
+
+    it('scales every sideways distance by k = (dotX − 0.10·W) / 292', () => {
+      expect(at.sideways).toBeCloseTo((dot.x - 0.1 * width) / 292, EXACT);
+      expect(at.sideways).toBeGreaterThan(0);
+      expect(at.sideways).toBeLessThan(1);
+    });
+
+    it('follows the brief’s keyframes: their kinds, their times, and how far left each is, before k', () => {
+      expect(ball.map(({ kind, at: time }) => [kind, time])).toEqual(
+        BRIEF.map(({ kind, at: time }) => [kind, time]),
+      );
+      ball.forEach((frame, i) => {
+        expect((dot.x - frame.x) / at.sideways).toBeCloseTo(BRIEF[i]!.left, EXACT);
+      });
+    });
+
+    it('lands first at 10 % of the width, and the start is straight above it', () => {
+      const [start, first] = ball;
+
+      expect(first!.x).toBeCloseTo(0.1 * width, EXACT);
+      expect(start!.x).toBe(first!.x);
+    });
+
+    it('starts just above the top edge, fully hidden, already round', () => {
+      const start = ball[0]!;
+
+      expect(start.y + RADIUS).toBeCloseTo(0, EXACT);
+      expect(start.y + RADIUS).toBeLessThanOrEqual(0);
+      expect(start.squash).toEqual({ width: 1, height: 1 });
+    });
+
+    it('peaks 150, 62 and 16 pt above the floor, whatever the width', () => {
+      const heights = kinds('peak').map((peak) => floor - peak.y);
+
+      expect(heights).toHaveLength(3);
+      [150, 62, 16].forEach((up, i) => expect(heights[i]).toBeCloseTo(up, EXACT));
+    });
+
+    it('presses 2 pt into the floor at each landing, squashed as the brief says, and leaves it round', () => {
+      kinds('landing').forEach((landing) => expect(landing.y - floor).toBeCloseTo(PRESS, EXACT));
+      expect(kinds('landing').map((landing) => landing.squash)).toEqual(
+        BRIEF.flatMap((frame) => ('squash' in frame ? [frame.squash] : [])),
+      );
+      kinds('liftoff').forEach((liftoff) => {
+        expect(liftoff.y).toBe(floor);
+        expect(liftoff.squash).toEqual({ width: 1, height: 1 });
+      });
+    });
+
+    it('lands each time lower and further right than the last, each squash gentler', () => {
+      const landings = kinds('landing');
+      const peaks = kinds('peak');
+
+      landings.slice(1).forEach((landing, i) => {
+        expect(landing.x).toBeGreaterThan(landings[i]!.x);
+        expect(landing.squash.width).toBeLessThan(landings[i]!.squash.width);
+        expect(landing.squash.height).toBeGreaterThan(landings[i]!.squash.height);
+      });
+      peaks.slice(1).forEach((peak, i) => {
+        expect(peak.y).toBeGreaterThan(peaks[i]!.y);
+      });
+    });
+
+    it('ends exactly on the dot: not close to it — on it', () => {
+      const last = ball[ball.length - 1]!;
+
+      expect(last.kind).toBe('settled');
+      expect(last.x).toBe(dot.x);
+      expect(last.y).toBe(dot.y);
+      expect(last.squash).toEqual({ width: 1, height: 1 });
+    });
+  },
+);
+
+/** The letters rise in three groups, one group per landing: Rak · ie · ta. */
+describe('the letters’ cues', () => {
+  const at = splashGeometry(fullScreen(390, 844), SETTING);
+  const landings = at.ball.filter(({ kind }) => kind === 'landing').map(({ at: time }) => time);
+
+  it('are the brief’s: R 0.42, a 0.46, k 0.50 · i 1.00, e 1.04 · t 1.42, a 1.46', () => {
+    expect(at.letters.map(({ letter, cue }) => [letter, cue])).toEqual([
+      ['R', 420],
+      ['a', 460],
+      ['k', 500],
+      ['i', 1000],
+      ['e', 1040],
+      ['t', 1420],
+      ['a', 1460],
+    ]);
+  });
+
+  it('come in three groups, each just after its own landing: Rak · ie · ta', () => {
+    const groupOf = (cue: number) => landings.filter((landing) => landing < cue).length;
+    const groups = [1, 2, 3].map((group) =>
+      at.letters
+        .filter(({ cue }) => groupOf(cue) === group)
+        .map(({ letter }) => letter)
+        .join(''),
+    );
+
+    expect(groups).toEqual(['Rak', 'ie', 'ta']);
+  });
+
+  it('are the same on every phone', () => {
+    PHONES.forEach(({ width, height }) => {
+      expect(
+        splashGeometry(fullScreen(width, height), SETTING).letters.map(({ cue }) => cue),
+      ).toEqual(at.letters.map(({ cue }) => cue));
+    });
+  });
+});
+
+/**
+ * Below an opaque status bar the view starts the bar's height down, so the screen's top edge is
+ * above the view's: the ball still starts above the screen's, and the first landing is still 10 %
+ * of the screen's width — in the view's own coordinates, as everything else.
+ */
+describe('the ball’s path in a view that does not cover the whole screen', () => {
+  const W = 411;
+  const H = 914;
+  const STATUS_BAR = 24;
+  const view = { x: 0, y: STATUS_BAR, width: W, height: H - STATUS_BAR - 48 };
+  const at = splashGeometry({ screen: { width: W, height: H }, view }, SETTING);
+  const onTheScreen = splashGeometry(fullScreen(W, H), SETTING);
+
+  it('starts above the screen’s top edge, not the view’s', () => {
+    expect(at.ball[0]!.y + RADIUS).toBeCloseTo(-STATUS_BAR, EXACT);
+  });
+
+  it('is the same path on the screen, every keyframe moved up by the bar', () => {
+    expect(at.sideways).toBeCloseTo(onTheScreen.sideways, EXACT);
+    at.ball.forEach((frame, i) => {
+      expect(frame.x).toBeCloseTo(onTheScreen.ball[i]!.x, EXACT);
+      expect(frame.y).toBeCloseTo(onTheScreen.ball[i]!.y - STATUS_BAR, EXACT);
+    });
+  });
+});

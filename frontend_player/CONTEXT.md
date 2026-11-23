@@ -117,7 +117,9 @@ review comment and a test description all use the same word.
 - **Drawn splash** — the first screen of every cold open, drawn rather than played from a file
   (`DrawnSplash`): its ground, a radial glow on `splashGroundEdge`, and the **lockup** — _Rakieta_
   and its `volt` dot, centred as one on the full screen rather than on the app's view, the word's
-  seven letters placed from Archivo 800's own numbers (`splashGeometry`, #855). It swallows every touch
+  seven letters placed from Archivo 800's own numbers (`splashGeometry`, #855). Under full motion the
+  dot is a **ball** that bounces the lockup into place — three landings, _Rak_ · _ie_ · _ta_ rising
+  with them — and comes to rest as the full stop (`splashMotion`, #856). It swallows every touch
   until it is gone and plays once per JavaScript process; while it **covers** the tree
   (`useCoveredBySplash`), iOS's modal stage is held back and a toast's hold does not start. Not
   sign-in's _It's a game!_ picture, which `auth` calls its stage's splash (`StageSplash`).

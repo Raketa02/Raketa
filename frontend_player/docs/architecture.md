@@ -257,6 +257,13 @@ behind it, and when the sequence resolves the tree — or the startup failure sc
   is unchanged. Its letters are placed on the **full screen** by a pure geometry
   (`bootstrap/domain/splashGeometry.ts`), offset by where the app's view starts on it, which it
   reads from the root's safe-area frame.
+- **The ball bounces the lockup into place** (#856). The same geometry gives the ball's keyframes
+  and the letters' cues, and a second pure module (`bootstrap/domain/splashMotion.ts`) the curves
+  between them. **One Reanimated clock**, started on the splash's first layout, moves the ball and
+  every letter on the UI thread, `transform` and `opacity` only, and ends exactly in the still
+  lockup; under reduced motion it stands at its end from the first frame. The motion's functions
+  carry Reanimated's `'worklet'` directive — a string, not an import, so the domain stays pure and
+  jest runs them as plain functions — because the UI thread calls them every frame.
 - **Until it is gone the splash swallows every touch**, and it sits above everything the root
   draws: the overlay host, the toasts and the environment badge. The tree beneath takes no touch
   and is hidden from a screen reader. **It plays once per JavaScript process**, a dev reload

@@ -41,7 +41,7 @@ const FADE_AT = 2600;
 const FADE_AT_REDUCED = 900;
 const FADE = 500;
 const GLOW_IN = 390;
-/** The lockup's short fade-in, under both variants until the ball flies (#855, #856). */
+/** The lockup's short fade-in under reduced motion, where nothing flies (#855, #856). */
 const LOCKUP_IN = 150;
 
 /** A few frames of a 60 Hz screen: long enough for an animation started on a tick to show. */
@@ -58,6 +58,7 @@ const GLOW = 'splash-glow';
 const GROUND = 'splash-ground';
 const LOCKUP = 'splash-lockup';
 const DOT = 'splash-dot';
+const LETTERS = 'splash-letters';
 const APP = 'app-root';
 
 /** The phone's full screen, as React Native's own test setup reports it. */
@@ -722,23 +723,10 @@ describe('the lockup', () => {
     });
   });
 
-  it('is in place within 0,15 s of the splash’s first layout', async () => {
-    launch();
+  it('is in place within 0,15 s of the splash’s first layout under reduced motion — a fade, not a cut', async () => {
+    launch({ reduced: true });
     expect(opacityOf(LOCKUP)).toBe(0);
 
-    layOutTheSplash();
-    await settle();
-
-    clockTo(LOCKUP_IN / 2);
-    expect(opacityOf(LOCKUP)).toBeGreaterThan(0);
-    expect(opacityOf(LOCKUP)).toBeLessThan(1);
-
-    clockTo(LOCKUP_IN + A_FEW_FRAMES);
-    expect(opacityOf(LOCKUP)).toBe(1);
-  });
-
-  it('comes in the same way under reduced motion — a fade, not a cut', async () => {
-    launch({ reduced: true });
     layOutTheSplash();
     await settle();
 
@@ -801,9 +789,9 @@ describe('the lockup', () => {
     });
   });
 
-  it('sets no letter before its face has loaded, and comes in once it has', async () => {
+  it('sets no letter before its face has loaded, and comes in once it has, under reduced motion', async () => {
     const face = faceStillLoading();
-    launch({ face });
+    launch({ face, reduced: true });
     layOutTheSplash();
     await settle();
 
@@ -814,14 +802,16 @@ describe('the lockup', () => {
     await face.arrive();
     const arrivedAt = Date.now() - splashLaidOutAt;
     expect(letters()).toHaveLength(7);
+    // The layer's own fade brings them in: the letters are not faded a second time.
+    expect(opacityOf(LETTERS)).toBe(1);
 
     clockTo(arrivedAt + LOCKUP_IN + A_FEW_FRAMES);
     expect(opacityOf(LOCKUP)).toBe(1);
   });
 
-  it('sets no letter in a face that could not be read, and comes in as its dot alone', async () => {
+  it('sets no letter in a face that could not be read, and comes in as its dot alone, under reduced motion', async () => {
     const face = faceStillLoading();
-    launch({ face });
+    launch({ face, reduced: true });
     layOutTheSplash();
 
     await face.fail();
@@ -839,5 +829,259 @@ describe('the lockup', () => {
     clockTo(FADE_AT + FADE);
     expect(screen.queryByTestId(LOCKUP, HIDDEN_TOO)).toBeNull();
     expect(letters()).toHaveLength(0);
+  });
+
+  /**
+   * **The ball bounces Rakieta into place** (#856). Its path and its curves are pure and tested on
+   * their own (`domain/splashGeometry.test.ts`, `domain/splashMotion.test.ts`); what this holds is
+   * that the splash draws them on the launch's clock: where the ball is, how much of each letter
+   * shows, and that the motion ends in #855's still lockup. The motion is read a frame at a time, so
+   * every time here is a frame clear of the moment it is about.
+   */
+  describe('the motion', () => {
+    type Drawn = ReturnType<typeof screen.getByTestId>;
+
+    const FRAME = 16;
+    const SETTLES_AT = 1680;
+    const STILL_AT = 1780;
+
+    /** A transform as Reanimated last drew it, every part it does not say at rest. */
+    function transformOf(element: ReturnType<typeof screen.getByTestId>) {
+      const { transform = [] } = getAnimatedStyle(element) as ViewStyle;
+      return Object.assign(
+        { translateX: 0, translateY: 0, scaleX: 1, scaleY: 1 },
+        ...(transform as object[]),
+      ) as { translateX: number; translateY: number; scaleX: number; scaleY: number };
+    }
+
+    /** Where the ball is drawn: the dot's own box, moved and squashed by the motion. */
+    function theBall() {
+      const element = screen.getByTestId(DOT, HIDDEN_TOO);
+      const box = styleOf(DOT);
+      const moved = transformOf(element);
+      const size = Number(box.width);
+      return {
+        x: Number(box.left) + size / 2 + moved.translateX,
+        y: Number(box.top) + size / 2 + moved.translateY,
+        scaleX: moved.scaleX,
+        scaleY: moved.scaleY,
+      };
+    }
+
+    /** How much of each letter shows, in the word's order. */
+    function shown(): number[] {
+      return letters().map((letter) =>
+        Number((getAnimatedStyle(letter) as TextStyle).opacity ?? 1),
+      );
+    }
+
+    /** How far below its place each letter is, in the word's order. */
+    function below(): number[] {
+      return letters().map((letter) => transformOf(letter).translateY);
+    }
+
+    /**
+     * The ball at rest on the dot: the dot's own box, exactly where #855 stands it, and no transform
+     * at all — so it is drawn as #855's dot was, not near it.
+     */
+    function expectTheBallOnTheDot() {
+      const { dot } = placedFor(WHOLE_SCREEN);
+      expect(transformOf(screen.getByTestId(DOT, HIDDEN_TOO))).toEqual({
+        translateX: 0,
+        translateY: 0,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      expect(styleOf(DOT)).toMatchObject({
+        left: dot.x - 6,
+        top: dot.y - 6,
+        width: 12,
+        height: 12,
+      });
+    }
+
+    /** #855’s lockup, still: the ball on the dot, unsquashed, and every letter in its place. */
+    function expectTheStillLockup() {
+      const placed = placedFor(WHOLE_SCREEN);
+      expectTheBallOnTheDot();
+      expect(shown()).toEqual([1, 1, 1, 1, 1, 1, 1]);
+      expect(below()).toEqual([0, 0, 0, 0, 0, 0, 0]);
+      letters().forEach((letter, i) => {
+        expect(styleOf(letter).left).toBe(placed.letters[i]!.x);
+        expect(styleOf(letter).top).toBe(placed.letters[i]!.y);
+      });
+      expect(opacityOf(LOCKUP)).toBe(1);
+    }
+
+    it('starts with the ball out of sight above the top edge, the lockup showing nothing else', async () => {
+      launch();
+      await settle();
+
+      const ball = theBall();
+      expect(ball.y + 6 * ball.scaleY).toBeLessThanOrEqual(0);
+      expect(ball.x).toBeCloseTo(0.1 * SCREEN.width, 6);
+      expect(opacityOf(LOCKUP)).toBe(1);
+      expect(opacityOf(LETTERS)).toBe(1);
+      expect(shown()).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    });
+
+    it('drops the ball straight down onto the floor, where it squashes, and bounces it up', async () => {
+      await launchReady();
+      const { floor } = placedFor(WHOLE_SCREEN);
+      const start = theBall();
+
+      clockTo(200);
+      expect(theBall().x).toBe(start.x);
+      expect(theBall().y).toBeGreaterThan(start.y);
+      expect(theBall().y).toBeLessThan(floor);
+
+      // The first landing, at 0,39 s: wider and flatter, its bottom pressed into the floor.
+      clockTo(390 + FRAME + 8);
+      expect(theBall().scaleX).toBeGreaterThan(1);
+      expect(theBall().scaleY).toBeLessThan(1);
+
+      // Near the first bounce's peak, at 0,72 s: 150 pt above the floor, and round.
+      clockTo(720 + 8);
+      expect(floor - theBall().y).toBeGreaterThan(145);
+      expect([theBall().scaleX, theBall().scaleY]).toEqual([1, 1]);
+    });
+
+    it('comes to rest on the dot at 1,68 s and stops dead', async () => {
+      await launchReady();
+
+      clockTo(SETTLES_AT - 4 * FRAME);
+      expect(transformOf(screen.getByTestId(DOT, HIDDEN_TOO)).translateY).toBeLessThan(0);
+
+      clockTo(SETTLES_AT + FRAME);
+      expectTheBallOnTheDot();
+
+      clockTo(FADE_AT - 1);
+      expectTheBallOnTheDot();
+    });
+
+    it('raises Rak with the first landing, ie with the second and ta with the third', async () => {
+      await launchReady();
+
+      clockTo(400);
+      expect(shown()).toEqual([0, 0, 0, 0, 0, 0, 0]);
+
+      clockTo(900);
+      expect(shown()).toEqual([1, 1, 1, 0, 0, 0, 0]);
+
+      clockTo(1390);
+      expect(shown()).toEqual([1, 1, 1, 1, 1, 0, 0]);
+
+      clockTo(STILL_AT + FRAME);
+      expect(shown()).toEqual([1, 1, 1, 1, 1, 1, 1]);
+      expect(below()).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    });
+
+    it('rises each letter from below its place while it fades in', async () => {
+      await launchReady();
+
+      // R's rise is cued at 0,42 s and takes 0,32 s.
+      clockTo(420 + 2 * FRAME);
+      expect(shown()[0]).toBeGreaterThan(0);
+      expect(shown()[0]).toBeLessThan(1);
+      expect(below()[0]).toBeGreaterThan(0);
+      expect(below()[0]).toBeLessThan(10);
+    });
+
+    it('ends in #855’s lockup, pixel for pixel, the last frame before the fade', async () => {
+      await launchReady();
+
+      clockTo(FADE_AT - 1);
+      expectTheStillLockup();
+    });
+
+    it('still fades at 2,6 s, the motion long over', async () => {
+      await launchReady();
+
+      clockTo(FADE_AT - 1);
+      expect(opacityOf(SPLASH)).toBe(1);
+
+      clockTo(FADE_AT + A_FEW_FRAMES);
+      expect(opacityOf(SPLASH)).toBeLessThan(1);
+
+      clockTo(FADE_AT + FADE);
+      expect(splashIsUp()).toBe(false);
+    });
+
+    it('draws one ball, above the letters, with nothing trailing it', async () => {
+      await launchReady();
+      clockTo(720);
+
+      const drawn = screen
+        .getByTestId(LOCKUP, HIDDEN_TOO)
+        .findAll((node: Drawn) => typeof node.type === 'string');
+      const ballAt = drawn.findIndex((node: Drawn) => node.props.testID === DOT);
+      const lastLetterAt = Math.max(...letters().map((letter) => drawn.indexOf(letter)));
+
+      expect(screen.getAllByTestId(DOT, HIDDEN_TOO)).toHaveLength(1);
+      expect(ballAt).toBeGreaterThan(lastLetterAt);
+      const ball = styleOf(DOT);
+      expect(ball.shadowOpacity).toBeUndefined();
+      expect(ball.elevation).toBeUndefined();
+    });
+
+    it('flies the ball before the face has loaded, and fades the letters in as the clock has them', async () => {
+      const face = faceStillLoading();
+      launch({ face });
+      layOutTheSplash();
+      await settle();
+
+      // Falling from its first bounce, between the first two landings.
+      clockTo(860);
+      expect(letters()).toHaveLength(0);
+      expect(theBall().y).toBeLessThan(placedFor(WHOLE_SCREEN).floor);
+
+      await face.arrive();
+      const arrivedAt = Date.now() - splashLaidOutAt;
+      expect(shown()).toEqual([1, 1, 1, 0, 0, 0, 0]);
+      // Late, so they come in over the lockup's short fade rather than all at once, already risen.
+      expect(opacityOf(LETTERS)).toBe(0);
+      clockTo(arrivedAt + LOCKUP_IN / 2);
+      expect(opacityOf(LETTERS)).toBeGreaterThan(0);
+      expect(opacityOf(LETTERS)).toBeLessThan(1);
+      clockTo(arrivedAt + LOCKUP_IN + A_FEW_FRAMES);
+      expect(opacityOf(LETTERS)).toBe(1);
+
+      clockTo(STILL_AT + FRAME);
+      expect(shown()).toEqual([1, 1, 1, 1, 1, 1, 1]);
+    });
+
+    it('lands the ball as the dot alone when the face could not be read', async () => {
+      const face = faceStillLoading();
+      launch({ face });
+      layOutTheSplash();
+      await face.fail();
+
+      clockTo(SETTLES_AT + FRAME);
+      expect(letters()).toHaveLength(0);
+      expectTheBallOnTheDot();
+      expect(opacityOf(LOCKUP)).toBe(1);
+    });
+
+    describe('under reduced motion', () => {
+      it('flies nothing and bounces nothing: the ball is the dot, every letter in place, from the start', async () => {
+        launch({ reduced: true });
+        layOutTheSplash();
+        await settle();
+
+        [0, 100, 400, 800].forEach((t) => {
+          clockTo(t);
+          expectTheBallOnTheDot();
+          expect(shown()).toEqual([1, 1, 1, 1, 1, 1, 1]);
+          expect(below()).toEqual([0, 0, 0, 0, 0, 0, 0]);
+        });
+      });
+
+      it('ends in the same lockup, pixel for pixel, the last frame before its fade at 0,9 s', async () => {
+        await launchReady({ reduced: true });
+
+        clockTo(FADE_AT_REDUCED - 1);
+        expectTheStillLockup();
+      });
+    });
   });
 });

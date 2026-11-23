@@ -8,7 +8,10 @@
  * motion scale: they belong to one picture, played once per process.
  */
 export const LAUNCH_CLOCK = {
-  /** The fade's earliest start: the finished lockup has stood still since 1.68 s. */
+  /**
+   * The fade's earliest start: the ball has rested on the dot since 1.68 s, and the word has stood
+   * still since 1.78 s (`splashStillAt`).
+   */
   fadeAt: 2600,
   /** The same under reduced motion: the lockup in place almost at once, and a brief hold. */
   fadeAtReduced: 900,
@@ -18,8 +21,9 @@ export const LAUNCH_CLOCK = {
   glowIn: 390,
   /**
    * The lockup coming in — the word and its dot, in place — once the splash has laid out and the
-   * wordmark's face is there. Under both variants until the ball flies (#856); then under reduced
-   * motion only, which is the brief's *"almost instantly"*.
+   * wordmark's face is there. **Under reduced motion only**, the brief's *"almost instantly"*: under
+   * full motion the ball and the letters bring the lockup in on the motion's own clock (#856,
+   * `domain/splashMotion.ts`).
    */
   lockupIn: 150,
 } as const;

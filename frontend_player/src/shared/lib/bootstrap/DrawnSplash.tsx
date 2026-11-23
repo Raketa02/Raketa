@@ -13,8 +13,20 @@
  * Archivo 800's own advances and kerning — never laid out as a run of text, so where every letter
  * stands is known before the first frame. They keep their size whatever the phone's text size: a
  * logo is a logo. The splash loads their face itself, as it starts, and sets no letter before the
- * face is there — nor in a face that could not be read; then the lockup comes in over 0.15 s. The
- * ball that becomes the dot flies in with #856.
+ * face is there — nor in a face that could not be read.
+ *
+ * **The ball bounces it into place** (#856). The dot is the ball: one volt circle, drawn above the
+ * letters, that drops in from just above the top edge, lands three times along the floor and comes
+ * to rest as the full stop at 1.68 s, while *Rak*, *ie* and *ta* rise with its three landings. **One
+ * clock moves all of it**, on the UI thread, from the splash's first layout to 1.78 s, when the word
+ * is still; the ball's pose and each letter's are pure functions of that clock
+ * (`domain/splashMotion.ts`), so the landings and the letters they shake up can never drift apart,
+ * and the clock's end is exactly #855's still lockup. A face that arrives late sets its letters
+ * where the clock has them by then, faded in over 0.15 s rather than all at once.
+ *
+ * **Under reduced motion nothing flies**: the clock stands at its end from the first frame, so the
+ * ball is the dot and every letter is in place, and the lockup comes in over 0.15 s once the splash
+ * has laid out and the face has answered.
  *
  * **Everything is placed on the full screen**, not on the app's view: where the view does not cover
  * a system bar — Android's opaque status bar, a three-button navigation bar — the geometry offsets
@@ -25,14 +37,15 @@
  *
  * **The fade is the whole splash's opacity**, glow, word and dot together, linear over 0.5 s. The
  * launch gate holds that value and moves it, because when the fade begins is the gate's to say;
- * this only draws it. Motion runs on the UI thread and moves only opacity.
+ * this only draws it. Motion runs on the UI thread and moves only `transform` and `opacity`, never a
+ * layout prop (CLAUDE.md, *Mobile gotchas*).
  *
  * Nothing speaks it (ADR-0198): the ground and the word are a picture, and the splash adds no
  * announcement.
  */
 
 import { useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   ReduceMotion,
@@ -50,8 +63,10 @@ import {
   splashGeometry,
   WORDMARK_FACE,
   type Box,
+  type PlacedLetter,
   type WordmarkSetting,
 } from './domain/splashGeometry';
+import { ballAt, letterAt, splashStillAt } from './domain/splashMotion';
 import type { SplashFace } from './fonts';
 import { LAUNCH_CLOCK } from './launchClock';
 
@@ -82,10 +97,15 @@ export interface DrawnSplashProps {
   readonly onFirstLayout: () => void;
 }
 
-export function DrawnSplash({ reduced, opacity, face, onFirstLayout }: DrawnSplashProps) {
-  const glow = useSharedValue(reduced ? 1 : 0);
-  const lockup = useSharedValue(0);
-
+export function DrawnSplash({
+  reduced: handedOver,
+  opacity,
+  face,
+  onFirstLayout,
+}: DrawnSplashProps) {
+  // The variant as the gate handed it over first: decided once, and never switched mid-play — nor
+  // asking for the face a second time, as an effect that followed it would.
+  const [reduced] = useState(handedOver);
   // The face handed over first, asked for once.
   const firstFace = useRef(face);
   const [faceReady, setFaceReady] = useState(face.loaded);
@@ -107,18 +127,43 @@ export function DrawnSplash({ reduced, opacity, face, onFirstLayout }: DrawnSpla
     return splashGeometry({ screen, view }, WORDMARK);
   }, [frame]);
 
+  const glow = useSharedValue(reduced ? 1 : 0);
+  /**
+   * **The motion's clock**, in milliseconds from the splash's first layout, which the ball and every
+   * letter read their pose from. Under reduced motion it stands at its end — the still lockup — from
+   * the first frame; otherwise it runs there once, from the first layout.
+   */
+  const motion = useSharedValue(reduced ? splashStillAt(placed) : 0);
+  // Under full motion the lockup is there from the start, and the motion brings it in: the ball out
+  // of sight above the top edge, each letter unseen below its place until its cue.
+  const lockup = useSharedValue(reduced ? 0 : 1);
+  // The letters, as one: there with the lockup, unless their face was not there as the splash mounted
+  // under full motion. Then they come in over the lockup's short fade when it arrives — unseen before
+  // the first cue, as it normally is, and otherwise rather than all at once, where the clock already
+  // has them. Under reduced motion the lockup's own fade brings them in.
+  const lettersIn = useSharedValue(reduced || faceReady ? 1 : 0);
+
+  const bringInTheLateLetters = useCallback(() => {
+    if (reduced) return;
+    lettersIn.value = withTiming(1, {
+      duration: LAUNCH_CLOCK.lockupIn,
+      easing: Easing.linear,
+      reduceMotion: ReduceMotion.Never,
+    });
+  }, [reduced, lettersIn]);
+
   const bringInTheLockupIfDue = useCallback(() => {
     const now = due.current;
-    if (now.begun || !now.laidOut || !now.answered) return;
+    if (!reduced || now.begun || !now.laidOut || !now.answered) return;
     now.begun = true;
     // Never the OS's reduced motion, which would make it a cut: the variant is the gate's, and
-    // under both, for now, the lockup comes in over the same short fade.
+    // under it the lockup comes in over a short fade, the brief's "almost instantly".
     lockup.value = withTiming(1, {
       duration: LAUNCH_CLOCK.lockupIn,
       easing: Easing.linear,
       reduceMotion: ReduceMotion.Never,
     });
-  }, [lockup]);
+  }, [reduced, lockup]);
 
   // **The face is asked for as the splash starts**, never behind the sequence's session check.
   // A face that cannot be read sets no letter — a family the phone never registered would draw the
@@ -131,23 +176,33 @@ export function DrawnSplash({ reduced, opacity, face, onFirstLayout }: DrawnSpla
     const answered = (loaded: boolean) => () => {
       if (!live) return;
       due.current.answered = true;
-      if (loaded) setFaceReady(true);
+      if (loaded) {
+        setFaceReady(true);
+        bringInTheLateLetters();
+      }
       bringInTheLockupIfDue();
     };
     firstFace.current.load().then(answered(true), answered(false));
     return () => {
       live = false;
     };
-  }, [bringInTheLockupIfDue]);
+  }, [bringInTheLockupIfDue, bringInTheLateLetters]);
 
   const onLayout = () => {
     if (due.current.laidOut) return;
     due.current.laidOut = true;
-    // The variant is the gate's, decided once: under it the glow is already lit, and otherwise it
-    // comes on whatever Reanimated later hears from the OS.
+    // The variant is the gate's, decided once: under it the glow is already lit and the motion
+    // already over, and otherwise both run whatever Reanimated later hears from the OS. They start
+    // here, with the gate's clock, so the ball's 0.39 s fall is the glow's.
     if (!reduced) {
       glow.value = withTiming(1, {
         duration: LAUNCH_CLOCK.glowIn,
+        easing: Easing.linear,
+        reduceMotion: ReduceMotion.Never,
+      });
+      const still = splashStillAt(placed);
+      motion.value = withTiming(still, {
+        duration: still,
         easing: Easing.linear,
         reduceMotion: ReduceMotion.Never,
       });
@@ -156,11 +211,25 @@ export function DrawnSplash({ reduced, opacity, face, onFirstLayout }: DrawnSpla
     onFirstLayout();
   };
 
+  const { ball, dot } = placed;
+
   const splashStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
   const lockupStyle = useAnimatedStyle(() => ({ opacity: lockup.value }));
-
-  const { dot } = placed;
+  const lettersStyle = useAnimatedStyle(() => ({ opacity: lettersIn.value }));
+  // The ball, drawn as the dot moved and squashed: at rest the transform is nothing at all, so the
+  // last frame is the dot exactly where #855 stands it.
+  const ballStyle = useAnimatedStyle(() => {
+    const pose = ballAt(ball, motion.value);
+    return {
+      transform: [
+        { translateX: pose.x - dot.x },
+        { translateY: pose.y - dot.y },
+        { scaleX: pose.scaleX },
+        { scaleY: pose.scaleY },
+      ],
+    };
+  });
 
   return (
     <Animated.View
@@ -176,15 +245,16 @@ export function DrawnSplash({ reduced, opacity, face, onFirstLayout }: DrawnSpla
         </Animated.View>
       </View>
       <Animated.View testID="splash-lockup" style={[s.fill, lockupStyle]} pointerEvents="none">
-        {faceReady
-          ? placed.letters.map(({ letter, x, y }, i) => (
-              // Keyed by its place in the word, which has two a's.
-              <Text key={i} allowFontScaling={false} style={[s.letter, { left: x, top: y }]}>
-                {letter}
-              </Text>
-            ))
-          : null}
-        <View
+        <Animated.View testID="splash-letters" style={[s.fill, lettersStyle]}>
+          {faceReady
+            ? placed.letters.map((placedLetter, i) => (
+                // Keyed by its place in the word, which has two a's.
+                <SplashLetter key={i} placed={placedLetter} motion={motion} />
+              ))
+            : null}
+        </Animated.View>
+        {/* The ball, which is the dot: last, so it is drawn above the letters it lands among. */}
+        <Animated.View
           testID="splash-dot"
           style={[
             s.dot,
@@ -195,10 +265,35 @@ export function DrawnSplash({ reduced, opacity, face, onFirstLayout }: DrawnSpla
               height: dot.size,
               borderRadius: dot.size / 2,
             },
+            ballStyle,
           ]}
         />
       </Animated.View>
     </Animated.View>
+  );
+}
+
+/**
+ * One letter of the wordmark, at its place, rising into it on the motion's clock from its cue: 10 pt
+ * from below, fading in, a touch past and back. Its place is a layout prop and never moves; the rise
+ * is a transform.
+ */
+function SplashLetter({
+  placed: { letter, x, y, cue },
+  motion,
+}: {
+  readonly placed: PlacedLetter;
+  readonly motion: SharedValue<number>;
+}) {
+  const style = useAnimatedStyle(() => {
+    const pose = letterAt(cue, motion.value);
+    return { opacity: pose.opacity, transform: [{ translateY: pose.below }] };
+  });
+
+  return (
+    <Animated.Text allowFontScaling={false} style={[s.letter, { left: x, top: y }, style]}>
+      {letter}
+    </Animated.Text>
   );
 }
 
