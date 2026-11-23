@@ -197,6 +197,21 @@ const color = {
   yesGroundCentre: '#203C48',
   yesGroundEdge: '#14252C',
 
+  /** THE DRAWN SPLASH'S GROUND — the app's second dark surface, beside *It's a game!*, and the
+   *  splash's alone ([ADR-0209](../../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md),
+   *  docs/design-system.md Part 16 2026-11-23). The centre and the edge of the radial glow every
+   *  cold open fades out of (`shared/lib/bootstrap/DrawnSplash.tsx`): centred horizontally and 42 %
+   *  down, `splashGroundEdge` from three quarters of the way to the edges and beyond.
+   *
+   *  The product owner's brief to the byte, NOT `night` (`#0A3441`) and NOT the yes screen's pair:
+   *  a second dark surface argues for its own record, as `yesGround*`'s note asks. **The edge is
+   *  also the OS launch window's colour** (`app.config.ts`, the splash-screen plugin), so the
+   *  window and the splash read as one field from the tap. Hue 191–192°, `night`'s family (194°).
+   *  What sits on them is the lockup's (#855): white and `volt`, computed in
+   *  `splashGround.test.ts`. Nothing else is drawn on them, and no other surface uses them. */
+  splashGroundCentre: '#134652',
+  splashGroundEdge: '#0B2B33',
+
   /** THE PORTRAIT TILE'S WASH — what was the deck card's, and the one card that wears a wash
    *  ([#801](https://github.com/Raketa02/Raketa/issues/801); home rows 17–19; docs/design-system.md
    *  7.31, Part 16 2026-11-14). The deck card it was fenced to (ADR-0169 §7, Part 16 2026-09-15) left

@@ -19,7 +19,7 @@ import {
   useSessionStatus,
   wireHttpCredentials,
 } from '@/shared/lib/auth';
-import { BootstrapGate, bootstrapApp } from '@/shared/lib/bootstrap';
+import { LaunchGate, bootstrapApp } from '@/shared/lib/bootstrap';
 import { TIMEOUT_MS } from '@/shared/lib/http';
 import { queryClient } from '@/shared/lib/query-client';
 import type { AppError } from '@/shared/errors';
@@ -240,6 +240,12 @@ describe('relaunching', () => {
 // The launch sequence, rendered — no flash in either direction
 // ---------------------------------------------------------------------------
 
+/**
+ * The tree mounts **under the launch's drawn splash** (ADR-0209), hidden from a screen reader until
+ * the splash has gone — and nothing lays out here, so it never goes. What is mounted is the question.
+ */
+const UNDER_THE_SPLASH = { includeHiddenElements: true } as const;
+
 /** Stands in for the route tree: it names whichever branch the guard would render. */
 function TreeUnderTest() {
   const status = useSessionStatus();
@@ -263,9 +269,9 @@ function renderLaunch() {
 
   render(
     <QueryClientProvider client={queryClient}>
-      <BootstrapGate run={run}>
+      <LaunchGate run={run}>
         <Recorder seen={seen} />
-      </BootstrapGate>
+      </LaunchGate>
     </QueryClientProvider>,
   );
 
@@ -285,7 +291,7 @@ describe('the launch sequence', () => {
 
     const seen = renderLaunch();
 
-    expect(await screen.findByText('Signed in')).toBeTruthy();
+    expect(await screen.findByText('Signed in', UNDER_THE_SPLASH)).toBeTruthy();
     // The tree renders only after the sequence resolves, so it was never mounted while
     // the status was still `bootstrapping` — which is what a login-screen flash is.
     expect(seen).not.toContain('bootstrapping');
@@ -295,7 +301,7 @@ describe('the launch sequence', () => {
   it('shows the sign-in tree with no authenticated-tree flash', async () => {
     const seen = renderLaunch();
 
-    expect(await screen.findByText('Sign in')).toBeTruthy();
+    expect(await screen.findByText('Sign in', UNDER_THE_SPLASH)).toBeTruthy();
     expect(seen).not.toContain('bootstrapping');
     expect(seen).not.toContain('authenticated');
   });

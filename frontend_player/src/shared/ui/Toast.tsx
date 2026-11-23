@@ -63,7 +63,7 @@ import {
 } from '@/shared/store/toast.store';
 
 import { CloseControl } from './CloseControl';
-import { announce } from './overlay';
+import { announce, useCoveredBySplash } from './overlay';
 import { TAB_BAR_HEIGHT } from './TabBar';
 import { theme } from './theme';
 
@@ -85,19 +85,22 @@ export function ToastHost() {
   const dismiss = useToastQueue((state) => state.dismiss);
   const insets = useSafeAreaInsets();
   const head = queue[0];
+  // Under the launch's drawn splash (ADR-0209 §2) a message is drawn but not yet seen: it is
+  // neither said nor timed until the splash has gone, and then it has its whole hold.
+  const covered = useCoveredBySplash();
 
   // Announced as it becomes the head rather than as it is queued: a sentence spoken while
   // three others are still ahead of it is a sentence about a screen the player is not on.
   // Keyed on the toast itself, so two identical messages are two toasts and the second is
   // held for its own 2,6 seconds rather than inheriting what is left of the first one's.
   useEffect(() => {
-    if (head === undefined) return;
+    if (head === undefined || covered) return;
 
     announce(head.message, head.politeness);
     const held = setTimeout(() => dismiss(head.id), holdOf(head.hold));
 
     return () => clearTimeout(held);
-  }, [head, dismiss]);
+  }, [head, dismiss, covered]);
 
   if (head === undefined) return null;
 

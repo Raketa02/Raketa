@@ -98,11 +98,28 @@ review comment and a test description all use the same word.
   `isLoggedIn`, a bare `isLoading` — none can express "still restoring", which is what
   causes a login screen to flash over a valid session.
 - **Bootstrap sequence** — the one ordered startup path in `shared/lib/bootstrap`
-  (reporting → config → focus/online wiring → keychain → session → splash → tree).
-  _Avoid_: "init", "app setup" — those name a place, not an order, and the order is the
-  point.
-- **Splash gate** — holding `expo-splash-screen` until bootstrap resolves _and_ the fonts
-  are loaded. The mechanism that makes the tri-state visible-free.
+  (reporting → config → focus/online wiring → keychain → session → install referrer → fonts →
+  tree), run **behind the drawn splash**. _Avoid_: "init", "app setup" — those name a place, not
+  an order, and the order is the point.
+- **Launch gate** — the one owner of a cold open (`LaunchGate`,
+  [ADR-0209](../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)): it
+  draws the **drawn splash** on its first render, lets the **launch window** go on the splash's
+  first layout, runs the bootstrap sequence behind it, mounts the tree underneath when the
+  sequence resolves, and fades the splash at the later of 2.6 s (0.9 s under reduced motion) and
+  the first screen being ready. Nothing renders a route tree before the sequence resolves, which
+  is what keeps the tri-state from showing. _Avoid_: "splash gate" — it was the bootstrap gate's
+  hold on `expo-splash-screen` until startup ended, and **startup is never held now**.
+- **Launch window** — the OS's own splash, drawn from the tap until the first JavaScript frame: a
+  plain `#0B2B33` field with no icon (`app.config.ts`, the splash-screen plugin), the drawn splash's edge
+  colour, so the two read as one field. _Avoid_: "native splash" as if it were the app's splash.
+- **Drawn splash** — the first screen of every cold open, drawn rather than played from a file
+  (`DrawnSplash`): today its ground, a radial glow on `splashGroundEdge`. It swallows every touch
+  until it is gone and plays once per JavaScript process; while it **covers** the tree
+  (`useCoveredBySplash`), iOS's modal stage is held back and a toast's hold does not start. Not
+  sign-in's _It's a game!_ picture, which `auth` calls its stage's splash (`StageSplash`).
+- **Hold** — a screen under the drawn splash declaring itself blank (`useSplashHold`), so the fade
+  waits for it. The entry gate holds while its decision is _pending_. A hold delays only the fade,
+  and once the fade has begun nothing stops it.
 - **Token manager** — the module in `shared/lib/auth` owning raw token values and their
   **in-memory mirror** (read from the keychain once at bootstrap; written back atomically
   on every change). _Avoid_: "token store" — it is not a Zustand store and never will be.

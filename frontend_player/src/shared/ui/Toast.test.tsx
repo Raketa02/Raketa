@@ -17,6 +17,7 @@ import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { showToast, useToastQueue } from '@/shared/store/toast.store';
 
+import { SplashCoverProvider } from './overlay';
 import { TAB_BAR_HEIGHT } from './TabBar';
 import { theme } from './theme';
 import { ToastHost } from './Toast';
@@ -108,6 +109,43 @@ describe('the queue', () => {
     act(() => jest.advanceTimersByTime(theme.motion.hold.toast - 1));
 
     expect(drawn('Second')).toBeTruthy();
+  });
+});
+
+/**
+ * **A message raised under the launch's drawn splash** (ADR-0209 §2): the host is in the tree the
+ * splash covers for the first seconds of a cold open, so a hold started there would run out unseen
+ * — a two-second toast raised at 0.4 s gone before the fade at 2.6 s. It waits, unsaid, until the
+ * splash is gone, and then has its whole time.
+ */
+describe('under the launch’s splash', () => {
+  function renderCovered(covered: boolean) {
+    return (
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <SplashCoverProvider covered={covered}>
+          <ToastHost />
+        </SplashCoverProvider>
+      </SafeAreaProvider>
+    );
+  }
+
+  it('says nothing and starts no hold until the splash has gone, then has its whole time', () => {
+    const view = renderTree(renderCovered(true));
+    act(() => showToast({ message: 'That link has already been used' }));
+
+    hold();
+    hold();
+    expect(drawn('That link has already been used')).toBeTruthy();
+    expect(announced).not.toHaveBeenCalled();
+
+    view.rerender(renderCovered(false));
+    expect(announced).toHaveBeenCalledTimes(1);
+
+    act(() => jest.advanceTimersByTime(theme.motion.hold.toast - 1));
+    expect(drawn('That link has already been used')).toBeTruthy();
+
+    act(() => jest.advanceTimersByTime(1));
+    expect(drawn('That link has already been used')).toBeNull();
   });
 });
 

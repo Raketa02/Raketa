@@ -215,10 +215,11 @@ Three states, explicitly. Scattered `isLoading` booleans cannot express
 authenticated tree flashing before a redirect, and the login screen flashing while valid
 credentials are still being read out of the keychain.
 
-`src/shared/lib/bootstrap/` runs one ordered sequence:
+`src/shared/lib/bootstrap/` runs one ordered sequence, **behind the drawn splash**:
 
 ```
-native process starts
+native process starts                          (the OS launch window: a plain night field)
+   → the launch gate draws the splash          (the launch window is let go on its first layout)
    → initialise crash/error reporting          (so a bootstrap crash is visible)
    → read + Zod-validate public runtime config (fail fast on bad config)
    → wire focusManager / onlineManager to native state
@@ -226,14 +227,44 @@ native process starts
    → restore + validate/refresh the session
    → start reading the install referrer        (Android, first launch only; never awaited — #756)
    → initialise authenticated app state
-   → hide the splash screen
-   → render the authenticated or unauthenticated tree
+   → load fonts
+   → mount the authenticated or unauthenticated tree, underneath the splash
+   → fade the splash into it                   (at the later of 2.6 s and the first screen ready)
 ```
 
-The splash screen is the gate. Nothing renders a route tree before the sequence resolves.
+**The launch gate owns the launch, and startup is never held**
+([ADR-0209](../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)). It
+was the bootstrap gate, which held the native splash until the sequence resolved; that splash is
+now the OS's launch window, a plain `#0B2B33` field with no icon, kept only until the drawn
+splash's first layout. The drawn splash is the first thing the player sees, the sequence runs
+behind it, and when the sequence resolves the tree — or the startup failure screen — mounts
+**underneath** it, so the first screen's own requests start under the motion.
+
+- **The fade starts at the later of 2.6 s** (0.9 s under reduced motion), counted from the
+  splash's first layout, **and the first screen being ready**: the sequence settled, the tree laid
+  out, and **no hold standing**. It is a linear 0.5 s fade of the whole splash, which then
+  unmounts. _Ready_ never means the data has arrived.
+- **A hold** is the one interface between the tree and the gate (`useSplashHold`): a screen that
+  would draw nothing declares itself blank, and the fade waits while any declaration stands. The
+  entry gate holds while its decision is _pending_, so the splash never fades into a blank frame,
+  and the shared gate never imports a feature to know it.
+- **Reduced motion is decided once, before the first frame**, from the OS's answer —
+  `ReducedMotionProvider` starts from the setting as the process started, never a provisional
+  `false` — and never switched mid-play.
+- **Until it is gone the splash swallows every touch**, and it sits above everything the root
+  draws: the overlay host, the toasts and the environment badge. The tree beneath takes no touch
+  and is hidden from a screen reader. **It plays once per JavaScript process**, a dev reload
+  included — never on a fast refresh, a return from the background or a sign-out — and the
+  sequence runs once with it.
+- **What drawing last cannot cover reads `useCoveredBySplash`** (`shared/ui`). iOS's modal stage
+  is a native window above the whole app, so a sheet the first screen opens at once is presented
+  only as the splash goes; Android's is a layer in the tree, covered with it. A toast raised under
+  the splash is neither said nor timed until the splash has gone, then has its whole hold.
+
+Nothing renders a route tree before the sequence resolves.
 
 Fonts belong in this sequence too: Archivo (400–800) and IBM Plex Mono (400–600) are
-loaded with `expo-font` and **awaited before the splash hides** — a late font reflows
+loaded with `expo-font` and **awaited before the tree mounts** — a late font reflows
 every number on screen.
 
 ### Root provider composition

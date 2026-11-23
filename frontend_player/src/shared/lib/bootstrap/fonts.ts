@@ -1,5 +1,5 @@
 /**
- * The app's typefaces, and the promise the splash screen waits on.
+ * The app's typefaces, and the startup sequence's last step.
  *
  * The keys are the **family names** the design system selects weight by
  * (`theme.font.sans[700]`), because `fontWeight` is ignored on Android when a custom
@@ -7,9 +7,9 @@
  * slip — that text silently renders in the system font on device, and `fonts.test.ts`
  * exists to catch it.
  *
- * These are awaited *before* the splash screen hides: a font that arrives late reflows
- * every number on screen, and this app puts monospaced figures in front of the player
- * constantly. See docs/architecture.md Part 3.
+ * These are awaited *before* the tree mounts underneath the drawn splash: a font that arrives
+ * late reflows every number on screen, and this app puts monospaced figures in front of the
+ * player constantly. See docs/architecture.md Part 3.
  */
 
 // Imported file by file, not from the package index. Each index `require`s every weight

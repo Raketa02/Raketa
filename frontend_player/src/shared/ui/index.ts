@@ -208,10 +208,12 @@ export { ModalStage, type ModalStageProps } from './ModalStage';
 export {
   OverlayHost,
   ReducedMotionProvider,
+  SplashCoverProvider,
   announce,
   behindOverlay,
   moveAccessibilityFocus,
   useCollapsedPresentation,
+  useCoveredBySplash,
   useLiveRegion,
   useOverlayLayers,
   useReducedMotion,
@@ -220,6 +222,7 @@ export {
   type FocusTarget,
   type OverlayLayers,
   type ReducedMotionProviderProps,
+  type SplashCoverProviderProps,
 } from './overlay';
 export {
   MONOGRAM_HUES,

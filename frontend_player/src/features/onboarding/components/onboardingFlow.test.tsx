@@ -39,6 +39,7 @@ import {
   runInProgress,
   RUNS_IN_PROGRESS_PATH,
   SPORTS_SERVED,
+  splashHoldsStanding,
   stubGate as stubGateWith,
   stubLocation,
   stubProfileOptions,
@@ -394,6 +395,67 @@ describe('where a launch lands', () => {
     onlineManager.setOnline(true);
 
     await waitFor(() => expect(screen).toHavePathname('/tags'));
+  });
+
+  /**
+   * **The entry gate holds the splash while it is still asking** (ADR-0209 §3). *Pending* draws
+   * nothing — the one blank state after startup — and the splash fading into it would be the blank
+   * frame the brief forbids. An answer lets go, whichever it is: a destination, or either of the two
+   * screens saying the gate could not be read.
+   */
+  describe('the splash', () => {
+    it('is held while the gate is still asking who this is, and let go when it answers', async () => {
+      stubGate();
+      let answerMe = () => {};
+      const held = new Promise<void>((resolve) => {
+        answerMe = resolve;
+      });
+      transport.on('GET', ME_PATH, async () => {
+        await held;
+        return json<Wire['MeResponse']>({ ...GATE_USER, has_player_profile: true });
+      });
+
+      await launchSignedIn();
+      await waitFor(() => expect(transport.requestsTo('GET', ME_PATH)).toHaveLength(1));
+
+      expect(splashHoldsStanding()).toBe(1);
+
+      answerMe();
+
+      expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+      expect(splashHoldsStanding()).toBe(0);
+    });
+
+    it('is let go on the screen saying the gate could not be read', async () => {
+      stubGate();
+      transport.on('GET', ME_PATH, () => errorResponse(403, 'forbidden'));
+
+      await launchSignedIn();
+
+      expect(await screen.findByText("We couldn't pick up where you left off")).toBeTruthy();
+      expect(splashHoldsStanding()).toBe(0);
+    });
+
+    it('is let go on the screen saying it is waiting for a connection', async () => {
+      stubGate();
+      onlineManager.setOnline(false);
+
+      await launchSignedIn();
+
+      expect(
+        await screen.findByText("You're offline. This will load as soon as you're back."),
+      ).toBeTruthy();
+      expect(splashHoldsStanding()).toBe(0);
+    });
+
+    it('is never held for a signed-out launch, which asks the gate nothing', async () => {
+      setSessionStatus('unauthenticated');
+
+      renderRouter(ONBOARDING_ROUTES, { initialUrl: '/' });
+
+      await waitFor(() => expect(screen).toHavePathname('/sign-in'));
+      expect(splashHoldsStanding()).toBe(0);
+    });
   });
 
   it('claims nothing was tried, and offers no retry for a query that resumes itself', async () => {

@@ -18,10 +18,10 @@ pnpm start                   # then press i (iOS sim) / a (Android emulator)
 ```
 
 The app boots to a placeholder screen. `src/app/_layout.tsx` composes the root providers
-and gates the splash screen on the **bootstrap sequence** — the ordered startup path in
+and runs the **bootstrap sequence** behind a drawn splash — the ordered startup path in
 [`docs/architecture.md` Part 3](docs/architecture.md#part-3--bootstrap-and-the-session-state-machine),
 implemented in `src/shared/lib/bootstrap/`. It validates config, then loads Archivo and
-IBM Plex Mono with `expo-font` and awaits them before the splash hides. Routing, sessions
+IBM Plex Mono with `expo-font` and awaits them before the tree mounts. Routing, sessions
 and features arrive in later slices; build them outward from the folder contract in
 [`src/features/_template/README.md`](src/features/_template/README.md). The design system
 is already locked — see below.

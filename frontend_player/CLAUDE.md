@@ -82,7 +82,7 @@ asserting it renders correctly.
   `jest` failing to parse React Native's untranspiled Flow.
 - Fonts (Archivo, IBM Plex Mono) are imported **file by file** — each `@expo-google-fonts`
   index `require`s every weight and Metro does not tree-shake, so one name costs 4,2 MB
-  instead of 1,0 MB — and awaited before the splash screen hides.
+  instead of 1,0 MB — and awaited before the tree mounts underneath the drawn splash.
 
 ## Safety — never without an explicit request
 
@@ -199,8 +199,13 @@ reason. Zustand never holds API entities, tokens, a backend cache, or a global l
 Bootstrap is a **state**, never `user === undefined` — that ambiguity is what flashes a login
 screen while valid credentials are still being read out of the keychain. `shared/lib/bootstrap`
 runs one ordered sequence (error reporting → validate config → wire focus/online managers → read
-SecureStore → restore/validate session → start reading the install referrer, never awaited → hide
-splash → render) and nothing renders a route tree before it resolves. The guard is a redirect in `(app)/_layout.tsx` keyed on `SessionStatus`;
+SecureStore → restore/validate session → start reading the install referrer, never awaited → load
+fonts → render) and nothing renders a route tree before it resolves. **Startup runs behind a drawn
+splash and is never held** ([ADR-0209](../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)):
+the launch gate draws the splash first, lets the OS launch window go on the splash's first layout,
+mounts the tree underneath when the sequence resolves, and fades at the later of 2.6 s and the
+first screen being ready — a screen that would draw nothing says so with `useSplashHold`, as the
+entry gate does while _pending_. The guard is a redirect in `(app)/_layout.tsx` keyed on `SessionStatus`;
 route groups make the authorization boundary visible in the file tree. iOS Keychain data can
 survive a reinstall, so **a token existing is not proof a session exists** — bootstrap validates
 it.

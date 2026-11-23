@@ -95,6 +95,7 @@ import TagsRoute from '@/app/(onboarding)/tags';
 import { featureFlagKeys } from '@/features/feature_flags/types';
 import { HOME_COPY } from '@/features/shell/types';
 import { beginSession, setSessionStatus } from '@/shared/lib/auth';
+import { SplashHoldsProvider, type SplashHolds } from '@/shared/lib/bootstrap';
 import {
   ClipboardProvider,
   HapticsProvider,
@@ -408,9 +409,34 @@ export function resetPush(): void {
 }
 
 /**
- * The providers the real root layout composes, without the bootstrap sequence — fonts, the
- * splash screen and config validation are the launch path's business and have their own
- * tests.
+ * **The splash's holds, counted as the launch gate counts them** (ADR-0209 §3). The harness mounts no
+ * launch gate — no suite waits out a splash — so a screen that says it is blank says it here, and the
+ * entry gate's suite reads how many such declarations stand. Every tree withdraws its own as it
+ * unmounts, so the count is back to nought between tests.
+ */
+let holdsStanding = 0;
+
+const SPLASH_HOLDS: SplashHolds = {
+  place: () => {
+    holdsStanding += 1;
+    let withdrawn = false;
+    return () => {
+      if (withdrawn) return;
+      withdrawn = true;
+      holdsStanding -= 1;
+    };
+  },
+};
+
+/** How many screens of the tree say, right now, that they are blank and the splash must wait. */
+export function splashHoldsStanding(): number {
+  return holdsStanding;
+}
+
+/**
+ * The providers the real root layout composes, without the launch gate — the drawn splash, the
+ * startup sequence, fonts and config validation are the launch path's business and have their own
+ * tests (`LaunchGate.test.tsx`). Its one interface with the tree, the hold, is recorded instead.
  */
 function TestRoot() {
   return (
@@ -426,9 +452,11 @@ function TestRoot() {
             would — rather than the context's `false`, which is what a tree with no provider
             answers whatever the OS says. */}
         <ReducedMotionProvider>
-          <WithPorts>
-            <Slot />
-          </WithPorts>
+          <SplashHoldsProvider holds={SPLASH_HOLDS}>
+            <WithPorts>
+              <Slot />
+            </WithPorts>
+          </SplashHoldsProvider>
         </ReducedMotionProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

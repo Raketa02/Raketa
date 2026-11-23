@@ -1,6 +1,6 @@
 /**
- * The root layout: the only place providers are composed, and the gate the bootstrap
- * sequence resolves behind.
+ * The root layout: the only place providers are composed, and the launch gate — the drawn
+ * splash every cold open starts on, with the bootstrap sequence running behind it (ADR-0209).
  *
  * docs/architecture.md Part 3 fixes the order — reporting wraps everything so it can see
  * failures, and auth sits above Query so a session change can reach the cache. Each
@@ -24,7 +24,7 @@ import { fetchCurrentUserAtLaunch, refreshTokens, restoreSession } from '@/featu
 import { readTheInstallReferrerOnce } from '@/features/links/types';
 import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
-import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
+import { LaunchGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
 import { queryClient } from '@/shared/lib/query-client';
 import { OverlayHost, ReducedMotionProvider, ToastHost } from '@/shared/ui';
 
@@ -92,7 +92,14 @@ export default function RootLayout() {
            * named as the moment it becomes the context Part 13 describes.
            */}
           <ReducedMotionProvider>
-            <BootstrapGate run={run}>
+            {/*
+             * The launch gate (ADR-0209): it draws the splash first, runs the sequence behind it,
+             * mounts everything below underneath it, and fades it out — over the overlay host, the
+             * toasts and the badge, which is why they are all inside it. Inside the motion
+             * provider, whose first answer is already the OS's: the splash decides its variant
+             * once, from that.
+             */}
+            <LaunchGate run={run}>
               {/*
                * design-system 9.3's root-level overlay host: every modal stage on Android is a
                * layer here, above the route tree and the tab bar, and the app beneath is hidden
@@ -117,7 +124,7 @@ export default function RootLayout() {
                * queue: `shared/store/toast.store.ts`.
                */}
               <ToastHost />
-            </BootstrapGate>
+            </LaunchGate>
           </ReducedMotionProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

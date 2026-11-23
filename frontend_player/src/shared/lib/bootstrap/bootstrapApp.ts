@@ -10,8 +10,12 @@
  *  -> restore + validate the session          <- here
  *  -> start reading the install referrer       <- here, not awaited (#756)
  *  -> load fonts                              <- here
- *  -> hide the splash screen                  <- BootstrapGate
- *  -> render
+ *  -> render, underneath the drawn splash     <- LaunchGate
+ *
+ * **It runs behind the drawn splash, and nothing waits on it to show one** (ADR-0209 §2). It no
+ * longer ends by hiding a native splash: the launch gate lets the OS launch window go on the drawn
+ * splash's first layout, before this has done anything, and fades the splash when the first screen
+ * is ready.
  *
  * Only the steps whose code exists are implemented; the rest are inserted here as their
  * slices land, so there is never a second place that runs work at launch.

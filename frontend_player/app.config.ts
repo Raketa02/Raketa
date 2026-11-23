@@ -83,6 +83,18 @@ export default (): ExpoConfig => {
     plugins: [
       'expo-router',
       'expo-secure-store',
+      // The OS launch window (ADR-0209 §1), drawn from the tap until the first JavaScript frame and
+      // let go on the drawn splash's first layout. It cannot be removed — iOS requires a launch
+      // screen, and Android 12+ always draws one — so it is a plain night field: the drawn splash's
+      // edge colour (`theme.color.splashGroundEdge`, spelled here because Node evaluates this
+      // document before Metro exists, and held equal by `appConfigDocument.test.ts`), so the two
+      // read as one field. The image is a 512 × 512 PNG with nothing in it, because Android 12+
+      // shows the launcher's icon unless it is handed one. One colour for both platforms and both
+      // appearances. A native change: a fresh build, and on iOS perhaps a reinstall, to see it.
+      [
+        'expo-splash-screen',
+        { backgroundColor: '#0B2B33', image: './assets/launch-window-icon.png' },
+      ],
       [
         'expo-location',
         {

@@ -274,7 +274,10 @@ meant an `AccessibilityInfo` listener per consumer, which was fine for two overl
 for the Play tab's always-mounted surfaces (a press transform, the fill's staggered seats).
 Outside a provider it reads `false`, which is what the app looked like before anybody asked for
 calm; a test that wants a tree in reduced motion passes `value` rather than mocking the OS,
-which is Part 13's own shape for a port's context.
+which is Part 13's own shape for a port's context. **Inside one, its first answer is already the
+OS's** — Reanimated's reading of the setting as the process started, there before anything
+renders — and the subscription follows the switch from then on: the launch's drawn splash decides
+its variant once, before its first frame, and must never take a provisional `false` (ADR-0209 §2).
 
 **Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
 a real modal" is three separate obligations rather than one prop — read `overlay.tsx` and

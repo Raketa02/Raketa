@@ -39,10 +39,11 @@ component that ignores the theme fails `pnpm lint` rather than review.
 The audit describes an HTML file, and **its phone frame, dark stage, scenario rail, time bar
 and 900px breakpoint are harness — they do not ship.** The app _is_ the phone. Never build a
 frame, a stage or a scenario switcher, and never use the four stage colours (`#08222B`
-`#071C24` `#0B2B36` `#24505E`) — they are not in the theme. **The one dark screen is _It's a
+`#071C24` `#0B2B36` `#24505E`) — they are not in the theme. **The dark screens are two: _It's a
 game!_**, on two colours of its own (`yesGroundCentre`, `yesGroundEdge`) that ADR-0167 fences
-as the yes screen's alone — the moment that inherited them; it is not a dark mode and not a
-licence for a second dark surface.
+as the yes screen's alone — the moment that inherited them — **and the drawn splash** every cold
+open starts on, on its own pair (`splashGroundCentre`, `splashGroundEdge`) that ADR-0209 fences
+as the splash's alone. Neither is a dark mode, and neither is a licence for another dark surface.
 
 ## The four React Native traps
 

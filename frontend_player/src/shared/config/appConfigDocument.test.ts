@@ -15,7 +15,13 @@
  * environment by hand.
  */
 
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { inflateSync } from 'zlib';
+
 import appConfig from '../../../app.config';
+
+import { theme } from '@/shared/ui/theme';
 
 import { appIdentity } from './appIdentity';
 import { APP_SCHEME } from './appLinks';
@@ -48,6 +54,58 @@ function pluginNamed(name: string): [string, Record<string, unknown>] {
 
   if (!Array.isArray(entry)) throw new Error(`${name} is not configured in app.config.ts`);
   return [entry[0] as string, (entry[1] ?? {}) as Record<string, unknown>];
+}
+
+/**
+ * Whether a PNG draws nothing at all: 8-bit RGBA, and every pixel's alpha nought.
+ *
+ * Read straight from the file's chunks — the image data inflated and each scanline un-filtered —
+ * rather than through an image library, because the question is one byte per pixel.
+ */
+function everyPixelIsTransparent(png: Buffer): boolean {
+  const SIGNATURE = '89504e470d0a1a0a';
+  if (png.subarray(0, 8).toString('hex') !== SIGNATURE) return false;
+
+  let width = 0;
+  let height = 0;
+  const data: Buffer[] = [];
+  for (let at = 8; at < png.length;) {
+    const length = png.readUInt32BE(at);
+    const type = png.toString('latin1', at + 4, at + 8);
+    const body = png.subarray(at + 8, at + 8 + length);
+    if (type === 'IHDR') {
+      width = body.readUInt32BE(0);
+      height = body.readUInt32BE(4);
+      const [bitDepth, colourType, , , interlace] = body.subarray(8, 13);
+      if (bitDepth !== 8 || colourType !== 6 || interlace !== 0) return false;
+    }
+    if (type === 'IDAT') data.push(body);
+    at += 12 + length;
+  }
+
+  const BYTES = 4;
+  const stride = width * BYTES;
+  const raw = inflateSync(Buffer.concat(data));
+  let previous = Buffer.alloc(stride);
+  for (let row = 0; row < height; row += 1) {
+    const filter = raw[row * (stride + 1)];
+    const line = Buffer.from(raw.subarray(row * (stride + 1) + 1, (row + 1) * (stride + 1)));
+    for (let i = 0; i < stride; i += 1) {
+      const left = i >= BYTES ? (line[i - BYTES] ?? 0) : 0;
+      const up = previous[i] ?? 0;
+      const upLeft = i >= BYTES ? (previous[i - BYTES] ?? 0) : 0;
+      const paeth = () => {
+        const p = left + up - upLeft;
+        const [a, b, c] = [Math.abs(p - left), Math.abs(p - up), Math.abs(p - upLeft)];
+        return a <= b && a <= c ? left : b <= c ? up : upLeft;
+      };
+      const predicted = [0, left, up, (left + up) >> 1, paeth()][filter ?? 0] ?? 0;
+      line[i] = ((line[i] ?? 0) + predicted) & 0xff;
+    }
+    for (let alpha = 3; alpha < stride; alpha += BYTES) if (line[alpha] !== 0) return false;
+    previous = line;
+  }
+  return width > 0 && height > 0;
 }
 
 describe('the config document', () => {
@@ -121,6 +179,35 @@ describe('the config document', () => {
     const [, options] = pluginNamed('expo-image-picker');
 
     expect(options.photosPermission).toEqual(expect.any(String));
+  });
+
+  /**
+   * **The OS launch window is a plain night field with no icon, on both platforms** (ADR-0209 §1).
+   * It cannot be removed — iOS requires a launch screen, and Android 12+ always draws one — so it is
+   * the drawn splash's own edge colour, and the window and the splash read as one field from the tap:
+   * no white, and no Expo logo. One colour and one image for both platforms and both appearances, so
+   * no override (`ios`, `android`, `dark`) may paint anything else.
+   */
+  it('opens on a plain launch window in the splash’s edge colour, on both platforms', () => {
+    const [, options] = pluginNamed('expo-splash-screen');
+
+    expect(options.backgroundColor).toBe(theme.color.splashGroundEdge);
+    expect(options.ios).toBeUndefined();
+    expect(options.android).toBeUndefined();
+    expect(options.dark).toBeUndefined();
+  });
+
+  /**
+   * **No icon**: Android 12+ draws the launcher's icon on its system splash unless it is handed one,
+   * so it is handed one with nothing in it. Read from the file, every pixel: an image with one
+   * visible pixel is a logo.
+   */
+  it('hands the launch window an icon with nothing in it', () => {
+    const [, options] = pluginNamed('expo-splash-screen');
+    const image = readFileSync(join(__dirname, '../../..', String(options.image)));
+
+    expect(String(options.image)).toMatch(/\.png$/);
+    expect(everyPixelIsTransparent(image)).toBe(true);
   });
 
   /**
