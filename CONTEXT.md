@@ -1786,18 +1786,17 @@ charges' (**Payments**), its result the Game's (**Games**).
   best company for the players still on it — the **Social vibe** of the three left plus the
   candidate, then their new faces, then the forecast, then the level spread.
 - **Fill in** — the group's rescue board: the **Rescues** you fit and are free for, one tab of a
-  group page. It never offers a proposal that is still filling. Today it also draws your own yeses
-  as a second section, *You're In*, under the rescues' heading *Seats to fill*.
-  [#844](https://github.com/Raketa02/Raketa/issues/844) decided, and has not yet built, that the
-  yeses become a tab of their own, **You’re in**, so Fill in holds only the rescues, and neither tab
-  has a heading. _Avoid_: Seats to fill, for the tab.
+  group page. It never offers a proposal that is still filling, and holds only the rescues: your own
+  yeses are the tab beside it, **You’re in** ([#844](https://github.com/Raketa02/Raketa/issues/844),
+  built by [#847](https://github.com/Raketa02/Raketa/issues/847); until then they were Fill in's
+  second section). Neither tab has a heading. _Avoid_: Seats to fill, for the tab.
 - **You’re in** — your own **Live yeses** in that group and sport that have not filled: picks,
   challenges and your own posts, never a rescue (a taken rescue is on Home). It is a group page's
   tab beside **Fill in**, the tab **Post a game** floats over, and where a post lands. Spelled with
-  a lower-case *i* and a curly apostrophe, like *Fill in*. **Decided and not yet built**
-  ([#844](https://github.com/Raketa02/Raketa/issues/844)); until it is, the same rows are Fill in's
-  second section. _Avoid_: You're In. Not Hottest groups' *You're in* chip, which means you're a
-  member.
+  a lower-case *i* and a curly apostrophe, like *Fill in*
+  ([#844](https://github.com/Raketa02/Raketa/issues/844), built by
+  [#847](https://github.com/Raketa02/Raketa/issues/847)). _Avoid_: You're In. Not Hottest groups'
+  *You're in* chip, which means you're a member.
 - **Check-in** — *retired 2026-10-11* ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §4, not yet built —
   [#651](https://github.com/Raketa02/Raketa/issues/651)–[#653](https://github.com/Raketa02/Raketa/issues/653)).
   A club scanning a player's QR code, or typing its short code, at the desk on the day; optional
