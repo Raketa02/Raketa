@@ -13,6 +13,7 @@ import {
   youTile,
   ZOFIA,
 } from '@/test-support/groupDeck';
+import type { Wire } from '@/test-support/transport';
 
 import { toDeckCard, toGroupDeck, toWireKind } from './deckMappers';
 
@@ -90,6 +91,14 @@ describe('a card', () => {
     expect(fun?.vibe).toEqual({ pct: 82 });
     expect(fun).not.toHaveProperty('forecast');
     expect(toDeckCard(deckCard({ vibe: null }))).not.toHaveProperty('vibe');
+  });
+
+  /** A server from before #830 sends no `vibe` at all: the card is still drawn, with no vibe. */
+  it('reads no vibe from an older server’s card, rather than failing the deck', () => {
+    const { vibe: _unsent, ...older } = deckCard();
+    const card = toDeckCard(older as unknown as Wire['DeckCardSchema']);
+    expect(card).not.toHaveProperty('vibe');
+    expect(card).toMatchObject({ kind: 'competitive' });
   });
 
   it('reads a challenge whose poster withdrew as nobody named', () => {

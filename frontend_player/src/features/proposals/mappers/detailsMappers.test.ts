@@ -118,3 +118,50 @@ describe('the kind’s own card (#833, #839)', () => {
     expect(toProposalDetails(wire)).not.toHaveProperty('atStake');
   });
 });
+
+describe('a For-fun game’s Social vibe (#833, #840)', () => {
+  const forFun = (vibe: Wire['ProposalDetailsResponse']['vibe']) =>
+    proposalDetails(deckCard({ kind: 'FOR_FUN', forecast: null }), { forecast: null, vibe });
+
+  it('reads the % and your tags’ rows, each with who carries it, in the read’s order', () => {
+    const wire = forFun({
+      pct: 67,
+      rows: [
+        { tag: 'STAYS_FOR_A_DRINK', carried_by: ['me', 'kuba'] },
+        { tag: 'HERE_FOR_A_REGULAR_GAME', carried_by: ['me'] },
+      ],
+    });
+
+    expect(toProposalDetails(wire)?.vibe).toEqual({
+      pct: 67,
+      rows: [
+        { tag: 'STAYS_FOR_A_DRINK', carriedBy: ['me', 'kuba'] },
+        { tag: 'HERE_FOR_A_REGULAR_GAME', carriedBy: ['me'] },
+      ],
+    });
+  });
+
+  /** ADR-0207 §7: an app that doesn't know a tag code skips it, and never crashes. */
+  it('leaves off a row whose tag this build cannot name', () => {
+    const wire = forFun({
+      pct: 50,
+      rows: [
+        { tag: 'NOT_A_TAG_YET' as Wire['SocialTag'], carried_by: ['me'] },
+        { tag: 'PLAYS_TO_WIN', carried_by: ['me', 'ania'] },
+      ],
+    });
+
+    expect(toProposalDetails(wire)?.vibe?.rows).toEqual([
+      { tag: 'PLAYS_TO_WIN', carriedBy: ['me', 'ania'] },
+    ]);
+  });
+
+  it('reads no vibe where the read sends none, nor from an older server’s read', () => {
+    expect(toProposalDetails(forFun(null))).not.toHaveProperty('vibe');
+
+    const { vibe: _unsent, ...older } = forFun(null);
+    const wire = older as unknown as Wire['ProposalDetailsResponse'];
+    expect(toProposalDetails(wire)).not.toHaveProperty('vibe');
+    expect(toProposalDetails(wire)).toMatchObject({ kind: 'forFun', status: 'FILLING' });
+  });
+});

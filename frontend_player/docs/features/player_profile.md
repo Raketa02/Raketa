@@ -240,7 +240,11 @@ cache holds the trimmed line sent (the same trim the server keeps) or none. **Th
 invalidate the player's own record**: the header card draws the face, the intro and the tags
 off `GET /players/me/record`, another feature's read of the same facts, and a tab that read the
 old line after _Save_ would be the one screen the edit was made on saying it did not land —
-invalidated through `playerRecordKeys`, never patched. The live lines are `photosLine`,
+invalidated through `playerRecordKeys`, never patched. **A tag save also marks every deck and
+every game's details stale** (#840; ADR-0207 §2): a For-fun card's Social vibe and the details'
+rows are worked out from everybody's tags on every read and stored nowhere, so they move with the
+edit — `proposalKeys.decks()` and `proposalKeys.proposals()`, never patched (`proposals.md`, the
+Social vibe card). The live lines are `photosLine`,
 `tagsLine` (against the **served** ceiling, so the row reads the options too) and `introLine`.
 **Not seen on a device**: the row drawn from signed addresses, the sheet over the tab's chrome,
 the write failure pinned under the row, and the intro's action bar over the keyboard.

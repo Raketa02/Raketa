@@ -117,6 +117,9 @@ describe('the competitive details’ top card', () => {
     expect(within(stakes).getByText('+0,08')).toBeTruthy();
     expect(within(stakes).getByText(LOSE_TILE)).toBeTruthy();
     expect(within(stakes).getByText('−0,07')).toBeTruthy();
+
+    // The split row said the sides, so the vs line stays a drawing: said once.
+    expect(screen.queryByLabelText('You and zofia.b against ania.k and ewa.m')).toBeNull();
   });
 
   /** The bar is drawn and hidden: the split row above it already speaks its three numbers. */
@@ -162,6 +165,9 @@ describe('the competitive details’ top card', () => {
     expect(screen.queryByText(BALANCE_FORECAST)).toBeNull();
     expect(screen.queryByText(/^\d+%$/)).toBeNull();
     expect(screen.queryByText(/forecast|unrated|cannot|could not|not available/i)).toBeNull();
+
+    // With no split row to say the sides, the vs line says them.
+    expect(screen.getByLabelText('You and zofia.b against ania.k and ewa.m')).toBeTruthy();
   });
 
   it('names one person a side on a singles court', async () => {

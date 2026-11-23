@@ -27,8 +27,8 @@ its line under it say it, and the first yes's payment setup says the rest.
 
 **The details read top to bottom: the top card, the game card, _Who is free_**
 ([#836](https://github.com/Raketa02/Raketa/issues/836); for fun 3–6; design-system 7.22), for both
-kinds. The top card comes first — the kind's own (below; For fun's is #840's, and draws nothing until
-then) — then the dark game card: the status tag, the tiles, the vs line, WHERE · DAY ·
+kinds. The top card comes first — the kind's own (below: the Balance forecast, or the Social vibe
+card) — then the dark game card: the status tag, the tiles, the vs line, WHERE · DAY ·
 TIME · YOUR SHARE, the offline note while an answer waits, and **what the reader may do, in the
 card's own foot**, right under the facts it answers. _Not this time_ (secondary, at its words' width)
 is on the left and the yes (primary, the rest) on the right, side by side, as mocks 4 and 6 draw
@@ -60,6 +60,34 @@ the game. A **provisional** figure (a seat open, read as matching its partner) i
 the deck card and the details drew it before; the booked game never receives one. **The deck card is
 unchanged**: no stakes there. Walked in `competitiveDetails.test.tsx`; the booked game's
 `forecastBlock.test.tsx` passed untouched. **Not seen on a device.**
+
+**A For-fun game's details open on the Social vibe card** ([#840](https://github.com/Raketa02/Raketa/issues/840);
+ADR-0207 §6; for fun 7, which leads over 5 and 6). How much the whole table shares, and who shares
+yours. **The top**: _SOCIAL VIBE_, the big % in its band's paper ink with its word beside it, and the
+bar full width below — **the deck card's own number**, so the % swiped on is the % looked at, worded
+and banded by `socialVibeBand` as the card's row is. **The grid**: a column per person named on the
+reader's version — **you first, as _You_, then the others as the tiles stand** (`rowsOf`: the side
+with more people In on top, the people In first in a row), so the faces read in the order of the
+tiles below; mock 5's _Magda, Filip, You, Kuba_ is overruled by mock 7's. Four columns for doubles,
+two for singles; a seat still open is nobody, at the read's table and here. Each column is a round
+face with the nickname under it on one line, shortened with an ellipsis. **The rows are your tags
+only**, in the read's order — the vocabulary's — each with its emoji and label, 💘 like any other;
+**a dot under every carrier**, your own included, as the read names them (`carried_by`). **A row
+somebody else carries is on a pale volt band** with ink words and olive dots; **a row only you have
+is grey**, with a grey dot and no band. Somebody else counts only through a column, so a carrier the
+read names who stands on no tile shares nothing visible. **The grid has no taps**, and is spoken a row
+at a time — _Stays for a drink: you, kuba.w_ (`socialVibeRowSpoken`) — the column heads hidden, since
+every row names its carriers. **The rule is `topCardOf`'s** (`domain/details.ts`): For fun opens on
+the vibe card and never a forecast, even one a read sent; competitive on its forecast and never a
+vibe; nothing at all where the read sends none — fewer than two named, or nobody holding a tag that
+counts. A tag code this build can't name is left off by the mapper (ADR-0207 §7). **The card is
+`shared/ui`'s `SocialVibeCard`**, handed a `SocialVibeGrid` (`shared/vocabulary/socialVibeGrid.ts`),
+because the booked game and the game at the court draw it next (#841, `games`): the columns and the
+shared rows are each feature's rule, the paint the card's. **Live**: a tag saved in the You tab
+(`useChangeSocialTags`) marks every deck read and every details read stale, beside the record — the
+vibe is worked out on every read and stored nowhere — so a game reopened draws the new rows and
+number. Walked in `forFunDetails.test.tsx`. **Not seen on a device**: the card against for fun 7, the
+lower bands' paper inks, a long nickname's ellipsis, and eight rows.
 
 **Nothing the server decides is re-derived.** The order, the sides, the forecast's figure, the grade
 and every cell's shade are the read's. What the client decides is how a dealt card is drawn:
@@ -504,7 +532,8 @@ full game while it waits for one payment** (#625), sent as the withdrawal (`useL
 `DELETE /proposals/{id}/yes`), and the game fills again.
 
 **The filling details are `GET /proposals/{id}`** (A4.2; owed by #556). The kind's top card above the
-card (since #836; a competitive game's full forecast and stakes since #839), then the status tag — _Filling · 2
+card (since #836; a competitive game's full forecast and stakes since #839, a For-fun game's Social
+vibe card since #840), then the status tag — _Filling · 2
 of 4 in_, _Waiting for one payment_ amber, _Booked_, or how it ended unfilled — WHERE with the distance
 and no court, the share with _if it fills · book by_ or _Waiting for one payment · until 14:40 · Nobody
 pays until it's in_, and in the card's foot **the actions the read names**:

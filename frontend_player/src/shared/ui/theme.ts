@@ -318,9 +318,38 @@ const color = {
    *  computed half-way down: the figure 5,31 and 5,05 (past AA, where `gameGreen` is large text
    *  only); `ink` — *Social vibe* inside the fill — 6,06 and 5,77 on them; against the track
    *  (`onDarkTag` over the ground) 3,43 and 3,26, a mark's 3:1. Derived in gameGround.test.ts. The
-   *  paper card's olive inks are #840's. Drawn by `SocialVibeRow` alone, on the game card's ground. */
+   *  paper card's inks are #840's, below. Drawn by `SocialVibeRow` on the game card's ground — and,
+   *  as the band's FILL alone, by `SocialVibeCard`'s bar on paper (ADR-0207 §8: one fill per band,
+   *  whatever the ground), where they stand 2,47 and 2,60 off its `line2` track and volt 1,07: a
+   *  shade beside the track, never the only signal, since the % and its word are printed above. */
   gameVoltDim: '#8BA140',
   gameGrey: '#8A969B',
+
+  /** THE SOCIAL VIBE CARD'S PAPER PAINT (#840; ADR-0207 §8–§9, docs/design-system.md 7.39,
+   *  Part 16 2026-11-23) — the card a For-fun game's details open on, on `surface`. ADR-0207 §9's
+   *  named exceptions, and drawn by `SocialVibeCard` alone.
+   *
+   *  `voltPale` — A SHARED ROW'S BAND, MEASURED off for fun 7 to the pixel. Against 1.2's *volt has
+   *  no soft and needs none*: the mock's grid reads across a pale volt band, so the band is one,
+   *  and it stays a bed for words and marks only — `ink` 16,82 on it, `oliveInk` dots 5,78.
+   *
+   *  `oliveInk` — THE OLIVE ON PAPER: the grid's dots and the big % in the two upper bands. It IS
+   *  `gameCellDim`'s value, as ADR-0207 §9.2 names it — the overlap grid's olive, now an ink on
+   *  paper (6,01 on `surface`); `socialVibeInks.test.ts` holds the two equal. The mock's own olive
+   *  is a shade off (#5E7010), and the ADR's word stands.
+   *
+   *  `oliveInkDim` — *Some common ground*'s %: olive's hue lifted to a lighter step that still
+   *  carries the figure past AA (4,91). DERIVED, since no mock draws the band.
+   *
+   *  `vibeGrey` — A ROW ONLY YOU HAVE, and *Fresh mix*'s %: the mock's row grey (#7C8B8D, 3,54 — not
+   *  a text colour) at its own hue, darkened to the first step past AA (4,58), `muted`'s own history.
+   *  A shade lighter than `oliveInkDim`, so *Fresh mix* never reads stronger than *Some common
+   *  ground*, as `gameGrey` sits under `gameVoltDim` on dark. The row's dot is `line`, the mock's
+   *  value to within a unit. Derived in socialVibeInks.test.ts. */
+  voltPale: '#F9FDE2',
+  oliveInk: '#546A36',
+  oliveInkDim: '#617843',
+  vibeGrey: '#6A787A',
 
   /** THE POSTING GRID'S TWO MIDDLE GREENS (#558; the Games & Fill in screens A5.2, A10;
    *  docs/design-system.md 7.28, Part 16 2026-10-02). The grid's ramp runs `paper2` (nobody who
@@ -989,6 +1018,12 @@ const size = {
    *  italic Archivo is loaded, so it is drawn, as Top 10's mark and count lean, at the one angle the
    *  app draws an italic at (`ITALIC_LEAN`). */
   socialVibe: { bar: 18, inset: space.sm, lean: ITALIC_LEAN },
+  /** The Social vibe card — 7.39 (#840; ADR-0207 §6, for fun 7, which leads over 5 and 6).
+   *  MEASURED off mock 7 and checked against mock 5, whose phone gives the scale (the card is the
+   *  content width, 449 pixels for 360): the bar 21 (33 and 28 pixels), a face 24 (39 and 33), a
+   *  column 36 (54 and 45 pixels apart), a row 24 (39) and a dot 12 (18). The bar is the card's
+   *  own, thicker than the row's 18 because the % above it is bigger. */
+  socialVibeCard: { bar: 21, face: 24, column: 36, row: 24, dot: 12 },
   /** The switch — 6.12. The track and the knob are UI §G1's measured 40 x 23 and 18, and the
    *  inset is the arithmetic between them rather than a fourth number. The ROW is the touch
    *  surface, exactly as 6.11's is: a 23pt track is well under the 44pt minimum, and a

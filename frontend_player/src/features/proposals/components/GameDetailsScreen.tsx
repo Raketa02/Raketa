@@ -12,7 +12,14 @@
  * │ [ You + Zofia ▓▓▓▓▓░░░░░░░░ Ania + Ewa ]   │   #839; for fun 3): both sides and the gap, the
  * │ 73%  Fairly even · A counted game — …      │   bar, the % and its word, the counted sentence,
  * │ [ If you win +0,08 ] [ If you lose −0,07 ] │   and the stakes — two tiles or none. Never on
- * └─────────────────────────────────────────────┘   For fun, whose Social vibe card is #840's
+ * └─────────────────────────────────────────────┘   For fun, which opens instead on
+ * ┌ SOCIAL VIBE ────────────────────────────────┐   the Social vibe card (`shared/ui`'s
+ * │ 67%  Good vibe                              │   `SocialVibeCard`, #840; for fun 7): the deck
+ * │ [████████████████░░░░░░░░]                  │   card's %, its word and the bar below, then
+ * │                  You  magda filip kuba      │   your tags' rows — a dot under each carrier,
+ * │ ▌🍻 Stays for a drink  ●             ●      │   You first, then the tiles' order; a row
+ * │  🔁 Here for a regular game ●               │   only you have in grey
+ * └─────────────────────────────────────────────┘
  * ┌ ● Filling · 1 of 4 in ─────────────────────┐   the dark card — the status, the tiles with IN,
  * │ [tile] [tile]  ── KAROL + YOU VS … ──       │   the vs line, and the court on an accent line:
  * │ [tile] [tile]                               │
@@ -30,7 +37,8 @@
  * ## One read, and the server says what the reader may do
  *
  * **`GET /proposals/{id}`** (#542) is the whole of it: who is In, the sides, the kind's own card — a
- * competitive game's forecast with both side strengths, the gap and what is at stake (#833) — the
+ * competitive game's forecast with both side strengths, the gap and what is at stake, or a For-fun
+ * game's Social vibe with who at the table carries each of the reader's tags (#833) — the
  * club and its distance, the share and the book-by, the overlap, the status — *Filling · 2 of 4
  * in*, *Waiting for one payment* in amber, booked, or how it ended unfilled — and **`actions`, what
  * the reader may do now**, in the screen's order. *Waiting for one payment* (#625, #626; Q111)
@@ -82,6 +90,7 @@ import {
   ForecastBlock,
   Note,
   ScreenHeader,
+  SocialVibeCard,
   theme,
 } from '@/shared/ui';
 import { COUNTED_GAME_SENTENCE } from '@/shared/vocabulary/forecastPresentation';
@@ -279,8 +288,10 @@ function Details({
         />
         <ScrollView contentContainerStyle={s.body} testID="game-details">
           {/* The top card, the kind's own: a competitive game's full forecast and what is at
-              stake (#839). For fun draws none here — its Social vibe card is #840's. */}
-          {topCard === undefined ? null : (
+              stake (#839), or a For-fun game's Social vibe card with its grid (#840). */}
+          {topCard === undefined ? null : topCard.kind === 'vibe' ? (
+            <SocialVibeCard grid={topCard.grid} />
+          ) : (
             <ForecastBlock
               forecast={topCard.forecast}
               split={topCard.forecast.split}
@@ -308,6 +319,9 @@ function Details({
               completes={completesTheGame(details)}
               fill={false}
               onPerson={setReading}
+              // The forecast's split row says who partners whom; the Social vibe card does not,
+              // nor does nothing at all — so there the vs line is spoken instead, said once.
+              speaksSides={topCard?.kind !== 'forecast'}
             />
 
             <Facts details={details} at={at} />

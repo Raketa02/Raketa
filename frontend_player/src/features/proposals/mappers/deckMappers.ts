@@ -113,9 +113,13 @@ export function toForecast(wire: Schemas['DeckForecastSchema'] | null): Pick<Dec
   return wire === null ? {} : { forecast: { pct: wire.pct, provisional: wire.provisional } };
 }
 
-/** A For-fun card's Social vibe, or nothing — always nothing on a competitive card (#830). */
-export function toVibe(wire: Schemas['DeckVibeSchema'] | null): Pick<DeckCard, 'vibe'> {
-  return wire === null ? {} : { vibe: { pct: wire.pct } };
+/**
+ * A For-fun card's Social vibe, or nothing — always nothing on a competitive card (#830), and from
+ * an older server's read, which sends no `vibe` at all: the card is drawn without one, never a deck
+ * that fails over a field it did not know to send.
+ */
+export function toVibe(wire: Schemas['DeckVibeSchema'] | null | undefined): Pick<DeckCard, 'vibe'> {
+  return wire === null || wire === undefined ? {} : { vibe: { pct: wire.pct } };
 }
 
 /**

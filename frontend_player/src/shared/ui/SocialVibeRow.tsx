@@ -37,8 +37,9 @@
  * vibe, 82 percent, Great vibe* (ADR-0207 §8): the band's word is said, since the colour is never
  * the only cue (Part 13), and the figure is drawn.
  *
- * **On dark only, today.** The deck card draws it; the Friends card draws it next (#842), on the
- * same ground. The Social vibe card on paper (#840) brings the paper paint — olive ink — with it.
+ * **On dark only.** The deck card draws it; the Friends card draws it next (#842), on the same
+ * ground. The Social vibe card on paper (`SocialVibeCard`, #840) draws its own bar — full width
+ * under the % and its word, with no name inside — in the same fills, with olive inks for the figure.
  */
 
 import { StyleSheet, Text, View } from 'react-native';

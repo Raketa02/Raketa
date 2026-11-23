@@ -1711,3 +1711,18 @@ them, and the server still serves where a request was found:
 details (#840) draws the % with its word printed beside it and the grid of tags; the booked game and
 the game at the court draw that card (#841); the Friends card and Post a game's fits draw the % on
 For fun (#842). Each cites this section's bands and adds its own sentences here.
+
+### 33.1 The Social vibe card
+
+> Added 2026-11-23 by the player app's [#840](https://github.com/Raketa02/Raketa/issues/840)
+> (ADR-0207 §6; for fun 7). A For-fun game's details open on it, where a competitive game's open on
+> the Balance forecast. The words are `shared/vocabulary/socialVibePresentation.ts`'s; the card is
+> `shared/ui`'s `SocialVibeCard`.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The eyebrow | `Social vibe` | uppercased by the style, a header |
+| The reading | `{n}%` beside `{word}` · spoken `Social vibe, {n} percent, {word}` | the deck card's number and §33's bands, said as the row says them, so the % swiped on is the % looked at |
+| A column | `You` · `{nickname}` · `?` | you first, then the others as the tiles stand; a nickname whole, cut by the column with an ellipsis; an account no longer named is a tile's `?`. Hidden from a listener: every row names its carriers |
+| A row | `{emoji} {label}` · `🍻 Stays for a drink` | one of **your** tags, in the vocabulary's order, the picker's label (§27); 💘 like any other |
+| A row, spoken | `{label}: you, {names}` · `Stays for a drink: you, kuba.w` · `Here for a regular game: you` | the label without its emoji, then everybody who carries it in the columns' order, each nickname whole; an account no longer named is `somebody`. One element a row; the grid has no taps |

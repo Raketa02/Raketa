@@ -7,7 +7,13 @@
  */
 
 import { balanceTone } from './balancePresentation';
-import { socialVibeBand, socialVibeSpoken } from './socialVibePresentation';
+import {
+  SOCIAL_VIBE_YOU,
+  socialVibeBand,
+  socialVibeColumnName,
+  socialVibeRowSpoken,
+  socialVibeSpoken,
+} from './socialVibePresentation';
 
 describe('the bands', () => {
   it.each([
@@ -40,5 +46,50 @@ describe('the row’s spoken name', () => {
     expect(socialVibeSpoken(82)).toBe('Social vibe, 82 percent, Great vibe');
     expect(socialVibeSpoken(35)).toBe('Social vibe, 35 percent, Some common ground');
     expect(socialVibeSpoken(0)).toBe('Social vibe, 0 percent, Fresh mix');
+  });
+});
+
+/**
+ * The Social vibe card's rows, spoken (#840; ADR-0207 §6): *{tag}: you, {names}* — the tag's words
+ * without its emoji, then everybody who carries it, you first, each nickname whole.
+ */
+describe('a row of the Social vibe card, spoken', () => {
+  const you = { isYou: true } as const;
+
+  it('says the tag, then you, then the others who carry it', () => {
+    expect(socialVibeRowSpoken('STAYS_FOR_A_DRINK', [you, { isYou: false, name: 'kuba.w' }])).toBe(
+      'Stays for a drink: you, kuba.w',
+    );
+    expect(
+      socialVibeRowSpoken('HERE_TO_IMPROVE', [
+        you,
+        { isYou: false, name: 'filip.n' },
+        { isYou: false, name: 'kuba.w' },
+      ]),
+    ).toBe('Here to improve: you, filip.n, kuba.w');
+  });
+
+  it('says you alone on a row only you carry, and 💘 like any other', () => {
+    expect(socialVibeRowSpoken('HERE_FOR_A_REGULAR_GAME', [you])).toBe(
+      'Here for a regular game: you',
+    );
+    expect(
+      socialVibeRowSpoken('OPEN_TO_MEET_SOMEONE', [you, { isYou: false, name: 'ania.k' }]),
+    ).toBe('Open to meet someone: you, ania.k');
+  });
+
+  it('says somebody for an account that can no longer be named', () => {
+    expect(socialVibeRowSpoken('SHARES_A_LIFT', [you, { isYou: false }])).toBe(
+      'Shares a lift: you, somebody',
+    );
+  });
+
+  it('heads your column You, the others by their nickname whole, an unnamed one ?', () => {
+    expect(SOCIAL_VIBE_YOU).toBe('You');
+    expect(socialVibeColumnName(you)).toBe('You');
+    expect(socialVibeColumnName({ isYou: false, name: 'magdalena.pietrzak' })).toBe(
+      'magdalena.pietrzak',
+    );
+    expect(socialVibeColumnName({ isYou: false })).toBe('?');
   });
 });

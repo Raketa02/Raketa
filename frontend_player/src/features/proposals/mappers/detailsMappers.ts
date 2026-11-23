@@ -2,15 +2,16 @@
  * **A game still filling, off the wire** — `GET /proposals/{id}` (#542) read into the domain's
  * shape ([#557](https://github.com/Raketa02/Raketa/issues/557)). The deck mapper's narrowings for
  * the same fields — the tiles, the challenger and the grid are a card's — and a sport this build
- * cannot name, or a game cell outside the week, is nothing to draw. **The forecast is the details'
- * own** since #833: the card's figure with both side strengths and the signed gap, and what is at
- * stake beside it.
+ * cannot name, or a game cell outside the week, is nothing to draw. **The kind's card is the
+ * details' own** since #833: a competitive game's figure with both side strengths and the signed
+ * gap, and what is at stake beside it; a For-fun game's Social vibe with your tags' rows.
  */
 
 import { toSport } from '@/features/onboarding/types';
 import type { components } from '@/generated/schema';
+import { toSocialTagId } from '@/shared/vocabulary/socialTags';
 
-import type { ProposalDetails } from '../domain/details';
+import type { DetailsVibeRow, ProposalDetails } from '../domain/details';
 
 import { toChallenger, toClub, toDeckSides, toKind, toOverlap } from './deckMappers';
 import { toYourPayment } from './fillMappers';
@@ -50,8 +51,25 @@ export function toProposalDetails(
     sides: toDeckSides(wire.sides),
     ...toDetailsForecast(wire.forecast),
     ...toAtStake(wire.at_stake),
+    ...toDetailsVibe(wire.vibe),
     overlap,
   };
+}
+
+/**
+ * A For-fun game's Social vibe and your tags' rows (#833), in the read's order. **A tag this build
+ * cannot name is left off** (ADR-0207 §7): the server sends codes only, and a row with no words is
+ * not drawn. Nothing where the read sends none, nor from an older server's read.
+ */
+function toDetailsVibe(
+  wire: Schemas['DetailsVibeSchema'] | null | undefined,
+): Pick<ProposalDetails, 'vibe'> {
+  if (wire === null || wire === undefined) return {};
+  const rows = wire.rows.flatMap((row): DetailsVibeRow[] => {
+    const tag = toSocialTagId(row.tag);
+    return tag === undefined ? [] : [{ tag, carriedBy: row.carried_by }];
+  });
+  return { vibe: { pct: wire.pct, rows } };
 }
 
 /**

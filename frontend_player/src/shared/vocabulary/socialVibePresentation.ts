@@ -9,7 +9,7 @@
  *
  * The Social vibe is For fun's headline number where the forecast is Competitive's (ADR-0207 §5),
  * so its bands sit beside `balancePresentation`'s, below every feature that draws the number: the
- * deck card today, the Friends card, Post a game's fits and the Social vibe card next. **One ladder
+ * deck card and the Social vibe card (#840) today, the Friends card and Post a game's fits next. **One ladder
  * drives both the word and the tone**, from one hue family — volt, a dimmed volt, then grey. The
  * forecast's green / amber / red is not reused: a vibe is not a verdict, and *Fresh mix* is not a
  * bad game.
@@ -21,6 +21,9 @@
  * **The percentage is the server's and is never derived here.** It is worked out from everybody's
  * tags now, on every read; this file only says what it is called.
  */
+
+import { socialTagName } from './socialTagPresentation';
+import type { SocialTagId } from './socialTags';
 
 /** The three tones a band is drawn in. Never `ok` / `warn` / `bad`: they would mean a verdict. */
 export type SocialVibeTone = 'volt' | 'dimVolt' | 'grey';
@@ -67,4 +70,47 @@ export function socialVibeBand(pct: number): SocialVibeBand {
  */
 export function socialVibeSpoken(pct: number): string {
   return `${SOCIAL_VIBE}, ${Math.round(pct)} percent, ${socialVibeBand(pct).word}`;
+}
+
+// ---------------------------------------------------------------------------
+// The Social vibe card — its columns and its rows (#840; ADR-0207 §6, for fun 7)
+// ---------------------------------------------------------------------------
+
+/** Your column's name: you are *You*, the others their nicknames. */
+export const SOCIAL_VIBE_YOU = 'You';
+
+/** An account that can no longer be named heads its column as a tile names it. */
+const UNNAMED = '?';
+
+/**
+ * **A column's name, as drawn** — *You*, or the nickname whole: the column shortens it with an
+ * ellipsis where it is long, so a name is never cut in the words.
+ */
+export function socialVibeColumnName(column: SocialVibeCarrier): string {
+  if (column.isYou) return SOCIAL_VIBE_YOU;
+  return column.name ?? UNNAMED;
+}
+
+/** Somebody at the table, as a row's spoken name needs them: you, or their nickname. */
+export interface SocialVibeCarrier {
+  readonly isYou: boolean;
+  /** Absent for an account that can no longer be named. */
+  readonly name?: string;
+}
+
+/**
+ * **A row of the grid, spoken** — *Stays for a drink: you, kuba.w* (ADR-0207 §6).
+ *
+ * The tag's words without its emoji (`socialTagName`: a glyph read aloud describes the layout),
+ * then everybody who carries it, in the columns' order — you first. A nickname is said whole, as
+ * its owner wrote it; an account no longer named is *somebody*, as the deck's sides say it. The
+ * grid's dots are drawn for the eye; this is the same fact for the ear, so a listener hears who
+ * shares each of their tags without a column to read down.
+ */
+export function socialVibeRowSpoken(
+  tag: SocialTagId,
+  carriers: readonly SocialVibeCarrier[],
+): string {
+  const who = carriers.map((one) => (one.isYou ? 'you' : (one.name ?? 'somebody')));
+  return `${socialTagName(tag)}: ${who.join(', ')}`;
 }

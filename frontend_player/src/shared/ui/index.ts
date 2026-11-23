@@ -163,6 +163,13 @@ export {
 } from './SeatFace';
 export { Segment, type SegmentOption, type SegmentProps } from './Segment';
 export { SocialTagRow, type SocialTagRowProps } from './SocialTagRow';
+export {
+  SOCIAL_VIBE_CARD,
+  SOCIAL_VIBE_CARD_FIGURE,
+  SOCIAL_VIBE_CARD_FILL,
+  SocialVibeCard,
+  type SocialVibeCardProps,
+} from './SocialVibeCard';
 export { SOCIAL_VIBE_ON_DARK, SocialVibeRow, type SocialVibeRowProps } from './SocialVibeRow';
 export {
   ALL_SPORTS,
