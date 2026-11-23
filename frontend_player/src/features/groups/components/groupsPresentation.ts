@@ -161,17 +161,20 @@ export function gamesTabLabel(cards: number): string {
   return `${GROUPS_COPY.group.tabs.games}, ${cards} with somebody In`;
 }
 
-/** *Fill in, 1 seat to fill* — the Fill in tab, spoken with its count (#557). */
+/**
+ * *Fill in, 2 new seats to fill* — the Fill in tab, spoken with its badge: the rescues the reader
+ * hasn't seen there yet (#557; *new* since #849, ADR-0208).
+ */
 export function fillInTabLabel(seats: number): string {
-  return `${GROUPS_COPY.group.tabs.fillIn}, ${counted(seats, 'seat', 'seats')} to fill`;
+  return `${GROUPS_COPY.group.tabs.fillIn}, ${counted(seats, 'new seat', 'new seats')} to fill`;
 }
 
 /**
- * *You’re in, 3 games* — the You’re in tab, spoken with its count: the reader's live yeses in this
- * group and sport (#847). A plain count for now, as Games' and Fill in's are.
+ * *You’re in, 3 new games* — the You’re in tab, spoken with its badge: the reader's live yeses in
+ * this group and sport that they haven't seen there yet (#847; *new* since #849, ADR-0208).
  */
 export function youreInTabLabel(yeses: number): string {
-  return `${GROUPS_COPY.group.tabs.youreIn}, ${counted(yeses, 'game', 'games')}`;
+  return `${GROUPS_COPY.group.tabs.youreIn}, ${counted(yeses, 'new game', 'new games')}`;
 }
 
 /**

@@ -183,10 +183,11 @@ const toasts = () => useToastQueue.getState().queue.map((toast) => [toast.messag
 // ---------------------------------------------------------------------------
 
 describe('the Fill in tab (split mock 1)', () => {
-  it('counts the seats to fill on its tab, from whichever tab the page is on', async () => {
+  // What it counts is what the reader hasn't seen (#849) — `groupBadges.test.tsx` walks the rest.
+  it('counts the seats to fill on its tab, new until the tab is visited', async () => {
     await openPage(() => [seatToFill()]);
 
-    expect(await screen.findByRole('button', { name: 'Fill in, 1 seat to fill' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Fill in, 1 new seat to fill' })).toBeTruthy();
   });
 
   it('draws only the rescues, with no heading and nothing floating — the yeses are You’re in’s', async () => {
@@ -283,9 +284,10 @@ describe('pulling Fill in', () => {
     });
 
     expect(await screen.findByTestId(`seat-to-fill-${rows[0]?.booking_id ?? ''}`)).toBeTruthy();
-    // And the tabs' badges with it: Seats to fill's own count, and You’re in's.
-    expect(screen.getByRole('button', { name: 'Fill in, 1 seat to fill' })).toBeTruthy();
-    expect(await screen.findByRole('button', { name: 'You’re in, 1 game' })).toBeTruthy();
+    // And the tabs' badges with it: none on Fill in, where the new seat is on screen, and You’re
+    // in's new yes.
+    expect(screen.getByRole('button', { name: 'Fill in', selected: true })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'You’re in, 1 new game' })).toBeTruthy();
     await waitFor(() => expect(control().props.refreshing).toBe(false));
   });
 

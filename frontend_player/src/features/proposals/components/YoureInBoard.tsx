@@ -29,6 +29,12 @@
  * costs no request. **Withdraw** takes a yes back in place: the row leaves and the tab stays, on its
  * empty state if it was the last.
  *
+ * **What it draws is seen while it is on screen** (ADR-0208, #849): every yes here is marked seen by
+ * its proposal whenever the rows change while the page is in view, with no record's sheet and
+ * nothing of the fill's over it — a post landing here, a pull, a yes withdrawn — and one that
+ * arrives while a game's details are
+ * pushed over the page is seen when the page is uncovered. The tab bar's badge counts the rest.
+ *
  * A row's upper block opens its game still filling (A4.2). A held poster opens that player's record,
  * as a sibling of the rows so they are hidden from a listener while the sheet is up.
  */
@@ -42,9 +48,11 @@ import { behindOverlay, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckPerson } from '../domain/deck';
-import { yesesIn, youreInEmpty } from '../domain/fillIn';
+import { yesIds, yesesIn, youreInEmpty } from '../domain/fillIn';
+import { useFill } from '../hooks/useFill';
 import { useSeatsToFill } from '../hooks/useFillIn';
 import { useLiveYeses } from '../hooks/useLiveYeses';
+import { useSeeRows } from '../hooks/useSeenRows';
 
 import { FILL_IN_COPY } from './fillInCopy';
 import { HeldRead, isHeld } from './HeldRead';
@@ -58,14 +66,28 @@ export interface YoureInBoardProps {
   readonly sport: Sport;
   /** What the tab draws once neither tab has a row — the group's starting card. */
   readonly empty: ReactNode;
+  /** Whether the page is the screen in view — nothing pushed over it (`useScreenInView`). */
+  readonly inView: boolean;
 }
 
-export function YoureInBoard({ groupId, sport, empty }: YoureInBoardProps) {
+export function YoureInBoard({ groupId, sport, empty, inView }: YoureInBoardProps) {
   const live = useLiveYeses();
   // Fill in's read, asked only whether it is empty. Its refusal is drawn on Fill in, which reads it
   // again when that tab opens; this tab opening never re-asks a refused one.
   const rescues = useSeatsToFill(groupId, sport, { retryOnMount: false });
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
+  const fill = useFill();
+  // What the tab draws is seen while it is on screen — the page in view, and no record's sheet and
+  // nothing of the fill's over it. Everything the tab counts is drawn, so the two are one list.
+  const here =
+    live.data === undefined ? undefined : yesIds(yesesIn(live.data.yeses, groupId, sport));
+  useSeeRows(
+    groupId,
+    sport,
+    'youreIn',
+    here === undefined ? undefined : { onScreen: here, counted: here },
+    inView && reading === undefined && fill.over === 'none',
+  );
 
   const drawn = (): ReactNode => {
     const spinner = (

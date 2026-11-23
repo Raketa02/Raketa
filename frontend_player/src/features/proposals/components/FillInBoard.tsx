@@ -22,6 +22,12 @@
  * seats to fill right now* — and never the group's starting card, which tells you to post from a tab
  * that no longer has the button (split Q3b).
  *
+ * **What it draws is seen while it is on screen** (ADR-0208, #849): every rescue standing is marked
+ * seen by its booking whenever the rows change while the page is in view, with no record's sheet
+ * and nothing of the fill's (*It's a game!*, its sheets) over it — so a rescue a pull brings is seen
+ * at once, and one that arrives while a game's details are pushed over the page is seen when the
+ * page is uncovered. The tab bar's badge counts the rest.
+ *
  * A row's upper block opens the rescue's details from outside (A4.3). A held poster opens that
  * player's record, as a sibling of the rows so they are hidden from a listener while the sheet is
  * up.
@@ -36,7 +42,10 @@ import { behindOverlay, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckPerson } from '../domain/deck';
+import { rescueIds } from '../domain/fillIn';
+import { useFill } from '../hooks/useFill';
 import { useSeatsToFill } from '../hooks/useFillIn';
+import { useSeeRows } from '../hooks/useSeenRows';
 
 import { FILL_IN_COPY } from './fillInCopy';
 import { HeldRead, isHeld } from './HeldRead';
@@ -48,11 +57,26 @@ const COPY = FILL_IN_COPY;
 export interface FillInBoardProps {
   readonly groupId: string;
   readonly sport: Sport;
+  /** Whether the page is the screen in view — nothing pushed over it (`useScreenInView`). */
+  readonly inView: boolean;
 }
 
-export function FillInBoard({ groupId, sport }: FillInBoardProps) {
+export function FillInBoard({ groupId, sport, inView }: FillInBoardProps) {
   const { read, now, seats } = useSeatsToFill(groupId, sport);
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
+  const fill = useFill();
+  // What the tab draws is seen while it is on screen — the page in view, and no record's sheet and
+  // nothing of the fill's over it. Cut back to the read's rows, not the standing ones: the tab bar
+  // runs a clock of its own, and may count a row past its deadline a moment after this one drops it.
+  useSeeRows(
+    groupId,
+    sport,
+    'fillIn',
+    seats === undefined || read.data === undefined
+      ? undefined
+      : { onScreen: rescueIds(seats), counted: rescueIds(read.data.seatsToFill) },
+    inView && reading === undefined && fill.over === 'none',
+  );
 
   if (seats === undefined) {
     return isHeld(read) ? (

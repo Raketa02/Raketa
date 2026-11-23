@@ -19,6 +19,7 @@ import {
   requestLevels,
   requestTags,
   emptySeatLabel,
+  fillInTabLabel,
   friendSeatLabel,
   seatMoreLine,
   takeOffLabel,
@@ -129,9 +130,15 @@ describe('a club’s line', () => {
 });
 
 describe('the group page’s sentences', () => {
-  it('says the You’re in tab with its count, one game or many (#847)', () => {
-    expect(youreInTabLabel(1)).toBe('You’re in, 1 game');
-    expect(youreInTabLabel(3)).toBe('You’re in, 3 games');
+  // #849: a badge counts what the player hasn't seen, and the tab's spoken name says so.
+  it('says the Fill in tab with its new seats, one or many', () => {
+    expect(fillInTabLabel(1)).toBe('Fill in, 1 new seat to fill');
+    expect(fillInTabLabel(2)).toBe('Fill in, 2 new seats to fill');
+  });
+
+  it('says the You’re in tab with its new games, one or many', () => {
+    expect(youreInTabLabel(1)).toBe('You’re in, 1 new game');
+    expect(youreInTabLabel(3)).toBe('You’re in, 3 new games');
   });
 
   // #848: Post a game's chevron names the tab a back-out returns to — the one it was opened from.

@@ -1286,7 +1286,12 @@ the Play segment since [#512](https://github.com/Raketa02/Raketa/issues/512), th
 the last profile to come — **one key per account per value**, and **empties itself at sign-out**
 as step 4 of `endSession`, beside the cache clear. It holds a choice, never a copy of server
 state; a value it cannot read, or one the owning feature no longer recognises, is that value's
-default. **One flag is the phone's rather than an account's**
+default. **Since [#849](https://github.com/Raketa02/Raketa/issues/849) it also keeps the rows a
+player has seen on a group page's tabs**
+([ADR-0208](../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)):
+one list of ids per group, sport and tab (`seenRows.<entry>`), per account and emptied at sign-out
+like the rest, and **the one value no screen holds its first frame for** — read without waiting,
+with no badge until it has been read, and written without waiting. **One flag is the phone's rather than an account's**
 ([ADR-0200](../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8, #732): _the guide on
 Your rating was shown_ (`readPhoneFlag` / `raisePhoneFlag`), under a prefix of its own that the
 sign-out never lists, so it is kept — a second account on the phone never sees the guide. A flag

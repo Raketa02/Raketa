@@ -219,15 +219,16 @@ describe('the You’re in tab (split mock 2)', () => {
     expect(screen.queryByTestId(`seat-to-fill-${rescue.booking_id}`)).toBeNull();
   });
 
+  // New until the tab is visited (#849) — `groupBadges.test.tsx` walks the rest.
   it('counts its rows on its tab from the moment the page opens, and says the count aloud', async () => {
     stubLiveYeses(transport, [yesInTheCrew(), yesInTheCrew(), liveYes({ pool_id: ELSEWHERE })]);
     await openPage(() => [seatToFill()]);
 
     // On Games: the read started with the page, not with the tab.
-    expect(await screen.findByRole('button', { name: 'You’re in, 2 games' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'You’re in, 2 new games' })).toBeTruthy();
     expect(transport.requestsTo('GET', LIVE_YESES_PATH)).toHaveLength(1);
     // Games' and Fill in's badges are their own, as before.
-    expect(screen.getByRole('button', { name: 'Fill in, 1 seat to fill' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Fill in, 1 new seat to fill' })).toBeTruthy();
   });
 
   it('never holds up the page or a tab switch while its read is on its way', async () => {
@@ -469,8 +470,9 @@ describe('pulling You’re in', () => {
     });
 
     expect(await screen.findByTestId(`youre-in-${yes.proposal_id}`)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'You’re in, 1 game' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Fill in, 1 seat to fill' })).toBeTruthy();
+    // None on You’re in, where the new yes is on screen; Fill in's new seat on its own tab.
+    expect(screen.getByRole('button', { name: 'You’re in', selected: true })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Fill in, 1 new seat to fill' })).toBeTruthy();
     await waitFor(() => expect(control().props.refreshing).toBe(false));
   });
 

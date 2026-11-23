@@ -2,10 +2,11 @@
  * **How many are waiting, over a thing's top-right corner** — the Chats badge at a segment's size
  * (`size.segmentBadge`): the same `coralInk` pill with a white tabular figure, overlapping the
  * corner of what it counts so it belongs to that thing rather than sitting beside it. `Segment`
- * draws it over a segment (a group page's Games, Fill in and You’re in), and a group's page over the group's
- * tile, counting the requests waiting on its Owner (#529, moved there from the Info tab by Q125).
- * One mark, one meaning — a count of things only you can clear — which is why 1.2's sixth coral
- * entry does not widen for it. It is `CountBadge`'s `attend` mark at a segment's size and placed on
+ * draws it over a segment (a group page's Games, Fill in and You’re in — on Fill in and You’re in
+ * what is **new since the player last looked**, and on no tab while it is the one shown, #849), and
+ * a group's page over the group's tile, counting the requests waiting on its Owner (#529, moved
+ * there from the Info tab by Q125). One mark, one meaning — a count of things only you can clear,
+ * by acting or, on a tab, by looking — which is why 1.2's sixth coral entry does not widen for it. It is `CountBadge`'s `attend` mark at a segment's size and placed on
  * a corner: `CountBadge` sits on a 16pt glyph, risen by the tab bar's ring, at `num.xs`; this one
  * overlaps the corner of a box at `num.tiny`, so the two keep their own geometry.
  *

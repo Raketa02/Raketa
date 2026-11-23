@@ -69,6 +69,33 @@ describe('the phone-preferences store', () => {
 });
 
 /**
+ * **The rows seen on a group page's tabs** ([ADR-0208](../../../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)):
+ * one entry per group, sport and tab, per account like every value, and forgotten at sign-out with
+ * the rest.
+ */
+describe('the rows seen on a group page’s tabs', () => {
+  const FILL_IN = 'seenRows.a0000000-0000-4000-8000-000000000005.padel.fillIn';
+  const YOURE_IN = 'seenRows.a0000000-0000-4000-8000-000000000005.padel.youreIn';
+
+  it('keeps each tab’s entry apart, and each account’s', async () => {
+    await savePhonePreference(ADA, FILL_IN, '["b1"]');
+    await savePhonePreference(ADA, YOURE_IN, '["p1"]');
+
+    await expect(readPhonePreference(ADA, FILL_IN)).resolves.toBe('["b1"]');
+    await expect(readPhonePreference(ADA, YOURE_IN)).resolves.toBe('["p1"]');
+    await expect(readPhonePreference(BORIS, FILL_IN)).resolves.toBeUndefined();
+  });
+
+  it('forgets them when a session ends', async () => {
+    await savePhonePreference(ADA, FILL_IN, '["b1"]');
+
+    await endSession('session-invalidated');
+
+    await expect(readPhonePreference(ADA, FILL_IN)).resolves.toBeUndefined();
+  });
+});
+
+/**
  * **The one value kept past a session** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
  * §8, as amended 2026-11-04): *the guide on Your rating was shown* is kept per account on this
  * phone, and outlives the session — the same account signing in again never sees the guide, and a

@@ -14,12 +14,13 @@ import type { AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { PaymentToConfirm } from '../domain/fill';
-import { yesesIn } from '../domain/fillIn';
+import { yesIds, yesesIn } from '../domain/fillIn';
 import type { Home } from '../domain/home';
 import type { LiveYeses } from '../domain/liveYes';
 import { readLiveYeses, readPaymentsToConfirm } from '../use-cases/liveYeses';
 
 import { proposalKeys } from './proposalKeys';
+import { useUnseenCount } from './useSeenRows';
 
 export function useLiveYeses() {
   return useQuery<LiveYeses, AppError>({
@@ -29,15 +30,21 @@ export function useLiveYeses() {
 }
 
 /**
- * **The You’re in tab's badge** — the reader's live yeses in this group and sport, a plain count of
- * the tab's rows for now, as Games' and Fill in's are (#847; the screens A1). The page's tab bar reads
- * it, so **the read starts as the page opens** rather than when the tab is drawn: the same read the
- * tab makes anyway, made earlier and in parallel — it holds up nothing, and the tab usually opens
- * already read. 0 — nothing drawn — while it is on its way or refused.
+ * **The You’re in tab's badge** — the reader's live yeses in this group and sport that they haven't
+ * seen on the tab (ADR-0208, #849; the screens A1), each known by its proposal and counted against
+ * what the phone kept. The page's tab bar reads it, so **the read starts as the page opens** rather
+ * than when the tab is drawn: the same read the tab makes anyway, made earlier and in parallel — it
+ * holds up nothing, and the tab usually opens already read. 0 — nothing drawn — while it is on its
+ * way or refused, and until the phone has been read.
  */
 export function useYoureInBadge(groupId: string, sport: Sport): number {
   const yeses = useLiveYeses().data?.yeses;
-  return yeses === undefined ? 0 : yesesIn(yeses, groupId, sport).length;
+  return useUnseenCount(
+    groupId,
+    sport,
+    'youreIn',
+    yeses === undefined ? undefined : yesIds(yesesIn(yeses, groupId, sport)),
+  );
 }
 
 /**

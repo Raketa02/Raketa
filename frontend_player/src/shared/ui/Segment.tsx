@@ -37,14 +37,17 @@
  * Play drew `Match me · 3` here and no longer does — a number **in the label** reads as part of
  * the view's name.
  *
- * ## The badge — how many are waiting, over the segment's corner
+ * ## The badge — a count only you can clear, over the segment's corner
  *
- * A number that means *how many are waiting* is the Chats badge's job, and `badge` draws it:
- * `CornerBadge`, the same `coralInk` pill with a white tabular digit at the segment's own size,
- * overlapping the segment's top-right corner so it belongs to that view rather than sitting beside
- * it (a group page's Games, Fill in and You’re in). Out of the layout, so a count arriving moves nothing.
- * **It announces nothing**: the caller puts the count in the option's `accessibilityLabel`, as the
- * tab bar puts it on the column's, and a badge that spoke too would be one number read twice.
+ * A number that means *something here is yours to attend to* is the Chats badge's job, and `badge`
+ * draws it: `CornerBadge`, the same `coralInk` pill with a white tabular digit at the segment's own
+ * size, overlapping the segment's top-right corner so it belongs to that view rather than sitting
+ * beside it (a group page's Games, Fill in and You’re in). On Fill in and You’re in it counts what
+ * is **new since the player last looked** (#849, ADR-0208), and the page draws none on the segment
+ * selected, since what that view shows is seen while it is shown; what a count means is the caller's.
+ * Out of the layout, so a count arriving moves nothing. **It announces nothing**: the caller puts
+ * the count in the option's `accessibilityLabel`, as the tab bar puts it on the column's, and a
+ * badge that spoke too would be one number read twice.
  *
  * ## The door — a view that isn't yours yet
  *
@@ -69,8 +72,9 @@ export interface SegmentOption<K extends string> {
   /** Defaults to `label`. Set it where the visible words are cryptic out of context. */
   readonly accessibilityLabel?: string;
   /**
-   * How many are waiting on this view, drawn over the segment's corner — see the module note.
-   * Absent, or 0, draws nothing. The caller says the count in `accessibilityLabel`.
+   * The caller's count for this view — what is new on it, on a group page — drawn over the
+   * segment's corner: see the module note. Absent, or 0, draws nothing. The caller says the count in
+   * `accessibilityLabel`.
    */
   readonly badge?: number;
   /**

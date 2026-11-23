@@ -16,8 +16,9 @@
  * cannot tell *me again* from *somebody else*.
  *
  * **Why `shared/lib` and not a feature.** Five features each own their values (the shell the Play
- * segment, groups the last sport, auth the last profile, proposals the opened games, and rankings
- * the view), and the sign-out sequence in `shared/lib/auth` has to empty it — `shared/` may never
+ * segment, groups the last sport, auth the last profile, proposals the opened games and the rows
+ * seen on a group page's tabs, and rankings the view), and the sign-out sequence in
+ * `shared/lib/auth` has to empty it — `shared/` may never
  * import a feature.
  *
  * **Why AsyncStorage.** Not the keychain: that is the credentials store, and one module owning it
@@ -55,9 +56,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * *Friends* — the view last looked at on the Rankings page, which Home's trophy reads too. It is the
  * per-account value [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md)
  * adds to ADR-0188's table, so its record exists; per account and forgotten at sign-out like the rest.
+ *
+ * **And the rows seen on a group page's tabs** ([#849](https://github.com/Raketa02/Raketa/issues/849)),
+ * the value [ADR-0208](../../../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)
+ * adds — see {@link SeenRowsPreference}.
  */
 export type PhonePreference =
-  'playSegment' | 'lastSport' | 'lastProfile' | 'openedGames' | 'dismissedGames' | 'rankingView';
+  | 'playSegment'
+  | 'lastSport'
+  | 'lastProfile'
+  | 'openedGames'
+  | 'dismissedGames'
+  | 'rankingView'
+  | SeenRowsPreference;
+
+/**
+ * **The rows a player has seen on a group page's tab** (ADR-0208) — the ids on Fill in and You’re in
+ * (and Games, from #850) that were on screen, which is what a tab's badge is counted against: one
+ * JSON list of ids **per group, sport and tab**, each under its own key, `seenRows.` and then the
+ * entry `proposals` spells. Per account and forgotten at sign-out, like the rest of the table; only
+ * ids, cut back to the ones the tab still counts every time it is written (§2), so it never grows
+ * past the tab; and **read and written without waiting** (§5) — the one value here whose read no
+ * screen holds its first frame for.
+ */
+export type SeenRowsPreference = `seenRows.${string}`;
 
 /** Every key this module writes starts with this, and nothing else's does. */
 const PREFIX = 'raketa.phone-preferences.';

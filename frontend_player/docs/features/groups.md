@@ -571,7 +571,7 @@ A1, A3; mocks 11–14). Until #847 split it, `GroupScreen` drew one board as the
 the rescues the reader is offered, then _You’re in_, their own yeses on this group's games still
 filling, each under a heading — and handed it the starting card above for a tab with no row in
 either, as `GamesTab` hands the deck its own. **The tab bar counts Fill in** — the rescues, the board
-read's own `badge` (`useFillInBadge`), spoken _Fill in, 1 seat to fill_ — read for the page's sport
+read's own `badge` until #849 (`useFillInBadge`, below), spoken _Fill in, 1 seat to fill_ — read for the page's sport
 whichever tab is open, so `stubGroupDeck` now serves an empty Fill in too and every suite that opens a
 page gets it. The tab's walk is `groupFillIn.test.tsx`; the board's record is
 [`proposals.md`](proposals.md).
@@ -591,14 +591,34 @@ tab's read is its own — its spinner, its offline note, its refusal with the re
 never touches the other's rows. **+ Post a game floats over You’re in, and only there** (split
 override 1: mock 1 draws it on Fill in), over the level door too, and not while an official group's
 _add a sport_ card stands in the tab; You’re in's rows leave room for it, Fill in's no longer do.
-**The tab bar counts You’re in** — a plain count of its rows for now, as Games and Fill in count,
-spoken _You’re in, 3 games_ (`useYoureInBadge`) — so **the live-yeses read starts as the page opens**,
+**The tab bar counts You’re in** — a plain count of its rows until #849 (below), as Games and Fill in
+counted, spoken _You’re in, 3 games_ (`useYoureInBadge`) — so **the live-yeses read starts as the page opens**,
 from the tab bar, rather than when the tab is drawn: the read the tab makes anyway, made earlier, and
 it holds up neither the page nor a tab switch. #847 had _Post a game_ turn the page to You’re in as it
 opened, an interim #848 replaced (below). Walked in
 `groupFillIn.test.tsx` and `groupYoureIn.test.tsx`. **Not seen on a device**: four tabs with badges on
 a 320pt phone and at a large text size, which the split's log estimates at about 69pt a tab against
 about 55pt for _You’re in_, are asked for a look.
+
+**Fill in's and You’re in's badges count what the player hasn't seen**
+([#849](https://github.com/Raketa02/Raketa/issues/849),
+[ADR-0208](../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md);
+PRD #844; split Q2b, Q10–Q12). Until then a badge never cleared: _Fill in 2_ came back on every
+visit until those games were gone. Now **a tab's rows are seen while it is on screen** — the page
+in view, nothing pushed over it, no record sheet and nothing of the fill's up — **and the tab on
+screen draws no badge**
+(split override 2, overriding mocks 1 and 2): `TabsWithCounts` skips the selected tab. A visit
+clears a badge, a row that only changed keeps its id and stays seen, and only a new one brings the
+badge back; spoken _Fill in, 2 new seats to fill_ and _You’re in, 3 new games_ (`fillInTabLabel`,
+`youreInTabLabel`). The rule, the ids, the marking and the phone's memory are `proposals`'
+(`proposals.md`); what is this feature's is the tab bar and **whether the page is in view**, which
+the route file reads (`useScreenInView`, the navigator's focus — read there and handed in, as the
+hook's own rule asks) and `GroupScreen` hands each board as `inView`. **Remembered on the phone**,
+per account, across a relaunch and Android killing the app, and forgotten at sign-out; the first run
+shows today's counts until each tab is visited. **Games is untouched**: its plain count stands, on
+the selected tab too, until #850 gives it the deck's ids. Walked in `groupBadges.test.tsx`. **Not
+seen on a device**: a badge clearing on a visit and staying cleared after the app is killed are
+asked for a look (the split's §17).
 
 **Games and Fill in re-read on a pull** (2026-10-12, asked by the product owner; You’re in too since
 #847, the same control re-reading everything whichever tab is pulled). Until then only Info

@@ -5,11 +5,10 @@ import { fillIn, seatToFill } from '@/test-support/groupDeck';
 import { toFillIn } from './fillInMappers';
 
 describe('a group’s Fill in', () => {
-  it('reads the badge, the clock and each row — its court, share, open seats, deadline and paid players', () => {
+  it('reads the clock and each row — its court, share, open seats, deadline and paid players', () => {
     const row = seatToFill();
     const read = toFillIn(fillIn([row]));
 
-    expect(read.badge).toBe(1);
     expect(read.seatsToFill).toHaveLength(1);
     expect(read.seatsToFill[0]).toMatchObject({
       bookingId: row.booking_id,

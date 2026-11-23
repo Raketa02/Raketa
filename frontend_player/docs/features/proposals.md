@@ -507,7 +507,7 @@ say the reader may** (`mayWithdraw`) — so it is hidden while the full game wai
 when the `actions` hold _Leave_ instead, and before the read lands: a withdrawal then is a departure,
 with no sheet in front of it. One read a row, because the live yes does not carry who is In.
 Each row's upper block opens its game. Sections only when they have rows; with neither, the group's
-starting card. The tab's badge is the read's `badge`, filed under the group's root
+starting card. The tab's badge was the read's `badge` (until #849, below), filed under the group's root
 (`proposalKeys.fillIn`), so every answer in the group and every changed limit re-reads it.
 
 **Fill in and You’re in are a board each since #847** ([#847](https://github.com/Raketa02/Raketa/issues/847),
@@ -523,7 +523,8 @@ Fill in's read has said there is nothing too** — it asks the same query the Fi
 read, so that costs no request — with the spinner while Fill in's read is on its way, and otherwise
 _You haven’t said yes to a game here yet_, including while Fill in's read could not say. _Withdraw_
 on the last row leaves the tab on that state. **The You’re in badge is `useYoureInBadge`**: the rows'
-count, plain for now, which the page's tab bar reads, so the live-yeses read starts as the page opens.
+count — plain until #849 (below) — which the page's tab bar reads, so the live-yeses read starts as
+the page opens.
 **So an answer no longer waits for the live yeses** (`reread`'s `yeses: 'start'`): with the badge
 observing them on every tab, an awaited re-read would hold a deck's card hidden and a _Booking…_ busy
 for a badge's read, retries and all — the code review's catch — and a badge never holds anything up.
@@ -536,6 +537,54 @@ The two headings and their presentation functions went (`seatsToFillHeader`, `yo
 owning its read, while Fill in still stacked both, and the Fill in suite passed unchanged — which
 found one trap: **a board mounted on a refused read reads it again** (Query's retry on mount), so a
 stack that unmounted a board with each refusal asked for ever; it keeps both mounted.
+
+**The two badges count what the reader hasn't seen** ([#849](https://github.com/Raketa02/Raketa/issues/849),
+[ADR-0208](../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md);
+PRD #844; split Q2b, Q10–Q12). The product owner's rule is over every choice: **a badge is a nudge,
+not a ledger** — it never costs a request or a wait, and where being exact would, the simpler rule
+wins.
+
+- **The rule is the domain's** (`domain/seen.ts`, beside the Fill in rules): a badge is the ids the
+  tab counts now minus the ids seen (`unseenCount`); a look leaves seen what was seen and what is
+  on screen, among the ids still counted (`afterALook`), so the set is cut back with every write and
+  never grows past the tab; one entry per group, sport and tab (`seenEntry`); and a stored value that
+  is not a list of ids is _nothing seen_ (`seenFrom`). **The ids** are `fillIn.ts`'s: Fill in's, the booking of each rescue
+  still standing on the read's clock (`rescueIds`); You’re in's, the proposal of each live yes in
+  this group and sport (`yesIds`). A row is known by its id, so one that only changed — its cut-off
+  passed, its book-by moved, somebody joined — stays seen.
+- **`useFillInBadge` and `useYoureInBadge` count unseen** (`useUnseenCount`, `hooks/useSeenRows.ts`).
+  **Fill in's read's `badge` is no longer read** — the mapper drops it and `FillIn` has no such
+  field; it stays on the wire for older installed apps. The Fill in badge reads `useSeatsToFill`,
+  so a rescue past its deadline leaves the count as it leaves the tab.
+- **The boards mark what they draw** (`useSeeRows`): every id on the board, whenever the rows change
+  while the board is `inView` — the page the screen in view, handed down from the route file
+  (`useScreenInView`) — with no player's record sheet of its own open and nothing of the fill's up
+  (`useFill().over`: _It's a game!_, the payment setup, a refused share's confirmation, a rescue
+  gone). **This is the rule in full, not the simplification ADR-0208 §7 allows** (marking on
+  opening the tab and on leaving it): a row a pull or a re-read brings while the tab is on screen is
+  seen at once, and one that arrives while a game's details, Info or _Post a game_ is pushed over
+  the page, or a sheet is up, is seen only once the page is uncovered — and stays new if the app
+  dies meanwhile. **The one cover not followed is the sport bar**, a popover over the header the
+  player opened to change the page: under the nudge rule, following it would be machinery for
+  being exact.
+- **What a look cuts the set back to is the read's rows** (`TabLook`'s `counted`), not only the
+  ones drawn: on Fill in the tab bar runs a clock of its own beside the board's, so a rescue past its
+  deadline can leave the board a moment before it leaves the badge, and it stays seen until the read
+  lets it go — never _1 new_ for a row that is gone (the code review's catch). On You’re in the two
+  lists are one.
+- **Kept on the phone, never waited on** (the phone-preferences store's `seenRows.<entry>`, per
+  account, forgotten at sign-out whichever way it ends): read once into the query cache, never
+  paused for the network and never stale, and **no badge until it has been read**; a look writes the
+  cache first and the phone second, not as a mutation, and fetches what was kept before writing over
+  it, as the opened games do. A look that changed nothing writes nothing (`sameSeen`), one that
+  finds the cache emptied under it — the session ended mid-read — writes nothing either, so a
+  sign-out is never undone, and one cut short is simply lost.
+
+Walked in `groupBadges.test.tsx`, and mutation-checked: dropping the cover, the record sheet, the
+fill's overlays, the phone's write or the selected tab's rule each turns a walk red. The two clocks'
+race is not walked — it needs the bar's and the board's ticks to land in a given order. **Not walked: a phone read that is
+held** — a suite cannot hold the store without importing AsyncStorage, which the lint fence keeps to
+two modules — so _no badge until read_ is `useUnseenCount`'s one line, read, not run.
 
 **A rescue is a card the deck already drew, now answered at its booking.** A _Seat open_ card's id is
 its booking's (#545): the yes is `POST /bookings/{id}/seats` and the no `POST /bookings/{id}/no`

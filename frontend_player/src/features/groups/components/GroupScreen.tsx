@@ -28,9 +28,13 @@
  * mock 1's *Games 4*): the same badge, off the deck's own read — the one the tab draws, for the
  * sport the page is on and the kind its switch stands on, so the two never disagree and the count
  * costs no second request. **The *Fill in* tab counts its rescues** (#557, mock 11's *Fill in 1*) —
- * the rescue board's own badge, read for the page's sport — **and *You’re in* its rows** (#847): the
- * reader's live yeses in this group and sport, a plain count for now, read as the page opens so the
- * badge has it, never holding up the page or a tab switch (`useYoureInBadge`).
+ * read for the page's sport — **and *You’re in* its rows** (#847): the reader's live yeses in this
+ * group and sport, read as the page opens so the badge has it, never holding up the page or a tab
+ * switch (`useYoureInBadge`). **Both count what the player hasn't seen** (#849, ADR-0208): a tab's
+ * rows are seen while it is on screen — which is why the page is told whether it is the screen in
+ * view (`inView`, read by the route file) and hands that to the two boards, which mark what they
+ * draw — and **the tab on screen draws no badge** (split override 2). Games keeps its plain count, on
+ * the tab shown too, until #850.
  *
  * **Fill in and You’re in are `proposals`' boards** (#557, split into a tab each by #847, PRD #844):
  * Fill in holds only the rescues, and says *No seats to fill right now* with none; You’re in holds only
@@ -139,7 +143,10 @@ interface GroupTabsProps {
   readonly onSelect: (tab: GroupTab) => void;
 }
 
-/** The tab bar — with Games', Fill in's and You’re in's counts once there is a sport to read them for. */
+/**
+ * The tab bar — with Games', Fill in's and You’re in's counts once there is a sport to read them for,
+ * and none on the tab selected but Games' (#849).
+ */
 function GroupTabs({ sport, ...props }: GroupTabsProps & { readonly sport: Sport | undefined }) {
   return sport === undefined ? (
     <Segment options={TABS} selected={props.selected} onSelect={props.onSelect} style={s.tabs} />
@@ -164,6 +171,9 @@ function TabsWithCounts({
     if (option.key === 'games' && games > 0) {
       return { ...option, badge: games, accessibilityLabel: gamesTabLabel(games) };
     }
+    // The tab on screen draws no badge (split override 2): what it shows is seen while it is shown.
+    // Games still counts while selected until its own ids are seen too (#850).
+    if (option.key === selected) return option;
     if (option.key === 'fillIn' && seats > 0) {
       return { ...option, badge: seats, accessibilityLabel: fillInTabLabel(seats) };
     }
@@ -177,13 +187,18 @@ function TabsWithCounts({
 
 export interface GroupScreenProps {
   readonly groupId: string;
+  /**
+   * Whether the page is the screen in view — nothing pushed over it (`useScreenInView`, read by the
+   * route file). What Fill in and You’re in draw is seen only while it is (#849).
+   */
+  readonly inView: boolean;
   /** The card a notice opened the deck at (#559) — absent for a page the player opened. */
   readonly arrival?: DeckArrival;
   /** The tab and the sport a rating pass begun here returns to (#729) — absent otherwise. */
   readonly returning?: ReturningPass;
 }
 
-export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
+export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreenProps) {
   const read = useGroup(groupId);
   const group = read.data;
 
@@ -297,7 +312,7 @@ export function GroupScreen({ groupId, arrival, returning }: GroupScreenProps) {
                   ) : needsALevel ? (
                     <LevelDoor from={fromAGroup(groupId, tab)} />
                   ) : sport === undefined ? null : (
-                    <TabBody tab={tab} group={group} sport={sport} />
+                    <TabBody tab={tab} group={group} sport={sport} inView={inView} />
                   )}
                 </ScrollView>
               )}
@@ -320,18 +335,27 @@ function TabBody({
   tab,
   group,
   sport,
+  inView,
 }: {
   readonly tab: GroupTab;
   readonly group: Group;
   readonly sport: Sport;
+  readonly inView: boolean;
 }) {
   switch (tab) {
     case 'games':
       return <GamesTab group={group} sport={sport} />;
     case 'fillIn':
-      return <FillInBoard groupId={group.id} sport={sport} />;
+      return <FillInBoard groupId={group.id} sport={sport} inView={inView} />;
     case 'youreIn':
-      return <YoureInBoard groupId={group.id} sport={sport} empty={<YoureInTab group={group} />} />;
+      return (
+        <YoureInBoard
+          groupId={group.id}
+          sport={sport}
+          inView={inView}
+          empty={<YoureInTab group={group} />}
+        />
+      );
     case 'friends':
       return <FriendsTab group={group} sport={sport} />;
   }

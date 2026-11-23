@@ -1,6 +1,7 @@
 /**
  * **A group's Fill in tab** — `GET /pools/{id}/fill-in?sport` (#545), its rescues and the tab's
- * badge ([#557](https://github.com/Raketa02/Raketa/issues/557)). You’re in, the tab beside it since
+ * badge ([#557](https://github.com/Raketa02/Raketa/issues/557); the rows not seen yet since #849).
+ * You’re in, the tab beside it since
  * #847, is the live yeses (`useLiveYeses`), each row's game read in detail (`useProposal`) — and asks
  * this read only whether Fill in is empty, for its starting card.
  *
@@ -15,11 +16,12 @@ import { useQuery } from '@tanstack/react-query';
 import type { AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { standingSeats, type FillIn, type SeatToFill } from '../domain/fillIn';
+import { rescueIds, standingSeats, type FillIn, type SeatToFill } from '../domain/fillIn';
 import { readFillIn } from '../use-cases/fillIn';
 
 import { proposalKeys } from './proposalKeys';
 import { useReadClock } from './useHome';
+import { useUnseenCount } from './useSeenRows';
 
 /** How one observer asks: `retryOnMount: false` for a tab that reads it without drawing its refusal. */
 export interface FillInObserver {
@@ -48,7 +50,18 @@ export function useSeatsToFill(groupId: string, sport: Sport, observer: FillInOb
   return { read, now, seats };
 }
 
-/** **The Fill in tab's badge** — the *Seats to fill* rows (the screens A1, mock 11). */
+/**
+ * **The Fill in tab's badge** — the rescues still standing that the reader hasn't seen (ADR-0208,
+ * #849; the screens A1), each known by its booking and counted against what the phone kept for
+ * this group and sport. The read's own `badge` is no longer read: the rows are, on the read's
+ * clock, so a rescue past its deadline leaves the count as it leaves the tab.
+ */
 export function useFillInBadge(groupId: string, sport: Sport): number {
-  return useFillIn(groupId, sport).data?.badge ?? 0;
+  const { seats } = useSeatsToFill(groupId, sport);
+  return useUnseenCount(
+    groupId,
+    sport,
+    'fillIn',
+    seats === undefined ? undefined : rescueIds(seats),
+  );
 }

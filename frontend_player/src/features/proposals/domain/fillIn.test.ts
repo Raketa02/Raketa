@@ -2,8 +2,10 @@ import type { DeckPerson } from './deck';
 import type { LiveYes } from './liveYes';
 import {
   mayWithdraw,
+  rescueIds,
   squaresOfYes,
   standingSeats,
+  yesIds,
   yesOnRow,
   yesesIn,
   youreInEmpty,
@@ -72,6 +74,24 @@ describe('yesesIn — You’re in (§10.2)', () => {
       later,
     ];
     expect(yesesIn(yeses, 'group-1', 'padel')).toEqual([here, later]);
+  });
+});
+
+// ADR-0208 §1: a row is known by its id, so a row that only changed keeps it.
+describe('the ids the two tabs count (#849)', () => {
+  it('is the booking of each rescue still standing, on Fill in', () => {
+    const rows = [
+      row({ bookingId: 'b-1' }),
+      row({ bookingId: 'b-2', deadline: '2026-10-01T10:00:00Z' }),
+    ];
+
+    expect(rescueIds(standingSeats(rows, Date.parse('2026-10-01T12:00:00Z')))).toEqual(['b-1']);
+  });
+
+  it('is the proposal of each live yes in this group and sport, on You’re in', () => {
+    const yeses = [yes({ proposalId: 'p-1' }), yes({ proposalId: 'p-2', groupId: 'group-2' })];
+
+    expect(yesIds(yesesIn(yeses, 'group-1', 'padel'))).toEqual(['p-1']);
   });
 });
 

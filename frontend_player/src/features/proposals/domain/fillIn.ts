@@ -41,12 +41,14 @@ export interface SeatToFill extends RescueOffer {
   readonly players: readonly DeckPerson[];
 }
 
-/** The tab's read, for one sport. */
+/**
+ * The tab's read, for one sport. **The wire's `badge` is not read** (#849): the tab's badge is
+ * worked out from the rows still standing, minus the ones seen (`seen.ts`); the field stays on the
+ * wire for older installed apps (ADR-0208, *Harder*).
+ */
 export interface FillIn {
   /** The instant every row and deadline was read against, on the server's clock. */
   readonly readAt: string;
-  /** The tab's badge: the *Seats to fill* rows. */
-  readonly badge: number;
   /** Soonest first. */
   readonly seatsToFill: readonly SeatToFill[];
 }
@@ -57,6 +59,14 @@ export function standingSeats(rows: readonly SeatToFill[], now: number): readonl
     const deadline = Date.parse(row.deadline);
     return Number.isNaN(deadline) || deadline > now;
   });
+}
+
+/**
+ * **The ids Fill in counts** (ADR-0208 §1, #849) — the booking of each rescue row still standing,
+ * which is what its badge counts and what the tab marks seen.
+ */
+export function rescueIds(standing: readonly Pick<SeatToFill, 'bookingId'>[]): readonly string[] {
+  return standing.map((row) => row.bookingId);
 }
 
 /**
@@ -78,6 +88,14 @@ export function yesesIn(
   sport: Sport,
 ): readonly LiveYes[] {
   return yeses.filter((yes) => yes.groupId === groupId && yes.sport === sport);
+}
+
+/**
+ * **The ids You’re in counts** (ADR-0208 §1, #849) — the proposal of each live yes in this group and
+ * sport (`yesesIn`): what its badge counts and what the tab marks seen.
+ */
+export function yesIds(here: readonly Pick<LiveYes, 'proposalId'>[]): readonly string[] {
+  return here.map((yes) => yes.proposalId);
 }
 
 /**
