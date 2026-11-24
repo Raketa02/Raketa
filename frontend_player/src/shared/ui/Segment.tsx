@@ -58,12 +58,80 @@
  * box, the same slop, no `disabled` in its state, and its press reported like any other. A door
  * that read as shut is one nobody opens. The words carry the state as well (the caller's door has
  * no number), so the dim is never the whole fact.
+ *
+ * ## An option that owns a menu — a tab with a second layer
+ *
+ * A group page's **Friends** tab holds the kind of the game being built, in **the tab's menu**
+ * (`TabMenu`, 9.5; PRD [#859](https://github.com/Raketa02/Raketa/issues/859), #861 — Games' from
+ * #862), where a row of *Competitive | For fun* under the tabs once stood. Such an option carries
+ * `menu`. **While it is selected and its menu is offered** — the page's rule, not this control's —
+ * it draws a Feather chevron at its right edge, pointing down while the menu is shut and turning up
+ * while it is open, and says `expanded`. Anywhere else it is an ordinary option: no chevron, no
+ * `expanded`, a label and its badge. **The control still reports every press**, the selected
+ * option's too: the page decides that a press there opens or shuts the menu.
+ *
+ * **It widens by the chevron's room, and the others share the rest** (`size.segMenu`): its box's
+ * flex basis is the room where every other's is nought, so its label keeps the same share of the
+ * track as every other option's and the chevron is added beside it, never squeezed out of it. **The
+ * widths move by a layout transition** on each option's box — one change of size, and Reanimated
+ * moves the frames; never a width animated frame by frame (`CLAUDE.md`'s Reanimated rule). So in a
+ * control where any option owns a menu, **every option is a box** that is laid out in the track and
+ * carries the raised surface, with the press inside it; a control with none is drawn as it always
+ * was. The chevron turns on the same beat (`motion.tabMenu`), and under reduced motion nothing moves.
  */
 
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
+import { useEffect } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutRectangle,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+import Animated, {
+  Easing,
+  LinearTransition,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { CornerBadge } from './CornerBadge';
+import { useReducedMotion } from './overlay';
 import { theme } from './theme';
+
+const EASE = Easing.bezierFn(
+  theme.motion.easeDecel.x1,
+  theme.motion.easeDecel.y1,
+  theme.motion.easeDecel.x2,
+  theme.motion.easeDecel.y2,
+);
+
+/** The widths moving as one layout change — see the module note. */
+const WIDEN = LinearTransition.duration(theme.motion.tabMenu).easing(EASE);
+
+/** The room the chevron takes beside the label: its gap, itself, and its inset from the edge. */
+const CHEVRON_ROOM = theme.size.segMenu.gap + theme.size.segMenu.chevron + theme.size.segMenu.inset;
+
+/** Pointing down while the menu is shut, turned over while it is open. */
+const TURN = 180;
+
+/**
+ * **The menu an option owns** — see the module note. Present on the option that has one, whether or
+ * not it is offered now, so the control's drawing is the same while the page decides.
+ */
+export interface SegmentMenu {
+  /** Whether the page offers the menu now. Selected and offered, the option draws its chevron. */
+  readonly offered: boolean;
+  /** Whether the menu is open: the chevron turned up, and `expanded`. */
+  readonly open: boolean;
+  /** Where the option stands in the track, each time it is laid out — what its menu hangs from. */
+  readonly onFrame?: (frame: LayoutRectangle) => void;
+}
 
 export interface SegmentOption<K extends string> {
   readonly key: K;
@@ -82,6 +150,8 @@ export interface SegmentOption<K extends string> {
    * rather than the view: its label dimmed, nothing else changed — see the module note.
    */
   readonly door?: boolean;
+  /** **This option owns a menu** — a chevron while selected and offered: see the module note. */
+  readonly menu?: SegmentMenu;
 }
 
 export interface SegmentProps<K extends string> {
@@ -121,6 +191,10 @@ export function Segment<K extends string>({
   onDark = false,
   prominent = false,
 }: SegmentProps<K>) {
+  const reduced = useReducedMotion();
+  // One option with a menu makes every option a box, so all the widths move together.
+  const boxed = options.some((option) => option.menu !== undefined);
+
   return (
     <View
       style={[
@@ -132,6 +206,76 @@ export function Segment<K extends string>({
     >
       {options.map((option) => {
         const on = option.key === selected;
+        const label = (
+          <Text
+            style={[
+              s.label,
+              prominent ? s.labelProminent : undefined,
+              onDark && !on ? s.labelOnDark : undefined,
+              on ? (prominent ? s.labelSelectedProminent : s.labelSelected) : undefined,
+              option.door === true ? s.labelDoor : undefined,
+            ]}
+            numberOfLines={1}
+          >
+            {option.label}
+          </Text>
+        );
+        const badge =
+          option.badge === undefined || option.badge <= 0 ? null : (
+            <CornerBadge count={option.badge} />
+          );
+
+        if (boxed) {
+          const menu = option.menu;
+          // The chevron, and the room for it, only while selected and offered.
+          const chevron = on && menu?.offered === true;
+          return (
+            <Animated.View
+              key={option.key}
+              testID={`segment-${option.key}`}
+              layout={reduced ? undefined : WIDEN}
+              onLayout={
+                menu?.onFrame === undefined
+                  ? undefined
+                  : ({ nativeEvent }) => menu.onFrame?.(nativeEvent.layout)
+              }
+              style={[
+                s.box,
+                chevron ? s.boxWidened : undefined,
+                on ? (prominent ? s.selectedProminent : s.selected) : undefined,
+              ]}
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={option.accessibilityLabel ?? option.label}
+                accessibilityState={
+                  chevron ? { selected: on, expanded: menu.open } : { selected: on }
+                }
+                onPress={() => onSelect(option.key)}
+                // 6.5's slop, as the unboxed segment's below.
+                hitSlop={theme.hit.seg}
+                // The press dims what the box holds; the raised surface is the box's, and stays.
+                style={({ pressed }) => [
+                  s.boxPress,
+                  prominent ? s.segmentProminent : undefined,
+                  chevron ? s.pressWidened : undefined,
+                  pressed ? s.pressed : undefined,
+                ]}
+              >
+                {label}
+                {chevron ? (
+                  <SegmentChevron
+                    open={menu.open}
+                    reduced={reduced}
+                    tint={prominent ? theme.color.surface : theme.color.ink}
+                    testID={`segment-chevron-${option.key}`}
+                  />
+                ) : null}
+                {badge}
+              </Pressable>
+            </Animated.View>
+          );
+        }
 
         return (
           <Pressable
@@ -153,25 +297,56 @@ export function Segment<K extends string>({
               pressed ? s.pressed : undefined,
             ]}
           >
-            <Text
-              style={[
-                s.label,
-                prominent ? s.labelProminent : undefined,
-                onDark && !on ? s.labelOnDark : undefined,
-                on ? (prominent ? s.labelSelectedProminent : s.labelSelected) : undefined,
-                option.door === true ? s.labelDoor : undefined,
-              ]}
-              numberOfLines={1}
-            >
-              {option.label}
-            </Text>
-            {option.badge === undefined || option.badge <= 0 ? null : (
-              <CornerBadge count={option.badge} />
-            )}
+            {label}
+            {badge}
           </Pressable>
         );
       })}
     </View>
+  );
+}
+
+/**
+ * The selected option's chevron — down while its menu is shut, turned over while it is open, on the
+ * menu's beat; at once under reduced motion. A mark: the option's `expanded` says the same.
+ */
+function SegmentChevron({
+  open,
+  reduced,
+  tint,
+  testID,
+}: {
+  readonly open: boolean;
+  readonly reduced: boolean;
+  readonly tint: string;
+  readonly testID: string;
+}) {
+  const turned = useSharedValue(open ? 1 : 0);
+  useEffect(() => {
+    const to = open ? 1 : 0;
+    // The app has already asked the OS (`reduced`), so Reanimated is told not to ask again.
+    turned.value = reduced
+      ? to
+      : withTiming(to, {
+          duration: theme.motion.tabMenu,
+          easing: EASE,
+          reduceMotion: ReduceMotion.Never,
+        });
+  }, [open, reduced, turned]);
+  const turn = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${TURN * turned.value}deg` }],
+  }));
+
+  return (
+    <Animated.View
+      testID={testID}
+      style={[s.chevron, turn]}
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Feather name="chevron-down" size={theme.size.segMenu.chevron} color={tint} />
+    </Animated.View>
   );
 }
 
@@ -211,4 +386,32 @@ const s = StyleSheet.create({
   selectedProminent: { backgroundColor: theme.color.ink },
   labelProminent: { ...theme.type.btn },
   labelSelectedProminent: { color: theme.color.surface },
+  // An option as a box, where any option owns a menu: the segment's share and shape, laid out in
+  // the track, with the press inside it — see the module note.
+  box: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    borderRadius: theme.radius.segThumb,
+    overflow: 'visible',
+  },
+  // The chevron's room, on top of the share every option has.
+  boxWidened: { flexBasis: CHEVRON_ROOM },
+  boxPress: {
+    flexGrow: 1,
+    minHeight: theme.size.seg,
+    paddingVertical: theme.space.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  // The label keeps the share; the chevron stands in the room beside it.
+  pressWidened: { paddingRight: CHEVRON_ROOM },
+  chevron: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: theme.size.segMenu.inset,
+    justifyContent: 'center',
+  },
 });

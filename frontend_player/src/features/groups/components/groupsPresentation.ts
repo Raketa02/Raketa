@@ -39,7 +39,7 @@ import {
 } from '../domain/group';
 import { adminTagged, type GroupExit, type GroupRunner } from '../domain/groupInfo';
 import type { GroupKind } from '../domain/vocabulary';
-import type { GamesCard, GroupTab } from '../domain/groupPage';
+import type { GameIntent, GamesCard, GroupTab } from '../domain/groupPage';
 import type { GroupAction } from '../domain/groupRules';
 import { isJoinTap } from '../domain/hottest';
 
@@ -176,6 +176,18 @@ export function fillInTabLabel(seats: number): string {
  */
 export function youreInTabLabel(yeses: number): string {
   return `${GROUPS_COPY.group.tabs.youreIn}, ${counted(yeses, 'new game', 'new games')}`;
+}
+
+/** The kinds' words, held to `GameIntent`'s keys: a kind with no words fails to compile. */
+const KIND_WORDS: Readonly<Record<GameIntent, string>> = GROUPS_COPY.group.kinds;
+
+/**
+ * *Friends, Competitive* — the selected tab that offers its menu, spoken with the kind it holds
+ * (#861, PRD #859): nothing drawn names the kind while the menu is shut, so the name does. Its
+ * `expanded` says whether the menu is open.
+ */
+export function menuTabLabel(tab: GroupTab, kind: GameIntent): string {
+  return `${GROUPS_COPY.group.tabs[tab]}, ${KIND_WORDS[kind]}`;
 }
 
 /**

@@ -4,7 +4,7 @@
  * friends screens §7.1–§7.2; friends 7, 8).
  *
  * ```
- *        [ Competitive | For fun ]          this game's kind, and nothing else's
+ *   [ Games | Fill in | You’re in | Friends ⌄ ]   the page's tabs: this game's kind is the menu's
  *   ┌───────────── THEIR SIDE ─────────────┐
  *   │   [Mag]×                 [Ani]×      │   a seated friend: their face, *nickname level*, a ×
  *   │ ──────────────────────────────────── │
@@ -15,8 +15,12 @@
  *   ┌ the friends card ─────────────────────┐  every seat filled: `proposals`' card
  * ```
  *
- * - **Competitive · For fun** sets **this game's kind only** (`friendsGame.store`) — never the Games
- *   deck's switch, never the Play intent (ADR-0202; the README's defaults).
+ * - **The kind is picked in the Friends tab's menu** (`TabMenu`, #861, PRD #859; tab menu mocks 2
+ *   and 4), not on a row above the court: the court sits right under the tabs, at its own size. It
+ *   sets **this game's kind only** (`friendsGame.store`) — never the Games deck's kind, never the
+ *   Play intent (ADR-0202; the README's defaults). The menu is the page's, drawn over the page; a
+ *   pick asks this tab (`FriendsTabHandle`), because a kind changed keeps the sides the court shows
+ *   (`chooseKind`), and only the court knows what it shows.
  * - **The court** is `Court` at `court.build`, a seat 60. The reader stands in the first seat,
  *   *You 2,71*. **A seated friend** is their face, the seat's three letters over their Level, and
  *   6.9's remove control at its corner (7.12's seat-clear badge): the × takes them off. **An empty
@@ -43,7 +47,7 @@
  */
 
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useImperativeHandle, useState, type Ref } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useReaderId } from '@/features/auth/types';
@@ -60,7 +64,6 @@ import {
   SeatCaption,
   SeatFace,
   seatBox,
-  Segment,
   theme,
 } from '@/shared/ui';
 import { seatPlaces, type LineUpSeat, type SeatPlace } from '@/shared/vocabulary/seatPlace';
@@ -97,7 +100,21 @@ function lineUpSeats(shown: readonly FriendSeat[]): readonly LineUpSeat[] {
   ];
 }
 
-export function FriendsTab({ group, sport }: { readonly group: Group; readonly sport: Sport }) {
+/** What the page's menu asks of the court — see the module note. */
+export interface FriendsTabHandle {
+  /** Make the game being built this kind, keeping the sides the court shows. */
+  readonly chooseKind: (kind: GameIntent) => void;
+}
+
+export function FriendsTab({
+  group,
+  sport,
+  handle,
+}: {
+  readonly group: Group;
+  readonly sport: Sport;
+  readonly handle?: Ref<FriendsTabHandle>;
+}) {
   const readerId = useReaderId();
   const level = useSkillRatings().data?.find((rating) => rating.sport === sport)?.level;
 
@@ -144,15 +161,11 @@ export function FriendsTab({ group, sport }: { readonly group: Group; readonly s
     };
   });
 
-  const intents: readonly { key: GameIntent; label: string }[] = [
-    { key: 'competitive', label: COPY.competitive },
-    { key: 'forFun', label: COPY.forFun },
-  ];
+  // The page's menu picks the kind; the court keeps the sides it shows as it changes.
+  useImperativeHandle(handle, () => ({ chooseKind: game.chooseKind }));
 
   return (
     <View style={s.tab}>
-      <Segment options={intents} selected={game.kind} onSelect={game.chooseKind} style={s.intent} />
-
       <Court
         sport={sport}
         width={WIDTH}
@@ -327,7 +340,6 @@ function FriendInSeat({
 
 const s = StyleSheet.create({
   tab: { alignItems: 'center', gap: theme.space.lg },
-  intent: { alignSelf: 'center', minWidth: WIDTH },
   // 6.6's photo-tile value, as a court seat's own press is.
   pressed: { opacity: 0.7 },
   more: { ...theme.type.rlLabel, color: theme.color.muted },

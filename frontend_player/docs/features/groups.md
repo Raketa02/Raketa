@@ -207,9 +207,29 @@ games yet_ once anybody has joined: a posted game is seen by everybody who arriv
 [#757](https://github.com/Raketa02/Raketa/issues/757), the friends screens §7.1–§7.2, friends 7–8).
 **Competitive · For fun sets this game's kind, and nothing else's** (ADR-0202; the friends README's
 defaults): it is `friendsGame.store`'s, no longer `gameIntent.store`'s, so turning it never moves the
-Games deck's switch or the Play intent. It keeps its position while the app is open, in memory only
-(ADR-0188 §5) — one value for the app, since it is the kind of the game being built — and, like the
-app's other process stores, a sign-out does not reset it.
+Games deck's kind or the Play intent, and the deck's kind never moves it. It keeps its position while
+the app is open, in memory only (ADR-0188 §5) — one value for the app, since it is the kind of the
+game being built — and, like the app's other process stores, a sign-out does not reset it.
+
+**The kind is picked in the Friends tab's menu, and the court sits right under the tabs**
+([#861](https://github.com/Raketa02/Raketa/issues/861), PRD #859; the friends screens §7.1, tab menu
+mocks 2 and 4 as illustrations). The _Competitive | For fun_ row above the court is gone, and the
+court keeps its size. **Whenever the court is drawn** — not on the _add a sport_ card, not on the
+level door — the selected Friends tab draws a chevron, widens for it, and is spoken _Friends,
+Competitive_ with its expanded state; **a press on it opens the menu** (`shared/ui`'s `TabMenu`, 9.5),
+hanging from the tab by its right edge: _Competitive_ then _For fun_, the current kind ticked, **no
+counts and no door** — a game with friends is one game's kind, so a Competitive-only player picks For
+fun here freely. **Picking the other kind** folds the menu away and turns the court into that kind's
+game, and with every seat filled the card asks again for it, as it did; the kind it already is just
+closes the menu. **The menu's open state is the page's own** (`GroupScreen`), drawn as the page's
+last layer, never on the modal stage: a press on the tab again, a line, anywhere else on the page —
+which does nothing else, the body taking no touch under it — Android back, a pushed screen, the
+bottom bar and a sport change all close it, and another tab is one tap. **A pick asks the court**
+through a handle (`FriendsTabHandle`), because a kind changed keeps the sides the court shows and
+only the court knows what it shows. Walked in `friendsGame.test.tsx` through `test-support/tabMenu.ts`
+(_open a tab's menu, then pick a kind_), with the chevron's absent states in `officialGroups.test.tsx`
+and `theDoorWherePlayBegins.test.tsx`. **Not seen on a device** — the chevron, the widened tab and the
+menu over the court are asked for a look (#866).
 
 **The court is the app's court, spoken in the seat's sentences.** `Court` at `court.build` with
 `shared/ui`'s `SeatFace` and `SeatCaption` — Play's until #574, and drawn by Fill in and a booked
@@ -555,7 +575,8 @@ here changed either time: Play opens on Groups, and no flag decides it any more.
 
 **Games is the deck** ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A1–A2).
 `GamesTab` hands `proposals`' `GamesDeck` the kind the page's switch stands on — the game-intent
-store, which Friends' switch shares, so one choice is one choice on both tabs — and the starting card
+store, which Friends' kind no longer shares since #757 (it is the Friends tab's menu's since #861) —
+and the starting card
 to draw while the segment deals nothing. **The starting card is unchanged** (_Just you so far_, _3 of
 4_, _Nothing picked right now_), and _Nothing picked right now_ gains a third door under the link's
 two, _Post a game_ — the floating button's own `PostAGame` (You’re in's since #847), in `LinkCard`'s `foot`, open since #558. **The tab bar counts Games** — the cards somebody is already In on with you, off

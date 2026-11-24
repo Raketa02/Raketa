@@ -55,6 +55,21 @@
  * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are
  * not a deck — the question, the starting card.
  *
+ * **The Friends tab holds a menu** (#861, PRD #859; tab menu mocks 2 and 4, illustrations), where a
+ * *Competitive | For fun* row stood above the court: selected, with its court drawn, the tab draws a
+ * chevron and widens for it (`Segment`'s option that owns a menu), and **a press on it opens the
+ * menu** — the kind of the game being built, Competitive then For fun, the current one ticked
+ * (`TabMenu`). **The menu is the page's**: its open state is this page's own, it is drawn over the
+ * page as the last layer of its tree — never on the modal stage, which would cover the tab bar and the
+ * app's bottom bar — and the page measures the tab bar and the tab for it to hang from. A press on
+ * the same tab, on a line, on the page around the bar, Android back and the page leaving view close
+ * it; **a press on another tab goes there in one tap**, the bar being the one thing its catcher leaves
+ * uncovered, and the page closes it on the way. While it is open the body takes no touch at all. **A
+ * pick asks the court** (`FriendsTabHandle`), which keeps the sides it shows as the kind changes, and
+ * never moves the Games deck's kind (ADR-0202). The menu is open only for the tab and the sport it
+ * was opened on, so a notice turning the page to Games or a sport changing under it shuts it; and
+ * a menu shut that way is forgotten, never to open again on its own.
+ *
  * **A player rated in nothing meets one door** (#730, ADR-0200 §2): in a player group, each of the
  * four tabs draws onboarding's `LevelDoor` in place of its content — *Get your level*, or *Carry on
  * with your padel questions* with a run left halfway — and the pass it begins returns to the tab it
@@ -92,7 +107,7 @@
  */
 
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -107,11 +122,25 @@ import {
   useYoureInBadge,
 } from '@/features/proposals/types';
 import { codeMessage } from '@/shared/errors';
-import { Segment, theme, type SegmentOption } from '@/shared/ui';
+import {
+  Segment,
+  TabMenu,
+  theme,
+  type MenuFrame,
+  type SegmentMenu,
+  type SegmentOption,
+  type TabMenuLine,
+} from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Group } from '../domain/group';
-import { GROUP_TABS, OPENING_TAB, type GroupTab } from '../domain/groupPage';
+import {
+  GAME_INTENTS,
+  GROUP_TABS,
+  OPENING_TAB,
+  type GameIntent,
+  type GroupTab,
+} from '../domain/groupPage';
 import type { DeckArrival, ReturningPass } from '../schemas/groupRouteParams';
 import { useGroup, useGroupReread } from '../hooks/useGroups';
 import { usePull } from '../hooks/usePull';
@@ -120,12 +149,12 @@ import { useGameIntent } from '../store/gameIntent.store';
 import { useGroupTab } from '../store/groupTab.store';
 
 import { AddSportCard } from './AddSportCard';
-import { FriendsTab } from './FriendsTab';
+import { FriendsTab, type FriendsTabHandle } from './FriendsTab';
 import { GamesTab } from './GamesTab';
 import { GroupHeader } from './GroupHeader';
 import { anotherSportRoute, groupInfoRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
-import { fillInTabLabel, gamesTabLabel, youreInTabLabel } from './groupsPresentation';
+import { fillInTabLabel, gamesTabLabel, menuTabLabel, youreInTabLabel } from './groupsPresentation';
 import { ReadFailure } from './ReadFailure';
 import { SportFilterPage } from './SportFilterPage';
 import { PostAGame, YoureInTab } from './YoureInTab';
@@ -138,8 +167,32 @@ const TABS: readonly SegmentOption<GroupTab>[] = GROUP_TABS.map((key) => ({
   label: GROUPS_COPY.group.tabs[key],
 }));
 
+/**
+ * The Friends tab's menu's lines — the kinds, in their order (#861); no counts, no door. Read at
+ * load too, so from the copy module, never `groupsPresentation`'s `KIND_WORDS`: entered from that
+ * side of the feature cycle, it is not yet defined when this module runs.
+ */
+const FRIENDS_LINES: readonly TabMenuLine<GameIntent>[] = GAME_INTENTS.map((kind) => ({
+  key: kind,
+  label: GROUPS_COPY.group.kinds[kind],
+}));
+
+/** The menu open on a tab, for the sport it was opened on — see the module note. */
+interface OpenMenu {
+  readonly tab: GroupTab;
+  readonly sport: Sport;
+}
+
+/** Where the menu hangs: the tab bar and the tab in the page, as they stood when it opened. */
+interface MenuHung {
+  readonly bar: MenuFrame | undefined;
+  readonly trigger: MenuFrame | undefined;
+}
+
 interface GroupTabsProps {
   readonly groupId: string;
+  /** The four tabs, Friends with its menu. */
+  readonly options: readonly SegmentOption<GroupTab>[];
   readonly selected: GroupTab;
   readonly onSelect: (tab: GroupTab) => void;
 }
@@ -150,7 +203,7 @@ interface GroupTabsProps {
  */
 function GroupTabs({ sport, ...props }: GroupTabsProps & { readonly sport: Sport | undefined }) {
   return sport === undefined ? (
-    <Segment options={TABS} selected={props.selected} onSelect={props.onSelect} style={s.tabs} />
+    <Segment options={props.options} selected={props.selected} onSelect={props.onSelect} />
   ) : (
     <TabsWithCounts {...props} sport={sport} />
   );
@@ -158,6 +211,7 @@ function GroupTabs({ sport, ...props }: GroupTabsProps & { readonly sport: Sport
 
 function TabsWithCounts({
   groupId,
+  options,
   selected,
   onSelect,
   sport,
@@ -168,7 +222,7 @@ function TabsWithCounts({
   // The live yeses are read here, as the page opens, so You’re in's badge has them — and the tab,
   // the same read, usually opens already read.
   const yeses = useYoureInBadge(groupId, sport);
-  const counted = TABS.map((option) => {
+  const counted = options.map((option) => {
     // The tab on screen draws no badge (split override 2): what it shows is seen while it is shown —
     // on Games too, where the other kind's new cards show once the player leaves (ADR-0208).
     if (option.key === selected) return option;
@@ -183,7 +237,21 @@ function TabsWithCounts({
     }
     return option;
   });
-  return <Segment options={counted} selected={selected} onSelect={onSelect} style={s.tabs} />;
+  return <Segment options={counted} selected={selected} onSelect={onSelect} />;
+}
+
+/** A menu the page no longer offers is forgotten, so it never opens again on its own. */
+function ForgetsAShutMenu({
+  shut,
+  forget,
+}: {
+  readonly shut: boolean;
+  readonly forget: () => void;
+}) {
+  useEffect(() => {
+    if (shut) forget();
+  }, [shut, forget]);
+  return null;
 }
 
 export interface GroupScreenProps {
@@ -209,6 +277,30 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
   const tab = useGroupTab((state) => state.tabs[groupId]) ?? returnTab ?? OPENING_TAB;
   const show = useGroupTab((state) => state.show);
   const setTab = (next: GroupTab) => show(groupId, next);
+
+  // The tab's menu — the page's own state (see the module note). The bar and the tab are measured
+  // into refs, never state: the tab widens on every switch to Friends and back, and a measure in
+  // state would draw the whole page again each time. They are read once, as the menu opens, and
+  // kept where it hung while it folds away.
+  const [menu, setMenu] = useState<OpenMenu | undefined>(undefined);
+  const [hung, setHung] = useState<MenuHung>({ bar: undefined, trigger: undefined });
+  const forgetMenu = useCallback(() => setMenu(undefined), []);
+  const barFrame = useRef<MenuFrame | undefined>(undefined);
+  const tabFrame = useRef<MenuFrame | undefined>(undefined);
+  const hangMenu = () => {
+    const bar = barFrame.current;
+    const at = tabFrame.current;
+    // The tab in the page's coordinates: the bar's place, and the tab's place in the bar.
+    setHung({
+      bar,
+      trigger:
+        bar === undefined || at === undefined
+          ? undefined
+          : { ...at, x: bar.x + at.x, y: bar.y + at.y },
+    });
+  };
+  const friendsKind = useFriendsGame((state) => state.kind);
+  const friendsTab = useRef<FriendsTabHandle>(null);
   const reread = useGroupReread(groupId);
   const rereadGames = useRereadGroupGames(groupId);
   // The group, for the header and the starting cards, and the games drawn on Games, Fill in and
@@ -285,6 +377,42 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
         {(sport, toAdd, needsALevel) => {
           // The sport the four tabs are drawn for — none while the reader must add one.
           const playing = toAdd.length === 0 ? sport : undefined;
+          // Friends offers its menu wherever its court is drawn — not on the add-a-sport card, not
+          // on the level door.
+          const court = playing !== undefined && !needsALevel;
+          const offers = (key: GroupTab) => key === 'friends' && court;
+          const menuOpen =
+            menu !== undefined && menu.tab === tab && menu.sport === playing && offers(tab);
+          const select = (next: GroupTab) => {
+            // A press on the selected tab that offers a menu opens it, or shuts it.
+            if (next === tab && offers(next) && playing !== undefined) {
+              if (menuOpen) return setMenu(undefined);
+              hangMenu();
+              setMenu({ tab: next, sport: playing });
+              return;
+            }
+            setMenu(undefined);
+            setTab(next);
+          };
+          const friendsMenu: SegmentMenu = {
+            offered: offers('friends'),
+            open: menuOpen,
+            onFrame: (frame) => {
+              tabFrame.current = frame;
+            },
+          };
+          const options = TABS.map((option) =>
+            option.key !== 'friends'
+              ? option
+              : {
+                  ...option,
+                  menu: friendsMenu,
+                  // Selected with its menu offered, it says the kind it holds.
+                  ...(tab === 'friends' && friendsMenu.offered
+                    ? { accessibilityLabel: menuTabLabel('friends', friendsKind) }
+                    : {}),
+                },
+          );
           return group === undefined ? (
             read.error === null ? null : (
               <View style={s.body}>
@@ -297,7 +425,21 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
             )
           ) : (
             <>
-              <GroupTabs groupId={groupId} sport={playing} selected={tab} onSelect={setTab} />
+              <View
+                testID="group-tabs"
+                style={s.tabs}
+                onLayout={({ nativeEvent }) => {
+                  barFrame.current = nativeEvent.layout;
+                }}
+              >
+                <GroupTabs
+                  groupId={groupId}
+                  sport={playing}
+                  options={options}
+                  selected={tab}
+                  onSelect={select}
+                />
+              </View>
               {tab === 'games' && playing !== undefined ? (
                 // The deck lays itself out — see the module note.
                 <View style={s.fill}>
@@ -315,13 +457,21 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
                   testID="group-page-body"
                   contentContainerStyle={s.body}
                   refreshControl={tab === 'friends' ? undefined : pullControl}
+                  // Under an open menu the page takes no touch: a press there only closes it.
+                  pointerEvents={menuOpen ? 'none' : 'auto'}
                 >
                   {toAdd.length > 0 ? (
                     <AddSportCard sports={toAdd} groupId={groupId} tab={tab} />
                   ) : needsALevel ? (
                     <LevelDoor from={fromAGroup(groupId, tab)} />
                   ) : sport === undefined ? null : (
-                    <TabBody tab={tab} group={group} sport={sport} inView={inView && arrived} />
+                    <TabBody
+                      tab={tab}
+                      group={group}
+                      sport={sport}
+                      inView={inView && arrived}
+                      friendsTab={friendsTab}
+                    />
                   )}
                 </ScrollView>
               )}
@@ -331,6 +481,23 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
                   <PostAGame groupId={groupId} />
                 </View>
               ) : null}
+              {/* The tab's menu, over the page, last — see the module note. */}
+              {tab === 'friends' && court ? (
+                <TabMenu
+                  open={menuOpen}
+                  lines={FRIENDS_LINES}
+                  selected={friendsKind}
+                  trigger={hung.trigger}
+                  bar={hung.bar}
+                  align="end"
+                  onClose={forgetMenu}
+                  onPick={(kind) => {
+                    // The kind it already is just closes the menu.
+                    if (kind !== friendsKind) friendsTab.current?.chooseKind(kind);
+                  }}
+                />
+              ) : null}
+              <ForgetsAShutMenu shut={menu !== undefined && !menuOpen} forget={forgetMenu} />
             </>
           );
         }}
@@ -345,11 +512,14 @@ function TabBody({
   group,
   sport,
   inView,
+  friendsTab,
 }: {
   readonly tab: GroupTab;
   readonly group: Group;
   readonly sport: Sport;
   readonly inView: boolean;
+  /** What the page's menu asks the Friends court — see the module note. */
+  readonly friendsTab: Ref<FriendsTabHandle>;
 }) {
   switch (tab) {
     case 'games':
@@ -366,7 +536,7 @@ function TabBody({
         />
       );
     case 'friends':
-      return <FriendsTab group={group} sport={sport} />;
+      return <FriendsTab group={group} sport={sport} handle={friendsTab} />;
   }
 }
 

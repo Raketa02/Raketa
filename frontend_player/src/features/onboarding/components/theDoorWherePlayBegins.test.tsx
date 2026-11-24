@@ -361,6 +361,12 @@ describe('a player rated in nothing, in a player group', () => {
       await expectTheDoor();
       await openTab(TABS.friends);
       await expectTheDoor();
+      // No court behind the door, so no menu on its tab (#861): no chevron, and a press opens none.
+      expect(
+        screen.queryByTestId('segment-chevron-friends', { includeHiddenElements: true }),
+      ).toBeNull();
+      fireEvent.press(await tab(TABS.friends, true));
+      expect(screen.queryByTestId('tab-menu', { includeHiddenElements: true })).toBeNull();
       // Nothing was started by looking.
       expect(transport.requestsTo('POST', ASSESSMENTS_PATH)).toEqual([]);
     },

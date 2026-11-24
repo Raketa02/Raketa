@@ -15,6 +15,7 @@
  * the bank, the court gone, and each refusal's sentence.
  */
 
+import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { StyleSheet } from 'react-native';
 
@@ -26,6 +27,11 @@ import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { theme } from '@/shared/ui';
 import { DECK_READ_AT, deckPath, stubGroupDeck } from '@/test-support/groupDeck';
+import {
+  pressHardwareBack,
+  stopWatchingHardwareBack,
+  watchHardwareBack,
+} from '@/test-support/hardwareBack';
 import {
   FRIENDS_PATH,
   GATE_USER,
@@ -39,6 +45,7 @@ import {
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
 import { fakePayments } from '@/test-support/platform';
+import { menuLine, menuTab, openTabMenu, pickKind } from '@/test-support/tabMenu';
 import {
   errorResponse,
   installTransport,
@@ -52,9 +59,11 @@ import {
 import { useFriendsGame } from '../store/friendsGame.store';
 import { useGameIntent } from '../store/gameIntent.store';
 
+import { groupFriendsRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsPresentation';
 
 const COPY = GROUPS_COPY;
+const KINDS = COPY.group.kinds;
 const CARD = FRIENDS_CARD_COPY;
 
 function rating(sport: Wire['Sport'], mu: number): Wire['RatingResponse'] {
@@ -284,7 +293,7 @@ async function openFriendsTab() {
   fireEvent.press(await screen.findByRole('button', { name: /^Padel po pracy,/ }));
   await waitFor(() => expect(screen).toHavePathname(`/play/group/${GROUP.id}`));
   fireEvent.press(await tab('Friends'));
-  expect(await tab('Friends', true)).toBeTruthy();
+  expect(await menuTab('Friends')).toBeTruthy();
 }
 
 const pickerRow = (id: string) => screen.findByTestId(`pick-${id}`);
@@ -303,13 +312,202 @@ const lastCardAsked = () => query(cardRequests().at(-1)!);
 
 const seatNamed = (label: string) => screen.findByRole('button', { name: label });
 
-describe('the switch', () => {
+/** Friends' chevron, wherever it is drawn — a mark, never spoken. */
+const chevron = () =>
+  screen.queryByTestId('segment-chevron-friends', { includeHiddenElements: true });
+/** The menu, as a finger and a listener reach it — not while it folds away. */
+const menu = () => screen.queryByTestId('tab-menu');
+
+/**
+ * **The Friends tab's menu** (#861, PRD #859; the friends screens §7.1): the row above the court is
+ * gone, and the kind of the game being built is picked from a menu hanging from the selected tab.
+ */
+describe('the tab’s menu, opening and shutting', () => {
+  afterEach(() => stopWatchingHardwareBack());
+
+  it('draws no row over the court, and a chevron on the selected tab — spoken with the kind', async () => {
+    await openFriendsTab();
+
+    expect(chevron()).toBeTruthy();
+    expect(screen.queryByRole('button', { name: KINDS.competitive })).toBeNull();
+    expect(screen.queryByRole('button', { name: KINDS.forFun })).toBeNull();
+    const friends = await menuTab('Friends');
+    expect(friends.props.accessibilityLabel).toBe('Friends, Competitive');
+    expect(friends.props.accessibilityState).toEqual({ selected: true, expanded: false });
+  });
+
+  it('draws none on Friends while another tab is selected, nor ever on Fill in or You’re in', async () => {
+    await openFriendsTab();
+
+    for (const other of ['Games', 'Fill in', 'You’re in']) {
+      fireEvent.press(await tab(other));
+      expect(await tab(other, true)).toBeTruthy();
+      expect(chevron()).toBeNull();
+      // Nothing on the bar says a menu, and Friends is its name alone.
+      for (const one of screen.getAllByRole('button', {
+        name: /^(Games|Fill in|You’re in|Friends)/,
+      })) {
+        expect(one.props.accessibilityState?.expanded).toBeUndefined();
+      }
+      expect(screen.getByRole('button', { name: 'Friends', selected: false })).toBeTruthy();
+    }
+  });
+
+  it('opens on a press on the selected tab: Competitive then For fun, the kind ticked, no counts', async () => {
+    await openFriendsTab();
+    const asked = cardRequests().length;
+
+    const open = await openTabMenu('Friends');
+
+    expect(await menuTab('Friends', true)).toBeTruthy();
+    expect(
+      within(open)
+        .getAllByRole('button')
+        .map((one) => one.props.accessibilityLabel),
+    ).toEqual(['Competitive', 'For fun']);
+    expect((await menuLine(KINDS.competitive)).props.accessibilityState).toEqual({
+      selected: true,
+    });
+    expect((await menuLine(KINDS.forFun)).props.accessibilityState).toEqual({ selected: false });
+    expect(
+      within(await menuLine(KINDS.competitive)).getByTestId('tab-menu-tick', {
+        includeHiddenElements: true,
+      }),
+    ).toBeTruthy();
+    // No counts and no door: two words, both live.
+    expect(within(open).queryAllByText(/[0-9]/, { includeHiddenElements: true })).toEqual([]);
+    // Nothing else moved.
+    expect(screen).toHavePathname(`/play/group/${GROUP.id}`);
+    expect(cardRequests()).toHaveLength(asked);
+  });
+
+  it('shuts on a second press on the tab, with nothing changed', async () => {
+    await openFriendsTab();
+    await openTabMenu('Friends');
+
+    fireEvent.press(await menuTab('Friends', true));
+
+    expect(menu()).toBeNull();
+    expect(await menuTab('Friends')).toBeTruthy();
+    expect(useFriendsGame.getState().kind).toBe('competitive');
+  });
+
+  it('shuts on a press anywhere on the page, which does nothing else — no seat, no card button', async () => {
+    await openFriendsTab();
+    await seat(MAGDA, EWA, ANIA);
+    await screen.findByTestId('friends-card');
+    const asked = cardRequests().length;
+    await openTabMenu('Friends');
+
+    // Under the menu the page takes no touch at all: a seat, the card's buttons, + Friends' seat.
+    fireEvent.press(await seatNamed('Their side, magda.p, level 2,66'));
+    fireEvent.press(screen.getByRole('button', { name: CARD.pickACourt }));
+    fireEvent.press(screen.getByRole('button', { name: 'Remove ania.k from their side' }));
+    expect(menu()).toBeTruthy();
+
+    // The catcher over the page takes the press, and shuts the menu.
+    fireEvent.press(screen.getByTestId('tab-menu-catcher-below'));
+
+    expect(menu()).toBeNull();
+    expect(screen).toHavePathname(`/play/group/${GROUP.id}`);
+    expect(
+      (await seatNamed('Their side, magda.p, level 2,66')).props.accessibilityState,
+    ).toMatchObject({ selected: false });
+    expect(screen.getByRole('button', { name: 'Remove ania.k from their side' })).toBeTruthy();
+    expect(cardRequests()).toHaveLength(asked);
+  });
+
+  it('shuts on a press over the header, which opens neither Info nor the sport bar', async () => {
+    await openFriendsTab();
+    await openTabMenu('Friends');
+
+    fireEvent.press(screen.getByTestId('tab-menu-catcher-above'));
+
+    expect(menu()).toBeNull();
+    expect(screen).toHavePathname(`/play/group/${GROUP.id}`);
+    expect(screen.queryByTestId('sport-bar')).toBeNull();
+  });
+
+  it('goes to another tab in one press, and the menu goes with the tab', async () => {
+    await openFriendsTab();
+    await openTabMenu('Friends');
+
+    fireEvent.press(await tab('Fill in'));
+
+    expect(await tab('Fill in', true)).toBeTruthy();
+    expect(menu()).toBeNull();
+    // Back on Friends, it is shut until asked.
+    fireEvent.press(await tab('Friends'));
+    expect(await menuTab('Friends')).toBeTruthy();
+    expect(menu()).toBeNull();
+  });
+
+  it('shuts on Android back, and the page stays where it was', async () => {
+    watchHardwareBack();
+    await openFriendsTab();
+    await openTabMenu('Friends');
+
+    let claimed = false;
+    act(() => {
+      claimed = pressHardwareBack();
+    });
+
+    expect(claimed).toBe(true);
+    expect(menu()).toBeNull();
+    expect(screen).toHavePathname(`/play/group/${GROUP.id}`);
+    expect(await menuTab('Friends')).toBeTruthy();
+  });
+
+  it('shuts when the sport changes under it', async () => {
+    await openFriendsTab();
+    await openTabMenu('Friends');
+
+    // The catcher keeps a finger off the pill; the page's rule holds for any way the sport moves.
+    fireEvent.press(await screen.findByRole('button', { name: 'Sport: Padel' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Tennis' }));
+    act(() => jest.advanceTimersByTime(theme.motion.unfold));
+
+    expect(await screen.findByRole('button', { name: 'Sport: Tennis' })).toBeTruthy();
+    expect(menu()).toBeNull();
+    expect(await menuTab('Friends')).toBeTruthy();
+    // Back on padel, the menu it was opened on is forgotten — never open on its own.
+    fireEvent.press(await screen.findByRole('button', { name: 'Sport: Tennis' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Padel' }));
+    act(() => jest.advanceTimersByTime(theme.motion.unfold));
+    expect(await screen.findByRole('button', { name: 'Sport: Padel' })).toBeTruthy();
+    expect(menu()).toBeNull();
+  });
+
+  it('shuts when a screen is pushed over the page, and is shut on the way back', async () => {
+    await openFriendsTab();
+    await openTabMenu('Friends');
+
+    act(() => router.push(groupFriendsRoute(GROUP.id, 'padel')));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${GROUP.id}/friends`));
+    fireEvent.press(screen.getByRole('button', { name: FRIENDS_COPY.picker.done }));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${GROUP.id}`));
+
+    expect(await menuTab('Friends')).toBeTruthy();
+    expect(menu()).toBeNull();
+  });
+
+  it('leaves the app’s bottom bar working while it is open', async () => {
+    await openFriendsTab();
+    await openTabMenu('Friends');
+
+    fireEvent.press(screen.getByLabelText('You'));
+
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+  });
+});
+
+describe('the tab’s menu, picking a kind', () => {
   it('sets this game’s kind, and never the Games deck’s switch', async () => {
     await openFriendsTab();
 
-    fireEvent.press(await tab(COPY.friends.forFun, false));
+    await pickKind('Friends', KINDS.forFun);
 
-    expect(await tab(COPY.friends.forFun, true)).toBeTruthy();
+    expect(await tab('Friends, For fun', true)).toBeTruthy();
     await seat(MAGDA, EWA, ANIA);
     await screen.findByTestId('friends-card');
     expect(lastCardAsked().get('kind')).toBe('FOR_FUN');
@@ -329,7 +527,7 @@ describe('the switch', () => {
     await seat(MAGDA, EWA, ANIA);
     await screen.findByTestId('friends-card');
 
-    fireEvent.press(await tab(COPY.friends.forFun, false));
+    await pickKind('Friends', KINDS.forFun);
 
     await waitFor(() => expect(lastCardAsked().get('kind')).toBe('FOR_FUN'));
     expect(lastCardAsked().get('partner_id')).toBe(EWA);
@@ -346,7 +544,7 @@ describe('the switch', () => {
     expect(within(card).getByText('87%')).toBeTruthy();
     expect(within(card).queryByLabelText(VIBE_SPOKEN)).toBeNull();
 
-    fireEvent.press(await tab(COPY.friends.forFun, false));
+    await pickKind('Friends', KINDS.forFun);
 
     expect(await screen.findByLabelText(VIBE_SPOKEN)).toBeTruthy();
     card = screen.getByTestId('friends-card');
@@ -354,11 +552,47 @@ describe('the switch', () => {
     expect(within(card).queryByTestId('friends-card-forecast')).toBeNull();
     expect(within(card).queryByText('87%')).toBeNull();
 
-    fireEvent.press(await tab(COPY.friends.competitive, false));
+    await pickKind('Friends', KINDS.competitive);
 
     expect(await screen.findByTestId('friends-card-forecast')).toBeTruthy();
     expect(within(screen.getByTestId('friends-card')).getByText('87%')).toBeTruthy();
     expect(screen.queryByLabelText(VIBE_SPOKEN)).toBeNull();
+  });
+
+  it('folds away on the other kind, and the tab says it', async () => {
+    await openFriendsTab();
+
+    await pickKind('Friends', KINDS.forFun);
+
+    expect(menu()).toBeNull();
+    expect(await tab('Friends, For fun', true)).toBeTruthy();
+    await openTabMenu('Friends');
+    expect((await menuLine(KINDS.forFun)).props.accessibilityState).toEqual({ selected: true });
+  });
+
+  it('just shuts on the kind it already is — the card is not asked again', async () => {
+    await openFriendsTab();
+    await seat(MAGDA, EWA, ANIA);
+    await screen.findByTestId('friends-card');
+    const asked = cardRequests().length;
+
+    await pickKind('Friends', KINDS.competitive);
+
+    expect(menu()).toBeNull();
+    expect(await tab('Friends, Competitive', true)).toBeTruthy();
+    expect(cardRequests()).toHaveLength(asked);
+  });
+
+  it('never moves with the Games deck’s kind', async () => {
+    await openFriendsTab();
+    fireEvent.press(await tab('Games'));
+
+    // Games keeps its own row until its menu is built (#862).
+    fireEvent.press(await screen.findByRole('button', { name: /^For fun,/ }));
+    await waitFor(() => expect(useGameIntent.getState().intent).toBe('forFun'));
+
+    fireEvent.press(await tab('Friends'));
+    expect(await tab('Friends, Competitive', true)).toBeTruthy();
   });
 });
 
@@ -598,7 +832,7 @@ describe('the court', () => {
 
   it('forgets the line-up when the page goes, and keeps the kind', async () => {
     await openFriendsTab();
-    fireEvent.press(await tab(COPY.friends.forFun, false));
+    await pickKind('Friends', KINDS.forFun);
     await seat(MAGDA, EWA, ANIA);
 
     fireEvent.press(screen.getByRole('button', { name: COPY.group.back }));
@@ -607,7 +841,7 @@ describe('the court', () => {
     fireEvent.press(await tab('Friends'));
 
     expect(await screen.findByText('Seat 3 more friends')).toBeTruthy();
-    expect(await tab(COPY.friends.forFun, true)).toBeTruthy();
+    expect(await tab('Friends, For fun', true)).toBeTruthy();
   });
 });
 
@@ -714,7 +948,7 @@ describe('the card', () => {
     stubFriendsIn({ padel: PADEL_FRIENDS.filter((one) => one.player_id !== ANIA) });
     transport.on('GET', cardPath, () => errorResponse(409, 'not_a_friend'));
 
-    fireEvent.press(await tab(COPY.friends.forFun, false));
+    await pickKind('Friends', KINDS.forFun);
 
     expect(await screen.findByText('Seat 1 more friend')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /ania\.k/ })).toBeNull();
@@ -728,7 +962,7 @@ describe('a seat somebody no longer holds', () => {
     await screen.findByTestId('friends-card');
     stubFriendsIn({ padel: PADEL_FRIENDS.filter((one) => one.player_id !== ANIA) });
     transport.on('GET', cardPath, () => errorResponse(409, 'not_a_friend'));
-    fireEvent.press(await tab(COPY.friends.forFun, false));
+    await pickKind('Friends', KINDS.forFun);
     await screen.findByText('Seat 1 more friend');
     transport.on('GET', cardPath, (request) => json(cardFor(request)));
   }
@@ -755,7 +989,7 @@ describe('a seat somebody no longer holds', () => {
       padel: PADEL_FRIENDS.map((one) => (one.player_id === ANIA ? friend(ANIA, 'PADEL') : one)),
     });
     transport.on('GET', cardPath, () => errorResponse(409, 'no_level'));
-    fireEvent.press(await tab(COPY.friends.forFun, false));
+    await pickKind('Friends', KINDS.forFun);
     await screen.findByText('Somebody here has no padel level yet. Swap someone.');
     fireEvent.press(screen.getByRole('button', { name: 'Remove magda.p from their side' }));
 

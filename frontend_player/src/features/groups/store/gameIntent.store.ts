@@ -10,8 +10,9 @@
  * phone because §5 lists it among what is *not* remembered. One value for the app rather than one
  * per group.
  *
- * **The Friends tab's switch is not this one** since #757: it sets one game's kind
- * (`friendsGame.store`), and turning it never moves the deck.
+ * **The Friends tab's kind is not this one** since #757 — picked in that tab's menu since #861, where
+ * a switch above the court stood: it sets one game's kind (`friendsGame.store`), and picking it never
+ * moves the deck.
  *
  * Nothing from the backend is here — it is a choice the player is making.
  */

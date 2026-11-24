@@ -161,7 +161,7 @@ export {
   type SeatCaptionProps,
   type SeatFaceProps,
 } from './SeatFace';
-export { Segment, type SegmentOption, type SegmentProps } from './Segment';
+export { Segment, type SegmentMenu, type SegmentOption, type SegmentProps } from './Segment';
 export { SocialTagRow, type SocialTagRowProps } from './SocialTagRow';
 export {
   SOCIAL_VIBE_CARD,
@@ -197,6 +197,13 @@ export {
   type TabBarProps,
   type TabBarTab,
 } from './TabBar';
+export {
+  TabMenu,
+  type MenuAlign,
+  type MenuFrame,
+  type TabMenuLine,
+  type TabMenuProps,
+} from './TabMenu';
 export { TAG_HEIGHT, Tag, type TagProps, type TagVariant } from './Tag';
 export { TextField, type TextFieldProps } from './TextField';
 export { TopSafeArea, type TopSafeAreaProps } from './TopSafeArea';

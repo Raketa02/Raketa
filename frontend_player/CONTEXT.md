@@ -955,6 +955,11 @@ comment and a commit message all use the same word.
   applied from the second row onward.
 - **Tag vs chip** — a **tag** is a 9.5pt state pill and is **never pressable**; a **chip**
   is a pressable filter pill and the only true pill in the app. A pressable tag is a chip.
+- **The tab's menu** — the small white picker that hangs from a group page's selected Friends tab
+  (Games' from #862), holding the kind: `TabMenu`, design-system 9.5 (#861). Opened by a second press
+  on the tab, whose chevron says it is there. UI vocabulary, not a domain term: the kind it picks is
+  the glossary's. _Avoid_: dropdown, popover (7.6's popover explains a word; this picks), the
+  switch (the row it replaced).
 - **Marked card** — the pressable card's third border, and the one that is **not about the
   control**: pressed (`coral`) and selected (`ink`) are things the reader has done to the card,
   where **marked** (`voltStroke`, 1pt) is a standing fact about whoever is drawn on it. The

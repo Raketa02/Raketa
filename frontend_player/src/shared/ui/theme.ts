@@ -760,6 +760,9 @@ const radius = {
   cardDark: 15,
   card: 13,
   popover: 13,
+  /** The tab's menu (9.5, #861) — the popover's 13, named for its role: an anchored card that picks
+   *  rather than explains, and changing one must not change the other. */
+  tabMenu: 13,
   bubble: 13,
   toast: 12,
   /** The ⚡Play disc. **There is no avatar rule here to be measured against** — see `avatar`
@@ -857,6 +860,15 @@ const size = {
    *  in words too — the door carries no number — and the label is the kind's name, which the live
    *  segment beside it prints whole. */
   segDoorOpacity: 0.8,
+  /** **An option that owns a menu** (6.3 as amended 2026-11-24, #861; PRD #859): the group page's
+   *  Friends tab, and Games' from #862. Selected, with its menu offered, it draws a Feather chevron
+   *  `chevron` across, `inset` in from its right edge and `gap` clear of the label — and **widens by
+   *  exactly that room**, `gap + chevron + inset` (21): its flex basis is the room where every other
+   *  option's is nought, so the label keeps the same share of the track as every other tab's and the
+   *  chevron is added beside it. Measured with Archivo against the four labels: at 320pt the shares
+   *  are 63,5 against *You’re in*'s 44,3 (`groupTabsFit.test.ts`). 12 is a step under the tab
+   *  bar's 16 icon — the label here is 10,5 where the bar's is 12 — and on the 3pt grid. */
+  segMenu: { chevron: 12, gap: space.xxs, inset: space.xs },
   /** A segment's count — the tab bar's badge (`tabBar.badge`) at the segment's size (#529),
    *  `CornerBadge`: a group page's Games, Fill in and You’re in (#847) — on Fill in and You’re in
    *  what is new since the player last looked, never on the tab shown (#849) — and the group's
@@ -866,6 +878,21 @@ const size = {
    *  than standing a size above the word it sits on. The fill, the white digit, the pill and the
    *  missing cap are the tab bar badge's; only the size is the segment's. */
   segmentBadge: 16,
+  /** **The tab's menu** (9.5, #861; PRD #859; tab menu mocks 3, 4 as illustrations) — a white card
+   *  hanging `hang` under the tab that opens it, as wide as its lines. A line is at least `minTouch`
+   *  tall (6.5), padded `padX` across, with `gap` between its marks; the card is padded `padY` above
+   *  and below its lines. **The selected mark is a `tick`-across `coralInk` circle** with
+   *  `Tick`'s drawn white tick in it (Archivo has no ✓) — 18 holds the 12 tick with 3 clear on every
+   *  side — and the line not selected keeps that space empty, so the words line up. `drop` is how
+   *  far it falls into place as it opens (`motion.tabMenu`). */
+  tabMenu: {
+    hang: space.xs,
+    padX: space.md,
+    padY: space.xxs,
+    gap: space.sm,
+    tick: 18,
+    drop: space.xs,
+  },
   tag: 19,
   /** The fit pill — 7.10. **26, which is the height every call site drew.** The prototype's
    *  class defaulted to 23 and was overridden inline at all five sites; UI §G1 records that
@@ -1940,6 +1967,14 @@ const motion = {
   rise: RISE,
   sheet: 260,
   popover: 130,
+  /**
+   * **The tab's menu** folding out of its tab and back (9.5, #861; PRD #859's *about 150ms*): the
+   * card fades in from `size.tabMenu.drop` above its place, and the chevron on the tab turns over —
+   * opacity and transform only, on the native driver. The selected tab's widening rides the same
+   * beat as a layout transition. All of it is skipped under reduced motion, where the menu is simply
+   * open or shut.
+   */
+  tabMenu: 150,
   /**
    * The swipe row's card coming to rest once the finger lifts (6.15) — to revealed or to closed,
    * never in between. Short enough to read as the card *landing* rather than travelling, since the

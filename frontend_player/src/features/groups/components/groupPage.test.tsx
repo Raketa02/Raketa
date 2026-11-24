@@ -40,6 +40,7 @@ import {
   type FakeShare,
 } from '@/test-support/platform';
 import { stubGroupDeck } from '@/test-support/groupDeck';
+import { pickKind } from '@/test-support/tabMenu';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import { useFriendsGame } from '../store/friendsGame.store';
@@ -224,12 +225,13 @@ async function unfold(sport: string) {
   settleTheUnfold();
 }
 
-const tab = (name: string, selected?: boolean) =>
+const tab = (name: string | RegExp, selected?: boolean) =>
   screen.findByRole('button', { name, ...(selected === undefined ? {} : { selected }) });
 
 async function openTab(name: string) {
   fireEvent.press(await tab(name));
-  expect(await tab(name, true)).toBeTruthy();
+  // Selected, a tab with a menu says its kind after its name (#861): *Friends, Competitive*.
+  expect(await tab(new RegExp(`^${name}(,|$)`), true)).toBeTruthy();
 }
 
 const faces = () => screen.queryAllByTestId(/^games-face-/, { includeHiddenElements: true });
@@ -495,7 +497,7 @@ describe('the header', () => {
     await waitFor(() => expect(screen).toHavePathname(INFO_PATH));
     await backFromInfo();
 
-    expect(await tab('Friends', true)).toBeTruthy();
+    expect(await tab('Friends, Competitive', true)).toBeTruthy();
   });
 });
 
@@ -638,21 +640,22 @@ describe('You’re in, with nothing on it or on Fill in (#847)', () => {
 describe('Friends', () => {
   const emptySeats = () => screen.queryAllByRole('button', { name: /, empty$/ });
 
-  it('switches between Competitive and For fun, and keeps the switch while the app is open', async () => {
-    // The game's own kind (#757) — `friendsGame.test.tsx` holds it apart from the deck's.
+  it('picks Competitive or For fun in the tab’s menu, and keeps the kind while the app is open', async () => {
+    // The game's own kind (#757) — `friendsGame.test.tsx` holds it apart from the deck's, and walks
+    // the menu itself (#861).
     await openGroup();
     await openTab('Friends');
-    expect(await tab(COPY.friends.competitive, true)).toBeTruthy();
+    expect(await tab('Friends, Competitive', true)).toBeTruthy();
 
-    fireEvent.press(await tab(COPY.friends.forFun, false));
-    expect(await tab(COPY.friends.forFun, true)).toBeTruthy();
+    await pickKind('Friends', COPY.group.kinds.forFun);
+    expect(await tab('Friends, For fun', true)).toBeTruthy();
 
     fireEvent.press(screen.getByRole('button', { name: COPY.group.back }));
     await waitFor(() => expect(screen).toHavePathname('/play'));
     await enter(MY_RAKETA_GROUP);
     await openTab('Friends');
 
-    expect(await tab(COPY.friends.forFun, true)).toBeTruthy();
+    expect(await tab('Friends, For fun', true)).toBeTruthy();
   });
 
   it.each([
@@ -757,6 +760,6 @@ describe('Friends', () => {
 
     fireEvent.press(screen.getByRole('button', { name: 'Back' }));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}`));
-    expect(await tab('Friends', true)).toBeTruthy();
+    expect(await tab('Friends, Competitive', true)).toBeTruthy();
   });
 });

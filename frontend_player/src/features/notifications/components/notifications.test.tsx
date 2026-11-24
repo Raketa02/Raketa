@@ -1968,7 +1968,9 @@ describe('an ask for a Level', () => {
       // Done lands on the crew’s Friends tab, in padel — the page under the picker.
       fireEvent.press(screen.getByRole('button', { name: FRIENDS_COPY.picker.done }));
       await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
-      expect(await screen.findByRole('button', { name: 'Friends', selected: true })).toBeTruthy();
+      expect(
+        await screen.findByRole('button', { name: /^Friends(,|$)/, selected: true }),
+      ).toBeTruthy();
       // And back from the page is the list the notice was opened from.
       fireEvent.press(await screen.findByLabelText(GROUPS_COPY.group.back));
       await waitFor(() => expect(screen).toHavePathname('/notices'));
@@ -1985,7 +1987,9 @@ describe('an ask for a Level', () => {
       expect(await screen.findByRole('checkbox', { name: /^zofia\.b/ })).toBeTruthy();
       fireEvent.press(await screen.findByLabelText('Back'));
       await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
-      expect(await screen.findByRole('button', { name: 'Friends', selected: true })).toBeTruthy();
+      expect(
+        await screen.findByRole('button', { name: /^Friends(,|$)/, selected: true }),
+      ).toBeTruthy();
     });
   });
 });

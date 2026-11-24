@@ -621,7 +621,7 @@ describe('the Owner’s count on the tile', () => {
     expect(tileCount('2')).toBeTruthy();
 
     fireEvent.press(await tab('Friends'));
-    await tab('Friends', true);
+    await tab('Friends, Competitive', true);
     expect(screen.getByRole('button', { name: waiting })).toBeTruthy();
     expect(tileCount('2')).toBeTruthy();
   });
@@ -733,7 +733,7 @@ describe('pulling the page', () => {
   it('is not Friends’', async () => {
     await openPage({ members: KAZIMIERZ });
     fireEvent.press(await tab('Friends'));
-    await tab('Friends', true);
+    await tab('Friends, Competitive', true);
 
     expect(
       within(screen.getByTestId('group-page-body')).UNSAFE_queryByType(RefreshControl),

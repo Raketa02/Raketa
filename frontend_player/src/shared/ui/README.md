@@ -159,7 +159,15 @@ details ([#840](https://github.com/Raketa02/Raketa/issues/840)): **`SocialVibeCa
 _SOCIAL VIBE_, the % and its word over a full-width bar, then the grid of your tags with a dot under
 each carrier, on paper in `voltPale` and the olive inks. It is handed a `SocialVibeGrid`
 (`shared/vocabulary/socialVibeGrid.ts`) and derives nothing, because the details (`proposals`) and
-the booked game (`games`' `GamePairingCard`, #841) each build one from their own read.
+the booked game (`games`' `GamePairingCard`, #841) each build one from their own read. And by the
+group page's Friends tab, where its _Competitive | For fun_ row went
+([#861](https://github.com/Raketa02/Raketa/issues/861), PRD #859): **`TabMenu`** (9.5) — a picker
+hanging from the tab that opens it, its lines' words, an optional muted count, a door, and the
+`coralInk` circle with `Tick` on the line selected; drawn in the page's own tree, never on the modal
+stage, with a catcher round the tab bar and `FoldAway`'s back and blur — with its place and its
+catcher's boxes in `tabMenuGeometry.ts`; and **`Segment`'s option that owns a menu** (6.3 as
+amended), its chevron, and the widths moving by a layout transition. **It came down ahead of its
+second caller**, as #861 decides: Games' tab draws the same menu from #862, with counts and a door.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

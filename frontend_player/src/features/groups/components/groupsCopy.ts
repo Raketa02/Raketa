@@ -59,6 +59,11 @@ export const GROUPS_COPY = {
      * *You’re in* takes a lower-case *i* and the curly apostrophe, like *Fill in* (split mock 3).
      */
     tabs: { games: 'Games', fillIn: 'Fill in', youreIn: 'You’re in', friends: 'Friends' },
+    /**
+     * **The kinds a tab's menu picks between** (#861, PRD #859), keyed by `GameIntent` — Friends'
+     * lines, and the kind its selected tab is spoken with: *Friends, Competitive*.
+     */
+    kinds: { competitive: 'Competitive', forFun: 'For fun' },
     /** The header is the door to Info (Q125): the tile, the name and the line under it. */
     openInfo: 'Opens Info',
   },
@@ -90,8 +95,6 @@ export const GROUPS_COPY = {
   },
   /** The Friends tab and the Friends screen (play 49–55). */
   friends: {
-    competitive: 'Competitive',
-    forFun: 'For fun',
     yourSide: 'Your side',
     theirSide: 'Their side',
     /** The reader's seat, drawn as its three letters over their Level. */

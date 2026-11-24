@@ -532,9 +532,16 @@ describe('an official group’s page for a player rated in none of its sports', 
     expect(screen.queryByText(COPY.youreIn.postAGameDrawn)).toBeNull();
     expect(screen.queryByTestId('post-a-game-fab')).toBeNull();
 
+    // No court, so no menu (#861): the tab is its name alone, with no chevron, and a press on it
+    // again opens nothing.
     await openTab(COPY.group.tabs.friends);
     expect(screen.getByText(ADD_HEADLINE)).toBeTruthy();
-    expect(screen.queryByText(COPY.friends.competitive)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Friends', selected: true })).toBeTruthy();
+    expect(
+      screen.queryByTestId('segment-chevron-friends', { includeHiddenElements: true }),
+    ).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Friends', selected: true }));
+    expect(screen.queryByTestId('tab-menu', { includeHiddenElements: true })).toBeNull();
   });
 
   // Q125: the header still opens Info, and the way out is there — it is not a sport's.
