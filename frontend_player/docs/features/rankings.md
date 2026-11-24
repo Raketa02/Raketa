@@ -16,7 +16,9 @@ Friends_ switch, the view the phone remembers, and Friends; [#778](https://githu
 the _Show me in General_ switch on the hidden card, and the page following it; and
 [#779](https://github.com/Raketa02/Raketa/issues/779) _Add friend_ from a stranger's record, sent from
 the ranking. [#869](https://github.com/Raketa02/Raketa/issues/869) made the jump button say _Finding
-you…_ while it reads (PRD [#867](https://github.com/Raketa02/Raketa/issues/867), the loading shimmer).
+you…_ while it reads (PRD [#867](https://github.com/Raketa02/Raketa/issues/867), the loading shimmer),
+and [#870](https://github.com/Raketa02/Raketa/issues/870) made the page shimmer until it lands — the
+first screen on the shared `Skeleton` and `Reveal`.
 
 **Every number is the server's, and this feature computes none of them.** The order, every place,
 _of N_, the chip, the gap, and how many wins close it are worked out by the backend — the win count
@@ -68,7 +70,30 @@ their own. Whose record is up is the screen's state, as on Members. **A step nam
 nickname, the reader's own too**, as §30.7 writes it; only a row reads _You_.
 
 **A pull reads the page again**, a refused read says why with _Try again_, and a read waiting for a
-connection says so; nothing but the pull is drawn under the header while the first read is out.
+connection says so, each where the skeleton stood.
+
+**Until the page has something to draw, it shimmers below the header** ([#870](https://github.com/Raketa02/Raketa/issues/870);
+the loading shimmer log §8, Q4–Q7; design system 5.6). **The header and the sport pill are the real
+ones throughout**, so the reader can change sport or go back while it loads. Below them, from the first
+frame: while the view or the sport is still unknown, a shape of the switch's own size and corner in
+the switch's place (the log's §12 call); then the real switch, and in the view's place **one fixed
+skeleton for both views and every sport** (`RankingsSkeleton`) — a block at the listed place card's
+height and the dark card's corner (the dark card drawn as a skeleton-tone block), three podium steps
+at their heights, and rows filling the screen on the list's own white card, each with the row's
+padding, the place column's room, the row face's circle, and bars for the name and the level. It
+never predicts the page's true shape. **It shows on landing, on a sport change and on a General ↔
+Friends change, only when that sport and view have nothing cached**: a sport or view read in the last
+few minutes opens at once, read again quietly behind it, as General and Friends always are on opening.
+**The page's one read decides it** (`Reveal`): the content is drawn underneath, hidden from sight and
+from a listener, and comes in on one 200 ms cross-fade when the read finishes — lands, is refused
+after its retries, or is held for a connection — so the failure or the amber note takes the skeleton's
+place as the page would. **Once the page is in, it never goes back** during that view's mount: **a
+pull never shows the skeleton**, the page staying under the pull's own spinner. A refusal or the
+note is not the page, though: when _Try again_ or the connection back sets the read out once more
+with still nothing to draw, the skeleton stands again, never a blank page. The sport and the view are
+reads too, under a reveal of their own: a page that comes cached fades in from the skeleton that
+stood while they were unknown, and one not read yet hands over to its own skeleton — the same shapes
+on the same band, since one `SkeletonGround` stands under the header for both.
 
 **_General | Friends_ is remembered per account on the phone** (#777; the screens §3; ADR-0203 §5,
 its value under ADR-0188), General the first time: `rankingView`, read and kept as the deck's last
@@ -204,6 +229,30 @@ Home card are [`friends.md`](friends.md)'s; a block closing the record is [`bloc
   obvious answer, not built;
 - (#869) _Finding you…_ is the loading-shimmer log's word (§9, Q8), and §30.7 does not have it yet —
   **owed to §30 from a root session**, as a row under _The jump button_;
+- (#870) **a read refused once and asked again keeps the skeleton** through Query's retries, and the
+  failure takes its place only once they are spent. The PRD counts _fails once and starts retrying_ as
+  finished, but that is the rule for a screen of several reads (#871), so one slow part never holds
+  the rest; here the page has one read, and revealing it would draw a blank page;
+- (#870) **_Try again_, or the connection back, stands the skeleton again** while the read is out with
+  still nothing drawn. The log's _once revealed, never back_ is read as the page's content: a refusal
+  or the amber note is not the page, and a blank page between them and the content is the frozen look
+  the PRD removes. It was a blank page before #870 too;
+- (#870) **a ratings read held for a connection, with nothing read yet, counts as refused** for the
+  opening sport (`useOpeningSport`), as a refused one did: offline with nothing cached and a trophy
+  that names no sport, the deck's sport waits on the ratings, and the page would otherwise shimmer for
+  as long as the phone is offline, where before #870 it stood blank. It opens on padel — or the deck's
+  last — and its own read says it is offline; Home's Top 10, which reads the same, opens the same way;
+- (#870) **the switch waits for the sport too**: it was drawn once the view was known, and the shape
+  in its place stands while the view _or_ the sport is unknown, as the ticket writes it — a moment the
+  switch could not be used for anything below it anyway;
+- (#870) the switch's shape takes the switch's own corner (`radius.seg`), not a pill's, so it is the
+  shape the switch replaces; the face is a circle, as the ticket writes it, where the real face is
+  `PlayerPhoto`'s rounded square;
+- (#870) the place card's block is the listed card with one gap line — every other card is shorter,
+  and the skeleton predicts none of them; the level's bar is four figures of `num.m` wide, IBM Plex
+  Mono's 600-unit advance; the name's fills its column, as a name may;
+- (#870) a pull made while the skeleton is up reaches the list underneath and reads the page again,
+  but its spinner is hidden with the list until the reveal;
 - (#776) around the reader, the card and the podium are drawn only once the window reaches the top,
   so the list never reads 3rd and then 187th;
 - (#777) the switch is the plain segmented control (6.3), as rankings 2 draws it — the track `line2`,
@@ -238,8 +287,10 @@ _Add friends_, the sheet over Rankings, and the whole page — the trophy beside
 level, the podium's steps, the rows and the tint, the drawn marks, and the pill over the header —
 and #776's scrolling: a page landing at either end, the list holding still as a page lands above it,
 the jump landing centred, and the button over the list; and #869's _Finding you…_ on the dark
-button, with its width change as the words swap (owed to the phone walk,
-[#877](https://github.com/Raketa02/Raketa/issues/877)). The suites say what the list reports (the
+button, with its width change as the words swap; and #870's skeleton — its shapes against the page
+they stand for, the band's tone, beat and tilt, and the cross-fade (owed to the phone walk,
+[#877](https://github.com/Raketa02/Raketa/issues/877); its frame cost on the A32 is
+[#873](https://github.com/Raketa02/Raketa/issues/873)'s). The suites say what the list reports (the
 rows on screen, an end reached), because a test renderer lays nothing out.
 
 **The ranking shows everybody, and the page has no switch** ([#799](https://github.com/Raketa02/Raketa/issues/799),

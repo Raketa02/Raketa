@@ -20,13 +20,24 @@
  * Both views hand the page one shape (`RankingRead`), so it is drawn once.
  *
  * **The page opens on** the sport it was asked for — the trophy's, or the one a pass returns to —
- * else the deck's last, else padel (`useRankingsSport`), and on the view the phone remembers. It draws
- * no switch until it knows the view, and nothing below it until it knows the sport too.
+ * else the deck's last, else padel (`useRankingsSport`), and on the view the phone remembers.
+ *
+ * **Until the page has something to draw, it shimmers below the header** (#870, PRD #867;
+ * `RankingsSkeleton`): while the view or the sport is still unknown, a shape in the switch's place and
+ * the view's skeleton under it; then the real switch, and the view's skeleton until its read finishes
+ * — a card-sized block, three podium steps and rows on one white card. **Only for a sport and view
+ * with nothing cached**: one read in the last few minutes opens at once, read again quietly behind
+ * it. The content is drawn underneath and comes in on one cross-fade (`Reveal`), and once in it never
+ * goes back to the skeleton — a pull keeps the page and spins the pull's own spinner. One
+ * `SkeletonGround` under the header, so one band crosses the switch's place and the view's.
  *
  * **A pull reads the page again** — every page drawn, the main read with them: places move whenever a
- * result settles anywhere in Raketa. While the first read is out nothing is drawn under the header
- * but the pull; a refused read says why with *Try again*, and a read waiting for a connection says
- * so. **Another sport is another page**, read from its top.
+ * result settles anywhere in Raketa. A refused read says why with *Try again*, and a read waiting for
+ * a connection says so, each in the skeleton's place; a read refused once and asked again is still on
+ * its way, so the skeleton stays through Query's retries rather than a blank page, and *Try again* or
+ * the connection back stands it again until the page is in. **Another sport is another page**, read
+ * from its top. The sport and the view are reads too, under a reveal of their own, so a page that
+ * comes cached fades in from the skeleton that stood while they were unknown.
  *
  * **Any face, row or podium step opens the full record**, a stranger's too; the reader's own opens
  * their own (§6). **Everybody is listed** (ADR-0204 §2, [#799](https://github.com/Raketa02/Raketa/issues/799)),
@@ -52,8 +63,10 @@ import { PlayerRecordSheet, type RecordSubject } from '@/features/player_record/
 import { offlineMessage } from '@/shared/errors';
 import {
   Note,
+  Reveal,
   ScreenHeader,
   Segment,
+  SkeletonGround,
   SportPillFrame,
   behindOverlay,
   theme,
@@ -74,6 +87,7 @@ import { PlaceCard } from './PlaceCard';
 import { PodiumSteps } from './PodiumSteps';
 import { RankingList } from './RankingList';
 import { RANKINGS_COPY, RANKINGS_PILL_WORDS, VIEW_WORDS, nobodyRankedLine } from './rankingsCopy';
+import { RankingSwitchSkeleton, RankingsSkeleton } from './RankingsSkeleton';
 
 export interface RankingsScreenProps {
   /** The sport the page was opened on — the trophy's, or a pass's way back. Absent: the deck's, or padel. */
@@ -131,14 +145,39 @@ export function RankingsScreen({ sport: asked }: RankingsScreenProps) {
               />
             )}
           >
-            {view === undefined ? null : (
-              <Segment options={viewOptions()} selected={view} onSelect={choose} style={s.switch} />
-            )}
-            {page === undefined ? null : page.view === 'GENERAL' ? (
-              <GeneralView key={page.sport} {...page} />
-            ) : (
-              <FriendsView key={page.sport} {...page} />
-            )}
+            {/* One ground under the header, so one band crosses the switch's place and the view's. */}
+            <SkeletonGround style={s.below}>
+              {/* The view and the sport are reads too: until both are known, the switch's place and
+                  the view's shimmer, and a view already cached comes in on the fade. One not read
+                  yet hands over to its own skeleton, the same shapes on the same band. */}
+              <Reveal
+                finished={page !== undefined}
+                landed={page !== undefined}
+                style={s.below}
+                skeleton={
+                  <>
+                    <RankingSwitchSkeleton />
+                    <RankingsSkeleton />
+                  </>
+                }
+              >
+                {page === undefined ? null : (
+                  <>
+                    <Segment
+                      options={viewOptions()}
+                      selected={page.view}
+                      onSelect={choose}
+                      style={s.switch}
+                    />
+                    {page.view === 'GENERAL' ? (
+                      <GeneralView key={page.sport} {...page} />
+                    ) : (
+                      <FriendsView key={page.sport} {...page} />
+                    )}
+                  </>
+                )}
+              </Reveal>
+            </SkeletonGround>
           </SportPillFrame>
         </TopSafeArea>
       </View>
@@ -231,9 +270,19 @@ function ViewPage({
       </>
     );
   const shownRows = below === 'table' ? read.rows : [];
+  // The page's one read has finished — landed, refused after its retries, or held for a connection —
+  // so what it drew, its failure or the offline note takes the skeleton's place. A read refused once
+  // and asked again is still on its way: the skeleton stays, rather than a blank page — and so it
+  // stands again when Try again or the connection back sets the read out with still nothing drawn.
+  const finished = ranking !== undefined || read.error !== null || read.paused;
 
   return (
-    <View style={s.page}>
+    <Reveal
+      finished={finished}
+      landed={ranking !== undefined}
+      skeleton={<RankingsSkeleton />}
+      style={s.page}
+    >
       <RankingList
         window={read.window}
         rows={shownRows}
@@ -266,13 +315,14 @@ function ViewPage({
         onEndReached={read.loadLater}
         jump={read.jump}
       />
-    </View>
+    </Reveal>
   );
 }
 
 const s = StyleSheet.create({
   root: { flex: 1 },
   screen: { flex: 1, backgroundColor: theme.color.paper },
+  below: { flex: 1 },
   // §3: the switch under the header, at the gutter, `sm` above the card.
   switch: { marginHorizontal: theme.size.gutter, marginBottom: theme.space.sm },
   page: { flex: 1 },

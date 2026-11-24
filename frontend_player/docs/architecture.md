@@ -816,6 +816,18 @@ acceptable for a product flow. Build the reusable states — `LoadingState`, `Em
 > `src/shared/errors/offlineMessage.ts` by
 > [#265](https://github.com/Raketa02/Raketa/issues/265).
 
+> **Amendment (2026-11-24) — `Skeleton` is built**, by
+> [#870](https://github.com/Raketa02/Raketa/issues/870) (PRD
+> [#867](https://github.com/Raketa02/Raketa/issues/867); design system 5.6): `Skeleton.tsx`'s block,
+> line and circle on a `SkeletonGround`, one band of light sweeping across all of them at once,
+> and `Reveal.tsx`, the cross-fade from a screen's skeleton to its content. **The primitive owns the
+> shapes and the band; each screen composes its own layout from them**, so there is no generic
+> loading screen to reach for. It is the _initial loading_ state's drawing, and only where the
+> layout is known: Rankings first, then Home, the four See all screens and the group page
+> (#871–#876). It never stands in for _empty_, a refusal or the offline note — those take its place
+> when the read ends that way — and never for _refreshing_. `LoadingState`, `EmptyState` and
+> `ErrorState` still stand as written.
+
 ### Loading granularity
 
 Distinguish screen initial load · pull-to-refresh · background refresh · button mutation ·

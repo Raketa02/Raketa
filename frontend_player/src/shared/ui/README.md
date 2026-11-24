@@ -168,6 +168,18 @@ stage, with a catcher round the tab bar and `FoldAway`'s back and blur — with 
 catcher's boxes in `tabMenuGeometry.ts`; and **`Segment`'s option that owns a menu** (6.3 as
 amended), its chevron, and the widths moving by a layout transition. **It came down ahead of its
 second caller**, as #861 decided: Games' tab draws the same menu since #862, with counts and a door.
+And by the loading shimmer ([#870](https://github.com/Raketa02/Raketa/issues/870), PRD #867; 5.6):
+**`Skeleton`** — `SkeletonBlock`, `SkeletonLine` (a text bar, a type role's size tall) and
+`SkeletonCircle`, rounded, in `color.skeleton`, each drawn on a **`SkeletonGround`**, the view a screen
+puts round everything that shimmers: it holds the one clock and the one moving style, and is what
+each shape measures its place against, so **one band of light crosses every shape at once** — a
+`react-native-svg` gradient, `motion.skeleton`'s sweep and tilt, `transform` only, sweeping under
+reduced motion, hidden from a listener. Its arithmetic is `skeletonSweep.ts`. And **`Reveal`**, a
+screen's content drawn under its skeleton, hidden, and brought in on one `fade` once its read has
+finished — a cut under reduced motion, decided at the first draw, never back once the content is
+in (a refusal or the offline note gives way to it again when the read sets out once more). **It came down ahead
+of its second caller**, as PRD #867 decides: Rankings is the first, and Home, See all and the group
+page follow (#871–#876). The layouts are the features'; the shapes and the band are this folder's.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

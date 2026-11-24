@@ -20,6 +20,7 @@ import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet } from '
 
 import { BLOCKS_COPY, blockRowLabel } from '@/features/blocks/types';
 import { FRIENDS_COPY } from '@/features/friends/types';
+import { onboardingKeys } from '@/features/onboarding/types';
 import { OWN_RECORD_TITLE, RECORD_TITLE, RECORD_UNAVAILABLE } from '@/features/player_record/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { readPhonePreference, savePhonePreference } from '@/shared/lib/preferences';
@@ -269,6 +270,20 @@ interface RankingServer {
   readonly answer: (sport: Wire['Sport'], read: Wire['RankingResponse']) => void;
   /** Answer one sport's Friends read with this, from now on (#777). */
   readonly answerFriends: (sport: Wire['Sport'], read: Wire['RankingResponse']) => void;
+  /**
+   * **Hold every read of one sport's view on its way** (#870) until the test lands them — answered as
+   * the server would — or drops them as a lost connection. Every read, not the next: the harness runs
+   * every pending timer on a navigation, so a read set out as Rankings opens is timed out under it and
+   * asked again a second later; both must wait.
+   */
+  readonly hold: (sport: Wire['Sport'], view: Wire['RankingView']) => HeldRead;
+}
+
+/** Reads held on their way until the test says how they end. */
+interface HeldRead {
+  /** Answer them all, and run past the backoff of a read timed out under the navigation. */
+  readonly land: () => Promise<void>;
+  readonly drop: () => Promise<void>;
 }
 
 /**
@@ -305,10 +320,16 @@ function rankingServer({
     ['SQUASH', NO_FRIEND('SQUASH')],
     ['BADMINTON', NO_FRIEND('BADMINTON')],
   ]);
+  const holds = new Map<string, Promise<void>>();
   for (const sport of ['PADEL', 'TENNIS', 'SQUASH', 'BADMINTON'] as const) {
-    transport.on('GET', rankingPath(sport), (request) =>
-      json(request.path.includes('view=FRIENDS') ? friendsReads.get(sport)! : reads.get(sport)!),
-    );
+    transport.on('GET', rankingPath(sport), (request) => {
+      const view: Wire['RankingView'] = request.path.includes('view=FRIENDS')
+        ? 'FRIENDS'
+        : 'GENERAL';
+      const answer = () => json(view === 'FRIENDS' ? friendsReads.get(sport)! : reads.get(sport)!);
+      const held = holds.get(`${sport} ${view}`);
+      return held === undefined ? answer() : held.then(answer);
+    });
   }
 
   for (const row of PADEL_ROWS.filter((one) => !one.is_you && one !== MAREK)) {
@@ -332,6 +353,30 @@ function rankingServer({
   return {
     answer: (sport, read) => reads.set(sport, read),
     answerFriends: (sport, read) => friendsReads.set(sport, read),
+    hold: (sport, view) => {
+      const key = `${sport} ${view}`;
+      let land = () => {};
+      let drop = () => {};
+      const held = new Promise<void>((resolve, reject) => {
+        land = resolve;
+        drop = () => reject(new TypeError('Network request failed'));
+      });
+      // A read never asked, or asked only after it was dropped, leaves no rejection unheard.
+      held.catch(() => {});
+      holds.set(key, held);
+      const end = async (how: () => void) => {
+        holds.delete(key);
+        await act(async () => how());
+      };
+      return {
+        land: async () => {
+          await end(land);
+          // Query asks again a second after a read timed out under the navigation.
+          await act(() => jest.advanceTimersByTimeAsync(1_000));
+        },
+        drop: () => end(drop),
+      };
+    },
   };
 }
 
@@ -1188,6 +1233,203 @@ describe('reading the page', () => {
     act(() => onlineManager.setOnline(true));
 
     expect(await screen.findByText('7th')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The skeleton while a page is read (#870, PRD #867)
+// ---------------------------------------------------------------------------
+
+/**
+ * The view's skeleton — hidden from a listener, so found by its id. For one fade there may be two:
+ * the page's while its sport and view were unknown, handing over to the view's own.
+ */
+const skeleton = () => screen.queryAllByTestId('rankings-skeleton', HIDDEN_TOO)[0] ?? null;
+/** Past the reveal's cross-fade, and a frame. */
+const pastTheFade = () => act(() => jest.advanceTimersByTime(theme.motion.fade + 16));
+
+describe('the skeleton while the page is read (#870)', () => {
+  it('shimmers under the real header on a first read, his names nowhere, and fades the page in once it lands', async () => {
+    const server = rankingServer();
+    const padel = server.hold('PADEL', 'GENERAL');
+    await openRankings();
+
+    expect(skeleton()).not.toBeNull();
+    // The header and the pill are the real ones throughout.
+    expect(screen.getByText('Rankings')).toBeTruthy();
+    expect(within(pill()).getByRole('button', { name: 'Sport: Padel' })).toBeTruthy();
+    // Nothing of the page is a listener's — nor found — until it is revealed.
+    expect(screen.queryByText('7th')).toBeNull();
+    expect(screen.queryByText('Inés')).toBeNull();
+    expect(screen.queryByTestId('place-card')).toBeNull();
+
+    await padel.land();
+
+    expect(await screen.findByText('7th')).toBeTruthy();
+    expect(screen.getAllByText('Inés').length).toBeGreaterThan(0);
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+  });
+
+  it('shimmers on a sport not read yet, opens at once on one read a minute ago, and shimmers again on a new one', async () => {
+    const server = rankingServer();
+    await openRankings();
+    await screen.findByText('7th');
+    pastTheFade();
+
+    const tennis = server.hold('TENNIS', 'GENERAL');
+    unfoldThePill('Padel');
+    fireEvent.press(
+      within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'Tennis' }),
+    );
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByText('Nobody ranked in tennis yet')).toBeNull();
+    await tennis.land();
+    expect(await screen.findByText('Nobody ranked in tennis yet')).toBeTruthy();
+    pastTheFade();
+
+    // Padel again, read a minute ago: drawn at once, read again quietly behind it.
+    unfoldThePill('Tennis');
+    fireEvent.press(within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'Padel' }));
+    expect(skeleton()).toBeNull();
+    expect(screen.getByText('7th')).toBeTruthy();
+
+    // Badminton, never read: the skeleton again.
+    const badminton = server.hold('BADMINTON', 'GENERAL');
+    unfoldThePill('Padel');
+    fireEvent.press(
+      within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'Badminton' }),
+    );
+    expect(skeleton()).not.toBeNull();
+    await badminton.land();
+    expect(await screen.findByText('Nobody ranked in badminton yet')).toBeTruthy();
+  });
+
+  it('shimmers on a view not read yet, and opens at once on the view read already', async () => {
+    const server = rankingServer();
+    await openRankings();
+    await screen.findByText('7th');
+    pastTheFade();
+
+    const friendsView = server.hold('PADEL', 'FRIENDS');
+    fireEvent.press(viewSegment('Friends'));
+    await waitFor(() => expect(viewReads('PADEL', 'FRIENDS')).toHaveLength(1));
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByText('Ania')).toBeNull();
+
+    await friendsView.land();
+    expect(await screen.findByText('4th')).toBeTruthy();
+    pastTheFade();
+
+    // General was read on landing: back to it, it is there at once.
+    fireEvent.press(viewSegment('General'));
+    await screen.findByText('7th');
+    expect(skeleton()).toBeNull();
+  });
+
+  it('stays through the automatic retries, and gives way to the failure and its Try again', async () => {
+    rankingServer();
+    transport.on('GET', rankingPath('PADEL'), () => errorResponse(503, 'service_unavailable'));
+    await openRankings();
+    expect(skeleton()).not.toBeNull();
+
+    // Refused once and asked again: still on its way, so still the skeleton — never a blank page.
+    await act(() => jest.advanceTimersByTimeAsync(1_500));
+    expect(rankingReads('PADEL').length).toBeGreaterThanOrEqual(2);
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+
+    await act(() => jest.advanceTimersByTimeAsync(30_000));
+
+    const again = await screen.findByRole('button', { name: 'Try again' });
+    expect(screen.getByRole('alert')).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    // Try again: the read is out once more with nothing to draw — the skeleton, never a blank page.
+    const reread = heldPage(() => json(general('PADEL')));
+    transport.on('GET', rankingPath('PADEL'), reread.responder);
+    fireEvent.press(again);
+    await act(() => jest.advanceTimersByTimeAsync(100));
+
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+
+    await reread.land();
+    expect(await screen.findByText('7th')).toBeTruthy();
+  });
+
+  it('gives way to the amber note when the read is held for a connection', async () => {
+    const server = rankingServer();
+    const padel = server.hold('PADEL', 'GENERAL');
+    await openRankings();
+    expect(skeleton()).not.toBeNull();
+
+    // The connection goes while the read is out: it is lost, and once its backoff has run it waits
+    // for the connection to ask again.
+    act(() => onlineManager.setOnline(false));
+    await padel.drop();
+    await act(() => jest.advanceTimersByTimeAsync(1_500));
+
+    expect(
+      await screen.findByText("You're offline. This will load as soon as you're back."),
+    ).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    // The connection back sets the read out again, and there is still nothing to draw: the skeleton.
+    const back = server.hold('PADEL', 'GENERAL');
+    act(() => onlineManager.setOnline(true));
+    await act(() => jest.advanceTimersByTimeAsync(100));
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByText("You're offline. This will load as soon as you're back.")).toBeNull();
+
+    await back.land();
+    expect(await screen.findByText('7th')).toBeTruthy();
+  });
+
+  it('never shimmers for as long as the phone is offline: a sport it cannot learn yet opens on padel, offline', async () => {
+    // No place, so the trophy names no sport, and the ratings were never read on this phone: the
+    // deck's sport waits on them, and they wait on the connection.
+    rankingServer({ trophy: null });
+    await launchSignedIn();
+    await screen.findByTestId('ranking-trophy');
+    act(() => {
+      queryClient.removeQueries({ queryKey: onboardingKeys.ratings() });
+      onlineManager.setOnline(false);
+    });
+
+    fireEvent.press(screen.getByTestId('ranking-trophy'));
+    await waitFor(() => expect(screen).toHavePathname('/rankings'));
+
+    expect(
+      await screen.findByText("You're offline. This will load as soon as you're back."),
+    ).toBeTruthy();
+    expect(within(pill()).getByRole('button', { name: 'Sport: Padel' })).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+    expect(screen.queryByTestId('rankings-switch-skeleton', HIDDEN_TOO)).toBeNull();
+  });
+
+  it('never shows on a pull: the page stays while it is read again', async () => {
+    const server = rankingServer();
+    await openRankings();
+    await screen.findByText('7th');
+    pastTheFade();
+
+    server.answer('PADEL', general('PADEL', { card: listedCard({ place: 6, of: 13 }) }));
+    const again = server.hold('PADEL', 'GENERAL');
+    await act(async () => {
+      fireEvent(pageRefresh(), 'refresh');
+    });
+
+    expect(pageRefresh().props.refreshing).toBe(true);
+    expect(skeleton()).toBeNull();
+    expect(screen.getByText('7th')).toBeTruthy();
+
+    await again.land();
+    expect(await screen.findByText('6th')).toBeTruthy();
+    expect(skeleton()).toBeNull();
   });
 });
 

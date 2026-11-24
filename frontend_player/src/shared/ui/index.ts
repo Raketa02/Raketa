@@ -147,6 +147,7 @@ export {
 export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popover';
 export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNavigator';
 export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
+export { Reveal, type RevealProps } from './Reveal';
 export { Row, type RowProps, type RowVariant } from './Row';
 export { RowSportPill, type RowSportPillProps } from './RowSportPill';
 export { RUN_OF_FORM_FILL, RunOfForm, type RunOfFormProps } from './RunOfForm';
@@ -162,6 +163,16 @@ export {
   type SeatFaceProps,
 } from './SeatFace';
 export { Segment, type SegmentMenu, type SegmentOption, type SegmentProps } from './Segment';
+export {
+  SkeletonBlock,
+  SkeletonCircle,
+  SkeletonGround,
+  SkeletonLine,
+  type SkeletonBlockProps,
+  type SkeletonCircleProps,
+  type SkeletonGroundProps,
+  type SkeletonLineProps,
+} from './Skeleton';
 export { SocialTagRow, type SocialTagRowProps } from './SocialTagRow';
 export {
   SOCIAL_VIBE_CARD,

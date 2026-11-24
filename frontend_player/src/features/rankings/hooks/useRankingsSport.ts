@@ -8,7 +8,10 @@
  * **draws no sport until it knows which** (ADR-0188 §4: no screen draws one choice and then jumps to
  * another), so with nothing asked it waits for Home's read and then the deck's two, the phone's and
  * the ratings'. A ratings read that fails is no level anywhere for this purpose: padel, and all four
- * in the app's order — the page still opens, and a sport with no level says so on its card.
+ * in the app's order — the page still opens, and a sport with no level says so on its card. **So is
+ * one held for a connection with nothing read yet** (#870), as Home's own read is for the trophy:
+ * the page opens, and its read says it is offline rather than the page shimmering for as long as the
+ * phone is.
  *
  * **A pick is held while the page is up and kept nowhere.** The phone remembers the view (#777), not
  * the sport: the trophy's sport is the latest result's, and the deck's last sport is the deck's.
@@ -56,7 +59,11 @@ export function useOpeningSport(asked?: Sport): OpeningSport {
   const deck = useDeckSport();
   const trophy = useHomeRanking();
 
-  const unrated = ratings.isError;
+  // A ratings read held for a connection, with nothing read yet, is one the page cannot wait on: it
+  // would wait out the whole time offline, shimmering. So it counts as refused — padel, or the deck's
+  // last — and the page's own read, held for the same connection, says the page is offline (#870).
+  const unrated =
+    ratings.isError || (ratings.data === undefined && ratings.fetchStatus === 'paused');
   const rated = unrated ? [] : ratings.data?.map((rating) => rating.sport);
 
   return {

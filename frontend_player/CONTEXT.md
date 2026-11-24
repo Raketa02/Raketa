@@ -961,6 +961,15 @@ comment and a commit message all use the same word.
   on the tab, whose chevron says it is there. UI vocabulary, not a domain term: the kind it picks is
   the glossary's. _Avoid_: dropdown, popover (7.6's popover explains a word; this picks), the
   switch (the row it replaced).
+- **Skeleton · ground · reveal** — a screen's **skeleton** is the grey shapes standing where its
+  content will be while its first read is out, one band of light sweeping across them: `Skeleton`'s
+  block, line and circle, laid out by the screen (design-system 5.6, #870). They stand on a
+  **ground** (`SkeletonGround`), which runs the one clock and is what every shape measures its place
+  against, so one band crosses them all. The **reveal** (`Reveal`) is the content, drawn underneath
+  and hidden, coming in on one fade once its read has finished; decided at the first draw, and never
+  back once the content is in. UI vocabulary, not domain terms. _Avoid_: shimmer for the shapes
+  (the shimmer is the band), placeholder, loading state (the architecture doc's menu of states
+  names the skeleton as one drawing of _initial loading_), spinner.
 - **Marked card** — the pressable card's third border, and the one that is **not about the
   control**: pressed (`coral`) and selected (`ink`) are things the reader has done to the card,
   where **marked** (`voltStroke`, 1pt) is a standing fact about whoever is drawn on it. The
