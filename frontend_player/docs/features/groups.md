@@ -150,8 +150,11 @@ waiting on the network, a pick written to the cache and then the phone, never a 
 **The filter unfolds on the UI thread and folds at once** (play 41–42; design-system 7.21). The
 pill is a chip; tapped, a white bar with the popover's shadow grows leftwards over the group's
 name from where the pill stood, the current sport dark at its right end, the others sliding out
-one by one — one Reanimated shared value over `motion.unfold`, read by the bar's width and each
-sport's opacity and slide, never a scale. It is the second surface on Reanimated after the radar
+one by one — one Reanimated shared value over `motion.unfold`, read by transforms and opacity
+only, never a scale and never the bar's width: the bar is laid out once at the pill's width and its
+far half slides out from under the current sport, because a width animated frame by frame went
+through Reanimated 3.16's shadow-tree commit and held still while React committed (2026-11-24,
+`SportPill`'s note). It is the second surface on Reanimated after the radar
 and the first with no gesture. The bar is drawn over the header's measured box, above a backdrop
 across the page, so **a tap on another sport picks it, and a tap on the current one, anywhere else,
 or Android's back folds it and changes nothing.** The shell's tab bar is outside the page and

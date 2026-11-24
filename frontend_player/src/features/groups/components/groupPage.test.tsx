@@ -307,15 +307,20 @@ describe('the fast filter', () => {
         },
       );
       fireEvent.press(closed);
-      const bar = await screen.findByTestId('sport-bar');
-      fireEvent(within(bar).getByRole('button', { name: 'Padel' }), 'layout', {
-        nativeEvent: { layout: { x: 0, y: 0, width: 80, height: 27 } },
+      // The bar is laid out at the closed pill's width — an 80-point pill and the bar's inset — and
+      // the rest of the row beside it; open, its moving end has travelled the difference.
+      const closedWidth = 80 + 2 * theme.size.groupPage.filterPad;
+      fireEvent(await screen.findByTestId('sport-bar'), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 0, width: closedWidth, height: 45 } },
       });
       fireEvent(screen.getByTestId('sport-bar-row'), 'layout', {
-        nativeEvent: { layout: { x: 0, y: 0, width: rowWidth, height: 27 } },
+        nativeEvent: { layout: { x: 0, y: 0, width: rowWidth - 80, height: 27 } },
       });
       act(() => jest.advanceTimersByTime(theme.motion.unfold + 16));
-      return (getAnimatedStyle(screen.getByTestId('sport-bar')) as { width?: number }).width;
+      const end = getAnimatedStyle(screen.getByTestId('sport-bar-end')) as {
+        transform?: { translateX?: number }[];
+      };
+      return closedWidth + Math.abs(end.transform?.[0]?.translateX ?? 0);
     }
 
     // #529 E2: the tile's edge showed past the open bar's end.

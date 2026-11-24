@@ -3772,8 +3772,10 @@ sport pill   6.2's chip less its border · paper2 · sport dot (round, sportDot)
              one rated sport: the same dot and name, no chevron, not a button
 bar          surface · radius pill (a row of chips, by amendment) · shadow popover · chip + 2 × 9 = 45
              other sports left, registry order · current sport last, ink fill, surface label, ›
-unfold       motion.unfold 280 · easeDecel · UI thread (reanimated) · the bar's width, then each
-             other sport's opacity and a space.md slide, half the unfold each, nearest first
+unfold       motion.unfold 280 · easeDecel · UI thread (reanimated) · transform and opacity only:
+             the bar is laid out once at the pill's width, drawn as two halves meeting under the
+             current sport, the far one sliding out from under it; then each other sport's opacity
+             and a space.md slide, half the unfold each, nearest first — never the bar's width
 fold         immediate — a sport tapped, the current one, the page behind, Android's back, or leaving
 header       10.3 compact · tile + name + official mark + N members · Club are one button (the row,
              but for back and the pill) · named by the group, hint Opens Info · row 0,7 pressed ·

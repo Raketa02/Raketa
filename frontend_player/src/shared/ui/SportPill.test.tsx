@@ -6,11 +6,13 @@
  *
  * Reanimated is real here, as it is in the router harness (ADR-0176 §2): every worklet runs on the
  * JavaScript thread and `withTiming` on the fake clock. Nothing lays anything out under jest, so the
- * two widths the bar grows between are handed to it as layout events.
+ * two widths the bar needs — its own, the closed pill's, and the other sports' row — are handed to it
+ * as layout events. **The bar is never resized**: how wide it stands open is the closed width and how
+ * far its sliding half's round end has travelled (`sport-bar-end`).
  */
 
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { StyleSheet, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { getAnimatedStyle } from 'react-native-reanimated';
 
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -77,7 +79,11 @@ function drawBar({
   return { onChoose };
 }
 
-/** A sliding pill's animated style — the slide is its wrapper, a few host nodes up from the button. */
+/**
+ * A sliding pill's opacity, and where its slide stands it **on the page** — its wrapper's own
+ * translation, a few host nodes up from the button, plus the clip it rides in, which slides with the
+ * bar's moving end.
+ */
 function slideOf(name: string): { readonly opacity?: number; readonly translateX?: number } {
   let node = within(bar()).getByRole('button', { name }).parent;
   while (node !== null) {
@@ -90,7 +96,7 @@ function slideOf(name: string): { readonly opacity?: number; readonly translateX
         ...(style.opacity === undefined ? {} : { opacity: style.opacity }),
         ...(style.transform?.[0]?.translateX === undefined
           ? {}
-          : { translateX: style.transform[0].translateX }),
+          : { translateX: style.transform[0].translateX + travelled() }),
       };
     }
     node = node.parent;
@@ -100,19 +106,41 @@ function slideOf(name: string): { readonly opacity?: number; readonly translateX
 
 const bar = () => screen.getByTestId('sport-bar');
 
-/** The two widths the layout would report: the whole row, and the current sport's pill. */
+/** The closed pill's width: the current sport and the bar's inset either side of it. */
+const CLOSED = PILL + 2 * PAD;
+
+/**
+ * The two widths the layout would report — the bar's own, which is the closed pill's, and the other
+ * sports' row — for a row of `ROW` with the current sport in it, as the open bar draws it.
+ */
 function layOut() {
-  const current = within(bar()).getByRole('button', { name: 'Padel' });
-  fireEvent(current, 'layout', {
-    nativeEvent: { layout: { width: PILL, height: 27, x: 0, y: 0 } },
+  fireEvent(bar(), 'layout', {
+    nativeEvent: { layout: { width: CLOSED, height: 45, x: 0, y: 0 } },
   });
   fireEvent(screen.getByTestId('sport-bar-row'), 'layout', {
-    nativeEvent: { layout: { width: ROW, height: 27, x: 0, y: 0 } },
+    nativeEvent: { layout: { width: ROW - PILL, height: 27, x: 0, y: 0 } },
   });
 }
 
-function barStyle(): { readonly width?: number; readonly opacity?: number } {
-  return getAnimatedStyle(bar()) as { readonly width?: number; readonly opacity?: number };
+/** How far the bar's sliding half has travelled from the pill's end — signed, as it is drawn. */
+function travelled(): number {
+  const style = getAnimatedStyle(screen.getByTestId('sport-bar-end')) as {
+    readonly transform?: readonly { readonly translateX?: number }[];
+  };
+  return style.transform?.[0]?.translateX ?? 0;
+}
+
+/** What the bar is drawn at: whether it shows, and how wide it stands open. */
+function barStyle(): { readonly width: number; readonly opacity?: number } {
+  const { opacity } = getAnimatedStyle(bar()) as { readonly opacity?: number };
+  return { width: CLOSED + Math.abs(travelled()), ...(opacity === undefined ? {} : { opacity }) };
+}
+
+/** Every animated view in the bar, with the style it is drawn at now. */
+function animatedStyles(): Record<string, unknown>[] {
+  return [bar(), ...within(bar()).UNSAFE_queryAllByType(View)]
+    .filter((node) => node.props.jestAnimatedStyle !== undefined)
+    .map((node) => ({ ...(getAnimatedStyle(node) as Record<string, unknown>) }));
 }
 
 /** One frame: an animated style is applied on the next frame, and the frames run on the fake clock. */
@@ -139,16 +167,40 @@ describe('the sport pill’s bar', () => {
     nextFrame();
     const first = barStyle();
     expect(first.opacity).toBe(1);
-    expect(first.width).toBeGreaterThanOrEqual(PILL + 2 * PAD);
+    expect(first.width).toBeGreaterThanOrEqual(CLOSED);
     expect(first.width).toBeLessThan(ROW + 2 * PAD);
+    // Leftwards: the moving end travels to the left of the pill's.
+    expect(travelled()).toBeLessThan(0);
 
     act(() => jest.advanceTimersByTime(theme.motion.unfold / 2));
-    const halfway = barStyle().width ?? 0;
-    expect(halfway).toBeGreaterThan(first.width ?? 0);
+    const halfway = barStyle().width;
+    expect(halfway).toBeGreaterThan(first.width);
     expect(halfway).toBeLessThan(ROW + 2 * PAD);
 
     act(() => jest.advanceTimersByTime(theme.motion.unfold));
     expect(barStyle().width).toBe(ROW + 2 * PAD);
+  });
+
+  // 2026-11-24: the bar grew by its width, so every frame went through Reanimated 3.16's shadow-tree
+  // commit — laid out again, every label measured again — and held still while React committed.
+  it('moves nothing but transforms and opacity, from the first frame to the last', () => {
+    drawBar({ onAnother: jest.fn() });
+    layOut();
+    nextFrame();
+    const first = animatedStyles();
+
+    const moved = new Set<string>();
+    for (let at = 0; at <= theme.motion.unfold + FRAME; at += FRAME) {
+      nextFrame();
+      animatedStyles().forEach((style, view) => {
+        for (const [prop, value] of Object.entries(style)) {
+          if (JSON.stringify(value) !== JSON.stringify(first[view]?.[prop])) moved.add(prop);
+        }
+      });
+    }
+
+    // It did move — and only by those two.
+    expect([...moved].sort()).toEqual(['opacity', 'transform']);
   });
 
   // #529 E2: open with every sport in it, the bar ended a few points into the group's tile, and
@@ -292,12 +344,18 @@ describe('the sport pill opening rightwards', () => {
     expect(within(current).queryByText('›', { includeHiddenElements: true })).toBeNull();
   });
 
-  it('lays its row against the bar’s left edge, so the current sport stays where the pill stood', () => {
+  it('keeps the current sport in the bar’s own flow, so it stays where the pill stood', () => {
     drawBar({ opens: 'right' });
+    layOut();
+    act(() => jest.advanceTimersByTime(theme.motion.unfold / 2));
 
-    const row = StyleSheet.flatten(screen.getByTestId('sport-bar-row').props.style as ViewStyle);
-    expect(row).toMatchObject({ position: 'absolute', top: PAD, left: PAD });
-    expect(row.right).toBeUndefined();
+    // Nothing between the current sport and the bar moves: no animated style on the way up.
+    let node = within(bar()).getByRole('button', { name: 'Padel' }).parent;
+    while (node !== null && node.props.testID !== 'sport-bar') {
+      expect(node.props.jestAnimatedStyle).toBeUndefined();
+      node = node.parent;
+    }
+    expect(StyleSheet.flatten(bar().props.style as ViewStyle).width).toBeUndefined();
   });
 
   it('grows from the pill to the whole row over the unfold, as leftwards', () => {
@@ -305,8 +363,10 @@ describe('the sport pill opening rightwards', () => {
     layOut();
 
     nextFrame();
-    expect(barStyle().width).toBeGreaterThanOrEqual(PILL + 2 * PAD);
+    expect(barStyle().width).toBeGreaterThanOrEqual(CLOSED);
     expect(barStyle().width).toBeLessThan(ROW + 2 * PAD);
+    // Rightwards: the moving end travels to the right of the pill's.
+    expect(travelled()).toBeGreaterThan(0);
 
     act(() => jest.advanceTimersByTime(theme.motion.unfold + FRAME));
     expect(barStyle().width).toBe(ROW + 2 * PAD);
