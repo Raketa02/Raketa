@@ -193,7 +193,7 @@ the card lost its bar (7.30, home refactor 5.1).
 **The tab's menu draws coral once, the _active tab_ meaning one level down**
 ([#861](https://github.com/Raketa02/Raketa/issues/861), [9.5](#95-the-tabs-menu), Part 16
 2026-11-24; PRD #859, the tab menu log's Q6). The line the page stands on — the kind of the game
-the Friends tab is building, and from #862 the kind Games' deck shows — carries a **circle with
+the Friends tab is building, and the kind Games' deck shows (#862) — carries a **circle with
 `Tick`'s drawn white tick**: the current kind is the active sub-tab, so this is the list's second
 entry drawn inside a tab, not a seventh. **The circle is `coralInk`**, not `coral`: a white mark on
 a coral fill takes `coralInk` wherever it is drawn — the ⚡Play disc and the badge did first
@@ -1081,9 +1081,10 @@ variant, each with a one-line `gloss` — because a column of three near-synonym
 what choosing one means. See [Part 16](#part-16--amendments-after-locking).
 
 > **Amended 2026-11-05 — the same card asks about a change** ([ADR-0201](../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
-> §2, [#740](https://github.com/Raketa02/Raketa/issues/740)). The Games switch's door opens the
-> declaration's card over the deck's area (`KindDoor`), asking a player who plays one kind whether
-> they want the other too. It offers two answers and a way out, and each gloss says what the answer
+> §2, [#740](https://github.com/Raketa02/Raketa/issues/740)). The Games door — the dimmed line of
+> the Games tab's menu ([9.5](#95-the-tabs-menu)) since [#862](https://github.com/Raketa02/Raketa/issues/862),
+> the switch's dimmed segment before it — opens the declaration's card over the deck's area
+> (`KindDoor`), asking a player who plays one kind whether they want the other too. It offers two answers and a way out, and each gloss says what the answer
 > costs. **One answer is highlighted**: _Either suits me_ comes first on the
 > [6.1](#61-button) `primary` fill, because it is the answer that loses nothing. The kind tapped and
 > _Keep competitive_ stay `on-dark`. The first-time question is unchanged: its three answers are
@@ -1374,9 +1375,9 @@ selected  background surface   label ink
 
 **Inset track, raised selection — the inverse of the chip.** For a two- or three-way view
 switch within one screen — and four ways once, a group page's tabs (below). Specified before anything used it, so the first screen that needed
-one did not invent a second shape; today it is a group page's tabs, the Games deck's kinds, _Post
-a game_'s choices, the reliability filter's three positions (#662) and You › Friends' three tabs
-(#754).
+one did not invent a second shape; today it is a group page's tabs, _Post a game_'s choices, the
+reliability filter's three positions (#662) and You › Friends' three tabs (#754). The Games deck's
+kinds were one until #862 moved them into the Games tab's menu ([9.5](#95-the-tabs-menu)).
 
 ```
 prominent   track paper2 · segment minHeight btn (34) · label btn 12 / 700 muted
@@ -1403,6 +1404,11 @@ door        label muted at opacity .8 (size.segDoorOpacity) → #7A878A on line2
 > unselected label is already at 4,62:1 on `line2`, so any dimming falls under 1.4.3's 4,5:1. The
 > door stops at 3,17:1, still past 3:1, and **the words carry the state too**: a door has no
 > number (_Competitive · 7_ beside a bare _For fun_), so the dim is never the whole fact.
+>
+> **Since [#862](https://github.com/Raketa02/Raketa/issues/862) the Games switch's door is a line of
+> the Games tab's menu** ([9.5](#95-the-tabs-menu)): the same rules — its words `muted` at .8, no
+> number, no tick, never disabled, its press opening the panel — on the menu's line rather than a
+> segment. No segment draws `door` today; the option is the control's still.
 
 ```
 four-way    a group page's tabs alone: Games · Fill in · You’re in · Friends · flex 1 each, one
@@ -1429,8 +1435,9 @@ four-way    a group page's tabs alone: Games · Fill in · You’re in · Friend
 > seen while it is shown; split mocks 1 and 2 draw one there and are overridden. **Games counts the
 > same way since [#850](https://github.com/Raketa02/Raketa/issues/850)** — the cards with somebody
 > In, of either kind, that the player hasn't seen, spoken _Games, 4 new with somebody In_ — and a
-> look there is at the kind the deck's switch is on, so the other kind's cards stay new until it
-> moves; selected, Games draws none either. The mark, its place out of the layout and 1.2's sixth
+> look there is at the kind the deck is on, so the other kind's cards stay new until it moves —
+> opening the Games tab's menu, which counts both, sees neither (#862); selected, Games draws none
+> either. The mark, its place out of the layout and 1.2's sixth
 > entry are unchanged: it is still a count of things only you can clear, and looking is now how.
 
 ```
@@ -1445,7 +1452,7 @@ menu        an option that owns one (size.segMenu) — selected, with its menu o
 > ([#861](https://github.com/Raketa02/Raketa/issues/861), PRD #859; tab menu mocks 1 and 2,
 > illustrations; Part 16). A group page's **Friends** tab holds the kind of the game being built in
 > [9.5](#95-the-tabs-menu)'s menu, where a _Competitive | For fun_ row stood above the court, and
-> Games holds its deck's kind there from #862. The option carries `menu`, and **while it is selected
+> Games holds its deck's kind there since #862. The option carries `menu`, and **while it is selected
 > and its menu is offered** — the page's rule — it draws a chevron at its right edge, pointing down,
 > turning up while the menu is open on the menu's beat, and says `expanded`. Anywhere else it is a
 > label and its badge, as before; Fill in and You’re in never own one. **The control still reports
@@ -3787,6 +3794,13 @@ tabs         6.3's four-way segment · Games · Fill in · You’re in · Friend
              Games 4 · Fill in 2 · You’re in 3 (spoken "You’re in, 3 new games") · none on the tab
              shown · Games' across both kinds, seen a kind at a time (#850) · Friends none · opens
              on Games
+tab menu     9.5 · from the selected Games or Friends tab, its chevron 6.3's · no row under the tabs
+             Games: hung by the tab's left edge · Competitive then For fun, the deck's kind ticked ·
+             a live kind ends in its count, num.tiny muted · the door dimmed, no number, no tick ·
+             still (drawn, opens nothing) while an intent answer or its finding is out
+             Friends: hung by its right edge · no counts, no door
+games above  the cap line (tiny muted, centred) and the offline note directly under the tabs, then
+             the deck, which takes the rest
 dark card    5.2 · h2 headline, surface — num.m for a count (3 of 4) · tiny line, onDarkTiny
              Share the link (volt) + Copy link (onDark)
 games seats  PlayerPhoto face box at groupPage.seat (34) · seated ring · empty seat dashed · one element
@@ -3818,6 +3832,20 @@ Q125), and Games, Fill in and Friends each with one dark card whose remedy is th
 [#847](https://github.com/Raketa02/Raketa/issues/847)** (split mock 3): You’re in, the reader's own
 live yeses, stands between Fill in and Friends, and draws the starting card that was Fill in's — only
 once Fill in has nothing either — while Fill in, empty, says one line (7.27).
+
+**The kind is the tab's menu's** ([9.5](#95-the-tabs-menu); Friends since
+[#861](https://github.com/Raketa02/Raketa/issues/861), Games since
+[#862](https://github.com/Raketa02/Raketa/issues/862); PRD #859, tab menu mocks 1 to 4,
+illustrations). No _Competitive | For fun_ row stands under the tabs: the selected Games or Friends
+tab draws 6.3's chevron and opens the menu on a second press. **On Games** the menu hangs by the
+tab's left edge, its live kinds ending in today's count, the kind the intent doesn't want a door
+whose line opens 5.2's panel over the deck. Its chevron is drawn only where the switch was live — a
+sport to play and a deck read that came back with its kinds, of either kind, so it stays while a
+newly picked kind is read under the deck's spinner — and while an intent answer or its finding is
+out it stays drawn and opens nothing, so the bar never jumps. With the row gone, **the cap line and
+the offline note stand directly under the tabs** and the deck takes the height down to its buttons.
+Nothing names the kind while the menu is shut but the cards and the tab's spoken name, _Games,
+Competitive_ (the tab menu log's Q10).
 
 **The header is the door to Info** (Q125, [#721](https://github.com/Raketa02/Raketa/issues/721)):
 10.3's header with `onPress`, the whole row answering but for the back control and the pill, which
@@ -5052,13 +5080,17 @@ motion    fades in, dropping 6 (size.tabMenu.drop), over motion.tabMenu (150) ·
 ([#861](https://github.com/Raketa02/Raketa/issues/861), PRD #859; tab menu mocks 3 and 4,
 illustrations; Part 16 2026-11-24). A group page's **Friends** tab holds the kind of the game being
 built in one — _Competitive_ then _For fun_ — where a row of the two stood above the court, and
-Games holds its deck's kind from #862, each line with its count and the kind the intent doesn't
-want as a door. **A press on the selected tab that offers it opens it** (6.3's option that owns a
-menu), and its chevron turns up.
+**Games** holds its deck's kind since [#862](https://github.com/Raketa02/Raketa/issues/862), where
+the switch stood above the deck: each live kind with today's count, and the kind the intent doesn't
+want as a door, whose line closes the menu and opens 5.2's panel over the deck. **A press on the
+selected tab that offers it opens it** (6.3's option that owns a menu), and its chevron turns up —
+on Games, not while an intent answer or its finding is out: the chevron stays, and the press opens
+nothing.
 
 **It picks; [7.6](#76-the-anchored-popover)'s popover explains.** So it is as wide as its lines,
 with no arrow, no close and no focus moved, and **a press on a line closes it and reports the line**
-— the one already selected too, which the page reads as nothing. **The selected line carries
+— the one already selected too, which the page reads as nothing (on Games, but for shutting a
+door's panel left open). **The selected line carries
 coral's mark** — the `coralInk` circle with the drawn white tick (Archivo has no ✓), the _active
 tab_ meaning one level down ([1.2](#12-one-accent-used-sparingly)) — and the other lines keep its
 space empty, so the words line up. **A door line** is 6.3's door: its words dimmed, never disabled,
@@ -5073,15 +5105,17 @@ the bar, so a press anywhere else on the page — a seat, a button, the header, 
 closes the menu **and does nothing else**, and a press on another tab reaches the bar and goes
 there in one tap. The page takes no touch under it besides. **Android back** closes it, and so
 does **the page leaving view** — a pushed screen, or the app's bottom bar, which is outside the page
-and stays live; a sport changing under it closes it too.
+and stays live; a sport changing under it closes it too, and on Games a notice moving the deck's
+kind.
 
 **Its motion is opacity and transform only**, on React Native's `Animated` and the native driver, as
 FOR YOU's content is ([7.37](#737-for-you-the-folding-line-and-its-footer)): it fades in from 6 above
 its place, and folds away the same way, already out of reach as it goes — no press, nothing heard,
 its catcher gone. Nothing moves under reduced motion. **It is spoken through names alone** (ADR-0198):
-the selected tab says its name then its kind — _Friends, Competitive_ — and whether it is
-`expanded`; each line says its kind, its count where it has one, and whether it is `selected`; no
-announcement, no focus moved. **The mocks' counts beside the tabs' labels are not built**: a tab keeps
+the selected tab says its name then its kind — _Friends, Competitive_, _Games, For fun_ — and
+whether it is `expanded`; each line says its kind, its count where it has one — _Competitive, 5
+games_ — and whether it is `selected`, and a door says it is one — _For fun, not a kind you play_;
+no announcement, no focus moved. **The mocks' counts beside the tabs' labels are not built**: a tab keeps
 its corner badge, and the tab on screen draws none (the fill-in split's override 2).
 
 ---
@@ -6538,6 +6572,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-24 | [6.3](#63-segmented-control) · [`Segment.tsx`](../src/shared/ui/Segment.tsx) · `theme.ts` `size.segMenu` · `groupTabsFit.test.ts`                                                                                                                                                                                                                                                        | Every segment `flex: 1`, every one the same width, and a press on the one selected reported with nothing drawn for it                                                                                                                                                                                                                                        | **An option may own a menu.** Selected with its menu offered — the page's rule — it draws a Feather chevron, 12, at its right edge, down while the menu is shut and turned up while it is open, and says `expanded`; anywhere else it is a label and its badge. **Its box's flex basis is the chevron's room, 21, where every other box's is nought**, so it widens by that room and its label keeps the same share as every other. In a control where any option owns one, every option is a box carrying the raised surface with the press inside it, and **the widths move by a layout transition** on `motion.tabMenu`, none under reduced motion. Every press is still reported                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | PRD #859 (#861; tab menu mocks 1, 2): the _Competitive / For fun_ row leaves the group page for a menu in the selected tab, and the tab needs a mark that says so. The room on top of an equal share, not the content's width: at 384pt an equal share, 84,75, is already wider than _Friends_ and its chevron, so the content's width would have made the selected tab the narrowest. Measured with Archivo: 63,5 a share at 320pt against _You’re in_'s 44,3. A layout transition because a width animated per frame freezes under the New Architecture (`CLAUDE.md`). Not seen on a device: the bar at 320pt and at a large text size (#866)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-11-24 | [9.5](#95-the-tabs-menu) · [9.3](#93-layer-order) · [7.6](#76-the-anchored-popover) · [`TabMenu.tsx`](../src/shared/ui/TabMenu.tsx) · `tabMenuGeometry.ts` · `theme.ts` `size.tabMenu` `radius.tabMenu` `motion.tabMenu`                                                                                                                                                                 | Three overlays, all on the root host — the sheet, the toast and the popover, which explains a word                                                                                                                                                                                                                                                           | **A fourth, the tab's menu: a picker.** A white card hung 6 under the tab that opens it, by the tab's start or end edge and inside the gutters, as wide as its lines, with no arrow and no close; each line a button at least 44 tall — the selected mark, the words, a count where the page gives one, a door dimmed and never disabled. **Drawn in the page's own tree as its last child**, never on the modal stage, with a catcher of four transparent presses round the tab bar: a press anywhere else closes it and does nothing else, and another tab is one tap. Android back and the page leaving view close it. Fades in dropping 6 over 150ms, opacity and transform on the native driver, none under reduced motion. The popover's elevation and radius value; no eighth shadow                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | PRD #859 (#861; tab menu mocks 3, 4): Friends' kind, and Games' from #862, move into the tab. 7.6 is an explainer — 250, an arrow, a close, focus moved — and a choice made in one tap needs none of them. On the root host it would cover the tab bar it hangs from and the app's bottom bar, and the PRD keeps both live. Four presses round the bar rather than one under a raised bar, because z-order is the one thing no test sees                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-11-24 | [1.2](#12-one-accent-used-sparingly) · [`TabMenu.tsx`](../src/shared/ui/TabMenu.tsx) · [`.claude/rules/design-system.md`](../.claude/rules/design-system.md)                                                                                                                                                                                                                             | Coral's list closed at six, the tab's menu not yet drawn                                                                                                                                                                                                                                                                                                     | **The tab's menu's selected mark** — an 18 circle with `Tick`'s drawn white tick — is counted under the list's **active tab** entry: the current kind is the active sub-tab. Not a seventh. **The circle is `coralInk`**, as every white mark on a coral fill is                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | PRD #859 (the tab menu log's Q6) asked for a coral tick and read it as the active tab; `coral` under a white mark is 3,89:1, which Rule C refused for the ⚡Play disc and the badge, so the tick takes their `coralInk` (5,89:1). Flagged for the product owner with the rest                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-11-24 | [7.21](#721-the-group-page) · [6.3](#63-segmented-control) · [5.2](#52-dark-card) · [9.5](#95-the-tabs-menu) · [`GamesDeck.tsx`](../src/features/proposals/components/GamesDeck.tsx) · [`GroupScreen.tsx`](../src/features/groups/components/GroupScreen.tsx)                                                                                                                            | The Games deck drew its own _Competitive · 7 / For fun · 1_ switch under the tabs, the kind the intent doesn't want a dimmed segment, and the cap line and the offline note under it                                                                                                                                                                         | **The row is gone, and the kind is the Games tab's menu.** The selected Games tab draws 6.3's chevron where the switch was live — a sport to play and a deck read that came back with its kinds, of either kind, so it stays while a newly picked kind is read under the deck's spinner — and a second press opens 9.5's menu hung by the tab's left edge: _Competitive_ then _For fun_, the deck's kind ticked, each live kind ending in today's count in `num.tiny` `muted`, the door dimmed with no number and no tick, its line closing the menu and opening 5.2's panel over the deck. While an intent answer or its finding is out the chevron stays and a press opens nothing. **The cap line and the offline note stand directly under the tabs**, and the deck takes the height. The door's rules (6.3) are the menu line's now; no segment draws `door` today                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | PRD #859 (#862; tab menu mocks 1, 3, illustrations): the kind moves into the tab, and the deck gets the row's height. The chevron's rule is the switch's own, read off the deck reads the page already holds, so it costs no request; the menu stays through a load because both kinds' reads carry the same pair of counts (the log's Q13). Not seen on a device (#866)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 # Part 17 — What the reset removed
 

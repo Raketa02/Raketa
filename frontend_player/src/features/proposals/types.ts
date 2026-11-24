@@ -5,11 +5,12 @@
  * ([#554](https://github.com/Raketa02/Raketa/issues/554); the screens A7.1, A7.3) — over the
  * backend's Proposals context (#538, #539).
  *
- * The group page draws `GamesDeck` as its Games tab and reads the tab's badge with `useGamesBadge`;
- * the details screen is mounted by its route file under `play/group/`, which checks its params
- * here first. The dependency points one way — `groups` reads `proposals`, never the reverse — so
- * the page hands in what only it knows: the kind its switch stands on, and the starting cards a
- * group with nothing dealt still draws.
+ * The group page draws `GamesDeck` as its Games tab, reads the tab's badge with `useGamesBadge`
+ * and draws the tab's menu off `useGamesMenu` in `kindMenuLines`' words (#862); the details screen
+ * is mounted by its route file under `play/group/`, which checks its params here first. The
+ * dependency points one way — `groups` reads `proposals`, never the reverse — so the page hands in
+ * what only it knows: the kind its menu stands on, a line picked in it (`GamesDeckHandle`), and the
+ * starting cards a group with nothing dealt still draws.
  *
  * The shell composes `GamesAndMoneyRow` into the You tab's ACCOUNT group, and a route file under
  * `you/` mounts its screen. `LiveYeses` and `PaymentsToConfirm` are You › Payments' sections,
@@ -21,7 +22,10 @@
  * its result — see the block below on Home.
  */
 
-export { GamesDeck, type GamesDeckProps } from './components/GamesDeck';
+export { GamesDeck, type GamesDeckHandle, type GamesDeckProps } from './components/GamesDeck';
+/** The Games tab's menu (#862): what it holds, and its lines' words. */
+export { useGamesMenu, type GamesMenu } from './hooks/useGroupDeck';
+export { kindMenuLines } from './components/deckPresentation';
 export { GameDetailsScreen, type GameDetailsScreenProps } from './components/GameDetailsScreen';
 export { GamesAndMoneyRow, type GamesAndMoneyRowProps } from './components/GamesAndMoneyRow';
 export { GamesAndMoneyScreen } from './components/GamesAndMoneyScreen';

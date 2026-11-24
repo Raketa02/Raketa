@@ -24,7 +24,7 @@
  * feature's, and this one has no business composing it.
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { gameKeys } from '@/features/games/types';
 import { playerRecordKeys } from '@/features/player_record/types';
@@ -95,6 +95,7 @@ export function useDeclarePlayIntent() {
   const client = useQueryClient();
 
   return useMutation<Declared | undefined, AppError, PlayIntentDeclaration>({
+    mutationKey: playerProfileKeys.declaring(),
     mutationFn: (declaration) => declarePlayIntent(declaration),
     onSuccess: (declared) => {
       if (declared === undefined) {
@@ -112,6 +113,26 @@ export function useDeclarePlayIntent() {
       );
     },
   });
+}
+
+/**
+ * **Whether a play intent for this sport is on its way** — a declaration from any screen, read off
+ * the mutation's own state rather than a copy of it (#862): the group page's Games tab holds its
+ * menu still while one is out, since its answer changes the kinds the deck shows. No sport, none.
+ */
+export function usePlayIntentOnItsWay(sport: Sport | undefined): boolean {
+  const declaring = useMutationState({
+    filters: { mutationKey: playerProfileKeys.declaring(), status: 'pending' },
+    select: (mutation) => sportDeclared(mutation.state.variables),
+  });
+  return sport !== undefined && declaring.includes(sport);
+}
+
+/** The sport a declaration on its way is for. */
+function sportDeclared(asked: unknown): Sport | undefined {
+  return typeof asked === 'object' && asked !== null && 'sport' in asked
+    ? (asked as PlayIntentDeclaration).sport
+    : undefined;
 }
 
 /**

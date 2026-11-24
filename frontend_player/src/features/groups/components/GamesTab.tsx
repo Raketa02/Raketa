@@ -4,9 +4,10 @@
  * nothing, the dark card a starting group has always drawn (play 14–17, 39; PRD #500 stories
  * 60–65, ADR-0183 §13).
  *
- * **The deck is `proposals`'**: the read, the switch, the stage, the card and the answers
- * (`GamesDeck`). What this tab hands it is what only the group page knows — the kind its switch
- * stands on (`gameIntent.store`, the deck's own since #757), and the card to draw when this
+ * **The deck is `proposals`'**: the read, the stage, the card, the answers and the door's panel
+ * (`GamesDeck`). What this tab hands it is what only the group page knows — the kind the tab's
+ * menu stands on (`gameIntent.store`, the deck's own since #757), each line picked in that menu
+ * (`handle`, #862: the menu is the page's, the panel the deck's), and the card to draw when this
  * segment deals nothing, which is about the group's roster rather than about any game.
  *
  * **The starting card** is `gamesCard`'s: *Just you so far*, *3 of 4* once others who play the sport
@@ -29,10 +30,10 @@
  * the headline has already said who is missing. *3 of 4* is a count and is drawn in mono (1.4).
  */
 
-import type { ReactElement } from 'react';
+import type { ReactElement, Ref } from 'react';
 import { StyleSheet, View, type RefreshControlProps } from 'react-native';
 
-import { GamesDeck } from '@/features/proposals/types';
+import { GamesDeck, type GamesDeckHandle } from '@/features/proposals/types';
 import { courtSeatCount, SeatFace, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -51,13 +52,15 @@ export interface GamesTabProps {
   readonly sport: Sport;
   /** The card a notice opened the deck at (#559) — on top while it is dealt. */
   readonly onTop?: string;
+  /** What the page's menu asks the deck — a line picked (#862). */
+  readonly handle?: Ref<GamesDeckHandle>;
   /** The page's pull, which the deck puts on whichever scroller it is in. */
   readonly refreshControl?: ReactElement<RefreshControlProps>;
   /** Whether the page is the screen in view — what the deck shows is seen only while it is (#850). */
   readonly inView: boolean;
 }
 
-export function GamesTab({ group, sport, onTop, refreshControl, inView }: GamesTabProps) {
+export function GamesTab({ group, sport, onTop, handle, refreshControl, inView }: GamesTabProps) {
   const chosen = useGameIntent((state) => state.intent);
   const choose = useGameIntent((state) => state.choose);
 
@@ -67,6 +70,7 @@ export function GamesTab({ group, sport, onTop, refreshControl, inView }: GamesT
       sport={sport}
       chosen={chosen}
       onChoose={choose}
+      {...(handle === undefined ? {} : { handle })}
       inView={inView}
       empty={<StartingCard group={group} sport={sport} />}
       {...(onTop === undefined ? {} : { onTop })}

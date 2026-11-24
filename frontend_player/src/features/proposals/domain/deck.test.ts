@@ -15,6 +15,7 @@ import {
   headlineOf,
   intentAnswering,
   inAcrossVersions,
+  kindMenu,
   refusalOutcome,
   rescueGoneOf,
   resolveKind,
@@ -111,6 +112,72 @@ describe('the switch’s two sides (ADR-0201 §2)', () => {
 
   it('draws no switch while no intent is declared', () => {
     expect(switchSides([])).toEqual([]);
+  });
+});
+
+describe('the Games tab’s menu, off the reads already held (#862)', () => {
+  const ANIA = [{ kind: 'competitive', count: 7 }] as const;
+  const ZOFIA = [
+    { kind: 'competitive', count: 5 },
+    { kind: 'forFun', count: 1 },
+  ] as const;
+
+  it('is drawn off the read of the kind chosen: both kinds, the deck’s kind ticked', () => {
+    expect(kindMenu('competitive', ZOFIA, undefined)).toEqual({
+      kind: 'competitive',
+      ticked: 'competitive',
+      sides: [
+        { kind: 'competitive', door: false, count: 5 },
+        { kind: 'forFun', door: false, count: 1 },
+      ],
+    });
+  });
+
+  it('keeps the door a door: dimmed, with no count, and never the tick', () => {
+    expect(kindMenu('competitive', ANIA, undefined)).toEqual({
+      kind: 'competitive',
+      ticked: 'competitive',
+      sides: [
+        { kind: 'competitive', door: false, count: 7 },
+        { kind: 'forFun', door: true },
+      ],
+    });
+  });
+
+  it('stands on the kind the intent shows when the one chosen is the door, as the deck does', () => {
+    expect(kindMenu('forFun', ANIA, undefined)).toMatchObject({
+      kind: 'competitive',
+      ticked: 'competitive',
+    });
+  });
+
+  it('is drawn off the other kind’s read while the one picked is read — or failed', () => {
+    // Both reads carry the same pair of counts, so the menu stays while the deck reads.
+    expect(kindMenu('forFun', undefined, ZOFIA)).toEqual({
+      kind: 'forFun',
+      ticked: 'forFun',
+      sides: [
+        { kind: 'competitive', door: false, count: 5 },
+        { kind: 'forFun', door: false, count: 1 },
+      ],
+    });
+  });
+
+  it('ticks nothing while the deck stands on a kind the read held says is a door', () => {
+    expect(kindMenu('forFun', undefined, ANIA)).toMatchObject({
+      kind: 'forFun',
+      ticked: undefined,
+    });
+  });
+
+  it('is not there before a read of either kind has come back', () => {
+    expect(kindMenu('competitive', undefined, undefined)).toBeUndefined();
+  });
+
+  it('is not there while the first-time question is up, whatever the other kind held', () => {
+    expect(kindMenu('competitive', [], undefined)).toBeUndefined();
+    expect(kindMenu('competitive', [], ZOFIA)).toBeUndefined();
+    expect(kindMenu('competitive', undefined, [])).toBeUndefined();
   });
 });
 

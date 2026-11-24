@@ -167,7 +167,7 @@ hanging from the tab that opens it, its lines' words, an optional muted count, a
 stage, with a catcher round the tab bar and `FoldAway`'s back and blur — with its place and its
 catcher's boxes in `tabMenuGeometry.ts`; and **`Segment`'s option that owns a menu** (6.3 as
 amended), its chevron, and the widths moving by a layout transition. **It came down ahead of its
-second caller**, as #861 decides: Games' tab draws the same menu from #862, with counts and a door.
+second caller**, as #861 decided: Games' tab draws the same menu since #862, with counts and a door.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

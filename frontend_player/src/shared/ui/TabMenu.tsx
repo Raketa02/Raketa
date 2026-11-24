@@ -2,8 +2,8 @@
  * **The tab's menu** — a small white card hanging from the tab that opens it, picking one of its
  * lines (design-system 9.5, [#861](https://github.com/Raketa02/Raketa/issues/861); PRD #859; tab menu
  * mocks 3 and 4, illustrations). A group page's **Friends** tab holds the kind of the game being built
- * in one, and Games' its deck's kind from #862 — where a row of *Competitive | For fun* under the tabs
- * once stood.
+ * in one, and Games' its deck's kind since #862, with each live kind's count and the door — where a
+ * row of *Competitive | For fun* under the tabs once stood.
  *
  * ```
  *  [ Games | Fill in | You’re in | Friends ⌃ ]     ← the tab, its chevron turned up (`Segment`)

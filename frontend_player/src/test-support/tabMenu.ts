@@ -5,9 +5,10 @@
  * `TabMenu`; a suite that picked a kind on the row picks it here.
  *
  * **Everything is found by what a listener hears**: the selected tab by its name — the tab's word,
- * then the kind it holds, *Friends, Competitive* — with `selected` and `expanded`, and a line by the
- * kind its name begins with (Games' lines say their count after it from #862). Nothing reads a
- * component's internals.
+ * then the kind it holds, *Friends, Competitive* or *Games, For fun* — with `selected` and
+ * `expanded`, and a line by the kind its name begins with: Games' live lines say their count after
+ * it, *For fun, 1 game*, and its door that it is one, *For fun, not a kind you play* (#862). Nothing
+ * reads a component's internals.
  *
  * Not app code — nothing under `src/` outside tests imports this.
  */
@@ -54,4 +55,28 @@ export function menuLine(kind: string, selected?: boolean): ReturnType<typeof sc
 export async function pickKind(tab: string, kind: string): Promise<void> {
   await openTabMenu(tab);
   fireEvent.press(await menuLine(kind));
+}
+
+/** **Shut the tab's menu open now** — a second press on its tab, which changes nothing else. */
+export async function shutTabMenu(tab: string): Promise<void> {
+  fireEvent.press(await menuTab(tab, true));
+}
+
+/**
+ * **What the menu says, read and put away**: the tab's menu opened, the line with this whole spoken
+ * name found — *Competitive, 7 games*, selected or not where `selected` says — and the menu shut
+ * again, so a suite that only reads leaves the page as it found it.
+ */
+export async function menuSays(
+  tab: string,
+  name: string,
+  selected?: boolean,
+): ReturnType<typeof screen.findByRole> {
+  const open = await openTabMenu(tab);
+  const line = await within(open).findByRole('button', {
+    name,
+    ...(selected === undefined ? {} : { selected }),
+  });
+  await shutTabMenu(tab);
+  return line;
 }

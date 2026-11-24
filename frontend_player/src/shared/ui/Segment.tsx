@@ -51,19 +51,21 @@
  *
  * ## The door — a view that isn't yours yet
  *
- * The Games switch draws both kinds always, and the kind the player's intent doesn't want is a
+ * The Games switch drew both kinds always, and the kind the player's intent doesn't want was a
  * **door** (`door`; [ADR-0201](../../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
  * §2): its press opens a way to change the intent rather than the view, and it reads *not yours
  * yet*. **Dimmed, never disabled** — the label at `size.segDoorOpacity` and nothing else: the same
  * box, the same slop, no `disabled` in its state, and its press reported like any other. A door
  * that read as shut is one nobody opens. The words carry the state as well (the caller's door has
- * no number), so the dim is never the whole fact.
+ * no number), so the dim is never the whole fact. **Since #862 that door is a line of the Games
+ * tab's menu** (`TabMenu`'s `door`, the same dim and the same rules), and no segment draws one
+ * today; the option is the control's still.
  *
  * ## An option that owns a menu — a tab with a second layer
  *
  * A group page's **Friends** tab holds the kind of the game being built, in **the tab's menu**
- * (`TabMenu`, 9.5; PRD [#859](https://github.com/Raketa02/Raketa/issues/859), #861 — Games' from
- * #862), where a row of *Competitive | For fun* under the tabs once stood. Such an option carries
+ * (`TabMenu`, 9.5; PRD [#859](https://github.com/Raketa02/Raketa/issues/859), #861), and **Games**
+ * its deck's kind since #862, where a row of *Competitive | For fun* under the tabs once stood. Such an option carries
  * `menu`. **While it is selected and its menu is offered** — the page's rule, not this control's —
  * it draws a Feather chevron at its right edge, pointing down while the menu is shut and turning up
  * while it is open, and says `expanded`. Anywhere else it is an ordinary option: no chevron, no

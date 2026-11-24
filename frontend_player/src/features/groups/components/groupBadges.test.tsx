@@ -69,6 +69,7 @@ import {
 import { fakeClipboard, fakeHaptics, fakePayments, fakeShare } from '@/test-support/platform';
 import { bookingDetails } from '@/test-support/home';
 import { servedReliability } from '@/test-support/playerRecord';
+import { menuSays, menuTab, pickKind } from '@/test-support/tabMenu';
 import {
   installTransport,
   json,
@@ -640,12 +641,12 @@ const forFunIn = (extra: Partial<Wire['DeckCardSchema']> = {}) =>
 
 const rereadDecks = () => reread(proposalKeys.group(CREW.id));
 
-/** The deck's switch on Competitive, as the page opens — its read drawn. */
-const onCompetitive = () => screen.findByRole('button', { name: /^Competitive, /, selected: true });
+/** The deck on Competitive, as the page opens — its read drawn, and the tab saying its kind. */
+const onCompetitive = () => menuTab('Games');
 
-/** The deck's switch moved to For fun, and the card drawn there. */
+/** The deck moved to For fun in the Games tab's menu (#862), and the card drawn there. */
 async function switchToForFun(card: Wire['DeckCardSchema']) {
-  fireEvent.press(await screen.findByRole('button', { name: /^For fun, / }));
+  await pickKind('Games', 'For fun');
   expect(await screen.findByTestId(`game-card-${card.proposal_id}`)).toBeTruthy();
 }
 
@@ -659,7 +660,7 @@ describe('Games’ badge — the cards with somebody In you haven’t seen, acro
     // On Games, on Competitive: the tab shown draws no badge, even for the other kind's card.
     expect(await onCompetitive()).toBeTruthy();
     act(() => jest.advanceTimersByTime(0));
-    expect(drawnCount(await tabNamed('Games', true))).toBeNull();
+    expect(drawnCount(await tabNamed('Games, Competitive', true))).toBeNull();
 
     await visit(FILL_IN);
 
@@ -688,6 +689,20 @@ describe('Games’ badge — the cards with somebody In you haven’t seen, acro
     // She opens Games on Competitive and leaves: still Games 1.
     await visit(GAMES);
     expect(await onCompetitive()).toBeTruthy();
+    await visit(FILL_IN);
+
+    expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
+  });
+
+  // #862: the menu names both kinds and counts them, and that is no look at either deck.
+  it('sees nothing when the Games tab’s menu is opened — the other kind’s card stays new', async () => {
+    dealt = { forFun: [forFunIn()] };
+    await launchOnThePage();
+    expect(await onCompetitive()).toBeTruthy();
+
+    // She opens the menu over Competitive, reads For fun's count, and picks the kind she is on.
+    expect(await menuSays('Games', 'For fun, 1 game', false)).toBeTruthy();
+    await pickKind('Games', 'Competitive');
     await visit(FILL_IN);
 
     expect(await tabNamed(GAMES_NEW, false)).toBeTruthy();
@@ -735,8 +750,8 @@ describe('Games’ badge — the cards with somebody In you haven’t seen, acro
     await launchOnThePage();
     // A look at For fun, nobody In anywhere — its read stays in the cache.
     await switchToForFun(fun);
-    fireEvent.press(screen.getByRole('button', { name: /^Competitive, / }));
-    expect(await onCompetitive()).toBeTruthy();
+    await pickKind('Games', 'Competitive');
+    expect((await onCompetitive()).props.accessibilityLabel).toBe('Games, Competitive');
 
     // Kuba says yes on a Competitive card, which a re-read brings while she is looking at it.
     const seenHere = kubaIn();

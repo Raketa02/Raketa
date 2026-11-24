@@ -341,13 +341,17 @@ describe('the tab’s menu, opening and shutting', () => {
 
     for (const other of ['Games', 'Fill in', 'You’re in']) {
       fireEvent.press(await tab(other));
-      expect(await tab(other, true)).toBeTruthy();
+      expect(
+        await screen.findByRole('button', { name: new RegExp(`^${other}`), selected: true }),
+      ).toBeTruthy();
       expect(chevron()).toBeNull();
-      // Nothing on the bar says a menu, and Friends is its name alone.
+      // Nothing on the bar says a menu but the selected Games tab's own (#862), and Friends is its
+      // name alone.
       for (const one of screen.getAllByRole('button', {
         name: /^(Games|Fill in|You’re in|Friends)/,
       })) {
-        expect(one.props.accessibilityState?.expanded).toBeUndefined();
+        const gamesOwn = other === 'Games' && one.props.accessibilityLabel === 'Games, Competitive';
+        expect(one.props.accessibilityState?.expanded).toBe(gamesOwn ? false : undefined);
       }
       expect(screen.getByRole('button', { name: 'Friends', selected: false })).toBeTruthy();
     }
@@ -587,8 +591,8 @@ describe('the tab’s menu, picking a kind', () => {
     await openFriendsTab();
     fireEvent.press(await tab('Games'));
 
-    // Games keeps its own row until its menu is built (#862).
-    fireEvent.press(await screen.findByRole('button', { name: /^For fun,/ }));
+    // The Games tab's own menu (#862) moves the deck, and never the game being built.
+    await pickKind('Games', KINDS.forFun);
     await waitFor(() => expect(useGameIntent.getState().intent).toBe('forFun'));
 
     fireEvent.press(await tab('Friends'));

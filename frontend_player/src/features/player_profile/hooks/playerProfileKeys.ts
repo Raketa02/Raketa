@@ -43,6 +43,12 @@ export const playerProfileKeys = {
   deckCounts: (sport: Sport) => [...playerProfileKeys.all, 'deck-counts', sport] as const,
   /** No declared row open — a key nothing is ever read under, so no sport's count is borrowed. */
   deckCountsNone: () => [...playerProfileKeys.all, 'deck-counts', 'none'] as const,
+  /**
+   * **A mutation key**: a play intent being declared — the one-tap question's, the Games door's and
+   * You's — so a screen can tell an answer for a sport is on its way (`usePlayIntentOnItsWay`): the
+   * group page's Games tab holds its menu still meanwhile (#862).
+   */
+  declaring: () => [...playerProfileKeys.all, 'declaring'] as const,
 };
 
 /**

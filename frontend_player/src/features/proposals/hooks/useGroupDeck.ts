@@ -9,6 +9,7 @@
  * | `useWithdrawYes` | `DELETE /proposals/{id}/yes` — the details' *Withdraw* |
  * | `useDropCard` | the answered card off the read the moment it has flown |
  * | `useFindGames` | after an intent answer on Games: the group dealt now, then its deck read (#741) |
+ * | `useGamesMenu` | the Games tab's menu, off the reads already held — nothing asked (#862) |
  * | `useRereadGroupGames` | the decks, Fill in, the games' details and the live yeses — a pull |
  * | `useAnswersOnTheirWay` | the cards whose answers are still on their way — hidden from a read |
  *
@@ -48,11 +49,22 @@ import {
   type QueryClient,
   type QueryKey,
 } from '@tanstack/react-query';
+import { useCallback, useSyncExternalStore } from 'react';
 
+import { usePlayIntentOnItsWay } from '@/features/player_profile/types';
 import { isAppError, type AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { resolveKind, withoutCard, type Finding, type GroupDeck } from '../domain/deck';
+import {
+  kindMenu,
+  kindsHeld,
+  resolveKind,
+  withoutCard,
+  type DeckSegment,
+  type Finding,
+  type GroupDeck,
+  type KindMenu,
+} from '../domain/deck';
 import { isRescue, type DealtIn, type YesAnswer, type YesOn } from '../domain/fill';
 import { GAMES_SEEN } from '../domain/seen';
 import type { GameKind } from '../domain/vocabulary';
@@ -94,6 +106,83 @@ export function useGroupDeck(groupId: string, sport: Sport, chosen: GameKind) {
 export function useGamesBadge(groupId: string, sport: Sport, chosen: GameKind): number {
   const counted = useGroupDeck(groupId, sport, chosen).read.data?.inCardIds;
   return useUnseenCount(groupId, sport, GAMES_SEEN, counted);
+}
+
+/**
+ * **The Games tab's menu, as the group page draws it** (#862, PRD #859) — `kindMenu` off the deck
+ * reads the page already holds, and whether it is **still**: an intent answer on its way for the
+ * sport, or its games being found (`useFindGames`), read off the mutations' own state. The page draws
+ * the chevron while the menu is there, and a tap on the tab opens it unless it is still.
+ *
+ * **It asks for nothing**: both kinds' reads are read as the cache holds them (`useReadsHeld`) — the
+ * badge's read and the deck's are the ones that go out — so the chevron costs no request, and the
+ * other kind's read, held from an earlier look, keeps the menu up while the kind just picked is
+ * read. No sport to play — the *add a sport* card — no menu.
+ */
+export function useGamesMenu(
+  groupId: string,
+  sport: Sport | undefined,
+  chosen: GameKind,
+): GamesMenu | undefined {
+  const { asked, other } = useReadsHeld(groupId, sport, chosen);
+  const declaring = usePlayIntentOnItsWay(sport);
+  const finding = useFindingOnItsWay(groupId, sport);
+  const menu = kindMenu(chosen, asked, other);
+  return menu === undefined ? undefined : { ...menu, still: declaring || finding };
+}
+
+/**
+ * **The kinds the page's reads hold for this sport** (`kindsHeld`) — the pair the Games tab's menu is
+ * drawn from, which the deck asks which kind is a door while its own read is not in (#862).
+ */
+export function useKindsHeld(
+  groupId: string,
+  sport: Sport,
+  chosen: GameKind,
+): readonly DeckSegment[] | undefined {
+  const { asked, other } = useReadsHeld(groupId, sport, chosen);
+  return kindsHeld(asked, other);
+}
+
+/**
+ * **Both kinds' deck reads, as the cache holds them now** — their kinds, read straight off the cache
+ * and followed as it changes, with **no observer kept**: an observer that never fetches would still
+ * count as the read's (a query whose observers are all disabled is skipped by a re-read, and is never
+ * let go while the page is up), and these only look.
+ */
+function useReadsHeld(groupId: string, sport: Sport | undefined, chosen: GameKind) {
+  const client = useQueryClient();
+  const follow = useCallback(
+    (changed: () => void) => client.getQueryCache().subscribe(changed),
+    [client],
+  );
+  const held = (kind: GameKind) =>
+    sport === undefined
+      ? undefined
+      : client.getQueryData<GroupDeck>(proposalKeys.deck(groupId, sport, kind))?.segments;
+  const asked = useSyncExternalStore(follow, () => held(chosen));
+  const other = useSyncExternalStore(follow, () => held(otherKind(chosen)));
+  return { asked, other };
+}
+
+/** The Games tab's menu, and whether a tap on the tab may open it — see `useGamesMenu`. */
+export interface GamesMenu extends KindMenu {
+  /** An intent answer on its way for the sport, or its games being found: drawn, and inert. */
+  readonly still: boolean;
+}
+
+/** The kind that is not this one. */
+function otherKind(kind: GameKind): GameKind {
+  return kind === 'competitive' ? 'forFun' : 'competitive';
+}
+
+/** Whether finding is under way for this group and sport — the deck's or a deck since gone. */
+function useFindingOnItsWay(groupId: string, sport: Sport | undefined): boolean {
+  const finding = useMutationState({
+    filters: { mutationKey: proposalKeys.finding(groupId), status: 'pending' },
+    select: (mutation) => (mutation.state.variables as GamesToFind | undefined)?.sport,
+  });
+  return sport !== undefined && finding.includes(sport);
 }
 
 /** Take a card off the read it was dealt on — its segment's count and the badge's ids following. */
@@ -146,6 +235,7 @@ export function useFindGames(groupId: string, onLanded: (kind: GameKind) => void
   const client = useQueryClient();
   const landed = useLatest(onLanded);
   return useMutation<boolean, AppError, GamesToFind>({
+    mutationKey: proposalKeys.finding(groupId),
     mutationFn: ({ sport, finding }) =>
       findGames(client, { groupId, sport, kind: finding.landsOn }),
     onSuccess: (read, { finding }) => {

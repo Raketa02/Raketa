@@ -39,6 +39,12 @@ export const proposalKeys = {
    */
   bookingYeses: () => [...proposalKeys.answers(), 'booking'] as const,
   /**
+   * **A mutation key**: finding, after an intent answer on a group's Games (#741) — so the group
+   * page can tell its games are being found (`useGamesMenu`) and hold the Games tab's menu still
+   * until the deck lands (#862).
+   */
+  finding: (groupId: string) => [...proposalKeys.all, 'finding', groupId] as const,
+  /**
    * **A mutation key**: Needs your answer's visit (#819), so the envelope's badge can tell which
    * watermarks this phone has sent (`useAnswersWaiting`).
    */

@@ -19,11 +19,11 @@ import {
   forecastSides,
   gameDayWords,
   inOnGameLine,
+  kindMenuLines,
   payLabel,
   paySpoken,
   refusalMessage,
   ribbonWords,
-  segmentLabel,
   shareAside,
   sidesSpoken,
   stampsFor,
@@ -45,12 +45,54 @@ const SIDES: Pick<DeckCard, 'sides'> = {
   },
 };
 
-describe('the lines above the deck', () => {
-  it('names a segment with its count', () => {
-    expect(segmentLabel('competitive', 7)).toBe('Competitive · 7');
-    expect(segmentLabel('forFun', 1)).toBe('For fun · 1');
+describe('the Games tab’s menu (#862)', () => {
+  it('ends each live kind in today’s count, and says it after the kind', () => {
+    expect(
+      kindMenuLines([
+        { kind: 'competitive', door: false, count: 5 },
+        { kind: 'forFun', door: false, count: 1 },
+      ]),
+    ).toEqual([
+      {
+        key: 'competitive',
+        label: 'Competitive',
+        count: '5',
+        accessibilityLabel: 'Competitive, 5 games',
+      },
+      { key: 'forFun', label: 'For fun', count: '1', accessibilityLabel: 'For fun, 1 game' },
+    ]);
   });
 
+  it('counts an empty kind as nought, which is still a live kind', () => {
+    expect(kindMenuLines([{ kind: 'forFun', door: false, count: 0 }])).toEqual([
+      { key: 'forFun', label: 'For fun', count: '0', accessibilityLabel: 'For fun, 0 games' },
+    ]);
+  });
+
+  it('draws the door with no number, in today’s door words', () => {
+    expect(
+      kindMenuLines([
+        { kind: 'competitive', door: false, count: 7 },
+        { kind: 'forFun', door: true },
+      ]),
+    ).toEqual([
+      {
+        key: 'competitive',
+        label: 'Competitive',
+        count: '7',
+        accessibilityLabel: 'Competitive, 7 games',
+      },
+      {
+        key: 'forFun',
+        label: 'For fun',
+        accessibilityLabel: 'For fun, not a kind you play',
+        door: true,
+      },
+    ]);
+  });
+});
+
+describe('the lines above the deck', () => {
   it('says which weeks are full, counting one game as one', () => {
     expect(capLine({ weeks: 'this', booked: 2 })).toBe(
       'Your 2 games this week are booked — showing next week',

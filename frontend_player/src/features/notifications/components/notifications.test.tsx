@@ -71,6 +71,7 @@ import {
 import { envelope, sheetTitle } from '@/test-support/needsYourAnswer';
 import { fakePush, PUSH_TOKEN, type FakePush } from '@/test-support/platform';
 import { servedReliability } from '@/test-support/playerRecord';
+import { menuSays, menuTab } from '@/test-support/tabMenu';
 import {
   errorResponse,
   installTransport,
@@ -1066,7 +1067,7 @@ describe('the recent notices, behind the bell on Home', () => {
     );
   });
 
-  it('opens a Challenge in the kind it was dealt in, the card on top — the switch moved to it', async () => {
+  it('opens a Challenge in the kind it was dealt in, the card on top — the deck moved to it', async () => {
     const first = deckCard({ kind: 'FOR_FUN' });
     const challenge = deckCard({ kind: 'FOR_FUN', type: 'CHALLENGE' });
     stubNotices(transport, [
@@ -1100,9 +1101,9 @@ describe('the recent notices, behind the bell on Home', () => {
     fireEvent.press(await screen.findByRole('button', { name: /^Ola challenges you/ }));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
 
-    expect(
-      await screen.findByRole('button', { name: 'For fun, 2 games', selected: true }),
-    ).toBeTruthy();
+    // The Games tab says the kind it moved to, and its menu ticks it (#862).
+    expect((await menuTab('Games')).props.accessibilityLabel).toBe('Games, For fun');
+    expect(await menuSays('Games', 'For fun, 2 games', true)).toBeTruthy();
     fireEvent.press(await screen.findByRole('button', { name: 'Game details' }));
     await waitFor(() =>
       expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${challenge.proposal_id}`),

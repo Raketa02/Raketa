@@ -101,8 +101,9 @@ and never this feature's component ([#786](https://github.com/Raketa02/Raketa/is
 `auth.md`). **A change to the card's look here does not reach it by itself: whoever changes the card
 checks the hero.**
 
-**The kind is the switch's, corrected by the intent.** The group page's Competitive · For fun switch
-(`groups`' game-intent store, which Friends shares) hands in the kind chosen; the read says which
+**The kind is the page's, corrected by the intent.** The group page's Games tab's menu — its
+Competitive · For fun switch until #862, below — hands in the kind chosen (`groups`' game-intent
+store, no longer Friends' since #757); the read says which
 segments the player's intent shows, and a choice it does not show is read again as the segment it
 does (`resolveKind`, `useGroupDeck`'s second query) — so a For-fun player never lands on an empty
 Competitive deck. No segments at all is no intent declared: `DeclarationInterstitial` replaces
@@ -133,7 +134,7 @@ held and the card stays gone, with the amber _resumes_ note.
 `refreshControl` and put on whichever scroller the tab is in: the one-time question's, the starting
 card's, a failed read's (the pull mends it as the retry does), and **the deck's own**, a scroller with
 nothing to scroll that exists for the pull — its content is the page's height (`flexGrow: 1`), so the
-stage still takes what the switch and the buttons leave. A drag down is the pull's and a drag across
+stage still takes what the cap line and the buttons leave. A drag down is the pull's and a drag across
 is the card's, because `DeckStage` claims only a move further across than down, and React Native's
 Android refresh layout lets go of a touch once it has moved across. A pull's read is drawn as every
 read is (below): the card being read stays on top. What the pull re-reads is
@@ -219,8 +220,8 @@ deadline leaves silently rather than lingering until the next read to be refused
 and never a decision: the server stays the authority on whether a game is over. **The details'
 answers are the read's `actions`** (#557), not a flag of the screen's, and their DAY carries the
 date — _Saturday_ over _3 Oct_, _· next week_ from seven days out (A4.1). **The weekly cap's line sits
-under the switch**, above the deck (A1, A2.1). _Book it now_'s court block has a solid **green**
-border — the tag's own — and _Booked_ keeps `voltStroke`. The game card's three corals are recorded
+directly under the tabs**, above the deck (A1, A2.1; under the switch until #862). _Book it now_'s
+court block has a solid **green** border — the tag's own — and _Booked_ keeps `voltStroke`. The game card's three corals are recorded
 in the design system's §1.2 as meanings it already had (a stroke is _where_, a `coralInk` fill is
 attention). **Owed to the backend**: a distance for the details' WHERE (A4.1 draws _3,1 km_; a deck
 card carries none).
@@ -594,12 +595,12 @@ same phone memory as Fill in's and You’re in's, on the deck read's new field:
   every segment the intent shows — the kind not read too, Competitive first, never a rescue's. The
   mapper reads them into `GroupDeck.inCardIds`, and **`games_badge` is no longer read**: `GroupDeck`
   has no such field, and the number stays on the wire for older installed apps. **`useGamesBadge` is
-  `useUnseenCount`** over those ids, off the deck read the tab already makes for the kind the switch
+  `useUnseenCount`** over those ids, off the deck read the tab already makes for the kind the deck
   is on: no extra request, and nothing reads the other kind's deck.
 - **A list per kind** (`gamesSeen(kind)`, ADR-0208 §1), and the badge counted against both
   (`GAMES_SEEN`; `useUnseenCount` takes the lists a badge is counted against). A first cut kept one
   list for both, which a look cut back to whatever read was drawn — and **the other kind's read,
-  held from an earlier visit, can be older than a card seen since**, so moving the switch there made
+  held from an earlier visit, can be older than a card seen since**, so moving the deck there made
   a card she had just looked at new again (the code review's catch). Each kind's list is cut back
   only by its own kind's read now, which is the newest that kind has.
 - **The deck marks the whole of the kind on screen** (`GamesDeck`, `useSeeRows`): **every card the
@@ -608,14 +609,15 @@ same phone memory as Fill in's and You’re in's, on the deck read's new field:
   than a badge no visit could — whenever they change while the page is `inView` and nothing is over
   the deck: no player's record, nothing of the fill's (`useFill().over`), and neither the door's
   panel nor _Finding…_ over its area. The other kind's cards keep what they had — new, or seen on an
-  earlier visit — and move only when the switch does.
-- **A notice's card is seen as any visit is** — but only once the switch stands on its kind. The page
-  moves the switch in an effect, which runs after the deck's own, so on a page whose reads are still
-  cached the deck is drawn for one frame on the kind the switch stood on; `GroupScreen` hands the
-  deck `inView` false until it has moved the switch (the code review's catch).
+  earlier visit — and move only when the deck does; opening the Games tab's menu, which counts both
+  kinds, sees neither (#862).
+- **A notice's card is seen as any visit is** — but only once the deck stands on its kind. The page
+  moves the kind in an effect, which runs after the deck's own, so on a page whose reads are still
+  cached the deck is drawn for one frame on the kind it stood on; `GroupScreen` hands the deck
+  `inView` false until it has moved the kind (the code review's catch).
 - **`withoutCard` leaves the ids to the server**: the answered card was on screen and is seen, and a
   seen list cut back to an edit made before the server had the answer would forget it — new again
-  when a refusal puts the card back. The switch's count still follows at once.
+  when a refusal puts the card back. The menu's count still follows at once.
 
 Walked in `groupBadges.test.tsx` and mutation-checked: marking both kinds' ids, marking only the top
 card, marking only the drawn cards, one list for both kinds, dropping the page's cover, the record
@@ -739,12 +741,12 @@ a changed Games & money — re-reads the grid and its sheet with the decks.
 **The screen is `PostAGameScreen`, mounted by `groups`** (`PostAGamePage`, `/play/group/[groupId]/post`)
 because only the group knows what it hands in: the sports the reader may post in here (the page's own
 filter — rated in, among an official group's declared ones), each with how many members are rated in
-it (_Padel 10_, the roster's count), the sport the page is on and the kind its switch stands on. The
+it (_Padel 10_, the roster's count), the sport the page is on and the kind its deck stands on. The
 edge still points one way. **The draft is a feature store** (`store/postDraft.store.ts`): the four
 controls, the week shown and the pick, kept while the player stays in the group and forgotten when
 the group's page goes (`forgetPostDraft`, called by the page) and after a post. The sport and the
 kind are absent from the draft until chosen, so the page's sport and **the player's intent** — the
-switch's kind as the deck corrects it (`useGroupDeck`'s, a read the page has made already) — stand in
+deck's kind as the deck corrects it (`useGroupDeck`'s, a read the page has made already) — stand in
 without being frozen before the read lands.
 
 **The controls** (A5.1): SPORT a row of chips with the sport's dot and its count; KIND Competitive /
@@ -1420,8 +1422,9 @@ nickname is said as its owner wrote it. The harness's deck and Home people are h
 
 **The kind you don't play is a door** ([#740](https://github.com/Raketa02/Raketa/issues/740),
 [ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
-§2, Q127). The switch draws both kinds always (`switchSides`): the read's segments are the kinds the
-intent shows, and the one missing is drawn dimmed with no number — `Segment`'s `door`, its label at
+§2, Q127). _As built, on the switch — #862 moved the door into the Games tab's menu (below); what
+it says and opens is unchanged._ The switch draws both kinds always (`switchSides`): the read's
+segments are the kinds the intent shows, and the one missing is drawn dimmed with no number — `Segment`'s `door`, its label at
 .8 and nothing else, so it is the same box and the same reach as the live kind. Ania reads
 _Competitive · 7_ and a bare _For fun_, Kuba the mirror, and Zofia's _Either suits me_ is unchanged;
 an undeclared sport still draws the first-time question and no switch. **The deck still never opens
@@ -1434,14 +1437,15 @@ them, so neither moved. The panel is the first-time question's dark card and ans
 other kind is missing and what each answer costs in the live segment's count (`doorPresentation`, the
 words §28: a singular, and a zero that drops the number); _Either suits me_ is first, on the
 `primary` fill. An answer is `PUT /play-intents/{sport}` on `DECK` for the page's sport alone, and on
-landing the switch moves to the kind tapped and the group's decks are read again, as after the
-first-time question. _Keep_, a press on the live kind and Android's back close it and send nothing,
+landing the deck moves to the kind tapped and the group's decks are read again, as after the
+first-time question. _Keep_, a press on the live kind (the live kind picked in the menu since #862)
+and Android's back close it and send nothing,
 and a refusal is the interstitial's coral note above the card. A read that shows the kind tapped
 closes it, and so does a change of sport, for good. **The write is the deck's, not the panel's**:
 `GamesDeck` holds `useDeclarePlayIntent` and hands the panel the answer in flight. The panel can go
 while an answer is out — a read that now shows the kind, or a change of sport — and an answer held
-by the panel's own mutation then lost its landing: the switch never moved and nothing was read
-again. While an answer is out nothing on the switch moves, and neither _Keep_ nor back closes it. The
+by the panel's own mutation then lost its landing: the deck never moved and nothing was read
+again. While an answer is out no pick moves anything, and neither _Keep_ nor back closes it. The
 panel scrolls inside the area, so at a large text size _Keep_ is a drag away rather than cut off.
 **Calls made
 without a ruling**: the door is spoken _For fun, not a kind you play_; the panel's answers keep the
@@ -1450,6 +1454,33 @@ the panel covers the cards on paper rather than over a scrim. `groupGamesDoor.te
 against a fake server that holds each sport's intent. **Not seen on a device**: the dim, and the
 panel over the stack — the ticket asks for that walk. _Finding…_ after an answer is #741's.
 
+**The switch leaves the deck for the Games tab's menu** ([#862](https://github.com/Raketa02/Raketa/issues/862),
+PRD #859; the screens A1, A2.1; tab menu mocks 1 and 3 as illustrations). **`GamesDeck` draws no
+switch**: above the deck stand only the weekly cap's line and the offline note, directly under the
+page's tabs, and the deck takes the height. The menu is the group page's; this feature gives it
+what to draw and takes what it picks. **What to draw is `useGamesMenu`** — `kindMenu`
+(`domain/deck.ts`) off the deck reads the page already holds, both kinds' watched and never fetched
+(`enabled: false`), so the chevron costs no request: the chosen kind's read or, while it is read or
+after it failed, the other kind's, since both carry the same pair of counts; nothing before either
+has come back, nor while the first-time question is up. The kind it stands on is the deck's
+(`resolveKind` against the chosen kind's read), so the tick and the cards never disagree, and it is
+ticked only while it is live. **And whether it is still**: an intent answer on its way for the sport
+(`player_profile`'s `usePlayIntentOnItsWay`, on the declaration's new mutation key) or finding
+under way for the group and sport (`proposalKeys.finding`, `useFindGames`' key) — the mutations'
+own state, never a copy. **Its words are `kindMenuLines`**: each live kind's words ending in
+today's count (`switchSides`', the switch's rule unchanged), spoken _Competitive, 7 games_; the
+door the kind's words alone, spoken as it was (`doorSpoken`). `segmentLabel`'s _Competitive · 7_
+went with the switch. **What it picks comes through `GamesDeckHandle.pick`**: a door opens the panel
+and moves nothing; a live kind is `onChoose`'s and shuts a panel left open, as the switch's live
+kind did; nothing moves while an answer or finding is out. **Which kind is a door is what the menu
+was drawn from** (`useKindsHeld`, `kindsHeld`): the deck's own read, or while it is on its way or
+failed the reads the menu holds, so a door drawn there opens — its panel, and finding after it, lie
+over the deck's spinner or its failure as over the cards (the code review's catch: the remembered
+kind corrected to the intent's, and that kind's read not in yet). The reads held are read straight
+off the cache with no observer, which a never-fetching observer would have made the reads' own. Walked in the group page's
+suites (`groups.md`), with `domain/deck.test.ts` and `deckPresentation.test.ts` for the rule and
+the words. **Not seen on a device** (#866).
+
 **After an intent answer on Games, the tab is finding** ([#741](https://github.com/Raketa02/Raketa/issues/741),
 [ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
 §4, the screens A2.1 state 5). The deck read straight after an answer used to come before Raketa had
@@ -1457,24 +1488,24 @@ dealt anything for it, so a new player and Ania both landed on a false _Nothing 
 Now the door's panel and the first-time question both hand their landed answer to
 **`useFindGames`**. It sends `POST /pools/{id}/deal`, then marks the group's reads stale, re-reads
 the page's Fill in (who a seat is offered to reads the intent) and reads **the deck it lands on**,
-once. Then the switch moves there. Meanwhile **`FindingGames`** says _Finding for-fun games for
+once. Then the deck moves there. Meanwhile **`FindingGames`** says _Finding for-fun games for
 you…_ (the words §28) where the answer was given: in the question's place, or over the deck's area
 on the panel's ground. After _Either suits me_ on the first-time question it says _Finding games for
-you…_, and the deck stays where the switch stood (`findingAfterTheQuestion`). **It never hangs and
+you…_, and the deck stays on the kind it stood on (`findingAfterTheQuestion`). **It never hangs and
 never says it failed**:
 
 - a failed deal (the network, `pool_not_found`, a server error) falls through to the read;
 - a deal that never answers is given up at the request's own timeout;
 - that read is tried once and never paused for a reconnect (`networkMode: 'always'` on both);
-- a read that fails leaves the deck as it stands. The switch doesn't move, so with the connection
+- a read that fails leaves the deck as it stands. The kind doesn't move, so with the connection
   gone the player keeps the deck the phone has, not a spinner over one no read can reach;
 - a failure that isn't a request's is a bug, and is thrown on, not swallowed.
 
-Nothing is retried. The switch is still while finding, as it is while an answer is out. **The switch
-lands on the mutation, not on the call** (`useFindGames`' `onLanded`). A call's own callback is
-dropped when the tab unmounts, so a player who left Games mid-finding came back on the old kind.
-Moving the switch only at the end is what keeps the order **PUT, deal, deck**: moving it first would
-read the new kind's deck before the deal, for nobody. The landing moves the app-wide switch even if
+Nothing is retried. The Games tab's menu is still while finding, as it is while an answer is out
+(the switch was, until #862). **The kind lands on the mutation, not on the call** (`useFindGames`'
+`onLanded`). A call's own callback is dropped when the tab unmounts, so a player who left Games mid-finding came back on the old kind.
+Moving the kind only at the end is what keeps the order **PUT, deal, deck**: moving it first would
+read the new kind's deck before the deal, for nobody. The landing moves the app-wide kind even if
 the page has gone to another sport meanwhile, as moving it at the answer would have. An answer on the You tab asks for no deal, and
 the jobs deal those groups. `useRereadDeck` lost its one caller and went. `stubGroupDeck` now answers
 the deal with `204`, so a suite that answers the first-time question doesn't pass by the

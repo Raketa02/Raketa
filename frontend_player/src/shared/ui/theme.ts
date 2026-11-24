@@ -861,7 +861,7 @@ const size = {
    *  segment beside it prints whole. */
   segDoorOpacity: 0.8,
   /** **An option that owns a menu** (6.3 as amended 2026-11-24, #861; PRD #859): the group page's
-   *  Friends tab, and Games' from #862. Selected, with its menu offered, it draws a Feather chevron
+   *  Friends tab, and Games' since #862. Selected, with its menu offered, it draws a Feather chevron
    *  `chevron` across, `inset` in from its right edge and `gap` clear of the label — and **widens by
    *  exactly that room**, `gap + chevron + inset` (21): its flex basis is the room where every other
    *  option's is nought, so the label keeps the same share of the track as every other tab's and the

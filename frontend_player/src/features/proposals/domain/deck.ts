@@ -201,6 +201,53 @@ export function switchSides(segments: readonly DeckSegment[]): readonly SwitchSi
 }
 
 /**
+ * **The Games tab's menu** (#862, PRD #859) — where the switch's two sides went: the kind the deck
+ * stands on, both kinds in the menu's order, and the line ticked.
+ */
+export interface KindMenu {
+  /** The kind the deck stands on — the one it reads, and the one the tab is spoken with. */
+  readonly kind: GameKind;
+  /** Both kinds, as `switchSides` draws them: live with their count, or the door. */
+  readonly sides: readonly SwitchSide[];
+  /** The kind the deck stands on while it is a live one — a door is never ticked. */
+  readonly ticked: GameKind | undefined;
+}
+
+/**
+ * **The menu, off the reads the page already holds** — the deck's read of the kind chosen, and the
+ * other kind's, either of which may not be in. **Both carry the same pair of counts**, so while the
+ * kind just picked is read — or after its read failed — the menu is drawn off the other kind's, and
+ * stays usable. The kind it stands on is the deck's own (`resolveKind` against the chosen kind's
+ * read), so the tick and the cards never disagree. **There is no menu** before either read has come
+ * back, nor while the first-time question is up: a read made with no intent carries no kinds, and
+ * the chosen kind's read says so even when the other kind's still holds some.
+ */
+export function kindMenu(
+  chosen: GameKind,
+  asked: readonly DeckSegment[] | undefined,
+  other: readonly DeckSegment[] | undefined,
+): KindMenu | undefined {
+  const segments = kindsHeld(asked, other);
+  if (segments === undefined || segments.length === 0) return undefined;
+  const kind = resolveKind(chosen, asked);
+  const sides = switchSides(segments);
+  const live = sides.some((side) => side.kind === kind && !side.door);
+  return { kind, sides, ticked: live ? kind : undefined };
+}
+
+/**
+ * **The kinds the reads held say the intent shows** — the chosen kind's read's, or the other kind's
+ * while that one is not in: the pair the menu draws, and so the pair the deck asks which kind is a
+ * door, even while its own read is on its way or failed — a door drawn is a door that opens.
+ */
+export function kindsHeld(
+  asked: readonly DeckSegment[] | undefined,
+  other: readonly DeckSegment[] | undefined,
+): readonly DeckSegment[] | undefined {
+  return asked ?? other;
+}
+
+/**
  * **What a door's panel says** — the one kind the player plays, their count of it in this group
  * (the number their switch shows, so it is as old as the read), and the kind they tapped.
  */

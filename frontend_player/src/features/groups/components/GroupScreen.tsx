@@ -26,7 +26,7 @@
  *
  * **The Games tab counts the cards where somebody is already In with you, of either kind** (#553,
  * the screens A1, mock 1's *Games 4*; across both kinds since #850): the same badge, off the deck's
- * own read — the one the tab draws, for the sport the page is on and the kind its switch stands on,
+ * own read — the one the tab draws, for the sport the page is on and the kind its menu stands on,
  * whose ids are both kinds' — so the count costs no second request and nothing reads the other
  * kind's deck. **The *Fill in* tab counts its rescues** (#557, mock 11's *Fill in 1*) — read for the
  * page's sport — **and *You’re in* its rows** (#847): the reader's live yeses in this group and
@@ -34,8 +34,9 @@
  * (`useYoureInBadge`). **All three count what the player hasn't seen** (#849, #850, ADR-0208): a
  * tab's rows are seen while it is on screen — which is why the page is told whether it is the screen
  * in view (`inView`, read by the route file) and hands that to the deck and the two boards, which
- * mark what they draw; on Games, every card of the kind the switch is on, so the other kind's stay
- * new until the switch moves there — and **the tab on screen draws no badge** (split override 2).
+ * mark what they draw; on Games, every card of the kind the deck is on, so the other kind's stay
+ * new until the deck moves there, the menu's opening seeing nothing — and **the tab on screen draws no
+ * badge** (split override 2).
  *
  * **Fill in and You’re in are `proposals`' boards** (#557, split into a tab each by #847, PRD #844):
  * Fill in holds only the rescues, and says *No seats to fill right now* with none; You’re in holds only
@@ -51,24 +52,35 @@
  * screen pushed over the page — Info, a game's details — leaves it where it was, so back is the tab
  * the player left.
  *
- * **Games lays itself out** (#553): the deck fills the page between the switch and its three
+ * **Games lays itself out** (#553): the deck fills the page between the tabs and its three
  * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are
  * not a deck — the question, the starting card.
  *
- * **The Friends tab holds a menu** (#861, PRD #859; tab menu mocks 2 and 4, illustrations), where a
- * *Competitive | For fun* row stood above the court: selected, with its court drawn, the tab draws a
- * chevron and widens for it (`Segment`'s option that owns a menu), and **a press on it opens the
- * menu** — the kind of the game being built, Competitive then For fun, the current one ticked
- * (`TabMenu`). **The menu is the page's**: its open state is this page's own, it is drawn over the
+ * **Games and Friends each hold a menu** (PRD #859; tab menu mocks 1 to 4, illustrations), where a
+ * *Competitive | For fun* row stood under the tabs: selected, the tab draws a chevron and widens for
+ * it (`Segment`'s option that owns a menu), and **a press on it opens the menu** — Competitive then
+ * For fun, the current one ticked (`TabMenu`). **Friends** (#861) offers it wherever its court is
+ * drawn, for the kind of the game being built, hung by the tab's right edge. **Games** (#862) offers it
+ * where the switch was live — a sport to play and a deck read that came back with its kinds, of either
+ * kind (`useGamesMenu`, off the reads the tab bar and the deck already hold, asking for nothing) — so
+ * not while the first read is on its way, after it failed or while the first-time question is up, and
+ * still while a newly picked kind is read. Hung by the tab's left edge, its live kinds end in today's
+ * count and the kind the intent doesn't want is a door (`kindMenuLines`). **While an intent answer or
+ * its finding is out the Games tab is still**: the chevron stays drawn and a press opens nothing (the
+ * mutations' own state, off `useGamesMenu`). **The menu is the page's**: its open state is this page's own, it is drawn over the
  * page as the last layer of its tree — never on the modal stage, which would cover the tab bar and the
  * app's bottom bar — and the page measures the tab bar and the tab for it to hang from. A press on
  * the same tab, on a line, on the page around the bar, Android back and the page leaving view close
  * it; **a press on another tab goes there in one tap**, the bar being the one thing its catcher leaves
  * uncovered, and the page closes it on the way. While it is open the body takes no touch at all. **A
- * pick asks the court** (`FriendsTabHandle`), which keeps the sides it shows as the kind changes, and
- * never moves the Games deck's kind (ADR-0202). The menu is open only for the tab and the sport it
- * was opened on, so a notice turning the page to Games or a sport changing under it shuts it; and
- * a menu shut that way is forgotten, never to open again on its own.
+ * pick asks the tab it is for**: Friends' court (`FriendsTabHandle`), which keeps the sides it shows
+ * as the kind changes and never moves the Games deck's kind (ADR-0202); Games' deck
+ * (`GamesDeckHandle`), whose door's panel and write are its own — a door opens the panel, and a live
+ * kind, the one it stands on included, is chosen and shuts a panel left open. The menu is open
+ * only for the tab and the sport it was opened on, so a notice turning the page to Games or a sport
+ * changing under it shuts it, and so does a notice moving the deck's kind; and a menu shut that way is
+ * forgotten, never to open again on its own. **To read the Games menu above the body, the page holds
+ * the sport filter's state itself** (`useGroupSport`, handed to `SportFilterFrame`).
  *
  * **A player rated in nothing meets one door** (#730, ADR-0200 §2): in a player group, each of the
  * four tabs draws onboarding's `LevelDoor` in place of its content — *Get your level*, or *Carry on
@@ -88,8 +100,8 @@
  *
  * **A notice opens the deck at a card** (#559; the screens A9: *the deck opens with the card on top
  * for You complete it and Challenges*). The route hands in the card's sport, kind and id: the page
- * stands on that sport until the player picks another — never saved as a pick — the switch moves
- * to the card's kind, the page is on Games, and the deck draws the card first while it is dealt.
+ * stands on that sport until the player picks another — never saved as a pick — the deck moves to
+ * the card's kind, the page is on Games, and the deck draws the card first while it is dealt.
  *
  * **Games, Fill in and You’re in pull** — the group, for the header and the starting cards, and every
  * read `proposals` draws the three tabs from (`useRereadGroupGames`): the decks, Fill in, the live
@@ -116,8 +128,11 @@ import {
   FillInBoard,
   YoureInBoard,
   forgetPostDraft,
+  kindMenuLines,
   useFillInBadge,
   useGamesBadge,
+  useGamesMenu,
+  type GamesDeckHandle,
   useRereadGroupGames,
   useYoureInBadge,
 } from '@/features/proposals/types';
@@ -143,6 +158,7 @@ import {
 } from '../domain/groupPage';
 import type { DeckArrival, ReturningPass } from '../schemas/groupRouteParams';
 import { useGroup, useGroupReread } from '../hooks/useGroups';
+import { useGroupSport } from '../hooks/useGroupSport';
 import { usePull } from '../hooks/usePull';
 import { useFriendsGame } from '../store/friendsGame.store';
 import { useGameIntent } from '../store/gameIntent.store';
@@ -156,7 +172,7 @@ import { anotherSportRoute, groupInfoRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
 import { fillInTabLabel, gamesTabLabel, menuTabLabel, youreInTabLabel } from './groupsPresentation';
 import { ReadFailure } from './ReadFailure';
-import { SportFilterPage } from './SportFilterPage';
+import { SportFilterFrame } from './SportFilterPage';
 import { PostAGame, YoureInTab } from './YoureInTab';
 
 const COPY = GROUPS_COPY.group;
@@ -191,7 +207,7 @@ interface MenuHung {
 
 interface GroupTabsProps {
   readonly groupId: string;
-  /** The four tabs, Friends with its menu. */
+  /** The four tabs, Games and Friends with their menus. */
   readonly options: readonly SegmentOption<GroupTab>[];
   readonly selected: GroupTab;
   readonly onSelect: (tab: GroupTab) => void;
@@ -271,12 +287,28 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
   const read = useGroup(groupId);
   const group = read.data;
 
+  // The sport the page stands on until the player picks another: a notice's card's, or the one a
+  // returning pass rated last. Opening is not picking — neither is saved (ADR-0188 §2).
+  const openingSport = arrival?.sport ?? returning?.sport;
+  // The filter's state is held here rather than in the frame it draws (`SportFilterFrame`), so the
+  // page knows its sport above the body: the Games tab's menu is read for it.
+  const filter = useGroupSport(group?.declaredSports, openingSport);
+
   // A pass returning here opens on the tab it began on, from the first frame — the page that
   // began it forgot its tab as it went, so nothing is drawn for Games and then redrawn.
   const returnTab = returning?.tab;
   const tab = useGroupTab((state) => state.tabs[groupId]) ?? returnTab ?? OPENING_TAB;
   const show = useGroupTab((state) => state.show);
   const setTab = (next: GroupTab) => show(groupId, next);
+
+  // The Games tab's menu (#862), off the deck reads the tab bar and the deck already hold — for the
+  // sport the tabs are drawn for, none while the reader must add one.
+  const chosenKind = useGameIntent((state) => state.intent);
+  const gamesMenu = useGamesMenu(
+    groupId,
+    filter.toAdd.length === 0 ? filter.sport : undefined,
+    chosenKind,
+  );
 
   // The tab's menu — the page's own state (see the module note). The bar and the tab are measured
   // into refs, never state: the tab widens on every switch to Friends and back, and a measure in
@@ -286,10 +318,11 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
   const [hung, setHung] = useState<MenuHung>({ bar: undefined, trigger: undefined });
   const forgetMenu = useCallback(() => setMenu(undefined), []);
   const barFrame = useRef<MenuFrame | undefined>(undefined);
-  const tabFrame = useRef<MenuFrame | undefined>(undefined);
-  const hangMenu = () => {
+  /** Each tab that owns a menu, where it stands in the bar — Games' and Friends'. */
+  const tabFrames = useRef<Partial<Record<GroupTab, MenuFrame>>>({});
+  const hangMenu = (from: GroupTab) => {
     const bar = barFrame.current;
-    const at = tabFrame.current;
+    const at = tabFrames.current[from];
     // The tab in the page's coordinates: the bar's place, and the tab's place in the bar.
     setHung({
       bar,
@@ -301,6 +334,7 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
   };
   const friendsKind = useFriendsGame((state) => state.kind);
   const friendsTab = useRef<FriendsTabHandle>(null);
+  const gamesDeck = useRef<GamesDeckHandle>(null);
   const reread = useGroupReread(groupId);
   const rereadGames = useRereadGroupGames(groupId);
   // The group, for the header and the starting cards, and the games drawn on Games, Fill in and
@@ -319,23 +353,21 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
     />
   );
 
-  // The sport the page stands on until the player picks another: a notice's card's, or the one a
-  // returning pass rated last. Opening is not picking — neither is saved (ADR-0188 §2).
-  const openingSport = arrival?.sport ?? returning?.sport;
-
   // A notice's card: the deck, in the card's kind. Before the deck is drawn — it waits for the sport,
   // which is read off the phone — so it is never read for one kind and then another.
   const card = arrival?.card;
   const kind = arrival?.kind;
-  // The card whose kind the switch has been moved to. Until it has, the deck sees nothing (#850): on
-  // a page whose reads are still cached, the deck is drawn for the kind the switch stood on a frame
-  // before this effect moves it, and would mark cards the player never had on screen.
+  // The card whose kind the deck has been moved to. Until it has, the deck sees nothing (#850): on
+  // a page whose reads are still cached, the deck is drawn for the kind it stood on a frame before
+  // this effect moves it, and would mark cards the player never had on screen. The move shuts a
+  // menu left open (#862): the kind it would pick from is not the one it was opened over.
   const [arrivedAt, setArrivedAt] = useState<string | undefined>(undefined);
   const arrived = card === undefined || arrivedAt === card;
   useEffect(() => {
     if (kind === undefined) return;
     show(groupId, 'games');
     useGameIntent.getState().choose(kind);
+    setMenu(undefined);
     setArrivedAt(card);
   }, [card, kind, groupId, show]);
 
@@ -359,9 +391,8 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <SportFilterPage
-        {...(group?.declaredSports === undefined ? {} : { declaredSports: group.declaredSports })}
-        {...(openingSport === undefined ? {} : { opening: openingSport })}
+      <SportFilterFrame
+        filter={filter}
         onAnother={(offer) => router.replace(anotherSportRoute(groupId, tab, offer))}
         header={(pill, cover) => (
           <GroupHeader
@@ -377,42 +408,45 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
         {(sport, toAdd, needsALevel) => {
           // The sport the four tabs are drawn for — none while the reader must add one.
           const playing = toAdd.length === 0 ? sport : undefined;
-          // Friends offers its menu wherever its court is drawn — not on the add-a-sport card, not
-          // on the level door.
+          // A tab offers its menu only where there is a sport to play — not on the add-a-sport card,
+          // not on the level door: Friends wherever its court is drawn, Games wherever a deck read
+          // has come back with its kinds (`useGamesMenu`).
           const court = playing !== undefined && !needsALevel;
-          const offers = (key: GroupTab) => key === 'friends' && court;
+          const offers = (key: GroupTab) =>
+            court && (key === 'friends' || (key === 'games' && gamesMenu !== undefined));
           const menuOpen =
             menu !== undefined && menu.tab === tab && menu.sport === playing && offers(tab);
           const select = (next: GroupTab) => {
-            // A press on the selected tab that offers a menu opens it, or shuts it.
+            // A press on the selected tab that offers a menu opens it, or shuts it — on Games, not
+            // while an intent answer is on its way or its games are found: the chevron stays, inert.
             if (next === tab && offers(next) && playing !== undefined) {
               if (menuOpen) return setMenu(undefined);
-              hangMenu();
+              if (next === 'games' && gamesMenu?.still === true) return;
+              hangMenu(next);
               setMenu({ tab: next, sport: playing });
               return;
             }
             setMenu(undefined);
             setTab(next);
           };
-          const friendsMenu: SegmentMenu = {
-            offered: offers('friends'),
-            open: menuOpen,
+          const menuOf = (key: GroupTab): SegmentMenu => ({
+            offered: offers(key),
+            open: menuOpen && tab === key,
             onFrame: (frame) => {
-              tabFrame.current = frame;
+              tabFrames.current[key] = frame;
             },
-          };
-          const options = TABS.map((option) =>
-            option.key !== 'friends'
-              ? option
-              : {
-                  ...option,
-                  menu: friendsMenu,
-                  // Selected with its menu offered, it says the kind it holds.
-                  ...(tab === 'friends' && friendsMenu.offered
-                    ? { accessibilityLabel: menuTabLabel('friends', friendsKind) }
-                    : {}),
-                },
-          );
+          });
+          // Selected with its menu offered, a tab says the kind it holds: *Games, Competitive*.
+          const heldKind = (key: GroupTab): GameIntent | undefined =>
+            key === 'friends' ? friendsKind : key === 'games' ? gamesMenu?.kind : undefined;
+          const options = TABS.map((option) => {
+            if (option.key !== 'friends' && option.key !== 'games') return option;
+            const owned = { ...option, menu: menuOf(option.key) };
+            const held = heldKind(option.key);
+            return tab === option.key && owned.menu.offered && held !== undefined
+              ? { ...owned, accessibilityLabel: menuTabLabel(option.key, held) }
+              : owned;
+          });
           return group === undefined ? (
             read.error === null ? null : (
               <View style={s.body}>
@@ -442,11 +476,16 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
               </View>
               {tab === 'games' && playing !== undefined ? (
                 // The deck lays itself out — see the module note.
-                <View style={s.fill}>
+                <View
+                  style={s.fill}
+                  // Under an open menu the deck takes no touch: a press there only closes it.
+                  pointerEvents={menuOpen ? 'none' : 'auto'}
+                >
                   <GamesTab
                     group={group}
                     sport={playing}
-                    // A notice's deck sees nothing until the switch stands on its kind.
+                    handle={gamesDeck}
+                    // A notice's deck sees nothing until it stands on the card's kind.
                     inView={inView && arrived}
                     refreshControl={pullControl}
                     {...(card === undefined ? {} : { onTop: card })}
@@ -482,6 +521,20 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
                 </View>
               ) : null}
               {/* The tab's menu, over the page, last — see the module note. */}
+              {tab === 'games' && court && gamesMenu !== undefined ? (
+                <TabMenu
+                  open={menuOpen}
+                  lines={kindMenuLines(gamesMenu.sides)}
+                  selected={gamesMenu.ticked}
+                  trigger={hung.trigger}
+                  bar={hung.bar}
+                  align="start"
+                  onClose={forgetMenu}
+                  // The deck takes the line: a door opens its panel, and a live kind — the one it
+                  // stands on too — is chosen and shuts a panel left open.
+                  onPick={(picked) => gamesDeck.current?.pick(picked)}
+                />
+              ) : null}
               {tab === 'friends' && court ? (
                 <TabMenu
                   open={menuOpen}
@@ -501,7 +554,7 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
             </>
           );
         }}
-      </SportFilterPage>
+      </SportFilterFrame>
     </SafeAreaView>
   );
 }
@@ -523,7 +576,8 @@ function TabBody({
 }) {
   switch (tab) {
     case 'games':
-      return <GamesTab group={group} sport={sport} inView={inView} />;
+      // Never drawn here: Games lays itself out, outside this scroller — see the module note.
+      return null;
     case 'fillIn':
       return <FillInBoard groupId={group.id} sport={sport} inView={inView} />;
     case 'youreIn':

@@ -20,6 +20,7 @@ import { sentenceList } from '@/shared/formatting/sentenceList';
 import { dayDate } from '@/shared/date/calendarDay';
 import { platformClock, platformDay } from '@/shared/date/platformZone';
 import { dayLabel, dayName } from '@/shared/vocabulary/availabilityPresentation';
+import type { TabMenuLine } from '@/shared/ui';
 import { balanceWord } from '@/shared/vocabulary/balancePresentation';
 import type { Weekday } from '@/shared/vocabulary/week';
 
@@ -33,6 +34,7 @@ import {
   type Overlap,
   type RescueGone,
   type Ribbon,
+  type SwitchSide,
   type WeekCap,
 } from '../domain/deck';
 import type { PaymentDue } from '../domain/details';
@@ -41,6 +43,7 @@ import type { Deadline, YourTime } from '../domain/home';
 import type { DayRange, GameKind, ProposalStatus } from '../domain/vocabulary';
 import { gameEndsAt, weekdayAt, type GameDay } from '../domain/when';
 
+import { doorSpoken } from './doorPresentation';
 import type { FactWords } from './GameFacts';
 import { HOME_GAME_COPY } from './homeCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
@@ -57,16 +60,36 @@ export const LINE_JOIN = DOT;
 const SIDE_JOIN = ' + ';
 
 // ---------------------------------------------------------------------------
-// The switch and the lines above the deck
+// The Games tab's menu and the lines above the deck
 // ---------------------------------------------------------------------------
 
-/** *Competitive · 7* — one side of the switch (mock 9). */
-export function segmentLabel(kind: GameKind, count: number): string {
-  return `${COPY.kind[kind]}${DOT}${count}`;
+/**
+ * **The Games tab's menu's lines** (#862, PRD #859; tab menu mock 3, an illustration) — where the
+ * switch's *Competitive · 7 / For fun · 1* stood: each live kind in its words, ending in **today's
+ * count** (`switchSides`' own, unchanged), and spoken *Competitive, 7 games*; the door in the kind's
+ * words alone, **with no number**, spoken as the door was (`doorSpoken`). Whether a line is the one
+ * selected is its state, never its words.
+ */
+export function kindMenuLines(sides: readonly SwitchSide[]): readonly TabMenuLine<GameKind>[] {
+  return sides.map((side) =>
+    side.door
+      ? {
+          key: side.kind,
+          label: COPY.kind[side.kind],
+          accessibilityLabel: doorSpoken(side.kind),
+          door: true,
+        }
+      : {
+          key: side.kind,
+          label: COPY.kind[side.kind],
+          count: `${side.count}`,
+          accessibilityLabel: segmentSpoken(side.kind, side.count),
+        },
+  );
 }
 
-/** *Competitive, 7 games* — the same segment, spoken. */
-export function segmentSpoken(kind: GameKind, count: number): string {
+/** *Competitive, 7 games* — a live kind's line, spoken. */
+function segmentSpoken(kind: GameKind, count: number): string {
   return `${COPY.kind[kind]}, ${counted(count, 'game', 'games')}`;
 }
 

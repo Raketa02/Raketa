@@ -353,8 +353,13 @@ describe('a player rated in nothing, in a player group', () => {
       stubAnia([WEDNESDAY]);
       await openTheGroup(WEDNESDAY);
 
-      // Games, which the page opens on.
+      // Games, which the page opens on — with no menu behind the door either (#862).
       await expectTheDoor();
+      expect(
+        screen.queryByTestId('segment-chevron-games', { includeHiddenElements: true }),
+      ).toBeNull();
+      fireEvent.press(await tab(TABS.games, true));
+      expect(screen.queryByTestId('tab-menu', { includeHiddenElements: true })).toBeNull();
       await openTab(TABS.fillIn);
       await expectTheDoor();
       await openTab(TABS.youreIn);

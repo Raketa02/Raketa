@@ -40,7 +40,7 @@ import {
   type FakeShare,
 } from '@/test-support/platform';
 import { stubGroupDeck } from '@/test-support/groupDeck';
-import { pickKind } from '@/test-support/tabMenu';
+import { menuTab, pickKind } from '@/test-support/tabMenu';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import { useFriendsGame } from '../store/friendsGame.store';
@@ -420,12 +420,13 @@ describe('the tab bar', () => {
   it('is Games · Fill in · You’re in · Friends, with no counts, and opens on Games', async () => {
     await openGroup();
 
-    expect(await tab('Games', true)).toBeTruthy();
+    // Selected, with its deck read, Games says the kind its menu holds (#862).
+    expect(await menuTab('Games')).toBeTruthy();
     const names = screen
-      .getAllByRole('button', { name: /^(Games|Fill in|You’re in|Friends)$/ })
+      .getAllByRole('button', { name: /^(Games|Fill in|You’re in|Friends)(,|$)/ })
       .map((one) => one.props.accessibilityLabel as string);
     // In this order, and the label is lower-case *i* with the curly apostrophe.
-    expect(names).toEqual(['Games', 'Fill in', 'You’re in', 'Friends']);
+    expect(names).toEqual(['Games, Competitive', 'Fill in', 'You’re in', 'Friends']);
     expect(await tab('You’re in', false)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^Info/ })).toBeNull();
   });

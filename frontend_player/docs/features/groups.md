@@ -577,18 +577,51 @@ and then went with the old loop ([#576](https://github.com/Raketa02/Raketa/issue
 here changed either time: Play opens on Groups, and no flag decides it any more.
 
 **Games is the deck** ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A1–A2).
-`GamesTab` hands `proposals`' `GamesDeck` the kind the page's switch stands on — the game-intent
-store, which Friends' kind no longer shares since #757 (it is the Friends tab's menu's since #861) —
-and the starting card
+`GamesTab` hands `proposals`' `GamesDeck` the kind the Games tab's menu stands on (below; the
+switch's until #862) — the game-intent store, which Friends' kind no longer shares since #757 (it is
+the Friends tab's menu's since #861) — each line picked in that menu, and the starting card
 to draw while the segment deals nothing. **The starting card is unchanged** (_Just you so far_, _3 of
 4_, _Nothing picked right now_), and _Nothing picked right now_ gains a third door under the link's
 two, _Post a game_ — the floating button's own `PostAGame` (You’re in's since #847), in `LinkCard`'s `foot`, open since #558. **The tab bar counts Games** — the cards somebody is already In on with you, off
 the same deck read the tab draws (`useGamesBadge`), in the requests count's mark and spoken _Games, 4 with
 somebody In_; Fill in counts its rescues, and You’re in its rows (below). **Games lays itself out**:
-the deck fills the page between its switch and its three buttons, so `GroupScreen` draws it outside
+the deck fills the page between the tabs and its three buttons, so `GroupScreen` draws it outside
 the page's scroller, and the deck scrolls itself in the states that are not a deck. Every suite that
 opens a group's page stubs the deck (`test-support/groupDeck`'s quiet deck); the tab's own walk is
 `groupGames.test.tsx`. The record of the deck itself is [`proposals.md`](proposals.md).
+
+**The deck's kind is picked in the Games tab's menu, and the cap line sits right under the tabs**
+([#862](https://github.com/Raketa02/Raketa/issues/862), PRD #859; the screens A1, A2.1; tab menu
+mocks 1 and 3 as illustrations). The deck's _Competitive · N / For fun · N_ row is gone: the weekly
+cap's line and the offline note stand directly under the tabs, and the deck takes the height. **The
+chevron's rule is the switch's**: the selected Games tab draws one where there is a sport to play —
+no _add a sport_ card, no level door — and a deck read of this group and sport has come back with its
+kinds, **of either kind** (`proposals`' `useGamesMenu`, off `kindMenu`). So none while the first read
+is on its way, after it failed, or while the first-time question is up; and it stays while a newly
+picked kind is read, drawn off the other kind's read, which carries the same pair of counts. **It
+costs no request**: both kinds' reads are watched, never fetched — the badge's read and the deck's are
+the ones that go out. The tab is spoken _Games, Competitive_, and **a press opens the menu** hung by
+the tab's left edge: _Competitive_ then _For fun_, the deck's kind ticked, each live kind ending in
+today's count (`kindMenuLines`, `switchSides`' numbers), the kind the intent doesn't want a door —
+dimmed, no number, no tick — whose line closes the menu and opens the deck's `KindDoor` over the deck.
+**While an intent answer or its finding is out the tab is still**: the chevron stays drawn so the bar
+doesn't jump, and a press opens nothing — read off the two mutations' own state
+(`usePlayIntentOnItsWay`, `proposalKeys.finding`), never a store's copy. **A pick goes to the deck**
+through a handle (`GamesDeckHandle`), because the panel and its write are the deck's: a door opens
+its panel; a live kind is chosen in `gameIntent.store` and drawn at once from a cached read, under the
+deck's spinner from an uncached one and over its `ReadFailed` from a failed one, the menu working
+throughout — a door drawn off the other kind's read opens over them too; the kind it stands on
+changes nothing but a panel left open, which it shuts. **A press on the tab while the panel is open opens
+the menu over it, and a live kind picked there closes the panel** — the switch's own rule, which the
+grilling had left open (the screens A2.1). **A notice moving the deck's kind closes a menu left open**
+(the arrival's effect). To read its sport above the body, **the page holds the filter's state itself**
+(`useGroupSport` handed to `SportFilterFrame`), as Members' Administrator view does. Walked in
+`groupGames.test.tsx` (every chevron state, the lines, the three loads, a notice),
+`groupGamesDoor.test.tsx` (the door from the menu, its three answers, the still tab) and
+`groupBadges.test.tsx` (opening the menu sees nothing) through `test-support/tabMenu.ts`, with the
+absent states in `officialGroups.test.tsx` and `theDoorWherePlayBegins.test.tsx`. **Not seen on a
+device** — the Games chevron, its menu over the deck and the cap line under the tabs are asked for a
+look (#866).
 
 **Fill in is `proposals`' board** ([#557](https://github.com/Raketa02/Raketa/issues/557), the screens
 A1, A3; mocks 11–14). Until #847 split it, `GroupScreen` drew one board as the tab — _Seats to fill_,
@@ -650,18 +683,19 @@ Until then it was the server's `games_badge`, which never cleared and was drawn 
 too. Now it is the deck read's ids (`in_card_ids`, #846, across both kinds) minus the ids seen, read
 off the deck the tab already draws — **no extra request, and nothing reads the other kind's deck**;
 `games_badge` stays on the wire and is not read. **Seen per kind**: while Games is on screen the deck
-marks every card of the kind its switch is on, not only the top one, so the other kind's cards stay
-new until the switch moves there — Marta, on Competitive, opens Games and leaves with _Games 1_ still
-there for Kuba's For-fun yes, and it goes once she has switched to For fun. A notice that opens the
-deck at a card leaves its kind seen, like any visit, because the switch moves there first. **The tab
+marks every card of the kind it is on, not only the top one, so the other kind's cards stay new
+until the deck moves there — Marta, on Competitive, opens Games and leaves with _Games 1_ still there
+for Kuba's For-fun yes, and it goes once she has switched to For fun (in the Games tab's menu since
+#862, whose opening sees nothing). A notice that opens the deck at a card leaves its kind seen, like
+any visit, because the deck moves there first. **The tab
 on screen draws no badge**, now on Games too: `TabsWithCounts` skips the selected tab for all three
 (split override 2), so the other kind's new cards show only once the player leaves Games — ADR-0208's
 ruling. Spoken _Games, 4 new with somebody In_ (`gamesTabLabel`). This feature's part is the tab bar
 and handing `inView` to `GamesTab`, which hands it to the deck — **false while a notice's kind is
-still on its way to the switch** (`arrived`): the page moves the switch in an effect that runs after
-the deck's, and on a page whose reads are cached the deck would otherwise mark the kind the switch
+still on its way to the deck** (`arrived`): the page moves the deck's kind in an effect that runs
+after the deck's, and on a page whose reads are cached the deck would otherwise mark the kind it
 stood on for one frame (the code review's catch). The marking is `proposals.md`'s.
-Walked in `groupBadges.test.tsx` (the other kind's card, a visit on one kind, the switch, a changed
+Walked in `groupBadges.test.tsx` (the other kind's card, a visit on one kind, a kind picked, a changed
 card, an older read of the other kind, a card this build cannot draw, a relaunch, sign-out, a
 notice's card on a cold and a warm cache, and the details, a record and _It's a game!_ over the
 deck). **Not seen on a device.**
@@ -684,7 +718,7 @@ out of each other's way.
 the screens A5). Both doors — the floating button (Fill in's then, You’re in's since #847) and _Nothing picked right now_'s third — push
 `/play/group/[groupId]/post`, whose route mounts `PostAGamePage`: it hands the screen the page's own
 sport filter (`useGroupSport`), each sport's rated count off the group's roster, the page's sport and
-the switch's kind; a reader rated in none of an official group's sports gets `AddSportCard` with _Get
+the deck's kind; a reader rated in none of an official group's sports gets `AddSportCard` with _Get
 rated in padel to post here_ (Q80). **Which tab the page is on is now a store** (`groupTab.store`)
 rather than its state, because _Post a game_ reads it and moves it from over the page. Until #848 it
 turned the page to Fill in **as it opened** (You’re in from #847), so every way back landed on the
@@ -718,8 +752,9 @@ the screens A9: _the deck opens with the card on top_). The route reads an **arr
 group's id — the card's sport, kind and id, all three or none (`parseGroupRouteParams`), spelled by
 `groupDeckRoute`, which `notifications` pushes. The page stands on the card's sport until the player
 picks another (`useGroupSport`'s `opening`, `openingSport`'s `wanted`) — **opening is not picking**, so
-the phone's last sport is untouched — turns to Games, moves the switch to the card's kind
-(`gameIntent.store`, one value for the app), and hands the card to the deck as `onTop`. An arrival
+the phone's last sport is untouched — turns to Games, moves the deck to the card's kind
+(`gameIntent.store`, one value for the app), shutting a Games menu left open (#862), and hands the
+card to the deck as `onTop`. An arrival
 this build cannot read opens the page as it always opens: the group's id alone is a page.
 
 **Members' score tag is the served band, on every row** ([#660](https://github.com/Raketa02/Raketa/issues/660),
