@@ -83,7 +83,6 @@ export const DISCOVERY_COPY = {
     back: 'Back to Home',
     pillHint: 'Shows new players in another sport',
     nobodyAtAll: 'Nobody new right now',
-    reading: 'Reading new players…',
   },
   sameLevel: {
     /** FOR YOU's line (#820) — its title: the row was *SAME COMPETITIVE LEVEL PLAYERS*. */
@@ -102,7 +101,6 @@ export const DISCOVERY_COPY = {
     sameLevel: 'Same level',
     pillHint: 'Compares everybody in another sport',
     nobodyAtAll: 'Nobody to compare with right now',
-    reading: 'Reading players at your level…',
   },
   sameVibe: {
     /** FOR YOU's line (#820) — its title: the row was *SAME VIBE PLAYERS*. */
@@ -113,7 +111,6 @@ export const DISCOVERY_COPY = {
     back: 'Back to Home',
     pillHint: 'Shows who shares your tags in another sport',
     nobodyAtAll: 'Nobody shares your tags right now',
-    reading: 'Reading same vibe players…',
   },
 } as const;
 

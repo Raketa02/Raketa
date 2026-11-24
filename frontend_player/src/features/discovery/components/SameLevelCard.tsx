@@ -25,6 +25,10 @@
  * amber 55–69, red under 55) in the game cards' inks (`BALANCE_FIGURE`).
  *
  * Home's row hands the rail's width; See all stretches the card across the content.
+ *
+ * **While See all's first page is read, the card is one skeleton block** (`SAME_LEVEL_CARD_SKELETON`,
+ * [#872](https://github.com/Raketa02/Raketa/issues/872)): a dark card is drawn as a `skeleton` block,
+ * never a dark one (design system 5.6), at its own corner and at the height its drawing gives it.
  */
 
 import { Feather } from '@expo/vector-icons';
@@ -33,7 +37,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BAND_NAMES, bandPresentation, sportLabel } from '@/features/onboarding/types';
 import { RoundFriendButton } from '@/features/friends/types';
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
-import { BALANCE_FIGURE, ComparisonBar, PlayerPhoto, theme } from '@/shared/ui';
+import { BALANCE_FIGURE, ComparisonBar, PlayerPhoto, SkeletonBlock, theme } from '@/shared/ui';
 import { balanceTone } from '@/shared/vocabulary/balancePresentation';
 
 import { foundAtSameLevel, moreSportsOf, type SameLevelPlayer } from '../domain/sameLevel';
@@ -46,6 +50,7 @@ import {
   pairingLabel,
   sportsCount,
 } from './discoveryCopy';
+import type { SeeAllSkeletonTile } from './SeeAllScreen';
 
 export interface SameLevelCardProps {
   readonly player: SameLevelPlayer;
@@ -165,9 +170,45 @@ export function SameLevelCard({ player, you, width, onOpen, onCompare }: SameLev
   );
 }
 
+/** **A card while See all's first page is read** (#872): one block, as tall as the card. */
+export const SAME_LEVEL_CARD_SKELETON: SeeAllSkeletonTile = {
+  height: (_width, fontScale) => cardHeight(fontScale),
+  Tile: SameLevelCardSkeleton,
+};
+
+function SameLevelCardSkeleton() {
+  return <SkeletonBlock style={s.skeleton} />;
+}
+
+/**
+ * **The card's height**, read off its drawing: `lg` above and `xs` below; the pairing — the taller
+ * of a side (the face, the nickname and the level, `xxs` apart) and the middle (the %, *EVEN* `xxs`
+ * under it, the sport `xs` under that); the comparison bar `md` under it (its *YOU* row, the mark's
+ * row and the band names, `ComparisonBar`'s three, set at a fixed size); and the foot `xs` under
+ * that, a reach tall. Every other line grows with the phone's text size, as the OS grows it.
+ */
+function cardHeight(fontScale: number): number {
+  const { space, type, num, size } = theme;
+  const bar = size.comparisonBar;
+  const line = (role: { readonly lineHeight: number }) => role.lineHeight * fontScale;
+  const side = FACE + space.xxs + line(type.h2) + space.xxs + line(num.s);
+  const middle =
+    line(num.xl) +
+    space.xxs +
+    line(type.eyebrow) +
+    space.xs +
+    Math.max(size.sportDot, line(type.rlLabel));
+  const comparison =
+    type.tag.lineHeight + bar.labelGap + bar.markHeight + bar.namesTop + type.tag.lineHeight;
+  const foot = Math.max(size.minTouch, line(type.rlValue));
+  return space.lg + Math.max(side, middle) + space.md + comparison + space.xs + foot + space.xs;
+}
+
 const FACE = theme.size.sameLevel.face;
 
 const s = StyleSheet.create({
+  // The whole card, at the dark card's corner.
+  skeleton: { flex: 1, borderRadius: theme.radius.cardDark },
   // 5.2's dark card — its radius and padding — on the card's own ground (7.34). No shadow.
   card: {
     backgroundColor: theme.color.levelCardGround,

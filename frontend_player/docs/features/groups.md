@@ -978,3 +978,21 @@ list; the sheet from a card, and closed for good when a read drops it; _Join_ an
 page drawn at once on Home's line; a page-only card's join; a refusal; _Asked_; _You're in_; and back
 to Home with the line still open. **Not seen on a device** — a look is owed: the page's header, the full-width card, the
 gaps and the pull.
+
+**Groups heating up shimmers while its first page is read** (2026-11-24,
+[#872](https://github.com/Raketa02/Raketa/issues/872); PRD #867, the loading shimmer log §10; design
+system 5.6). The spinner is gone. Under the real header, **the line's card stands as its skeleton at
+the content's whole width, `sm` apart, as many as fill the screen** (`HottestGroupsScreen`'s
+`HottestGroupsSkeleton`), on one `SkeletonGround`; the first page comes in on `Reveal`'s cross-fade once
+its read finishes. See all's rules hold (`discovery.md`): the failure and the offline note take the
+skeleton's place; the skeleton stays through Query's retries and stands again on _Try again_ or the
+connection back; an empty first page says its line; a pull and a later page never show it. **The card
+is 5.1's white card drawn as itself** (`HottestGroupCardSkeleton`), at the height its drawing gives it
+(`hottestCardHeight`, its words' lines grown with the phone's text size), with the shapes every card
+has: the band edge to edge, the shield over it in the card's white ring, the name, and both figures
+over their words, set at the widths of _14 games this week_ and _11 players_. **Calls made here**: the tag (only the hottest few have one), the faces (as many
+as the server sends) and the chip (its words are the reader's relation) are not drawn, and the foot
+keeps their room; the spinner's spoken name went with the spinner. Walked in
+`hottestGroupsPage.test.tsx`: the skeleton at the card's size filling the window, then the list; the
+empty line; the retries, the failure and _Try again_; the offline note and the connection back; and a
+pull. **Not seen on a device**: a look is owed at the card's shimmer and the fade onto the list.

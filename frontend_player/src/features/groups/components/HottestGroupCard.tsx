@@ -25,13 +25,21 @@
  * the body's door a second time, hidden from a listener, who reaches the sheet by the body.
  *
  * **Everything is the server's**: the tag, the figures, the faces.
+ *
+ * **While Groups heating up's first page is read, the card stands as its skeleton**
+ * (`HottestGroupCardSkeleton`, [#872](https://github.com/Raketa02/Raketa/issues/872)): 5.1's white
+ * card is always there, so it is drawn as itself, at the card's own height, with the shapes every
+ * card has inside it — the band, the shield over it in the card's white ring, the name, and the two
+ * figures over their words. The tag is the hottest few's and the faces are as many as the server
+ * sends, so neither is drawn; nor is the chip, whose words are the reader's relation — the foot keeps
+ * its room.
  */
 
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { Button, Card, Plus, theme } from '@/shared/ui';
+import { Button, Card, Plus, SkeletonBlock, SkeletonLine, SkeletonWords, theme } from '@/shared/ui';
 
 import type { HottestGroup } from '../domain/group';
 import type { GroupAction } from '../domain/groupRules';
@@ -212,10 +220,105 @@ function TagPill({ tag }: { readonly tag: HeatTag }) {
   );
 }
 
+/** **A card while the page's first read is out** (#872): the white card, and its shapes. */
+export function HottestGroupCardSkeleton({
+  width,
+  height,
+}: {
+  readonly width: number;
+  /** `hottestCardHeight`'s, at the phone's text size. */
+  readonly height: number;
+}) {
+  return (
+    <View testID="hottest-skeleton-card" style={[s.skeletonCard, { width, height }]}>
+      <SkeletonBlock style={s.skeletonBand} />
+      <View style={s.skeletonShield}>
+        <SkeletonBlock style={s.skeletonShieldTile} />
+      </View>
+      <View style={s.body}>
+        <SkeletonLine role={theme.type.h2} width="50%" />
+        <View style={s.figures}>
+          {/* Two figures each, as most cards draw. Worked out at the call. */}
+          <View style={s.figure}>
+            <SkeletonWords role={FIGURE} words="14" />
+            <SkeletonWords role={theme.type.tiny} words={gamesThisWeekWords(14)} />
+          </View>
+          <View style={[s.figure, s.figureEnd]}>
+            <SkeletonWords role={FIGURE} words="11" style={s.skeletonEnd} />
+            <SkeletonWords role={theme.type.tiny} words={HOT.players} style={s.skeletonEnd} />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * **The card's height**, read off its drawing: its border; the band; the body under it — the
+ * shield's overhang and `sm` (`BODY_TOP`), the name, `xs`, and the figures, each number over its
+ * words `xxs` apart; and the foot — `sm` above, `md` below, and between them the faces' reach, a
+ * button tall, the chip beside them a step shorter. The words' lines grow with the phone's text size
+ * (`fontScale`), as the OS grows them.
+ */
+export function hottestCardHeight(fontScale: number): number {
+  const { space, type, num, size } = theme;
+  return (
+    2 * CARD_BORDER +
+    SIZE.band +
+    BODY_TOP +
+    type.h2.lineHeight * fontScale +
+    space.xs +
+    num.m.lineHeight * fontScale +
+    space.xxs +
+    type.tiny.lineHeight * fontScale +
+    space.sm +
+    size.btn +
+    space.md
+  );
+}
+
 /** Below the band: the shield's overhang under it, then 9 to the name. */
 const BODY_TOP = SIZE.shieldTop + theme.size.monogram.shield - SIZE.band + theme.space.sm;
 
+/** 5.1's card border, a `line` point all round. */
+const CARD_BORDER = 1;
+
+/** A figure's number, as the card sets it. */
+const FIGURE = { ...theme.num.m, ...theme.tabular };
+
+/** The shield's two lower corners — `GroupMonogram`'s, on its outer edge. */
+const SHIELD_FOOT = Math.round(theme.size.monogram.shield * SIZE.shieldFoot);
+
 const s = StyleSheet.create({
+  // 5.1's card drawn as itself, its padding moved inside as the card's is.
+  skeletonCard: {
+    backgroundColor: theme.color.surface,
+    borderWidth: CARD_BORDER,
+    borderColor: theme.color.line,
+    borderRadius: theme.radius.card,
+    overflow: 'hidden',
+  },
+  // Edge to edge, the card's corner clipping it, as the band is.
+  skeletonBand: { height: SIZE.band, borderRadius: 0 },
+  // The shield's place, its ring the card's white — so it lies over the band, as the real one does.
+  skeletonShield: {
+    position: 'absolute',
+    top: SIZE.shieldTop,
+    left: theme.space.md,
+    width: theme.size.monogram.shield,
+    height: theme.size.monogram.shield,
+    padding: SIZE.shieldRing,
+    backgroundColor: theme.color.surface,
+    borderBottomLeftRadius: SHIELD_FOOT,
+    borderBottomRightRadius: SHIELD_FOOT,
+  },
+  skeletonShieldTile: {
+    flex: 1,
+    borderRadius: 0,
+    borderBottomLeftRadius: SHIELD_FOOT - SIZE.shieldRing,
+    borderBottomRightRadius: SHIELD_FOOT - SIZE.shieldRing,
+  },
+  skeletonEnd: { alignSelf: 'flex-end' },
   // 5.1's card, its padding moved inside so the band runs to the card's edges.
   card: { padding: 0, overflow: 'hidden' },
   band: { height: SIZE.band },

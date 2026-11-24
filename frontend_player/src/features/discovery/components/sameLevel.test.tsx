@@ -21,11 +21,13 @@
  * after a write is the read again, never this client guessing.
  */
 
+import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { FlatList, StyleSheet, type TextStyle } from 'react-native';
+import { Dimensions, FlatList, StyleSheet, type TextStyle } from 'react-native';
 
 import { FRIENDS_COPY, roundLabel } from '@/features/friends/types';
 import { GROUPS_COPY } from '@/features/groups/types';
+import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
@@ -52,6 +54,7 @@ import {
 } from '@/test-support/transport';
 
 import { DISCOVERY_COPY, nobodyToCompareIn } from './discoveryCopy';
+import { SAME_LEVEL_CARD_SKELETON } from './SameLevelCard';
 
 const COPY = DISCOVERY_COPY.sameLevel;
 
@@ -225,6 +228,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  onlineManager.setOnline(true);
   transport.restore();
   queryClient.clear();
   useToastQueue.setState({ queue: [] });
@@ -632,5 +636,110 @@ describe('See all', () => {
 
     expect(await screen.findByText(nobodyToCompareIn('squash'))).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sport: Squash' })).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// See all's skeleton while its first page is read (#872, PRD #867)
+// ---------------------------------------------------------------------------
+
+describe('See all, while its first page is read (#872)', () => {
+  /** See all's skeleton — hidden from a listener, so found by its id. */
+  const skeleton = () => screen.queryByTestId('see-all-skeleton', HIDDEN);
+  /** Past the reveal's cross-fade, and a frame. */
+  const pastTheFade = () => act(() => jest.advanceTimersByTime(theme.motion.fade + 16));
+  const zofia = () => screen.queryByTestId(`same-level-${ZOFIA.player_id}`);
+
+  /** See all pressed on Home's row, its first page held on its way. */
+  async function openHeld() {
+    await homeWithTheRow();
+    const first = transport.hold('GET', SAME_LEVEL_ALL_PATH);
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/same-level'));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    return first;
+  }
+
+  it('shimmers full-width cards at the card’s own height under the real header, then fades the page in', async () => {
+    levelServer();
+    const first = await openHeld();
+
+    expect(skeleton()).not.toBeNull();
+    expect(screen.getByText(COPY.title)).toBeTruthy();
+    // The pill stands at its final shape, offering every sport until the page says which.
+    expect(screen.getByRole('button', { name: 'Sport: All' })).toBeTruthy();
+    expect(zofia()).toBeNull();
+    // One a line, at the content's whole width, as many lines as fill the window.
+    const window = Dimensions.get('window');
+    const content = window.width - 2 * theme.size.gutter;
+    const tall = SAME_LEVEL_CARD_SKELETON.height(content, window.fontScale);
+    const cards = screen.getAllByTestId('see-all-skeleton-tile', HIDDEN);
+    for (const each of cards) {
+      expect(StyleSheet.flatten(each.props.style)).toMatchObject({ width: content, height: tall });
+    }
+    expect(cards.length * (tall + theme.space.sm)).toBeGreaterThanOrEqual(window.height);
+    expect((cards.length - 1) * (tall + theme.space.sm)).toBeLessThan(window.height);
+
+    await act(async () => first.land());
+
+    expect(await screen.findByTestId(`same-level-${ZOFIA.player_id}`)).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+    expect(pageReads()).toHaveLength(1);
+  });
+
+  it('says the empty line in the list’s place when the first page holds nobody — never a skeleton', async () => {
+    levelServer();
+    await homeWithTheRow();
+    transport.on('GET', SAME_LEVEL_ALL_PATH, () =>
+      json<Wire['SameLevelPageResponse']>({ players: [], next: null, sports: [] }),
+    );
+    const first = transport.hold('GET', SAME_LEVEL_ALL_PATH);
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    expect(skeleton()).not.toBeNull();
+
+    await act(async () => first.land());
+
+    expect(await screen.findByText(COPY.nobodyAtAll)).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+  });
+
+  it('gives way to the failure and its Try again once the retries are spent', async () => {
+    levelServer();
+    transport.on('GET', SAME_LEVEL_ALL_PATH, () => errorResponse(503, 'service_unavailable'));
+    await homeWithTheRow();
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/same-level'));
+    expect(skeleton()).not.toBeNull();
+
+    await act(() => jest.advanceTimersByTimeAsync(30_000));
+
+    const again = await screen.findByRole('button', { name: GROUPS_COPY.retry });
+    expect(screen.getByRole('alert')).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    levelServer();
+    fireEvent.press(again);
+    expect(await screen.findByTestId(`same-level-${ZOFIA.player_id}`)).toBeTruthy();
+  });
+
+  it('gives way to the amber note while the read waits for a connection', async () => {
+    levelServer();
+    const first = await openHeld();
+    expect(skeleton()).not.toBeNull();
+
+    act(() => onlineManager.setOnline(false));
+    await act(async () => first.drop());
+    await act(() => jest.advanceTimersByTimeAsync(1_500));
+
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    act(() => onlineManager.setOnline(true));
+    expect(await screen.findByTestId(`same-level-${ZOFIA.player_id}`)).toBeTruthy();
   });
 });

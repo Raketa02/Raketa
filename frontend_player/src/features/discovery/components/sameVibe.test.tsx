@@ -20,14 +20,18 @@
  * relation, and See all keeps who holds a level in a sport it is asked for.
  */
 
+import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { FlatList } from 'react-native';
+import { Dimensions, FlatList, StyleSheet } from 'react-native';
 
 import { FRIENDS_COPY, roundLabel } from '@/features/friends/types';
 import { RECORD_UNAVAILABLE } from '@/features/player_record/types';
+import { GROUPS_COPY } from '@/features/groups/types';
+import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { theme } from '@/shared/ui';
 import { socialTagChip, socialTagLabel } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import { isOpen, lineNamed, lineTitles, openLine } from '@/test-support/forYou';
@@ -52,6 +56,7 @@ import {
 import { rereadDiscovery } from '../hooks/useNewInRaketa';
 
 import { DISCOVERY_COPY, moreTags, nobodySharesYourTagsIn } from './discoveryCopy';
+import { SAME_VIBE_TILE_SKELETON } from './SameVibeTile';
 
 const COPY = DISCOVERY_COPY.sameVibe;
 const HIDDEN = { includeHiddenElements: true } as const;
@@ -203,6 +208,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  onlineManager.setOnline(true);
   transport.restore();
   queryClient.clear();
   useToastQueue.setState({ queue: [] });
@@ -732,5 +738,114 @@ describe('See all', () => {
 
     expect(await screen.findByText(nobodySharesYourTagsIn('padel'))).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sport: Padel' })).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// See all's skeleton while its first page is read (#872, PRD #867)
+// ---------------------------------------------------------------------------
+
+describe('See all, while its first page is read (#872)', () => {
+  /** See all's skeleton — hidden from a listener, so found by its id. */
+  const skeleton = () => screen.queryByTestId('see-all-skeleton', HIDDEN);
+  /** Past the reveal's cross-fade, and a frame. */
+  const pastTheFade = () => act(() => jest.advanceTimersByTime(theme.motion.fade + 16));
+  const karol = () => screen.queryByTestId(`same-vibe-${KAROL.player_id}`);
+
+  /** See all pressed on Home's row, its first page held on its way. */
+  async function openHeld() {
+    await homeWithTheRow();
+    const first = transport.hold('GET', SAME_VIBE_ALL_PATH);
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/same-vibe'));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    return first;
+  }
+
+  it('shimmers two columns of tiles at the grid tile’s height under the real header, then fades the page in', async () => {
+    vibeServer();
+    const first = await openHeld();
+
+    expect(skeleton()).not.toBeNull();
+    expect(screen.getByText(COPY.title)).toBeTruthy();
+    // The pill stands at its final shape, offering every sport until the page says which.
+    expect(screen.getByRole('button', { name: 'Sport: All' })).toBeTruthy();
+    expect(karol()).toBeNull();
+    // Two to a line, each a column wide, as many lines as fill the window.
+    const window = Dimensions.get('window');
+    const column = (window.width - 2 * theme.size.gutter - theme.space.sm) / 2;
+    const tall = SAME_VIBE_TILE_SKELETON.height(column, window.fontScale);
+    const tiles = screen.getAllByTestId('see-all-skeleton-tile', HIDDEN);
+    for (const each of tiles) {
+      const { width, height } = StyleSheet.flatten(each.props.style);
+      expect(width).toBeCloseTo(column);
+      expect(height).toBe(tall);
+    }
+    expect(tiles.length % 2).toBe(0);
+    const lines = tiles.length / 2;
+    expect(lines * (tall + theme.space.sm)).toBeGreaterThanOrEqual(window.height);
+    expect((lines - 1) * (tall + theme.space.sm)).toBeLessThan(window.height);
+
+    await act(async () => first.land());
+
+    expect(await screen.findByTestId(`same-vibe-${KAROL.player_id}`)).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+    expect(pageReads()).toHaveLength(1);
+  });
+
+  it('says the empty line in the grid’s place when the first page holds nobody — never a skeleton', async () => {
+    vibeServer();
+    await homeWithTheRow();
+    transport.on('GET', SAME_VIBE_ALL_PATH, () =>
+      json<Wire['SameVibePageResponse']>({ players: [], next: null, sports: [] }),
+    );
+    const first = transport.hold('GET', SAME_VIBE_ALL_PATH);
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    expect(skeleton()).not.toBeNull();
+
+    await act(async () => first.land());
+
+    expect(await screen.findByText(COPY.nobodyAtAll)).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+  });
+
+  it('gives way to the failure and its Try again once the retries are spent', async () => {
+    vibeServer();
+    transport.on('GET', SAME_VIBE_ALL_PATH, () => errorResponse(503, 'service_unavailable'));
+    await homeWithTheRow();
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/same-vibe'));
+    expect(skeleton()).not.toBeNull();
+
+    await act(() => jest.advanceTimersByTimeAsync(30_000));
+
+    const again = await screen.findByRole('button', { name: GROUPS_COPY.retry });
+    expect(screen.getByRole('alert')).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    vibeServer();
+    fireEvent.press(again);
+    expect(await screen.findByTestId(`same-vibe-${KAROL.player_id}`)).toBeTruthy();
+  });
+
+  it('gives way to the amber note while the read waits for a connection', async () => {
+    vibeServer();
+    const first = await openHeld();
+    expect(skeleton()).not.toBeNull();
+
+    act(() => onlineManager.setOnline(false));
+    await act(async () => first.drop());
+    await act(() => jest.advanceTimersByTimeAsync(1_500));
+
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    act(() => onlineManager.setOnline(true));
+    expect(await screen.findByTestId(`same-vibe-${KAROL.player_id}`)).toBeTruthy();
   });
 });

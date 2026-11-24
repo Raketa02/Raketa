@@ -33,6 +33,9 @@ const LINES = 3;
 /** Between chips, both ways — the record's tag row's gap. */
 const GAP = theme.space.xs;
 
+/** **The three lines' room**, kept from the first frame — and held by a tile's skeleton (#872). */
+export const SHARED_TAGS_ROOM = LINES * TAG_HEIGHT + (LINES - 1) * GAP;
+
 export interface SharedTagsProps {
   /** The tags the two share, in the vocabulary's order. */
   readonly tags: readonly SocialTagId[];
@@ -124,7 +127,7 @@ export function SharedTags({ tags }: SharedTagsProps) {
 
 const s = StyleSheet.create({
   // The three lines' room, kept from the first frame — 6.4's own height, three times.
-  room: { minHeight: LINES * TAG_HEIGHT + (LINES - 1) * GAP },
+  room: { minHeight: SHARED_TAGS_ROOM },
   lines: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   // A chip is never wider than the line: one that would be is cut by its own ellipsis — the width it
   // was measured at.

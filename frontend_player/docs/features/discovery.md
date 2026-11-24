@@ -29,8 +29,8 @@ dot), then the sports the first page says somebody holds a level in (`pillChoice
 chosen sport though it left that list). The grid is a two-column `FlatList`, newest first, **20 to a
 page read on as it nears its end** (`useNewInRaketaPage`, an infinite query per sport; an end
 reached while a page is coming joins it, and the pages are joined with each person once,
-`joinPages`). **The frame, the paging and the pill are every people row's** since #802: `domain/seeAll.ts` (`SeeAllSport`, `SeeAllPage<Person>`, `joinPages`, `pillChoices`), `hooks/useSeeAllPages.ts` (the infinite query, `LISTS_PEOPLE`, `SeeAllList<Person>`) and `components/SeeAllScreen.tsx` (the header, the pill keeping its last sports, every state, the list in one column or the caller's), each row handing in its key, its read and how it draws a person. Home's rows read through `usePeopleRow` (re-read on return, `LISTS_PEOPLE`). Every state is drawn: a
-spinner, the failure with _Try again_ (`groups`' `ReadFailure`), offline, a later page refused under
+`joinPages`). **The frame, the paging and the pill are every people row's** since #802: `domain/seeAll.ts` (`SeeAllSport`, `SeeAllPage<Person>`, `joinPages`, `pillChoices`), `hooks/useSeeAllPages.ts` (the infinite query, `LISTS_PEOPLE`, `SeeAllList<Person>`) and `components/SeeAllScreen.tsx` (the header, the pill keeping its last sports, every state, the list in one column or the caller's), each row handing in its key, its read and how it draws a person. Home's rows read through `usePeopleRow` (re-read on return, `LISTS_PEOPLE`). Every state is drawn: the
+grid's own skeleton (#872, below), the failure with _Try again_ (`groups`' `ReadFailure`), offline, a later page refused under
 the grid, the pull — the pill kept through a sport's failed read (the screen holds the last sports
 offered), so _All_ is a tap away — and _Nobody new plays squash yet_ when a sport leaves nobody, or _Nobody new right
 now_ with _All_ (a call: §31.7 words only the sport).
@@ -253,3 +253,32 @@ foregrounding, the pull, a block — brings the new figure. **The footer link ke
 (_See all players at your level_): the line's own name has just said the count. Walked in the mapper
 and copy tests and the shell's `forYou.test.tsx`; the line suites now find a line by `lineNamed`, its
 title with or without a count.
+
+**See all shimmers its own grid while its first page is read** (2026-11-24,
+[#872](https://github.com/Raketa02/Raketa/issues/872); PRD #867, the loading shimmer log §10; design
+system 5.6). The spinner at the top of an empty body is gone from all three. Under the real header,
+**the row's own tile or card stands as a skeleton, a column wide, in the grid's lines and gaps, as many
+lines as fill the screen** (`SeeAllScreen`'s `skeleton`, a `SeeAllSkeletonTile`: the drawing, and the
+height it stands at a column's width), on one `SkeletonGround`; the first page comes in on `Reveal`'s
+cross-fade once its read finishes. **New in Raketa's tile is one block** at the grid's 9:8 and the
+tile's corner, since everything on it is drawn over the photograph (`JOINER_TILE_SKELETON`). **Same
+level's dark card is one block** at the card's height, read off its drawing
+(`SAME_LEVEL_CARD_SKELETON`). **Same vibe's pale tile is a white card drawn as itself**, without the
+person's wash, at the grid tile's height (its three lines of chips keep their room, `SHARED_TAGS_ROOM`),
+holding the face, the nickname and the % circle, _2 things in common_'s width, a first chip, and the
+round button's circle (`SAME_VIBE_TILE_SKELETON`). **The shared rules hold**: the failure with _Try
+again_ and the offline note take the skeleton's place; the skeleton stays through Query's retries and
+stands again on _Try again_ or the connection back; an empty first page says its empty line; a pull
+and a later page never show it. **Each shape's height follows the phone's text size**: its words' lines
+are grown by the OS's `fontScale`, as the card's own text is. **Three calls made here.** **A sport not
+read yet shimmers too**: the reveal is keyed by the sport, so each sport's first read is its own, as on
+Rankings; a sport read in the last few minutes opens at once, and a switch opens the list at its top.
+**The pill stands from the first frame, offering every sport until the first page says which**, so it
+is drawn at its final shape, chevron and all, and the header never changes shape at the reveal (_Same
+competitive level players_ wraps beside it); a sport picked meanwhile is read like any other. **The spinner's three spoken names went with it**: the
+skeleton is hidden from a listener and says nothing (ADR-0198). Walked in `newInRaketa.test.tsx`,
+`sameLevel.test.tsx` and `sameVibe.test.tsx`, with the first page held in flight (test-support's
+`transport.hold`): the skeleton in its grid at the tile's size, then the page; the empty line; the
+retries, the failure and _Try again_; the offline note and the connection back; and, on New in
+Raketa, a sport not read, one read already, and a pull. **Not seen on a device**: a look is owed at
+each grid's shimmer and the fade onto it.

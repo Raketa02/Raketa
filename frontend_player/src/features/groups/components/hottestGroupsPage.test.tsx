@@ -20,9 +20,11 @@
  * guessing.
  */
 
+import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { Dimensions, FlatList } from 'react-native';
+import { Dimensions, FlatList, StyleSheet } from 'react-native';
 
+import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
@@ -51,10 +53,11 @@ import { groupKeys } from '../hooks/groupKeys';
 
 import { GROUPS_COPY } from './groupsCopy';
 import { hottestChipLabel } from './groupsPresentation';
-import { HottestGroupCard } from './HottestGroupCard';
+import { HottestGroupCard, hottestCardHeight } from './HottestGroupCard';
 
 const HOT = GROUPS_COPY.hottest;
 const PAGE = HOT.page;
+const HIDDEN = { includeHiddenElements: true } as const;
 
 const face = (n: number, nickname: string): Wire['GroupPersonSchema'] => ({
   player_id: `f0000000-0000-4000-8000-0000000009${String(n).padStart(2, '0')}`,
@@ -231,6 +234,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  onlineManager.setOnline(true);
   jest.useRealTimers();
   transport.restore();
   queryClient.clear();
@@ -419,50 +423,151 @@ describe('the list', () => {
 });
 
 describe('its states', () => {
-  it('spins, named, while the first page reads', async () => {
-    heatingUpServer(EIGHT);
+  /** The page's skeleton — hidden from a listener, so found by its id. */
+  const skeleton = () => screen.queryByTestId('hottest-groups-skeleton', HIDDEN);
+  /** Past the reveal's cross-fade, and a frame. */
+  const pastTheFade = () => act(() => jest.advanceTimersByTime(theme.motion.fade + 16));
+  const theList = () => screen.queryByTestId('hottest-groups-list');
+
+  /** *All groups ›* pressed on Home's line, the page's first read held on its way. */
+  async function openHeld() {
     await homeWithTheLine();
-    // Every read waits until answered — the navigation runs every pending timer, so the first one
-    // times out and is asked again: each is answered, and any after them at once.
-    let answered = false;
-    const waiting: (() => void)[] = [];
-    const page = () =>
-      json<Wire['HottestGroupsPageResponse']>({ groups: EIGHT, next: null, total: 8 });
-    transport.on('GET', HOTTEST_GROUPS_ALL_PATH, () =>
-      answered ? page() : new Promise((resolve) => waiting.push(() => resolve(page()))),
-    );
-
+    const first = transport.hold('GET', HOTTEST_GROUPS_ALL_PATH);
     fireEvent.press(screen.getByRole('link', { name: HOT.allGroupsLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/hottest-groups'));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    return first;
+  }
 
-    expect(await screen.findByLabelText(PAGE.reading)).toBeTruthy();
-    expect(screen.queryByTestId('hottest-groups-list')).toBeNull();
-    await act(async () => {
-      answered = true;
-      for (const answer of waiting) answer();
-    });
-    // Past a retry's backoff, should the first read have timed out.
-    await act(() => jest.advanceTimersByTimeAsync(2_000));
+  it('shimmers full-width cards under the real header while the first page reads, then fades it in (#872)', async () => {
+    heatingUpServer(EIGHT);
+    const first = await openHeld();
+
+    expect(skeleton()).not.toBeNull();
+    expect(screen.getByRole('header', { name: PAGE.title })).toBeTruthy();
+    expect(screen.getByRole('button', { name: PAGE.back })).toBeTruthy();
+    expect(theList()).toBeNull();
+    // One card a line at the content's whole width and the card's own height, as many as fill the
+    // window and none wholly past its foot.
+    const window = Dimensions.get('window');
+    const cards = screen.getAllByTestId('hottest-skeleton-card', HIDDEN);
+    for (const card of cards) {
+      const { width, height } = StyleSheet.flatten(card.props.style);
+      expect(width).toBe(window.width - 2 * theme.size.gutter);
+      expect(height).toBe(hottestCardHeight(window.fontScale));
+    }
+    const step = hottestCardHeight(window.fontScale) + theme.space.sm;
+    expect(cards.length * step).toBeGreaterThanOrEqual(window.height);
+    expect((cards.length - 1) * step).toBeLessThan(window.height);
+
+    await act(async () => first.land());
 
     expect(await screen.findByTestId('hottest-groups-list')).toBeTruthy();
-    expect(screen.queryByLabelText(PAGE.reading)).toBeNull();
+    expect(listed()).toEqual(EIGHT.map((group) => group.id));
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+    // Held in flight, never timed out and asked again.
+    expect(pageReads()).toHaveLength(1);
   });
 
-  it('says a first page’s failure, and Try again reads it again', async () => {
-    jest.useFakeTimers();
+  it('says the empty line in the list’s place when the first page holds nobody — never a skeleton (#872)', async () => {
+    heatingUpServer(EIGHT);
+    await homeWithTheLine();
+    transport.on('GET', HOTTEST_GROUPS_ALL_PATH, () =>
+      json<Wire['HottestGroupsPageResponse']>({ groups: [], next: null, total: 0 }),
+    );
+    const first = transport.hold('GET', HOTTEST_GROUPS_ALL_PATH);
+    fireEvent.press(screen.getByRole('link', { name: HOT.allGroupsLabel }));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByText(PAGE.nobody)).toBeNull();
+
+    await act(async () => first.land());
+
+    expect(await screen.findByText(PAGE.nobody)).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+  });
+
+  it('keeps the skeleton through the retries, says a first page’s failure, and Try again shimmers until it reads', async () => {
     heatingUpServer(EIGHT);
     transport.on('GET', HOTTEST_GROUPS_ALL_PATH, () => errorResponse(503, 'service_unavailable'));
     await homeWithTheLine();
     fireEvent.press(screen.getByRole('link', { name: HOT.allGroupsLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/hottest-groups'));
+    expect(skeleton()).not.toBeNull();
+
+    // Refused once and asked again: still on its way, so still the skeleton — never a blank page.
+    await act(() => jest.advanceTimersByTimeAsync(1_500));
+    expect(pageReads().length).toBeGreaterThanOrEqual(2);
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByRole('button', { name: GROUPS_COPY.retry })).toBeNull();
+
     // Through the automatic retries the error model allows.
     await act(() => jest.advanceTimersByTimeAsync(30_000));
-
     const again = await screen.findByRole('button', { name: GROUPS_COPY.retry });
     expect(screen.getByRole('alert')).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
 
+    // Try again: out once more with nothing to draw — the skeleton again, then the list.
     heatingUpServer(EIGHT);
+    const reread = transport.hold('GET', HOTTEST_GROUPS_ALL_PATH);
     fireEvent.press(again);
+    await act(() => jest.advanceTimersByTimeAsync(100));
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByRole('button', { name: GROUPS_COPY.retry })).toBeNull();
+
+    await act(async () => reread.land());
     expect(await screen.findByTestId('hottest-groups-list')).toBeTruthy();
     expect(listed()).toEqual(EIGHT.map((group) => group.id));
+  });
+
+  it('gives way to the amber note while the read waits for a connection, and shimmers again once back (#872)', async () => {
+    heatingUpServer(EIGHT);
+    const first = await openHeld();
+    expect(skeleton()).not.toBeNull();
+
+    // The connection goes while the read is out: it is lost, and once its backoff has run it waits
+    // for the connection to ask again.
+    act(() => onlineManager.setOnline(false));
+    await act(async () => first.drop());
+    await act(() => jest.advanceTimersByTimeAsync(1_500));
+
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    // The connection back sets the read out again with still nothing to draw: the skeleton.
+    const back = transport.hold('GET', HOTTEST_GROUPS_ALL_PATH);
+    act(() => onlineManager.setOnline(true));
+    await act(() => jest.advanceTimersByTimeAsync(100));
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByText(offlineMessage('resumes'))).toBeNull();
+
+    await act(async () => back.land());
+    expect(await screen.findByTestId('hottest-groups-list')).toBeTruthy();
+  });
+
+  it('never shimmers on a pull: the list stays while every page is read again (#872)', async () => {
+    heatingUpServer(EIGHT);
+    await openThePage();
+    pastTheFade();
+
+    // The page's own pull — Home's stays mounted under it, with its own.
+    const pull = () => screen.UNSAFE_getByType(FlatList).props.refreshControl.props;
+    const pulled = transport.hold('GET', HOTTEST_GROUPS_ALL_PATH);
+    await act(async () => {
+      void pull().onRefresh();
+    });
+    expect(pull().refreshing).toBe(true);
+    expect(skeleton()).toBeNull();
+    expect(listed()).toHaveLength(8);
+
+    await act(async () => pulled.land());
+    await waitFor(() => expect(pull().refreshing).toBe(false));
+    expect(skeleton()).toBeNull();
+    expect(listed()).toHaveLength(8);
   });
 
   it('says a later page’s failure under the list, and its own Try again reads it again', async () => {

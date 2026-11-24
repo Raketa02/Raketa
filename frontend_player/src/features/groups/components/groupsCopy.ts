@@ -197,8 +197,6 @@ export const GROUPS_COPY = {
     page: {
       title: 'Groups heating up',
       back: 'Back to Home',
-      /** The spinner's spoken name while the first page reads. */
-      reading: 'Reading groups heating up…',
       /** A list read empty — no group of 3 is left (a call: the line hides then, so it is rarely met). */
       nobody: 'No groups heating up right now',
     },
