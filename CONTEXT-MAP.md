@@ -143,6 +143,15 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > amended).
 > The brief, the decision log and the mock are `docs/specs/splash-screen/`.
 >
+> **The tab menu touches no context** (PRD [#859](https://github.com/Raketa02/Raketa/issues/859);
+> decided, not yet built). A group page's *Competitive / For fun* switch leaves the page for a menu on
+> the selected **Games** or **Friends** tab, with today's counts and **Play intent**'s door on Games
+> and neither on Friends, and the deck card's player tiles take a fixed shape. It is a change of
+> layout with no new record: ADR-0201 §2 and the fill-in split's override 2 carry dated notes. Only
+> the player app changes: no backend change and no contract change. The brief, the decision log and
+> the mocks, which are illustrations only, are `docs/specs/tab-menu/`; the specs it amends are
+> `docs/specs/games-and-fill-in/` and `docs/specs/friends/`.
+>
 > **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
 > radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
 > ranking, with the feature flag that hid them
@@ -300,6 +309,8 @@ else lives one layer down. See
 │   │                            the decision log and the mocks, which lead on design
 │   ├── specs/splash-screen/  ← the drawn splash, startup behind it (ADR-0209): the brief, the
 │   │                            decision log and the mock, which lead on design
+│   ├── specs/tab-menu/       ← Competitive / For fun in the tab's menu, the deck tiles' shape
+│   │                            (PRD #859): the brief, the decision log and the mocks, illustrations only
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)

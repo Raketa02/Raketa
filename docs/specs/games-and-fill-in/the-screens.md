@@ -40,6 +40,9 @@
 > **A later ruling the mocks predate (Q127):** the Competitive / For fun switch always shows both
 > kinds, and the kind the player's intent doesn't want is a dimmed door to changing it. No mock
 > draws the door, its panel or the finding state ([A1](#a1-where-things-live), [A2.1](#a21-states)).
+> *(Noted 2026-11-24, [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet
+> built: the switch becomes the Games tab's menu, and the door a line in it, still dimmed, numberless
+> and never disabled, opening the same panel. The ruling itself stands.)*
 >
 > **A later decision the mocks predate (PRD [#844](https://github.com/Raketa02/Raketa/issues/844),
 > 2026-11-23; decided, built by [#847](https://github.com/Raketa02/Raketa/issues/847)–[#850](https://github.com/Raketa02/Raketa/issues/850)):**
@@ -52,6 +55,19 @@
 > wherever a mock draws a badge on the selected tab (mocks 1 and 11), read none.
 > The split's own mocks, its decision log and its two overrides are in
 > [`docs/specs/fill-in-split/`](../fill-in-split/README.md), cited as *split mock 1* to *3*.
+>
+> **A later decision the mocks predate (PRD [#859](https://github.com/Raketa02/Raketa/issues/859),
+> 2026-11-24; decided and not yet built, by [#861](https://github.com/Raketa02/Raketa/issues/861)–[#865](https://github.com/Raketa02/Raketa/issues/865)):**
+> **the Competitive / For fun switch leaves the page.** The choice moves into a menu on the selected
+> Games or Friends tab, marked by a chevron and opened by a tap on that tab
+> ([A1](#a1-where-things-live)). Wherever a mock draws the switch under the tabs (mocks 1 and 9),
+> read the Games tab's menu; on Friends, read that tab's menu. The deck card takes the height the
+> switch gave back, and **its player tiles take a fixed shape**: **1.75 : 1** for doubles and **3:4**
+> for singles, shrinking at that shape on a small phone and never stretched, wherever a card's mock
+> draws its tiles stretched to fill it. **The tab menu's own four mocks are illustrations, not designs**: unlike
+> this document's mocks, none of them wins over a rule, and nothing is read off one. They, the brief
+> and the decision log are in [`docs/specs/tab-menu/`](../tab-menu/README.md), cited as *tab menu mock
+> 1* to *4*.
 
 ---
 
@@ -77,8 +93,9 @@
     [ADR-0208](../../adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)).
     - **What a tab shows is seen while it is on screen**, and a row arriving while you're on it is
       seen at once. On Fill in and You’re in that is everything the tab counts. **On Games it is the
-      cards of the kind the switch is on**, the whole deck of that kind, not only the top card; the
-      other kind's cards stay unseen until the switch moves to it.
+      cards of the kind the deck shows**, the whole deck of that kind, not only the top card; the
+      other kind's cards stay unseen until the deck shows them. Opening the Games tab's menu sees
+      nothing, though its lines count both kinds (#859).
     - **The tab on screen draws no badge**, whatever it counts (mocks 1 and 11 and split mocks 1
       and 2 draw one: an override). So a player on Games never sees the Games badge, even while the
       other kind holds cards they haven't seen; once they leave Games, its badge counts those.
@@ -128,19 +145,69 @@
   picker — over every sport she is unrated in, in a player group; over that group's sports she is
   unrated in, in an official one — and returns to the group. Rated in everything there is to offer,
   there is no *+ Another sport*.
-- **The Competitive / For fun switch** (mock 9) sits under the tabs on **Games**:
-  *Competitive · 7* / *For fun · 1* — the number is the cards of that kind in this group and
-  sport. It stays where it is today on **Friends** too, where it sets one friends game's kind and
-  never the intent ([the Friends spec set](../friends/README.md), Q128).
+- **The Games tab's menu** holds the Competitive / For fun choice (PRD
+  [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built, by
+  [#862](https://github.com/Raketa02/Raketa/issues/862); tab menu mocks 1 and 3, illustrations).
+  *Until it is built, the choice is a switch under the tabs, on screen all the time: Competitive · 7
+  / For fun · 1 (mock 9).*
+  - **The chevron.** The selected Games tab draws a small chevron at its right edge, pointing down,
+    and **widens to fit its label and the chevron**. The other three tabs share the rest, and the
+    widths move by a layout transition. It is drawn only where the switch would be live today:
+    - there is a sport to play (no *Add a sport* card, no level door), and a deck read of this group
+      and sport has come back with its kinds. A read made while the player has no intent for the
+      sport carries none. The read can be of either kind, since both carry the pair of counts, so
+      the chevron stays while a newly picked kind loads;
+    - **no chevron** while the first read is on its way, after it failed, or while the first-time
+      question is up ([A2.1](#a21-states)). After that question's answer the chevron first appears
+      when the deck it lands on is read, not while its games are being found;
+    - **while the door's answer is on its way or its games are being found**, the chevron already
+      drawn stays drawn so the bar doesn't jump, and a tap on the tab does nothing.
+
+    Fill in and You’re in never draw one, and Games draws none when it isn't selected: a label and
+    its badge, like every tab. The tab on screen still draws no badge, so the chevron is its only
+    mark.
+  - **The menu.** A tap on the selected Games tab opens a small white menu. It hangs from the tab's
+    bottom edge with no arrow, aligned to the tab's left edge and kept inside the screen's gutters,
+    and the chevron turns to point up. Its two lines are **Competitive** then **For fun**:
+    - the current kind has a **coral tick** in front, and the other line keeps that space empty;
+    - each live kind ends in **its count**, the cards of that kind in this group and sport: today's
+      numbers, in muted mono.
+
+    Nothing else names the kind while the menu is closed. A card says it (the forecast on
+    Competitive, the Social vibe on For fun), and the selected tab's spoken name always does:
+    *Games, Competitive*. A starting card (state 1) or today's spinner says neither, so on an empty
+    or loading deck only the menu and the spoken name tell the kinds apart. That is the cost of
+    keeping the kind's word out of the tab (the tab menu log's Q10).
   - **Both kinds are always drawn** (Q127, [ADR-0201](../../adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
     §2). A player whose intent is one kind sees that kind live, with its number, and **the other
-    dimmed, with no number**: Ania (Competitive) reads *Competitive · 7* and a dimmed *For fun*, and
+    dimmed, with no number**: Ania (Competitive) reads *Competitive 7* and a dimmed *For fun*, and
     Kuba (For fun) the mirror. *Either suits me* sees both live, as before.
-  - **The dimmed kind is a door**, not a disabled tab: the same size as the live one and just as
-    easy to press. A tap opens its panel ([A2.1](#a21-states)) and doesn't move the switch.
+  - **The dimmed line is a door**, never disabled: as tall as the live line and just as easy to
+    press, with no tick. A tap closes the menu and opens its panel ([A2.1](#a21-states)), and
+    doesn't move the kind.
+  - **Picking.** The kind you are in just closes the menu. The other kind closes it and **swaps the
+    deck in place** ([#863](https://github.com/Raketa02/Raketa/issues/863)): the cards slide down and
+    out, and the other kind's rise into the same spot. ✕ · i · the ball stay put when both kinds
+    have cards; they fade out when the new kind deals nothing and its starting card rises instead,
+    and fade back in on the way back. You stay on Games, and nothing scrolls. A kind not read in the last few minutes shows today's spinner in the
+    deck's area until it lands, and a failed read today's failure with its retry; the menu works
+    throughout. A notice opening the deck at a card of the other kind moves it there directly, with
+    no swap.
+  - **Closing.** A second tap on the tab closes the menu with nothing changed. **A tap anywhere else
+    on the page closes it and does nothing else**: no card answered, no button pressed, no sport
+    changed, and a swipe that begins there moves no card. A tap on another tab goes there in one
+    tap. Android back, a sport change, a screen pushed over the page and a notice opening the deck
+    (PRD #859's *a notice arriving at the deck*) close it too, and the bottom bar keeps working. The menu folds out of the tab and back in
+    briefly, with no motion under reduced motion.
   - **The deck never opens on the dimmed kind**, even when the phone last stood on that kind in
-    another sport or group. The remembered position stays one for the app, as today, and is
-    corrected to a live kind.
+    another sport or group. The remembered kind stays one for the app, as today, and is corrected
+    to a live kind.
+- **The Friends tab's menu** (#859, by [#861](https://github.com/Raketa02/Raketa/issues/861); tab
+  menu mocks 2 and 4): the same chevron on the selected Friends tab whenever its court is drawn, and
+  a menu aligned to the tab's right edge with **no counts and no door**. It opens and closes as the
+  Games tab's does. It sets one friends game's kind and never the intent
+  ([the Friends screens §7.1](../friends/the-screens.md#71-the-court), Q128). *Until it is built, a
+  switch above the court.*
 
 ## A2. The Games tab
 
@@ -157,7 +224,8 @@
    you're on question 5*, and opening that run. Nothing else asks her to finish it.
 4. **No intent for this sport** — the one-time inline question *Competitive / For fun / Either*
    replaces the deck until answered; for a member who has just rated, straight after the door.
-   Its answer is followed by state 5. The switch isn't drawn while the question is up.
+   Its answer is followed by state 5. **The Games tab draws no chevron while the question is up**,
+   so its menu can't be opened (#859; until it is built, no switch is drawn).
 5. **Finding** (Q127) — right after any intent answer on Games, on the first-time question or on
    the other kind's door. The phone sends `PUT /play-intents/{sport}` with the `DECK` surface, then
    `POST /pools/{id}/deal`, and while that request is in flight the deck's area names the kind it
@@ -165,14 +233,22 @@
    *Either suits me* on the first-time question it reads ***Finding games for you…***. Then it
    re-reads the deck: the cards
    (state 7), or *Nothing picked right now* with **Post a game** (state 1). A failed deal request
-   falls through to the re-read, and nothing is retried.
+   falls through to the re-read, and nothing is retried. After the door's answer, the Games tab's
+   chevron stays drawn while the answer and the finding are in flight, and a tap on the tab opens
+   nothing. After the first-time question there is no chevron yet: it first appears with the deck
+   the answer lands on (#859).
 6. **Weekly cap reached** — a slim line above the deck: *"Your 2 games this week are booked —
-   showing next week"* (Q73).
+   showing next week"* (Q73). With the switch gone, it and the offline note sit **directly under
+   the tabs** (#859).
 7. **The deck** (mock 1).
 
-**The other kind's door** (Q127). A tap on the switch's dimmed kind opens a panel over the deck, inside
-the deck's area so the cards' layout is not squeezed. It is an overlay on the group page, not a new
-route:
+**The other kind's door** (Q127). A tap on the dimmed line of the Games tab's menu
+([A1](#a1-where-things-live)) closes the menu first, then opens a panel over the deck, inside the
+deck's area so the cards' layout is not squeezed. So the panel never opens under the menu. It is
+an overlay on the group page, not a new route. *(Until #859 is built, the door is the switch's
+dimmed kind.)* **Open, for [#862](https://github.com/Raketa02/Raketa/issues/862):** the grilling
+didn't decide what a tap on the selected Games tab does while the panel is open and no answer is
+out. Today a press on the switch then closes the panel, and a live kind is chosen.
 
 > **You play padel competitively, so Raketa only puts you in competitive games.**
 > Want for-fun games too?
@@ -183,9 +259,9 @@ route:
 
 - *Either suits me* is first and highlighted. The three answers are the first-time question's and
   the You tab's words.
-- The number is the member's own count of that kind in this group, the one the switch shows. One
-  card reads *Your 1 competitive card goes.*; none drops the number: *Get for-fun games as well as
-  competitive ones.* and *Raketa stops dealing you competitive games. Games you're In on stay.*
+- The number is the member's own count of that kind in this group, the one the menu's live line
+  shows. One card reads *Your 1 competitive card goes.*; none drops the number: *Get for-fun games
+  as well as competitive ones.* and *Raketa stops dealing you competitive games. Games you're In on stay.*
   ([the words §28](../matchmaking/the-words.md#28-the-games-tabs-door-and-finding)).
 - An answer changes this sport only, lands on the kind tapped, and goes on to state 5.
 - *Keep competitive* closes the panel and sends nothing.
@@ -212,7 +288,7 @@ Dark card, top to bottom:
 
 | Part | What it shows | Rules |
 | --- | --- | --- |
-| **Ribbon** | *Picked for you* (dark teal) · *Kuba challenged you* / *The group challenged you* (dark teal) · *Seat open · court booked* (**coral**) | No *· friendly* — the segment already says it. On the right, **⏱ 21 h 00** only when the deadline is under 24 h (book-by; for a rescue the cut-off, then the start); *45 min* under an hour, coral. At the deadline the card leaves silently. |
+| **Ribbon** | *Picked for you* (dark teal) · *Kuba challenged you* / *The group challenged you* (dark teal) · *Seat open · court booked* (**coral**) | No *· friendly* — the segment already says it (from #859, the Games tab's menu and the card's own forecast or Social vibe). On the right, **⏱ 21 h 00** only when the deadline is under 24 h (book-by; for a rescue the cut-off, then the start); *45 min* under an hour, coral. At the deadline the card leaves silently. |
 | **Tiles** | 2 × 2 for doubles, 1 × 2 for singles (mock 10): photo or generated poster, the player's **nickname**, never with an @ (cut short visually, never an invented form — ADR-0199, which superseded ADR-0171; the mocks' *Karol T.* is mock data), level | **IN** tag (green outline) on a player who said yes. **FRIEND** (volt) on the reader's own friends, and only theirs (Q68, applying since Q128). No other tag. On a rescue each player reads *2,75 · paid*. |
 | **Your tile** | *You*, your level | When your yes would fill the game: **You complete it** in volt (mocks 3, 7). On a rescue your seat is the **dashed** tile: *You complete it · 27 zł · court booked* (mock 2), or *You? · 27 zł* when more than one seat is open. |
 | **vs line** | *KAROL + YOU VS ANIA + KUBA* | The top row is one side, the bottom row the other (Q70). |
@@ -238,6 +314,26 @@ ribbon of its own, for anybody. It is simply first in the deck of each player it
 server orders it.
 
 **Singles** (mock 10) follow the same rules with two tall tiles and no *vs* line.
+
+**The tiles' shape** (PRD [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not
+yet built, by [#864](https://github.com/Raketa02/Raketa/issues/864) and
+[#865](https://github.com/Raketa02/Raketa/issues/865); the reasons and the measurements are
+[the tab menu log](../tab-menu/decisions.md)'s §2 and §6). The card takes the height the switch
+gave back, and its tiles stop stretching to fill it:
+
+- **Doubles tiles are 1.75 : 1**, the details' own shape, and **singles tiles 3:4**, the photo's
+  crop. A tile is as wide as its column; where the height runs short it is as tall as the room
+  allows, at the same shape, narrower and centred. It never stretches. The details screen keeps
+  1.75 for both.
+- **Spare height on a tall phone is spread evenly** between the card's blocks: the tiles, the *vs*
+  line, the forecast or Social vibe row, the overlap grid and the court block.
+- **A tile's foot** (the nickname, the IN / FRIEND tag, the level, *paid*, the open seat's words)
+  grows with the OS text size **up to a cap worked out to fit the tile**. A tile never shrinks
+  below what its own content needs at that cap, a rescue's open seat included.
+- **On a small phone** the tiles, the grid's cells, the paddings and the gaps shrink together in
+  proportion, while text keeps its size and never goes below 9.5pt. **Only where even that can't
+  fit does the deck scroll**, as a last resort: the card keeps its minimum height and the buttons
+  sit below it.
 
 **A game dealt in versions** ([the mechanics §7](the-mechanics.md#7-one-game-several-versions))
 is not a card type: the card is the same, plus one line under the tiles — *4 people are In on
@@ -787,7 +883,11 @@ row, and there is no *mark all*. The app icon carries no number until push is on
 - **Changed** — peeking deck cards fade; the group page's Competitive / For fun switch appears on
   Games, and since Q127 draws the kind the intent doesn't want dimmed, at full size and still
   pressable, as a door; the You tab gains *Account*; the bottom bar loses Players and Chats
-  (removed, #569).
+  (removed, #569). *(Noted 2026-11-24, [#859](https://github.com/Raketa02/Raketa/issues/859),
+  decided and not yet built: the switch leaves the page for a menu on the selected Games or Friends
+  tab, and the door becomes the Games menu's dimmed line, still at full size and pressable. Its
+  Part 16 rows are the building tickets': the option that owns a menu and widens, the menu itself,
+  its coral tick read as the active tab, and the deck tiles' fixed shape.)*
 - **Sport colours** as today: padel coral, tennis mint, squash night2, badminton amber.
 
 ---
@@ -1098,7 +1198,7 @@ adapter**, and **nothing a mock shows is hard-coded**. On top of today's cohort 
 
 | File | Shows |
 | --- | --- |
-| `player/1-games_tap_general_view.png` | The group page on Games: header, tabs with badges, switch, deck, buttons |
+| `player/1-games_tap_general_view.png` | The group page on Games: header, tabs with badges, switch, deck, buttons. #859 moves the switch into the Games tab's menu, not yet built ([tab menu mocks 1 and 3](../tab-menu/README.md)) |
 | `player/2_game_card_seat_open.png` | A rescue card |
 | `player/3_game_card_picked_for you_1.png` | A pick you complete (*Book it now*) |
 | `player/4_game_card_challenge.png` | A challenge (*Kuba challenged you*) |
@@ -1106,7 +1206,7 @@ adapter**, and **nothing a mock shows is hard-coded**. On top of today's cohort 
 | `player/6_game_card_picked_for_you_no_friends.png` | A fresh pick, countdown, no free cancellation |
 | `player/7_games_card_picked_for_you_no_friend_you_lat_in.png` | A pick you complete, no friends |
 | `player/8_picked_for_you_no_friends_not_all_in.png` | A pick with one In, no friends |
-| `player/9_competitive_forfun_tap.png` | The switch |
+| `player/9_competitive_forfun_tap.png` | The switch. #859 moves it into the Games tab's menu, not yet built ([tab menu mock 3](../tab-menu/README.md)) |
 | `player/10_game_card_singles.png` | A singles pick |
 | `player/11_fill_in_tap_general.png` | Fill in with both sections and the FAB — two tabs since #844 ([split mocks 1 and 2](../fill-in-split/README.md)) |
 | `player/12_fill_in_sets_to_fill_row.png` | The rescue row |

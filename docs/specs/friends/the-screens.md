@@ -257,7 +257,30 @@ tile as a request (§6.2). It changes in three ways:
 
 #### 7.1 The court
 
-- **The switch** above the court, **Competitive / For fun**, sets this game's kind only (friends 7).
+- **The Friends tab's menu**, **Competitive / For fun**, sets this game's kind only (2026-11-24,
+  [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built, by
+  [#861](https://github.com/Raketa02/Raketa/issues/861); [tab menu mocks 2 and
+  4](../tab-menu/README.md), illustrations). *Until it is built, the choice is a switch above the
+  court (friends 7).*
+  - **The chevron.** The selected Friends tab draws a small chevron at its right edge, pointing
+    down, **whenever the court is drawn**: not on the *Add a sport* card or the level door. The
+    selected tab widens to fit it, as on Games
+    ([the Games screens A1](../games-and-fill-in/the-screens.md#a1-where-things-live)).
+  - **The menu.** A tap on the selected Friends tab opens a small white menu hanging from the tab's
+    bottom edge, **aligned to its right edge** and kept inside the gutters, with the chevron
+    turned up. Two lines, **Competitive** then **For fun**, and a coral tick on this game's kind.
+    **No counts and no door**: there is nothing to count, and a game with friends is one game's
+    kind, never the intent, so a Competitive-only player picks For fun here freely (the tab menu
+    log's Q3).
+  - **Picking** the other kind turns the court being built into a game of that kind, and the card
+    under a full court asks again for it (§7.2). Picking the kind it already is just closes the
+    menu. A kind picked here never moves the Games deck, and one picked on Games never changes this
+    game.
+  - **Closing** is the Games menu's: the tab again, a tap anywhere else (which does nothing else),
+    another tab in one tap, Android back, a sport change, a pushed screen, or a notice opening the
+    deck, which puts the page on Games.
+
+  The court sits right under the tabs, at its own size.
 - **The court** (friends 7): *THEIR SIDE* above the net, *YOUR SIDE* below, faces with *nickname level*
   labels, a × on each seated friend. Empty seats draw a **+**; **+ Friends** sits under the court.
 - **Seating**: Done seats the picks in the evenest sides. **Tap one face, then another** to swap
@@ -274,8 +297,9 @@ tile as a request (§6.2). It changes in three ways:
   and *Ogrody 33 is full at 10:00* on another club's court).
 - **On For fun** (amended 2026-11-23, ADR-0207 §5, #834): the **Social vibe row** (ADR-0207 mock 2)
   stands where the percentage, its word and the balance bar were, the card's `vibe.pct`: the four's
-  vibe, worded and coloured by the app's four bands. **No forecast is drawn.** Flipping the switch
-  flips the number; the *vs* line, the overlap and the court stay as they are.
+  vibe, worded and coloured by the app's four bands. **No forecast is drawn.** Picking the other
+  kind (the tab's menu from #859; the switch until then) flips the number; the *vs* line, the
+  overlap and the court stay as they are.
 - **Buttons**: **Send game and pay 25 zł** (volt), **Pick a different court** (dark).
 - **The court and the card always name the same sides** ([README](README.md#overrides), note 3).
 - **Refused**: *These four can't all play together. Swap someone.* in the card's place; no buttons.

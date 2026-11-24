@@ -334,8 +334,12 @@ serve.
 A group's **Friends** tab draws a court with you in one seat, as today, with a **+** on each empty
 seat and **+ Friends** under it.
 
-- **Above the court**, **Competitive** or **For fun**, for **this game only**. It never changes your
-  Play intent. Competitive counts for the score; For fun doesn't.
+- **In the Friends tab's menu**, **Competitive** or **For fun**, for **this game only**. It never
+  changes your Play intent. Competitive counts for the score; For fun doesn't. A chevron on the
+  selected Friends tab says the menu is there, and a tap on that tab opens it. It has no counts
+  and no door, so any kind can be picked, and it never moves the Games deck (2026-11-24,
+  [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built; until then a
+  switch above the court).
 - **Intent never excludes** (Q15). A friend whose intent is For fun only can be seated in a
   Competitive game; the invitation names the kind, and she decides.
 - **Any friend can be seated** (Q14), from this group or any other. A friend who isn't a member plays
@@ -374,7 +378,8 @@ loading state while it works. It is the deck's card **without the player tiles**
     everybody's tags now. It is the same however they stand, so a swap never moves it. **No
     forecast** is shown, though the forecast still seats them in the evenest sides.
 
-  Flipping the kind switch flips the number, and nothing else on the card;
+  Picking the other kind (in the tab's menu from #859, on the switch until then) flips the
+  number, and nothing else on the card;
 - the **overlap grid** of the four's weeks, graded *High / Good / Slim overlap*;
 - the **court panel**: *Court available · Sat 10:00 · Ogrody 33 · Court 3 · 25 zł each*, with the kind
   of court, and *Ogrody 33 is full at 10:00* on another club's court;
@@ -685,7 +690,8 @@ decision log's Q129 row, and each that a rule rests on is marked *(a call)* wher
 open for the product owner to overrule.
 
 **Defaults stated in the grilling and not objected to:** Info stays in the group header; the *friend*
-tag on every face; the Friends tab's kind switch is per game, never intent; hours from the club's
+tag on every face; the Friends tab's kind switch is per game, never intent (its menu since #859,
+decided and not yet built, and still per game); hours from the club's
 book-by to 14 days where nobody has a game; the usual yes withdrawals; friendship survives leaving a
 group and ends on deletion; the administrator's Members view has no pills; the chat opens at send; a
 club's cancel moves the game; the club sees an ordinary booking.

@@ -1124,6 +1124,12 @@ form. `{sport}` is the sport's name inside a sentence, as in *Carry on with your
 `{n}` is the count of the player's own cards of their declared kind in this group, the one the
 switch shows.
 
+*(Noted 2026-11-24, [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet
+built: the switch becomes the Games tab's menu, and the door its dimmed line, with the same label,
+no number and the same press target as the live line. `{n}` is the live line's count. The menu's
+spoken names, the selected tab's *Games, Competitive* and each line's, are worded in copy modules by
+[#862](https://github.com/Raketa02/Raketa/issues/862); the door line keeps the door's.)*
+
 | Where | A competitive player taps *For fun* | A for-fun player taps *Competitive* | Note |
 | --- | --- | --- | --- |
 | The switch, the door | `For fun`, dimmed | `Competitive`, dimmed | no number; the same size and press target as the live kind |
@@ -1275,7 +1281,7 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| The switch | `Competitive` · `For fun` | `playIntentPresentation`'s, cited; it sets this game's kind |
+| The switch | `Competitive` · `For fun` | `playIntentPresentation`'s, cited; it sets this game's kind. *Noted 2026-11-24 ([#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built): the same two words become the Friends tab's menu lines, with no counts; their spoken names, the kind alone, are worded by [#861](https://github.com/Raketa02/Raketa/issues/861).* |
 | The court | `THEIR SIDE` · `YOUR SIDE` · `{nickname} {level}` · `You {level}` · `+ Friends` | mock 7 |
 | The court, unfilled | `Seat {n} more friends` · `Seat 1 more friend` | at 0, the card |
 | The card | the deck card's words, without tiles: the *vs* line (`YOU + EWA VS MAGDA + ANIA`; singles `YOU VS ANIA`), the balance (`87%` · `Very even`), the overlap's grade, `Court available`, `{share} each`, `{when} · {club} · {court}` and the kind of court | the screens A2.3, cited |

@@ -1,6 +1,8 @@
 # ADR-0201 — The other kind is a door, and a changed intent leaves the cards you haven't answered
 
-- **Status:** Accepted
+- **Status:** Accepted — **§2 noted 2026-11-24
+  ([#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built): the switch
+  becomes the Games tab's menu, and the door a line in it**
 - **Date:** 2026-11-05
 - **Amends [ADR-0094](0094-play-intent-declared-per-sport-in-its-own-aggregate.md)'s 2026-10-06
   note**, *the You tab is the other place a player changes it*. The Games deck's switch is a further
@@ -142,6 +144,20 @@ that a gone name frees its seat (§3).
 - **An *Either suits me* player narrows on the You tab only** (Q7).
 - **Untouched:** the Friends tab's switch, Post a game's Kind step and the first-time question's
   words. Post a game still lets Ania post a for-fun game as a one-off.
+
+> **Note — the switch moves into the tab (2026-11-24, [#859](https://github.com/Raketa02/Raketa/issues/859); decided and not yet built).**
+> The switch under the tabs becomes **the Games tab's menu**: a chevron on the selected Games tab,
+> and a tap on that tab opens a menu with two lines, Competitive then For fun, each live line with
+> the count the switch shows today. **The door is a line in it**, still dimmed, still numberless and
+> never disabled. A tap on it closes the menu and opens the same panel, with the same three answers.
+> What this section decides is unchanged: both kinds are always offered, the deck never opens on the
+> door, the remembered kind stays one for the app, and an *Either suits me* player narrows on the
+> You tab only. The Friends tab's switch, which this record doesn't decide, moves into that tab's
+> own menu ([the Friends screens §7.1](../specs/friends/the-screens.md#71-the-court);
+> [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
+> still governs it). A change of layout with no new record; specified in
+> [`docs/specs/games-and-fill-in/`](../specs/games-and-fill-in/the-screens.md#a1-where-things-live),
+> its record in [`docs/specs/tab-menu/`](../specs/tab-menu/README.md).
 
 ### 3. A changed intent leaves the cards you haven't answered
 

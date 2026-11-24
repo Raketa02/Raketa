@@ -503,17 +503,20 @@ of the code because this file asks for them in that order.
   first time a player opens Games for a sport without one — and on the You tab
   ([ADR-0094](docs/adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md), its ask at
   the tail of a rating run corrected by [ADR-0200](docs/adr/0200-a-level-is-asked-where-play-begins.md)) — and
-  at the **other kind's door** on a group deck's switch: the kind the intent does not want is drawn dimmed, and a
-  tap opens an in-place change, reported on the `DECK` surface
+  at the **other kind's door** in a group's **Games tab's menu**: the kind the intent does not want
+  is a line drawn dimmed, with no number, and a tap opens an in-place change, reported on the `DECK`
+  surface
   ([ADR-0201](docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md) §2,
-  not yet built — [#740](https://github.com/Raketa02/Raketa/issues/740)). It is both what a player is
+  built by [#740](https://github.com/Raketa02/Raketa/issues/740) as a dimmed kind on the switch under
+  the tabs; the switch becoming the Games tab's menu is decided and not yet built —
+  [#859](https://github.com/Raketa02/Raketa/issues/859)). It is both what a player is
   dealt and who they are dealt to, one fact, because a card is one game everybody on it sees
   (ADR-0201 §1). A group deck deals no card of a kind the player's intent does not want. **A changed
   intent leaves the cards not yet answered**: a name not yet In whose intent no longer wants a card's
   kind holds no seat on it, so its seat goes to the next best fits and a new yes there is refused
   `no_longer_fits`. It is read live and recorded nowhere, and it is not a no: the yeses already given
   stand, and if the intent wants the kind again before the seat is taken, the name is back on the
-  card (ADR-0201 §3, not yet built — [#738](https://github.com/Raketa02/Raketa/issues/738)).
+  card (ADR-0201 §3, built by [#738](https://github.com/Raketa02/Raketa/issues/738)).
 - **Play intent declaration** — the **event-sourced aggregate** that holds one, one stream per
   `(player, sport)`. Separate from the Player profile, which stays free of a sport dimension.
 - **Mode** — *defined in the Matchmaking section below, where it belongs.* It is named here only
@@ -2164,12 +2167,14 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   said no to never returns; one you are In on is on *You’re in*; one you took your yes back from
   is dealt again. Never dealt: a kind your Play intent does not want, a share above **Most I'll
   pay**, a week at your **Games per week**, an hour you already have a game at, a club no longer
-  selling, or a card with somebody In you may not share a court with. **The switch shows both
-  kinds**: the one your Play intent does not want is a dimmed door with no number, which opens an
-  in-place change of intent and is never where the deck opens. **A name whose intent no longer wants
+  selling, or a card with somebody In you may not share a court with. **The Games tab's menu shows
+  both kinds**: the one your Play intent does not want is a dimmed door with no number, which opens
+  an in-place change of intent and is never where the deck opens. Today that is the switch under
+  the tabs; its becoming the menu on the selected Games tab is decided and not yet built
+  ([#859](https://github.com/Raketa02/Raketa/issues/859)). **A name whose intent no longer wants
   a card's kind is left off it** unless they are In
   ([ADR-0201](docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
-  §2–§3, not yet built — [#738](https://github.com/Raketa02/Raketa/issues/738),
+  §2–§3, built by [#738](https://github.com/Raketa02/Raketa/issues/738) and
   [#740](https://github.com/Raketa02/Raketa/issues/740)). A projection, recomputed
   at every read and stored nowhere. (The Players deck of people went with Classic play.)
 - **Owed card** — the new card dealt first to the players still in a game that a club's cancel

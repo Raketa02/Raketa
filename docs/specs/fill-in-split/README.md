@@ -69,7 +69,7 @@ are right everywhere else.
 | Note | Where | What it draws | What is built |
 | --- | --- | --- | --- |
 | 1 | 1, 2 | **+ Post a game** floating over Fill in, and nothing floating over You’re in | **+ Post a game floats on You’re in, and only there** (Q4): the button that makes a game sits on the tab where that game appears. Fill in has no button |
-| 2 | 1, 2, 3 | A badge on the selected tab: *Fill in 2* on mocks 1 and 3, *You’re in 3* on mock 2. The group page's first mocks do the same (*Games 4* on the Games and Fill in mock 1, *Fill in 1* on mock 11) | **The tab on screen draws no badge**, whatever it counts (Q2b, Q10). What it shows is seen while it is on screen; on Games, the other kind's unseen cards show in the Games badge only once you leave the tab |
+| 2 | 1, 2, 3 | A badge on the selected tab: *Fill in 2* on mocks 1 and 3, *You’re in 3* on mock 2. The group page's first mocks do the same (*Games 4* on the Games and Fill in mock 1, *Fill in 1* on mock 11) | **The tab on screen draws no badge**, whatever it counts (Q2b, Q10). What it shows is seen while it is on screen; on Games, the other kind's unseen cards show in the Games badge only once you leave the tab. *Noted 2026-11-24 ([#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built): when the Competitive / For fun choice moves into the Games and Friends tabs' menu, the tab on screen still draws no badge, and on Games and Friends **the chevron is the selected tab's only mark**; Fill in and You’re in draw none. The tab menu's mocks draw a count on the selected tab too (*Games 3*), and it is not built either ([the tab menu's README](../tab-menu/README.md#the-ground-rule-the-mocks-are-illustrations)).* |
 
 ## Index
 
