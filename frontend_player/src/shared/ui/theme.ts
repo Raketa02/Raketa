@@ -1255,8 +1255,7 @@ const size = {
    *  so the disc's proportion is still the mock's; not a new number. */
   deckAnswer: { pass: 54, record: 42, accept: 66, ball: 26 },
   /** A group's Games card (#553, the screens A2.3), measured off mocks 2–10 at 1x. `ribbon` is
-   *  the band's height; `tileMin` the least a tile shrinks to on a short phone, where the tiles
-   *  give the card's other parts the height they need.
+   *  the band's height.
    *
    *  **A tile has one shape per court** (#864; the tab menu log §6.2, 7.22, Part 16 2026-11-24),
    *  width over height, and the deck's tiles never stretch to fill the card (`deckCardGeometry`).
@@ -1270,7 +1269,24 @@ const size = {
    *  - `singlesTile` **3:4**, tennis and squash — the photo's own crop (`PROFILE_PHOTO_ASPECT`, and
    *    the 3:4 photo tile, `photoTile`), so on Android the whole photo shows: 160.5 × 214 on the
    *    A32. 1.75 would have left singles ~92pt strips with most of the card empty.
-   *  A game's details keep `doublesTile` for both court shapes (out of #859's scope). The grid's cells
+   *  A game's details keep `doublesTile` for both court shapes (out of #859's scope).
+   *
+   *  **A tile is a fixed box, so its foot's words are capped, and its floor is what they need**
+   *  (#865; the tab menu log §6.4, §6.5; 7.22, Part 16 2026-11-24):
+   *  - `footMaxScale` **1.3** is the tile foot's `maxFontSizeMultiplier` — the name, the IN and
+   *    FRIEND tags, the level line and *paid*, *You complete it*, and the open seat's words — DERIVED
+   *    by `gameTileFoot.test.ts` from Archivo's and IBM Plex Mono's real advance widths against the
+   *    tile at its smallest drawn size, `tileNarrowest`: the largest step at which *2,71 · paid*
+   *    still fits across it and a rescue's open seat still fits down it (both stop at 1.3), and a
+   *    bound, not a freeze. *You complete it* fills that tile at 1.0 and its box cuts it above, as it
+   *    does the name.
+   *  - `tileNarrowest` **128.5** is that tile's width, and the floor: the narrowest phone's column
+   *    ((320 − 2 × 15 − 2 × 12 − 9) / 2), 73.4 tall on doubles and 171.3 on singles. Where a short
+   *    card shrinks its boxes in proportion the tiles stop here (`deckCardGeometry`), and where even
+   *    that does not fit the deck scrolls. It replaced `tileMin` (54), a height fixed beside the
+   *    tile's content and already short of a rescue's open seat (61).
+   *
+   *  The grid's cells
    *  are `cell` tall and `cellGap` apart — **4, off the grid on purpose**: 6.8's hour cells' own
    *  gap (`availability.gap`), so the week is drawn with one rhythm on both surfaces — and the
    *  game's own cell is ringed `ring` wide and grows `ringOut` (`space.xxs`) past its slot on every
@@ -1278,9 +1294,10 @@ const size = {
    *  `courtStroke`, a stroke like `onCourtTick`'s, dashed on a free vote and solid on a booking. */
   gameCard: {
     ribbon: 30,
-    tileMin: 54,
     doublesTile: 1.75,
     singlesTile: 3 / 4,
+    footMaxScale: 1.3,
+    tileNarrowest: 128.5,
     cell: 9,
     cellGap: 4,
     ring: 2,

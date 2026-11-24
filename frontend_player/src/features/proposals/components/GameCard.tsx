@@ -34,8 +34,14 @@
  * allows at that shape; the height left over goes in equal shares to the gaps between the blocks.
  * It decides from **what the card measures**, never from what a block is assumed to be: the stage
  * (this card's own box, which is the stage's), and the ribbon, the *vs* line, the forecast or vibe
- * row, the grid, the court block and the versions line, each as laid out at the phone's text size
- * and wrap (`useCardRoom`).
+ * row, the grid's words, the court block and the versions line, each as laid out at the phone's text
+ * size and wrap (`useCardRoom`).
+ *
+ * **Where the room is short, every box shrinks in proportion and no word does** (#865): the tiles,
+ * the body's padding above and below, the gaps and the grid's cells, at the geometry's `scale`, down
+ * to the floor — the narrowest tile, which its foot's capped words fill. **Where even that does not
+ * fit, the card tells the deck how short it can get** (`onLeast`), and the deck lays its stage out
+ * at that and scrolls.
  *
  * **A card is drawn unseen until it has measured itself once.** Its blocks have to be laid out to be
  * measured, so it cannot draw nothing, as the sign-in hero does (`useMeasuredRoom`); a card drawn
@@ -43,7 +49,9 @@
  * phone. Until then, and always under Jest, which lays nothing out, its tiles are their column's
  * width at their shape and its gaps at rest, so every part of it is there to find and press. Once
  * measured it is never unseen again: a block that appears later keeps the last size until it
- * answers.
+ * answers. **On a deck it also waits for a stage that holds it** (#865): a card at its floor in a
+ * stage shorter than its least would show cut off at the foot for the frames the deck takes to lay
+ * the stage out at it, then grow — so it stays unseen until then.
  *
  * ## A door to the game, and doors to the people on it
  *
@@ -77,7 +85,7 @@
  */
 
 import Feather from '@expo/vector-icons/Feather';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PixelRatio,
   Pressable,
@@ -145,9 +153,35 @@ export interface GameCardProps {
   /** The card is the top one: a press opens the game, a tile its player. Absent behind. */
   readonly onOpen?: () => void;
   readonly onPerson?: (person: DeckPerson) => void;
+  /**
+   * The least height this card is drawn at, once it has measured itself and whenever that changes,
+   * and `undefined` once it no longer stands — the deck lays its stage out at no less, and scrolls
+   * where that is more than the page leaves (#865, `deckCardGeometry`). Given, the card stays unseen
+   * until its stage holds it (see the module note).
+   */
+  readonly onLeast?: (proposalId: string, least: number | undefined) => void;
 }
 
-export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson }: GameCardProps) {
+/** The card's boxes at rest — what it draws before it has measured itself. */
+const AT_REST = {
+  scale: 1,
+  padX: BASE.pad,
+  padY: BASE.pad,
+  underTiles: BASE.underTiles,
+  aroundHair: BASE.aroundHair,
+  between: BASE.between,
+} as const;
+
+export function GameCard({
+  card,
+  seatsPerSide,
+  at,
+  day,
+  today,
+  onOpen,
+  onPerson,
+  onLeast,
+}: GameCardProps) {
   const { top, bottom } = rowsOf(card, seatsPerSide);
   const ribbon = ribbonOf(card);
   const countdown = countdownOf(card.deadline, at);
@@ -157,12 +191,22 @@ export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson 
   const acrossVersions = inAcrossVersions(card);
   const headline = headlineOf(card);
   const shape: CourtShape = seatsPerSide === 1 ? 'singles' : 'doubles';
-  const { geometry, laidOut } = useCardRoom(shape, {
-    versions: acrossVersions !== undefined,
-    headline: headline !== undefined,
-  });
+  const { geometry, laidOut, seen } = useCardRoom(
+    shape,
+    { versions: acrossVersions !== undefined, headline: headline !== undefined },
+    onLeast !== undefined,
+  );
   // At rest until the card has been laid out — see the module note.
-  const gaps = geometry ?? BASE;
+  const gaps = geometry ?? AT_REST;
+
+  // How short this card can get — the deck's to lay its stage out at (see the module note).
+  const least = geometry?.least;
+  const { proposalId } = card;
+  useEffect(() => {
+    if (least === undefined || onLeast === undefined) return undefined;
+    onLeast(proposalId, least);
+    return () => onLeast(proposalId, undefined);
+  }, [least, proposalId, onLeast]);
 
   const drawing = (
     <>
@@ -193,7 +237,10 @@ export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson 
       </View>
 
       {/* Every gap is the geometry's, so the body sets them one by one rather than as one `gap`. */}
-      <View style={[s.body, { padding: gaps.pad }]}>
+      <View
+        style={[s.body, { paddingHorizontal: gaps.padX, paddingVertical: gaps.padY }]}
+        testID="game-card-body"
+      >
         <GameTiles
           top={top}
           bottom={bottom}
@@ -225,8 +272,13 @@ export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson 
           </View>
         )}
 
-        <View style={{ marginBottom: gaps.between }} onLayout={laidOut.grid}>
-          <OverlapGrid overlap={card.overlap} today={today} />
+        <View style={{ marginBottom: gaps.between }}>
+          <OverlapGrid
+            overlap={card.overlap}
+            today={today}
+            scale={gaps.scale}
+            onWordsLaidOut={laidOut.gridWords}
+          />
         </View>
 
         <View onLayout={laidOut.court}>
@@ -242,7 +294,7 @@ export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson 
           reaches the tile first. Behind the top card it is inert: no press, nothing to find. */}
       <Pressable
         // Unseen until it has measured itself — see the module note.
-        style={[s.clip, geometry === undefined ? s.unmeasured : undefined]}
+        style={[s.clip, seen ? undefined : s.unmeasured]}
         accessible={false}
         disabled={onOpen === undefined}
         {...(onOpen === undefined ? {} : { onPress: onOpen })}
@@ -314,13 +366,17 @@ interface Laid {
  * - **A block that has just appeared keeps the card at its last size until it answers** — a
  *   forecast arriving on a live card, the versions line on a second version — rather than dropping
  *   it back to the size it stood at before it had measured itself, which would jump it twice.
+ * - **It is seen once it has a geometry** — and, where the stage will be laid out at its least
+ *   (`waitsForStage`), a stage within a pixel and a half of it — and never unseen again.
  */
 function useCardRoom(
   shape: CourtShape,
   drawn: { readonly versions: boolean; readonly headline: boolean },
+  waitsForStage: boolean,
 ): {
   readonly geometry: CardGeometry | undefined;
   readonly laidOut: Readonly<Record<MeasuredBlock | 'stage', OnLayout>>;
+  readonly seen: boolean;
 } {
   const [laid, setLaid] = useState<Laid>({ heights: {} });
 
@@ -350,7 +406,7 @@ function useCardRoom(
       vs: heightOf('vs'),
       versions: heightOf('versions'),
       headline: heightOf('headline'),
-      grid: heightOf('grid'),
+      gridWords: heightOf('gridWords'),
       court: heightOf('court'),
     };
   }, []);
@@ -372,7 +428,16 @@ function useCardRoom(
   const kept = useRef<CardGeometry | undefined>(undefined);
   if (fresh !== undefined) kept.current = fresh;
 
-  return { geometry: fresh ?? kept.current, laidOut };
+  // Seen from the first geometry whose stage holds it, and for good — written in render as `kept` is.
+  const seenOnce = useRef(false);
+  const short =
+    waitsForStage &&
+    fresh !== undefined &&
+    laid.stage !== undefined &&
+    laid.stage.height + 1.5 / PixelRatio.get() < fresh.least;
+  if (fresh !== undefined && !short) seenOnce.current = true;
+
+  return { geometry: fresh ?? kept.current, laidOut, seen: seenOnce.current };
 }
 
 const s = StyleSheet.create({

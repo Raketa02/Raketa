@@ -1934,11 +1934,11 @@ the stage (the card's own box, which is the stage's), the court's shape and the 
 the blocks whose height is words — the ribbon, the _vs_ line, the forecast or vibe row, the grid,
 the court block and the versions line — it gives the tiles' size and every gap. A tile is as wide
 as its column; where the card's height runs out, it is as tall as the room allows at the same
-shape, narrower and centred in its column; and never below `tileMin`, which #865 replaces with the
-tile's own content. **The height a tile leaves goes in equal shares to the gaps between the
-blocks** — the tiles, the _vs_ line, the forecast or vibe row, the grid and the court block, with
-the hairline in the middle of its gap — so the card still fills its stage and the three stacked
-cards stay one size. _4 people are In on this game_ is a caption to the tiles and stays at its own
+shape, narrower and centred in its column; and never below `tileMin` — which #865 replaced with the
+narrowest tile, the one its words' cap is derived for (the next section). **The height a tile
+leaves goes in equal shares to the gaps between the blocks** — the tiles, the _vs_ line, the
+forecast or vibe row, the grid and the court block, with the hairline in the middle of its gap — so
+the card still fills its stage and the three stacked cards stay one size. _4 people are In on this game_ is a caption to the tiles and stays at its own
 gap under them: a call made here, since the log names five blocks and not it.
 
 `GameCard` measures with `onLayout` (`useCardRoom`), and **draws a card unseen until it has
@@ -1963,7 +1963,69 @@ arrive together, as Fabric delivers them; not counted on a device. The tile's ph
 (`TilePhoto`) and the grid are memoised, so that drawing redraws the boxes, not the faces or the
 week. **At the floor a tile keeps its shape**, so on a 320 × 568 phone a singles tile is 40,5pt wide
 and a doubles tile 94,5, where they were their column's 128,5 squashed to 54: the ticket's rule (the
-ratio on every phone, `tileMin` as the floor), with the card already not fitting there; #865
-replaces the floor with the tile's content and brings the scroll. **Not seen on a device** (#866):
-the shapes on the A32 and an iPhone, the spread on a tall phone, the first frame, and the floor on
-the smallest phone.
+ratio on every phone, `tileMin` as the floor), with the card already not fitting there — until #865
+replaced the floor with the tile's content and brought the scroll (the next section). **Not seen on
+a device** (#866): the shapes on the A32 and an iPhone, the spread on a tall phone, the first frame,
+and the floor on the smallest phone.
+
+## The tile's words are capped, its floor is what they need, and a card the page cannot hold scrolls (#865)
+
+**A tile of one shape is a fixed box, so its foot's words are capped** — the design system's rule
+for words in a fixed box (7.22, the tab bar's and the ON COURT mark's mechanism): they may neither
+be frozen nor grow without bound. The name, IN, FRIEND, the level line and _paid_, _You complete
+it_, and a rescue's open seat — its words and its price — take `maxFontSizeMultiplier`
+`footMaxScale`, **1,3**, through `GameTiles` and `CardTag`'s `maxScale`; the level line is one line
+now, as every other line in the foot was. `gameTileFoot.test.ts` derives it from the bundled Archivo
+Bold and IBM Plex Mono against the smallest tile the card draws: the largest step at which
+_2,71 · paid_ still fits across it and the open seat, the tallest foot, still fits down it — both
+1,3.
+
+**That smallest tile is the floor, `tileNarrowest`**: the narrowest phone's column, 128,5 wide, at
+the tile's shape (73,4 doubles, 171,3 singles). `tileMin` (54) is retired: it was a height beside
+the content, already short of the open seat's 61. The floor does not move with the text size,
+because up to the cap the foot fits it and past the cap the foot does not grow — so
+`deckCardGeometry` takes no font scale. **A call made here, flagged to the user**: _You complete
+it_ fills that tile exactly at 1,0, in both its registers (110,1 of 110,5 in the Level's mono on your
+tile, 104,9 of 107,5 in the name's role on the open seat), so a cap derived over it would be 1,0 —
+a freeze, which Part 13 refuses. It is capped with the rest and cut by its box above 1,0 on the
+narrowest tile, as the name always was (the ON COURT mark's Sport is the precedent). And the open
+seat's price line, _27 zł · court booked_ (146,8 at 1,0), was already wider than every column but a
+412's: its figure is whole and the words after it are cut, as before the cap. Neither is a new cut;
+both are recorded in the fit test.
+
+**Short room shrinks every box on the card at one share, and never a word** (`scale`). The tiles at
+their shape, narrower and centred; the body's padding above and below; every gap; and the week
+grid's cells, their gaps and its width, centred, so a cell keeps its shape. The words — the ribbon,
+the _vs_ line, the forecast or vibe row, the grid's grade and letters, the court block, the versions
+line — are measured and passed through as they are. **The grid is now measured by its words**
+(`OverlapGrid`'s `onWordsLaidOut`, round the grade and the day letters): its cells are the
+geometry's to shrink, so measuring the whole grid would feed the module's own answer back into it.
+The card's sides are its width, which the room never takes, so they and the gap between two tiles
+stay at rest. Where the tiles reach the floor, every other box stops at that share too.
+
+**Where even that does not fit, the deck scrolls.** The geometry gives every card its **least**
+height — its tiles at the floor and every box at that share, independent of the stage — and the
+card tells the deck (`onLeast`, once measured and whenever it changes, and takes it back when it
+leaves). The deck lays the stage out at no less than the tallest of the cards the player sees, so
+the stack stays one size — not the card held in reserve, which would move the stage under the top
+card a moment after it was drawn — and **until one of them has said, the last height holds**: after
+an answer, a swap or a new deal the stage never drops to the page and grows back. The area round it
+grows from its content rather than from nought (`flexGrow`, where `flex: 1` would have sized it
+from nothing and let the stage overflow a scroller that never grew). So the scroller that was there
+only for the pull scrolls: the card at its least, the ✕ · i · ball buttons below it, a drag across
+still the card's and a drag down the scroller's. **A card on the deck stays unseen until its stage
+holds it**, as it stays unseen until it has measured itself: shown in a stage shorter than its
+least, it would be cut off at the foot for the frames the deck takes to grow the stage. Once seen it
+is never unseen again. At 1,0, for the base card: a 320 × 568 scrolls (435
+against 276 — its column is the floor, so nothing there can shrink); a 360 × 800 shrinks every box
+to 0,98 and fits; the A32, a 390 iPhone and a 412 × 915 stand at rest. At the largest text size
+(iOS's _AX5_, 3,571) every phone scrolls, its tiles at the floor.
+
+Walked in `deckCardGeometry.test.ts` (the five phones at 1,0 and the largest, both shapes: the
+ratio, the shrink with every word as measured, the floor, the least, the scroll threshold),
+`gameTileFoot.test.ts` (the cap and the floor against the fonts), `gameCard.test.tsx` (the caps on
+the foot's words, the grid and the padding at the share, the least told) and
+`groupGamesRoom.test.tsx` (the router harness: a 320 × 568's layouts lay the stage out at the card's
+least, with the buttons in the scroller under it, and the height held after an answer until the
+card coming up has measured). **Not seen on a device** (#866): the cap at the
+largest text size, the shrink on a 360 phone and the scroll on the smallest.

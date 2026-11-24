@@ -35,6 +35,13 @@
  * drag across is the card's, because the stage claims only a move further across than down
  * (`DeckStage`). A pull re-reads like any other read — see the next section.
  *
+ * **Unless the card cannot fit the page** (#865; the tab menu log §6.5): a short card shrinks every
+ * box on it in proportion, down to its floor, and each card on the stage says how short that is
+ * (`onLeast`, `deckCardGeometry`). The stage is laid out at no less than the tallest of them, so on a
+ * 320 × 568 phone or at the largest text sizes the scroller's content is the card at its least and
+ * the buttons under it, and it scrolls to them — a drag down still the scroller's, a drag across
+ * still the card's, as above.
+ *
  * ## A re-read moves the cards behind the one being read, and never that one
  *
  * Another player's yes reaches this deck on its next read — the player's own answer settling, a
@@ -147,6 +154,7 @@
 
 import { router } from 'expo-router';
 import {
+  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -241,6 +249,9 @@ const ON_THE_STAGE = 3;
 /** Whichever scroller the tab is in — the one the page's pull is on. */
 const BODY = 'games-deck-body';
 
+/** The stage's box, laid out at no less than its cards' least height (#865). */
+const STAGE = 'games-deck-stage';
+
 /** The surface a door's answer reports — the deck's, as the first-time question's does. */
 const DECLARED_ON = 'DECK';
 
@@ -327,6 +338,20 @@ export function GamesDeck({
   );
   /** Why the panel's last answer was refused — drawn in the panel until another is given. */
   const [refusal, setRefusal] = useState<AppError | undefined>(undefined);
+  /**
+   * How short each card standing on the stage can get, by its id — the stage is laid out at no less
+   * (#865). A card that leaves takes its entry with it.
+   */
+  const [leasts, setLeasts] = useState<Readonly<Record<string, number>>>({});
+  const cardLeast = useCallback(
+    (proposalId: string, least: number | undefined) =>
+      setLeasts((was) => {
+        if (was[proposalId] === least) return was;
+        const { [proposalId]: _gone, ...others } = was;
+        return least === undefined ? others : { ...others, [proposalId]: least };
+      }),
+    [],
+  );
   // The door's answer is written here rather than in the panel, so it lands — the deck moved,
   // the group read again — when the panel has gone meanwhile (`KindDoor`).
   const declare = useDeclarePlayIntent();
@@ -420,6 +445,16 @@ export function GamesDeck({
       : [leaving.card, ...standing.filter((card) => card.proposalId !== leaving.card.proposalId)];
   const top = shown[0];
   useEffect(() => setUnderThumb(top?.proposalId), [top?.proposalId]);
+
+  // The cards on the stage, and the least height the tallest of them can get to — the stage is laid
+  // out at no less, and where the page leaves less the scroller scrolls (#865, see the module note).
+  // Until one of them has said, the last height holds — after an answer, a swap, a new deal — so the
+  // stage never drops to the page and back.
+  const onStage = shown.slice(0, ON_THE_STAGE);
+  const said = onStage.flatMap((card) => leasts[card.proposalId] ?? []);
+  const lastLeast = useRef(0);
+  if (said.length > 0) lastLeast.current = Math.max(...said);
+  const least = lastLeast.current;
 
   // What stands where the stack stands, and how it and the buttons move (#863).
   const stack: StackDrawn =
@@ -633,7 +668,7 @@ export function GamesDeck({
         onAnswer={(said) => answerTo(said, top)}
         onLeft={() => cardLeft(top)}
         stamps={stampsFor(top, chargesAtOnce(top))}
-        cards={shown.slice(0, ON_THE_STAGE).map((card, depth) => ({
+        cards={onStage.map((card, depth) => ({
           key: card.proposalId,
           card: (
             <GameCard
@@ -648,6 +683,7 @@ export function GamesDeck({
                     onPerson: (person: DeckPerson) => setReading(person),
                   }
                 : {})}
+              onLeast={cardLeast}
             />
           ),
         }))}
@@ -668,12 +704,15 @@ export function GamesDeck({
         {above}
 
         {/* The deck's area, which the door's panel covers — see the module note. */}
-        <View style={s.area}>
+        <View style={s.deckArea}>
           <View style={s.under} {...covered}>
             <SwapStack
               motion={stackMotion(swap, deck !== undefined)}
-              // The stage takes the height the page leaves; the starting card, its own.
-              {...(stack === 'nothing' ? {} : { style: s.stage })}
+              // The stage takes the height the page leaves, and never less than its cards' least;
+              // the starting card, its own.
+              {...(stack === 'nothing'
+                ? {}
+                : { style: [s.stage, { minHeight: least }], testID: STAGE })}
               {...(stack === 'reading'
                 ? {
                     waiting: (
@@ -751,11 +790,16 @@ const s = StyleSheet.create({
   grow: { flexGrow: 1 },
   // The deck's area — what the page leaves under the cap line, and what the door's panel covers.
   area: { flex: 1 },
+  // The same, round the stage: as tall as its content at least — the stage at its cards' least and
+  // the buttons — so where that is more than the page the scroller's content grows past it and
+  // scrolls, and where it is less, the page's height (#865). `flex: 1` would size it from nought.
+  deckArea: { flexGrow: 1 },
   // What the area holds: the stage and the buttons, or the starting card — the page's own step.
-  under: { flex: 1, gap: theme.space.sm },
+  under: { flexGrow: 1, gap: theme.space.sm },
   // The ground of what lies over the deck's area — the paper the cards stand on, covering them.
   over: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.color.paper },
-  // The stage takes what the page leaves between the cap line and the buttons.
-  stage: { flex: 1, marginBottom: theme.space.sm },
+  // The stage takes what the page leaves between the cap line and the buttons, and no less than its
+  // cards' least (#865) — a basis of its content, which is that, never of nought.
+  stage: { flexGrow: 1, marginBottom: theme.space.sm },
   cap: { ...theme.type.tiny, color: theme.color.muted, textAlign: 'center' },
 });

@@ -58,11 +58,13 @@ export interface SwapStackProps {
   readonly style?: StyleProp<ViewStyle>;
   /** What stands in the stack's place while a read is on its way — today's spinner. */
   readonly waiting?: ReactNode;
+  /** The layer's own box, to a test — the deck names the stage's. */
+  readonly testID?: string;
   readonly children?: ReactNode;
 }
 
 /** The layer the stack stands in — see the module note. */
-export function SwapStack({ motion, style, waiting, children }: SwapStackProps) {
+export function SwapStack({ motion, style, waiting, testID, children }: SwapStackProps) {
   const reduced = useReducedMotion();
   const travel = reduced ? 0 : RISE;
   const lift = useRef(new Animated.Value(0)).current;
@@ -91,7 +93,7 @@ export function SwapStack({ motion, style, waiting, children }: SwapStackProps) 
   }, [motion, travel, lift, seen]);
 
   return (
-    <View style={style}>
+    <View style={style} {...(testID === undefined ? {} : { testID })}>
       <Animated.View
         testID="games-deck-stack"
         style={[s.grow, { opacity: seen, transform: [{ translateY: lift }] }]}

@@ -60,6 +60,18 @@
  * hands the size in (`geometry`) once it is laid out; until then a tile is its column's width at
  * its shape (`ratio`). **A game's details keep 1.75 for both court shapes** — no geometry, the
  * default ratio — so a singles tile is 3:4 on the deck and 1.75 there (#859, out of its scope).
+ *
+ * ## A fixed box, so its words are capped
+ *
+ * **Every word in a tile's foot grows with the OS text size up to `footMaxScale` (1.3), and no
+ * further** (#865; the tab menu log §6.4) — the name, IN and FRIEND, the level line and *paid*, *You
+ * complete it*, and the open seat's words and price: a box of one shape whose words grew without
+ * bound would cover the face and then spill out of it. The cap is derived against the smallest tile
+ * the card draws, `tileNarrowest` (`gameTileFoot.test`), and that tile is the card's floor, so at
+ * the cap the foot fits every tile there is. Each line is one line: a level line that wrapped would
+ * be a foot taller than the one the cap was derived for. What does not fit is cut by the box, as the
+ * name always was — on the narrowest tile *You complete it* above 1.0, and the open seat's price
+ * line past its figure.
  */
 
 import { memo } from 'react';
@@ -93,6 +105,27 @@ import {
 import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = PROPOSALS_COPY;
+
+/** The foot's words grow with the OS text size to here — see the module note. */
+const CAP = theme.size.gameCard.footMaxScale;
+
+/**
+ * A player's foot, as a box: its padding across and down, the step between its two lines, and the
+ * step between the name and a tag — `gameTileFoot.test` derives the cap against it.
+ */
+export const TILE_FOOT = {
+  padX: theme.space.sm,
+  padY: theme.space.xs,
+  lines: theme.space.xxs,
+  beside: theme.space.xs,
+} as const;
+
+/** The seat a rescue offers you, as a box: its dashed stroke, its padding, the step between its lines. */
+export const OPEN_SEAT = {
+  stroke: theme.size.gameCard.courtStroke,
+  pad: theme.space.sm,
+  lines: theme.space.xxs,
+} as const;
 
 export interface GameTilesProps {
   readonly top: DeckRow;
@@ -220,14 +253,16 @@ function GameTile({
           5,24 (`photoScrim`), whatever the photograph is. */}
       <View style={s.foot}>
         <View style={s.nameRow}>
-          <Text style={s.name} numberOfLines={1}>
+          <Text style={s.name} numberOfLines={1} maxFontSizeMultiplier={CAP}>
             {tileName(person)}
           </Text>
-          {person.isIn ? <CardTag label={COPY.in} tone="green" /> : null}
-          {person.friend === true ? <CardTag label={COPY.friend} tone="volt" /> : null}
+          {person.isIn ? <CardTag label={COPY.in} tone="green" maxScale={CAP} /> : null}
+          {person.friend === true ? (
+            <CardTag label={COPY.friend} tone="volt" maxScale={CAP} />
+          ) : null}
         </View>
         {person.isYou && completes ? (
-          <Text style={s.completes} numberOfLines={1}>
+          <Text style={s.completes} numberOfLines={1} maxFontSizeMultiplier={CAP}>
             {COPY.youCompleteIt}
           </Text>
         ) : (
@@ -310,10 +345,10 @@ function OpenSeat({
       accessibilityLabel={openSeatLabel(completes, share)}
       testID="game-tile-your-seat"
     >
-      <Text style={s.openSeatWho} numberOfLines={1}>
+      <Text style={s.openSeatWho} numberOfLines={1} maxFontSizeMultiplier={CAP}>
         {completes ? COPY.youCompleteIt : COPY.youQuestion}
       </Text>
-      <Text style={s.openSeatShare} numberOfLines={1}>
+      <Text style={s.openSeatShare} numberOfLines={1} maxFontSizeMultiplier={CAP}>
         {under}
       </Text>
     </View>
@@ -330,7 +365,11 @@ function TileLine({ person }: { readonly person: DeckPerson }) {
     ...(person.paid === true ? [COPY.paid] : []),
   ];
   if (parts.length === 0) return null;
-  return <Text style={s.level}>{parts.join(LINE_JOIN)}</Text>;
+  return (
+    <Text style={s.level} numberOfLines={1} maxFontSizeMultiplier={CAP}>
+      {parts.join(LINE_JOIN)}
+    </Text>
+  );
 }
 
 const s = StyleSheet.create({
@@ -349,23 +388,23 @@ const s = StyleSheet.create({
   },
   // Volt as a line, which it may be on dark (2.2) — the seat offered, dashed because it is open.
   openSeat: {
-    borderWidth: theme.size.gameCard.courtStroke,
+    borderWidth: OPEN_SEAT.stroke,
     borderStyle: 'dashed',
     borderColor: theme.color.volt,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: theme.space.xxs,
-    padding: theme.space.sm,
+    gap: OPEN_SEAT.lines,
+    padding: OPEN_SEAT.pad,
   },
   openSeatWho: { ...theme.type.h2, color: theme.color.volt },
   openSeatShare: { ...theme.num.xs, ...theme.tabular, color: theme.color.onDarkTiny },
   foot: {
     backgroundColor: theme.color.photoScrim,
-    paddingHorizontal: theme.space.sm,
-    paddingVertical: theme.space.xs,
-    gap: theme.space.xxs,
+    paddingHorizontal: TILE_FOOT.padX,
+    paddingVertical: TILE_FOOT.padY,
+    gap: TILE_FOOT.lines,
   },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: TILE_FOOT.beside },
   name: { ...theme.type.h2, color: theme.color.surface, flexShrink: 1 },
   level: { ...theme.num.xs, ...theme.tabular, color: theme.color.onDarkTiny },
   completes: { ...theme.num.xs, color: theme.color.volt },
