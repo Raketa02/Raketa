@@ -189,8 +189,10 @@
     deck in place** ([#863](https://github.com/Raketa02/Raketa/issues/863)): the cards slide down and
     out, and the other kind's rise into the same spot. ✕ · i · the ball stay put when both kinds
     have cards; they fade out when the new kind deals nothing and its starting card rises instead,
-    and fade back in on the way back. You stay on Games, and nothing scrolls. A kind not read in the last few minutes shows today's spinner in the
-    deck's area until it lands, and a failed read today's failure with its retry; the menu works
+    and fade back in on the way back. You stay on Games, and nothing scrolls. A kind not read in the last few minutes shows the deck-card skeleton in the
+    deck's area until it lands (amended 2026-11-24, PRD [#867](https://github.com/Raketa02/Raketa/issues/867),
+    [the loading shimmer's](../loading-shimmer/README.md) Q26, built by [#876](https://github.com/Raketa02/Raketa/issues/876);
+    it was today's spinner, which stands until then), and a failed read today's failure with its retry; the menu works
     throughout. A notice opening the deck at a card of the other kind moves it there directly, with
     no swap.
   - **Closing.** A second tap on the tab closes the menu with nothing changed. **A tap anywhere else

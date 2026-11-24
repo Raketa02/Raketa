@@ -161,6 +161,16 @@ Assumptions, all estimates except the A32: iPhone SE inset 20/0; 390×844 iPhone
 - **The read fails**: today's `ReadFailed` with its retry, in the deck area. The menu still works.
 - **That spinner is the brief's "loading indicator is visible". Nothing new is built for loading.**
 
+> **Amended 2026-11-24** (PRD [#867](https://github.com/Raketa02/Raketa/issues/867), the loading
+> shimmer's Q26, [`docs/specs/loading-shimmer/`](../loading-shimmer/README.md) §10). **Not cached
+> now shows the deck-card skeleton in the deck area, not the spinner.** The old stack slides out,
+> one deck-card block stands in the deck area in the skeleton's tone with the shimmer's band
+> crossing it, and the new stack rises into place when the read lands, exactly as §5.1 decides. Its
+> rise replaces the shimmer's cross-fade there. *Nothing new is built for loading* no longer holds:
+> the deck borrows the `Skeleton` primitive that Home, Rankings, See all and the group page are
+> built on. **Unchanged:** a cached swap, a failed read (`ReadFailed` and its retry) and the menu,
+> which still works throughout. Built by [#876](https://github.com/Raketa02/Raketa/issues/876).
+
 ### 5.3 Making the swap faster is out of scope (Q8)
 Prefetching the other kind when the menu opens, or reading both kinds on every visit, was evaluated and **left out of this work** at the user's call.
 

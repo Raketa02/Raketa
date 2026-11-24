@@ -36,7 +36,7 @@ const color = {
   // --- Surfaces and structure ---
   paper: '#F4F2ED', // app background — warm off-white, never pure white
   paper2: '#EDEAE3', // recessed: the situation header, the popover close
-  paper3: '#E2DED3', // the club card's tray — 1.21 on paper, where paper2 is 1.07 (#529)
+  paper3: '#E2DED3', // the club card's tray — 1.20 on paper, where paper2 is 1.07 (#529)
   surface: '#FFFFFF', // cards, sheets, popovers, raised controls
 
   ink: '#101B20', // body text — 15.65 on paper, 17.50 on surface
@@ -49,6 +49,22 @@ const color = {
 
   line: '#E5E1D8', // BOUNDS a thing: card borders, chip borders
   line2: '#F0EDE6', // a FOLD inside one thing: hairlines, tag backgrounds, tracks
+
+  // --- Loading: a shape standing where a screen's content will be ---
+  /** THE SKELETON'S SHAPE (PRD #867, #868; 1.5, 15.2, Part 16 2026-11-24): a block, a line or a
+   *  circle drawn where a screen's content will be while its first read is out. **`paper3`'s value
+   *  under a name of its own**, because the meaning is new and the value is not (15.2: no new
+   *  colour). Computed from the hex values (WCAG 2.1): 1.20 on `paper` and 1.34 on `surface`, the
+   *  two grounds a skeleton is drawn on, so it reads as a shape on both. **Refused** (the loading
+   *  shimmer log's §2.2, Q23): `line`, the nearest value at 1.17 and 1.30, because it BOUNDS a
+   *  thing; `paper2` (1.07 on paper) and `line2` (1.05), too faint on paper. 1.4.11's 3:1 is not
+   *  asked of it: it is hidden from a listener and carries nothing a player needs to read. */
+  skeleton: '#E2DED3',
+  /** THE SKELETON'S SHEEN (PRD #867, #868; Q23): the band's peak, **`paper`'s value**. The band's
+   *  gradient runs `skeleton` → this → `skeleton`, so at its brightest a shape lifts to the ground it
+   *  stands on, and no opacity number is needed. On `surface` the peak is still 1.12 off the white,
+   *  so a shape on a card never vanishes into it. */
+  skeletonSheen: '#F4F2ED',
 
   // --- Accent: the only attention colour in the app ---
   coral: '#E8482B', // a MARK, not a text bed. ink on it 4.50 · white 3.89 (X)
@@ -1924,13 +1940,16 @@ const shadow = {
 
 // ---------------------------------------------------------------------------
 // Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, one settle, one
-// unfold, one disclose, and the yes screen's entrance, which is the first and the fade composed.
+// unfold, one disclose, the yes screen's entrance, which is the first and the fade composed, and
+// one sweep, the skeleton's band looping while a screen has nothing to draw yet (2026-11-24).
 // Nothing else moves.
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
 //
 // Every one of these is skipped when AccessibilityInfo.isReduceMotionEnabled is true — but
-// `kindSwap`, which crossfades there instead (its own note).
+// `kindSwap`, which crossfades there instead (its own note), and `skeleton`, which sweeps there
+// unchanged, as the calculating screen's indicator and the busy spinner turn there unchanged:
+// design-system Part 13's three exceptions, the two indicators having no token here (its own note).
 // ---------------------------------------------------------------------------
 
 /** The two durations the yes screen's entrance is composed from — see `motion.yesEntrance`. */
@@ -1965,6 +1984,25 @@ const motion = {
    * reduced motion gets the weaker of the two signals.
    */
   typing: 1200,
+  /**
+   * **The skeleton's sweep** (PRD #867, #868; 1.5, Part 13, Part 16 2026-11-24): one band of light,
+   * `color.skeletonSheen` between two `color.skeleton`s, crossing every shape on a screen at once
+   * while that screen has nothing to draw yet. It runs left to right across the screen's width once
+   * every `sweep` milliseconds, at constant speed, with no pause, for as long as the shapes stand;
+   * the band is tilted `tilt` degrees. `transform` alone, on the UI thread. A loop, argued in
+   * Part 16 against 1.5.
+   *
+   * **Both numbers are Facebook Shimmer's Android defaults, read from its source** (`Shimmer.java`:
+   * `animationDuration = 1000L`, no repeat delay, `RESTART`, `INFINITE`, `LEFT_TO_RIGHT`,
+   * `tilt = 20f`), the loading shimmer log's Q24. It refused the iOS library's 230 pt/s with its
+   * 0,4 s pause, and any number picked without a source.
+   *
+   * **It sweeps under reduced motion** (`ReduceMotion.Never`, without which Reanimated cuts the
+   * timing): the third named exception, beside the calculating screen's indicator and the busy
+   * spinner, for their reason (Q2). A still loading screen reads as frozen, and this is progress,
+   * not decoration.
+   */
+  skeleton: { sweep: 1000, tilt: 20 },
   rise: RISE,
   sheet: 260,
   popover: 130,

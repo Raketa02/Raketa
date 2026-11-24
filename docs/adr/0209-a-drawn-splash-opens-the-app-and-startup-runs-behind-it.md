@@ -162,6 +162,39 @@ the environment badge. **Until it is unmounted, it swallows every touch.**
 > before. In a release build nothing visible moves. Frames over 20 ms in the splash's first 2.6 s,
 > debug build: 21 → 3–5, the overrun past 16.7 ms 488 → ~100 ms.
 
+> **Amended 2026-11-24, again — the sequence gains a step that warms Home**
+> ([PRD #867](https://github.com/Raketa02/Raketa/issues/867), the loading shimmer, written by
+> [#868](https://github.com/Raketa02/Raketa/issues/868); its decision log's §7 and Q18, in
+> [`docs/specs/loading-shimmer/`](../specs/loading-shimmer/README.md)). With the tree mounting once
+> the motion is still, Home's own reads set out about 0.2 s before the fade, and a cold open often
+> faded onto a Home still building itself. **_Nothing else is warmed_ no longer holds for Home's
+> reads:**
+>
+> - **The step.** Right after session restore, which has already cached the account, the sequence
+>   starts _warm Home_ and **never awaits it**, as it starts the install referrer. It reads with
+>   exactly the query definitions Home's own hooks use (keys, functions and options, Top 10's chain
+>   included), so Home finds them in the cache, fresh under the app's 30 s `staleTime`, and asks
+>   for nothing twice. The order becomes: reporting → config → focus and online managers → keychain
+>   → session restore → **warm Home (never awaited)** → install referrer (never awaited) → fonts.
+> - **Only for an account whose entry decision is the tabs.** The entry decision becomes a pure rule
+>   over the account, callable outside its hook, so the step and the entry gate always agree. So
+>   there is no warm-up for naming, the social steps, a club's area or Start playing. **It is skipped
+>   when the phone already knows it is offline**, by §4's rule. **Launch only**: after a sign-in,
+>   Home mounts the moment the session opens, and a warm-up would gain nothing.
+> - **Who builds it and who starts it.** Each feature offers its Home read's prefetch on its public
+>   surface, and **the shell feature, which owns Home, composes them into the warm-up** it offers on
+>   its own. **The root layout only starts that warm-up**, as a step of the sequence it hands the
+>   launch gate, as it does the other steps, because the shared sequence may not import a feature.
+> - **Unchanged:** the splash never waits for it, and the fade rule (§3) stands as written. _Ready_
+>   still never means the data has arrived.
+> - **Why it is safe where mounting was not.** The freeze came from views created on the thread
+>   that moves the ball. Reads create no views. Their responses are parsed on the JavaScript thread,
+>   while the ball and the letters move on the UI thread, in worklets. And a cache write that no
+>   screen watches commits nothing.
+> - **How it is accepted:** with the A32 system trace of a cold start, the one above. Frames over
+>   20 ms in the splash's first 2.6 s must not rise above its 3–5 (debug build). Then a look on a
+>   release build.
+
 **It plays once per start of the JavaScript process**, a dev reload included. It doesn't play on
 a fast refresh, a return from the background, a sign-out, or an Android reopen after Back on the
 root screen, which the activity already turns into a resume.
