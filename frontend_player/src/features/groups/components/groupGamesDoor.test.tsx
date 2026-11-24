@@ -767,6 +767,11 @@ describe('finding, after the door’s answer', () => {
     expect(await live('For fun, 3 games', true)).toBeTruthy();
     expect(await screen.findByTestId(`game-card-${FIRST.FOR_FUN.proposal_id}`)).toBeTruthy();
     expect(screen.queryByText('Finding for-fun games for you…')).toBeNull();
+    // Landed by finding, the kind is drawn directly: no stack went out, and none comes in (#863).
+    const stack = StyleSheet.flatten(
+      screen.getByTestId('games-deck-stack').props.style as ViewStyle,
+    );
+    expect([stack.opacity, stack.transform]).toEqual([1, [{ translateY: 0 }]]);
   });
 
   it('sends the answer, then the deal, then reads the deck — once', async () => {

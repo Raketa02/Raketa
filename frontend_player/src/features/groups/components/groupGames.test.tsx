@@ -21,11 +21,17 @@
 import { onlineManager } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { RefreshControl, StyleSheet, type TextStyle } from 'react-native';
+import {
+  AccessibilityInfo,
+  RefreshControl,
+  StyleSheet,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 
 import { PAYMENTS_COPY } from '@/features/payments/types';
 import { RECORD_TITLE } from '@/features/player_record/types';
-import { PROPOSALS_COPY } from '@/features/proposals/types';
+import { PROPOSALS_COPY, proposalKeys } from '@/features/proposals/types';
 import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -432,7 +438,7 @@ describe('the Games tab’s menu — its lines (#862)', () => {
 });
 
 describe('the Games tab’s menu — picking a kind (#862)', () => {
-  it('swaps the deck to the other kind at once when it was read, and stays on Games', async () => {
+  it('swaps the deck to the other kind in place when it was read, and stays on Games', async () => {
     const { competitive, forFun, deal } = eitherDeck();
     await openGames(deal);
     await screen.findByTestId(`game-card-${competitive.proposal_id}`);
@@ -440,11 +446,12 @@ describe('the Games tab’s menu — picking a kind (#862)', () => {
     expect(await screen.findByTestId(`game-card-${forFun.proposal_id}`)).toBeTruthy();
     expect(useGameIntent.getState().intent).toBe('forFun');
 
-    // Competitive was read a moment ago: it is drawn on the press itself.
+    // Competitive was read a moment ago: it comes in once For fun's stack has gone out, with no
+    // spinner between them (the swap itself is the next describe's, #863).
     await pickKind('Games', 'Competitive');
 
     expect(menu()).toBeNull();
-    expect(screen.getByTestId(`game-card-${competitive.proposal_id}`)).toBeTruthy();
+    expect(await screen.findByTestId(`game-card-${competitive.proposal_id}`)).toBeTruthy();
     expect(screen.queryByLabelText(COPY.reading)).toBeNull();
     expect(screen).toHavePathname(`/play/group/${CREW.id}`);
     expect(await menuTab('Games')).toBeTruthy();
@@ -490,7 +497,7 @@ describe('the Games tab’s menu — picking a kind (#862)', () => {
     expect(await screen.findByTestId(`game-card-${forFun.proposal_id}`)).toBeTruthy();
     // …and the menu goes back as it came.
     await pickKind('Games', 'Competitive');
-    expect(screen.getByTestId(`game-card-${competitive.proposal_id}`)).toBeTruthy();
+    expect(await screen.findByTestId(`game-card-${competitive.proposal_id}`)).toBeTruthy();
   });
 
   it('just shuts on the kind it stands on — nothing read again', async () => {
@@ -549,6 +556,344 @@ describe('the Games tab’s menu — picking a kind (#862)', () => {
     expect(menu()).toBeNull();
     expect((await menuTab('Games')).props.accessibilityLabel).toBe('Games, For fun');
     expect(useGameIntent.getState().intent).toBe('forFun');
+  });
+});
+
+/**
+ * **Picking the other kind swaps the deck in place** (#863, PRD #859; the tab menu log §5.1–§5.2):
+ * the stack goes out, down and fading, and the other kind's rises into its place — the cards only,
+ * the buttons staying where both kinds have them. **Asserted at the end of each beat, never
+ * mid-motion**, and each beat is its own advance: the second is set going by the first one's end,
+ * and state set inside an advance is drawn only when it is over (`player-reanimated-tests`).
+ */
+describe('the Games deck swapped in place (#863)', () => {
+  const { out: OUT, in: IN, rise: RISE } = theme.motion.kindSwap;
+  const AT_REST = { opacity: 1, down: 0 };
+
+  /** A view's style, its layers merged — what the stage's own suite reads its cards by. */
+  function styleOf(view: { readonly props: { readonly style: unknown } }): ViewStyle {
+    const styles = [view.props.style].flat(3) as (ViewStyle | undefined)[];
+    return Object.assign({}, ...styles.filter((entry) => entry !== undefined)) as ViewStyle;
+  }
+
+  /** How the deck's stack stands in its layer: how faded, and how far down. */
+  function stackStands(): { readonly opacity: number; readonly down: number } {
+    const style = styleOf(screen.getByTestId('games-deck-stack', HIDDEN_TOO));
+    const transform = (style.transform ?? []) as readonly Record<string, unknown>[];
+    const down = transform.find((entry) => 'translateY' in entry)?.['translateY'];
+    return { opacity: Number(style.opacity ?? 1), down: Number(down ?? 0) };
+  }
+
+  /** How seen the buttons are — `undefined` where none are drawn. */
+  function buttonsSeen(): number | undefined {
+    const layer = screen.queryByTestId('games-deck-buttons', HIDDEN_TOO);
+    return layer === null ? undefined : Number(styleOf(layer).opacity ?? 1);
+  }
+
+  /** The stack going out, to its end. */
+  const goneOut = () => act(() => jest.advanceTimersByTime(OUT));
+  /** The other kind's stack coming in, to its end: it has landed. */
+  const cameIn = () => act(() => jest.advanceTimersByTime(IN));
+
+  const passButton = () => screen.queryByRole('button', { name: 'Not this time' });
+
+  /** Zofia's competitive card, then Kuba's for-fun one: a tile of each to swipe by. */
+  const ZOFIAS = ZOFIA().player_id;
+  const KUBAS = KUBA().player_id;
+
+  /**
+   * `kind`'s read held from now on, until the suite lands it — so the swap's spinner is certain to
+   * stand when the stack has gone out — and the other kind's as `others` deals it.
+   */
+  function holdRead(
+    kind: Wire['SearchMode'],
+    others: (asked: Wire['SearchMode'] | undefined) => Wire['GroupDeckResponse'],
+  ): (read: Wire['GroupDeckResponse']) => Promise<void> {
+    let answer: ((read: Response) => void) | undefined;
+    transport.on('GET', deckPath(CREW.id), (request) =>
+      kindAsked(request) === kind
+        ? new Promise<Response>((resolve) => {
+            answer = resolve;
+          })
+        : json(others(kindAsked(request))),
+    );
+    return async (read) => {
+      await act(async () => {
+        answer?.(json(read));
+      });
+    };
+  }
+
+  /** The deck's answers from now on, a yes on either card taken. */
+  function takeYeses(...cards: readonly Wire['DeckCardSchema'][]) {
+    for (const card of cards) {
+      transport.on('POST', yesPath(card.proposal_id), () =>
+        json({ proposal_id: card.proposal_id, open_seats: 2 }),
+      );
+      transport.on('POST', noPath(card.proposal_id), () => noContent());
+    }
+  }
+
+  it('sends the stack out, then brings the other kind’s in — its top card answering once it has landed', async () => {
+    const { competitive, forFun, deal } = eitherDeck();
+    takeYeses(competitive, forFun);
+    await openGames(deal);
+    await screen.findByTestId(`game-card-${competitive.proposal_id}`);
+
+    await pickKind('Games', 'For fun');
+
+    // Going out, it is still Competitive's stack on screen — and it answers nothing (a request
+    // sets out a tick after the answer, so the walk's end says so).
+    expect(screen.getByTestId(`game-card-${competitive.proposal_id}`)).toBeTruthy();
+    swipe(tile(ZOFIAS), commit + 40);
+
+    // Gone out: down `rise` and faded — and the For-fun stack comes up from there.
+    goneOut();
+    expect(stackStands()).toEqual({ opacity: 0, down: RISE });
+    expect(await screen.findByTestId(`game-card-${forFun.proposal_id}`)).toBeTruthy();
+    expect(screen.queryByTestId(`game-card-${competitive.proposal_id}`, HIDDEN_TOO)).toBeNull();
+    // Still coming in, it answers nothing either.
+    swipe(tile(KUBAS), commit + 40);
+    cameIn();
+
+    expect(stackStands()).toEqual(AT_REST);
+    expect(screen.queryByLabelText(COPY.reading)).toBeNull();
+    expect(swipe(tile(KUBAS), commit + 40)).toBe(true);
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    await waitFor(() =>
+      expect(transport.requestsTo('POST', yesPath(forFun.proposal_id))).toHaveLength(1),
+    );
+    expect(transport.requestsTo('POST', yesPath(competitive.proposal_id))).toHaveLength(0);
+  });
+
+  /**
+   * The code review's catch: the flight (240 ms) outlasts the stack going out (200), and a card
+   * answered just before the pick left the other kind's read — the one drawn by then.
+   */
+  it('lets a card still in flight fly out with its own stack, and leave its own kind’s read', async () => {
+    const { competitive, forFun, deal } = eitherDeck();
+    takeYeses(competitive, forFun);
+    await openGames(deal);
+    await screen.findByTestId(`game-card-${competitive.proposal_id}`);
+
+    expect(swipe(tile(ZOFIAS), commit + 40)).toBe(true);
+    await pickKind('Games', 'For fun');
+    goneOut();
+
+    // The beat is over, and the card is still flying: Competitive is drawn until it has flown.
+    expect(screen.getByTestId(`game-card-${competitive.proposal_id}`, HIDDEN_TOO)).toBeTruthy();
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT - OUT));
+
+    const competitiveRead = queryClient.getQueryData<{
+      readonly cards: readonly { proposalId: string }[];
+    }>(proposalKeys.deck(CREW.id, 'padel', 'competitive'));
+    expect(competitiveRead?.cards.map((card) => card.proposalId)).toEqual([]);
+    expect(await screen.findByTestId(`game-card-${forFun.proposal_id}`)).toBeTruthy();
+    cameIn();
+    expect(stackStands()).toEqual(AT_REST);
+  });
+
+  it('keeps the buttons when both kinds deal cards, answering nothing until the stack has landed', async () => {
+    const { competitive, forFun, deal } = eitherDeck();
+    takeYeses(competitive, forFun);
+    await openGames(deal);
+    await screen.findByTestId(`game-card-${competitive.proposal_id}`);
+
+    await pickKind('Games', 'For fun');
+
+    fireEvent.press(passButton()!);
+    expect(buttonsSeen()).toBe(1);
+    goneOut();
+    await screen.findByTestId(`game-card-${forFun.proposal_id}`);
+    expect(buttonsSeen()).toBe(1);
+    fireEvent.press(passButton()!);
+    cameIn();
+    expect(buttonsSeen()).toBe(1);
+    expect(transport.requestsTo('POST', noPath(competitive.proposal_id))).toHaveLength(0);
+    expect(transport.requestsTo('POST', noPath(forFun.proposal_id))).toHaveLength(0);
+
+    // Landed, they answer the card that came in.
+    fireEvent.press(passButton()!);
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    await waitFor(() =>
+      expect(transport.requestsTo('POST', noPath(forFun.proposal_id))).toHaveLength(1),
+    );
+  });
+
+  it('brings the starting card in when the other kind deals nothing, and the buttons go', async () => {
+    const card = deckCard();
+    await openGames((kind) =>
+      groupDeck({
+        kind: kind ?? 'COMPETITIVE',
+        segments: [
+          { kind: 'COMPETITIVE', count: 1 },
+          { kind: 'FOR_FUN', count: 0 },
+        ],
+        cards: kind === 'FOR_FUN' ? [] : [card],
+      }),
+    );
+    await screen.findByTestId(`game-card-${card.proposal_id}`);
+
+    await pickKind('Games', 'For fun');
+    // Going out, the stack and its buttons are still Competitive's.
+    expect(screen.getByTestId(`game-card-${card.proposal_id}`)).toBeTruthy();
+    expect(buttonsSeen()).toBe(1);
+    goneOut();
+
+    expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+    expect(buttonsSeen()).toBeUndefined();
+    cameIn();
+    expect(stackStands()).toEqual(AT_REST);
+    expect(passButton()).toBeNull();
+  });
+
+  it('brings the buttons back in, from the starting card to a kind with cards', async () => {
+    const card = deckCard({
+      kind: 'FOR_FUN',
+      forecast: null,
+      sides: { yours: [youTile(), KUBA()], theirs: [ANIA(), EWA()] },
+    });
+    takeYeses(card);
+    const deal = (kind: Wire['SearchMode'] | undefined) =>
+      groupDeck({
+        kind: kind ?? 'COMPETITIVE',
+        segments: [
+          { kind: 'COMPETITIVE', count: 0 },
+          { kind: 'FOR_FUN', count: 1 },
+        ],
+        cards: kind === 'FOR_FUN' ? [card] : [],
+      });
+    await openGames(deal);
+    // Either suits her, so Competitive is live with nothing in it.
+    expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+    expect(passButton()).toBeNull();
+    const land = holdRead('FOR_FUN', deal);
+
+    await pickKind('Games', 'For fun');
+    // Going out, it is the starting card that goes.
+    expect(screen.getByText('Nothing picked right now')).toBeTruthy();
+    goneOut();
+    // The starting card had none, so none stand under the spinner: they come in with the cards.
+    expect(screen.getByLabelText(COPY.reading)).toBeTruthy();
+    expect(buttonsSeen()).toBeUndefined();
+    await land(deal('FOR_FUN'));
+    await screen.findByTestId(`game-card-${card.proposal_id}`);
+    cameIn();
+
+    expect(buttonsSeen()).toBe(1);
+    expect(swipe(tile(KUBAS), commit + 40)).toBe(true);
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    await waitFor(() =>
+      expect(transport.requestsTo('POST', yesPath(card.proposal_id))).toHaveLength(1),
+    );
+  });
+
+  it('stands today’s spinner in the stack’s place while a kind not read yet is read, then brings it in', async () => {
+    const { competitive, forFun, deal } = eitherDeck();
+    takeYeses(forFun);
+    await openGames(deal);
+    await screen.findByTestId(`game-card-${competitive.proposal_id}`);
+    const land = holdRead('FOR_FUN', deal);
+
+    await pickKind('Games', 'For fun');
+    goneOut();
+
+    expect(screen.getByLabelText(COPY.reading)).toBeTruthy();
+    expect(stackStands()).toEqual({ opacity: 0, down: RISE });
+    expect(screen.queryByTestId(`game-card-${competitive.proposal_id}`, HIDDEN_TOO)).toBeNull();
+    // Both kinds deal cards: the buttons stay under it, answering nothing.
+    expect(buttonsSeen()).toBe(1);
+
+    await land(deal('FOR_FUN'));
+    expect(await screen.findByTestId(`game-card-${forFun.proposal_id}`)).toBeTruthy();
+    expect(screen.queryByLabelText(COPY.reading)).toBeNull();
+    cameIn();
+
+    expect(stackStands()).toEqual(AT_REST);
+    expect(swipe(tile(KUBAS), commit + 40)).toBe(true);
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    await waitFor(() =>
+      expect(transport.requestsTo('POST', yesPath(forFun.proposal_id))).toHaveLength(1),
+    );
+  });
+
+  it('goes out to today’s failure when that read is refused, and a retry draws the deck directly', async () => {
+    const { competitive, forFun, deal } = eitherDeck();
+    await openGames(deal);
+    await screen.findByTestId(`game-card-${competitive.proposal_id}`);
+    serveKind('FOR_FUN', 'refused', deal);
+
+    await pickKind('Games', 'For fun');
+    // The stack goes out first, whatever the read will say.
+    expect(screen.getByTestId(`game-card-${competitive.proposal_id}`)).toBeTruthy();
+    goneOut();
+
+    expect(await screen.findByRole('button', { name: COPY.readAgain })).toBeTruthy();
+    expect(passButton()).toBeNull();
+    expect(screen.queryByTestId('games-deck-stack')).toBeNull();
+
+    serveKind('FOR_FUN', deal('FOR_FUN'), deal);
+    fireEvent.press(screen.getByRole('button', { name: COPY.readAgain }));
+    expect(await screen.findByTestId(`game-card-${forFun.proposal_id}`)).toBeTruthy();
+    expect(stackStands()).toEqual(AT_REST);
+  });
+
+  it('draws a notice’s kind directly — no stack goes out, none comes in', async () => {
+    const { competitive, forFun, deal } = eitherDeck();
+    await openGames(deal);
+    await screen.findByTestId(`game-card-${competitive.proposal_id}`);
+    // For fun read once, so the notice's kind is drawn from the cache on its first frame.
+    await pickKind('Games', 'For fun');
+    goneOut();
+    await screen.findByTestId(`game-card-${forFun.proposal_id}`);
+    cameIn();
+    await pickKind('Games', 'Competitive');
+    goneOut();
+    await screen.findByTestId(`game-card-${competitive.proposal_id}`);
+    cameIn();
+
+    act(() =>
+      router.push({
+        pathname: '/play/group/[groupId]',
+        params: { groupId: CREW.id, sport: 'padel', kind: 'forFun', card: forFun.proposal_id },
+      }),
+    );
+
+    expect(await screen.findByTestId(`game-card-${forFun.proposal_id}`)).toBeTruthy();
+    expect(stackStands()).toEqual(AT_REST);
+    expect(screen.queryByTestId(`game-card-${competitive.proposal_id}`, HIDDEN_TOO)).toBeNull();
+  });
+
+  describe('under reduced motion', () => {
+    // Answered back as the phone usually answers, never restored: `spyOn` on the preset's own mock
+    // hands back that mock, and restoring it strips its answer for every suite after this one.
+    beforeEach(() => {
+      jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    });
+    afterEach(() => {
+      jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+    });
+
+    it('crossfades: the stack fades out where it stands, and the other kind’s fades in there', async () => {
+      const { competitive, forFun, deal } = eitherDeck();
+      takeYeses(forFun);
+      await openGames(deal);
+      await screen.findByTestId(`game-card-${competitive.proposal_id}`);
+
+      await pickKind('Games', 'For fun');
+      goneOut();
+
+      expect(stackStands()).toEqual({ opacity: 0, down: 0 });
+      expect(await screen.findByTestId(`game-card-${forFun.proposal_id}`)).toBeTruthy();
+      cameIn();
+
+      expect(stackStands()).toEqual(AT_REST);
+      expect(swipe(tile(KUBAS), commit + 40)).toBe(true);
+      act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+      await waitFor(() =>
+        expect(transport.requestsTo('POST', yesPath(forFun.proposal_id))).toHaveLength(1),
+      );
+    });
   });
 });
 

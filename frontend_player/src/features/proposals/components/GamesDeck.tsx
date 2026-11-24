@@ -62,6 +62,19 @@
  * segment it does (`useGroupDeck`), so the deck never stands on an empty kind the player could not
  * have wanted.
  *
+ * ## A kind picked swaps the deck in place (#863)
+ *
+ * **The stack goes out and the other kind's comes in** (the tab menu log §5.1–§5.2; `KindSwap.tsx`
+ * draws it, `domain/kindSwap.ts` rules it, `useKindSwap` times it): going out, the deck still draws
+ * the kind it leaves, while the kind picked is read from the press; coming in, its stack rises into
+ * the same place once that read is in — today's spinner standing in the stack's place until it is —
+ * and the stage's own arrival is not run for its cards (`standing`). **Only the cards move**: the
+ * stack, the starting card or the swap's spinner stand in one layer, drawn always, and the buttons
+ * in another, kept where both kinds deal cards and faded where one side is the starting card. **No
+ * answer reaches a stack on the move.** A failed read goes out to today's failure, and a change of
+ * sport ends a swap. **Only a pick from the menu moves anything**: a notice's kind and the kind
+ * finding lands on are the page's choice made directly, and draw the deck directly.
+ *
  * ## The kind the intent doesn't want is a door (Q127)
  *
  * **Both kinds are always in the menu** (`switchSides`; ADR-0201 §2, #740): the one the intent shows
@@ -177,6 +190,13 @@ import {
   type Finding,
 } from '../domain/deck';
 import { isRescue, type DealtIn } from '../domain/fill';
+import {
+  buttonsMotion,
+  stackMotion,
+  swapTo,
+  takesAnswers,
+  type StackDrawn,
+} from '../domain/kindSwap';
 import { gamesSeen } from '../domain/seen';
 import type { GameKind } from '../domain/vocabulary';
 import { fortnightOf, gameDayOf, weekdayAt } from '../domain/when';
@@ -188,9 +208,9 @@ import {
   useAnswersOnTheirWay,
   useDropCard,
   useFindGames,
-  useGroupDeck,
   useKindsHeld,
 } from '../hooks/useGroupDeck';
+import { useKindSwap } from '../hooks/useKindSwap';
 import { useLatest } from '../hooks/useLatest';
 import { useSeeRows } from '../hooks/useSeenRows';
 
@@ -198,11 +218,18 @@ import { DeckAnswers } from './DeckAnswers';
 import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
 import { FindingGames } from './FindingGames';
-import { answerLabels, capLine, refusalMessage, stampsFor } from './deckPresentation';
+import {
+  ANSWER_LABELS,
+  answerLabels,
+  capLine,
+  refusalMessage,
+  stampsFor,
+} from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
 import { GameCard } from './GameCard';
 import { KindDoor } from './KindDoor';
+import { SwapButtons, SwapStack } from './KindSwap';
 import { ReadFailed } from './ReadFailed';
 import { gameRoute, rescueRoute } from './proposalRoutes';
 
@@ -271,14 +298,23 @@ export function GamesDeck({
   refreshControl,
   inView,
 }: GamesDeckProps) {
-  const { read, kind } = useGroupDeck(groupId, sport, chosen);
+  /** The card on its way off the stage, and its answer — until it has flown. */
+  const [leaving, setLeaving] = useState<Leaving | undefined>(undefined);
+  // The kind drawn — the one chosen, or while a pick's stack goes out the one it leaves, held while
+  // a card of it is still in flight — and the swap under way (#863; see the module note).
+  const {
+    read,
+    kind,
+    swap,
+    begin: beginSwap,
+    end: endSwap,
+  } = useKindSwap(groupId, sport, chosen, leaving !== undefined);
   const drop = useDropCard(groupId, sport, kind);
   const dealtIn: DealtIn = { groupId, sport, kind };
   const fill = useFillYes(dealtIn);
   /** What the fill has up over the phone — *It's a game!* or one of its sheets covers the deck. */
   const fillOver = useFill().over;
 
-  const [leaving, setLeaving] = useState<Leaving | undefined>(undefined);
   /** The player whose record is open — a tile's press. */
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
   /** The card on top as last drawn — under the thumb, so a re-read moves the cards behind it. */
@@ -302,11 +338,13 @@ export function GamesDeck({
   /** The finding under way for this sport — a pick moves nothing while it is either. */
   const finding = pendingOn(sport, find)?.finding;
   const beginFinding = (after: Finding) => find.mutate({ sport, finding: after });
-  // A panel belongs to the sport it was opened on, and a change of sport closes it.
+  // A panel belongs to the sport it was opened on, and a change of sport closes it — and stops a
+  // swap, which was the other sport's deck's.
   useEffect(() => {
     setDoor(undefined);
     setRefusal(undefined);
-  }, [sport]);
+    endSwap();
+  }, [sport, endSwap]);
   const onTheirWay = useAnswersOnTheirWay();
 
   const answer = useAnswerCard<DeckCard>(
@@ -339,24 +377,6 @@ export function GamesDeck({
       ? undefined
       : doorPanel(kinds, door.kind);
 
-  /**
-   * A line of the Games tab's menu, picked (`GamesDeckHandle`). A door opens its panel and moves
-   * nothing; a live kind is the page's choice, as ever, and shuts a panel left open — as a press on
-   * the switch's live kind did. While an answer is on its way, or its games are being found, nothing
-   * moves: finding lands it. Which kind is a door is what the menu drew it from (`kinds`), so its
-   * panel opens even over this deck's spinner or its failure.
-   */
-  const pick = (pressed: GameKind) => {
-    if (declaring !== undefined || finding !== undefined) return;
-    if (kinds !== undefined && doorPanel(kinds, pressed) !== undefined) {
-      setRefusal(undefined);
-      setDoor({ sport, kind: pressed });
-      return;
-    }
-    setDoor(undefined);
-    onChoose(pressed);
-  };
-  useImperativeHandle(handle, () => ({ pick }));
   // What the deck shows is seen while it is on screen (#850): every card the read of the kind on
   // screen dealt, whenever they change while the page is in view with nothing over the deck — no
   // record's sheet, nothing of the fill's, neither the door's panel nor finding over its area. On
@@ -401,6 +421,41 @@ export function GamesDeck({
   const top = shown[0];
   useEffect(() => setUnderThumb(top?.proposalId), [top?.proposalId]);
 
+  // What stands where the stack stands, and how it and the buttons move (#863).
+  const stack: StackDrawn =
+    deck === undefined ? 'reading' : top === undefined ? 'nothing' : 'cards';
+  const buttons = buttonsMotion(swap, stack);
+  /** Whether the deck stands as a stack a pick can swap: not today's first spinner, nor a failure. */
+  const swappable =
+    deck === undefined ? swap !== undefined && read.error === null : deck.segments.length > 0;
+
+  /**
+   * A line of the Games tab's menu, picked (`GamesDeckHandle`). A door opens its panel and moves
+   * nothing; a live kind is the page's choice, as ever, and shuts a panel left open — as a press on
+   * the switch's live kind did. **A live kind other than the one drawn swaps the deck in place**
+   * (#863): its stack goes out while the kind picked is read, and comes in once it is; from today's
+   * first spinner or a failure there is no stack to move, and the kind is drawn directly. While an
+   * answer is on its way, or its games are being found, nothing moves: finding lands it. Which kind
+   * is a door is what the menu drew it from (`kinds`), so its panel opens even over this deck's
+   * spinner or its failure.
+   */
+  const pick = (pressed: GameKind) => {
+    if (declaring !== undefined || finding !== undefined) return;
+    if (kinds !== undefined && doorPanel(kinds, pressed) !== undefined) {
+      setRefusal(undefined);
+      setDoor({ sport, kind: pressed });
+      return;
+    }
+    setDoor(undefined);
+    // Still going out, a pick only changes where the swap lands — the kind going out included.
+    if (swappable && (pressed !== kind || swap?.phase === 'out')) {
+      const held = buttons === 'kept' || buttons === 'in';
+      beginSwap(swapTo(swap, { from: kind, stack, held, kinds }, pressed));
+    }
+    onChoose(pressed);
+  };
+  useImperativeHandle(handle, () => ({ pick }));
+
   // *Undo* deals the card it held back where it was — on top, under the thumb again. A yes sent at
   // zero has left the read by then, so a card still in it when the count stops was taken back.
   const counted = useRef<string | null>(null);
@@ -432,7 +487,8 @@ export function GamesDeck({
    * with nothing saved waits for the setup, and the card springs back.
    */
   const answerTo = (said: DeckExit, card: DeckCard): DragVerdict => {
-    if (leaving !== undefined) return 'withheld';
+    // No answer reaches a stack on the move — going out, or coming in until it has landed (#863).
+    if (leaving !== undefined || !takesAnswers(swap)) return 'withheld';
     if (said === 'yes' && fill.setUpFirst(() => landLater.current('yes', card))) return 'withheld';
     return land(said, card);
   };
@@ -511,7 +567,8 @@ export function GamesDeck({
     );
   const covered = behindOverlay(panel !== undefined || finding !== undefined);
 
-  if (deck === undefined) {
+  // A swap's spinner stands in the stack's place, below; today's stands alone (#863).
+  if (deck === undefined && (swap === undefined || read.error !== null)) {
     // Nothing to pull while the first read is on its way; one that failed pulls as its retry reads.
     const waiting =
       read.error === null ? (
@@ -537,7 +594,7 @@ export function GamesDeck({
     );
   }
 
-  if (deck.segments.length === 0) {
+  if (deck !== undefined && deck.segments.length === 0) {
     return (
       <ScrollView testID={BODY} contentContainerStyle={s.page} refreshControl={refreshControl}>
         {/* The answer's finding stands where the question was, until the deck it lands on is read. */}
@@ -562,24 +619,42 @@ export function GamesDeck({
     </>
   );
 
-  if (top === undefined) {
-    return (
-      <ScrollView
-        testID={BODY}
-        contentContainerStyle={[s.page, s.grow]}
-        refreshControl={refreshControl}
-      >
-        {above}
-        {/* The deck's area, which the door's panel covers — see the module note. */}
-        <View style={s.area}>
-          <View style={s.under} {...covered}>
-            {empty}
-          </View>
-          {overTheDeck}
-        </View>
-      </ScrollView>
-    );
-  }
+  // The stage, the starting card, or a swap's spinner, in the layer a swap moves — and the buttons
+  // under it, in theirs (#863, `KindSwap`): drawn always, at rest when nothing swaps.
+  const stage =
+    top !== undefined ? (
+      <DeckStage
+        standing={swap !== undefined}
+        leaving={
+          leaving !== undefined && leaving.card.proposalId === top.proposalId
+            ? leaving.said
+            : undefined
+        }
+        onAnswer={(said) => answerTo(said, top)}
+        onLeft={() => cardLeft(top)}
+        stamps={stampsFor(top, chargesAtOnce(top))}
+        cards={shown.slice(0, ON_THE_STAGE).map((card, depth) => ({
+          key: card.proposalId,
+          card: (
+            <GameCard
+              card={card}
+              seatsPerSide={seatsPerSide}
+              at={at}
+              day={gameDayOf(card.startsAt, at)}
+              today={weekday}
+              {...(depth === 0
+                ? {
+                    onOpen: () => open(card),
+                    onPerson: (person: DeckPerson) => setReading(person),
+                  }
+                : {})}
+            />
+          ),
+        }))}
+      />
+    ) : stack === 'nothing' ? (
+      empty
+    ) : null;
 
   return (
     <>
@@ -595,44 +670,45 @@ export function GamesDeck({
         {/* The deck's area, which the door's panel covers — see the module note. */}
         <View style={s.area}>
           <View style={s.under} {...covered}>
-            <View style={s.stage}>
-              <DeckStage
-                leaving={
-                  leaving !== undefined && leaving.card.proposalId === top.proposalId
-                    ? leaving.said
-                    : undefined
-                }
-                onAnswer={(said) => answerTo(said, top)}
-                onLeft={() => cardLeft(top)}
-                stamps={stampsFor(top, chargesAtOnce(top))}
-                cards={shown.slice(0, ON_THE_STAGE).map((card, depth) => ({
-                  key: card.proposalId,
-                  card: (
-                    <GameCard
-                      card={card}
-                      seatsPerSide={seatsPerSide}
-                      at={at}
-                      day={gameDayOf(card.startsAt, at)}
-                      today={weekday}
-                      {...(depth === 0
-                        ? {
-                            onOpen: () => open(card),
-                            onPerson: (person: DeckPerson) => setReading(person),
-                          }
-                        : {})}
-                    />
-                  ),
-                }))}
-              />
-            </View>
+            <SwapStack
+              motion={stackMotion(swap, deck !== undefined)}
+              // The stage takes the height the page leaves; the starting card, its own.
+              {...(stack === 'nothing' ? {} : { style: s.stage })}
+              {...(stack === 'reading'
+                ? {
+                    waiting: (
+                      <ActivityIndicator
+                        accessibilityLabel={COPY.reading}
+                        color={theme.color.muted}
+                      />
+                    ),
+                  }
+                : {})}
+            >
+              {stage}
+            </SwapStack>
 
-            <DeckAnswers
-              labels={answerLabels(top)}
-              onPass={() => answerTo('no', top)}
-              onAccept={() => answerTo('yes', top)}
-              onRecord={() => open(top)}
-              answering={leaving !== undefined}
-            />
+            {buttons === 'none' ? null : (
+              // Nothing here reaches a stack going out. Coming in, the i opens the card coming in,
+              // and ✕ and the ball wait for it to land (`answerTo`).
+              <SwapButtons motion={buttons} inert={swap?.phase === 'out'}>
+                {/* Under a swap's spinner they are kept, answering nothing, with the game's own
+                    names — there is no card yet to name them for. */}
+                <DeckAnswers
+                  labels={top === undefined ? ANSWER_LABELS : answerLabels(top)}
+                  onPass={() => {
+                    if (top !== undefined) answerTo('no', top);
+                  }}
+                  onAccept={() => {
+                    if (top !== undefined) answerTo('yes', top);
+                  }}
+                  onRecord={() => {
+                    if (top !== undefined && swap?.phase !== 'out') open(top);
+                  }}
+                  answering={leaving !== undefined}
+                />
+              </SwapButtons>
+            )}
           </View>
           {overTheDeck}
         </View>

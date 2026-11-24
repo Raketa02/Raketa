@@ -69,7 +69,7 @@ import {
 import { fakeClipboard, fakeHaptics, fakePayments, fakeShare } from '@/test-support/platform';
 import { bookingDetails } from '@/test-support/home';
 import { servedReliability } from '@/test-support/playerRecord';
-import { menuSays, menuTab, pickKind } from '@/test-support/tabMenu';
+import { landTheSwap, menuSays, menuTab, pickKind } from '@/test-support/tabMenu';
 import {
   installTransport,
   json,
@@ -644,10 +644,14 @@ const rereadDecks = () => reread(proposalKeys.group(CREW.id));
 /** The deck on Competitive, as the page opens — its read drawn, and the tab saying its kind. */
 const onCompetitive = () => menuTab('Games');
 
-/** The deck moved to For fun in the Games tab's menu (#862), and the card drawn there. */
+/**
+ * The deck moved to For fun in the Games tab's menu (#862), and the card drawn there — its stack
+ * landed, so it answers and opens (#863).
+ */
 async function switchToForFun(card: Wire['DeckCardSchema']) {
   await pickKind('Games', 'For fun');
   expect(await screen.findByTestId(`game-card-${card.proposal_id}`)).toBeTruthy();
+  landTheSwap();
 }
 
 const GAMES_NEW = 'Games, 1 new with somebody In';

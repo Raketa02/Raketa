@@ -1929,7 +1929,8 @@ const shadow = {
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
 //
-// Every one of these is skipped when AccessibilityInfo.isReduceMotionEnabled is true.
+// Every one of these is skipped when AccessibilityInfo.isReduceMotionEnabled is true — but
+// `kindSwap`, which crossfades there instead (its own note).
 // ---------------------------------------------------------------------------
 
 /** The two durations the yes screen's entrance is composed from — see `motion.yesEntrance`. */
@@ -1975,6 +1976,16 @@ const motion = {
    * open or shut.
    */
   tabMenu: 150,
+  /**
+   * **The Games deck swapped to its other kind in place** (#863; PRD #859's *about 200ms* and *about
+   * 250ms*, *about 24pt*): picked from the tab's menu, the stack goes `rise` down and fades out over
+   * `out`, then the other kind's stack comes up from `rise` below into the same place and fades in
+   * over `in` — the cards alone, opacity and transform on the native driver, `easeDecel`, the stage
+   * never scaled. The buttons under it fade over the same beats where one side has none. **Under
+   * reduced motion it is a crossfade, not skipped**: nothing travels, and the two fades run — a cut
+   * from one kind's cards to the other's would not say the deck changed.
+   */
+  kindSwap: { out: 200, in: 250, rise: 24 },
   /**
    * The swipe row's card coming to rest once the finger lifts (6.15) — to revealed or to closed,
    * never in between. Short enough to read as the card *landing* rather than travelling, since the

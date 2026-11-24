@@ -1481,6 +1481,38 @@ off the cache with no observer, which a never-fetching observer would have made 
 suites (`groups.md`), with `domain/deck.test.ts` and `deckPresentation.test.ts` for the rule and
 the words. **Not seen on a device** (#866).
 
+**A kind picked in the menu swaps the deck in place** ([#863](https://github.com/Raketa02/Raketa/issues/863),
+PRD #859; the tab menu log §5.1, §5.2). **The stack goes out** — `motion.kindSwap.rise` (24) down
+and faded over `.out` (200) — and **the other kind's comes in**, up from `rise` below into the same
+place over `.in` (250): opacity and a translation on the native driver, nothing scaled, the stage
+told its cards stand in place from their first frame (`DeckStage`'s `standing`) so its own arrival —
+a step up and a shrink to full size — does not run under the swap's. **Only the cards move**: the
+layer the stack stands in is drawn always, round the stage, the starting card or a swap's spinner
+(`KindSwap.tsx`'s `SwapStack`), and the buttons stand in one of their own (`SwapButtons`). **The
+rules are pure** (`domain/kindSwap.ts`): while the stack goes out the deck still draws the kind it
+leaves (`kindDrawn`), and the kind picked is read from the press, as before — the hook
+(`useKindSwap`) holds an observer on both, so the swap costs that read nothing — and comes in once
+it is read, at once where it was read before. **The buttons stay where both sides have them**: the
+kind left dealt a card and the kind picked **promises** one by the count its menu line shows,
+because that read is not in when the stack goes out; where one side is the group's starting card
+they fade with the stack (`buttonsMotion`), and a count the read then contradicts is the read's to
+settle. **A kind not read yet**: today's spinner stands centred in the stack's place, the buttons
+kept under it where they stay, until the read lands and the stack rises; **a refused read** goes out
+to today's failure with its retry, and the swap ends — a retry that lands draws the deck directly.
+A pick made while that spinner stands comes straight in, having no stack to send out; a pick made
+while the stack still goes out only changes where it lands. **A card still in flight holds the kind
+it leaves** (the code review's catch): the flight (240) outlasts the beat, and the card leaves that
+kind's read and carries that kind's answer, so the kind picked comes in once the card has flown. **No answer reaches a stack on the
+move** (`takesAnswers`, guarded in `answerTo` as well as by the layers' touch): the buttons take no
+touch while the stack goes out, and coming in ✕ and the ball wait for it to land while the i opens
+the card coming in. **Under reduced motion it is a crossfade**: nothing travels and the two fades
+run, faded rather than skipped for the reason the design system's 1.5 gives. **Only a pick moves anything**: a notice's kind and the kind finding lands on are drawn
+directly, and a change of sport ends a swap. Walked in `groupGames.test.tsx` (_the Games deck
+swapped in place_, at the end of each beat and never mid-motion), with the badges suite landing the
+swap before it answers (`landTheSwap`), the door suite's finding drawing directly,
+`domain/kindSwap.test.ts` for the rules and `deckStage.test.tsx` for `standing`. **Not seen on a
+device** (#866).
+
 **After an intent answer on Games, the tab is finding** ([#741](https://github.com/Raketa02/Raketa/issues/741),
 [ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
 §4, the screens A2.1 state 5). The deck read straight after an answer used to come before Raketa had

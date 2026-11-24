@@ -56,6 +56,8 @@ interface StageOver {
   /** The people on the stage, the top card first. */
   readonly cards?: readonly string[];
   readonly stamps?: Readonly<Record<DeckExit, StampWords>>;
+  /** The cards stand in place from their first frame — a swapped deck's stack (#863). */
+  readonly standing?: boolean;
 }
 
 /** Every mount of a face, in order — so a card promoted in place can be told from one redrawn. */
@@ -80,6 +82,7 @@ function drawStage({
   collapsed = false,
   cards = ['Marek Z.'],
   stamps = PLAYERS_STAMPS,
+  standing = false,
 }: StageOver = {}) {
   const haptics = fakeHaptics();
   const tree = (over: Partial<StageOver>) => (
@@ -91,6 +94,7 @@ function drawStage({
           onAnswer={onAnswer}
           cards={(over.cards ?? cards).map((name) => ({ key: name, card: <Face name={name} /> }))}
           stamps={stamps}
+          standing={'standing' in over ? over.standing : standing}
         />
       </HapticsProvider>
     </ReducedMotionProvider>
@@ -318,6 +322,35 @@ describe('the card behind becoming the top card', () => {
     swipe(card('Ana K.'), -commit);
 
     expect(onAnswer).toHaveBeenCalledWith('no');
+  });
+});
+
+/**
+ * #863: a deck swapped to its other kind brings its stack in as one, by the deck's own rise — so the
+ * cards it hands in stand in place from their first frame, and the stage's arrival, which scales a
+ * card, is not run for them. Once the swap is over, a card coming forward arrives as ever.
+ */
+describe('a stack handed in standing', () => {
+  it('stands its top card in place, whole, from the first frame', () => {
+    drawStage({ cards: ['Marek Z.'], standing: true });
+
+    expect(standingOf('Marek Z.')).toEqual({ translateY: 0, scale: 1 });
+    expect(opacityOf('Marek Z.')).toBe(1);
+  });
+
+  it('lets the next card arrive as ever once it is no longer standing', () => {
+    const { rerender } = drawStage({
+      cards: ['Marek Z.', 'Ana K.'],
+      leaving: 'yes',
+      standing: true,
+    });
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+
+    rerender({ leaving: undefined, cards: ['Ana K.'], standing: false });
+
+    expect(standingOf('Ana K.')).toEqual({ translateY: STACK.step, scale: 1 - STACK.shrink });
+    act(() => jest.advanceTimersByTime(theme.motion.rise + 50));
+    expect(standingOf('Ana K.')).toEqual({ translateY: 0, scale: 1 });
   });
 });
 

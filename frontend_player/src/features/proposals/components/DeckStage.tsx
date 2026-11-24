@@ -79,6 +79,12 @@
  * third card; and its photograph mounting again. Each read as a blink between the release and
  * the card under it.
  *
+ * **A stack handed in standing arrives by its caller's motion, not this one** (`standing`, #863): the
+ * Games deck swapped to its other kind brings its whole stack up into the stage as one, and a top
+ * card that also came forward from a step back and a shrink smaller would be scaled under that rise.
+ * Its cards stand in place from their first frame — the value starts there, so no frame is drawn
+ * short of it — and every card after the swap arrives as ever.
+ *
  * ## The durations live here rather than in the theme
  *
  * `theme.motion` is *"one entrance, one sheet, one popover, one fade"* and holds the shared
@@ -197,6 +203,13 @@ export interface DeckStageProps {
   readonly cards: readonly StagedCard[];
   /** What the two stamps say, for the card on top — see the module note. */
   readonly stamps: Readonly<Record<DeckExit, StampWords>>;
+  /**
+   * **The cards handed in now stand in place from their first frame** — a deck swapped to its other
+   * kind, whose stack rises in as one by the deck's own motion (#863, `KindSwap`): the arrival — a
+   * card coming forward from a step back and a shrink smaller — is not run for a card first drawn on
+   * top while this is set. Absent, every card arrives.
+   */
+  readonly standing?: boolean;
 }
 
 /** One card on the stage, and what tells it from every other across renders. */
@@ -213,10 +226,19 @@ export interface StagedCard {
 interface Motion {
   readonly drag: Animated.ValueXY;
   readonly arrival: Animated.Value;
+  /** Drawn standing in place — no arrival to run (`standing`). */
+  readonly standing: boolean;
   gone: boolean;
 }
 
-export function DeckStage({ leaving, onAnswer, onLeft, cards, stamps }: DeckStageProps) {
+export function DeckStage({
+  leaving,
+  onAnswer,
+  onLeft,
+  cards,
+  stamps,
+  standing = false,
+}: DeckStageProps) {
   const collapsed = useCollapsedPresentation();
   const haptics = useHaptics();
   /**
@@ -232,7 +254,8 @@ export function DeckStage({ leaving, onAnswer, onLeft, cards, stamps }: DeckStag
     if (held !== undefined) return held;
     const made: Motion = {
       drag: new Animated.ValueXY(),
-      arrival: new Animated.Value(collapsed ? 1 : 0),
+      arrival: new Animated.Value(collapsed || standing ? 1 : 0),
+      standing,
       gone: false,
     };
     motions.set(key, made);
@@ -300,7 +323,7 @@ export function DeckStage({ leaving, onAnswer, onLeft, cards, stamps }: DeckStag
   // The arrival: once per top card rather than once per render, from where it stood behind.
   useEffect(() => {
     if (motion === undefined) return;
-    if (collapsed) {
+    if (collapsed || motion.standing) {
       motion.arrival.setValue(1);
       return;
     }

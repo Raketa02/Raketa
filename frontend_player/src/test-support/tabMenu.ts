@@ -13,7 +13,9 @@
  * Not app code — nothing under `src/` outside tests imports this.
  */
 
-import { fireEvent, screen, within } from 'expo-router/testing-library';
+import { act, fireEvent, screen, within } from 'expo-router/testing-library';
+
+import { theme } from '@/shared/ui/theme';
 
 /** `word`, with every character a pattern would read as an operator escaped. */
 function literal(word: string): string {
@@ -55,6 +57,17 @@ export function menuLine(kind: string, selected?: boolean): ReturnType<typeof sc
 export async function pickKind(tab: string, kind: string): Promise<void> {
   await openTabMenu(tab);
   fireEvent.press(await menuLine(kind));
+}
+
+/**
+ * **The Games deck's swap, run to its end** (#863): a kind picked from the Games tab's menu sends the
+ * stack out and brings the other kind's in, and the stack coming in answers once it has landed — so
+ * a suite that answers it, or touches it, lands it first. Each beat is its own advance: the second
+ * is set going by the first one's end.
+ */
+export function landTheSwap(): void {
+  act(() => jest.advanceTimersByTime(theme.motion.kindSwap.out));
+  act(() => jest.advanceTimersByTime(theme.motion.kindSwap.in));
 }
 
 /** **Shut the tab's menu open now** — a second press on its tab, which changes nothing else. */
