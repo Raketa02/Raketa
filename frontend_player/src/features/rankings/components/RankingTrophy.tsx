@@ -13,6 +13,9 @@
  * **No number, and still a button**, when there is no place in that view — not enough results, off
  * the list, never played, or in Friends no friend listed — and while Home or the phone is being read:
  * a number appearing is the badge's own move, and the pill is the way to the page whatever it says.
+ * **Home holds the number back while it shimmers** (#871; `showsPlace`): the trophy is drawn for real
+ * from the start, and its place comes with the rest of your things — or, past the ceiling, as it
+ * lands — named only once drawn.
  *
  * **A tap opens Rankings on the trophy's sport and view**, pushed over Home (the shell keeps the Home
  * column lit): the sport in the address, the view the one the page reads off the phone. With no result
@@ -42,12 +45,18 @@ const CUP =
 const HANDLES = 'M7 5H4.5v1.5A3 3 0 0 0 7 9.5M17 5h2.5v1.5A3 3 0 0 1 17 9.5';
 const HANDLE_WEIGHT = 1.8;
 
-export function RankingTrophy() {
+export interface RankingTrophyProps {
+  /** Whether its place may be drawn — Home's to say while it shimmers (#871). Drawn unless said. */
+  readonly showsPlace?: boolean;
+}
+
+export function RankingTrophy({ showsPlace = true }: RankingTrophyProps) {
   const router = useRouter();
   const ranking = useHomeRanking();
   const { view } = useRankingView();
   // Home's read and the phone's both in, or no place to show — and no words for one.
-  const known = ranking == null || view === undefined ? undefined : { ranking, view };
+  const known =
+    !showsPlace || ranking == null || view === undefined ? undefined : { ranking, view };
   const place = known === undefined ? undefined : placeIn(known.view, known.ranking);
   const figure = trophyPlace(place);
 

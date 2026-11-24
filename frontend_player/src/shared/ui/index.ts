@@ -147,7 +147,8 @@ export {
 export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popover';
 export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNavigator';
 export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
-export { Reveal, type RevealProps } from './Reveal';
+export { Reveal, useRevealParts, type PartsRevealed, type RevealProps } from './Reveal';
+export { REVEAL_CEILING } from './revealParts';
 export { Row, type RowProps, type RowVariant } from './Row';
 export { RowSportPill, type RowSportPillProps } from './RowSportPill';
 export { RUN_OF_FORM_FILL, RunOfForm, type RunOfFormProps } from './RunOfForm';
@@ -168,10 +169,12 @@ export {
   SkeletonCircle,
   SkeletonGround,
   SkeletonLine,
+  SkeletonWords,
   type SkeletonBlockProps,
   type SkeletonCircleProps,
   type SkeletonGroundProps,
   type SkeletonLineProps,
+  type SkeletonWordsProps,
 } from './Skeleton';
 export { SocialTagRow, type SocialTagRowProps } from './SocialTagRow';
 export {

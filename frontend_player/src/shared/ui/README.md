@@ -180,6 +180,17 @@ finished — a cut under reduced motion, decided at the first draw, never back o
 in (a refusal or the offline note gives way to it again when the read sets out once more). **It came down ahead
 of its second caller**, as PRD #867 decides: Rankings is the first, and Home, See all and the group
 page follow (#871–#876). The layouts are the features'; the shapes and the band are this folder's.
+Home added ([#871](https://github.com/Raketa02/Raketa/issues/871)) **`useRevealParts`**, for a screen
+with several parts: `revealParts.ts`'s pure rule — together before the ceiling (`REVEAL_CEILING`,
+2.5 s from the mount), top-down from it, never a lower part before an upper one, never a part taken
+back — with the ceiling's one timer; **`Reveal`'s `sizedBy="skeleton"`**, a part of a scrolling
+column whose skeleton holds its place while its content is nothing yet; **`SkeletonWords`**, a bar as
+wide as a heading's own words; and the ground and the reveal passing on where they stand on the page
+(`SectionOnPage`), so a row inside them is measured through them. **A shape joins the clock once it
+has been laid out**, not as it mounts — it draws no band before then — and the ground draws itself
+again as it is laid out only while a shape stands: under jest, where nothing is laid out unless a
+suite says so, a skeleton runs no frame, which matters because the router harness runs minutes of
+frames on every navigation (a sweep left running had suites taking twenty minutes and more).
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

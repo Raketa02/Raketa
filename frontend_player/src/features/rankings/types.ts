@@ -11,7 +11,7 @@
 export { RankingsScreen, type RankingsScreenProps } from './components/RankingsScreen';
 
 /** **The trophy left of Home's bell** — the shell places it. */
-export { RankingTrophy } from './components/RankingTrophy';
+export { RankingTrophy, type RankingTrophyProps } from './components/RankingTrophy';
 
 /**
  * **Top 10, the last of FOR YOU's lines** (#805, #820) — the shell folds it under Players with your
@@ -19,6 +19,8 @@ export { RankingTrophy } from './components/RankingTrophy';
  */
 export { useTopTenLine } from './components/TopTenLine';
 export { rereadTopTen } from './hooks/useTopTen';
+/** **Whether Top 10's read has finished** (#871) — behind its opening sport — for the shell's reveal. */
+export { useTopTenFinished } from './hooks/useTopTen';
 
 /**
  * **Where Rankings is** — for the trophy, and for the entry gate landing a pass that began on

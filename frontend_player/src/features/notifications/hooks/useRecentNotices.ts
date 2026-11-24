@@ -12,6 +12,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
+import { useReadFinished } from '@/shared/lib/query-client';
 
 import type { RecentNotices } from '../domain/notice';
 import { readNotices } from '../use-cases/notifications';
@@ -36,4 +37,13 @@ export function useRecentNotices({
     refetchInterval: every,
     ...(opening ? { refetchOnMount: 'always' as const } : {}),
   });
+}
+
+/**
+ * **Whether the bell's read has finished** (#871) — landed, refused, held for a connection, or failed
+ * once and retrying: what the bell's number waits on before Home reveals it with the rest of your
+ * things. Read off the cache, so it draws again only as it turns.
+ */
+export function useNoticesFinished(): boolean {
+  return useReadFinished(notificationKeys.notices());
 }

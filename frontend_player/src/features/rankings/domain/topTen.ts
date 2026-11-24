@@ -78,3 +78,25 @@ export function topTenFace(read: TopTen | null | undefined): TopTenFace {
   if (read.players.length === 0) return { kind: 'nobody', sport: read.sport };
   return { kind: 'cards', sport: read.sport, players: read.players };
 }
+
+/**
+ * **Whether Top 10's read has finished, for Home's reveal** (#871) — its own read, once asked: landed,
+ * refused, held for a connection, or failed once and retrying. **Until it is asked it waits behind its
+ * opening sport** — Home's read and the ratings — **and one of those failing with nothing read counts
+ * it as finished too**: Top 10 cannot set out until that read answers, and one failing read must not
+ * hold Home through its backoff (the loading shimmer log Q13). A call, recorded in the shell's record.
+ */
+export function topTenReadFinished({
+  asked,
+  askedFinished,
+  behindAFailure,
+}: {
+  /** Whether a Top 10 read has been asked for — its sport known. */
+  readonly asked: boolean;
+  /** Whether an asked one has finished. */
+  readonly askedFinished: boolean;
+  /** Whether a read the opening sport waits on has failed with nothing read. */
+  readonly behindAFailure: boolean;
+}): boolean {
+  return asked ? askedFinished : behindAFailure;
+}

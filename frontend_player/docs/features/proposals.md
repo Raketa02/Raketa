@@ -2029,3 +2029,23 @@ the foot's words, the grid and the padding at the share, the least told) and
 least, with the buttons in the scroller under it, and the height held after an answer until the
 card coming up has measured). **Not seen on a device** (#866): the cap at the
 largest text size, the shrink on a 360 phone and the scroll on the smallest.
+
+## Your games is not drawn before its read lands (#871)
+
+**`HomeRail` draws nothing until Home's read lands** ([#871](https://github.com/Raketa02/Raketa/issues/871);
+PRD #867; the loading shimmer log §6, Q16): it never says _Your games · 0_, nor the empty sentences,
+while it does not know. **This reverses the rail's first rule** (#556, #576) — the sentences were _not
+gated on the read having landed_ because they were true of everybody, and holding them back would
+have left a blank screen; the count over them was not true, and the shell now draws Home's skeleton
+in the rail's place meanwhile: the heading's bar and one card's block, **`YourGamesSkeleton`**,
+exported for it — a block as tall as the rows every card draws (`homeCardHeight`, read off
+`HomeGameCard`: the dark card's padding, the tags, three facts, the large button). **A refused read
+says so under the heading with no count** (`gamesHeading(undefined)`) — it said _· 0_ over the coral
+note — and **a read waiting for a connection says so** in amber, which it did not at all. **A first
+read that failed once and is retrying keeps the rail's skeleton in its place**: Home stops waiting for
+it (`useHomeReadFinished`) and reveals around it, and the rail comes in where the skeleton stood when
+it lands or is refused, so it never pushes FOR YOU down. The skeleton's heading bar is as wide as
+_YOUR GAMES · 1_, a one-figure count being what nearly every Home draws. **`useHomeReadFinished`** says whether Home's read has finished — landed,
+refused, held for a connection, or failed once and retrying — off the cache, for the shell's reveal
+and for `rankings`' Top 10, which waits behind it. Walked in the shell's `homeReveal.test.tsx`; the
+rail's own walks are unchanged (`homeAndBookedGame.test.tsx`), every one of them past Home's read.

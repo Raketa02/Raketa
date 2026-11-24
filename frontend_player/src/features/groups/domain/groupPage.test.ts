@@ -4,6 +4,7 @@ import {
   filterSports,
   gamesCard,
   homeAsksForALevel,
+  levelCardReadsFinished,
   needsALevel,
   openingSport,
   rosterFor,
@@ -228,5 +229,29 @@ describe('a sport’s roster, and a face in it', () => {
     expect(faceIn(padel, 'p2')).toEqual(person(2));
     expect(faceIn(padel, 'p9')).toBeUndefined();
     expect(faceIn(undefined, 'p1')).toBeUndefined();
+  });
+});
+
+// #871: what Home's reveal waits on for the card.
+describe('whether the level card’s reads have finished', () => {
+  const T = true;
+  const F = false;
+
+  it.each<[string, boolean, boolean | undefined, boolean, boolean]>([
+    ['the ratings still out', F, undefined, T, F],
+    ['a rated reader, whatever the groups do', T, F, F, T],
+    [
+      'the ratings holding nothing — refused, held or retrying: no card, nothing more',
+      T,
+      undefined,
+      F,
+      T,
+    ],
+    ['a reader rated in nothing, the groups still out', T, T, F, F],
+    ['a reader rated in nothing, the groups in', T, T, T, T],
+  ])('%s', (_case, ratingsFinished, ratedInNothing, groupsFinished, finished) => {
+    expect(levelCardReadsFinished({ ratingsFinished, ratedInNothing, groupsFinished })).toBe(
+      finished,
+    );
   });
 });

@@ -35,3 +35,5 @@ export {
 } from './components/discoveryRoutes';
 export { DISCOVERY_COPY, joinedLine, nobodyNewPlays } from './components/discoveryCopy';
 export { rereadDiscovery } from './hooks/useNewInRaketa';
+/** **Whether the three people lines have been read** (#871) — for the shell's reveal of FOR YOU. */
+export { useDiscoveryLinesFinished } from './hooks/useLinesFinished';

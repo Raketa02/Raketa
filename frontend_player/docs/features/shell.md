@@ -471,3 +471,78 @@ unknown `schemaVersion` with and without a saved datafile, and one refused mid-s
 `playSegment.test.tsx`'s walks run with `explore` served on (`launchWithExplore`), and
 `theShell.test.tsx` finds Play by its title. **Not seen on a device**: the title over the list, and
 the switcher back through a locally served datafile.
+
+**Home shimmers until it is built, then reveals together** ([#871](https://github.com/Raketa02/Raketa/issues/871);
+PRD #867; the loading shimmer log §5, §6, Q11–Q16). Home was about ten reads drawn as each landed —
+the envelope, the level card, _Your games · 0_ and its sentences, then FOR YOU's lines one by one.
+**Now it has two parts, top-down** (`hooks/useHomeParts`), each waiting on its reads:
+
+| Part                                    | Draws                                              | Waits for                                                                                                      |
+| --------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **1 — your things**                     | the header's numbers, the level card, _Your games_ | Home's own read; the ratings, and your groups where the level card needs them; in-no-group; the bell's notices |
+| **2 — FOR YOU**, all its lines together | the heading and whichever lines have content       | Groups heating up; the three people lines; Top 10, behind its opening sport                                    |
+
+- **The skeleton**, while a part waits: _Your games_' heading bar and one game card's block at the
+  rail's real card size (`proposals`' `YourGamesSkeleton`), and FOR YOU's heading bar and four closed
+  lines at the line's real height (`ForYouSkeleton`) — **no level card and no envelope**, which are
+  often absent. Both stand on one `SkeletonGround`, so one band crosses them; it draws itself again
+  as it is laid out only while a shape stands, so once Home has revealed a line folding under it
+  costs nothing. The heading bars are as wide as their words (`shared/ui`'s `SkeletonWords`, the words
+  set unseen in the heading's role, _Your games_' with a one-figure count); the card's block is as
+  tall as the rows every card draws, read off its drawing — the tags, three facts, the large button.
+  Each part is a `Reveal` **sized by its skeleton** while it waits, since its content is nothing until
+  its read lands.
+- **The rule** is `shared/ui`'s `useRevealParts`: **before the ceiling, everything together** once both
+  parts have finished, on one cross-fade; **at the ceiling, 2.5 s after Home mounts**, the finished
+  parts from the top, stopping at the first that is not — never FOR YOU before your things — and then
+  each in turn as it finishes. **A read has finished** once it has landed, been refused, paused for a
+  connection, or **failed once and started retrying** (`shared/lib/query-client`'s `readHasFinished`),
+  read off Query's cache by each feature's own `use…Finished` (the level card's and Top 10's rules
+  over those reads are their features' `domain/`'s, `levelCardReadsFinished` and
+  `topTenReadFinished`) — `proposals`' `useHomeReadFinished`,
+  `groups`' `useLevelCardFinished`, `useInNoGroupFinished` and `useHottestGroupsFinished`,
+  `notifications`' `useNoticesFinished`, `discovery`'s `useDiscoveryLinesFinished` and `rankings`'
+  `useTopTenFinished` — each drawing `HomeScreen` again only as it turns, so a background re-read
+  draws nothing new. **Photo bytes are never waited for.**
+- **The header is drawn for real from the start** — the title, the bell, the trophy — and **its
+  numbers wait for your things**: the envelope (`showsEnvelope`), the bell's badge (`NoticeBell`'s
+  `showsCount`) and the trophy's place (`RankingTrophy`'s `showsPlace`) come with them, or, past the
+  ceiling, each as it lands: they sit in the right-aligned slot and push nothing down. Held back, each
+  is said nowhere — the bell's and the trophy's names are the bare ones.
+- **When**: only if something is unread at the first draw — a Home whose reads are all cached is
+  simply drawn, no skeleton and no fade — and **once per mount**: a part shown stays shown, and Home is
+  kept, so a return to Home, a pull and a background re-read never shimmer.
+- **The ground and each reveal pass on where they stand on the page** (`SectionOnPage`): FOR YOU's
+  rows are measured through them, so the on-screen reports and the page showing an unfolding line
+  are as they were.
+
+Calls made here, for the user to check:
+
+- **Top 10 does not hold FOR YOU behind a failing read** (`useTopTenFinished`): it cannot set out
+  until its opening sport is known — Home's read and the ratings — so one of those failing and
+  retrying counts Top 10 as finished too. Otherwise one failing read would hold FOR YOU through its
+  whole backoff, which is what the retrying rule is for. Top 10's line then joins FOR YOU, at its
+  foot, when it lands.
+- **_Your games_ keeps its skeleton while its first read retries** (the code review's catch): Home
+  stops waiting for it and reveals around it, and the rail comes in where its skeleton stood when it
+  lands or is refused — never drawn in later above FOR YOU, pushing it down. **The level card and a
+  FOR YOU line do not**: the card is often absent and draws no skeleton, so a ratings read that lands
+  _rated in nothing_ while your groups retry draws it in at the top when they land; and a line whose
+  read fails stays out of FOR YOU until it is read, as before.
+- **Offline with nothing read, _Your games_ says so** under its heading, in the amber note, with no
+  count — as a refusal says it in coral, now with no count either (`proposals`' record).
+
+The walks are `homeReveal.test.tsx`: the skeleton with every read out (one card, four lines, the real
+header), no _· 0_ before Home's read, FOR YOU landing first and nothing shown until your things do,
+the bell's read and Home's failing once and counting as finished — Top 10 not waited for behind
+Home's — from the ceiling your things while FOR YOU shimmers, never FOR YOU first while the header's
+numbers come as they land, and no skeleton on a return or a pull. **The harness runs every pending
+timer on a navigation, the launch's included, so the ceiling has passed by the time a walk looks, and
+a held read is deaf to the client's timeout** (`test-support/transport`'s `deafToAborts`) — else it
+would time out under the launch, which is a read failing once. **The sweep costs those suites
+nothing**: a shape joins the ground's clock only once it is laid out, and the harness lays nothing
+out — before that change Home's skeleton swept through every navigation's minutes of frames, and
+through a suite's day-long clock jump, inside an `act` that could not unmount it until the jump
+ended. **So the header's numbers held before the ceiling are walked by no suite**: the rule before the ceiling is `Reveal.test.tsx`'s, on the
+hook. **Not seen on a device**: the shimmer over Home, the card's block against a real card, the two
+fades, and a slow part coming in at the ceiling.

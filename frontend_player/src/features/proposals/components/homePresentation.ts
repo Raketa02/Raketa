@@ -69,10 +69,11 @@ const SPOKEN_JOIN = ', ';
  * `YOUR GAMES · n` — **the heading over Home's rail and its count**, which is the one number on
  * that screen. A rail pages through everything it holds, so the count is what says how much there
  * is; the dots under it say where you are, and neither is the other. Drawn uppercase by 3.3's
- * section rule, and never `h2`.
+ * section rule, and never `h2`. **Without its count while the read has nothing** (#871) — refused, or
+ * waiting for a connection: it never says a number it does not know.
  */
-export function gamesHeading(count: number): string {
-  return `${COPY.heading} · ${count}`;
+export function gamesHeading(count: number | undefined): string {
+  return count === undefined ? COPY.heading : `${COPY.heading} · ${count}`;
 }
 
 /**

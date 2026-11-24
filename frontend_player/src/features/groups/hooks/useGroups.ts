@@ -21,6 +21,7 @@ import { useCallback, useEffect } from 'react';
 
 import type { AppError } from '@/shared/errors';
 import { useOnReturn } from '@/shared/lib/platform';
+import { useReadFinished } from '@/shared/lib/query-client';
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -162,4 +163,13 @@ export function useGroupInfo(groupId: string) {
  */
 export function useInNoGroup(): boolean {
   return useMyGroups().data?.length === 0;
+}
+
+/**
+ * **Whether the read `useInNoGroup` answers from has finished** (#871) — your groups, landed, refused,
+ * held for a connection, or failed once and retrying: *YOUR GAMES*' line waits on it before Home
+ * reveals it. Read off the cache, so it draws again only as it turns.
+ */
+export function useInNoGroupFinished(): boolean {
+  return useReadFinished(groupKeys.mine());
 }

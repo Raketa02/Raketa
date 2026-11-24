@@ -16,10 +16,12 @@
  * one does.
  */
 
-import { useSkillRatings } from '@/features/onboarding/types';
+import { onboardingKeys, useSkillRatings } from '@/features/onboarding/types';
+import { readHasFinished, useQueryCacheAnswer } from '@/shared/lib/query-client';
 
-import { homeAsksForALevel } from '../domain/groupPage';
+import { homeAsksForALevel, levelCardReadsFinished } from '../domain/groupPage';
 
+import { groupKeys } from './groupKeys';
 import { useMyGroups } from './useGroups';
 
 export function useHomeAsksForALevel(): boolean | undefined {
@@ -33,4 +35,20 @@ export function useHomeAsksForALevel(): boolean | undefined {
     groups.data.length,
     (ratings.data ?? []).map((rating) => rating.sport),
   );
+}
+
+/**
+ * **Whether the reads the card answers from have finished** (#871) — `levelCardReadsFinished` over
+ * the ratings and your groups, each landed, refused, held for a connection, or failed once and
+ * retrying (`readHasFinished`). Read off the cache, so it draws again only as it turns.
+ */
+export function useLevelCardFinished(): boolean {
+  return useQueryCacheAnswer((client) => {
+    const ratings = client.getQueryState<readonly unknown[]>(onboardingKeys.ratings());
+    return levelCardReadsFinished({
+      ratingsFinished: readHasFinished(ratings),
+      ratedInNothing: ratings?.data === undefined ? undefined : ratings.data.length === 0,
+      groupsFinished: readHasFinished(client.getQueryState(groupKeys.mine())),
+    });
+  });
 }

@@ -25,10 +25,16 @@
  *   the busy spinner — progress, not decoration.
  * - **Hidden from a listener, and it announces nothing** (ADR-0198: the name is the whole job, and a
  *   shape has none). What a screen says while it loads is the screen's.
- * - **The clock runs only while a shape stands.** The ground counts its shapes, starts the sweep with
- *   the first and stops it with the last — a ground round a whole page costs nothing once the page
- *   has revealed. It starts at the sweep's place in the wall clock's time, so shapes that go and
+ * - **The clock runs only while a shape stands, laid out.** The ground counts its shapes once each has
+ *   been placed — a shape draws no band before its layout says where it stands, so it has nothing to
+ *   move until then (#871) — starts the sweep with the first and stops it with the last: a ground
+ *   round a whole page costs nothing once the page has revealed. Under jest nothing is laid out unless
+ *   a suite says so, so a router suite runs no sweep under the harness, which runs minutes of frames
+ *   on every navigation. It starts at the sweep's place in the wall clock's time, so shapes that go and
  *   come back in one drawing (one skeleton handing over to the next) keep the band where it was.
+ *
+ * **It passes on where it stands on its page** (`SectionOnPage`, #871): put round sections on a page
+ * that watches what is on screen — Home's — a row inside it is still measured on the page, through it.
  *
  * How a screen's content takes the skeleton's place is `Reveal`'s.
  */
@@ -47,11 +53,13 @@ import {
 } from 'react';
 import {
   StyleSheet,
+  Text,
   View,
   useWindowDimensions,
   type DimensionValue,
   type LayoutChangeEvent,
   type StyleProp,
+  type TextStyle,
   type ViewStyle,
 } from 'react-native';
 import Animated, {
@@ -66,6 +74,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
+import { SectionOnPage, useTopOnPage } from './onScreen';
 import {
   bandSheet,
   shapeOffset,
@@ -122,30 +131,42 @@ export interface SkeletonGroundProps {
  */
 export function SkeletonGround({ children, style, testID }: SkeletonGroundProps) {
   const node = useRef<View>(null);
+  const page = useTopOnPage();
   const clock = useSharedValue(0);
   const shapes = useRef(0);
   // The band crosses the ground itself — its own size once laid out, the window's until then — so
   // it leaves the ground's last corner as the next sweep enters its first, and never runs on past it.
   const window = useWindowDimensions();
-  const [laidOut, setLaidOut] = useState<{ readonly width: number; readonly height: number }>();
+  const [laidOut, setLaidOut] = useState<Size>();
   const width = laidOut?.width ?? window.width;
   const height = laidOut?.height ?? window.height;
   const geometry = useMemo(() => sweepGeometry({ width, height }), [width, height]);
+  // Its size is drawn from only while a shape stands: a ground round a page that has revealed — Home's,
+  // for the session — draws nothing again as a line folds or a rail grows under it.
+  const latest = useRef<Size>();
+  const measure = useCallback(() => {
+    const size = latest.current;
+    if (size === undefined) return;
+    setLaidOut((was) => (was?.width === size.width && was.height === size.height ? was : size));
+  }, []);
   const onLayout = (event: LayoutChangeEvent) => {
-    const { width: across, height: down } = event.nativeEvent.layout;
-    if (across !== laidOut?.width || down !== laidOut?.height) {
-      setLaidOut({ width: across, height: down });
-    }
+    const { y, width: across, height: down } = event.nativeEvent.layout;
+    page.laidOut(y);
+    latest.current = { width: across, height: down };
+    if (shapes.current > 0) measure();
   };
 
   const enter = useCallback(() => {
     shapes.current += 1;
-    if (shapes.current === 1) sweepOn(clock);
+    if (shapes.current === 1) {
+      measure();
+      sweepOn(clock);
+    }
     return () => {
       shapes.current -= 1;
       if (shapes.current === 0) cancelAnimation(clock);
     };
-  }, [clock]);
+  }, [clock, measure]);
 
   // One style for every shape on the ground, so a frame runs one mapper however many shapes stand —
   // each shape's own part of the move is a still offset under it.
@@ -159,10 +180,16 @@ export function SkeletonGround({ children, style, testID }: SkeletonGroundProps)
   return (
     <GroundContext.Provider value={ground}>
       <View ref={node} style={style} testID={testID} onLayout={onLayout}>
-        {children}
+        <SectionOnPage.Provider value={page.top}>{children}</SectionOnPage.Provider>
       </View>
     </GroundContext.Provider>
   );
+}
+
+/** The ground's own size, as laid out. */
+interface Size {
+  readonly width: number;
+  readonly height: number;
 }
 
 /** Where a shape stands on its ground, and how tall it is — read from its layout. */
@@ -191,7 +218,9 @@ function Shape({ style, testID }: ShapeProps) {
   const [placed, setPlaced] = useState<Placed>();
   const gradient = useId();
 
-  useEffect(enter, [enter]);
+  // On the clock once placed: until its layout says where it stands it draws no band to move.
+  const isPlaced = placed !== undefined;
+  useEffect(() => (isPlaced ? enter() : undefined), [isPlaced, enter]);
 
   const onLayout = (event: LayoutChangeEvent) => {
     const { x, y, height } = event.nativeEvent.layout;
@@ -290,6 +319,42 @@ export function SkeletonLine({ role, width = '100%', style, testID }: SkeletonLi
   );
 }
 
+export interface SkeletonWordsProps {
+  /** The role the words will be set in — the heading's own, its case included. */
+  readonly role: TextStyle & { readonly fontSize: number; readonly lineHeight?: number };
+  /** The words that will stand there: a heading that is always there, so its words are known. */
+  readonly words: string;
+  /** The bar's box in its parent — a margin. */
+  readonly style?: StyleProp<ViewStyle>;
+  readonly testID?: string;
+}
+
+/**
+ * **A line as wide as its words** (#871) — where a heading that is always there will stand, such as
+ * Home's *YOUR GAMES*: the words are set unseen in their role, so the bar spans exactly what the font
+ * would draw, at any text size, with no width to guess. A bar the role's size tall, as `SkeletonLine`'s.
+ */
+export function SkeletonWords({ role, words, style, testID }: SkeletonWordsProps) {
+  return (
+    <View
+      style={[s.words, { height: role.lineHeight ?? role.fontSize }, style]}
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Text style={[role, s.unseen]} numberOfLines={1}>
+        {words}
+      </Text>
+      <View style={s.wordsBar}>
+        <Shape
+          style={{ height: role.fontSize, borderRadius: role.fontSize / 2 }}
+          {...(testID === undefined ? {} : { testID })}
+        />
+      </View>
+    </View>
+  );
+}
+
 export interface SkeletonCircleProps {
   /** Its diameter — a face's, a mark's. */
   readonly size: number;
@@ -316,4 +381,9 @@ const s = StyleSheet.create({
   sheet: { position: 'absolute', top: 0, left: 0 },
   band: { ...StyleSheet.absoluteFillObject },
   line: { justifyContent: 'center' },
+  // As wide as the words inside it, whatever its column; hidden from a listener whole.
+  words: { alignSelf: 'flex-start', justifyContent: 'center' },
+  // Laid out, so the box takes their width — and never drawn.
+  unseen: { opacity: 0 },
+  wordsBar: { ...StyleSheet.absoluteFillObject, justifyContent: 'center' },
 });

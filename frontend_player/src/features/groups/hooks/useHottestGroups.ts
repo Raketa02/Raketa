@@ -25,7 +25,7 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import type { AppError } from '@/shared/errors';
 import { useOnReturn } from '@/shared/lib/platform';
-import { LISTS_PEOPLE } from '@/shared/lib/query-client';
+import { LISTS_PEOPLE, useReadFinished } from '@/shared/lib/query-client';
 
 import type { HottestGroup, HottestPage, HottestRow } from '../domain/group';
 import { joinHottestPages } from '../domain/hottest';
@@ -46,6 +46,15 @@ export function useHottestGroups() {
     // Its faces are friends first, and the sheet counts them: a friend write re-reads it (#801).
     meta: LISTS_PEOPLE,
   });
+}
+
+/**
+ * **Whether Groups heating up's read has finished** (#871) — landed, refused, held for a connection,
+ * or failed once and retrying: one of the reads FOR YOU waits on before Home reveals it. Read off the
+ * cache, so it draws again only as it turns.
+ */
+export function useHottestGroupsFinished(): boolean {
+  return useReadFinished(groupKeys.hottest());
 }
 
 /** ***Groups heating up*, as the page reads it** — the list so far, and its states. */

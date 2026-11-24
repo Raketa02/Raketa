@@ -137,6 +137,25 @@ export function homeAsksForALevel(groups: number, rated: readonly Sport[]): bool
   return groups > 0 && rated.length === 0;
 }
 
+/**
+ * **Whether the reads Home's level card answers from have finished** (#871) — what Home's reveal
+ * waits on for the card: **the ratings first, and your groups only for a reader rated in nothing**,
+ * since a rated reader is asked nothing by it (`useHomeAsksForALevel`). `ratedInNothing` is
+ * `undefined` while the ratings hold nothing — refused, held, retrying — and then the card is not
+ * drawn, so it waits on nothing more.
+ */
+export function levelCardReadsFinished({
+  ratingsFinished,
+  ratedInNothing,
+  groupsFinished,
+}: {
+  readonly ratingsFinished: boolean;
+  readonly ratedInNothing: boolean | undefined;
+  readonly groupsFinished: boolean;
+}): boolean {
+  return ratingsFinished && (ratedInNothing !== true || groupsFinished);
+}
+
 /** **One sport's roster** — `undefined` for a sport the group's read did not carry. */
 export function rosterFor(
   group: Pick<Group, 'ratedBySport'>,

@@ -44,6 +44,7 @@ import {
   stubSameVibe,
   stubTopTen,
 } from '@/test-support/onboardingRouter';
+import { layOutHomeParts } from '@/test-support/onScreen';
 import { scrollerOf } from '@/test-support/pinned';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
@@ -362,6 +363,7 @@ describe('the page', () => {
     const layout = (y: number, height: number) => ({
       nativeEvent: { layout: { x: 0, y, width: 390, height } },
     });
+    layOutHomeParts();
     act(() => {
       fireEvent(page as never, 'layout', layout(0, 700));
       fireEvent(screen.getByTestId('for-you'), 'layout', layout(500, 400));
@@ -394,6 +396,7 @@ describe('the page', () => {
       nativeEvent: { layout: { x: 0, y, width: 390, height } },
     });
 
+    layOutHomeParts();
     act(() => {
       fireEvent(page as never, 'layout', layout(0, 700));
       fireEvent(screen.getByTestId('for-you'), 'layout', layout(500, 400));

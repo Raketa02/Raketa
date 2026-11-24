@@ -14,7 +14,9 @@
 export { NotificationsRow, type NotificationsRowProps } from './components/NotificationsRow';
 export { NotificationsScreen } from './components/NotificationsScreen';
 export { NoticesScreen } from './components/NoticesScreen';
-export { NoticeBell } from './components/NoticeBell';
+export { NoticeBell, type NoticeBellProps } from './components/NoticeBell';
+/** **Whether the bell's read has finished** (#871) — its number waits on it, for the shell's reveal. */
+export { useNoticesFinished } from './hooks/useRecentNotices';
 export { NoticesHost } from './components/NoticesHost';
 /** The bell's list, read again — for the shell, once a request it was about is answered on Home. */
 export { rereadNotices } from './hooks/notificationKeys';

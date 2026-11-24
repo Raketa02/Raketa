@@ -53,6 +53,21 @@ function railOf(lineTestId: string): Node {
 }
 
 /**
+ * **Home's parts laid out at the column's top** (#871): the skeleton's ground and each part's reveal
+ * stand between the page's column and its sections, and each passes on where it stands on the page
+ * — so a suite that lays a section out on the page lays these out too, at the top, which keeps a
+ * section's own `y` its place on the page.
+ */
+export function layOutHomeParts(): void {
+  const width = Dimensions.get('window').width;
+  act(() => {
+    for (const testId of ['home-parts', 'home-your-things', 'home-for-you']) {
+      fireEvent(screen.getByTestId(testId), 'layout', layout(0, 0, width, 4000));
+    }
+  });
+}
+
+/**
  * **Lays Home out**: the page `PAGE_HEIGHT` tall, FOR YOU at the column's top, and each line named at
  * the top given — far enough down, and it is under the fold until the page is scrolled to it. An open
  * line's fold and rail are laid out under its header; a closed line has neither.
@@ -63,6 +78,7 @@ export function layOutHome(lines: Readonly<Record<string, number>>): void {
   const inside = width - 2 * theme.size.gutter - 2 * theme.size.foldingLine.border;
   const first = Object.keys(lines)[0];
   if (first === undefined) return;
+  layOutHomeParts();
   act(() => {
     fireEvent(pageOf(screen.getByTestId(first)), 'layout', layout(0, 0, width, PAGE_HEIGHT));
     fireEvent(screen.getByTestId('for-you'), 'layout', layout(theme.size.gutter, 0, width, 4000));

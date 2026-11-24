@@ -82,6 +82,8 @@ export { POSTING_COPY } from './components/postingCopy';
  * first; the routes themselves are this feature's to spell.
  */
 export { HomeRail, type HomeRailProps } from './components/HomeRail';
+/** **The rail's skeleton** (#871) — what the shell's Home shimmers in its place until it reveals it. */
+export { YourGamesSkeleton } from './components/YourGamesSkeleton';
 export { useHomeBadge } from './hooks/useHome';
 export { BookedGameScreen, type BookedGameScreenProps } from './components/BookedGameScreen';
 export { BookedGameChat, type BookedGameChatProps } from './components/BookedGameChat';
@@ -150,6 +152,11 @@ export { rereadHomeAfterALevel, useHomeLevelAsks } from './hooks/useHome';
  * `rankings` draws: the sport of the latest result and the places in it.
  */
 export { useHomeRanking } from './hooks/useHome';
+/**
+ * **Whether Home's one read has finished** (#871) — what the shell's reveal waits on for *YOUR GAMES*,
+ * the envelope and the trophy's place, and Top 10's opening sport behind them.
+ */
+export { useHomeReadFinished } from './hooks/useHome';
 export type { HomeRanking } from './domain/home';
 export type { HomeLevelAsk, HomeLevelAsker } from './domain/home';
 

@@ -11,11 +11,19 @@
  */
 
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { AccessibilityInfo, Dimensions, StyleSheet, type ViewStyle } from 'react-native';
+import { Profiler } from 'react';
+import { AccessibilityInfo, Dimensions, StyleSheet, View, type ViewStyle } from 'react-native';
 import { getAnimatedStyle, ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 
+import { useTopOnPage, type Followed } from './onScreen';
 import { ReducedMotionProvider } from './overlay';
-import { SkeletonBlock, SkeletonCircle, SkeletonGround, SkeletonLine } from './Skeleton';
+import {
+  SkeletonBlock,
+  SkeletonCircle,
+  SkeletonGround,
+  SkeletonLine,
+  SkeletonWords,
+} from './Skeleton';
 import { bandSheet, sweepGeometry } from './skeletonSweep';
 import { theme } from './theme';
 
@@ -124,6 +132,21 @@ describe('a skeleton shape', () => {
 
     expect(bandOf('block')).toBeTruthy();
   });
+
+  /**
+   * #871: nothing moves before a shape is placed — and nothing runs. The router harness runs minutes
+   * of frames on every navigation and lays nothing out, so a skeleton there must cost no frame.
+   */
+  it('sets the clock going only once a shape has been laid out', () => {
+    drawShapes();
+    frames(10);
+    expect(jest.getTimerCount()).toBe(0);
+
+    layOut('block', BLOCK);
+    frames(1);
+
+    expect(jest.getTimerCount()).toBeGreaterThan(0);
+  });
 });
 
 describe('the band', () => {
@@ -216,7 +239,84 @@ describe('the band', () => {
   });
 });
 
+describe('a bar as wide as its words', () => {
+  /** A section heading's bar — Home's *YOUR GAMES*, set in the heading's own role (#871). */
+  const HEADING = { ...theme.type.eyebrow, textTransform: 'uppercase' } as const;
+
+  it('sets the words in their role, unseen and unheard, so the bar takes exactly their width', () => {
+    render(
+      <SkeletonGround>
+        <SkeletonWords testID="heading" role={HEADING} words="Your games" />
+      </SkeletonGround>,
+    );
+
+    // A listener hears nothing of it, and nobody sees the words.
+    expect(screen.queryByText('Your games')).toBeNull();
+    const words = screen.getByText('Your games', HIDDEN);
+    expect(StyleSheet.flatten(words.props.style)).toMatchObject({ ...HEADING, opacity: 0 });
+    // The bar: the role's size tall, its ends rounded, across the words' box.
+    expect(
+      StyleSheet.flatten(screen.getByTestId('heading', HIDDEN).props.style) as ViewStyle,
+    ).toMatchObject({
+      backgroundColor: theme.color.skeleton,
+      height: theme.type.eyebrow.fontSize,
+      borderRadius: theme.type.eyebrow.fontSize / 2,
+    });
+  });
+});
+
+/**
+ * **A row standing in a wrapper on a watched page** — where it reads its own top on the page, as
+ * `HomeRow` does: its `y` in its parent, added to where the section around it stands.
+ */
+let probed: Followed<number> | undefined;
+function Row() {
+  const { top, laidOut } = useTopOnPage();
+  probed = top;
+  return <View testID="row" onLayout={(event) => laidOut(event.nativeEvent.layout.y)} />;
+}
+const at = (y: number) => ({ nativeEvent: { layout: { x: 0, y, width: 360, height: 100 } } });
+
 describe('the ground', () => {
+  it('passes on where it stands on its page, so a row inside it is measured on the page through it', () => {
+    render(
+      <SkeletonGround testID="ground">
+        <Row />
+      </SkeletonGround>,
+    );
+
+    act(() => {
+      fireEvent(screen.getByTestId('ground'), 'layout', at(120));
+      fireEvent(screen.getByTestId('row'), 'layout', at(45));
+    });
+
+    expect(probed?.get()).toBe(165);
+  });
+
+  it('draws nothing again as it is laid out anew once no shape stands — a page that has revealed', () => {
+    let commits = 0;
+    const page = (shimmering: boolean) => (
+      <Profiler id="ground" onRender={() => (commits += 1)}>
+        <SkeletonGround testID="ground">
+          {shimmering ? <SkeletonBlock style={{ height: theme.size.btn }} /> : null}
+        </SkeletonGround>
+      </Profiler>
+    );
+    const { rerender } = render(page(true));
+    const size = (height: number) => ({
+      nativeEvent: { layout: { x: 0, y: 0, width: 360, height } },
+    });
+    act(() => fireEvent(screen.getByTestId('ground'), 'layout', size(600)));
+    rerender(page(false));
+    const before = commits;
+
+    // A line folds open on the page under it, and the page grows.
+    act(() => fireEvent(screen.getByTestId('ground'), 'layout', size(900)));
+    act(() => fireEvent(screen.getByTestId('ground'), 'layout', size(1200)));
+
+    expect(commits).toBe(before);
+  });
+
   it('is where every shape is drawn: a shape outside one says so', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
 

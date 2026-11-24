@@ -147,6 +147,21 @@ export function networkFailure(): Responder {
   return () => Promise.reject(new TypeError('Network request failed'));
 }
 
+/** Responders that answer through the client's own abort — see `deafToAborts`. */
+const DEAF = new WeakSet<Responder>();
+
+/**
+ * **A responder deaf to the client's abort** (#871) — for a read a walk holds on its way across a
+ * navigation. The harness runs every pending timer on a navigation, the client's 15 s timeout among
+ * them, so a held read would time out under it, which no phone does in the instant a screen opens.
+ * Deaf, the read stays on its way until the walk answers it. Query's own cancellation still ends it
+ * for Query, which stops waiting whatever the socket does.
+ */
+export function deafToAborts(responder: Responder): Responder {
+  DEAF.add(responder);
+  return responder;
+}
+
 /** A server that accepts the connection and never answers. Drives the timeout path. */
 export function neverResponds(): Responder {
   return () => new Promise<Response>(() => {});
@@ -208,7 +223,7 @@ export function installTransport(): Transport {
     if (signal?.aborted === true) throw abortError();
 
     const response = responder(recorded);
-    if (signal == null) return response;
+    if (signal == null || DEAF.has(responder)) return response;
 
     return Promise.race([
       Promise.resolve(response),

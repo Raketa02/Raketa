@@ -255,6 +255,8 @@ describe('where a launch lands', () => {
 
     answerMe();
 
+    // Home, and then its sentence, which comes with Home's own read since #871.
+    expect(await screen.findByRole('header', { name: 'Home' })).toBeTruthy();
     expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });

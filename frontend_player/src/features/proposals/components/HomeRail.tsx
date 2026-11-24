@@ -33,23 +33,31 @@
  *
  * ## What it draws when it holds nothing, and when the read failed
  *
+ * **Nothing until its read lands** ([#871](https://github.com/Raketa02/Raketa/issues/871); the
+ * loading shimmer log §6, Q16): it never says *· 0*, nor that nothing is here, while it does not
+ * know. Home shimmers in its place meanwhile (`YourGamesSkeleton`, drawn by the shell), so there is
+ * no blank screen to hold anything back for. **This reverses the rail's first rule**, that the empty
+ * sentences were *not gated on the read having landed* because they were true of everybody: true,
+ * but the count over them was not.
+ *
  * **The empty sentences are the tab's** and are handed down: they say what lands on this *screen*,
- * and the screen is the shell's. **They are not gated on the read having landed**, and that is the
- * point of how they are worded: *every game you arrange shows up here* and *Play finds you one* are
- * true of a player with five games and of a player with none, so there is nothing to hold them back
- * for, and holding them back is what would leave a blank screen while a read is in flight.
+ * and the screen is the shell's — *every game you arrange shows up here* and *Play finds you one*.
  *
  * A failed read is a sentence rather than an emptiness — a rail that vanished on an error would be
  * indistinguishable from a player with no games, which is the one thing a list of your own games
- * must not be. It is said only while there is nothing to draw: a re-read that failed behind cards
- * already on screen leaves them, as every list here does.
+ * must not be — and **a read waiting for a connection says so** in amber; under the heading, with
+ * no count, either way. Each is said only while there is nothing to draw: a re-read that failed
+ * behind cards already on screen leaves them, as every list here does. **A first read that failed
+ * once and is retrying keeps the rail's skeleton in its place** (`YourGamesSkeleton`): Home stops
+ * waiting for it (`useHomeReadFinished`) and reveals around it, and the rail comes in where the
+ * skeleton stood when it lands or is refused — never drawn in later above FOR YOU, pushing it down.
  */
 
 import { router } from 'expo-router';
 import { StyleSheet, Text } from 'react-native';
 
 import { useBookingRooms } from '@/features/conversations/types';
-import { recoveryMessage } from '@/shared/errors';
+import { offlineMessage, recoveryMessage } from '@/shared/errors';
 import { HomeRow, HomeRowRail, Note, theme } from '@/shared/ui';
 
 import { chatIsOpen, isNew, lineCanRunOut, onHome } from '../domain/home';
@@ -58,6 +66,7 @@ import { useDismissedGames, useHome, useOpenedGames, useReadClock } from '../hoo
 import { HomeGameCard } from './HomeGameCard';
 import { gamesHeading } from './homePresentation';
 import { bookedChatRoute, bookedGameRoute } from './proposalRoutes';
+import { YourGamesSkeleton } from './YourGamesSkeleton';
 
 export interface HomeRailProps {
   /**
@@ -82,16 +91,25 @@ export function HomeRail({ empty }: HomeRailProps) {
   const now = useReadClock(home.data?.readAt, home.dataUpdatedAt, ticking);
   const games = all.filter((game) => onHome(game, now) && !dismissed?.has(game.bookingId));
   const failure = home.data === undefined ? home.error : null;
+  const offline = home.data === undefined && failure === null && home.fetchStatus === 'paused';
+
+  // Not drawn before its read lands — never *· 0* while it does not know (#871). Under Home's own
+  // skeleton until Home reveals; once it has, a first read retrying keeps the rail's in its place.
+  if (home.data === undefined && failure === null && !offline) {
+    return home.failureCount > 0 ? <YourGamesSkeleton /> : null;
+  }
 
   return (
-    <HomeRow heading={gamesHeading(games.length)}>
+    <HomeRow heading={gamesHeading(home.data === undefined ? undefined : games.length)}>
       {failure !== null ? (
         <Note variant="coral" accessibilityRole="alert">
           {recoveryMessage(failure)}
         </Note>
       ) : null}
 
-      {failure === null && games.length === 0 ? (
+      {offline ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+
+      {home.data !== undefined && games.length === 0 ? (
         <>
           <Text style={s.empty}>{empty.line}</Text>
           <Text style={s.empty}>{empty.act}</Text>

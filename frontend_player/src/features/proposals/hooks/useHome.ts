@@ -14,6 +14,7 @@ import { useCallback } from 'react';
 
 import { useReaderId } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
+import { useReadFinished } from '@/shared/lib/query-client';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -48,6 +49,15 @@ const homeRead = {
 
 export function useHome() {
   return useQuery<Home, AppError>(homeRead);
+}
+
+/**
+ * **Whether Home's one read has finished** (#871) — landed, refused, held for a connection, or failed
+ * once and retrying (`readHasFinished`): what *YOUR GAMES*, the envelope and the trophy's place wait
+ * on before Home reveals them. Read off the cache, so it draws again only as it turns.
+ */
+export function useHomeReadFinished(): boolean {
+  return useReadFinished(proposalKeys.home());
 }
 
 /**

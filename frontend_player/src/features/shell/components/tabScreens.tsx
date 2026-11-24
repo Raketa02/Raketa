@@ -26,9 +26,17 @@ import {
   useInNoGroup,
 } from '@/features/groups/types';
 import { NoticeBell } from '@/features/notifications/types';
-import { HomeRail, rereadHome } from '@/features/proposals/types';
+import { HomeRail, YourGamesSkeleton, rereadHome } from '@/features/proposals/types';
 import { RankingTrophy, rereadTopTen, useTopTenLine } from '@/features/rankings/types';
-import { FoldingLine, FoldingLines, theme, type FoldingLineParts } from '@/shared/ui';
+import {
+  FoldingLine,
+  FoldingLines,
+  Reveal,
+  SkeletonGround,
+  theme,
+  useRevealParts,
+  type FoldingLineParts,
+} from '@/shared/ui';
 
 import {
   FOR_YOU_LINES,
@@ -37,7 +45,10 @@ import {
   type ForYouLine,
   type LinesShown,
 } from '../domain/forYou';
+import { FOR_YOU, YOUR_THINGS, useHomeParts } from '../hooks/useHomeParts';
 import { useOpenLine } from '../hooks/useOpenLine';
+
+import { ForYouSkeleton } from './ForYouSkeleton';
 
 import { whenHomeStartsOver } from './homeStart';
 import { NeedsYourAnswer } from './NeedsYourAnswer';
@@ -96,14 +107,36 @@ import { HOME_COPY } from './shellCopy';
  * reaches those; the shell hands them nothing for that. **A pick on Top 10's pill re-reads that line
  * alone**; the pull re-reads it with the rest (`rereadTopTen`).
  *
+ * **It shimmers until it is built, then reveals together** ([#871](https://github.com/Raketa02/Raketa/issues/871);
+ * PRD #867; the loading shimmer log §6): **two parts, top-down** (`useHomeParts`) — *your things*
+ * (the header's numbers, the level card and *Your games*) and FOR YOU whole. While a part's reads are
+ * out its skeleton stands in its place — *Your games*' heading and one card (`proposals`'
+ * `YourGamesSkeleton`), FOR YOU's heading and four closed lines (`ForYouSkeleton`) — on one ground,
+ * so one band crosses both, and **no level card and no envelope**, which are often absent. Once every
+ * part has finished, everything comes in on one cross-fade; **from 2.5 s after Home mounts** (the
+ * ceiling, `useRevealParts`) it stops waiting for the slowest: the finished parts from the top, never
+ * FOR YOU before your things, and each part in turn as it finishes. **The header is drawn for real
+ * from the start** — the title, the bell and the trophy — and **its numbers wait for your things**:
+ * the envelope, the trophy's place and the bell's badge come with them, or, past the ceiling, as each
+ * lands, in a right-aligned slot that pushes nothing down. A skeleton is drawn only if something is
+ * unread at the first draw, so a Home whose reads are all cached is simply drawn; and it shows **once
+ * per mount** — never on a return to Home, a pull or a background re-read, since a part shown stays
+ * shown and Home stays mounted.
+ *
  * **Memoised, because it is kept** (`TAB_STACK`): Home stays mounted under every tab, and the route
  * that draws it is drawn again on every move the navigator makes — so without `memo` every press of
  * every tab re-rendered every row, card and poster on Home, nothing having changed, and a device
- * spent most of a second on it. It takes no props; what it reads, it reads for itself.
+ * spent most of a second on it. It takes no props; what it reads, it reads for itself — the parts'
+ * flags off the cache, so it draws again only as one of them turns.
  */
 export const HomeScreen = memo(function HomeScreen() {
   const client = useQueryClient();
   const inNoGroup = useInNoGroup();
+  const { shown, pastCeiling } = useRevealParts(useHomeParts());
+  const yourThings = shown >= YOUR_THINGS;
+  const forYou = shown >= FOR_YOU;
+  // The header's numbers come with your things — or, past the ceiling, each as it lands.
+  const numbers = yourThings || pastCeiling;
   return (
     <ShellScreen
       title={HOME_COPY.title}
@@ -111,9 +144,9 @@ export const HomeScreen = memo(function HomeScreen() {
       startsOverWhen={whenHomeStartsOver}
       right={
         <View style={s.headerRight}>
-          <NeedsYourAnswer />
-          <NoticeBell />
-          <RankingTrophy />
+          <NeedsYourAnswer showsEnvelope={numbers} />
+          <NoticeBell showsCount={numbers} />
+          <RankingTrophy showsPlace={numbers} />
         </View>
       }
       onRefresh={() =>
@@ -125,13 +158,36 @@ export const HomeScreen = memo(function HomeScreen() {
         ])
       }
     >
-      <HomeLevelCard />
-      <HomeRail
-        empty={
-          inNoGroup ? { ...HOME_COPY.empty, act: GROUPS_COPY.hottest.groupless } : HOME_COPY.empty
-        }
-      />
-      <ForYou inNoGroup={inNoGroup} />
+      {/* One ground for both parts, so one band crosses them both. */}
+      <SkeletonGround style={s.parts} testID="home-parts">
+        <Reveal
+          testID="home-your-things"
+          sizedBy="skeleton"
+          finished={yourThings}
+          landed={yourThings}
+          skeleton={<YourGamesSkeleton />}
+        >
+          <View style={s.part}>
+            <HomeLevelCard />
+            <HomeRail
+              empty={
+                inNoGroup
+                  ? { ...HOME_COPY.empty, act: GROUPS_COPY.hottest.groupless }
+                  : HOME_COPY.empty
+              }
+            />
+          </View>
+        </Reveal>
+        <Reveal
+          testID="home-for-you"
+          sizedBy="skeleton"
+          finished={forYou}
+          landed={forYou}
+          skeleton={<ForYouSkeleton />}
+        >
+          <ForYou inNoGroup={inNoGroup} />
+        </Reveal>
+      </SkeletonGround>
     </ShellScreen>
   );
 });
@@ -184,4 +240,7 @@ function ForYou({ inNoGroup }: { readonly inNoGroup: boolean }) {
 const s = StyleSheet.create({
   // The envelope and the bell, each in its own 44pt target, then the trophy's pill in the corner.
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs },
+  // The page's column, kept through the ground and each part: `sm` between what it stacks.
+  parts: { gap: theme.space.sm },
+  part: { gap: theme.space.sm },
 });

@@ -31,6 +31,10 @@
  * *Needs your answer, 2 new*, and hidden as a mark, as the bell's is. **While anything waits the
  * envelope stays, with or without a count.**
  *
+ * **Home holds the envelope back while it shimmers** (#871; `showsEnvelope`): it is one of the
+ * header's numbers, and comes with the rest of your things — or, past the ceiling, as Home's read
+ * lands. Only the drawing waits: the sheet a link or a notice asks for still opens.
+ *
  * ## The visit
  *
  * **Every way the sheet goes for good records a visit** (`wentForGood`, ADR-0205 §3): ✕, a swipe,
@@ -115,7 +119,12 @@ import {
 import { whenNeedsYourAnswerAsked } from './needsYourAnswerAsked';
 import { NEEDS_YOUR_ANSWER_COPY as COPY, envelopeFigure, envelopeSpoken } from './shellCopy';
 
-export function NeedsYourAnswer() {
+export interface NeedsYourAnswerProps {
+  /** Whether the envelope may be drawn — Home's to say while it shimmers (#871). Drawn unless said. */
+  readonly showsEnvelope?: boolean;
+}
+
+export function NeedsYourAnswer({ showsEnvelope = true }: NeedsYourAnswerProps) {
   const client = useQueryClient();
   const answers = useAnswersWaiting();
   const waits = envelopeShows(answers.counts);
@@ -170,7 +179,7 @@ export function NeedsYourAnswer() {
 
   return (
     <>
-      {waits ? (
+      {waits && showsEnvelope ? (
         <Pressable
           ref={envelope}
           accessibilityRole="button"

@@ -61,6 +61,8 @@ export { groupReturnRoute } from './components/groupRoutes';
  * places it; whether it is drawn is this feature's rule.
  */
 export { HomeLevelCard } from './components/HomeLevelCard';
+/** **Whether the card's reads have finished** (#871) — what the shell's reveal waits on for it. */
+export { useLevelCardFinished } from './hooks/useHomeAsksForALevel';
 /**
  * **Home's Groups heating up** ([#800](https://github.com/Raketa02/Raketa/issues/800), was HOTTEST
  * GROUPS; [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §3, ADR-0205 §5; the Home
@@ -74,6 +76,12 @@ export { useHottestGroupsLine } from './components/HottestGroupsLine';
 export { HottestGroupsScreen } from './components/HottestGroupsScreen';
 export { rereadHomeGroups } from './hooks/useHottestGroups';
 export { useInNoGroup } from './hooks/useGroups';
+/**
+ * **Whether the line's read and the groups' have finished** (#871) — what the shell's reveal waits
+ * on: Groups heating up for FOR YOU, and your groups for *Your games*' line.
+ */
+export { useHottestGroupsFinished } from './hooks/useHottestGroups';
+export { useInNoGroupFinished } from './hooks/useGroups';
 /** The reads behind it — what a notice opening Home on its card marks stale (#731). */
 export { groupKeys } from './hooks/groupKeys';
 /**
