@@ -144,6 +144,24 @@ a splash any more.
 **The splash sits above everything the root draws**, including the overlay host, the toasts and
 the environment badge. **Until it is unmounted, it swallows every touch.**
 
+> **Amended 2026-11-24 — the tree mounts once the motion is still, and the motion waits for its
+> face.** Measured on the A32 (system trace of the UI thread, a cold start), the motion stuttered
+> twice over. (1) **The tree mounting under the splash froze the ball**: a first screen is hundreds
+> of views, and the phone created them on the thread that moves it — a 204 ms frame and a run of
+> 20–50 ms ones from 0.9 s in, on a debug build. Keeping the tree out of layout (`display: none`)
+> saved nothing, because Fabric creates and inserts a hidden view all the same, so **the tree now
+> mounts once the sequence has resolved and the motion is still** (1.78 s; at once under reduced
+> motion). The first screen's own requests therefore set out under the still lockup rather than
+> under the motion — about 0.2 s before the 2.6 s fade in a release build, and sometimes after it in
+> a debug one, where Home may open on its placeholders for a moment; the moment the splash fades is
+> unchanged. (2) **"The ball needs no font and starts on the first frame"** held only where the face
+> loads in milliseconds: a debug build fetches it from the dev server, about 0.45 s on the A32, and
+> the seven letters were set on *Rak*'s cue with the ball in the air. **The motion now starts on the
+> first layout when the face is there, and otherwise waits for it** — a frame past its letters being
+> set, and never more than 0.6 s (`LAUNCH_CLOCK.faceWait`), after which the ball goes without it as
+> before. In a release build nothing visible moves. Frames over 20 ms in the splash's first 2.6 s,
+> debug build: 21 → 3–5, the overrun past 16.7 ms 488 → ~100 ms.
+
 **It plays once per start of the JavaScript process**, a dev reload included. It doesn't play on
 a fast refresh, a return from the background, a sign-out, or an Android reopen after Back on the
 root screen, which the activity already turns into a resume.
