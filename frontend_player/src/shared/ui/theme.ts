@@ -1256,8 +1256,21 @@ const size = {
   deckAnswer: { pass: 54, record: 42, accept: 66, ball: 26 },
   /** A group's Games card (#553, the screens A2.3), measured off mocks 2–10 at 1x. `ribbon` is
    *  the band's height; `tileMin` the least a tile shrinks to on a short phone, where the tiles
-   *  give the card's other parts the height they need; `detailsTile` the width:height of a tile on
-   *  a game's details, where nothing competes for it — all three on the 3pt grid. The grid's cells
+   *  give the card's other parts the height they need.
+   *
+   *  **A tile has one shape per court** (#864; the tab menu log §6.2, 7.22, Part 16 2026-11-24),
+   *  width over height, and the deck's tiles never stretch to fill the card (`deckCardGeometry`).
+   *  The shapes are **evidence, not a mock** — mock 3's ~1.6 is not used:
+   *  - `doublesTile` **1.75**, padel and badminton — the details' own ratio, now named for both
+   *    screens. On the user's A32 (384 × 853 dp, read over adb) a deck tile was 160.5 × 84.3 (1.90),
+   *    which left 32pt of face above the 52pt name strip; at 1.75 it is 160.5 × 92 there, 163.5 × 93
+   *    on a 390 iPhone, 174.5 × 100 on a 412 × 915, and it fills its column on every phone but a 360
+   *    Android (143 × 82, height-bound). 1.81 (the widest that fits from 360 up, the least face) and
+   *    1.5 (11pt short of its column on a 390 iPhone) were refused.
+   *  - `singlesTile` **3:4**, tennis and squash — the photo's own crop (`PROFILE_PHOTO_ASPECT`, and
+   *    the 3:4 photo tile, `photoTile`), so on Android the whole photo shows: 160.5 × 214 on the
+   *    A32. 1.75 would have left singles ~92pt strips with most of the card empty.
+   *  A game's details keep `doublesTile` for both court shapes (out of #859's scope). The grid's cells
    *  are `cell` tall and `cellGap` apart — **4, off the grid on purpose**: 6.8's hour cells' own
    *  gap (`availability.gap`), so the week is drawn with one rhythm on both surfaces — and the
    *  game's own cell is ringed `ring` wide and grows `ringOut` (`space.xxs`) past its slot on every
@@ -1266,7 +1279,8 @@ const size = {
   gameCard: {
     ribbon: 30,
     tileMin: 54,
-    detailsTile: 1.75,
+    doublesTile: 1.75,
+    singlesTile: 3 / 4,
     cell: 9,
     cellGap: 4,
     ring: 2,

@@ -317,7 +317,6 @@ function Details({
               bottom={bottom}
               singles={seats === 2}
               completes={completesTheGame(details)}
-              fill={false}
               onPerson={setReading}
               // The forecast's split row says who partners whom; the Social vibe card does not,
               // nor does nothing at all — so there the vs line is spoken instead, said once.

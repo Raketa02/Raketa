@@ -25,6 +25,7 @@
  * rows moved with the game's hour would draw the same week two ways on two cards.
  */
 
+import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/shared/ui';
@@ -45,7 +46,11 @@ export interface OverlapGridProps {
   readonly today: Weekday | undefined;
 }
 
-export function OverlapGrid({ overlap, today }: OverlapGridProps) {
+/**
+ * Drawn again only for another week or another day — the deck's card resizes its gaps once it has
+ * measured itself (`deckCardGeometry`), and that moves the grid without drawing it again.
+ */
+export const OverlapGrid = memo(function OverlapGrid({ overlap, today }: OverlapGridProps) {
   const shadeOf = (day: Weekday, range: DayRange): OverlapShade =>
     overlap.cells.find((cell) => cell.day === day && cell.range === range)?.shade ?? 'DARK';
 
@@ -86,7 +91,7 @@ export function OverlapGrid({ overlap, today }: OverlapGridProps) {
       ))}
     </View>
   );
-}
+});
 
 const s = StyleSheet.create({
   grid: { gap: GAP },

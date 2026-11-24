@@ -1919,3 +1919,51 @@ _Booking…_ — through the ten seconds and the send alike, taking no press. Op
 unchanged: the deck's card flies at once, so nothing on it needs to say it is waiting. `theFill.test.tsx`
 and `rescues.test.tsx` hold the one request behind a busy button. **Not seen on a device**: the
 handover from the count to the send, which is meant to show nothing at all.
+
+## The card's tiles take one shape per court (#864)
+
+**A deck tile no longer stretches.** It took whatever height the card left it (`fill`, down to
+`tileMin`), so its shape was the phone's: 1,90 : 1 on the user's A32, with 32pt of face above the
+name strip. Now doubles are **1,75 : 1** — the details' value, named `doublesTile` for both screens
+— and singles **3:4** (`singlesTile`), the photo's own crop. The evidence is the tab menu log's §2
+and §6.2 and the theme's comment, never a mock: mock 3's ~1,6 is not used. A game's details keep
+1,75 for both court shapes (out of #859's scope): `GameTiles` with no `geometry` is the details'.
+
+**`deckCardGeometry` sizes the card, and the card measures.** It is a pure module of numbers. From
+the stage (the card's own box, which is the stage's), the court's shape and the measured heights of
+the blocks whose height is words — the ribbon, the _vs_ line, the forecast or vibe row, the grid,
+the court block and the versions line — it gives the tiles' size and every gap. A tile is as wide
+as its column; where the card's height runs out, it is as tall as the room allows at the same
+shape, narrower and centred in its column; and never below `tileMin`, which #865 replaces with the
+tile's own content. **The height a tile leaves goes in equal shares to the gaps between the
+blocks** — the tiles, the _vs_ line, the forecast or vibe row, the grid and the court block, with
+the hairline in the middle of its gap — so the card still fills its stage and the three stacked
+cards stay one size. _4 people are In on this game_ is a caption to the tiles and stays at its own
+gap under them: a call made here, since the log names five blocks and not it.
+
+`GameCard` measures with `onLayout` (`useCardRoom`), and **draws a card unseen until it has
+measured itself once**: its blocks must be laid out to be measured, so it cannot draw nothing, as
+the sign-in hero does, and a card drawn first at the wrong size would jump a frame later — the court
+block sliding down 29pt on a tall phone. Until then, and always under Jest, which lays nothing out,
+its tiles are their column's width at their shape and its gaps at rest, so every part is there to
+find and press, and the router suites pass unchanged. Once measured it is never unseen again: **a
+block that appears later** — a forecast arriving, the versions line on a second version — keeps the
+card at its last size until it answers, rather than dropping it back. **A block measured again
+within a pixel and a half is the same block** (`sameLength`): Yoga rounds a block's top and bottom
+to the phone's pixels, so a block the gaps moved can report a pixel more or less, which would move
+the gaps again, and again. The column caps even the floor, so in a window narrower than any phone
+a tile is never wider than its column. A size is asserted only through the module
+(`deckCardGeometry.test.ts`: the five phones, both shapes, the ratio, width- against height-bound,
+the floor, the even spread, and the table's sizes for the same room); `gameCard.test.tsx` plays the
+layouts a phone would and holds the card to what the module says, and when — unseen until the last
+block answers, the last size kept for a block that appears, nothing redrawn within a pixel.
+
+**The measuring draws each card again once it is first laid out** — once, if a commit's layouts
+arrive together, as Fabric delivers them; not counted on a device. The tile's photograph
+(`TilePhoto`) and the grid are memoised, so that drawing redraws the boxes, not the faces or the
+week. **At the floor a tile keeps its shape**, so on a 320 × 568 phone a singles tile is 40,5pt wide
+and a doubles tile 94,5, where they were their column's 128,5 squashed to 54: the ticket's rule (the
+ratio on every phone, `tileMin` as the floor), with the card already not fitting there; #865
+replaces the floor with the tile's content and brings the scroll. **Not seen on a device** (#866):
+the shapes on the A32 and an iPhone, the spread on a tall phone, the first frame, and the floor on
+the smallest phone.

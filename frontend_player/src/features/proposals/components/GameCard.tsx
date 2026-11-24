@@ -26,6 +26,25 @@
  * 2026-09-30). `GameGround` draws it, one gradient in the card's own box, as the Players card draws
  * its wash, so its stops are shares of whatever height the stage gives it.
  *
+ * ## Its tiles have one shape, and the height they leave is shared
+ *
+ * The card fills its stage — the three stacked cards are one size — and its tiles no longer take
+ * whatever height is left (#864). **`deckCardGeometry` decides**: a tile 1.75 : 1 on doubles and
+ * 3:4 on singles, as wide as its column or, where the card's height runs out, as tall as the room
+ * allows at that shape; the height left over goes in equal shares to the gaps between the blocks.
+ * It decides from **what the card measures**, never from what a block is assumed to be: the stage
+ * (this card's own box, which is the stage's), and the ribbon, the *vs* line, the forecast or vibe
+ * row, the grid, the court block and the versions line, each as laid out at the phone's text size
+ * and wrap (`useCardRoom`).
+ *
+ * **A card is drawn unseen until it has measured itself once.** Its blocks have to be laid out to be
+ * measured, so it cannot draw nothing, as the sign-in hero does (`useMeasuredRoom`); a card drawn
+ * at the wrong size first would jump a frame later — the court block sliding down 29pt on a tall
+ * phone. Until then, and always under Jest, which lays nothing out, its tiles are their column's
+ * width at their shape and its gaps at rest, so every part of it is there to find and press. Once
+ * measured it is never unseen again: a block that appears later keeps the last size until it
+ * answers.
+ *
  * ## A door to the game, and doors to the people on it
  *
  * A press anywhere on the card opens the game's details, and a press on a tile opens that player's
@@ -58,7 +77,15 @@
  */
 
 import Feather from '@expo/vector-icons/Feather';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import {
+  PixelRatio,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 
 import { formatPercent } from '@/shared/formatting/ratingFormat';
 import { BALANCE_FIGURE, BalanceBar, SocialVibeRow, theme } from '@/shared/ui';
@@ -81,6 +108,17 @@ import { isRescue } from '../domain/fill';
 import type { GameDay } from '../domain/when';
 
 import { CourtBlock } from './CourtBlock';
+import {
+  BASE,
+  blocksLaidOut,
+  cardGeometry,
+  sameLength,
+  tileRatio,
+  type CardGeometry,
+  type CourtShape,
+  type MeasuredBlock,
+  type Size,
+} from './deckCardGeometry';
 import {
   barLabels,
   countdownSpoken,
@@ -118,6 +156,13 @@ export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson 
   const labels = barLabels([top, bottom]);
   const acrossVersions = inAcrossVersions(card);
   const headline = headlineOf(card);
+  const shape: CourtShape = seatsPerSide === 1 ? 'singles' : 'doubles';
+  const { geometry, laidOut } = useCardRoom(shape, {
+    versions: acrossVersions !== undefined,
+    headline: headline !== undefined,
+  });
+  // At rest until the card has been laid out — see the module note.
+  const gaps = geometry ?? BASE;
 
   const drawing = (
     <>
@@ -125,6 +170,7 @@ export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson 
 
       <View
         style={[s.ribbon, ribbon.kind === 'seatOpen' ? s.ribbonRescue : s.ribbonGame]}
+        onLayout={laidOut.ribbon}
         accessible
         accessibilityRole="header"
         accessibilityLabel={[ribbonWords(ribbon), countdownSpoken(countdown)]
@@ -146,43 +192,57 @@ export function GameCard({ card, seatsPerSide, at, day, today, onOpen, onPerson 
         )}
       </View>
 
-      <View style={s.body}>
+      {/* Every gap is the geometry's, so the body sets them one by one rather than as one `gap`. */}
+      <View style={[s.body, { padding: gaps.pad }]}>
         <GameTiles
           top={top}
           bottom={bottom}
-          singles={seatsPerSide === 1}
+          singles={shape === 'singles'}
           completes={completesIt(card)}
-          fill
+          ratio={tileRatio(shape)}
+          onVsLaidOut={laidOut.vs}
           speaksSides={headline?.kind !== 'forecast'}
+          {...(geometry === undefined ? {} : { geometry: geometry.tiles })}
           {...(isRescue(card) ? { rescue: { share: shareWords(card) } } : {})}
           {...(onPerson === undefined ? {} : { onPerson })}
         />
 
         {acrossVersions === undefined ? null : (
-          <Text style={s.versions}>{inOnGameLine(acrossVersions)}</Text>
+          <Text style={[s.versions, { marginTop: gaps.underTiles }]} onLayout={laidOut.versions}>
+            {inOnGameLine(acrossVersions)}
+          </Text>
         )}
 
-        <View style={s.hair} />
+        <View style={[s.hair, { marginVertical: gaps.aroundHair }]} />
 
-        {headline === undefined ? null : headline.kind === 'vibe' ? (
-          <SocialVibeRow pct={headline.pct} />
-        ) : (
-          <Forecast pct={headline.pct} fold={foldOf(card) ?? 0} labels={labels} />
+        {headline === undefined ? null : (
+          <View style={{ marginBottom: gaps.between }} onLayout={laidOut.headline}>
+            {headline.kind === 'vibe' ? (
+              <SocialVibeRow pct={headline.pct} />
+            ) : (
+              <Forecast pct={headline.pct} fold={foldOf(card) ?? 0} labels={labels} />
+            )}
+          </View>
         )}
 
-        <OverlapGrid overlap={card.overlap} today={today} />
+        <View style={{ marginBottom: gaps.between }} onLayout={laidOut.grid}>
+          <OverlapGrid overlap={card.overlap} today={today} />
+        </View>
 
-        <CourtBlock tag={courtTagOf(card)} day={day} card={card} />
+        <View onLayout={laidOut.court}>
+          <CourtBlock tag={courtTagOf(card)} day={day} card={card} />
+        </View>
       </View>
     </>
   );
 
   return (
-    <View style={s.card}>
+    <View style={s.card} onLayout={laidOut.stage}>
       {/* Not one element — see the module note. A press here opens the game; a tile's own press
           reaches the tile first. Behind the top card it is inert: no press, nothing to find. */}
       <Pressable
-        style={s.clip}
+        // Unseen until it has measured itself — see the module note.
+        style={[s.clip, geometry === undefined ? s.unmeasured : undefined]}
         accessible={false}
         disabled={onOpen === undefined}
         {...(onOpen === undefined ? {} : { onPress: onOpen })}
@@ -237,9 +297,89 @@ function Forecast({
   );
 }
 
+type OnLayout = (event: LayoutChangeEvent) => void;
+
+/** As laid out: the card's own box, which is its stage's, and each measured block's height. */
+interface Laid {
+  readonly stage?: Size;
+  readonly heights: Readonly<Partial<Record<MeasuredBlock, number>>>;
+}
+
+/**
+ * **The card's room, as it was laid out**, and the geometry it gives once every block the card draws
+ * has answered (see the module note).
+ *
+ * - **A layout within a pixel of the last is the same layout** (`sameLength`): the gaps moving a
+ *   block onto another fraction of a pixel must not move the gaps again.
+ * - **A block that has just appeared keeps the card at its last size until it answers** — a
+ *   forecast arriving on a live card, the versions line on a second version — rather than dropping
+ *   it back to the size it stood at before it had measured itself, which would jump it twice.
+ */
+function useCardRoom(
+  shape: CourtShape,
+  drawn: { readonly versions: boolean; readonly headline: boolean },
+): {
+  readonly geometry: CardGeometry | undefined;
+  readonly laidOut: Readonly<Record<MeasuredBlock | 'stage', OnLayout>>;
+} {
+  const [laid, setLaid] = useState<Laid>({ heights: {} });
+
+  // One handler a part for the card's life: `setLaid` never changes, nor does the phone's pixel.
+  const laidOut = useMemo(() => {
+    const pixel = 1 / PixelRatio.get();
+    const heightOf =
+      (part: MeasuredBlock): OnLayout =>
+      ({ nativeEvent }) => {
+        const height = nativeEvent.layout.height;
+        setLaid((was) =>
+          sameLength(was.heights[part], height, pixel)
+            ? was
+            : { ...was, heights: { ...was.heights, [part]: height } },
+        );
+      };
+    return {
+      stage: ({ nativeEvent }: LayoutChangeEvent) => {
+        const { width, height } = nativeEvent.layout;
+        setLaid((was) =>
+          sameLength(was.stage?.width, width, pixel) && sameLength(was.stage?.height, height, pixel)
+            ? was
+            : { ...was, stage: { width, height } },
+        );
+      },
+      ribbon: heightOf('ribbon'),
+      vs: heightOf('vs'),
+      versions: heightOf('versions'),
+      headline: heightOf('headline'),
+      grid: heightOf('grid'),
+      court: heightOf('court'),
+    };
+  }, []);
+
+  const { versions, headline } = drawn;
+  const fresh = useMemo(() => {
+    const blocks = blocksLaidOut(
+      laid.heights,
+      { shape, versions, headline },
+      StyleSheet.hairlineWidth,
+    );
+    return laid.stage === undefined || blocks === undefined
+      ? undefined
+      : cardGeometry({ stage: laid.stage, shape, blocks });
+  }, [laid, shape, versions, headline]);
+
+  // The last geometry the card had, while a block that has just appeared is measured. Written in
+  // render, and only ever with this render's own answer, so a render thrown away leaves it true.
+  const kept = useRef<CardGeometry | undefined>(undefined);
+  if (fresh !== undefined) kept.current = fresh;
+
+  return { geometry: fresh ?? kept.current, laidOut };
+}
+
 const s = StyleSheet.create({
   card: { flex: 1, borderRadius: theme.radius.deckCard, ...theme.shadow.deckCard },
   clip: { flex: 1, borderRadius: theme.radius.deckCard, overflow: 'hidden' },
+  // The ground is inside the clip, so the card's shadow, which needs it, goes too.
+  unmeasured: { opacity: 0 },
   ribbon: {
     height: theme.size.gameCard.ribbon,
     flexDirection: 'row',
@@ -255,7 +395,8 @@ const s = StyleSheet.create({
   countdown: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs },
   countdownWords: { ...theme.num.xs, ...theme.tabular, color: theme.color.surface },
   urgent: { color: theme.color.gameCoral },
-  body: { flex: 1, padding: theme.space.md, gap: theme.space.sm },
+  // Its padding and every gap in it are `deckCardGeometry`'s.
+  body: { flex: 1 },
   versions: { ...theme.type.tiny, color: theme.color.onDarkTiny, textAlign: 'center' },
   hair: { height: StyleSheet.hairlineWidth, backgroundColor: theme.color.onDarkHair },
   forecast: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },

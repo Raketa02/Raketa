@@ -318,7 +318,6 @@ function Booked({
               singles={seats === 2}
               // The last seat open: your yes completes it, as the card says (A2.3).
               completes={completesTheRescue(game)}
-              fill={false}
               onPerson={setReading}
               {...(rescue === undefined ? {} : { rescue: { share } })}
               // For fun draws no forecast, whose split row said the sides — so the line says them.

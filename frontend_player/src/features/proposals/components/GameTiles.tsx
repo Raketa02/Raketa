@@ -49,21 +49,36 @@
  * that word is a game still filling's — and each tile carries *paid* after its Level instead, the
  * share the club took.
  *
- * ## Two heights
+ * ## One shape per court, and it never stretches
  *
- * On the deck the tiles take the height the card leaves them (`fill`), down to `tileMin` on a short
- * phone, so the forecast, the grid and the court block keep theirs; on a game's details, where
- * nothing competes, each tile is drawn at the mock's width to height.
+ * A tile used to take whatever height the deck's card left it, so it was 1.90 : 1 on one phone and
+ * 1.49 on another, and the wider it was the less face showed (#864). **It has one shape now** —
+ * 1.75 : 1 on doubles and 3:4 on singles, the photo's own crop (`doublesTile`, `singlesTile`, with
+ * their evidence) — and **the deck's card decides its size** (`deckCardGeometry`): as wide as its
+ * column, or where the card's height runs out as tall as the room allows at the same shape,
+ * narrower and centred, and the height left over goes to the card's gaps, never to a tile. The card
+ * hands the size in (`geometry`) once it is laid out; until then a tile is its column's width at
+ * its shape (`ratio`). **A game's details keep 1.75 for both court shapes** — no geometry, the
+ * default ratio — so a singles tile is 3:4 on the deck and 1.75 there (#859, out of its scope).
  */
 
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+  type ViewStyle,
+} from 'react-native';
 
 import { formatLevel } from '@/shared/formatting/ratingFormat';
-import { PlayerPhoto, theme } from '@/shared/ui';
+import { PlayerPhoto, theme, type PlayerPhotoBox } from '@/shared/ui';
 
 import type { DeckPerson, DeckRow, DeckSeat } from '../domain/deck';
 
 import { CardTag } from './CardTag';
+import type { TileGeometry } from './deckCardGeometry';
 import {
   EMPTY_SEAT,
   LINE_JOIN,
@@ -88,8 +103,15 @@ export interface GameTilesProps {
   readonly completes: boolean;
   /** Opens a player's record. Absent on a card behind the top one, which is a drawing only. */
   readonly onPerson?: (person: DeckPerson) => void;
-  /** Take the card's spare height (the deck), or stand at the mock's proportion (the details). */
-  readonly fill: boolean;
+  /**
+   * **The deck's card**: each tile's size and the gaps inside the block, once the card is laid out
+   * (`deckCardGeometry`). Absent, a tile is as wide as its column at `ratio`.
+   */
+  readonly geometry?: TileGeometry;
+  /** A tile's width over its height where no `geometry` sizes it — `doublesTile`, the details'. */
+  readonly ratio?: number;
+  /** The *vs* line was laid out — the deck's card measures it (`deckCardGeometry`). */
+  readonly onVsLaidOut?: (event: LayoutChangeEvent) => void;
   /** A rescue: your tile is the open seat, offered at this share (*27 zł*). */
   readonly rescue?: { readonly share: string };
   /**
@@ -107,38 +129,46 @@ export function GameTiles({
   singles,
   completes,
   onPerson,
-  fill,
+  geometry,
+  ratio = theme.size.gameCard.doublesTile,
+  onVsLaidOut,
   rescue,
   speaksSides = false,
 }: GameTilesProps) {
+  // Sized by the card, or its column's width at its shape — see the module note.
+  const box: ViewStyle =
+    geometry === undefined
+      ? { flex: 1, aspectRatio: ratio }
+      : { width: geometry.width, height: geometry.height, marginHorizontal: geometry.inset };
+
   const tile = (seat: DeckSeat, at: number) =>
     rescue !== undefined && seat.kind === 'person' && seat.person.isYou ? (
-      <OpenSeat key={seat.person.playerId} share={rescue.share} completes={completes} fill={fill} />
+      <OpenSeat key={seat.person.playerId} share={rescue.share} completes={completes} box={box} />
     ) : (
       <GameTile
         key={seat.kind === 'person' ? seat.person.playerId : `empty-${at}`}
         seat={seat}
         completes={completes}
-        fill={fill}
+        box={box}
         {...(onPerson === undefined ? {} : { onPerson })}
       />
     );
 
+  const row = [s.row, geometry === undefined ? undefined : { gap: geometry.across }];
+
   if (singles) {
-    return (
-      <View style={[s.row, fill ? s.fill : undefined]}>
-        {[...top.seats, ...bottom.seats].map(tile)}
-      </View>
-    );
+    return <View style={row}>{[...top.seats, ...bottom.seats].map(tile)}</View>;
   }
 
   return (
-    <View style={[s.tiles, fill ? s.fill : undefined]}>
-      <View style={[s.row, fill ? s.fill : undefined]}>{top.seats.map(tile)}</View>
+    <View style={[s.tiles, geometry === undefined ? undefined : { gap: geometry.aroundVs }]}>
+      <View style={row}>{top.seats.map(tile)}</View>
       {/* The sides as a line, between the rows. Decorative to a listener where the forecast's
           name says the sides; spoken where nothing else does (`speaksSides`) — said once. */}
       <View
         style={s.vs}
+        testID="game-vs"
+        {...(onVsLaidOut === undefined ? {} : { onLayout: onVsLaidOut })}
         {...(speaksSides
           ? { accessible: true, accessibilityLabel: sidesSpoken(top, bottom) }
           : {
@@ -152,7 +182,7 @@ export function GameTiles({
         </Text>
         <View style={s.rule} />
       </View>
-      <View style={[s.row, fill ? s.fill : undefined]}>{bottom.seats.map(tile)}</View>
+      <View style={row}>{bottom.seats.map(tile)}</View>
     </View>
   );
 }
@@ -160,15 +190,16 @@ export function GameTiles({
 function GameTile({
   seat,
   completes,
-  fill,
+  box: size,
   onPerson,
 }: {
   readonly seat: DeckSeat;
   readonly completes: boolean;
-  readonly fill: boolean;
+  /** The tile's size — `GameTiles`' to decide. */
+  readonly box: ViewStyle;
   readonly onPerson?: (person: DeckPerson) => void;
 }) {
-  const box = [s.tile, fill ? s.tileFill : s.tileFixed];
+  const box = [s.tile, size];
 
   if (seat.kind === 'empty') {
     return (
@@ -184,13 +215,7 @@ function GameTile({
   const { person } = seat;
   const drawing = (
     <>
-      <View style={StyleSheet.absoluteFill}>
-        <PlayerPhoto
-          playerId={person.playerId}
-          {...(person.photoUrl === undefined ? {} : { photoUrl: person.photoUrl })}
-          box={{ kind: 'media' }}
-        />
-      </View>
+      <TilePhoto playerId={person.playerId} photoUrl={person.photoUrl} />
       {/* The pinned scrim under the words: white over the brightest photograph there can be is
           5,24 (`photoScrim`), whatever the photograph is. */}
       <View style={s.foot}>
@@ -239,6 +264,31 @@ function GameTile({
   );
 }
 
+const MEDIA: PlayerPhotoBox = { kind: 'media' };
+
+/**
+ * **The photograph, or the poster**, edge to edge — drawn again only for another person or another
+ * link. The deck's card resizes its tiles once it has measured itself (`deckCardGeometry`), and that
+ * redraws the box, never the face in it.
+ */
+const TilePhoto = memo(function TilePhoto({
+  playerId,
+  photoUrl,
+}: {
+  readonly playerId: string;
+  readonly photoUrl: string | undefined;
+}) {
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <PlayerPhoto
+        playerId={playerId}
+        {...(photoUrl === undefined ? {} : { photoUrl })}
+        box={MEDIA}
+      />
+    </View>
+  );
+});
+
 /**
  * **The seat a rescue offers you** (mock 2) — dashed volt, no face: *You complete it* over *27 zł ·
  * court booked*, or *You?* over *27 zł* while another seat is open too.
@@ -246,16 +296,16 @@ function GameTile({
 function OpenSeat({
   share,
   completes,
-  fill,
+  box,
 }: {
   readonly share: string;
   readonly completes: boolean;
-  readonly fill: boolean;
+  readonly box: ViewStyle;
 }) {
   const under = openSeatUnder(share, completes);
   return (
     <View
-      style={[s.tile, fill ? s.tileFill : s.tileFixed, s.openSeat]}
+      style={[s.tile, box, s.openSeat]}
       accessible
       accessibilityLabel={openSeatLabel(completes, share)}
       testID="game-tile-your-seat"
@@ -284,17 +334,14 @@ function TileLine({ person }: { readonly person: DeckPerson }) {
 }
 
 const s = StyleSheet.create({
-  fill: { flex: 1 },
+  // At rest: `deckCardGeometry`'s `aroundVs` and `across` before any spare height reaches them.
   tiles: { gap: theme.space.xs },
   row: { flexDirection: 'row', gap: theme.space.sm },
   tile: {
-    flex: 1,
     borderRadius: theme.radius.card,
     overflow: 'hidden',
     justifyContent: 'flex-end',
   },
-  tileFill: { minHeight: theme.size.gameCard.tileMin },
-  tileFixed: { aspectRatio: theme.size.gameCard.detailsTile },
   empty: {
     borderWidth: theme.size.gameCard.courtStroke,
     borderStyle: 'dashed',
