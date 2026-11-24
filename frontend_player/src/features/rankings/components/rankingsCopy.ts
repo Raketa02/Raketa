@@ -45,6 +45,11 @@ export const RANKINGS_COPY = {
   openOwnRecord: 'Opens your record',
   /** The jump button's hint (#776) — a call: §30.7 writes only what it reads. */
   jumpHint: 'Shows your row in the list',
+  /**
+   * The jump button's busy word, while it reads the page around the reader — drawn after the spinner
+   * and spoken as the button's name (#869; the loading-shimmer log §9, Q8). §30.7 owes it a row.
+   */
+  findingYou: 'Finding you…',
 } as const;
 
 /** §30.2: the switch under the header, *General* · *Friends* (#777). */

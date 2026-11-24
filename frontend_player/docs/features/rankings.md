@@ -15,7 +15,8 @@ the _You · 212th_ button; [#777](https://github.com/Raketa02/Raketa/issues/777)
 Friends_ switch, the view the phone remembers, and Friends; [#778](https://github.com/Raketa02/Raketa/issues/778)
 the _Show me in General_ switch on the hidden card, and the page following it; and
 [#779](https://github.com/Raketa02/Raketa/issues/779) _Add friend_ from a stranger's record, sent from
-the ranking.
+the ranking. [#869](https://github.com/Raketa02/Raketa/issues/869) made the jump button say _Finding
+you…_ while it reads (PRD [#867](https://github.com/Raketa02/Raketa/issues/867), the loading shimmer).
 
 **Every number is the server's, and this feature computes none of them.** The order, every place,
 _of N_, the chip, the gap, and how many wins close it are worked out by the backend — the win count
@@ -123,12 +124,27 @@ they are listed — never hidden from General (the mechanics §10), never off th
 the list has first said what is on screen, so it never flashes up before. A row is on screen once half
 of it is. **A tap centres the reader's row**: where the list already draws it, a scroll and nothing
 read; further down than the list has read, the page around them, **drawn as a new list only once it
-has landed** — until then the list stays where it was. Each tap reads that page afresh. A row not yet
+has landed** — until then the list stays where it was. Each jump reads that page afresh. A row not yet
 laid out is scrolled to as nearly as the header and an average row put it, and centred once it has
 been, on the next few frames and whenever the content grows. **While a centring is owed the top of
 the list asks for nothing**: a new list starts at its top, and would otherwise read the page above
 before it reached the reader. The reader's own drag takes the list back. A jump refused says why where the button stood, with _Try
 again_.
+
+**While a jump reads the page around the reader, the button says so: _◌ Finding you…_**
+([#869](https://github.com/Raketa02/Raketa/issues/869); the loading-shimmer log §9). It is
+`Button`'s own `busy`: the spinner before the busy word at the dark fill, the busy word the button's
+spoken name, and the button sized to its words, so its width changes as they swap. **It is busy only on a
+jump that has to read** — a row the list has not drawn. A scroll is over before a spinner would
+turn, so it is never busy, and Friends, read whole, never is. **It starts at the press and ends at
+the first of three**: the reader's row on screen, when the button goes as it always has; the jump
+refused, when the failure with _Try again_ takes its place; or the reader's own drag, when the read
+still lands and swaps the list. A page landing with no row of the reader's ends it as well: the
+server answers a reader no longer listed with its first page, and a busy button left up would take
+no press until a drag. **A busy button takes no press**, so a second press reads nothing,
+where it used to reset the read and start it again. A sport changed during a jump is another view,
+so the busy goes with it. The state is the list's (`RankingList`), kept beside what it last said
+was on screen and the centring it owes.
 
 **Around the reader, the card and the podium wait at the top of the list**: they stand above the rows
 again once the pages above reach place 1. A pull there reads the main read and the window around the
@@ -177,6 +193,17 @@ Home card are [`friends.md`](friends.md)'s; a block closing the record is [`bloc
   draws no mock — with the hint _Shows your row in the list_;
 - (#776) a tap on _You · {n}th_ for a row the list already draws scrolls to it and reads nothing: the
   page around the reader is read only for a row further down;
+- (#869) **_Try again_ on a refused jump is a jump of its own**, once per refusal: busy again, and
+  owed its centring afresh. The log names only the press, but a plain button during the retry's read
+  would restart it on a press, which is what #869 ends, and a drag since the refusal had already
+  taken back the centring the press owed. The failure stands until Query's next tick, so a second tap
+  on it is ignored;
+- (#869) **for the product owner**: a jump made offline is busy until the connection is back — the
+  read waits for it and then lands — or until the reader drags. The log's list of ends has no
+  offline case, and nothing says _offline_ there; the page's amber note in the button's place is the
+  obvious answer, not built;
+- (#869) _Finding you…_ is the loading-shimmer log's word (§9, Q8), and §30.7 does not have it yet —
+  **owed to §30 from a root session**, as a row under _The jump button_;
 - (#776) around the reader, the card and the podium are drawn only once the window reaches the top,
   so the list never reads 3rd and then 187th;
 - (#777) the switch is the plain segmented control (6.3), as rankings 2 draws it — the track `line2`,
@@ -210,7 +237,9 @@ two views, the Friends cards with
 _Add friends_, the sheet over Rankings, and the whole page — the trophy beside the bell, the dark card's place and
 level, the podium's steps, the rows and the tint, the drawn marks, and the pill over the header —
 and #776's scrolling: a page landing at either end, the list holding still as a page lands above it,
-the jump landing centred, and the button over the list. The suites say what the list reports (the
+the jump landing centred, and the button over the list; and #869's _Finding you…_ on the dark
+button, with its width change as the words swap (owed to the phone walk,
+[#877](https://github.com/Raketa02/Raketa/issues/877)). The suites say what the list reports (the
 rows on screen, an end reached), because a test renderer lays nothing out.
 
 **The ranking shows everybody, and the page has no switch** ([#799](https://github.com/Raketa02/Raketa/issues/799),
