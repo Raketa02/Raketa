@@ -2,6 +2,12 @@
 
 - **Status:** Accepted — ***`map-pin` for Around* superseded 2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §1: the
   tab is **Players** and draws `users`. One family, and `radar` still not drawn, stand.
+  — **Superseded for the bar 2026-11-25 by [ADR-0210](0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md)**
+  §5 (decided, not yet built — PRD [#878](https://github.com/Raketa02/Raketa/issues/878)): the bar
+  draws **Ionicons**, and selection changes marker, shape and tone; the ⚡Play disc and its white
+  `zap` retire (§6). Feather stays on every other surface, and one family on the bar, typed glyph
+  names, the ⚡ never drawn as the character and the declared dependency all stand. The body below
+  is history.
 - **Date:** 2026-08-29
 - **Closes:** [ADR-0012](0012-player-app-design-system.md)'s one deliberately-open item — *"The glyph set for tab icons is deliberately still open. The system specifies the 16pt box and the position; `@expo/vector-icons` ships with Expo and is the likely answer, but choosing it is a separate decision"*
 - **Answers:** [#238](https://github.com/Raketa02/Raketa/issues/238) — *Five glyphs, and the set they come from*, on [#217](https://github.com/Raketa02/Raketa/issues/217)

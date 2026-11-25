@@ -112,6 +112,13 @@ all three are for things that genuinely float.
 A deliberate rejection of the "floating card on grey" pattern. Warm paper reads as a
 physical object; a card on it reads as a piece of paper on a desk.
 
+> **Decided by [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md),
+> not yet built (PRD [#878](https://github.com/Raketa02/Raketa/issues/878))** — one exception:
+> **the tab bar becomes the one glass surface**, 88% white over a blur, floating over the screen
+> (ADR-0210 §2). On Android it is glass only if the A32 spike passes (ADR-0210 §7); otherwise it is opaque
+> `surface`. Nothing else becomes glass. This section is rewritten, with `theme.ts`, by
+> [#883](https://github.com/Raketa02/Raketa/issues/883).
+
 ## 1.2 One accent, used sparingly
 
 Coral is the only attention colour. It appears on: the primary button, the active tab,
@@ -133,6 +140,23 @@ is a thing to attend to** — the disc, and now the badge. Nothing else was hone
 does not grow to accommodate a new meaning ([1.3](#13-semantic-colour-is-never-decorative)),
 `red` is _ended badly_ and a challenge waiting for you is its opposite, and a count of things
 **only you can clear** is what attention means.
+
+> **Decided by [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md),
+> not yet built (PRD [#878](https://github.com/Raketa02/Raketa/issues/878))** — a third line:
+> **a `coralSoft` fill is _where you are_, on the bar only.** That fill is the selection marker
+> behind the lit tab, with its icon in `coral` and its label in `coralInk` (ADR-0210 §4).
+>
+> - **The list stays at six:** the marker _is_ the active-tab entry.
+> - **Home's badge stays a `coralInk` fill**, a thing to attend to.
+> - **The ⚡Play disc and its ring retire** (ADR-0210 §6), so the stroke line keeps the game card's
+>   ringed cell as its example.
+> - **_On the bar only_ fences the line, and two things below stand as they are.**
+>   - Rankings' own row is already tinted `coralSoft` for _where you are_ in a list (#775). It stays
+>     a meaning above.
+>   - The paging rail's current dot stays `ink`. Its reasoning, _a coral fill is not that_, is
+>     amended for the bar alone.
+>
+> This section is rewritten, with `theme.ts`, by [#883](https://github.com/Raketa02/Raketa/issues/883).
 
 **A list this short is a rule, and it refused two candidates in the same breath it admitted
 that one.** The challenge row's urgency stripe is `amber`
@@ -5272,6 +5296,21 @@ TopSafeArea           the top inset, as padding from the provider
   TabBar              equal columns, one per top-level destination
 ```
 
+> **Decided by [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md),
+> not yet built (PRD [#878](https://github.com/Raketa02/Raketa/issues/878))** — **the flex sibling
+> is reversed** (ADR-0210 §3, §9).
+>
+> - **The tab bar floats over the screen and owns no layout.** Screens inside the tabs draw to the
+>   bottom of the phone.
+> - **Everything at the bottom is placed by the bar's _reach_:** lift + 54 while it is drawn,
+>   nothing while it stands down. A scroller ends at reach + 15, a pinned CTA's screen ends at the
+>   reach, and the bottom inset is the lift's.
+> - **On Android the bar stands down while the keyboard is up**, beside the chat's stand-down.
+>
+> This section is rewritten by [#881](https://github.com/Raketa02/Raketa/issues/881) and
+> [#882](https://github.com/Raketa02/Raketa/issues/882). Until then the text below describes the
+> app as built.
+
 > **Confirmed for Play**, against a UI specification that proposed the opposite
 > ([#227](https://github.com/Raketa02/Raketa/issues/227)). The header **pins** above the
 > scroller and does not scroll away — both shipped layouts already build it that way, and the
@@ -5329,6 +5368,25 @@ icon 16 × 16, gap 3, label `tag`
 centre column: a 30pt disc, radius 11, 6.1 `primary`, shadow.fab
 active Play:   a 2pt `coral` ring, 2pt clear of the disc, ABSOLUTELY POSITIONED
 ```
+
+> **Decided by [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md),
+> not yet built (PRD [#878](https://github.com/Raketa02/Raketa/issues/878))** — **this section is
+> replaced** (ADR-0210 §2, §5, §6, §8):
+>
+> - **The dock:** 54 tall, 12 in from each side, lifted the larger of 12 and the bottom inset,
+>   radius 22, and glass.
+> - **The columns:** three equal Ionicons columns at 18pt, two in the Administrator's area, outlined
+>   in `ink` at 62% when idle.
+> - **The selection marker:** opaque `coralSoft`, 75 × 42, behind the lit tab's filled `coral`
+>   icon and `coralInk` label. It travels on a 460 ms spring.
+> - **Retired:** the ⚡Play disc, its ring and `shadow.fab`.
+> - **Kept:** Home's badge.
+>
+> [ADR-0135](../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md) is superseded
+> for the bar. This section is rewritten, with `theme.ts`, by
+> [#883](https://github.com/Raketa02/Raketa/issues/883), and its motion by
+> [#884](https://github.com/Raketa02/Raketa/issues/884). Until then the text below describes the
+> bar as built.
 
 **Three columns** — `Home · ⚡Play · You`
 ([#576](https://github.com/Raketa02/Raketa/issues/576)). The centre one is raised, and it is

@@ -207,7 +207,14 @@ review comment and a test description all use the same word.
   Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it, which is the
   whole of what [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. Home is the
   bottom of the stack and is kept; You and Play are laid over it fresh by every press. _Avoid_:
-  "the tab navigator" — there isn't one.
+  "the tab navigator" — there isn't one. **Decided, not yet built**
+  ([ADR-0210](../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md), PRD
+  [#878](https://github.com/Raketa02/Raketa/issues/878)): the one tab bar will **float over the
+  stack** as a glass dock, not sit below it as a flex sibling. Screens will end at its **reach**:
+  the room the dock takes at the bottom, its lift + 54, and nothing while it stands down. On
+  Android it will stand down while the keyboard is up. _Avoid_ confusing the reach with the tab's
+  menu's `TAB_REACH`, which is a touch slop. The one stack, the reset and what
+  each tab opens don't change. Until #881 builds it, the bar is drawn below the stack.
 - **Home** — the first tab, route `/`: the booked-games rail under the tab's own words —
   `features/proposals`' `HomeRail` over `GET /home`, with the payments to confirm above it. It
   was **Now** until [#550](https://github.com/Raketa02/Raketa/issues/550), and the rename is
@@ -961,6 +968,16 @@ comment and a commit message all use the same word.
   on the tab, whose chevron says it is there. UI vocabulary, not a domain term: the kind it picks is
   the glossary's. _Avoid_: dropdown, popover (7.6's popover explains a word; this picks), the
   switch (the row it replaced).
+- **Selection marker** — the soft coral capsule behind the lit tab's icon and label on the tab
+  bar: opaque `coralSoft`, 75 × 42, drawn under the words. It is one of the lit tab's three marks,
+  beside the filled icon and the coral colour, and the only one that moves. Play's bolt is filled
+  in both states, so there the marker and the colour carry it alone. When the lit tab changes it
+  **travels** to the new one, on a spring that stretches as it moves. On the bar's first draw, or when the bar comes back, it is simply there
+  ([ADR-0210](../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §4, §8;
+  decided, not yet built — PRD [#878](https://github.com/Raketa02/Raketa/issues/878)). The
+  brief's own phrase. UI vocabulary, not a domain term. _Avoid_: pill (taken by `radius.pill`,
+  `SportPill` and FOR YOU's count pill), highlight, and the ring (the ⚡Play disc's, which
+  retires with the disc). Not **the tab's menu**, which is a group page's.
 - **Skeleton · ground · reveal** — a screen's **skeleton** is the grey shapes standing where its
   content will be while its first read is out, one band of light sweeping across them: `Skeleton`'s
   block, line and circle, laid out by the screen (design-system 5.6, #870). They stand on a

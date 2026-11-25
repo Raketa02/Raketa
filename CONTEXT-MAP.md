@@ -152,6 +152,14 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > the mocks, which are illustrations only, are `docs/specs/tab-menu/`; the specs it amends are
 > `docs/specs/games-and-fill-in/` and `docs/specs/friends/`.
 >
+> **The tab bar dock touches no context**
+> ([ADR-0210](docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md), PRD
+> [#878](https://github.com/Raketa02/Raketa/issues/878); decided, not yet built). The player app's
+> tab bar floats over every main screen as a glass dock, Home · Play · You, and a coral **selection
+> marker** travels to the lit tab. What each tab opens doesn't change. Only the player app changes:
+> no backend change and no contract change. The brief, the decision log and the mocks, which lead
+> on design but give no number, are `docs/specs/tab-bar-dock/`.
+>
 > **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
 > radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
 > ranking, with the feature flag that hid them
@@ -311,6 +319,8 @@ else lives one layer down. See
 │   │                            decision log and the mock, which lead on design
 │   ├── specs/tab-menu/       ← Competitive / For fun in the tab's menu, the deck tiles' shape
 │   │                            (PRD #859): the brief, the decision log and the mocks, illustrations only
+│   ├── specs/tab-bar-dock/   ← the tab bar as a floating glass dock and its selection marker
+│   │                            (ADR-0210): the brief, the decision log and the mocks, which lead on design
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)
