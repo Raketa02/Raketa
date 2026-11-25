@@ -42,15 +42,46 @@
  *
  * The lit tab's icon fills in and turns `coral`, its label turns `coralInk`, and both sit on **the
  * selection marker**, an opaque `coralSoft` capsule (§4, §5). Idle tabs are outlines in `tabIdle`.
- * All three channels are drawn from one value, `active`, so they cannot disagree — the dock never
- * shows two selected tabs. Play's bolt is filled in both states, because it is the brand's mark, so
- * on Play the marker and the colour carry it alone.
+ * All three channels are drawn from one value, **the marker's trip**, which follows `active` from
+ * the next frame, so they cannot disagree — the dock never shows two selected tabs. A channel
+ * added here reads the trip too, never `selected`: `selected` is the column's spoken state, and it
+ * turns at the press while the drawing turns with the slide. Play's bolt is filled in both states,
+ * because it is the brand's mark, so on Play the marker and the colour carry it alone.
  *
  * **Layers, bottom to top: glass → marker → icons and labels → badge.** The marker is one layer
- * of the dock's own rather than a part of a column: it is what travels between columns (#884), a
- * press dims the column and never the marker, and a stretch on its layer never deforms a word. It
- * stands at the lit column's centre, worked out from the window's width as every other width in
- * the app is — a measured one would leave the first frame without a marker.
+ * of the dock's own rather than a part of a column: it is what travels between columns, a press
+ * dims the column and never the marker, and its stretch is a scale on a layer that holds no word
+ * or glyph, so nothing is ever deformed and iOS has nothing to rasterise blurred. It stands at the
+ * lit column's centre, worked out from the window's width as every other width in the app is — a
+ * measured one would leave the first frame without a marker.
+ *
+ * ## The marker travels
+ *
+ * **When the lit tab changes, the marker slides to it** on `motion.tabMarker`'s 460 ms spring,
+ * stretching like a bubble as it speeds up and recoiling as it brakes, and the new tab colours in
+ * after it sets off (ADR-0210 §8, [#884](https://github.com/Raketa02/Raketa/issues/884)). The
+ * numbers are `tabMarkerMotion.ts`'s, pure; here they run on the UI thread off **one clock** that
+ * Reanimated moves from 0 to 460, so the travel, the stretch and the colour-in can never drift apart.
+ * Per frame only `transform` and `opacity` move.
+ *
+ * - **It slides on every change of the lit tab after the dock's first draw** — a press, a landing,
+ *   a notice, a group opened from Home, and back. The bar cannot tell them apart, and has no need
+ *   to: the lit tab is the one value it is handed.
+ * - **It never slides on the dock's first draw**, which is also every time the dock comes back
+ *   after the chat or Android's keyboard: the shell draws it anew, and a new dock is placed. Nor on
+ *   a press of the lit tab, which changes nothing it is handed.
+ * - **A press mid-flight turns it from where it is, at the speed it has**: the new trip is worked
+ *   out on the UI thread in the same step that restarts the clock, so no frame falls between the
+ *   marker's place and the trip that starts from it.
+ * - **The colour-in is a cross-fade** of two stacked layers per column, idle and selected, so only
+ *   opacity moves: the new tab's selected layer comes in over 300 ms on `easeDecel`, 140 ms into
+ *   the slide, over its idle layer, which stays whole under it until it is whole — and the tab left
+ *   is idle at once.
+ * - **Reduce motion places the marker** under the new tab, and the colours switch at once — also the
+ *   moment it is turned on mid-slide.
+ *
+ * **The animated layers are memoised** and handed only shared values and fixed inventory, so a
+ * re-render of the dock — a count arriving, a press — never redraws them with their first pose.
  *
  * Every name is typed against Ionicons' own `glyphMap`, so a glyph absent from
  * `@expo/vector-icons@14.0.4` is a compile error rather than a blank column nobody notices at
@@ -89,11 +120,41 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { counted } from '@/shared/formatting/counted';
+import { memo, useEffect, useRef } from 'react';
 import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, {
+  Easing,
+  ReduceMotion,
+  runOnUI,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CountBadge } from './CountBadge';
+import { useReducedMotion } from './overlay';
+import {
+  colourInAt,
+  MARKER_SLIDE,
+  markerAt,
+  markerPlacedAt,
+  markerTravelling,
+  type MarkerTrip,
+} from './tabMarkerMotion';
 import { theme } from './theme';
+
+/** The marker's rest width, as a number a UI-thread worklet can hold without copying the theme. */
+const MARKER_WIDTH = theme.size.tabBar.marker.width;
+
+/** The colour-in's curve — the app's for a thing arriving. */
+const EASE = Easing.bezierFn(
+  theme.motion.easeDecel.x1,
+  theme.motion.easeDecel.y1,
+  theme.motion.easeDecel.x2,
+  theme.motion.easeDecel.y2,
+);
 
 /** A glyph name Ionicons actually ships. Not a `string`, and not behind a cast. */
 type IoniconsGlyph = keyof typeof Ionicons.glyphMap;
@@ -249,7 +310,11 @@ function Dock<Key extends string>({
     0,
     tabs.findIndex((tab) => tab.key === active),
   );
-  const markerAt = lit * column + (column - theme.size.tabBar.marker.width) / 2;
+  const { trip, clock } = useMarkerTravel(lit);
+  const columnWidth = useSharedValue(column);
+  useEffect(() => {
+    columnWidth.value = column;
+  }, [column, columnWidth]);
 
   return (
     <View
@@ -277,22 +342,111 @@ function Dock<Key extends string>({
         ) : null}
       </View>
       <View pointerEvents="none" style={s.rim} />
-      <View
-        testID={TAB_BAR_MARKER_TEST_ID}
-        pointerEvents="none"
-        style={[s.marker, { transform: [{ translateX: markerAt }] }]}
-      />
-      {tabs.map((tab) => (
+      <Marker trip={trip} clock={clock} column={columnWidth} />
+      {tabs.map((tab, index) => (
         <Column
           key={tab.key}
           tab={tab}
+          index={index}
           selected={tab.key === active}
           onPress={onPress}
           waiting={waiting?.(tab.key)}
+          trip={trip}
+          clock={clock}
         />
       ))}
     </View>
   );
+}
+
+/** The marker's trip and the clock it runs on — what every animated layer of the dock reads. */
+interface Travel {
+  readonly trip: SharedValue<MarkerTrip>;
+  readonly clock: SharedValue<number>;
+}
+
+/**
+ * **The marker's travel to the lit column**: placed under it on the dock's first draw, and sent to
+ * it on every change after — from where it is, on the UI thread — or placed under it at once under
+ * Reduce motion. A press of the lit tab changes nothing here, so nothing moves.
+ */
+function useMarkerTravel(lit: number): Travel {
+  const reduced = useReducedMotion();
+  const trip = useSharedValue(markerPlacedAt(lit));
+  // At its end: a placed marker is at rest, and its tab wholly coloured in.
+  const clock = useSharedValue(MARKER_SLIDE);
+  const drawnFor = useRef(lit);
+
+  useEffect(() => {
+    const changed = drawnFor.current !== lit;
+    drawnFor.current = lit;
+    // Placed under Reduce motion — and the moment it is turned on, even mid-slide.
+    if (reduced) {
+      trip.value = markerPlacedAt(lit);
+      clock.value = MARKER_SLIDE;
+      return;
+    }
+    if (changed) runOnUI(setOff)(trip, clock, lit);
+  }, [lit, reduced, trip, clock]);
+
+  return { trip, clock };
+}
+
+/**
+ * **A new trip, set off on the UI thread**: worked out from the marker's place and speed at the
+ * clock's reading, and the clock restarted, in one step — so no frame is drawn between the two.
+ */
+function setOff(trip: SharedValue<MarkerTrip>, clock: SharedValue<number>, to: number) {
+  'worklet';
+  trip.value = markerTravelling(trip.value, clock.value, to);
+  clock.value = 0;
+  // The app has decided Reduce motion itself (above), so the clock is never cut by the system's.
+  clock.value = withTiming(MARKER_SLIDE, {
+    duration: MARKER_SLIDE,
+    easing: Easing.linear,
+    reduceMotion: ReduceMotion.Never,
+  });
+}
+
+/**
+ * **The selection marker** — the dock's own layer, moved by `transform` alone: translated to where
+ * its trip has it, and scaled about its centre by its stretch. Memoised on shared values, so a
+ * re-render of the dock never redraws it with its first pose.
+ */
+const Marker = memo(function Marker({
+  trip,
+  clock,
+  column,
+}: Travel & { readonly column: SharedValue<number> }) {
+  const drawn = useAnimatedStyle(() => {
+    const pose = markerAt(trip.value, clock.value);
+    return {
+      // Translate first, so the scale is about the marker's own centre.
+      transform: [
+        {
+          translateX: pose.at * column.value + (column.value - MARKER_WIDTH) / 2,
+        },
+        { scaleX: pose.wide },
+        { scaleY: pose.tall },
+      ],
+    };
+  });
+  return (
+    <Animated.View testID={TAB_BAR_MARKER_TEST_ID} pointerEvents="none" style={[s.marker, drawn]} />
+  );
+});
+
+/**
+ * **How much one of a column's two layers shows**: its selected layer coming in on `easeDecel` while
+ * the trip is to it, over its idle layer, which stays whole under it until it is whole and only then
+ * goes — two layers each half there would let the ground show through the word mid-fade. A column
+ * the trip is not to is idle.
+ */
+function useLayerShown(index: number, layer: 'idle' | 'lit', { trip, clock }: Travel) {
+  return useAnimatedStyle(() => {
+    const lit = trip.value.to === index ? EASE(colourInAt(clock.value)) : 0;
+    return { opacity: layer === 'lit' ? lit : lit < 1 ? 1 : 0 };
+  });
 }
 
 /**
@@ -302,14 +456,22 @@ function Dock<Key extends string>({
  * the narrowest phone's dock across — so there is no `hit` entry here. Under a finger its icon,
  * label and badge dim to 0.7 (6.6's answer for a surface with no second fill); the marker is the
  * dock's, so it does not.
+ *
+ * **Its icon and its label are each two layers**, idle and selected, stacked and cross-faded by
+ * the dock's clock — the selected one over the idle one — so the colour-in moves opacity and
+ * nothing else. The badge stands over both.
  */
 function Column<Key extends string>({
   tab,
+  index,
   selected,
   onPress,
   waiting,
-}: {
+  trip,
+  clock,
+}: Travel & {
   readonly tab: TabBarTab<Key>;
+  readonly index: number;
   readonly selected: boolean;
   readonly onPress: (key: Key) => void;
   readonly waiting: number | undefined;
@@ -327,19 +489,68 @@ function Column<Key extends string>({
       {/* The glyph gets a box of its own so the badge can be positioned against the icon rather
           than against the column: a column is 98pt wide and the mark it belongs to is 18. */}
       <View style={s.glyphBox}>
-        <Glyph
-          name={selected ? tab.glyph.lit : tab.glyph.idle}
-          color={selected ? theme.color.coral : theme.color.tabIdle}
-        />
+        <GlyphLayers glyph={tab.glyph} index={index} trip={trip} clock={clock} />
         {/* 1.2's sixth coral entry: a count of things only the player can clear. */}
         {waiting === undefined ? null : (
           <CountBadge figure={waiting} tone="attend" over={theme.size.tabBar.icon} />
         )}
       </View>
-      <Label text={tab.label} color={selected ? theme.color.coralInk : theme.color.tabIdle} />
+      <LabelLayers text={tab.label} index={index} trip={trip} clock={clock} />
     </Pressable>
   );
 }
+
+/**
+ * **A column's two glyphs**: the outline in `tabIdle`, and over it the filled one in `coral`. Each
+ * fills the icon's box. Memoised on fixed inventory and shared values, like the marker.
+ */
+const GlyphLayers = memo(function GlyphLayers({
+  glyph,
+  index,
+  trip,
+  clock,
+}: Travel & { readonly glyph: TabBarTab<string>['glyph']; readonly index: number }) {
+  const idle = useLayerShown(index, 'idle', { trip, clock });
+  const lit = useLayerShown(index, 'lit', { trip, clock });
+  return (
+    <>
+      <Animated.View style={[s.glyphLayer, idle]}>
+        <Glyph name={glyph.idle} color={theme.color.tabIdle} />
+      </Animated.View>
+      <Animated.View style={[s.glyphLayer, lit]}>
+        <Glyph name={glyph.lit} color={theme.color.coral} />
+      </Animated.View>
+    </>
+  );
+});
+
+/**
+ * **A column's two labels**: in `tabIdle`, and over it in `coralInk`. The selected copy is a
+ * drawing laid over the word, hidden from the reader — the column is named once, by its own label.
+ */
+const LabelLayers = memo(function LabelLayers({
+  text,
+  index,
+  trip,
+  clock,
+}: Travel & { readonly text: string; readonly index: number }) {
+  const idle = useLayerShown(index, 'idle', { trip, clock });
+  const lit = useLayerShown(index, 'lit', { trip, clock });
+  return (
+    <View>
+      <Animated.View style={idle}>
+        <Label text={text} color={theme.color.tabIdle} />
+      </Animated.View>
+      <Animated.View
+        style={[StyleSheet.absoluteFill, lit]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Label text={text} color={theme.color.coralInk} />
+      </Animated.View>
+    </View>
+  );
+});
 
 /**
  * A mark, never a word. Hidden from the reader on every column: the visible label already names
@@ -445,6 +656,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'visible',
+  },
+  // One of the icon's two layers, filling its box with the glyph centred in it.
+  glyphLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   label: { ...theme.type.tag, textAlign: 'center' },

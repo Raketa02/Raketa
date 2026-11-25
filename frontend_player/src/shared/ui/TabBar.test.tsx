@@ -11,8 +11,10 @@
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { BlurView } from 'expo-blur';
+import type { ReactElement } from 'react';
+import { getAnimatedStyle } from 'react-native-reanimated';
 import {
   Dimensions,
   Platform,
@@ -35,6 +37,8 @@ import {
   type TabBarKey,
   type TabBarProps,
 } from './TabBar';
+import { ReducedMotionProvider } from './overlay';
+import { MARKER_SLIDE } from './tabMarkerMotion';
 import { theme } from './theme';
 
 /** A notched phone: its bottom inset is larger than the dock's least lift, so the inset leads. */
@@ -63,11 +67,23 @@ function renderBar(
   props: Partial<Omit<TabBarProps, 'active'>> = {},
   metrics: Metrics = NOTCHED,
 ) {
-  return render(
+  return render(onPhone(<TabBar active={active} onPress={jest.fn()} {...props} />, metrics));
+}
+
+/** A bar on a phone — its insets, and whether the phone asks for reduced motion. */
+function onPhone(bar: ReactElement, metrics: Metrics = NOTCHED, reduced = false) {
+  return (
     <SafeAreaProvider initialMetrics={metrics}>
-      <TabBar active={active} onPress={jest.fn()} {...props} />
-    </SafeAreaProvider>,
+      <ReducedMotionProvider value={reduced}>{bar}</ReducedMotionProvider>
+    </SafeAreaProvider>
   );
+}
+
+/** The style a view is drawn at now — an animated one's as its last frame left it. */
+function drawn(node: ReactTestInstance): ViewStyle & TextStyle {
+  return node.props.jestAnimatedStyle === undefined
+    ? flat(node.props.style)
+    : flat(getAnimatedStyle(node));
 }
 
 /** Every column the bar drew, by the name it speaks. */
@@ -95,17 +111,27 @@ const flat = (style: unknown): ViewStyle & TextStyle =>
 /** The dock's own frame. */
 const dock = () => flat(screen.getByTestId(TAB_BAR_TEST_ID).props.style);
 
-/** The selection marker's drawing. */
-const marker = () => flat(screen.getByTestId(TAB_BAR_MARKER_TEST_ID).props.style);
+/** The selection marker's drawing, as its last frame left it. */
+const marker = () => drawn(screen.getByTestId(TAB_BAR_MARKER_TEST_ID));
+
+/** One of the marker's transform steps — its translation, or its scale either way. */
+function markerStep(step: 'translateX' | 'scaleX' | 'scaleY'): number | undefined {
+  const steps = marker().transform as Record<string, number>[] | undefined;
+  return steps?.find((each) => each[step] !== undefined)?.[step];
+}
 
 /** Where the marker's left edge stands inside the dock's hairline — its offset. */
 function markerLeft(): number {
   const style = marker();
-  const shift = (style.transform as { translateX?: number }[] | undefined)?.find(
-    (step) => step.translateX !== undefined,
-  )?.translateX;
-  return (typeof style.left === 'number' ? style.left : 0) + (shift ?? 0);
+  return (typeof style.left === 'number' ? style.left : 0) + (markerStep('translateX') ?? 0);
 }
+
+/** The marker's centre, in columns of a dock this many wide — 0.5 is the first column's middle. */
+const markerCentre = (count: number) =>
+  (markerLeft() + Number(marker().width) / 2) / columnOf(count);
+
+/** The marker's shape — its width and height as shares of its rest. */
+const markerShape = () => ({ wide: markerStep('scaleX') ?? 1, tall: markerStep('scaleY') ?? 1 });
 
 /** A column's width as the dock lays it out: the window less both side insets and the hairlines. */
 const columnOf = (count: number) =>
@@ -119,17 +145,55 @@ function markerColumn(count: number): number | undefined {
   return Math.abs(centre - (at + 0.5) * width) < 0.01 ? at : undefined;
 }
 
-/** Every Ionicons glyph the bar drew, in order. */
+/** Every Ionicons glyph the bar drew, in order — two to a column, its idle and its selected. */
 const glyphs = () => screen.UNSAFE_queryAllByType(Ionicons);
 
-/** A column's glyph, by the column's name. */
-function glyphOf(name: string) {
-  const found = column(name).findByType(Ionicons);
-  return found.props as { name: string; color: string; size: number };
+/** How much of a node shows: the opacity of the animated layer it is drawn in. */
+function shownOf(node: ReactTestInstance): number {
+  for (let at: ReactTestInstance | null = node; at !== null; at = at.parent) {
+    if (at.props.jestAnimatedStyle !== undefined) return Number(drawn(at).opacity);
+  }
+  throw new Error('drawn in no animated layer');
 }
 
-/** A column's label, by its text. */
-const labelColour = (text: string) => flat(screen.getByText(text).props.style).color;
+/** One of a column's two layers, as drawn now: its glyph, its icon's and label's colours, and how much it shows. */
+interface Layer {
+  readonly glyph: string;
+  readonly icon: string;
+  readonly label: string;
+  readonly shown: number;
+}
+
+/**
+ * **A column's two layers, idle and selected**, by the column's name — each icon with its label,
+ * which fade together.
+ */
+function layersOf(name: string): { readonly idle: Layer; readonly lit: Layer } {
+  const icons = column(name).findAllByType(Ionicons);
+  const words = column(name)
+    .findAllByType(Text)
+    .filter((text: ReactTestInstance) => text.props.numberOfLines === 1);
+  expect(icons).toHaveLength(2);
+  expect(words).toHaveLength(2);
+  const layer = (at: 0 | 1): Layer => {
+    const shown = shownOf(icons[at]!);
+    expect(shownOf(words[at]!)).toBeCloseTo(shown, 10);
+    return {
+      glyph: icons[at]!.props.name,
+      icon: icons[at]!.props.color,
+      label: flat(words[at]!.props.style).color as string,
+      shown,
+    };
+  };
+  return { idle: layer(0), lit: layer(1) };
+}
+
+/** **What a column draws at rest** — the one of its layers that shows whole, the other not at all. */
+function drawnFor(name: string): Layer {
+  const { idle, lit } = layersOf(name);
+  expect([idle.shown, lit.shown].sort()).toEqual([0, 1]);
+  return lit.shown === 1 ? lit : idle;
+}
 
 /** A translucent token's alpha — its last channel — without spelling the colour out here. */
 const alphaOf = (token: string) => Number(token.split(',').pop()?.replace(')', ''));
@@ -203,7 +267,8 @@ describe('what the bar announces', () => {
   it('hides every glyph from the reader — the visible label already names the tab', () => {
     renderBar('home');
 
-    expect(glyphs()).toHaveLength(3);
+    // Two to a column: the idle layer's and the selected layer's.
+    expect(glyphs()).toHaveLength(6);
     for (const glyph of glyphs()) {
       expect(glyph.props.accessibilityElementsHidden).toBe(true);
       expect(glyph.props.importantForAccessibility).toBe('no');
@@ -381,14 +446,24 @@ describe('the family', () => {
   });
 
   it('outlines the idle tabs and fills the lit one, with the bolt filled always', () => {
+    const names = ['Home', 'Play', 'You'];
     renderBar('home');
 
-    expect(glyphs().map((glyph) => glyph.props.name)).toEqual(['home', 'flash', 'person-outline']);
+    expect(names.map((name) => drawnFor(name).glyph)).toEqual(['home', 'flash', 'person-outline']);
 
     screen.unmount();
     renderBar('you');
 
-    expect(glyphs().map((glyph) => glyph.props.name)).toEqual(['home-outline', 'flash', 'person']);
+    expect(names.map((name) => drawnFor(name).glyph)).toEqual(['home-outline', 'flash', 'person']);
+  });
+
+  it('draws each column’s outline under its filled glyph, ready to cross-fade', () => {
+    renderBar('home');
+
+    TAB_BAR_TABS.forEach(({ label, glyph }) => {
+      const { idle, lit } = layersOf(label);
+      expect([idle.glyph, lit.glyph]).toEqual([glyph.idle, glyph.lit]);
+    });
   });
 
   it('draws each glyph at 18', () => {
@@ -408,7 +483,8 @@ describe('the family', () => {
     for (const text of screen.UNSAFE_queryAllByType(Text)) {
       expect(String(text.props.children)).not.toContain('⚡');
     }
-    expect(glyphOf('Play').name).toBe('flash');
+    const { idle, lit } = layersOf('Play');
+    expect([idle.glyph, lit.glyph]).toEqual(['flash', 'flash']);
   });
 });
 
@@ -421,8 +497,10 @@ describe('the colours', () => {
     renderBar('play');
 
     for (const name of ['Home', 'You']) {
-      expect(glyphOf(name).color).toBe(theme.color.tabIdle);
-      expect(labelColour(name)).toBe(theme.color.tabIdle);
+      expect(drawnFor(name)).toMatchObject({
+        icon: theme.color.tabIdle,
+        label: theme.color.tabIdle,
+      });
     }
     // `ink` at .62 — an alpha ink, which darkens with the ground under the glass.
     expect(alphaOf(theme.color.tabIdle)).toBe(0.62);
@@ -431,24 +509,45 @@ describe('the colours', () => {
   it('draws the lit tab’s icon in `coral` and its label in `coralInk`', () => {
     renderBar('play');
 
-    expect(glyphOf('Play').color).toBe(theme.color.coral);
-    expect(labelColour('Play')).toBe(theme.color.coralInk);
+    expect(drawnFor('Play')).toMatchObject({
+      icon: theme.color.coral,
+      label: theme.color.coralInk,
+    });
   });
 
   it('colours one tab for selected, and only the one the bar was told is lit', () => {
     renderBar('you');
 
     const lit = ['Home', 'Play', 'You'].filter(
-      (name) => labelColour(name) === theme.color.coralInk,
+      (name) => drawnFor(name).label === theme.color.coralInk,
     );
     expect(lit).toEqual(['You']);
+  });
+
+  it('keeps each column’s selected layer over its idle one, so only opacity has to move', () => {
+    renderBar('you');
+
+    for (const name of ['Home', 'Play', 'You']) {
+      const { idle, lit } = layersOf(name);
+      expect([idle.icon, idle.label]).toEqual([theme.color.tabIdle, theme.color.tabIdle]);
+      expect([lit.icon, lit.label]).toEqual([theme.color.coral, theme.color.coralInk]);
+    }
+  });
+
+  it('names each tab once — the selected label is a drawing a reader never reaches', () => {
+    renderBar('home');
+
+    for (const name of ['Home', 'Play', 'You']) {
+      expect(screen.getAllByText(name)).toHaveLength(1);
+      expect(screen.getAllByText(name, { includeHiddenElements: true })).toHaveLength(2);
+    }
   });
 });
 
 /**
  * **The selection marker** (ADR-0210 §4): an opaque `coralSoft` capsule, 75 × 42, fully rounded,
- * centred in the lit column under its icon and label. It does not move yet (#884), so it simply
- * stands under whichever tab is lit.
+ * centred in the lit column under its icon and label — placed there on the dock's first draw, at
+ * rest and unstretched. How it travels is the next suite.
  */
 describe('the selection marker', () => {
   it('is an opaque `coralSoft` capsule, 75 × 42 and fully rounded', () => {
@@ -480,16 +579,10 @@ describe('the selection marker', () => {
     expect(marker().top).toBe((tabBar.height - 2 * HAIRLINE - tabBar.marker.height) / 2);
   });
 
-  it('is under the newly lit tab the moment the lit tab changes', () => {
-    const { rerender } = renderBar('home');
+  it('is drawn at rest, unstretched, on the dock’s first draw', () => {
+    renderBar('you');
 
-    rerender(
-      <SafeAreaProvider initialMetrics={NOTCHED}>
-        <TabBar active="you" onPress={jest.fn()} />
-      </SafeAreaProvider>,
-    );
-
-    expect(markerColumn(3)).toBe(2);
+    expect(markerShape()).toEqual({ wide: 1, tall: 1 });
   });
 
   it('says nothing to a reader and takes no touch — the column under it does both', () => {
@@ -501,6 +594,202 @@ describe('the selection marker', () => {
     expect(node.props.accessible).toBeUndefined();
     expect(node.props.accessibilityRole).toBeUndefined();
     expect(node.children).toHaveLength(0);
+  });
+});
+
+/**
+ * **The marker travels** (ADR-0210 §8, #884): when the lit tab changes it slides there on the
+ * 460 ms spring, stretching as it goes, and the new tab colours in from 140 ms into the slide while
+ * the tab left goes idle at once. Read off each animated layer as its last frame drew it, on the
+ * fake clock, timed from the change. **What the UI thread does lands on the next frame**, as on a
+ * phone: the trip is worked out there, so the tab left goes idle with the slide's first frame.
+ */
+describe('the marker travels', () => {
+  const FRAME = 16;
+  const { colourIn, colourInAfter } = theme.motion.tabMarker;
+
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  const advance = (ms: number) => act(() => jest.advanceTimersByTime(ms));
+
+  /** The player's bar, drawn and handed a new lit tab — the shell's press, landing or notice alike. */
+  function drawBar(active: TabBarKey, reduced = false) {
+    const bar = (lit: TabBarKey, props: Partial<TabBarProps> = {}) =>
+      onPhone(<TabBar active={lit} onPress={jest.fn()} {...props} />, NOTCHED, reduced);
+    const view = render(bar(active));
+    return {
+      light: (lit: TabBarKey, props: Partial<TabBarProps> = {}) => view.rerender(bar(lit, props)),
+    };
+  }
+
+  it('slides from the tab left to the lit one: between them mid-slide, at rest under it once settled', () => {
+    const { light } = drawBar('home');
+
+    light('you');
+    advance(60);
+
+    const midway = markerCentre(3);
+    expect(midway).toBeGreaterThan(0.5);
+    expect(midway).toBeLessThan(2.5);
+    expect(markerColumn(3)).toBeUndefined();
+
+    advance(MARKER_SLIDE);
+
+    expect(markerColumn(3)).toBe(2);
+    expect(markerShape()).toEqual({ wide: 1, tall: 1 });
+  });
+
+  it('stretches like a bubble on the way — wide and flat as it speeds up, narrow and tall as it brakes', () => {
+    const { light } = drawBar('home');
+
+    light('you');
+    // Near its fastest, a third of the way.
+    advance(48);
+    const fast = markerShape();
+    expect(fast.wide).toBeGreaterThan(1.25);
+    expect(fast.tall).toBeLessThan(0.88);
+
+    // Braking hard, near 70% of the way.
+    advance(48);
+    const braking = markerShape();
+    expect(braking.wide).toBeLessThan(0.96);
+    expect(braking.tall).toBeGreaterThan(1.04);
+  });
+
+  it('moves nothing but its transform — the travel a translate, the stretch a scale', () => {
+    const { light } = drawBar('home');
+    const before = marker();
+
+    light('you');
+    advance(48);
+    const during = marker();
+
+    const moved = Object.keys({ ...before, ...during }).filter(
+      (key) =>
+        JSON.stringify(before[key as keyof typeof before]) !==
+        JSON.stringify(during[key as keyof typeof during]),
+    );
+    expect(moved).toEqual(['transform']);
+  });
+
+  it('colours the new tab in from 140 ms into the slide, whole by 440, and leaves the old tab idle at once', () => {
+    const { light } = drawBar('home');
+
+    light('you');
+    advance(FRAME);
+
+    expect(layersOf('Home').lit.shown).toBe(0);
+    expect(layersOf('Home').idle.shown).toBe(1);
+    expect(layersOf('You').lit.shown).toBe(0);
+
+    advance(colourInAfter - 1 - FRAME);
+    expect(layersOf('You').lit.shown).toBe(0);
+
+    advance(colourIn / 2);
+    const halfway = layersOf('You');
+    expect(halfway.lit.shown).toBeGreaterThan(0.5);
+    expect(halfway.lit.shown).toBeLessThan(1);
+    // The idle layer stays whole under the selected one until that is whole: two layers each half
+    // there would let the ground show through the word.
+    expect(halfway.idle.shown).toBe(1);
+
+    // 440 into the slide, and the frame that draws it.
+    advance(colourIn / 2 + 1 + FRAME);
+    expect(layersOf('You').lit.shown).toBe(1);
+    expect(layersOf('You').idle.shown).toBe(0);
+  });
+
+  it('turns from where it is when a third tab is pressed mid-flight, and rests under that one', () => {
+    const { light } = drawBar('home');
+
+    light('you');
+    advance(60);
+    const turnedAt = markerCentre(3);
+
+    light('play');
+    advance(FRAME);
+    // It carries on from where it was turned, still going the way it was — no jump, back or ahead.
+    expect(markerCentre(3)).toBeGreaterThan(turnedAt);
+    expect(markerCentre(3) - turnedAt).toBeLessThan(0.35);
+
+    advance(MARKER_SLIDE);
+    expect(markerColumn(3)).toBe(1);
+    expect(markerShape()).toEqual({ wide: 1, tall: 1 });
+    expect(drawnFor('Play').label).toBe(theme.color.coralInk);
+    expect(drawnFor('You').label).toBe(theme.color.tabIdle);
+  });
+
+  it('never moves on a press of the lit tab — the bar is handed the same tab', () => {
+    const { light } = drawBar('play');
+    const before = marker();
+
+    light('play');
+    advance(60);
+
+    expect(marker()).toEqual(before);
+    expect(drawnFor('Play').label).toBe(theme.color.coralInk);
+  });
+
+  it('keeps its place and its colours through a re-render after it settles', () => {
+    // An animated view redrawn by its parent is drawn with its first pose under jest, so the
+    // marker and the layers are held out of the dock's re-renders — a count arriving is one.
+    const { light } = drawBar('home');
+    light('you');
+    advance(MARKER_SLIDE + FRAME);
+
+    light('you', { gamesNeedingYou: 3 });
+
+    expect(markerColumn(3)).toBe(2);
+    expect(drawnFor('You').label).toBe(theme.color.coralInk);
+    expect(drawnFor('Home, 3 games waiting on you').label).toBe(theme.color.tabIdle);
+  });
+
+  it('is placed under the new tab under Reduce motion, and the colours switch with it', () => {
+    const { light } = drawBar('home', true);
+
+    light('you');
+    // The next frame draws it: nothing between.
+    advance(FRAME);
+
+    expect(markerColumn(3)).toBe(2);
+    expect(markerShape()).toEqual({ wide: 1, tall: 1 });
+    expect(drawnFor('You').label).toBe(theme.color.coralInk);
+    expect(drawnFor('Home').label).toBe(theme.color.tabIdle);
+  });
+
+  it('is placed the moment Reduce motion is turned on, though it was mid-slide', () => {
+    let reduced = false;
+    const bar = (lit: TabBarKey) =>
+      onPhone(<TabBar active={lit} onPress={jest.fn()} />, NOTCHED, reduced);
+    const view = render(bar('home'));
+    view.rerender(bar('you'));
+    advance(48);
+    expect(markerColumn(3)).toBeUndefined();
+
+    reduced = true;
+    view.rerender(bar('you'));
+    advance(FRAME);
+
+    expect(markerColumn(3)).toBe(2);
+    expect(markerShape()).toEqual({ wide: 1, tall: 1 });
+    expect(drawnFor('You').label).toBe(theme.color.coralInk);
+  });
+
+  it('travels the same way on the Administrator’s two-column dock', () => {
+    const bar = (lit: 'groups' | 'you') =>
+      onPhone(<AdministratorTabBar active={lit} onPress={jest.fn()} />);
+    const view = render(bar('groups'));
+
+    view.rerender(bar('you'));
+    advance(48);
+
+    expect(markerColumn(2)).toBeUndefined();
+    expect(markerShape().wide).toBeGreaterThan(1.1);
+
+    advance(MARKER_SLIDE);
+    expect(markerColumn(2)).toBe(1);
+    expect(drawnFor('You').label).toBe(theme.color.coralInk);
   });
 });
 
@@ -533,12 +822,13 @@ describe('the layers', () => {
     renderBar('home', { gamesNeedingYou: 2 });
 
     const home = column('Home, 2 games waiting on you');
-    const drawn = home.findAll(
+    const order = home.findAll(
       (node: ReactTestInstance) => node.type === Ionicons || node.props.figure === 2,
     );
+    // Both of the icon's layers, then the badge over them.
     expect(
-      drawn.map((node: ReactTestInstance) => (node.type === Ionicons ? 'icon' : 'badge')),
-    ).toEqual(['icon', 'badge']);
+      order.map((node: ReactTestInstance) => (node.type === Ionicons ? 'icon' : 'badge')),
+    ).toEqual(['icon', 'icon', 'badge']);
   });
 });
 
@@ -576,7 +866,8 @@ describe('Dynamic Type', () => {
 
     const labels = screen.UNSAFE_queryAllByType(Text).filter((t) => t.props.numberOfLines === 1);
 
-    expect(labels).toHaveLength(TAB_BAR_TABS.length);
+    // Two to a column, idle and selected, and both bounded alike — the cross-fade never reflows.
+    expect(labels).toHaveLength(2 * TAB_BAR_TABS.length);
     for (const label of labels) {
       // Part 13 permits `allowFontScaling={false}` only inside the level bar, so the cap is the
       // only mechanism this surface has — and it is held inside the marker in
@@ -707,12 +998,18 @@ describe('the Administrator’s bar', () => {
 
   it('draws Groups as `people`, outlined while idle, and stands the marker under the lit one', () => {
     renderArea('groups');
-    expect(glyphs().map((glyph) => glyph.props.name)).toEqual(['people', 'person-outline']);
+    expect(['Groups', 'You'].map((name) => drawnFor(name).glyph)).toEqual([
+      'people',
+      'person-outline',
+    ]);
     expect(markerColumn(2)).toBe(0);
 
     screen.unmount();
     renderArea('you');
-    expect(glyphs().map((glyph) => glyph.props.name)).toEqual(['people-outline', 'person']);
+    expect(['Groups', 'You'].map((name) => drawnFor(name).glyph)).toEqual([
+      'people-outline',
+      'person',
+    ]);
     expect(markerColumn(2)).toBe(1);
   });
 });

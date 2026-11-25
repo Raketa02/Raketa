@@ -60,8 +60,11 @@ import {
   clearanceAbove,
   endPadding,
   floatOf,
+  markerAtRest,
+  markerCentre,
   markerUnder,
   pageOf,
+  slideFromNow,
 } from '@/test-support/tabBarReach';
 import {
   errorResponse,
@@ -859,9 +862,13 @@ describe('removed, an account that also plays', () => {
 describe('the two tabs', () => {
   /**
    * **The area draws the player's dock with two columns** (#883, ADR-0210 §3, Q16): the same frame,
-   * the same marker, Groups and You — and the marker under whichever is lit.
+   * the same marker, Groups and You — and the marker under whichever is lit, **travelling there**
+   * the way the player's does (#884): mid-slide between the two a moment after a press, at rest
+   * under the new tab once it settles. Each slide starts on the frame after its navigation, whose
+   * own flush ran every pending timer.
    */
-  it('draws the dock with its two tabs and the marker under the lit one', async () => {
+  it('draws the dock with its two tabs, and the marker travels to the lit one', async () => {
+    const slide = theme.motion.tabMarker.slide;
     await launchAsAdministrator([O3_CLUB_GROUP]);
 
     expect(barFloats()).toBe(true);
@@ -870,14 +877,28 @@ describe('the two tabs', () => {
       'You',
     ]);
     expect(markerUnder()).toBe('Groups');
+    expect(markerAtRest()).toBe(true);
 
     fireEvent.press(screen.getByRole('tab', { name: 'You' }));
+    const there = slideFromNow();
     await waitFor(() => expect(screen).toHavePathname(`/administrator/${CLUB_ID}/you`));
+    there(48);
+    expect(markerUnder()).toBeUndefined();
+    expect(markerCentre()).toBeGreaterThan(0.5);
+    expect(markerAtRest()).toBe(false);
+    there(48 + slide);
     expect(markerUnder()).toBe('You');
+    expect(markerAtRest()).toBe(true);
 
     fireEvent.press(screen.getByRole('tab', { name: 'Groups' }));
+    const back = slideFromNow();
     await waitFor(() => expect(screen).toHavePathname(`/administrator/${CLUB_ID}`));
+    back(48);
+    expect(markerUnder()).toBeUndefined();
+    expect(markerCentre()).toBeLessThan(1.5);
+    back(48 + slide);
     expect(markerUnder()).toBe('Groups');
+    expect(markerAtRest()).toBe(true);
   });
 
   it('opens You, with the way out, and comes back to Groups', async () => {

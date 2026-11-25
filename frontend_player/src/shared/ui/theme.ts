@@ -1622,7 +1622,7 @@ const size = {
     /** THE SELECTION MARKER (#883, ADR-0210 §4): an opaque `coralSoft` capsule at `radius.pill`,
      *  centred in the lit column, under its icon and label. 75 rather than the brief's 76, which is
      *  off the grid. On the narrowest phone a column is (320 − 24) ÷ 3 = 98.7 wide, so the marker
-     *  keeps the 97.5 its stretch will peak at (#884) inside it. */
+     *  keeps the 97.5 its stretch peaks at (`motion.tabMarker`, #884) inside it. */
     marker: { width: 75, height: 42 },
     /** The icon's box — Ionicons at 18, the largest that keeps icon + 3 + the capped label inside
      *  the marker (above). 16, `tabIcon`, is the fallback if 18 looks crowded on the phone (#885);
@@ -1990,8 +1990,9 @@ const shadow = {
 
 // ---------------------------------------------------------------------------
 // Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, one settle, one
-// unfold, one disclose, the yes screen's entrance, which is the first and the fade composed, and
-// one sweep, the skeleton's band looping while a screen has nothing to draw yet (2026-11-24).
+// unfold, one disclose, the yes screen's entrance, which is the first and the fade composed, one
+// sweep, the skeleton's band looping while a screen has nothing to draw yet (2026-11-24), and one
+// spring, the tab bar's selection marker travelling to the lit tab (`tabMarker`, 2026-11-25).
 // Nothing else moves.
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
@@ -2074,6 +2075,20 @@ const motion = {
    * from one kind's cards to the other's would not say the deck changed.
    */
   kindSwap: { out: 200, in: 250, rise: 24 },
+  /**
+   * **The tab bar's selection marker travelling** to the newly lit tab (10.2, ADR-0210 §8,
+   * [#884](https://github.com/Raketa02/Raketa/issues/884); the brief's *"460 ms, spring easing … colour
+   * in 300 ms, starting 140 ms after the slide"*). **The app's first spring**: `slide` long at
+   * `dampingRatio`, so it starts fast, overshoots by 2.8 % of its trip and settles; every trip takes
+   * `slide`, so the far jump moves faster. It stretches like a bubble with its own motion — wide and
+   * flat as it speeds up, narrow and tall as it brakes — and the new tab's selected layer fades in over
+   * `colourIn`, `colourInAfter` into the slide, on `easeDecel`; the tab left goes idle at once.
+   * `tabMarkerMotion.ts` holds the spring and the stretch; per frame only `transform` and `opacity`
+   * move, on the UI thread. **It never moves on the dock's first draw**, nor when the dock comes back,
+   * nor on a press of the lit tab. Skipped under reduced motion, where the marker is simply placed
+   * under the new tab and the colours switch at once.
+   */
+  tabMarker: { slide: 460, dampingRatio: 0.75, colourIn: 300, colourInAfter: 140 },
   /**
    * The swipe row's card coming to rest once the finger lifts (6.15) — to revealed or to closed,
    * never in between. Short enough to read as the card *landing* rather than travelling, since the

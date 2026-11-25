@@ -242,7 +242,8 @@ asymmetry with a proxy or a cookie session.
   `docs/architecture.md` Part 13). A sheet's content keeps the root's contexts only: no
   provider below the root, no navigation hook inside a sheet. And never scale a layer to move
   things on the UI thread — iOS rasterises it blurred; translate a point per tile, as the radar
-  does.
+  does. The one scaled layer is the tab bar's selection marker, whose stretch is a scale on a
+  layer that holds no word or glyph, a flat capsule with nothing to blur (ADR-0210 §8, #884).
 - **Never animate a layout prop frame by frame with Reanimated** (`height`, `width`, a margin,
   `top`…). Under the New Architecture, Reanimated 3.16 commits it to the shadow tree and skips that
   commit while React commits anywhere in the app, so the motion freezes and then jumps — and

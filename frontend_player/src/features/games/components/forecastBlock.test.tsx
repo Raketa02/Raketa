@@ -277,9 +277,10 @@ describe('the bar', () => {
     await openTheGame();
 
     await screen.findByText(BALANCE_FORECAST);
-    // Three *You*s on the screen: the reader's tile on the details, the bar's label and the tab.
-    // The bar's is the hidden one.
-    expect(screen.getAllByText('You', drawn)).toHaveLength(3);
+    // Four *You*s on the screen: the reader's tile on the details, the bar's label, and the tab's
+    // label twice — its idle layer and the selected one laid over it (#884). The bar's and the
+    // tab's selected copy are the hidden ones.
+    expect(screen.getAllByText('You', drawn)).toHaveLength(4);
     expect(screen.getByText('tomek', drawn)).toBeTruthy();
     expect(screen.getByLabelText('You 2,70, tomek.p 2,71, gap −0,01')).toBeTruthy();
   });

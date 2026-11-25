@@ -101,12 +101,29 @@ the words, placed from the window's width so the first frame has it. The ⚡Play
 `shadow.fab` are gone, so Play dims under a finger like the other two; Home's badge stays on the
 house. **The shell is unchanged**: the lit tab is still the URL's, so the marker stands under
 whichever tab that is — under Play for a group opened from Home's _Groups heating up_, under Home
-inside a booked game — and **it does not travel yet**: on any change it is simply under the new tab
-([#884](https://github.com/Raketa02/Raketa/issues/884) makes it slide). The administrator's area
-draws the same dock with Groups (`people`) and You. `theShell.test.tsx` and
-`administratorArea.test.tsx` walk where the marker stands (`markerUnder`); the look is the phone
+inside a booked game. The administrator's area draws the same dock with Groups (`people`) and You.
+`theShell.test.tsx` and `administratorArea.test.tsx` walk where the marker stands (`markerUnder`);
+the look is the phone
 walk's ([#885](https://github.com/Raketa02/Raketa/issues/885)), and a phone build needs a native
 rebuild for `expo-blur`.
+
+**The marker travels** ([#884](https://github.com/Raketa02/Raketa/issues/884), 2026-11-25; ADR-0210
+§8, design-system §10.2). On every change of the lit tab after the dock's first draw it slides to
+the new one on `motion.tabMarker`'s spring — 460 ms at damping ratio 0.75, so it overshoots by a few
+points and settles — stretching like a bubble with its own speed and recoiling as it brakes, and
+the new tab colours in from 140 ms into the slide while the tab left goes idle at once. The shell
+needs nothing for it: the lit tab is the URL's, so a press, a landing, a notice landing in another
+tab, a group opened from Home's _Groups heating up_ and back all change the one value the bar is
+handed, and **the bar cannot tell them apart**. Nothing moves where that value does not change — a
+press of the lit tab, a branch's own pushes — and nothing moves on the dock's first draw, which is
+also every time it comes back after the chat or Android's keyboard, since the shell draws it anew.
+Under Reduce motion the marker is placed and the colours switch at once. `markerTravels.test.tsx`
+walks it through the shell, `hottestGroups.test.tsx` the trip to Play and back, and
+`administratorArea.test.tsx` the Administrator's two tabs. **A press while the marker is still
+travelling cannot be walked through the router harness**, whose flush on the second navigation lands
+the first slide, so the turn mid-flight is the bar's own suite's. The feel is the phone walk's
+(#885), and so is whether the slide stutters while a tab's screen mounts under it
+([#886](https://github.com/Raketa02/Raketa/issues/886), measured on the A32 by the spike).
 
 **On Android the bar stands down while the keyboard is up** ([#882](https://github.com/Raketa02/Raketa/issues/882),
 2026-11-25; ADR-0210 §9, design-system §10.1). Android shrinks the window for the keyboard, and the

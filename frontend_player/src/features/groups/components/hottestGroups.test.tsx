@@ -20,6 +20,7 @@
  * answer lands.
  */
 
+import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { RefreshControl, StyleSheet, type ViewStyle } from 'react-native';
 
@@ -27,7 +28,9 @@ import { HOME_COPY } from '@/features/shell/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { theme } from '@/shared/ui';
 import { footerParts, lineNamed, lineTitles, openLine } from '@/test-support/forYou';
+import { markerAtRest, markerCentre, markerUnder, slideFromNow } from '@/test-support/tabBarReach';
 import {
   HOME_PATH,
   HOTTEST_GROUPS_PATH,
@@ -562,6 +565,39 @@ describe('the chip', () => {
     fireEvent.press(await chip(KAZIMIERZ, 'in'));
 
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${KAZIMIERZ.id}`));
+  });
+
+  /**
+   * **The group lives under Play** (`/play/group/{id}`), so opening it from Home lights Play, and the
+   * selection marker travels there — and back home with the page (ADR-0210 §8, #884). Each slide
+   * starts on the frame after its navigation, whose own flush ran every pending timer.
+   */
+  it('You’re in carries the selection marker from Home to Play, and back takes it home', async () => {
+    const slide = theme.motion.tabMarker.slide;
+    hottestServer([KAZIMIERZ]);
+    await launchSignedIn();
+    await openLine(HOT.line);
+    expect(markerUnder()).toBe('Home');
+
+    fireEvent.press(await chip(KAZIMIERZ, 'in'));
+    const there = slideFromNow();
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${KAZIMIERZ.id}`));
+    there(60);
+    expect(markerUnder()).toBeUndefined();
+    expect(markerCentre()).toBeGreaterThan(0.5);
+    there(60 + slide);
+    expect(markerUnder()).toBe('Play');
+    expect(markerAtRest()).toBe(true);
+
+    act(() => router.back());
+    const back = slideFromNow();
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    back(60);
+    expect(markerUnder()).toBeUndefined();
+    expect(markerCentre()).toBeLessThan(1.5);
+    back(60 + slide);
+    expect(markerUnder()).toBe('Home');
+    expect(markerAtRest()).toBe(true);
   });
 });
 

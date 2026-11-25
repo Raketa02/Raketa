@@ -228,8 +228,8 @@ describe('what a player lands on', () => {
 /**
  * **The bar is the dock, and the selection marker stands under the lit tab** (#883, ADR-0210 §4,
  * 10.2). The lit tab is the URL's, by the shell's one rule, and the marker is drawn from it with the
- * filled icon and the coral words, so the three can never disagree. **It does not travel yet**
- * (#884): on any change of lit tab it is simply under the new one, and inside a tab's own branch it
+ * filled icon and the coral words, so the three can never disagree. On a change of lit tab it
+ * travels to the new one (#884, walked in `markerTravels.test.tsx`), and inside a tab's own branch it
  * does not move at all.
  */
 describe('the dock and its selection marker', () => {
@@ -247,19 +247,24 @@ describe('the dock and its selection marker', () => {
     expect(markerUnder()).toBe('Home');
   });
 
-  it('is under the newly lit tab after every press — at once, for now', async () => {
+  it('comes to rest under the newly lit tab after every press', async () => {
+    // The slide takes `motion.tabMarker.slide`, from the frame after the press's navigation.
+    const settle = () => act(() => jest.advanceTimersByTime(theme.motion.tabMarker.slide + 16));
     await launchIntoTheApp();
 
     pressTab('You');
     await waitFor(() => expect(screen).toHavePathname('/you'));
+    settle();
     expect(markerUnder()).toBe('You');
 
     pressTab('Play');
     await onPlay();
+    settle();
     expect(markerUnder()).toBe('Play');
 
     pressTab('Home');
     await waitFor(() => expect(screen).toHavePathname('/'));
+    settle();
     expect(markerUnder()).toBe('Home');
   });
 

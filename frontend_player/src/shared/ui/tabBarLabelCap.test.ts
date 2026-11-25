@@ -34,6 +34,7 @@ import {
 } from '@/test-support/fontMetrics';
 
 import { ADMINISTRATOR_TAB_BAR_TABS, TAB_BAR_TABS } from './TabBar';
+import { MARKER_WIDEST } from './tabMarkerMotion';
 import { theme } from './theme';
 
 const { tabBar } = theme.size;
@@ -61,10 +62,10 @@ const AVAILABLE = tabBar.marker.width - 2 * theme.space.xxs;
 const LINE_AT_CAP = theme.type.tag.lineHeight * tabBar.labelMaxScale;
 
 /**
- * **The marker's widest stretch**, which #884's motion peaks at on a two-column trip: 1,30 of its
- * width (ADR-0210 §8's calibration).
+ * **The marker's widest stretch** — the motion's own, never a copy: 1,30 of its width, which a
+ * two-column trip peaks at and nothing draws past (ADR-0210 §8's calibration, #884).
  */
-const PEAK_STRETCH = 1.3;
+const PEAK_STRETCH = MARKER_WIDEST;
 
 /**
  * The face the label is drawn in, by construction rather than by assertion — built from the

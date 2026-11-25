@@ -263,7 +263,10 @@ while its request is on its way (Part 16, 2026-11-21); and, since the drawn spla
 2026-11-23); and, since the Games tab's menu, one swap, the deck's stack going out and the other
 kind's coming up into its place (`kindSwap`, Part 16, 2026-11-24); and, since the loading shimmer,
 one sweep, the skeleton's band crossing a screen that has nothing to draw yet, looping until its
-content comes in on the one fade (`motion.skeleton`, Part 16, 2026-11-24). Press feedback is 120ms.
+content comes in on the one fade (`motion.skeleton`, Part 16, 2026-11-24); and, since the tab bar's
+dock, one spring, the app's first: the selection marker travelling to a newly lit tab, stretching
+as it goes, with that tab colouring in after it (`motion.tabMarker`, [10.2](#102-the-tab-bar),
+Part 16, 2026-11-25). Press feedback is 120ms.
 Reduced-motion disables all of it but three: the calculating screen's indicator ([12.1](#the-calculating-screen)),
 the busy spinner and the skeleton's sweep, which are progress rather than decoration. The fade that
 then reveals the content is not one of them, and is a cut (Part 16, 2026-11-24). The drawn splash's bounce goes with
@@ -5403,15 +5406,19 @@ lit       filled icon in coral, label in coralInk, on the selection marker
 marker    opaque coralSoft, 75 × 42, radius.pill, centred in the lit column
 layers    glass → marker → icons and labels → badge
 press     the column's icon, label and badge dim to .7 · the marker ignores the press
+travel    motion.tabMarker: a 460 ms spring at damping ratio 0.75 to the newly lit column
+stretch   with its speed, widest 1.30 × 0.84 · recoil braking, 0.94 × 1.06 · rest 1 × 1
+colour    the new tab's selected layer over 300 ms on easeDecel, from 140 · the old idle at once
+still     the dock's first draw and every return · a press of the lit tab · reduced motion
 ```
 
 > **Rebuilt by [#883](https://github.com/Raketa02/Raketa/issues/883), 2026-11-25**, on
 > [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §2,
 > §4–§7, which supersedes [ADR-0135](../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)
 > for the bar. It replaced a flat `surface` strip, 64 tall, with Feather glyphs selected in tone
-> alone and a raised 30pt ⚡Play disc ringed in `coral` when Play was lit. **The marker stands still
-> for now**: it travels on a 460 ms spring with [#884](https://github.com/Raketa02/Raketa/issues/884),
-> which writes this section's motion.
+> alone and a raised 30pt ⚡Play disc ringed in `coral` when Play was lit. **The marker's travel**
+> is [#884](https://github.com/Raketa02/Raketa/issues/884)'s, 2026-11-25, on §8 of the same record
+> ([below](#the-marker-travels)).
 
 **Three columns** — `Home · ⚡Play · You`
 ([#576](https://github.com/Raketa02/Raketa/issues/576)), three equal places. Play was raised at the
@@ -5493,10 +5500,76 @@ rather than a blank column nobody notices at 18pt. **The ⚡ is `flash` and neve
 presentation and a `color` style has nothing to apply to.
 
 **The marker is the dock's own layer, not a part of a column.** Bottom to top: the glass, the
-marker, the icons and labels, the badge. Under the words, so the stretch #884 gives it never deforms
-a glyph; the dock's, so a press dims the column and never the marker; and placed under the lit
+marker, the icons and labels, the badge. Under the words, so its stretch never deforms a glyph;
+the dock's, so a press dims the column and never the marker; and placed under the lit
 column from the window's width, as every width in the app is, because a measured one would leave the
 dock's first frame without a marker.
+
+### The marker travels
+
+**When the lit tab changes, the marker slides to it** — the brief's _"the coral pill doesn't
+disappear and reappear — it travels"_
+([ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §8,
+[#884](https://github.com/Raketa02/Raketa/issues/884)). It is the app's first spring, and
+[1.5](#15-nothing-animates-that-does-not-have-to)'s list gains it.
+
+**The slide is `motion.tabMarker`: 460 ms at damping ratio 0.75.** It starts fast, passes its tab
+by `e^(−ζπ/√(1−ζ²))` of the trip, 2.8 % — 3.4 on a 120-wide column, 6.8 across two — and settles.
+Every trip takes the 460, near or far, so the far jump moves faster. **The spring is the motion
+module's own**, `tabMarkerMotion.ts`, rather than Reanimated's `withSpring`, because the stretch is
+drawn from the marker's speed and braking at every frame and `withSpring` keeps those to itself. Its
+stiffness is set by its length: it settles within a thousandth of its trip by 460 ms, under a third
+of a point on the widest phone, and is exactly at rest from there.
+
+**The stretch follows the motion, never the share of the trip** (the log's Q10). The marker widens
+and flattens with its speed while it speeds up; while it brakes, the widening turns over into a
+recoil, narrower and taller, by how hard it brakes for the speed it has — once it would stop within
+about a fifth of a second at that braking, it narrows. **Calibrated on the brief's own trip**, Home →
+You: widest **1.30 × 0.84 at its fastest, a third of the way**, where a spring released from rest is
+fastest, so the brief's _"about a third"_ is the motion's and no keyframe's; the recoil **0.94 ×
+1.06 near 70 %**; at rest **exactly 1 × 1**. **Speed is measured in columns**, not points, so a
+one-column trip moves at half the speed at every moment and stretches exactly half as much
+(≈ 1.15 × 0.92, then 0.97 × 1.03), and every phone stretches alike. **Never past 1.30**, whatever a
+retarget does to its speed: at 97.5 it fits the narrowest phone's 98.7 column, which
+`tabBarLabelCap.test.ts` holds against the motion's own widest.
+
+**A press mid-flight turns it from where it is, at the speed it has** — the brief's _rapid taps_.
+A new spring starts from the marker's place and speed, worked out on the UI thread in the same step
+that restarts the clock, so no frame falls between the two. The new pull changes its braking at
+once, so the shape it had is carried and eased into the new trip's over a few frames: the place, the
+speed and the shape all carry on, and it never finishes the first trip first or snaps.
+
+**The colour-in is a cross-fade**: each column draws its icon and its label twice, idle and
+selected, stacked, and only opacity moves. The new tab's selected layer comes in over **300 ms on
+`easeDecel`, starting 140 ms into the slide**, ending at 440, so the tab seems to light because the
+marker arrived, and its idle layer stays whole under it until it is whole — two layers each half
+there would let the ground show through the word mid-fade; **the tab left is idle at once**. The
+selected label is a drawing laid over the word, hidden from the reader: the column is named once,
+by its own label.
+
+**One clock.** The travel, the stretch and both layers of every column are pure functions of the
+trip and one clock that Reanimated runs from 0 to 460 on the UI thread, so they can never drift
+apart, and per frame only `transform` and `opacity` move. **The stretch is a scale on the marker's
+own layer**, which holds no word or glyph: iOS's rasterising of a scaled layer has nothing to blur,
+and the caps go slightly oval at the peak, which is the bubble. The marker and the layers are
+memoised on shared values, so a re-render of the dock never redraws them with their first pose.
+
+**When it moves, and when it does not.** It slides on **every change of the lit tab after the
+dock's first draw** — a press, a landing, a notice landing in another tab, a group opened from Home's
+_Groups heating up_, which lives under Play, and back from any of these; the bar is handed the lit
+tab and cannot tell them apart. **It never slides** on the dock's first draw, which is also every
+time the dock comes back after the chat or Android's keyboard — the shell draws it anew, and a new
+dock is placed — nor on a press of the lit tab, nor inside a tab's own branch, since none of those
+changes the lit tab. **The Administrator's two-column dock travels the same way.**
+
+**Under reduced motion it is placed**: the marker is under the new tab and the colours switch at
+once, with no slide, stretch or cross-fade. It is not one of [Part 13](#part-13--accessibility)'s
+exceptions, because nothing moves.
+
+The feel — a one-column and a two-column trip, a third tap mid-flight — is the phone walk's
+([#885](https://github.com/Raketa02/Raketa/issues/885)), and so is the slide's stutter while a tab's
+screen mounts under it, which the A32 spike measured
+([#886](https://github.com/Raketa02/Raketa/issues/886)).
 
 ### One badge, on Home, and on no other column
 
@@ -6238,7 +6311,10 @@ the missing column is a requirement here.**
   than decoration: the calculating screen's indicator, [6.1](#61-button)'s busy spinner (Part 16,
   2026-11-21), and **the skeleton's sweep** (`motion.skeleton`, `ReduceMotion.Never`; Part 16,
   2026-11-24), which keeps crossing a screen that has nothing to draw yet so that it never reads as
-  frozen. Only the sweep: the content's reveal is a `fade`, and a cut there.
+  frozen. Only the sweep: the content's reveal is a `fade`, and a cut there. **The tab bar's
+  selection marker is no exception** ([10.2](#102-the-tab-bar), Part 16, 2026-11-25): it is placed
+  under the newly lit tab and the colours switch at once — no slide, no stretch, no cross-fade —
+  and the app decides it itself, so the spring's clock is never cut by the system's switch as well.
 - **Tabular numerals** everywhere numbers are compared.
 - **Live announcements.** Every toast announces, **queued** —
   `announceForAccessibilityWithOptions` with `queue`, and **one exception**. The bare call
@@ -6849,6 +6925,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-25 | [1.1](#11-paper-not-glass) · [10.2](#102-the-tab-bar) · [4.2](#42-radius) · `TabBar.tsx` · `theme.ts` `color.glass` `radius.dock` `size.tabBar` `glass` · `expo-blur`                                                                                                                                                                                                                    | Paper, not glass, with no exception. The bar was a flat `surface` strip flush with the phone’s foot, 64 tall plus the bottom inset it padded itself with, its height set by the ⚡Play disc and growing about 7pt at the 1.6 label cap                                                                                                                       | **The bar is the dock, the one glass surface** (ADR-0210 §2, §7): 54 tall at every text size, 12 in from each side, lifted the larger of 12 and the bottom inset, at `radius.dock` 22, bounded by a 1pt `line` hairline with a 1pt `surface` rim inside it. On the iPhone `color.glass`, white at .88, over `expo-blur` at intensity 100 (`glass.blur`); on Android opaque `surface`, because `glass.android` is off. Its reach is lift + 54: 66 on the A32, 88 on a notched iPhone. New tokens: `color.glass`, `radius.dock`, `size.tabBar.height` `sideInset` `lift`, and `glass.android` `blur` `shadow`. `expo-blur` is the one new dependency and owns no styling (ADR-0012)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | PRD #878, #883: the product owner’s design floats the bar as frosted glass so it belongs to the screen it is on. 88% holds idle words at 4.53:1 over Home’s dark game card; Android’s material is the A32 spike’s verdict (#880), the blur adding frames over 16.7 ms. 12 and 75 replace the brief’s 10 and 76, which are off the grid                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-11-25 | [10.2](#102-the-tab-bar) · [1.2](#12-one-accent-used-sparingly) · `TabBar.tsx` · `theme.ts` `color.tabIdle` `size.tabBar.marker` `size.tabBar.icon` · `CountBadge.tsx` `over`                                                                                                                                                                                                            | Feather at 16, the same glyph in both states, selection in tone alone: `ink` selected, `muted` resting (ADR-0135). Play a raised `coralInk` disc with a white `zap`, ringed in `coral` while lit; the badge risen 4 above a 16pt icon box                                                                                                                    | **Ionicons on the bar, and selection by marker, shape and tone** (ADR-0210 §4, §5, superseding ADR-0135 for the bar): `home`/`home-outline`, `flash` in both states, `person`/`person-outline`, and the Administrator’s `people`/`people-outline`, at 18 (`size.tabBar.icon`). Idle icon and label in `color.tabIdle`, `ink` at .62; the lit icon `coral` and label `coralInk`, on **the selection marker**, an opaque `coralSoft` capsule 75 × 42 (`size.tabBar.marker`) centred in the lit column, standing still until #884. Layers: glass → marker → icons and labels → badge; every column dims to .7 under a finger and the marker ignores it. 1.2 gains its third line, _a `coralSoft` fill is where you are, on the bar_, and the list stays at six. Home’s badge stays, risen 4 above the 18pt box (`CountBadge`’s `over`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | PRD #878: the tab you were on was hard to see, and Play’s disc read as a button to press while you were in Play. Feather has no filled glyphs, and Ionicons ships in the package already declared. `coralInk` for the label because `coral` on `coralSoft` is 3.38:1; opaque because coral at 13% goes murky over a dark card. 18 is the largest icon that keeps icon + 3 + the capped label, 40.2, inside the marker’s 42                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 2026-11-25 | [4.3](#43-elevation) · [6.6](#66-press-states) · `theme.ts` `shadow.dock` · `.claude/rules/design-system.md` · `CLAUDE.md`                                                                                                                                                                                                                                                               | The ⚡Play disc: `size.fab` 30, `radius.fab` 11, `size.tabBar.bolt` 15, `ringGap` and `ringStroke` 2, and `shadow.fab`, the one tinted shadow, coral on iOS. The disc was the one column that did not dim, brightening to `coral` instead                                                                                                                    | **Retired with the disc** (ADR-0210 §6): `size.fab`, `radius.fab`, `size.tabBar.bolt`, `ringGap`, `ringStroke` and `shadow.fab`. **`shadow.dock`** takes `fab`’s slot with the deck card’s values (`#0B2B33`, 0/7, radius 20, .12, `elevation` 8), so the inventory stays at seven and no shadow is tinted; wherever the dock draws the glass (the iPhone), it is shadowed by `glass.shadow`, the same values as `boxShadow`. The agent rules file drops the disc’s tinted shadow and names the marker under the active-tab entry; the player app’s `CLAUDE.md` gains Ionicons on the bar                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Play is one of three equal places in the product owner’s mocks, so its disc, ring and tint go. The deck card’s is the faintest shadow for things that float over the page. `elevation` draws cleanly on the opaque Android dock (the spike’s T3); a translucent dock gives neither platform’s own shadow an opaque fill, so it takes `boxShadow`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-11-25 | [10.2](#102-the-tab-bar) · [1.5](#15-nothing-animates-that-does-not-have-to) · [Part 13](#part-13--accessibility) · `TabBar.tsx` · `tabMarkerMotion.ts` · `theme.ts` `motion.tabMarker` · `CLAUDE.md`                                                                                                                                                                                    | The selection marker stood still (#883): on any change of the lit tab it was simply under the new one, and the icon and label switched at once. No spring anywhere in the app; 1.5’s list ended at the skeleton’s sweep; `CLAUDE.md` said never to scale a layer to move things                                                                              | **The marker travels** (ADR-0210 §8): on every change of the lit tab after the dock’s first draw it slides to the new one on `motion.tabMarker`, a 460 ms spring at damping ratio 0.75 — the app’s first, and 1.5’s new entry — overshooting by 2.8 % of its trip and settling. It stretches with its own motion: wide and flat with its speed while it speeds up, the widening turned over into a recoil as it brakes, calibrated so Home → You is 1.30 × 0.84 a third of the way and 0.94 × 1.06 near 70 %, half that across one column, exactly 1 × 1 at rest and never past 1.30. A press mid-flight starts a new spring from the marker’s place and speed, carrying its shape. Each column draws its icon and label twice, idle and selected, cross-faded: the new tab’s selected layer over 300 ms on `easeDecel` from 140, the old tab idle at once. One clock on the UI thread; only `transform` and `opacity` move; the stretch is a scale on a layer that holds no word or glyph, the one exception `CLAUDE.md`’s rule now names. Nothing moves on the dock’s first draw, on its return after the chat or the keyboard, or on a press of the lit tab; under reduced motion the marker is placed and the colours switch at once, as Part 13 now says. The spring is `tabMarkerMotion.ts`’s own, settled within a thousandth of its trip by 460 ms                                                                                                                                                                                                      | PRD #878 and the brief: _the coral pill doesn’t disappear and reappear — it travels_, on _a spring curve, not a straight ease-out_; a spring is also what lets a press mid-flight turn the marker from where it is. The stretch follows the motion rather than keyframes on the trip, which could not meet both the brief’s fixed numbers and its far jump stretching more, and which a retarget would restart, snapping the shape. Speed in columns, so a wide phone stretches no more than a narrow one. Its own spring rather than `withSpring`, which takes the duration and damping ratio but keeps to itself the speed and braking the stretch is drawn from. A cross-fade of two layers, because a colour animated per frame is neither transform nor opacity. The feel is the phone walk’s (#885)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 # Part 17 — What the reset removed
 

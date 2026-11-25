@@ -978,8 +978,8 @@ comment and a commit message all use the same word.
   in both states, so there the marker and the colour carry it alone. When the lit tab changes it
   **travels** to the new one, on a spring that stretches as it moves. On the bar's first draw, or when the bar comes back, it is simply there
   ([ADR-0210](../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §4, §8;
-  drawn standing still by [#883](https://github.com/Raketa02/Raketa/issues/883), its travel
-  decided and not yet built — [#884](https://github.com/Raketa02/Raketa/issues/884)). The
+  drawn by [#883](https://github.com/Raketa02/Raketa/issues/883), its travel by
+  [#884](https://github.com/Raketa02/Raketa/issues/884), `tabMarkerMotion.ts`). The
   brief's own phrase. UI vocabulary, not a domain term. _Avoid_: pill (taken by `radius.pill`,
   `SportPill` and FOR YOU's count pill), highlight, and the ring (the ⚡Play disc's, which
   retires with the disc). Not **the tab's menu**, which is a group page's.

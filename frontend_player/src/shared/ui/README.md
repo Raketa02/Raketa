@@ -439,7 +439,9 @@ fourth tab could break the fit without anything saying so. It drew five, with th
 Players and Chats behind a switch, until that loop was removed (#576). **It is the dock** (#883): a
 rounded slab floating over the screen's foot, glass on the iPhone and opaque `surface` on Android
 (`theme.glass`), Ionicons from `@expo/vector-icons` — outlined idle, filled lit, the bolt `flash`
-in both — with the lit tab's icon `coral` and label `coralInk` on the `coralSoft` selection marker.
+in both — with the lit tab's icon `coral` and label `coralInk` on the `coralSoft` selection marker, which
+**travels** to a newly lit tab on `motion.tabMarker`'s spring (#884) — its numbers pure in
+`tabMarkerMotion.ts`, run on the UI thread off one clock.
 The ⚡ is a glyph rather than the character `⚡`, which carries `Emoji_Presentation=Yes` and
 would render in a colour this app does not choose. The dock's lift owns the bottom safe-area inset;
 a CTA above it owns none.
