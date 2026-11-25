@@ -65,6 +65,13 @@
  * `systemBars.android.ts`, the only importer of `expo-navigation-bar`. Its one caller is the launch
  * gate, which is handed it as it is handed the launch window, so it has no provider either.
  *
+ * **The eleventh is the soft keyboard** (#882, ADR-0210 §9): whether it is up, and a way to follow
+ * it. It joined `keyboard.ts` — the keyboard's module already, the avoidance value and the dismissal —
+ * rather than a second module, so that file is the only importer of React Native's `Keyboard`, the
+ * share sheet's kind of fence, and the app's one listener for its show and hide. Both shells read it
+ * through `useKeyboardShrinksTheWindow`, to stand the tab bar down while an Android window is shrunk
+ * for it; a suite raises and drops `fakeKeyboard()` through `KeyboardProvider`.
+ *
  * `appBuild` is the one plain *reading* of what the device is: which platform and which version
  * of the app this is, the two device facts a feature flag's rules may target (ADR-0206 §8).
  * Nothing to decide and nothing a test would drive, so no port.
@@ -80,7 +87,18 @@ export { useOnReturn } from './screenReturn';
 export { openAppSettings } from './appSettings';
 export { appBuild } from './appBuild';
 export { useCopyAndSay, type CopyWords } from './copyAndSay';
-export { KEYBOARD_AVOIDANCE, dismissKeyboard, windowResizesForKeyboard } from './keyboard';
+export {
+  KEYBOARD_AVOIDANCE,
+  deviceKeyboard,
+  dismissKeyboard,
+  windowResizesForKeyboard,
+  type KeyboardPort,
+} from './keyboard';
+export {
+  KeyboardProvider,
+  useKeyboardShrinksTheWindow,
+  type KeyboardProviderProps,
+} from './KeyboardProvider';
 export {
   REACHABILITY_ANSWER_WITHIN_MS,
   readReachability,

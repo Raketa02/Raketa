@@ -56,6 +56,7 @@ import type {
   HapticsPort,
   ImagePickingPort,
   InstallReferrerPort,
+  KeyboardPort,
   LiveStreamPort,
   LiveStreamStatus,
   LiveTyping,
@@ -492,6 +493,44 @@ export function fakeShare(): FakeShare {
       shared.push(message);
       return Promise.resolve();
     },
+  };
+}
+
+/**
+ * **A soft keyboard a suite raises and drops** (#882) — as a field taking the focus brings one up and
+ * the back button takes it down. It starts down, as it is when a screen opens, and tells whoever
+ * follows it of each change, as the device's port does on the keyboard's show and hide. Raising it
+ * while it is up, or dropping it while it is down, changes nothing and tells nobody.
+ *
+ * **It knows nothing of which phone it is on**: whether a keyboard that is up shrinks the window is
+ * the platform's (`windowResizesForKeyboard`), so a suite says Android with `Platform.OS`, as the
+ * phone would.
+ */
+export interface FakeKeyboard extends KeyboardPort {
+  /** The keyboard comes up. */
+  readonly raise: () => void;
+  /** The keyboard goes down. */
+  readonly drop: () => void;
+}
+
+export function fakeKeyboard(): FakeKeyboard {
+  let up = false;
+  const followers = new Set<() => void>();
+  const goes = (now: boolean) => {
+    if (up === now) return;
+    up = now;
+    for (const told of [...followers]) told();
+  };
+  return {
+    isUp: () => up,
+    follow: (onChange) => {
+      followers.add(onChange);
+      return () => {
+        followers.delete(onChange);
+      };
+    },
+    raise: () => goes(true),
+    drop: () => goes(false),
   };
 }
 

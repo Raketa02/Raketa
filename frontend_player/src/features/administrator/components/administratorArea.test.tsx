@@ -9,7 +9,7 @@
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { RefreshControl } from 'react-native';
+import { Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { clearStoredTokens, getSessionStatus, resetSessionStatus } from '@/shared/lib/auth';
@@ -19,15 +19,19 @@ import { theme } from '@/shared/ui';
 import {
   launchSignedIn,
   resetClipboard,
+  resetKeyboard,
   resetShare,
   stubClipboard,
   stubGate,
+  stubKeyboard,
   stubShare,
 } from '@/test-support/onboardingRouter';
 import {
   fakeClipboard,
+  fakeKeyboard,
   fakeShare,
   type FakeClipboard,
+  type FakeKeyboard,
   type FakeShare,
 } from '@/test-support/platform';
 import {
@@ -54,6 +58,7 @@ import {
   barFloats,
   bottomOf,
   clearanceAbove,
+  endPadding,
   floatOf,
   pageOf,
 } from '@/test-support/tabBarReach';
@@ -94,6 +99,7 @@ afterEach(async () => {
   transport.restore();
   resetShare();
   resetClipboard();
+  resetKeyboard();
   queryClient.clear();
   resetSessionStatus();
   await clearStoredTokens();
@@ -430,6 +436,47 @@ async function openGroup(setup: GroupSetup, setups: readonly GroupSetup[] = [set
   expect(await screen.findByRole('header', { name: setup.name })).toBeTruthy();
   return server;
 }
+
+/**
+ * **On Android, the area's bar stands down while the keyboard is up**, as the player's does (ADR-0210
+ * §3 and §9, #882): the window shrinks for the keyboard, and a bar floating at its foot would ride up
+ * over the form's fields. Not rendered, its reach nothing, and back when the keyboard goes.
+ */
+describe('New official group, with the keyboard up on Android', () => {
+  let keyboard: FakeKeyboard;
+  let android: jest.ReplaceProperty<typeof Platform.OS>;
+  const tabs = () => screen.queryAllByRole('tab');
+  /** The end padding of the form's page, found from its name field. */
+  const formEnd = () => {
+    const page = pageOf(screen.getByLabelText('Name'));
+    return endPadding(page as NonNullable<typeof page>);
+  };
+
+  beforeEach(() => {
+    keyboard = fakeKeyboard();
+    stubKeyboard(keyboard);
+    android = jest.replaceProperty(Platform, 'OS', 'android');
+  });
+
+  afterEach(() => {
+    android.restore();
+  });
+
+  it('draws no tab while it is up, the form ending at its own 15, and both tabs once it goes', async () => {
+    await launchAsAdministrator();
+    await openNewGroup();
+    expect(tabs()).toHaveLength(2);
+    expect(formEnd()).toBe(ADMINISTRATORS_BAR + theme.space.lg);
+
+    act(() => keyboard.raise());
+    expect(tabs()).toHaveLength(0);
+    expect(formEnd()).toBe(theme.space.lg);
+
+    act(() => keyboard.drop());
+    expect(tabs()).toHaveLength(2);
+    expect(formEnd()).toBe(ADMINISTRATORS_BAR + theme.space.lg);
+  });
+});
 
 describe('an official group’s page', () => {
   // #529: a request left since the page was read waited for a return to it, thirty seconds on.

@@ -7,7 +7,7 @@
  * rather than re-discovered by whichever feature trips over them first.
  */
 
-import { fakeImagePicking, fakeLocation, pickedImage } from './platform';
+import { fakeImagePicking, fakeKeyboard, fakeLocation, pickedImage } from './platform';
 
 describe('the location fake', () => {
   it('starts unasked and grants when asked', async () => {
@@ -110,5 +110,35 @@ describe('the image-picking fake', () => {
     const picking = fakeImagePicking({ state: 'denied', library: [pickedImage()] });
 
     await expect(picking.pickImages({ limit: 3 })).resolves.toHaveLength(1);
+  });
+});
+
+describe('the keyboard fake', () => {
+  it('starts down, and tells a follower as it comes up and goes down', () => {
+    const keyboard = fakeKeyboard();
+    const told: boolean[] = [];
+    keyboard.follow(() => told.push(keyboard.isUp()));
+
+    expect(keyboard.isUp()).toBe(false);
+    keyboard.raise();
+    keyboard.drop();
+
+    expect(told).toEqual([true, false]);
+  });
+
+  /** As the device's: a keyboard already up does not come up again. */
+  it('tells nobody when nothing changed, and nobody who stopped following', () => {
+    const keyboard = fakeKeyboard();
+    const told: boolean[] = [];
+    const stop = keyboard.follow(() => told.push(keyboard.isUp()));
+
+    keyboard.drop();
+    keyboard.raise();
+    keyboard.raise();
+    stop();
+    keyboard.drop();
+
+    expect(told).toEqual([true]);
+    expect(keyboard.isUp()).toBe(false);
   });
 });

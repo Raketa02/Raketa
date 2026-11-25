@@ -212,9 +212,10 @@ review comment and a test description all use the same word.
   by [#881](https://github.com/Raketa02/Raketa/issues/881)), not below it as a flex sibling, and
   screens end at its **reach**: the room the bar takes at the bottom — its height and the bottom
   inset while it is drawn, nothing while it stands down — a followed value the shell says
-  (`shared/ui`'s `tabBarReach.ts`). **Decided, not yet built** (PRD
+  (`shared/ui`'s `tabBarReach.ts`). It stands down in the chat and, on Android, while the keyboard
+  is up ([#882](https://github.com/Raketa02/Raketa/issues/882)). **Decided, not yet built** (PRD
   [#878](https://github.com/Raketa02/Raketa/issues/878)): the bar becomes a glass dock, whose reach
-  is its lift + 54, and on Android it stands down while the keyboard is up. _Avoid_ confusing the
+  is its lift + 54. _Avoid_ confusing the
   reach with the tab's menu's `TAB_REACH`, which is a touch slop. The one stack, the reset and what
   each tab opens don't change.
 - **Home** — the first tab, route `/`: the booked-games rail under the tab's own words —

@@ -574,3 +574,26 @@ no platform.
   over a stand-in for `expo-navigation-bar`).
 - **Not seen on a device.** It is a native change, so it needs a fresh build, and it needs a look on
   the A32 (three-button navigation) and an iPhone.
+
+**The eleventh port is the soft keyboard** ([#882](https://github.com/Raketa02/Raketa/issues/882),
+[ADR-0210](../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §9).
+`KeyboardPort` has **two halves**, `isUp()` and `follow(onChange)`, which are
+`useSyncExternalStore`'s. It joined `keyboard.ts`, the keyboard's module already, rather than a second
+module. That file is now the only importer of React Native's `Keyboard`, a lint fence of one name like
+`Share`'s, which `pnpm test:boundaries` drives. It is also the app's one listener for the keyboard's
+show and hide.
+
+- **`deviceKeyboard`** follows `keyboardDidShow` and `keyboardDidHide` (Android sends no _will_
+  events) and reads `Keyboard.isVisible()`. React Native keeps that record with listeners it adds as
+  the module loads, so it already holds the new state when a follower is told. **Up means docked**:
+  Android reports a floating or split keyboard shown with no height, nothing shrinks for it, so it
+  is read as down (the code review's catch). `keyboard.test.ts` sends the native events through the
+  device emitter and holds both.
+- **`useKeyboardShrinksTheWindow`** (`KeyboardProvider.tsx`) is what both shells read: up, on a phone
+  whose window resizes for it (`windowResizesForKeyboard`, Android). Its snapshot is the whole answer,
+  so on an iPhone nothing redraws as the keyboard comes and goes.
+- **`fakeKeyboard()`** starts down; `raise()` and `drop()` tell every follower, and a raise while up
+  or a drop while down tells nobody. It knows nothing of which phone it is on: a suite says Android
+  with `Platform.OS`. The harness takes it through `stubKeyboard` and `resetKeyboard`.
+- **`BottomSheet.test.tsx`** spies on `Keyboard.dismiss` through `jest.requireActual`, as
+  `payments.test.ts` already did, because the fence reaches tests too.

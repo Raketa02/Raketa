@@ -46,7 +46,7 @@ composer replaces it ([#400](https://github.com/Raketa02/Raketa/issues/400)): `b
 beside `tabForPathname` names the whole path, `TabShell` does not render the bar there rather than
 hiding it, and the room takes the bottom safe-area inset the bar owns everywhere else — the one
 exception to design-system §10.1, recorded in Part 16. The column stays lit while the bar is
-down. **No sentence the shell writes says "nothing is happening"** — it began as Now's refusal,
+down. It also stands down on Android while the keyboard is up, on any route (below). **No sentence the shell writes says "nothing is happening"** — it began as Now's refusal,
 because Now is where a game lands and asserting emptiness would be a lie one tap after one did, and
 it governs every empty state the shell writes. `shellCopy.test.ts` holds that refusal, and it
 **moved with the copy** rather than being deleted when the placeholder it was written for died.
@@ -89,6 +89,23 @@ a scroller's indicator now runs under the bar near the end of a list — iOS cou
 `theShell.test.tsx`, the group page's Fill in, You're in and Games suites, `theFill.test.tsx` and
 `administratorArea.test.tsx` walk it against bar heights worked out from the theme
 (`test-support/tabBarReach.ts`).
+
+**On Android the bar stands down while the keyboard is up** ([#882](https://github.com/Raketa02/Raketa/issues/882),
+2026-11-25; ADR-0210 §9, design-system §10.1). Android shrinks the window for the keyboard, and the
+floating bar sits at the window's foot, so it would ride up above the keyboard and over a field near
+it: Intro, Name, New group, Edit group, Post a game and the administrator's forms, whose pages no
+longer end above the bar. `TabShell` and `AreaShell` both read `useKeyboardShrinksTheWindow` (up, on
+a phone whose window resizes for it) and treat it as the chat's room is treated. The bar is not
+rendered and the reach is nothing, so a form's page ends its own 15 above the keyboard and the Undo
+toast stands 9 above the bottom inset; the toast keeps the full reach. Nothing animates, and the bar
+is back, its column lit, when the keyboard goes. An iPhone draws its keyboard over the window and the
+hook never answers yes there, so nothing redraws. **The platform's `keyboard.ts` is the app's one
+listener for the keyboard's show and hide.** It already held the avoidance value and the dismissal,
+so the reading joined it (ADR-0210 §9 corrects the PRD's _a new port_), and the lint fences React
+Native's `Keyboard` to it as it fences `Share` to the share port. `theShell.test.tsx` walks New group
+on both phones with `fakeKeyboard()`, `administratorArea.test.tsx` the area's New official group,
+and `theFill.test.tsx` the Undo toast. **Not seen on a device**: the bar going and coming with the
+keyboard is for the phone walk (#885).
 
 **You draws one more of another feature's sections: the Location area sentence**
 ([#462](https://github.com/Raketa02/Raketa/issues/462)). `AreaUpdatesNote` sits under

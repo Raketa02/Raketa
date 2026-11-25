@@ -13,7 +13,7 @@
 
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { ScrollView } from 'react-native';
+import { Platform, ScrollView } from 'react-native';
 
 import { gameKeys } from '@/features/games/types';
 import { PAYMENTS_COPY } from '@/features/payments/types';
@@ -47,11 +47,13 @@ import {
   launchSignedIn,
   resetClipboard,
   resetHaptics,
+  resetKeyboard,
   resetPayments,
   resetShare,
   stubClipboard,
   stubGate,
   stubHaptics,
+  stubKeyboard,
   stubMyGroups,
   stubPaymentMethod,
   stubPayments,
@@ -64,6 +66,7 @@ import {
   TEST_CARDS,
   fakeClipboard,
   fakeHaptics,
+  fakeKeyboard,
   fakePayments,
   fakeShare,
   type FakePayments,
@@ -209,6 +212,7 @@ afterEach(async () => {
   resetShare();
   resetClipboard();
   resetHaptics();
+  resetKeyboard();
   resetPayments();
   queryClient.clear();
   resetSessionStatus();
@@ -286,6 +290,27 @@ describe('a yes that moves money waits ten seconds behind Undo (§6.5)', () => {
     sayYes();
 
     expect(bottomOf(screen.getByTestId('undo-toast-host'))).toBe(PLAYERS_BAR + theme.space.sm);
+  });
+
+  // #882 (ADR-0210 §9): on Android the bar stands down while the keyboard is up, and the countdown
+  // follows it down to 9 above the bottom inset — the harness's is nought — and back up after.
+  it('stands 9 above the inset while the keyboard stands the bar down on Android, and above the bar after', async () => {
+    const keyboard = fakeKeyboard();
+    stubKeyboard(keyboard);
+    const android = jest.replaceProperty(Platform, 'OS', 'android');
+    try {
+      await openGames([bookItNow()]);
+      sayYes();
+      const undo = () => bottomOf(screen.getByTestId('undo-toast-host'));
+
+      act(() => keyboard.raise());
+      expect(undo()).toBe(theme.space.sm);
+
+      act(() => keyboard.drop());
+      expect(undo()).toBe(PLAYERS_BAR + theme.space.sm);
+    } finally {
+      android.restore();
+    }
   });
 
   it('takes the yes back on Undo — nothing is ever sent, and the card is dealt again on top', async () => {

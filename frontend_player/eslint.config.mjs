@@ -197,6 +197,22 @@ const shareImportPath = {
     'from src/test-support/platform.ts in a test. See #513.',
 };
 
+/**
+ * React Native's own keyboard — the share sheet's shape, one **name** out of `react-native`. Its
+ * show and hide are the OS's and no suite can bring a keyboard up, so the app has one listener for
+ * them, which a fake replaces (ADR-0210 §9, #882).
+ */
+const keyboardImportPath = {
+  name: 'react-native',
+  importNames: ['Keyboard'],
+  message:
+    'Only src/shared/lib/platform/keyboard.ts may import Keyboard from react-native. It is the ' +
+    "app's one listener for the keyboard's show and hide, and the keyboard is the OS's, so a suite " +
+    'brings it up through a fake — use useKeyboardShrinksTheWindow or dismissKeyboard from ' +
+    '@/shared/lib/platform, and fakeKeyboard() from src/test-support/platform.ts in a test. See ' +
+    '#882 and docs/adr/0210 §9.',
+};
+
 /** Applies everywhere under src/, including api/ and mappers/. */
 const CORE_PATTERNS = [
   crossAppImports,
@@ -238,11 +254,19 @@ const PURE_PATHS = [
 ];
 
 /**
- * The two path bans every block carries unless it is the one file exempt from one of them. The
+ * The three path bans every block carries unless it is the one file exempt from one of them. The
  * pure layers carry `PURE_PATHS` instead, which bans `react-native` whole and so the share sheet
- * with it.
+ * and the keyboard with it.
  */
-const DEFAULT_PATHS = [asyncStoragePath, shareImportPath];
+const DEFAULT_PATHS = [asyncStoragePath, shareImportPath, keyboardImportPath];
+
+/**
+ * That set minus the one ban a sanctioned owner is exempt from — a subtraction, never a re-listing,
+ * for `sharedPatternsExcept`'s reason below: the three exempt files used to list the paths they
+ * kept, so the keyboard's ban would have reached every file but them (#882).
+ */
+const defaultPathsExcept = (...exemptions) =>
+  DEFAULT_PATHS.filter((path) => !exemptions.includes(path));
 
 const restrict = (patterns, paths = DEFAULT_PATHS) => ['error', { patterns, paths }];
 
@@ -470,21 +494,35 @@ export default [
     // The share sheet — one verb, one file, the clipboard's exemption with the path ban
     // subtracted rather than a pattern: `Share` is one name out of `react-native` (#513).
     files: ['src/shared/lib/platform/share.ts'],
-    rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS, [asyncStoragePath]) },
+    rules: {
+      'no-restricted-imports': restrict(SHARED_PATTERNS, defaultPathsExcept(shareImportPath)),
+    },
+  },
+  {
+    // The keyboard — the share sheet's exemption, for the one name `Keyboard` (ADR-0210 §9, #882):
+    // its show and hide, and its dismissal, are read and asked here and nowhere else.
+    files: ['src/shared/lib/platform/keyboard.ts'],
+    rules: {
+      'no-restricted-imports': restrict(SHARED_PATTERNS, defaultPathsExcept(keyboardImportPath)),
+    },
   },
   {
     // The feature flags' saved datafile — one of the two modules that may import AsyncStorage
     // (ADR-0206 §6). The path ban is subtracted and nothing else: this file is a feature's api/
     // layer, so its baseline is `CORE_PATTERNS`, and every one of those still applies.
     files: ['src/features/feature_flags/api/datafileCache.ts'],
-    rules: { 'no-restricted-imports': restrict(CORE_PATTERNS, [shareImportPath]) },
+    rules: {
+      'no-restricted-imports': restrict(CORE_PATTERNS, defaultPathsExcept(asyncStoragePath)),
+    },
   },
   {
     // The phone-preferences store — the other module that may import AsyncStorage (ADR-0188
     // §1), one file wide for the datafile cache's reason. It sits under `shared/`, so its
     // baseline is `SHARED_PATTERNS`, and only the path ban is subtracted.
     files: ['src/shared/lib/preferences/phonePreferences.ts'],
-    rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS, [shareImportPath]) },
+    rules: {
+      'no-restricted-imports': restrict(SHARED_PATTERNS, defaultPathsExcept(asyncStoragePath)),
+    },
   },
   {
     // The one module that wraps the Featurevisor SDK (ADR-0206 §5) — one file wide, like the

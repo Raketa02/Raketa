@@ -20,9 +20,10 @@
 #   expo-navigation-bar                          → platform/systemBars.android.ts
 #   @featurevisor/sdk                            → feature_flags/api/featurevisor.ts
 #
-# And one **name** out of a module every screen imports:
+# And two **names** out of a module every screen imports:
 #
 #   { Share } from 'react-native'                → platform/share.ts
+#   { Keyboard } from 'react-native'             → platform/keyboard.ts
 #
 # AsyncStorage is banned everywhere but two modules: the phone-preferences store, which keeps the
 # choices a player made (ADR-0188), and the feature flags' saved datafile — a public file, never a
@@ -170,6 +171,7 @@ LIVE_PORT='src/shared/lib/platform/liveStream.ts'
 HAPTICS_PORT='src/shared/lib/platform/haptics.ts'
 CLIPBOARD_PORT='src/shared/lib/platform/clipboard.ts'
 SHARE_PORT='src/shared/lib/platform/share.ts'
+KEYBOARD_PORT='src/shared/lib/platform/keyboard.ts'
 PAYMENTS_PORT='src/shared/lib/platform/payments.tsx'
 PUSH_PORT='src/shared/lib/platform/push.ts'
 REFERRER_PORT='src/shared/lib/platform/installReferrer.ts'
@@ -373,6 +375,27 @@ expect_name_allowed View react-native "$FEATURE"
 # And the port itself is still under every other ban, the storage path included.
 expect_blocked expo-clipboard "$SHARE_PORT" 'clipboard.ts'
 expect_blocked @react-native-async-storage/async-storage "$SHARE_PORT" 'phonePreferences.ts'
+expect_name_blocked Keyboard react-native "$SHARE_PORT" 'keyboard.ts'
+
+echo
+echo "the keyboard — { Keyboard } from react-native belongs to platform/keyboard.ts"
+expect_name_blocked Keyboard react-native "$FEATURE" 'keyboard.ts'
+expect_name_blocked Keyboard react-native "$SCREEN" 'keyboard.ts'
+expect_name_blocked Keyboard react-native "$TEST" 'keyboard.ts'
+expect_name_blocked Keyboard react-native "$SUPPORT" 'keyboard.ts'
+expect_name_blocked Keyboard react-native "$AUTH" 'keyboard.ts'
+# One file wide: the platform file beside it may not listen, and neither may the three files that
+# are exempt from another path ban — each subtracts its one entry, never the list (#882).
+expect_name_blocked Keyboard react-native "$OTHER_PLATFORM_FILE" 'keyboard.ts'
+expect_name_blocked Keyboard react-native "$FLAGS_CACHE" 'keyboard.ts'
+expect_name_blocked Keyboard react-native "$PREFERENCES_STORE" 'keyboard.ts'
+expect_name_allowed Keyboard react-native "$KEYBOARD_PORT"
+# The ban is one name wide: the keyboard's own avoiding view is a component the screens draw.
+expect_name_allowed KeyboardAvoidingView react-native "$FEATURE"
+# And the port itself is still under every other ban, both other paths included.
+expect_name_blocked Share react-native "$KEYBOARD_PORT" 'share.ts'
+expect_blocked @react-native-async-storage/async-storage "$KEYBOARD_PORT" 'phonePreferences.ts'
+expect_blocked expo-clipboard "$KEYBOARD_PORT" 'clipboard.ts'
 
 echo
 echo "feature-flag evaluation — @featurevisor/sdk belongs to feature_flags/api/featurevisor.ts"

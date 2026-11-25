@@ -30,6 +30,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { authKeys, useCurrentUser, useSignOut, type AdministeredClub } from '@/features/auth/types';
+import { useKeyboardShrinksTheWindow } from '@/shared/lib/platform';
 import { showToast } from '@/shared/store/toast.store';
 import { AdministratorTabBar, theme, useSaysTabBarReach } from '@/shared/ui';
 
@@ -108,8 +109,11 @@ function useLeaveOnRemoval(
 function AreaShell({ club }: { readonly club: AdministeredClub }) {
   const pathname = usePathname();
   // The area's bar floats over its screens as the player's does, and this shell says its reach —
-  // its own shorter bar's (ADR-0210 §3): the area's lists and forms end at it the same way.
-  useSaysTabBarReach('administrator', true);
+  // its own shorter bar's (ADR-0210 §3): the area's lists and forms end at it the same way. And it
+  // stands down as the player's does while the keyboard shrinks an Android window (§9, #882): not
+  // rendered, its reach nothing, so no bar rides up over the field being typed into.
+  const barShown = !useKeyboardShrinksTheWindow();
+  useSaysTabBarReach('administrator', barShown);
 
   return (
     <View style={s.area}>
@@ -126,10 +130,12 @@ function AreaShell({ club }: { readonly club: AdministeredClub }) {
         <Stack.Screen name="you/settings/[groupId]" options={{ animation: 'default' }} />
         <Stack.Screen name="you/start-playing" options={{ animation: 'default' }} />
       </Stack>
-      <AdministratorTabBar
-        active={areaTabFor(club.clubId, pathname)}
-        onPress={(tab) => openAreaTab(club.clubId, tab, pathname)}
-      />
+      {barShown ? (
+        <AdministratorTabBar
+          active={areaTabFor(club.clubId, pathname)}
+          onPress={(tab) => openAreaTab(club.clubId, tab, pathname)}
+        />
+      ) : null}
       {/* Another club's invitation is offered here too, over the area it would sit beside (#518). */}
       <InvitationSheet worn={{ kind: 'administrator', clubId: club.clubId }} />
       {/* A club handing this account a group is told here, at whichever club it is (ADR-0192). */}

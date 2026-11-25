@@ -952,7 +952,12 @@ sessions.
   ([#857](https://github.com/Raketa02/Raketa/issues/857)): the status and navigation bars, which
   the launch gate paints for the drawn splash and restores as it fades. It is the first port
   split into platform files, `systemBars.ts` for an iPhone and `systemBars.android.ts`, the one
-  importer of `expo-navigation-bar`, with `fakeSystemBars()` beside them.
+  importer of `expo-navigation-bar`, with `fakeSystemBars()` beside them. The eleventh is
+  **`KeyboardPort`** ([#882](https://github.com/Raketa02/Raketa/issues/882), ADR-0210 §9): whether
+  the soft keyboard is up, and a way to follow it. It is the app's one listener for the keyboard's
+  show and hide, in `keyboard.ts` beside the avoidance value and the dismissal, the only importer of
+  React Native's `Keyboard`, with `fakeKeyboard()` beside it. Both shells stand the tab bar down
+  while it shrinks an Android window.
 - **A screen reaches a port through its context** — `useLocation()` /
   `useImagePicking()` / `useLiveStream()`, each defaulting to the real device, so nothing
   in the app wires anything up and a test wraps the tree in the device it wants. A screen

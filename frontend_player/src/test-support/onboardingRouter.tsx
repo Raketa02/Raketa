@@ -100,6 +100,7 @@ import { SplashHoldsProvider, type SplashHolds } from '@/shared/lib/bootstrap';
 import {
   ClipboardProvider,
   HapticsProvider,
+  KeyboardProvider,
   ShareProvider,
   ImagePickingProvider,
   LiveStreamProvider,
@@ -110,6 +111,7 @@ import {
   type PaymentsPort,
   type PushPort,
   type HapticsPort,
+  type KeyboardPort,
   type SharePort,
   type ImagePickingPort,
   type LiveStreamPort,
@@ -381,6 +383,23 @@ export function resetShare(): void {
 }
 
 /**
+ * The soft keyboard this tree types under, for the suites about the bar standing down while it is up
+ * on Android (#882). Same shape and reasons as the share sheet above; unset is the device's port over
+ * React Native's own `Keyboard`, which nothing in jest ever brings up.
+ */
+let keyboard: KeyboardPort | undefined;
+
+/** Run the tree against this keyboard. Call before `launchSignedIn`. */
+export function stubKeyboard(port: KeyboardPort): void {
+  keyboard = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetKeyboard(): void {
+  keyboard = undefined;
+}
+
+/**
  * The payment provider this tree saves a card through, for the suite whose screen is You ›
  * Payments (#552). **Like the live channel, it always has a fake**: the device's port would reach
  * Stripe's SDK, which jest's setup has made answer *no error* to everything — a card saved without a
@@ -492,11 +511,18 @@ function WithPorts({ children }: { readonly children: ReactNode }) {
   const withShare =
     share === undefined ? withPayments : <ShareProvider port={share}>{withPayments}</ShareProvider>;
 
-  const withClipboard =
-    clipboard === undefined ? (
+  const withKeyboard =
+    keyboard === undefined ? (
       withShare
     ) : (
-      <ClipboardProvider port={clipboard}>{withShare}</ClipboardProvider>
+      <KeyboardProvider port={keyboard}>{withShare}</KeyboardProvider>
+    );
+
+  const withClipboard =
+    clipboard === undefined ? (
+      withKeyboard
+    ) : (
+      <ClipboardProvider port={clipboard}>{withKeyboard}</ClipboardProvider>
     );
 
   const withHaptics =

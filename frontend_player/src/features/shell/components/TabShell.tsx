@@ -66,6 +66,15 @@
  * With the bar gone the bottom safe-area inset has no owner here, and the room takes it on its
  * own frame — the one place in the app where 10.1's *the bar owns the bottom inset* does not
  * hold, and the amendment beside it says so.
+ *
+ * **On Android it stands down while the keyboard is up, too** (10.1, ADR-0210 §9,
+ * [#882](https://github.com/Raketa02/Raketa/issues/882)). Android shrinks the window for the
+ * keyboard, and the bar floats at the window's foot, so it would ride up above the keyboard — over
+ * the field being typed into, on a form whose page no longer ends above the bar. The same answer
+ * as the chat's: not rendered, its reach nothing, so a form ends at its own gap above the keyboard,
+ * and nothing animates; it is back when the keyboard goes. An iPhone draws its keyboard over the
+ * window, covering the bar already, so there the keyboard changes nothing
+ * (`useKeyboardShrinksTheWindow`, the platform module's).
  */
 
 import { router, Stack, usePathname } from 'expo-router';
@@ -73,6 +82,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { NoticesHost } from '@/features/notifications/types';
 import { bookedGameRoute, FillProvider, useHomeBadge } from '@/features/proposals/types';
+import { useKeyboardShrinksTheWindow } from '@/shared/lib/platform';
 import { TabBar, theme, useSaysTabBarReach } from '@/shared/ui';
 
 import { barStandsDown, tabForPathname } from '../domain/shellTabs';
@@ -94,7 +104,8 @@ function openGame(bookingId: string) {
 export function TabShell() {
   const pathname = usePathname();
   const gamesNeedingYou = useHomeBadge();
-  const barShown = !barStandsDown(pathname);
+  const keyboardShrinksTheWindow = useKeyboardShrinksTheWindow();
+  const barShown = !barStandsDown(pathname) && !keyboardShrinksTheWindow;
   useSaysTabBarReach('player', barShown);
 
   return (

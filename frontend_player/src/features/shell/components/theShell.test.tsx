@@ -17,11 +17,12 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { AccessibilityInfo, StyleSheet, View, type ScrollView } from 'react-native';
+import { AccessibilityInfo, Platform, StyleSheet, View, type ScrollView } from 'react-native';
 
 import { authKeys, NICKNAME_ROW_TITLE } from '@/features/auth/types';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { levelAsksHeading, notNowLabel, requestsHeading } from '@/features/friends/types';
+import { GROUPS_COPY } from '@/features/groups/types';
 import {
   AREA_LINE,
   INTRO_TITLE,
@@ -72,9 +73,11 @@ import {
   barFloats,
   barFrame,
   clearanceAbove,
+  endPadding,
   pageOf,
   PLAYERS_BAR,
 } from '@/test-support/tabBarReach';
+import { fakeKeyboard, type FakeKeyboard } from '@/test-support/platform';
 import { pullDown } from '@/test-support/swipe';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -86,6 +89,7 @@ import {
   HOME_PATH,
   launchSignedIn,
   OWN_RECORD_SERVED,
+  resetKeyboard,
   PROFILE_OPTIONS_SERVED,
   PROFILE_SURFACE_SERVED,
   stubConversation,
@@ -93,6 +97,7 @@ import {
   stubEntries,
   stubGate,
   stubHome,
+  stubKeyboard,
   stubMyGroups,
   stubNotices,
   stubOwnRecord,
@@ -1094,5 +1099,77 @@ describe('the bar floats over the screen, and the screens end at its reach', () 
     expect(scrollerOf(signOut)).toBeUndefined();
     const rows = pageOf(screen.getByText(NICKNAME_ROW_TITLE));
     expect(clearanceAbove(rows as NonNullable<typeof rows>, 0)).toBe(theme.space.lg);
+  });
+});
+
+/**
+ * **On Android, the bar stands down while the keyboard is up** (#882, ADR-0210 §9, 10.1). Android
+ * shrinks the window for the keyboard, and the bar floats at the window's foot — so it would ride up
+ * above the keyboard and over the field being typed into, now that the scroller no longer ends above
+ * it. It stands down as it does in the chat: not rendered, its reach nothing, so the space it kept
+ * goes with it; and it comes back when the keyboard goes. **An iPhone ignores the keyboard**, which
+ * is drawn over the window and covers the bar there already.
+ */
+describe('on Android, the bar stands down while the keyboard is up', () => {
+  let keyboard: FakeKeyboard;
+  let phone: jest.ReplaceProperty<typeof Platform.OS> | undefined;
+  const tabs = () => screen.queryAllByRole('tab');
+
+  beforeEach(() => {
+    keyboard = fakeKeyboard();
+    stubKeyboard(keyboard);
+  });
+
+  afterEach(() => {
+    resetKeyboard();
+    phone?.restore();
+    phone = undefined;
+  });
+
+  /** New group, a tab screen with a field — under Play, where *New group* opens it. */
+  async function openNewGroup(os: typeof Platform.OS) {
+    phone = jest.replaceProperty(Platform, 'OS', os);
+    await launchIntoTheApp();
+    pressTab('Play');
+    fireEvent.press(await screen.findByRole('button', { name: GROUPS_COPY.list.newGroupLabel }));
+    await screen.findByRole('header', { name: GROUPS_COPY.newGroup.title });
+  }
+
+  /** The end padding of New group's page, found from its name field. */
+  const formEnd = () => {
+    const page = pageOf(screen.getByLabelText(GROUPS_COPY.newGroup.name));
+    return endPadding(page as NonNullable<typeof page>);
+  };
+
+  it('draws no tab while the keyboard is up, and New group’s page ends at its own 15', async () => {
+    await openNewGroup('android');
+    expect(tabs()).toHaveLength(3);
+    expect(formEnd()).toBe(PLAYERS_BAR + theme.space.lg);
+
+    act(() => keyboard.raise());
+
+    expect(tabs()).toHaveLength(0);
+    expect(formEnd()).toBe(theme.space.lg);
+  });
+
+  it('draws the three tabs again when the keyboard goes, and the reach with them', async () => {
+    await openNewGroup('android');
+    act(() => keyboard.raise());
+    expect(tabs()).toHaveLength(0);
+
+    act(() => keyboard.drop());
+
+    expect(tabs()).toHaveLength(3);
+    expect(screen.getByRole('tab', { name: 'Play', selected: true })).toBeTruthy();
+    expect(formEnd()).toBe(PLAYERS_BAR + theme.space.lg);
+  });
+
+  it('changes nothing on an iPhone, where the keyboard covers the bar', async () => {
+    await openNewGroup('ios');
+
+    act(() => keyboard.raise());
+
+    expect(tabs()).toHaveLength(3);
+    expect(formEnd()).toBe(PLAYERS_BAR + theme.space.lg);
   });
 });

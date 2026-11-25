@@ -6,7 +6,7 @@
  * The bar floats over the screen and owns no layout (10.1): every screen inside the tabs draws to
  * the bottom of the phone, so nothing ends above the bar because it is a flex sibling any more. What
  * used to be free is now **placed by one measure** — the bar's height and the bottom inset under it
- * while it is drawn, and **nothing while it stands down** (the chat):
+ * while it is drawn, and **nothing while it stands down** (the chat, and Android's keyboard up):
  *
  * | What | Where |
  * | --- | --- |

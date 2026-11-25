@@ -17,7 +17,6 @@
 
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import {
-  Keyboard,
   KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
@@ -102,6 +101,9 @@ describe('a sheet with a field in it', () => {
   });
 
   it('dismisses the keyboard before it closes, so no field keeps focus into a closing window', () => {
+    // React Native's own `Keyboard`, which only the platform's keyboard module imports (#882) — read
+    // here as `payments.test.ts` reads it, to see the dismissal land before the close.
+    const { Keyboard } = jest.requireActual<typeof import('react-native')>('react-native');
     const order: string[] = [];
     jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => order.push('dismiss'));
     render(
