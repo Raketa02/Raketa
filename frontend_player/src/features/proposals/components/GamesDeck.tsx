@@ -174,7 +174,7 @@ import { useDeclarePlayIntent } from '@/features/player_profile/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
-import { behindOverlay, courtSeatCount, Note, theme } from '@/shared/ui';
+import { behindOverlay, courtSeatCount, Note, theme, useTabBarReach } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import {
@@ -320,6 +320,9 @@ export function GamesDeck({
   onScreen = true,
   onCovered,
 }: GamesDeckProps) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
+  const pageEnd = { paddingBottom: reach + theme.size.gutter };
   /** The card on its way off the stage, and its answer — until it has flown. */
   const [leaving, setLeaving] = useState<Leaving | undefined>(undefined);
   // The kind drawn — the one chosen, or while a pick's stack goes out the one it leaves, held while
@@ -640,7 +643,11 @@ export function GamesDeck({
     // (#875); one that failed pulls as its retry reads; one held for a connection says it resumes.
     const waiting =
       read.error !== null ? (
-        <ScrollView testID={BODY} contentContainerStyle={s.page} refreshControl={refreshControl}>
+        <ScrollView
+          testID={BODY}
+          contentContainerStyle={[s.page, pageEnd]}
+          refreshControl={refreshControl}
+        >
           <ReadFailed error={read.error} onRetry={() => void read.refetch()} />
         </ScrollView>
       ) : read.isPaused ? (
@@ -659,14 +666,26 @@ export function GamesDeck({
         <View style={s.area} {...covered}>
           {waiting}
         </View>
-        {overTheDeck}
+        {/* The area runs under the bar to the phone's foot (#881), so what covers it ends at the
+            reach: the door's last button scrolls clear of the bar, as over the cards. */}
+        <View
+          testID="games-deck-over"
+          style={[s.overWaiting, { bottom: reach }]}
+          pointerEvents="box-none"
+        >
+          {overTheDeck}
+        </View>
       </View>
     );
   }
 
   if (deck !== undefined && deck.segments.length === 0) {
     return (
-      <ScrollView testID={BODY} contentContainerStyle={s.page} refreshControl={refreshControl}>
+      <ScrollView
+        testID={BODY}
+        contentContainerStyle={[s.page, pageEnd]}
+        refreshControl={refreshControl}
+      >
         {/* The answer's finding stands where the question was, until the deck it lands on is read. */}
         {finding === undefined ? (
           <DeclarationInterstitial
@@ -745,7 +764,7 @@ export function GamesDeck({
       {/* A scroller with nothing to scroll, there for the pull — see the module note. */}
       <ScrollView
         testID={BODY}
-        contentContainerStyle={[s.page, s.grow]}
+        contentContainerStyle={[s.page, s.grow, pageEnd]}
         refreshControl={refreshControl}
         {...behindOverlay(reading !== undefined)}
       >
@@ -837,6 +856,8 @@ const s = StyleSheet.create({
   under: { flexGrow: 1, gap: theme.space.sm },
   // The ground of what lies over the deck's area — the paper the cards stand on, covering them.
   over: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.color.paper },
+  // Where it lies while the deck's first read is out or failed: the area, less the bar's reach.
+  overWaiting: { ...StyleSheet.absoluteFillObject },
   // The stage takes what the page leaves between the cap line and the buttons, and no less than its
   // cards' least (#865) — a basis of its content, which is that, never of nought.
   stage: { flexGrow: 1, marginBottom: theme.space.sm },

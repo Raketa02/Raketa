@@ -119,26 +119,52 @@ export const TAB_BAR_TABS = [
 ] as const satisfies readonly TabBarTab[];
 
 /**
- * The bar's height at the default text size, **excluding** the bottom safe-area inset.
+ * **Which bar a shell draws** — the player's three columns, or the administrator's two (below).
+ */
+export type TabBarKind = 'player' | 'administrator';
+
+/**
+ * Each bar's height at the default text size, **excluding** the bottom safe-area inset.
  *
  * Derived from the same tokens the stylesheet below lays the bar out from — the hairline, the
- * two paddings, the ⚡Play disc (which is the tallest thing in a column, not the 16pt icon
- * box) and the label — so it cannot drift from the bar it describes. It exists because
- * [9.2](../../../docs/design-system.md#92-toast) positions the toast *above the tab bar*, and
- * the alternative was the toast holding a copy of these five numbers.
+ * two paddings, the tallest thing in a column and the label — so it cannot drift from the bar it
+ * describes. The tallest thing is the ⚡Play disc on the player's bar and the 16pt icon box on the
+ * administrator's, which has no disc. **Private**: what the rest of the app reads is the bar's
+ * **reach** (`tabBarReach.ts`, ADR-0210 §3), the room it takes at the bottom of the phone now that
+ * it floats over the screen rather than ending it (#881).
  *
  * **The default size, and a floor rather than a promise.** `labelMaxScale` lets Dynamic Type
- * grow the labels, so a bar on a phone set large is taller than this; the toast clearing the
- * default is what 9.2 asks for, and a toast that measured the bar would be an overlay
- * depending on a screen having one.
+ * grow the labels, so a bar on a phone set large is taller than this — by 7pt at the 1.6 cap,
+ * inside every gap kept above it (9 and 15) — until the dock's fixed 54 holds the label inside
+ * it (#883). A reach that measured the bar would be every screen's padding waiting on a layout.
  */
-export const TAB_BAR_HEIGHT =
-  1 +
-  theme.space.xs +
-  theme.size.fab +
-  theme.space.xxs +
-  theme.type.tag.lineHeight +
-  theme.space.md;
+const BAR_HEIGHT: Readonly<Record<TabBarKind, number>> = {
+  player:
+    1 +
+    theme.space.xs +
+    theme.size.fab +
+    theme.space.xxs +
+    theme.type.tag.lineHeight +
+    theme.space.md,
+  administrator:
+    1 +
+    theme.space.xs +
+    theme.size.tabIcon +
+    theme.space.xxs +
+    theme.type.tag.lineHeight +
+    theme.space.md,
+};
+
+/**
+ * **The room a bar takes at the bottom of the phone while it is drawn** — its height and the bottom
+ * inset it pads itself with. The shell says it (`useSaysTabBarReach`); nothing else works it out.
+ */
+export function tabBarReachOver(bar: TabBarKind, bottomInset: number): number {
+  return BAR_HEIGHT[bar] + bottomInset;
+}
+
+/** The bar's own frame — what a suite reads to see where it stands. Both bars carry it. */
+export const TAB_BAR_TEST_ID = 'tab-bar';
 
 export interface TabBarProps {
   /** Which of the three is showing. Play stays active for every screen inside Play. */
@@ -195,7 +221,10 @@ export function TabBar({ active, onPress, gamesNeedingYou }: TabBarProps) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[s.bar, { paddingBottom: theme.space.md + insets.bottom }]}>
+    <View
+      testID={TAB_BAR_TEST_ID}
+      style={[s.bar, { paddingBottom: theme.space.md + insets.bottom }]}
+    >
       {TAB_BAR_TABS.map((tab) =>
         tab.key === 'play' ? (
           <PlayTab key={tab.key} tab={tab} selected={active === tab.key} onPress={onPress} />
@@ -245,7 +274,10 @@ export function AdministratorTabBar({ active, onPress }: AdministratorTabBarProp
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[s.bar, { paddingBottom: theme.space.md + insets.bottom }]}>
+    <View
+      testID={TAB_BAR_TEST_ID}
+      style={[s.bar, { paddingBottom: theme.space.md + insets.bottom }]}
+    >
       {ADMINISTRATOR_TAB_BAR_TABS.map((tab) => (
         <FlankTab key={tab.key} tab={tab} selected={active === tab.key} onPress={onPress} />
       ))}
@@ -381,8 +413,14 @@ function Label({ text, color }: { text: string; color: string }) {
 }
 
 const s = StyleSheet.create({
-  // 10.2 — equal columns, paddingTop 6, paddingBottom 12 + the bottom inset.
+  // 10.2 — equal columns, paddingTop 6, paddingBottom 12 + the bottom inset. **Over the screen, at
+  // its foot** (10.1, ADR-0210 §3): the bar owns no layout, so every screen inside the tabs draws
+  // to the bottom of the phone and ends at the bar's reach instead (#881).
   bar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     flexDirection: 'row',
     backgroundColor: theme.color.surface,
     borderTopWidth: 1,

@@ -21,7 +21,7 @@
 import { router } from 'expo-router';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, theme } from '@/shared/ui';
+import { Button, Card, theme, useTabBarReach } from '@/shared/ui';
 
 import { useGroupsList, useMyGroupsReread } from '../hooks/useGroups';
 import { usePull } from '../hooks/usePull';
@@ -34,13 +34,15 @@ import { ReadFailure } from './ReadFailure';
 const COPY = GROUPS_COPY.list;
 
 export function GroupsSection() {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const groups = useGroupsList();
   const { refreshing, pull } = usePull(useMyGroupsReread());
 
   return (
     <ScrollView
       testID="groups-list"
-      contentContainerStyle={s.content}
+      contentContainerStyle={[s.content, { paddingBottom: reach + theme.space.lg }]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -85,7 +87,6 @@ export function GroupsSection() {
 const s = StyleSheet.create({
   content: {
     paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
   actions: {

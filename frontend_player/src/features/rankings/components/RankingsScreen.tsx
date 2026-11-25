@@ -71,6 +71,7 @@ import {
   behindOverlay,
   theme,
   TopSafeArea,
+  useTabBarReach,
   type SegmentOption,
 } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -106,6 +107,10 @@ interface RecordOpen {
 }
 
 export function RankingsScreen({ sport: asked }: RankingsScreenProps) {
+  // The page ends at the bar's reach, as a pinned screen does, and its rows do not pass under the bar
+  // (#881): whether the reader's row is on screen — the jump button — and where a jump centres it are
+  // the list's own measure of its frame, and FlatList takes no inset.
+  const reach = useTabBarReach();
   const { sports, sport, pick } = useRankingsSport(asked);
   const { view, choose } = useRankingView();
   // The overlays are the screen's, drawn beside its root: `behindOverlay` hides what it holds.
@@ -129,7 +134,7 @@ export function RankingsScreen({ sport: asked }: RankingsScreenProps) {
   return (
     <>
       <View style={s.root} {...behindOverlay(adding || reading !== undefined)}>
-        <TopSafeArea style={s.screen}>
+        <TopSafeArea style={[s.screen, { paddingBottom: reach }]}>
           <SportPillFrame
             sports={sports}
             sport={sport}

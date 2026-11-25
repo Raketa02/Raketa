@@ -115,6 +115,7 @@ export {
   PageReveal,
   scrollToReveal,
   useWatchedPage,
+  type Followed,
   type Span,
   type WatchedPage,
 } from './onScreen';
@@ -203,14 +204,21 @@ export {
   ADMINISTRATOR_TAB_BAR_TABS,
   AdministratorTabBar,
   TabBar,
-  TAB_BAR_HEIGHT,
   TAB_BAR_TABS,
+  TAB_BAR_TEST_ID,
   type AdministratorTabBarKey,
   type AdministratorTabBarProps,
   type TabBarKey,
+  type TabBarKind,
   type TabBarProps,
   type TabBarTab,
 } from './TabBar';
+export {
+  useFullTabBarReach,
+  useRoomAtTheBottom,
+  useSaysTabBarReach,
+  useTabBarReach,
+} from './tabBarReach';
 export {
   TabMenu,
   type MenuAlign,

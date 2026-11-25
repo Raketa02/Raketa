@@ -16,14 +16,16 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import { SkeletonBlock, theme } from '@/shared/ui';
+import { SkeletonBlock, theme, useTabBarReach } from '@/shared/ui';
 
 /** The buttons' row the block leaves bare, to a test. */
 const BARE_BUTTONS = 'deck-skeleton-buttons';
 
 export function DeckSkeleton() {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   return (
-    <View style={s.page} testID="deck-skeleton">
+    <View style={[s.page, { paddingBottom: reach + theme.size.gutter }]} testID="deck-skeleton">
       <SkeletonBlock style={s.card} />
       {/* The three buttons' row, as tall as its tallest — the ball — and drawn by nothing. */}
       <View style={s.buttons} testID={BARE_BUTTONS} />

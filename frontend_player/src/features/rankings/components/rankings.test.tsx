@@ -16,7 +16,7 @@
 
 import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet } from 'react-native';
+import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { BLOCKS_COPY, blockRowLabel } from '@/features/blocks/types';
 import { FRIENDS_COPY } from '@/features/friends/types';
@@ -25,7 +25,7 @@ import { OWN_RECORD_TITLE, RECORD_TITLE, RECORD_UNAVAILABLE } from '@/features/p
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { readPhonePreference, savePhonePreference } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
-import { theme } from '@/shared/ui';
+import { theme, TopSafeArea } from '@/shared/ui';
 import {
   GATE_USER,
   OWN_RECORD_SERVED,
@@ -41,6 +41,7 @@ import {
   stubRunsInProgress,
 } from '@/test-support/onboardingRouter';
 import { servedReliability } from '@/test-support/playerRecord';
+import { endPadding, pageOf, PLAYERS_BAR } from '@/test-support/tabBarReach';
 import {
   errorResponse,
   installTransport,
@@ -860,6 +861,31 @@ describe('the podium', () => {
 });
 
 describe('the rows', () => {
+  /**
+   * #881: every other tab screen runs under the floating bar; this one ends at its reach, because
+   * whether the reader's row is on screen and where a jump centres it are the list's own measure of
+   * its frame — a row hidden under the bar would count as seen. So the list keeps its own end, the
+   * room the jump button covers, inside a frame that ends above the bar.
+   */
+  it('end above the bar — the page ends at its reach, and the list keeps its own end inside it', async () => {
+    rankingServer();
+    await openRankings();
+    const [row] = await screen.findAllByTestId(/^ranked-row-/);
+
+    const list = pageOf(row as NonNullable<typeof row>);
+    expect(list?.props.testID).toBe('rankings-page');
+    expect(endPadding(list as NonNullable<typeof list>)).toBe(
+      theme.size.btn + 2 * theme.size.gutter,
+    );
+    const page = screen
+      .UNSAFE_getAllByType(TopSafeArea)
+      .find((frame) => within(frame).queryByTestId('rankings-page') !== null);
+    const frame = StyleSheet.flatten(
+      (page as NonNullable<typeof page>).findByType(View).props.style,
+    );
+    expect(frame.paddingBottom).toBe(PLAYERS_BAR);
+  });
+
   it('draw every place — coral for 1–3, grey after, the player he blocked among them (#799)', async () => {
     rankingServer();
     await openRankings();

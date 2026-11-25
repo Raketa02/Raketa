@@ -76,7 +76,7 @@ import {
   type RecordSubject,
 } from '@/features/player_record/types';
 import { codeMessage } from '@/shared/errors';
-import { Card, PlayerPhoto, ScreenHeader, Tag, theme } from '@/shared/ui';
+import { Card, PlayerPhoto, ScreenHeader, Tag, theme, useTabBarReach } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Group, GroupMember } from '../domain/group';
@@ -245,6 +245,8 @@ interface MembersListProps {
 }
 
 function MembersList({ groupId, sport, refused, group, friends = false }: MembersListProps) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const read = useGroupMembers(groupId, sport);
   const readerId = useReaderId();
   const members = read.data;
@@ -261,7 +263,7 @@ function MembersList({ groupId, sport, refused, group, friends = false }: Member
 
   return (
     <>
-      <ScrollView contentContainerStyle={s.body}>
+      <ScrollView contentContainerStyle={[s.body, { paddingBottom: reach + theme.space.lg }]}>
         {members === undefined ? (
           read.error === null ? null : (
             <ReadFailure
@@ -420,7 +422,6 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   body: {
     paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
   card: { gap: theme.space.sm },

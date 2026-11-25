@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { clearStoredTokens, getSessionStatus, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { theme } from '@/shared/ui';
 import {
   launchSignedIn,
   resetClipboard,
@@ -48,6 +49,14 @@ import {
   type GroupSetup,
 } from '@/test-support/officialGroupsServer';
 import { NEW_MEMBER_RELIABILITY } from '@/test-support/playerRecord';
+import {
+  ADMINISTRATORS_BAR,
+  barFloats,
+  bottomOf,
+  clearanceAbove,
+  floatOf,
+  pageOf,
+} from '@/test-support/tabBarReach';
 import {
   errorResponse,
   installTransport,
@@ -162,6 +171,23 @@ describe('the Groups tab', () => {
     expect(await screen.findByText(COPY.groups.emptyTitle)).toBeTruthy();
     expect(screen.getByText(COPY.groups.emptyLine)).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.groups.newGroupLabel })).toBeTruthy();
+  });
+
+  /**
+   * #881 (ADR-0210 §3): the area's bar floats over its screens as the player's does, and the area
+   * ends at **its** reach — its own bar, shorter by the disc it does not have. *New group* stands a
+   * gutter above it, and the last card scrolls clear of the button as it did.
+   */
+  it('floats its bar over the list, New group a gutter above it and the last card clear of both', async () => {
+    await launchAsAdministrator([O3_CLUB_GROUP, OPEN_PLAY_GROUP]);
+
+    expect(barFloats()).toBe(true);
+    const newGroup = floatOf(screen.getByRole('button', { name: COPY.groups.newGroupLabel }));
+    expect(bottomOf(newGroup) - ADMINISTRATORS_BAR).toBe(theme.size.gutter);
+    const list = pageOf(await screen.findByText(O3_CLUB_GROUP.name));
+    expect(clearanceAbove(list as NonNullable<typeof list>, ADMINISTRATORS_BAR)).toBe(
+      theme.size.btnLg + 2 * theme.size.gutter,
+    );
   });
 });
 

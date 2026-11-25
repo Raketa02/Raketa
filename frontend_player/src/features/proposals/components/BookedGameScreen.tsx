@@ -116,7 +116,14 @@ import { GamePairingCard, tapsAreOpen } from '@/features/games/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { formatZloty } from '@/shared/formatting/ratingFormat';
 import { showToast } from '@/shared/store/toast.store';
-import { behindOverlay, Button, courtSeatCount, ScreenHeader, theme } from '@/shared/ui';
+import {
+  behindOverlay,
+  Button,
+  courtSeatCount,
+  ScreenHeader,
+  theme,
+  useTabBarReach,
+} from '@/shared/ui';
 
 import { peopleOn, rowsOf, type DeckPerson } from '../domain/deck';
 import { vibeColumnsOf } from '../domain/details';
@@ -217,6 +224,8 @@ function Booked({
   readonly receivedAt: number;
   readonly groupName: string | undefined;
 }) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const me = useCurrentUser().data?.id;
   const room = useBookingRoom(game.bookingId);
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
@@ -305,7 +314,7 @@ function Booked({
                 ),
               })}
         />
-        <ScrollView contentContainerStyle={s.body}>
+        <ScrollView contentContainerStyle={[s.body, { paddingBottom: reach + theme.size.gutter }]}>
           <View style={s.game}>
             <GameGround />
             <View accessible accessibilityRole="header">

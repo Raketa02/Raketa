@@ -156,6 +156,15 @@ the list asks for nothing**: a new list starts at its top, and would otherwise r
 before it reached the reader. The reader's own drag takes the list back. A jump refused says why where the button stood, with _Try
 again_.
 
+**The page ends at the tab bar's reach, and its rows do not pass under the bar**
+([#881](https://github.com/Raketa02/Raketa/issues/881), 2026-11-25; design-system §10.1). Every other
+tab screen now runs to the phone's foot under the floating bar and pads its end by the reach; this one
+ends its layout at the reach, as a screen with a pinned button does. **On screen** and **centred** are
+the list's own measure of its frame — FlatList's viewability, which shows the button, and
+`scrollToIndex`'s middle — and it takes no inset, so a list running under the bar would call a row
+hidden behind it seen and centre the reader's row half the bar too low. The list keeps its own end
+(15, or the room the button covers) and the button its gutter, both inside the frame.
+
 **While a jump reads the page around the reader, the button says so: _◌ Finding you…_**
 ([#869](https://github.com/Raketa02/Raketa/issues/869); the loading-shimmer log §9). It is
 `Button`'s own `busy`: the spinner before the busy word at the dark fill, the busy word the button's

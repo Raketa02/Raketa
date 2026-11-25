@@ -84,12 +84,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PaymentSetupSheet } from '@/features/payments/types';
 import type { AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
-import { announce, theme, UndoToast } from '@/shared/ui';
+import { announce, theme, UndoToast, useRoomAtTheBottom } from '@/shared/ui';
 
 import { refusalOutcome, rescueGoneOf, type DeckCard, type RescueGone } from '../domain/deck';
 import {
@@ -143,16 +142,16 @@ interface Celebrating {
 }
 
 export interface FillProviderProps {
-  /** How far above the bottom inset the toast sits — the bar's height while the bar is drawn. */
-  readonly toastAbove: number;
   /** *Open game* — the shell's move: Home laid down, the booked game's details over it (#556). */
   readonly openGame: (bookingId: string) => void;
   readonly children: ReactNode;
 }
 
-export function FillProvider({ toastAbove, openGame, children }: FillProviderProps) {
+export function FillProvider({ openGame, children }: FillProviderProps) {
   const client = useQueryClient();
-  const insets = useSafeAreaInsets();
+  // The Undo toast follows the bar (ADR-0210 §3): 9 above its reach while it is drawn, and 9 above
+  // the bottom inset while it stands down — in the chat, it sits where the bar would have been.
+  const roomBelow = useRoomAtTheBottom();
 
   const [counting, setCounting] = useState<Counting | null>(null);
   /** Re-rendered once a second while a booking counts down — the toast's words. */
@@ -407,8 +406,9 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
 
         {counting === null ? null : (
           <View
+            testID="undo-toast-host"
             pointerEvents="box-none"
-            style={[s.toastHost, { bottom: toastAbove + insets.bottom + theme.space.sm }]}
+            style={[s.toastHost, { bottom: roomBelow + theme.space.sm }]}
           >
             <UndoToast
               message={bookingIn(undoSecondsLeft(counting.endsAt, Date.now()))}

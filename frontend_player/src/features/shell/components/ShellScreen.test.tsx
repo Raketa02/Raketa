@@ -7,14 +7,18 @@
  * CTA inside the scroller is a CTA that leaves the screen. And a bottom inset taken here as
  * well as by the tab bar is 34pt of nothing above the home indicator, which reads as padding
  * rather than as a bug.
+ *
+ * **Where the screen ends is the bar's reach** (ADR-0210 §3, #881): the bar floats over the
+ * screen's foot, so a page that forgot it would leave its last row under the bar, and a CTA that
+ * forgot it would sit under the bar. Neither throws.
  */
 
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
-import { Children, type ReactNode } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Children, useState, type ReactNode } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, type Metrics } from 'react-native-safe-area-context';
 
-import { TopSafeArea } from '@/shared/ui';
+import { theme, TopSafeArea, useSaysTabBarReach } from '@/shared/ui';
 
 import { ShellScreen } from './ShellScreen';
 
@@ -24,15 +28,46 @@ const METRICS: Metrics = {
   insets: { top: 47, left: 0, right: 0, bottom: 34 },
 };
 
-function renderScreen(action?: ReactNode) {
+/**
+ * The player's bar's height at the default text size (10.2) — worked out from the theme, never read
+ * back from the bar: the hairline, the top padding, the ⚡Play disc, the gap, the label, the foot.
+ */
+const PLAYERS_BAR =
+  1 +
+  theme.space.xs +
+  theme.size.fab +
+  theme.space.xxs +
+  theme.type.tag.lineHeight +
+  theme.space.md;
+
+/** The reach on this phone while the bar is drawn: the bar, and the bottom inset it pads itself with. */
+const REACH = PLAYERS_BAR + METRICS.insets.bottom;
+
+/** The tab shell around the screen: its bar drawn, or standing down as in the chat. */
+function Shell({ drawn, children }: { readonly drawn: boolean; readonly children: ReactNode }) {
+  useSaysTabBarReach('player', drawn);
+  return <>{children}</>;
+}
+
+function renderScreen(action?: ReactNode, bar: 'drawn' | 'standing down' | 'none' = 'none') {
+  const page = (
+    <ShellScreen title="Find a game" action={action}>
+      <Text>the page</Text>
+    </ShellScreen>
+  );
   return render(
     <SafeAreaProvider initialMetrics={METRICS}>
-      <ShellScreen title="Find a game" action={action}>
-        <Text>the page</Text>
-      </ShellScreen>
+      {bar === 'none' ? page : <Shell drawn={bar === 'drawn'}>{page}</Shell>}
     </SafeAreaProvider>,
   );
 }
+
+/** The screen's own frame — what `TopSafeArea` pads. */
+const frame = () =>
+  StyleSheet.flatten(screen.UNSAFE_getByType(TopSafeArea).findByType(View).props.style);
+
+/** Where the page's content ends: the padding under its last row. */
+const pageEnd = () => StyleSheet.flatten(scroller().props.contentContainerStyle).paddingBottom;
 
 function scroller() {
   return screen.UNSAFE_getByType(ScrollView);
@@ -98,18 +133,74 @@ describe('a screen with no title', () => {
 
 describe('the safe area', () => {
   it('takes the top edge on its first frame and leaves the bottom to the tab bar', () => {
-    renderScreen();
+    renderScreen(undefined, 'drawn');
 
-    // The top inset and no other: the bottom one is the bar's, and `TabBar` has its own suite
-    // proving it takes it. Padded from the provider on the first render, never by a native
-    // `SafeAreaView`, which measures itself a frame late — a tab root arrives with no
+    // The top inset and no other: the bottom one is in the bar's reach, and `TabBar` has its own
+    // suite proving it pads itself with it. Padded from the provider on the first render, never by
+    // a native `SafeAreaView`, which measures itself a frame late — a tab root arrives with no
     // transition, so that frame was the whole tab press on Android: the header blinked (#529).
-    const frame = StyleSheet.flatten(
-      screen.UNSAFE_getByType(TopSafeArea).findByType(View).props.style,
-    );
-    expect(frame.paddingTop).toBe(METRICS.insets.top);
-    expect(frame.paddingBottom).toBeUndefined();
+    expect(frame().paddingTop).toBe(METRICS.insets.top);
+    expect(frame().paddingBottom).toBeUndefined();
     expect(screen.UNSAFE_queryAllByType(SafeAreaView)).toHaveLength(0);
+  });
+});
+
+/**
+ * **The screen draws to the bottom of the phone and ends at the bar's reach** (10.1, ADR-0210 §3):
+ * the bar floats over its foot, so the page runs under it and ends 15 clear of it — today's gap above
+ * the bar — and a screen with a CTA ends its layout at the reach instead, the CTA above the bar in
+ * flow. Standing down, as in the chat, the reach is nothing and the page ends at its own 15.
+ */
+describe('where the screen ends', () => {
+  it('runs the page under the bar, ending it with padding of the reach and 15', () => {
+    renderScreen(undefined, 'drawn');
+
+    expect(frame().paddingBottom).toBeUndefined();
+    expect(pageEnd()).toBe(REACH + theme.space.lg);
+  });
+
+  it('ends the layout at the reach for a CTA, and the page at the CTA', () => {
+    renderScreen(<Text>Save</Text>, 'drawn');
+
+    expect(frame().paddingBottom).toBe(REACH);
+    expect(pageEnd()).toBe(theme.space.lg);
+    // In flow, under the page — a sibling, never inside the scroller or floating over it.
+    expect(siblings()).toHaveLength(3);
+    expect(within(scroller()).queryByText('Save')).toBeNull();
+  });
+
+  it.each([
+    ['standing down, as in the chat', 'standing down'],
+    ['absent, outside every shell', 'none'],
+  ] as const)('ends the page at its own 15 with the bar %s', (_, bar) => {
+    renderScreen(undefined, bar);
+
+    expect(pageEnd()).toBe(theme.space.lg);
+    expect(frame().paddingBottom).toBeUndefined();
+  });
+
+  it('moves with the bar: back to the reach when the bar is drawn again', () => {
+    function Toggled() {
+      const [drawn, setDrawn] = useState(false);
+      return (
+        <Shell drawn={drawn}>
+          <Pressable accessibilityLabel="leave the chat" onPress={() => setDrawn(true)} />
+          <ShellScreen title="Find a game">
+            <Text>the page</Text>
+          </ShellScreen>
+        </Shell>
+      );
+    }
+    render(
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <Toggled />
+      </SafeAreaProvider>,
+    );
+    expect(pageEnd()).toBe(theme.space.lg);
+
+    fireEvent.press(screen.getByLabelText('leave the chat'));
+
+    expect(pageEnd()).toBe(REACH + theme.space.lg);
   });
 });
 

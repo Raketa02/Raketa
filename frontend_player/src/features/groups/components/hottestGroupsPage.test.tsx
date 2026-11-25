@@ -47,6 +47,7 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { PLAYERS_BAR } from '@/test-support/tabBarReach';
 
 import type { HottestRow } from '../domain/group';
 import { groupKeys } from '../hooks/groupKeys';
@@ -457,8 +458,10 @@ describe('its states', () => {
       expect(height).toBe(hottestCardHeight(window.fontScale));
     }
     const step = hottestCardHeight(window.fontScale) + theme.space.sm;
-    expect(cards.length * step).toBeGreaterThanOrEqual(window.height);
-    expect((cards.length - 1) * step).toBeLessThan(window.height);
+    // What shows above the floating bar — the strip under it is no room for a line (#881).
+    const shown = window.height - PLAYERS_BAR;
+    expect(cards.length * step).toBeGreaterThanOrEqual(shown);
+    expect((cards.length - 1) * step).toBeLessThan(shown);
 
     await act(async () => first.land());
 

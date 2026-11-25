@@ -31,7 +31,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { authKeys, useCurrentUser, useSignOut, type AdministeredClub } from '@/features/auth/types';
 import { showToast } from '@/shared/store/toast.store';
-import { AdministratorTabBar, theme } from '@/shared/ui';
+import { AdministratorTabBar, theme, useSaysTabBarReach } from '@/shared/ui';
 
 import { afterRemoval } from '../domain/removal';
 import { useAreaAccess } from '../hooks/useAreaAccess';
@@ -107,6 +107,9 @@ function useLeaveOnRemoval(
 
 function AreaShell({ club }: { readonly club: AdministeredClub }) {
   const pathname = usePathname();
+  // The area's bar floats over its screens as the player's does, and this shell says its reach —
+  // its own shorter bar's (ADR-0210 §3): the area's lists and forms end at it the same way.
+  useSaysTabBarReach('administrator', true);
 
   return (
     <View style={s.area}>

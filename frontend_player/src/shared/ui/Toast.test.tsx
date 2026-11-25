@@ -12,13 +12,14 @@
  */
 
 import { act, fireEvent, render as renderTree, screen } from '@testing-library/react-native';
+import type { ReactNode } from 'react';
 import { AccessibilityInfo, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { showToast, useToastQueue } from '@/shared/store/toast.store';
 
 import { SplashCoverProvider } from './overlay';
-import { TAB_BAR_HEIGHT } from './TabBar';
+import { useSaysTabBarReach } from './tabBarReach';
 import { theme } from './theme';
 import { ToastHost } from './Toast';
 
@@ -30,10 +31,33 @@ const METRICS: Metrics = {
   insets: { top: 47, left: 0, right: 0, bottom: 34 },
 };
 
-/** The host is mounted once at the root, so every case here renders exactly one of it. */
-function render(): void {
+/**
+ * The player's bar's height at the default text size — the hairline, the top padding, the ⚡Play
+ * disc, the gap, the label and the foot (10.2) — worked out here from the theme rather than read back
+ * from the bar, so a reach that drifted from it goes red.
+ */
+const PLAYERS_BAR =
+  1 +
+  theme.space.xs +
+  theme.size.fab +
+  theme.space.xxs +
+  theme.type.tag.lineHeight +
+  theme.space.md;
+
+/** A shell, under the host as the tabs are: its bar drawn, or standing down as in the chat. */
+function Shell({ drawn, children }: { readonly drawn: boolean; readonly children?: ReactNode }) {
+  useSaysTabBarReach('player', drawn);
+  return <>{children}</>;
+}
+
+/**
+ * The host is mounted once at the root, so every case here renders exactly one of it — beside a
+ * shell when a case says the bar is drawn or standing down, and with none at all otherwise.
+ */
+function render(shell?: { readonly drawn: boolean }): void {
   renderTree(
     <SafeAreaProvider initialMetrics={METRICS}>
+      {shell === undefined ? null : <Shell drawn={shell.drawn} />}
       <ToastHost />
     </SafeAreaProvider>,
   );
@@ -221,13 +245,20 @@ describe('the host', () => {
     expect(hostStyle()?.zIndex).toBe(theme.layer.toast);
   });
 
-  it('sits above the tab bar and the bottom inset, rather than over the app’s own chrome', () => {
-    render();
+  /**
+   * **9 above the bar's full reach, on every screen** (ADR-0210 §3) — its height and the bottom inset
+   * from the insets alone, whether the bar is drawn, standing down or absent. In the chat, where the
+   * bar stands down, that is what keeps the toast clear of the composer.
+   */
+  it.each([
+    ['the bar drawn', { drawn: true }],
+    ['the bar standing down, as in the chat', { drawn: false }],
+    ['no shell at all', undefined],
+  ] as const)('sits 9 above the bar’s full reach with %s', (_, shell) => {
+    render(shell);
     act(() => showToast({ message: 'Saved' }));
 
-    // The bar's height is derived where the bar is drawn; a copy of it here would be the
-    // two numbers `TAB_BAR_HEIGHT` exists to keep as one.
-    expect(hostStyle()?.bottom).toBe(TAB_BAR_HEIGHT + METRICS.insets.bottom + theme.space.sm);
+    expect(hostStyle()?.bottom).toBe(PLAYERS_BAR + METRICS.insets.bottom + theme.space.sm);
   });
 
   /** Rule C: white on `mint` is 4,07:1, so the settled toast is `mintInk`. */

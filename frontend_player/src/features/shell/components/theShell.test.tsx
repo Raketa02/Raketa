@@ -17,7 +17,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { AccessibilityInfo, StyleSheet, type ScrollView } from 'react-native';
+import { AccessibilityInfo, StyleSheet, View, type ScrollView } from 'react-native';
 
 import { authKeys, NICKNAME_ROW_TITLE } from '@/features/auth/types';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
@@ -49,7 +49,7 @@ import {
   scoreRingLabel,
 } from '@/features/player_record/types';
 import { HOME_GAME_COPY, proposalKeys } from '@/features/proposals/types';
-import { doorRowLabel, theme } from '@/shared/ui';
+import { doorRowLabel, theme, TopSafeArea } from '@/shared/ui';
 import {
   BOOKED_ROOM,
   BOOKING,
@@ -68,6 +68,13 @@ import {
   sheetTitle,
 } from '@/test-support/needsYourAnswer';
 import { scrollerOf } from '@/test-support/pinned';
+import {
+  barFloats,
+  barFrame,
+  clearanceAbove,
+  pageOf,
+  PLAYERS_BAR,
+} from '@/test-support/tabBarReach';
 import { pullDown } from '@/test-support/swipe';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -86,6 +93,7 @@ import {
   stubEntries,
   stubGate,
   stubHome,
+  stubMyGroups,
   stubNotices,
   stubOwnRecord,
   stubPaymentsToConfirm,
@@ -973,8 +981,8 @@ describe('the shell survives the gate re-reading the player', () => {
  * **The bar stands down inside a booked game's chat, and nowhere else.** The composer replaces it
  * there so the keyboard and the stream get the whole screen
  * ([#400](https://github.com/Raketa02/Raketa/issues/400)) — and it is *not rendered* rather than
- * hidden, because the bar is a flex sibling of the navigator and a hidden one would still take its
- * height and the bottom inset. The details the room is pushed over keep their bar, which is what a
+ * hidden, and its reach is nothing, because a hidden bar would still be a reach every screen kept
+ * clear of (#881). The details the room is pushed over keep their bar, which is what a
  * prefix match under `/booking/…` would get wrong.
  */
 describe('the bar stands down inside a booked game’s chat', () => {
@@ -1002,5 +1010,89 @@ describe('the bar stands down inside a booked game’s chat', () => {
 
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
     expect(tabs()).toHaveLength(3);
+  });
+});
+
+/**
+ * **The bar floats over the screen, and every screen ends at its reach** (#881, ADR-0210 §3, 10.1).
+ * It used to be a flex sibling under the stack, which ended every screen above it whether the screen
+ * knew or not; now the screens draw to the bottom of the phone and the bar is drawn over their foot,
+ * so a list that forgot the reach would leave its last row under the bar and nothing would throw.
+ * **Nothing looks different**: the bar is as white, as flush and as tall as before, and every list
+ * ends 15 above it as it did — the gap a page kept above the bar, now kept above its reach.
+ */
+describe('the bar floats over the screen, and the screens end at its reach', () => {
+  it('draws the bar over the screen at the phone’s foot — as tall, as white and as flush as before', async () => {
+    await launchIntoTheApp();
+
+    expect(barFloats()).toBe(true);
+    // 10.2's bar, unchanged: `surface`, the hairline over it, its paddings (the harness has no inset).
+    expect(barFrame()).toMatchObject({
+      backgroundColor: theme.color.surface,
+      borderTopWidth: 1,
+      borderTopColor: theme.color.line,
+      paddingTop: theme.space.xs,
+      paddingBottom: theme.space.md,
+    });
+  });
+
+  it('scrolls a long Home to its last game fully clear of the bar, by today’s 15', async () => {
+    stubHomeGames(
+      transport,
+      Array.from({ length: 8 }, (_, at) => {
+        const id = String(at + 1).padStart(12, '0');
+        return homeGame({
+          booking_id: `3f2b8c1e-0000-4000-8000-${id}`,
+          game_id: `4f2b8c1e-0000-4000-8000-${id}`,
+        });
+      }),
+    );
+    await launchSignedIn();
+
+    const games = await screen.findAllByRole('button', { name: HOME_GAME_COPY.openGame });
+    const page = pageOf(games[games.length - 1] as (typeof games)[number]);
+
+    expect(page).toBeDefined();
+    expect(clearanceAbove(page as NonNullable<typeof page>)).toBe(theme.space.lg);
+  });
+
+  it('scrolls a long Play to its last group fully clear of the bar, by today’s 15', async () => {
+    stubMyGroups(
+      transport,
+      Array.from({ length: 12 }, (_, at) => ({
+        id: `a0000000-0000-4000-8000-${String(at + 1).padStart(12, '0')}`,
+        kind: 'PLAYER' as const,
+        name: `Crew ${at + 1}`,
+        monogram: { letters: 'Cr', colour: 1 },
+        sports: ['PADEL' as const],
+        member_count: 6,
+        home_club: { id: 'c0000000-0000-4000-8000-000000000001', name: 'Centrum Ruchu' },
+      })),
+    );
+    await launchIntoTheApp();
+
+    pressTab('Play');
+    const page = pageOf(await screen.findByRole('button', { name: /^Crew 12,/ }));
+
+    expect(page).toBeDefined();
+    expect(clearanceAbove(page as NonNullable<typeof page>)).toBe(theme.space.lg);
+  });
+
+  it('ends You at the bar — Sign out pinned above it, and the rows ending above Sign out', async () => {
+    await launchIntoTheApp();
+    pressTab('You');
+    const signOut = await screen.findByLabelText('Sign out');
+
+    // The screen Sign out is pinned on — Home stays laid down under every tab, so there are two.
+    const you = screen
+      .UNSAFE_getAllByType(TopSafeArea)
+      .find((frame) => within(frame).queryByLabelText('Sign out') !== null);
+    const frame = StyleSheet.flatten((you as NonNullable<typeof you>).findByType(View).props.style);
+    // The layout ends at the reach, so Sign out sits above the bar in flow, never under it…
+    expect(frame.paddingBottom).toBe(PLAYERS_BAR);
+    // …and the rows end at Sign out, with nothing scrolling between it and the bar.
+    expect(scrollerOf(signOut)).toBeUndefined();
+    const rows = pageOf(screen.getByText(NICKNAME_ROW_TITLE));
+    expect(clearanceAbove(rows as NonNullable<typeof rows>, 0)).toBe(theme.space.lg);
   });
 });

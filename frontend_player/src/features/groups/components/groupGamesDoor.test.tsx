@@ -53,6 +53,7 @@ import {
   pickKind,
   shutTabMenu,
 } from '@/test-support/tabMenu';
+import { bottomOf, PLAYERS_BAR } from '@/test-support/tabBarReach';
 import {
   pressHardwareBack,
   stopWatchingHardwareBack,
@@ -473,6 +474,11 @@ describe('the deck never opens on the dimmed kind', () => {
       expect(
         screen.getByText('Keep your 7 competitive cards and get for-fun ones too.'),
       ).toBeTruthy();
+      // The area runs under the floating bar to the phone's foot (#881); what covers it ends at the
+      // bar's reach, so the door's last button scrolls clear of the bar — the code review's catch.
+      const layer = screen.getByTestId('games-deck-over');
+      expect(within(layer).getByTestId('kind-door')).toBeTruthy();
+      expect(bottomOf(layer)).toBe(PLAYERS_BAR);
       expect(useGameIntent.getState().intent).toBe('forFun');
       fireEvent.press(screen.getByRole('button', { name: 'Keep competitive' }));
       expect(panel()).toBeNull();

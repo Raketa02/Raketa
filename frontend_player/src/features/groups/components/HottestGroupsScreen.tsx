@@ -57,6 +57,7 @@ import {
   TopSafeArea,
   behindOverlay,
   theme,
+  useTabBarReach,
 } from '@/shared/ui';
 
 import type { HottestGroup } from '../domain/group';
@@ -118,7 +119,9 @@ function HottestGroupsSkeleton({ width }: { readonly width: number }) {
   const window = useWindowDimensions();
   const [room, setRoom] = useState<number>();
   const tall = hottestCardHeight(window.fontScale);
-  const cards = Math.ceil((room ?? window.height) / (tall + CARD_GAP));
+  // What shows above the floating bar: the strip under it holds no card (#881, the code review).
+  const reach = useTabBarReach();
+  const cards = Math.ceil(Math.max(0, (room ?? window.height) - reach) / (tall + CARD_GAP));
 
   return (
     <View
@@ -142,6 +145,8 @@ function Body({
   readonly taps: HottestTaps;
   readonly width: number;
 }) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   // A pull is the pull's own state, never the query's: a background read spins nothing.
   const [pulling, setPulling] = useState(false);
 
@@ -169,7 +174,7 @@ function Body({
       testID="hottest-groups-list"
       data={list.groups}
       keyExtractor={(group) => group.id}
-      contentContainerStyle={s.content}
+      contentContainerStyle={[s.content, { paddingBottom: reach + theme.space.xxl }]}
       renderItem={({ item }) => (
         <HottestGroupCard
           group={item}
@@ -211,7 +216,6 @@ const s = StyleSheet.create({
   // 9 between cards; 15 at the gutter (Appendix B).
   content: {
     paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.xxl,
     gap: CARD_GAP,
   },
   // The list's own gutter and gaps, clipped at the room's foot.

@@ -46,6 +46,7 @@ import {
 } from '@/test-support/onboardingRouter';
 import { layOutHomeParts } from '@/test-support/onScreen';
 import { scrollerOf } from '@/test-support/pinned';
+import { PLAYERS_BAR } from '@/test-support/tabBarReach';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import { HOME_COPY } from './shellCopy';
@@ -365,7 +366,8 @@ describe('the page', () => {
     });
     layOutHomeParts();
     act(() => {
-      fireEvent(page as never, 'layout', layout(0, 700));
+      // 700 shows above the bar; the scroller runs under it to the phone's foot (#881).
+      fireEvent(page as never, 'layout', layout(0, 700 + PLAYERS_BAR));
       fireEvent(screen.getByTestId('for-you'), 'layout', layout(500, 400));
       fireEvent(screen.getByTestId('same-vibe'), 'layout', layout(150, 46));
       fireEvent(lineHeader(VIBE), 'layout', layout(0, 44));
@@ -398,7 +400,8 @@ describe('the page', () => {
 
     layOutHomeParts();
     act(() => {
-      fireEvent(page as never, 'layout', layout(0, 700));
+      // 700 shows above the bar; the scroller runs under it to the phone's foot (#881).
+      fireEvent(page as never, 'layout', layout(0, 700 + PLAYERS_BAR));
       fireEvent(screen.getByTestId('for-you'), 'layout', layout(500, 400));
       fireEvent(screen.getByTestId('hottest-groups'), 'layout', layout(30, 46));
       fireEvent(lineHeader(GROUPS), 'layout', layout(0, 44));

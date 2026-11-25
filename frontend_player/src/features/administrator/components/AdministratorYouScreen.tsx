@@ -43,7 +43,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AccountPanel, useCurrentUser } from '@/features/auth/types';
 import { ReadFailure } from '@/features/groups/types';
-import { Card, DoorRow, ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
+import { Card, DoorRow, ScreenHeader, theme, TopSafeArea, useTabBarReach } from '@/shared/ui';
 
 import { useAdministeredGroups } from '../hooks/useOfficialGroups';
 
@@ -55,13 +55,15 @@ import { ProfileChip } from './ProfileChip';
 const COPY = ADMINISTRATOR_COPY.you;
 
 export function AdministratorYouScreen({ clubId }: { readonly clubId: string }) {
+  // Sign out is pinned, so the screen ends at the bar's reach (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const user = useCurrentUser();
   // The area opened on this read, so it is here; *acts as a player* until it says otherwise, so
   // the row never flashes in for an account that plays.
   const plays = user.data?.profiles.actsAsPlayer ?? true;
 
   return (
-    <TopSafeArea style={s.screen}>
+    <TopSafeArea style={[s.screen, { paddingBottom: reach }]}>
       <ScreenHeader
         title={user.data?.nickname ?? COPY.title}
         right={<ProfileChip worn={{ kind: 'administrator', clubId }} />}

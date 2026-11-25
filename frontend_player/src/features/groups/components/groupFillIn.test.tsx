@@ -37,6 +37,7 @@ import {
   stubFillIn,
   stubGroupDeck,
 } from '@/test-support/groupDeck';
+import { clearanceAbove, pageOf } from '@/test-support/tabBarReach';
 import { bookedSides, bookingDetails } from '@/test-support/home';
 import {
   LIVE_YESES_PATH,
@@ -309,6 +310,18 @@ describe('the Fill in tab (split mock 1)', () => {
 
     expect(await screen.findByTestId(`seat-to-fill-${row.booking_id}`)).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  // #881: the bar floats over the page's foot, so the page ends at its reach and the gutter.
+  it('scrolls a long Fill in to its last row fully clear of the bar, by the page’s gutter', async () => {
+    const rows = Array.from({ length: 8 }, () => seatToFill());
+    await openFillIn(() => rows);
+
+    const last = rows[rows.length - 1] as Wire['SeatToFillSchema'];
+    const page = pageOf(await screen.findByTestId(`seat-to-fill-${last.booking_id}`));
+
+    expect(page?.props.testID).toBe('group-page-body');
+    expect(clearanceAbove(page as NonNullable<typeof page>)).toBe(theme.size.gutter);
   });
 });
 

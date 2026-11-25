@@ -52,6 +52,7 @@ import {
   behindOverlay,
   theme,
   type SportPillWords,
+  useTabBarReach,
 } from '@/shared/ui';
 import { SPORTS, type Sport } from '@/shared/vocabulary/sport';
 
@@ -177,6 +178,8 @@ function Body<Person extends { readonly playerId: string }>({
   emptyLine,
   testID,
 }: BodyProps<Person>) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   // A pull is the pull's own state, never the query's: a background read spins nothing.
   const [pulling, setPulling] = useState(false);
 
@@ -206,7 +209,7 @@ function Body<Person extends { readonly playerId: string }>({
       keyExtractor={(person) => person.playerId}
       numColumns={columns}
       {...(columns > 1 ? { columnWrapperStyle: s.columns } : {})}
-      contentContainerStyle={s.content}
+      contentContainerStyle={[s.content, { paddingBottom: reach + theme.space.xxl }]}
       renderItem={({ item }) => renderPerson(item, column)}
       ListEmptyComponent={
         <Text testID={`${testID}-empty`} style={s.empty}>
@@ -251,7 +254,9 @@ function SeeAllSkeleton({
   const window = useWindowDimensions();
   const [room, setRoom] = useState<number>();
   const tall = height(column, window.fontScale);
-  const lines = Math.ceil((room ?? window.height) / (tall + COLUMN_GAP));
+  // What shows above the floating bar: the strip under it holds no line (#881, the code review).
+  const reach = useTabBarReach();
+  const lines = Math.ceil(Math.max(0, (room ?? window.height) - reach) / (tall + COLUMN_GAP));
 
   return (
     <View
@@ -293,7 +298,6 @@ const s = StyleSheet.create({
   columns: { gap: COLUMN_GAP },
   content: {
     paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.xxl,
     gap: COLUMN_GAP,
   },
   empty: {

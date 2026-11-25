@@ -183,6 +183,7 @@ import {
   type SegmentMenu,
   type SegmentOption,
   type TabMenuLine,
+  useTabBarReach,
 } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -327,6 +328,8 @@ export interface GroupScreenProps {
 }
 
 export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreenProps) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const read = useGroup(groupId);
   const group = read.data;
 
@@ -626,7 +629,7 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
                 {scrolled ? (
                   <ScrollView
                     testID="group-page-body"
-                    contentContainerStyle={s.body}
+                    contentContainerStyle={[s.body, { paddingBottom: reach + theme.size.gutter }]}
                     refreshControl={tab === 'friends' ? undefined : pullControl}
                     // Under an open menu the page takes no touch: a press there only closes it.
                     pointerEvents={menuOpen ? 'none' : 'auto'}
@@ -662,7 +665,10 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
                     comes in with the header and the tab bar (#875), never over a page still
                     shimmering. */}
                 {top.landed && tab === 'youreIn' && toAdd.length === 0 ? (
-                  <View testID="post-a-game-fab" style={s.postAGame}>
+                  <View
+                    testID="post-a-game-fab"
+                    style={[s.postAGame, { bottom: reach + theme.size.gutter }]}
+                  >
                     <PostAGame groupId={groupId} />
                   </View>
                 ) : null}
@@ -775,6 +781,7 @@ const s = StyleSheet.create({
   // The deck while another tab is on: kept, and not laid out.
   gone: { display: 'none' },
   body: { padding: theme.size.gutter, gap: theme.space.sm },
-  // Over the page's bottom corner, at the gutter (play 46).
-  postAGame: { position: 'absolute', right: theme.size.gutter, bottom: theme.size.gutter },
+  // Over the page's bottom corner, at the gutter (play 46) — above the bar's reach, set where
+  // it is read.
+  postAGame: { position: 'absolute', right: theme.size.gutter },
 });

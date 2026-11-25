@@ -88,6 +88,7 @@ import {
   pickKind,
   shutTabMenu,
 } from '@/test-support/tabMenu';
+import { clearanceAbove, pageOf, PLAYERS_BAR } from '@/test-support/tabBarReach';
 import { dragTo, release, swipe } from '@/test-support/swipe';
 import { servedReliability } from '@/test-support/playerRecord';
 import {
@@ -1068,6 +1069,39 @@ describe('the states around the deck', () => {
     fireEvent.press(retry);
 
     expect(await screen.findByLabelText(COPY.details)).toBeTruthy();
+  });
+});
+
+/**
+ * **The deck stands above the bar** (#881, ADR-0210 §3): the bar floats over the page's foot, so the
+ * stage takes what the page leaves down to the buttons and the buttons stand 15 above the bar's
+ * reach — the gutter they stood at above the bar before it floated. So does the block that stands
+ * where the deck will, ending where the buttons will.
+ */
+describe('the deck above the bar (#881)', () => {
+  it('stands its ✕ · i · ✓ 15 above the bar, the last thing on the page', async () => {
+    const card = deckCard();
+    await openGames(groupDeck({ cards: [card] }));
+    await screen.findByTestId(`game-card-${card.proposal_id}`);
+
+    const page = pageOf(screen.getByTestId('games-deck-buttons', HIDDEN_TOO));
+
+    expect(page?.props.testID).toBe('games-deck-body');
+    expect(clearanceAbove(page as NonNullable<typeof page>)).toBe(theme.space.lg);
+  });
+
+  it('ends the first read’s block where the buttons will stand', async () => {
+    stubMyGroups(transport, [CREW]);
+    transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(PAGE));
+    transport.on('GET', deckPath(CREW.id), neverResponds());
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText('Play'));
+    fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
+
+    const [block] = await screen.findAllByTestId('deck-skeleton', HIDDEN_TOO);
+    const end = StyleSheet.flatten((block as NonNullable<typeof block>).props.style).paddingBottom;
+
+    expect(end).toBe(PLAYERS_BAR + theme.space.lg);
   });
 });
 

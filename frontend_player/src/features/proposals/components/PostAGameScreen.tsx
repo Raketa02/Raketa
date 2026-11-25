@@ -64,6 +64,7 @@ import {
   behindOverlay,
   courtSeatCount,
   theme,
+  useTabBarReach,
 } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 import { sportLabel } from '@/features/onboarding/types';
@@ -156,6 +157,8 @@ export function PostAGameScreen({
   onLeave,
   onLanded,
 }: PostAGameScreenProps) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const draft = usePostDraftStore((state) => draftFor(state, groupId));
   const keepIn = usePostDraftStore((state) => state.keep);
   const forget = usePostDraftStore((state) => state.forget);
@@ -328,7 +331,7 @@ export function PostAGameScreen({
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.screen} {...behindOverlay(overlay)}>
         <ScreenHeader title={COPY.title} onBack={onLeave} backLabel={backLabel} />
-        <ScrollView contentContainerStyle={s.body}>
+        <ScrollView contentContainerStyle={[s.body, { paddingBottom: reach + theme.space.xxxl }]}>
           <Control label={COPY.sport}>
             <ScrollView
               horizontal
@@ -502,7 +505,8 @@ function GridPlaceholder({
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
-  body: { padding: theme.size.gutter, gap: theme.space.lg, paddingBottom: theme.space.xxxl },
+  // Its end is the bar's reach and `xxxl`, set where the reach is read.
+  body: { padding: theme.size.gutter, gap: theme.space.lg },
   control: { gap: theme.space.sm },
   flab: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
   aside: { ...theme.type.rlLabel, color: theme.color.muted },

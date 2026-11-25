@@ -16,11 +16,18 @@ import { Dimensions, ScrollView } from 'react-native';
 
 import { theme } from '@/shared/ui';
 
+import { PLAYERS_BAR } from './tabBarReach';
+
 /** `POST /on-screen` — the cards that came on screen in one row (#796). */
 export const ON_SCREEN_PATH = '/api/v1/on-screen';
 
-/** How tall Home's page is between the header and the tab bar. */
+/** How tall Home's page shows between the header and the tab bar. */
 export const PAGE_HEIGHT = 700;
+/**
+ * How tall its scroller measures — the page and the strip under the bar, since the bar floats over
+ * the page's foot (#881). What shows is this less the bar's reach: `PAGE_HEIGHT`.
+ */
+const SCROLLER_HEIGHT = PAGE_HEIGHT + PLAYERS_BAR;
 /** Where a line's rail stands under the line's top — its header's height, the fold's place. */
 const RAIL_TOP = 30;
 /** How tall a rail is — its cards' height. */
@@ -80,7 +87,7 @@ export function layOutHome(lines: Readonly<Record<string, number>>): void {
   if (first === undefined) return;
   layOutHomeParts();
   act(() => {
-    fireEvent(pageOf(screen.getByTestId(first)), 'layout', layout(0, 0, width, PAGE_HEIGHT));
+    fireEvent(pageOf(screen.getByTestId(first)), 'layout', layout(0, 0, width, SCROLLER_HEIGHT));
     fireEvent(screen.getByTestId('for-you'), 'layout', layout(theme.size.gutter, 0, width, 4000));
     for (const [testId, top] of Object.entries(lines)) {
       fireEvent(screen.getByTestId(testId), 'layout', layout(0, top, width, 300));
@@ -104,7 +111,7 @@ export function scrollHomeTo(lineTestId: string, y: number): void {
     fireEvent.scroll(pageOf(screen.getByTestId(lineTestId)), {
       nativeEvent: {
         contentOffset: { x: 0, y },
-        layoutMeasurement: { width, height: PAGE_HEIGHT },
+        layoutMeasurement: { width, height: SCROLLER_HEIGHT },
         contentSize: { width, height: 4000 },
       },
     });

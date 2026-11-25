@@ -20,6 +20,7 @@ import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { theme } from '@/shared/ui';
 import {
   DECK_READ_AT,
   KAROL,
@@ -59,6 +60,7 @@ import {
 } from '@/test-support/onboardingRouter';
 import { fakeClipboard, fakeHaptics, fakePayments, fakeShare } from '@/test-support/platform';
 import { servedReliability } from '@/test-support/playerRecord';
+import { bottomOf, PLAYERS_BAR } from '@/test-support/tabBarReach';
 import {
   errorResponse,
   installTransport,
@@ -449,6 +451,16 @@ describe('+ Post a game (the screens A3, split override 1)', () => {
     fireEvent.press(within(floating).getByRole('button', { name: START.postAGame }));
 
     await waitFor(() => expect(screen).toHavePathname(`${GROUP_PATH}/post`));
+  });
+
+  // #881: the bar floats over the page's foot, so the button stands above its reach — the gutter
+  // above the bar it stood at before the bar floated.
+  it('stands the gutter above the bar', async () => {
+    await openYoureIn();
+
+    const floating = await screen.findByTestId('post-a-game-fab');
+
+    expect(bottomOf(floating) - PLAYERS_BAR).toBe(theme.size.gutter);
   });
 });
 

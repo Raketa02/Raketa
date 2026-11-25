@@ -1,5 +1,5 @@
 /**
- * The shell: one stack, and the bar under it — **Home · ⚡Play · You**.
+ * The shell: one stack, and the bar floating over its foot — **Home · ⚡Play · You**.
  *
  * **A `Stack`, not `<Tabs>`.** `<Tabs>` keeps a separate history per tab and restores it when you
  * come back — which is what it is for, and which breaks *back goes where I came from* without a
@@ -8,11 +8,18 @@
  * ([#227](https://github.com/Raketa02/Raketa/issues/227)). `shellNavigation` replaces rather than
  * pushes, and this file draws the result.
  *
- * **The bar is mounted here, once, below the navigator.** Design-system 10.1 lists it inside
- * the screen structure, and it is a flex sibling exactly as that says — but a sibling of the
- * *navigator*, not of each screen: a bar rendered per screen re-mounts on every push and
- * slides in with the screen it belongs behind. One mount is also what lets the bar own the
- * bottom safe-area inset while every screen takes only the top edge.
+ * **The bar is mounted here, once, over the navigator** — a sibling of the *navigator*, not of
+ * each screen: a bar rendered per screen re-mounts on every push and slides in with the screen it
+ * belongs behind. One mount is also what lets the bar own the bottom safe-area inset while every
+ * screen takes only the top edge.
+ *
+ * **It floats, and owns no layout** (10.1, [ADR-0210](../../../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md)
+ * §3, [#881](https://github.com/Raketa02/Raketa/issues/881)). It was a flex sibling under the
+ * stack, which ended every screen above it for free; now every screen inside the tabs draws to the
+ * bottom of the phone and the bar is drawn over its foot. What it takes there is its **reach** —
+ * its height and the bottom inset while it is drawn, nothing while it stands down — and this shell
+ * says it (`useSaysTabBarReach`). Every scroller ends at reach + its gap, the deck's buttons and
+ * Post a game stand above it, a pinned button's screen ends at it, and the Undo toast follows it.
  *
  * The active column is read from the current path rather than held in state. The bar is a
  * drawn object that takes an answer, and the answer is a fact about where the player is —
@@ -51,10 +58,10 @@
  * screen ([#400](https://github.com/Raketa02/Raketa/issues/400)). Which screen is
  * `barStandsDown`'s answer, read off the same pathname the active column is — the shell learns
  * that *a route* stands the bar down and nothing about what a room is. What it does with the
- * answer is **not render** the bar rather than hide it: the bar is a flex sibling of the
- * navigator, so a bar that was present and invisible would still take `TAB_BAR_HEIGHT` and the
- * bottom inset, and the composer would sit that far above the keyboard. Nothing animates it away
- * — the mock draws it absent, and 1.5 is *nothing animates that does not have to*.
+ * answer is **not render** the bar rather than hide it, and say its reach is nothing: a bar that
+ * was present and invisible would still be a reach the screens kept clear of, and the composer
+ * would sit that far above the keyboard. Nothing animates it away — the mock draws it absent, and
+ * 1.5 is *nothing animates that does not have to*.
  *
  * With the bar gone the bottom safe-area inset has no owner here, and the room takes it on its
  * own frame — the one place in the app where 10.1's *the bar owns the bottom inset* does not
@@ -66,7 +73,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { NoticesHost } from '@/features/notifications/types';
 import { bookedGameRoute, FillProvider, useHomeBadge } from '@/features/proposals/types';
-import { TAB_BAR_HEIGHT, TabBar, theme } from '@/shared/ui';
+import { TabBar, theme, useSaysTabBarReach } from '@/shared/ui';
 
 import { barStandsDown, tabForPathname } from '../domain/shellTabs';
 
@@ -88,12 +95,13 @@ export function TabShell() {
   const pathname = usePathname();
   const gamesNeedingYou = useHomeBadge();
   const barShown = !barStandsDown(pathname);
+  useSaysTabBarReach('player', barShown);
 
   return (
     <View style={s.shell}>
       {/* The moment a yes fills a game (#555): its ten seconds, its toast above the bar and its
           overlays outlive the screen the yes was said on, so they are held here, around the tabs. */}
-      <FillProvider toastAbove={barShown ? TAB_BAR_HEIGHT : 0} openGame={openGame}>
+      <FillProvider openGame={openGame}>
         {/* `initialRouteName` is the shell's root stated outright — `SHELL_TAB_ROOT.home`, whose
           route is `index` — and it is not the default. expo-router orders a navigator's routes
           with the `Stack.Screen` children below **first**, so without it the first route this

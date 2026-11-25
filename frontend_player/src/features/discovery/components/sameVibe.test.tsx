@@ -52,6 +52,7 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { PLAYERS_BAR } from '@/test-support/tabBarReach';
 
 import { rereadDiscovery } from '../hooks/useNewInRaketa';
 
@@ -783,8 +784,10 @@ describe('See all, while its first page is read (#872)', () => {
     }
     expect(tiles.length % 2).toBe(0);
     const lines = tiles.length / 2;
-    expect(lines * (tall + theme.space.sm)).toBeGreaterThanOrEqual(window.height);
-    expect((lines - 1) * (tall + theme.space.sm)).toBeLessThan(window.height);
+    // What shows above the floating bar — the strip under it is no room for a line (#881).
+    const shown = window.height - PLAYERS_BAR;
+    expect(lines * (tall + theme.space.sm)).toBeGreaterThanOrEqual(shown);
+    expect((lines - 1) * (tall + theme.space.sm)).toBeLessThan(shown);
 
     await act(async () => first.land());
 

@@ -5082,7 +5082,7 @@ a sentence away from the paragraph it belongs to.
 ## 9.2 Toast
 
 ```
-position  left 15, right 15, above the tab bar + bottom safe-area inset, clear by 9
+position  left 15, right 15, 9 above the tab bar's full reach — its height + the bottom inset (10.1)
 tst       background night, #fff, radius 12, padding 12 × 15, 12 / 600
 ok        background mintInk        ← Rule C, was mint (4.07:1)
 bad       background red
@@ -5290,38 +5290,65 @@ its corner badge, and the tab on screen draws none (the fill-in split's override
 ## 10.1 Screen structure
 
 ```
-TopSafeArea           the top inset, as padding from the provider
+TopSafeArea           the top inset, as padding from the provider — down to the phone's foot
   ScreenHeader        eyebrow + h1, optional back, optional right slot
-  ScrollView          paddingHorizontal 15, paddingBottom 15
-  CTA                 conditional, pinned above the tab bar
-  TabBar              equal columns, one per top-level destination
+  ScrollView          paddingHorizontal 15, paddingBottom reach + 15
+  CTA                 conditional — the screen ends at the reach, and the CTA sits above the bar
+TabBar                over the screen's foot, equal columns, one per top-level destination
 ```
 
-> **Decided by [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md),
-> not yet built (PRD [#878](https://github.com/Raketa02/Raketa/issues/878))** — **the flex sibling
-> is reversed** (ADR-0210 §3, §9).
+> **The tab bar floats over the screen and owns no layout**
+> ([ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §3,
+> [#881](https://github.com/Raketa02/Raketa/issues/881), 2026-11-25). It is mounted once by the
+> shell, over the navigator, and drawn absolutely at the phone's foot, so every screen inside the
+> tabs draws to the bottom of the phone. It used to be a flex sibling below the stack, which ended
+> every screen above it whether the screen knew or not. Now each screen ends at the bar's **reach**:
 >
-> - **The tab bar floats over the screen and owns no layout.** Screens inside the tabs draw to the
->   bottom of the phone.
-> - **Everything at the bottom is placed by the bar's _reach_:** lift + 54 while it is drawn,
->   nothing while it stands down. A scroller ends at reach + 15, a pinned CTA's screen ends at the
->   reach, and the bottom inset is the lift's.
-> - **On Android the bar stands down while the keyboard is up**, beside the chat's stand-down.
+> - **The reach is the room the bar takes at the bottom**: its height and the bottom inset while it
+>   is drawn, and **nothing while it stands down**. Today that is the bar's 64 at the default text
+>   size, plus the inset; the dock's lift + 54 replaces it with
+>   [#883](https://github.com/Raketa02/Raketa/issues/883). It is a followed value in `shared/ui`
+>   (`tabBarReach.ts`, the page band's pattern), said by the shell and read by everything placed
+>   against the bottom — a value rather than a context, because sheets and the toast host sit at
+>   the root, above the shell. The administrator's area says its own shorter bar's.
+> - **A scroller ends with padding of reach + its own gap** — 15 for the page, the gap it kept above
+>   the bar — so its last row scrolls fully clear of the bar.
+> - **The Games deck's ✕ · i · ✓ stand at reach + 15.** The stage fills what is left, as before, and
+>   keeps its least height and its scroll (#865). **Post a game** and the administrator's _New group_
+>   stand at reach + the gutter.
+> - **What a page says is on screen is what shows above the bar.** Home's band is its scroller's
+>   height less the reach, so a card under the bar is not seen, and a FOR YOU line unfolding brings
+>   its foot to the top of the bar, as it did when the page ended there. **Rankings ends at the
+>   reach**, as a pinned screen does: whether the reader's row is on screen — the jump button — and
+>   where a jump centres it are the list's own measure of its frame, which knows nothing of the bar,
+>   so its rows do not pass under it.
+> - **A screen with a pinned CTA ends its layout at the reach.** The CTA stays a flex sibling below
+>   the scroller, never a fixed element, and sits above the bar in flow; the page ends at the CTA,
+>   so nothing scrolls between the two. Group info's way out is pinned the same way.
+> - **The toast** sits 9 above the **full** reach on every screen — from the insets alone, whether
+>   or not the bar is drawn — as it sat 9 above the full bar, so in the chat it still clears the
+>   composer. **The Undo toast follows the bar**: 9 above the reach while it is drawn, and 9 above
+>   the bottom inset while it stands down.
 >
-> This section is rewritten by [#881](https://github.com/Raketa02/Raketa/issues/881) and
-> [#882](https://github.com/Raketa02/Raketa/issues/882). Until then the text below describes the
-> app as built.
+> **The bar's height is a floor at large text.** `labelMaxScale` grows its labels up to 1.6×, which
+> makes the bar about 7pt taller than the reach says — inside every gap kept above it — until the
+> dock's fixed 54 holds the label inside it (#883).
+>
+> **The Android keyboard's stand-down** (ADR-0210 §9) is
+> [#882](https://github.com/Raketa02/Raketa/issues/882)'s, and joins the chat's below when it is
+> built.
 
 > **Confirmed for Play**, against a UI specification that proposed the opposite
 > ([#227](https://github.com/Raketa02/Raketa/issues/227)). The header **pins** above the
 > scroller and does not scroll away — both shipped layouts already build it that way, and the
 > counter-argument is a viewport budget computed against a 392 × 788 phone with **no safe
-> areas at all**, so its own number gets worse on a real device rather than better. The CTA
-> and the tab bar are **flex siblings** below the scroller, never fixed elements.
+> areas at all**, so its own number gets worse on a real device rather than better. The CTA is
+> a **flex sibling** below the scroller, never a fixed element.
 >
-> **The tab bar owns the bottom safe-area inset and the CTA owns none.** The CTA sits above
-> the bar, so an inset applied twice is 34pt of nothing on a notched device — and applied to
-> the wrong one it is a CTA under the home indicator.
+> **The tab bar owns the bottom safe-area inset and the CTA owns none.** The bar pads itself with
+> it, so the reach holds it, and a CTA above the bar must not apply it too: an inset applied twice
+> is 34pt of nothing on a notched device — and applied to the wrong one it is a CTA under the home
+> indicator.
 >
 > **One screen is the exception, and it is the only one** ([Part 16](#part-16--amendments-after-locking),
 > 2026-09-11). The conversation **stands the tab bar down**: its composer replaces the bar for as
@@ -5330,9 +5357,9 @@ TopSafeArea           the top inset, as padding from the provider
 > no owner, so that screen takes it **on its own `SafeAreaView`, with both edges, outside its
 > keyboard avoidance** — under the composer and not inside its strip, because a padding inside
 > the strip is counted a second time the moment the keyboard is up. The bar is **not rendered**
-> rather than hidden, since a flex sibling that is present and invisible still takes its height
-> and the inset; and nothing animates it away, on 1.5. Every other screen inside the shell takes
-> the top edge alone, exactly as above.
+> rather than hidden, and its reach is nothing, since a bar that is present and invisible would
+> still be a reach the screen kept clear of; and nothing animates it away, on 1.5. Every other
+> screen inside the shell takes the top edge alone, exactly as above.
 >
 > **The top inset is padding read from the provider, never a native `SafeAreaView`**
 > ([Part 16](#part-16--amendments-after-locking), 2026-10-01). The native view measures itself
@@ -6798,6 +6825,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-24 | [7.22](#722-the-game-card) · [`deckCardGeometry.ts`](../src/features/proposals/components/deckCardGeometry.ts) · [`GameTiles.tsx`](../src/features/proposals/components/GameTiles.tsx) · `theme.size.gameCard`                                                                                                                                                                           | _Two heights_: on the deck the tiles took the card's spare height, down to `tileMin` (54), with no shape of their own; on a game's details each was `detailsTile` (1,75) wide to high                                                                                                                                                                        | **One shape per court, and nothing stretches.** Doubles tiles are `doublesTile` 1,75 : 1 — the details' value, named for both screens — and singles tiles `singlesTile` 3:4, the photo's crop. On the deck `deckCardGeometry` sizes them from the stage and the card's measured blocks (the ribbon, the _vs_ line, the forecast or vibe row, the grid, the court block, the versions line): as wide as their column, or height-bound at the same shape, narrower and centred, never under `tileMin` nor wider than its column. It is drawn unseen until it has measured itself once. The height left over goes in equal shares to the gaps between the tiles, the _vs_ line, the forecast or vibe row, the grid and the court block, so the card still fills its stage. A game's details keep 1,75 for both court shapes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | PRD #859 (#864; the tab menu log §2, §6.2, §6.3): evidence, not a mock — mock 3's ~1,6 is not used. The user's A32, read over adb at 384 × 853 dp, drew a tile 160,5 × 84,3 (1,90 : 1), 32pt of face above the 52pt name strip. With the row gone 1,75 gives 160,5 × 92 there, 163,5 × 93 on a 390 iPhone, 174,5 × 100 on a 412 × 915 and 143 × 82 on a 360 Android (height-bound); 3:4 gives 160,5 × 214, 163,5 × 218, 174,5 × 233 and 141 × 188. Refused: 1,81 (the least face), 1,5 (short of its column on a 390 iPhone), 1,75 on singles (~92pt strips). The floor, the text cap and the scroll are #865's. Not seen on a device (#866)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-11-24 | [7.22](#722-the-game-card) · `deckCardGeometry.ts` · `GameTiles.tsx` · `OverlapGrid.tsx` · `GamesDeck.tsx` · `gameTileFoot.test.ts` · `theme.size.gameCard`                                                                                                                                                                                                                              | The deck's tiles stopped at `tileMin` (54) where the card did not fit — which overflowed it on a 320 × 568 — and their foot's words grew with the OS text size with no cap                                                                                                                                                                                   | **A derived cap, a floor its words need, proportional shrinking, and a scroll as the last resort.** The tile foot's words — the name, IN, FRIEND, the level line and _paid_, _You complete it_, the open seat's words and price — take `maxFontSizeMultiplier` `footMaxScale` 1,3, each one line. The floor is `tileNarrowest`, 128,5 wide at the tile's shape, and `tileMin` is retired. Where the height runs out every box on the card shrinks at one share — the tiles at their shape, the body's padding above and below, the gaps, the week grid's cells, their gaps and its width — and no word. Where even the floor does not fit, the stage stands at the card's least height and the deck's scroller scrolls to the buttons below it; a drag across is still the card's                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | PRD #859 (#865; the tab menu log §6.4, §6.5): a tile of one shape is a fixed box, so 10.2's and 7.15's rule applies — a derived bound, never a freeze. Measured against 128,5, the narrowest phone's column: _2,71 · paid_ is 80,74pt at 1,0 in a foot 110,5 across, and a rescue's open seat 61 in 73,4 down — both stop at 1,3. _You complete it_ fills that tile at 1,0 (110,1 of 110,5; 104,9 of 107,5 on the open seat), so its own cap would be 1,0: it is capped with the rest and cut above, as the name is. The open seat's _27 zł · court booked_ (146,8) is cut past its figure, as before the cap. At 1,0 a 320 × 568 scrolls (435 against 276) and a 360 × 800 shrinks to 0,98 and fits. Refused: shrinking the text (6,6pt labels, under #219 B4's floor), dropping the week grid, declaring phones under 360 unsupported. Not seen on a device (#866)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-11-24 | [5.6](#56-skeleton--the-loading-shape) · [`Skeleton.tsx`](../src/shared/ui/Skeleton.tsx) · `skeletonSweep.ts` · [`Reveal.tsx`](../src/shared/ui/Reveal.tsx) · `RankingsSkeleton.tsx`                                                                                                                                                                                                     | `motion.skeleton` named the sweep and its tilt (#868), and nothing drew the band: no primitive, no width for the band, and no rule for how a screen’s content takes the skeleton’s place                                                                                                                                                                     | **The primitive, 5.6.** `SkeletonBlock`, `SkeletonLine` and `SkeletonCircle` on a `SkeletonGround`, which runs the one clock and holds the one moving style; each shape measures its place on the ground once and draws its piece of the band on a still offset. **The band is half the screen’s width across its stripes**, and travels from its right edge on the ground’s top-left corner to its left edge on the bottom-right one. **`Reveal`**: the content underneath, hidden, one `fade`, a cut under reduced motion, decided at the first draw, never back once the content is in. Rankings is its first screen                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | PRD [#867](https://github.com/Raketa02/Raketa/issues/867), [#870](https://github.com/Raketa02/Raketa/issues/870). **The width is Shimmer’s, read from its source** (`dropoff = 0.5f` over `widthRatio = 1f`), as the sweep and the tilt are. **The travel is not**: Shimmer’s leaves part of every cycle with no band on screen, and the log asks for no pause (Q24). **One style on the ground**, because a style per shape ran some fifty mappers a frame on Rankings, and the router harness runs five minutes of frames on a navigation; one mapper costs the phone less too. **Measured against the ground**, not the window, because a pushed screen would be measured mid-flight. **Not seen on a device**: the band’s width and travel                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-11-25 | [10.1](#101-screen-structure) · `TabBar.tsx` · `tabBarReach.ts` · `ShellScreen.tsx` · `TabShell.tsx` · `Toast.tsx`                                                                                                                                                                                                                                                                       | The tab bar was a flex sibling under the shell’s stack, so every screen inside the tabs ended above it for free; the two toasts added `TAB_BAR_HEIGHT` and the bottom inset                                                                                                                                                                                  | **The bar floats over the screen and owns no layout** (ADR-0210 §3). Screens inside the tabs draw to the bottom of the phone and end at the bar’s **reach** — its height and the bottom inset while it is drawn, nothing while it stands down — which the shell says and every reader follows: a scroller ends at reach + its own gap, the deck’s ✕ · i · ✓ and Post a game stand above it, a pinned CTA’s screen ends at it, the Undo toast stands 9 above it (above the inset in the chat), and the toast 9 above the **full** reach on every screen. `TAB_BAR_HEIGHT` is private to the bar. The look is unchanged: white, flush, the same height                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | The dock’s prefactor (#881, PRD #878): after it, the glass, the lift and the 54 are only a look change. A followed value rather than a context, because sheets and the toast host sit at the root, above the shell                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 # Part 17 — What the reset removed
 

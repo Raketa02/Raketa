@@ -2,7 +2,7 @@
  * The toast and its host — [9.2](../../../docs/design-system.md#92-toast), built.
  *
  * ```
- * host   left 15, right 15, above the tab bar + the bottom safe-area inset, layer 40
+ * host   left 15, right 15, 9 above the tab bar's full reach, layer 40
  * tst    background night, #fff, radius 12, padding 12 x 15, inlineTitle
  * ok     background mintInk        <- Rule C, was mint (4,07)
  * bad    background red
@@ -54,7 +54,6 @@
 
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   useToastQueue,
@@ -64,7 +63,7 @@ import {
 
 import { CloseControl } from './CloseControl';
 import { announce, useCoveredBySplash } from './overlay';
-import { TAB_BAR_HEIGHT } from './TabBar';
+import { useFullTabBarReach } from './tabBarReach';
 import { theme } from './theme';
 
 /** The words a closable message's close control is named by — a name the screen reader can say. */
@@ -83,7 +82,9 @@ function holdOf(hold: ToastHold): number {
 export function ToastHost() {
   const queue = useToastQueue((state) => state.queue);
   const dismiss = useToastQueue((state) => state.dismiss);
-  const insets = useSafeAreaInsets();
+  // 9 above the bar's **full** reach on every screen (ADR-0210 §3) — from the insets alone, drawn
+  // or not: in the chat, where the bar stands down, it still clears the composer.
+  const fullReach = useFullTabBarReach();
   const head = queue[0];
   // Under the launch's drawn splash (ADR-0209 §2) a message is drawn but not yet seen: it is
   // neither said nor timed until the splash has gone, and then it has its whole hold.
@@ -110,7 +111,7 @@ export function ToastHost() {
   return (
     <View
       pointerEvents={closable ? 'box-none' : 'none'}
-      style={[s.host, { bottom: TAB_BAR_HEIGHT + insets.bottom + theme.space.sm }]}
+      style={[s.host, { bottom: fullReach + theme.space.sm }]}
     >
       <Toast toast={head} onDismiss={closable ? () => dismiss(head.id) : undefined} />
     </View>

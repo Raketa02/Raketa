@@ -21,7 +21,7 @@ import { FILL_COPY, PROPOSALS_COPY } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
-import { doorRowLabel } from '@/shared/ui';
+import { doorRowLabel, theme } from '@/shared/ui';
 import {
   ANIA,
   deckCard,
@@ -68,6 +68,7 @@ import {
   fakeShare,
   type FakePayments,
 } from '@/test-support/platform';
+import { bottomOf, PLAYERS_BAR } from '@/test-support/tabBarReach';
 import {
   errorResponse,
   installTransport,
@@ -274,6 +275,17 @@ describe('a yes that moves money waits ten seconds behind Undo (§6.5)', () => {
     act(() => jest.advanceTimersByTime(5 * SECOND - PAST_THE_FLIGHT));
     await waitFor(() => expect(yeses(card)).toHaveLength(1));
     expect(screen.queryByTestId('undo-toast')).toBeNull();
+  });
+
+  // #881: the bar floats over the page, and the toast follows it — 9 above its reach. Standing down
+  // (the chat) it is 9 above the bottom inset, `useRoomAtTheBottom`'s; the harness cannot walk a
+  // countdown into the chat, since a navigation runs every pending timer and so the ten seconds.
+  it('stands 9 above the bar while it counts', async () => {
+    await openGames([bookItNow()]);
+
+    sayYes();
+
+    expect(bottomOf(screen.getByTestId('undo-toast-host'))).toBe(PLAYERS_BAR + theme.space.sm);
   });
 
   it('takes the yes back on Undo — nothing is ever sent, and the card is dealt again on top', async () => {

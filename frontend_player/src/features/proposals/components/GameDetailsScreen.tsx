@@ -92,6 +92,7 @@ import {
   ScreenHeader,
   SocialVibeCard,
   theme,
+  useTabBarReach,
 } from '@/shared/ui';
 import { COUNTED_GAME_SENTENCE } from '@/shared/vocabulary/forecastPresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -197,6 +198,8 @@ function Details({
   readonly kind: GameKind;
   readonly receivedAt: number;
 }) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const { proposalId, actions } = details;
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
 
@@ -286,7 +289,10 @@ function Details({
           title={othersTitle(details) || COPY.game.onlyYou}
           subline={sportWords(sport, kind)}
         />
-        <ScrollView contentContainerStyle={s.body} testID="game-details">
+        <ScrollView
+          contentContainerStyle={[s.body, { paddingBottom: reach + theme.size.gutter }]}
+          testID="game-details"
+        >
           {/* The top card, the kind's own: a competitive game's full forecast and what is at
               stake (#839), or a For-fun game's Social vibe card with its grid (#840). */}
           {topCard === undefined ? null : topCard.kind === 'vibe' ? (

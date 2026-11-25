@@ -6,7 +6,8 @@
 > changes what this feature does. Index: [`README.md`](README.md).
 
 **The shell is three tabs over one stack, and it remembers nothing.** `TabShell` mounts the
-`TabBar` once, below the navigator, and reads the active column off the current path —
+`TabBar` once, over the navigator's foot (below it until #881, see the next paragraph), and reads
+the active column off the current path —
 `tabForPathname`, by the **first** segment, so ⚡Play stays lit for every screen inside Play.
 It is a `Stack` and deliberately **not** `<Tabs>`, which keeps a history per tab and restores
 it: built that way, a player who leaves a screen and comes back lands on it, and _back goes
@@ -52,6 +53,42 @@ it governs every empty state the shell writes. `shellCopy.test.ts` holds that re
 The bar's **transitions** follow the two moves: `none` by default, because a replace that slid in
 from the right would read as going deeper on the gesture whose meaning is that nothing was kept,
 and the push kept for the screens pushed over a tab, which genuinely are ones.
+
+**The bar floats over the screen, and every screen inside the tabs ends at its reach**
+([#881](https://github.com/Raketa02/Raketa/issues/881), 2026-11-25;
+[ADR-0210](../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §3,
+design-system §10.1). It was a flex sibling under the stack, which ended every screen above it for
+free; it is now drawn absolutely at the phone's foot and owns no layout, so the screens draw to the
+bottom of the phone — the prefactor that leaves the dock (#883) a look change only. **The reach** is
+the room the bar takes there: its height and the bottom inset while it is drawn, and nothing while
+it stands down. `TabShell` says it (`useSaysTabBarReach('player', barShown)`), and so does the
+administrator's `AreaShell`, with its own shorter bar. It is a followed value in `shared/ui`
+(`tabBarReach.ts`, the page band's pattern) rather than a context, because sheets and the toast
+host sit at the root, above the shell; a shell mounting puts its first value in place before what
+it holds renders, so no screen draws a first frame at the phone's foot. **What reads it**:
+`ShellScreen` ends its page at reach + 15 — or, with an `action`, ends its layout at the reach so
+the CTA sits above the bar in flow — and every tab screen with its own scroller ends at reach + the
+gap it kept (the group page and its tabs, the deck's ✕ · i · ✓, game details, the booked game,
+Post a game, Edit group, Join a group, Members, New group, Play, the See all pages, _Groups heating
+up_ and the administrator's screens). Post a game and _New group_ stand at reach + the gutter, and
+Group info and the administrator's You end at the reach, their feet pinned. **What a page says is on
+screen is what shows above the bar**: `ShellScreen` hands Home's rows its band less the reach, so a
+card under the bar is not seen and a FOR YOU line unfolding brings its foot to the bar's top, as
+before. **Rankings ends at the reach** like a pinned screen — whether the reader's row is on screen
+(the jump button) and where a jump centres it are FlatList's own measure of its frame, which takes no
+inset — so its rows do not pass under the bar; the dock (#883) inherits that call.
+The Undo toast stands 9 above the reach, or above the inset in the chat (`useRoomAtTheBottom`, which
+_Start playing_ also ends at); the toast stands 9 above the **full** reach on every screen
+(`useFullTabBarReach`), so it still clears the chat's composer. `TAB_BAR_HEIGHT` is private to the bar
+now, and the look is unchanged: white, flush, the same height. **Three things it costs**: at the
+1.6 text cap the bar is about 7pt taller than its reach, inside every gap above it, until #883 fixes
+the dock at 54; on an iPhone with the keyboard up, a form that avoids it (New group, Edit group,
+Where you play) keeps the reach under its last field, room nobody sees until scrolled to the end; and
+a scroller's indicator now runs under the bar near the end of a list — iOS could stop it at the reach
+(`scrollIndicatorInsets`), Android has no such inset, so it is left for the dock's look (#883).
+`theShell.test.tsx`, the group page's Fill in, You're in and Games suites, `theFill.test.tsx` and
+`administratorArea.test.tsx` walk it against bar heights worked out from the theme
+(`test-support/tabBarReach.ts`).
 
 **You draws one more of another feature's sections: the Location area sentence**
 ([#462](https://github.com/Raketa02/Raketa/issues/462)). `AreaUpdatesNote` sits under

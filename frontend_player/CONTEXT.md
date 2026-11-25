@@ -207,14 +207,16 @@ review comment and a test description all use the same word.
   Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it, which is the
   whole of what [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. Home is the
   bottom of the stack and is kept; You and Play are laid over it fresh by every press. _Avoid_:
-  "the tab navigator" — there isn't one. **Decided, not yet built**
-  ([ADR-0210](../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md), PRD
-  [#878](https://github.com/Raketa02/Raketa/issues/878)): the one tab bar will **float over the
-  stack** as a glass dock, not sit below it as a flex sibling. Screens will end at its **reach**:
-  the room the dock takes at the bottom, its lift + 54, and nothing while it stands down. On
-  Android it will stand down while the keyboard is up. _Avoid_ confusing the reach with the tab's
-  menu's `TAB_REACH`, which is a touch slop. The one stack, the reset and what
-  each tab opens don't change. Until #881 builds it, the bar is drawn below the stack.
+  "the tab navigator" — there isn't one. The one tab bar **floats over the stack**
+  ([ADR-0210](../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §3, built
+  by [#881](https://github.com/Raketa02/Raketa/issues/881)), not below it as a flex sibling, and
+  screens end at its **reach**: the room the bar takes at the bottom — its height and the bottom
+  inset while it is drawn, nothing while it stands down — a followed value the shell says
+  (`shared/ui`'s `tabBarReach.ts`). **Decided, not yet built** (PRD
+  [#878](https://github.com/Raketa02/Raketa/issues/878)): the bar becomes a glass dock, whose reach
+  is its lift + 54, and on Android it stands down while the keyboard is up. _Avoid_ confusing the
+  reach with the tab's menu's `TAB_REACH`, which is a touch slop. The one stack, the reset and what
+  each tab opens don't change.
 - **Home** — the first tab, route `/`: the booked-games rail under the tab's own words —
   `features/proposals`' `HomeRail` over `GET /home`, with the payments to confirm above it. It
   was **Now** until [#550](https://github.com/Raketa02/Raketa/issues/550), and the rename is

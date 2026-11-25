@@ -52,6 +52,7 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { PLAYERS_BAR } from '@/test-support/tabBarReach';
 
 import { DISCOVERY_COPY, nobodyToCompareIn } from './discoveryCopy';
 import { SAME_LEVEL_CARD_SKELETON } from './SameLevelCard';
@@ -677,8 +678,10 @@ describe('See all, while its first page is read (#872)', () => {
     for (const each of cards) {
       expect(StyleSheet.flatten(each.props.style)).toMatchObject({ width: content, height: tall });
     }
-    expect(cards.length * (tall + theme.space.sm)).toBeGreaterThanOrEqual(window.height);
-    expect((cards.length - 1) * (tall + theme.space.sm)).toBeLessThan(window.height);
+    // What shows above the floating bar — the strip under it is no room for a line (#881).
+    const shown = window.height - PLAYERS_BAR;
+    expect(cards.length * (tall + theme.space.sm)).toBeGreaterThanOrEqual(shown);
+    expect((cards.length - 1) * (tall + theme.space.sm)).toBeLessThan(shown);
 
     await act(async () => first.land());
 
