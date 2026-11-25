@@ -7,7 +7,7 @@
  * a group's page over the group's tile, counting the requests waiting on its Owner (#529, moved
  * there from the Info tab by Q125). One mark, one meaning — a count of things only you can clear,
  * by acting or, on a tab, by looking — which is why 1.2's sixth coral entry does not widen for it. It is `CountBadge`'s `attend` mark at a segment's size and placed on
- * a corner: `CountBadge` sits on a 16pt glyph, risen by the tab bar's ring, at `num.xs`; this one
+ * a corner: `CountBadge` sits on a glyph, risen 4 above its box, at `num.xs`; this one
  * overlaps the corner of a box at `num.tiny`, so the two keep their own geometry.
  *
  * The parent places it: it is absolutely positioned, out of the layout, so a count arriving moves

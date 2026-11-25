@@ -7,9 +7,10 @@
  * alone is placed by the **full** reach, from the insets, whether a bar is drawn or not — so in the
  * chat, where the bar stands down, it still clears the composer.
  *
- * Every number here is worked out from the theme, never read back from the module: the bar's height
- * at the default text size is its hairline, its two paddings, the tallest thing in a column and the
- * label (10.2). A reach that drifted from the bar it describes would leave a list's last row under it.
+ * Every number here is worked out from the theme, never read back from the module: the bar is the
+ * dock, 54 tall and lifted the larger of 12 and the bottom inset (10.2, #883), and the
+ * administrator's is the same dock with two columns. A reach that drifted from the dock it describes
+ * would leave a list's last row under it.
  */
 
 import { fireEvent, render, screen } from '@testing-library/react-native';
@@ -25,20 +26,24 @@ import {
 } from './tabBarReach';
 import { theme } from './theme';
 
-/** A notched phone: a bottom inset exists, so leaving it out is visible. */
+/** A notched phone: a bottom inset exists, larger than the dock's least lift, so it leads. */
 const METRICS: Metrics = {
   frame: { x: 0, y: 0, width: 390, height: 844 },
   insets: { top: 47, left: 0, right: 0, bottom: 34 },
 };
 
-const { space, size, type } = theme;
+/** An Android phone on SDK 52, which draws no edge to edge: no bottom inset. */
+const NO_INSET: Metrics = {
+  frame: { x: 0, y: 0, width: 360, height: 800 },
+  insets: { top: 24, left: 0, right: 0, bottom: 0 },
+};
 
-/** The player's bar: the hairline, the top padding, the ⚡Play disc, the gap, the label, the foot. */
-const PLAYERS_BAR = 1 + space.xs + size.fab + space.xxs + type.tag.lineHeight + space.md;
-/** The administrator's: the same, with the 16pt icon box for the disc it does not have. */
-const ADMINISTRATORS_BAR = 1 + space.xs + size.tabIcon + space.xxs + type.tag.lineHeight + space.md;
+const { height: DOCK, lift: LEAST_LIFT } = theme.size.tabBar;
 
 const INSET = METRICS.insets.bottom;
+
+/** The dock's reach on the notched phone: it rests on the safe-area line, 54 tall. */
+const REACH = Math.max(LEAST_LIFT, INSET) + DOCK;
 
 /** What each reading says, as text a query can find. */
 function Readings() {
@@ -53,16 +58,16 @@ function Readings() {
 
 const read = (id: 'reach' | 'full' | 'room') => Number(screen.getByTestId(id).props.children);
 
-/** A shell drawing `bar` — and a press that stands it down and back, as the chat does. */
+/** A shell drawing its bar — and a press that stands it down and back, as the chat does. */
 function Shell({
-  bar,
+  startsDrawn = true,
   children,
 }: {
-  readonly bar: 'player' | 'administrator';
+  readonly startsDrawn?: boolean;
   readonly children: ReactNode;
 }) {
-  const [drawn, setDrawn] = useState(true);
-  useSaysTabBarReach(bar, drawn);
+  const [drawn, setDrawn] = useState(startsDrawn);
+  useSaysTabBarReach(drawn);
   return (
     <>
       <Pressable accessibilityLabel="stand down" onPress={() => setDrawn((now) => !now)} />
@@ -74,38 +79,37 @@ function Shell({
 /** The bar stands down, or comes back. */
 const standDown = () => fireEvent.press(screen.getByLabelText('stand down'));
 
-const onAPhone = (tree: ReactNode) =>
-  render(<SafeAreaProvider initialMetrics={METRICS}>{tree}</SafeAreaProvider>);
+const onAPhone = (tree: ReactNode, metrics: Metrics = METRICS) =>
+  render(<SafeAreaProvider initialMetrics={metrics}>{tree}</SafeAreaProvider>);
 
 describe('the reach a shell says', () => {
-  it('is the player’s bar and the bottom inset under it while the bar is drawn', () => {
+  it('is the dock’s lift and its 54 while the bar is drawn — 88 on a notched phone', () => {
     onAPhone(
-      <Shell bar="player">
+      <Shell>
         <Readings />
       </Shell>,
     );
 
-    expect(read('reach')).toBe(PLAYERS_BAR + INSET);
+    expect(read('reach')).toBe(REACH);
+    expect(REACH).toBe(88);
   });
 
-  it('is today’s bar height at the default text size — 64 — over no inset', () => {
-    // The number the PRD and ADR-0210 compare the dock's 66 and 88 against.
-    expect(PLAYERS_BAR).toBe(64);
-  });
-
-  it('is the administrator’s shorter bar in the administrator’s area', () => {
+  it('is the least lift and the 54 on a phone with no inset — 66, the A32’s', () => {
+    // The number the PRD and ADR-0210 compare against the old bar's 64.
     onAPhone(
-      <Shell bar="administrator">
+      <Shell>
         <Readings />
       </Shell>,
+      NO_INSET,
     );
 
-    expect(read('reach')).toBe(ADMINISTRATORS_BAR + INSET);
+    expect(read('reach')).toBe(LEAST_LIFT + DOCK);
+    expect(read('reach')).toBe(66);
   });
 
-  it('is nothing while the bar stands down, and the bar’s again when it comes back', () => {
+  it('is nothing while the bar stands down, and the dock’s again when it comes back', () => {
     onAPhone(
-      <Shell bar="player">
+      <Shell>
         <Readings />
       </Shell>,
     );
@@ -113,7 +117,7 @@ describe('the reach a shell says', () => {
     expect(read('reach')).toBe(0);
 
     standDown();
-    expect(read('reach')).toBe(PLAYERS_BAR + INSET);
+    expect(read('reach')).toBe(REACH);
   });
 
   it('is nothing with no shell at all, and nothing again once a shell has gone', () => {
@@ -122,11 +126,11 @@ describe('the reach a shell says', () => {
 
     screen.unmount();
     onAPhone(
-      <Shell bar="player">
+      <Shell>
         <Readings />
       </Shell>,
     );
-    expect(read('reach')).toBe(PLAYERS_BAR + INSET);
+    expect(read('reach')).toBe(REACH);
 
     screen.unmount();
     onAPhone(<Readings />);
@@ -148,18 +152,20 @@ describe('the reach a shell says', () => {
     }
 
     onAPhone(
-      <Shell bar="player">
+      <Shell>
         <FirstReading />
       </Shell>,
     );
 
-    expect(firstReadings[0]).toBe(PLAYERS_BAR + INSET);
+    expect(firstReadings[0]).toBe(REACH);
   });
 
   /**
    * **A profile switch replaces one shell with the other in one commit** (the root is a `Slot`), so
    * the new area's screens render while the old shell's reach still stands. They read the new
-   * shell's all the same — the code review's catch: *New group* drawn 14pt high for a frame.
+   * shell's all the same — the code review's catch: *New group* drawn 14pt high for a frame, when the
+   * two bars were two heights. The two shells now say one dock's reach, so the old one here is
+   * standing down, and says nothing.
    */
   it('is read on a screen’s first render when one shell replaces another', () => {
     const firstReadings: number[] = [];
@@ -170,61 +176,58 @@ describe('the reach a shell says', () => {
       return null;
     }
     function Switcher() {
-      const [bar, setBar] = useState<'player' | 'administrator'>('player');
+      const [area, setArea] = useState<'player' | 'administrator'>('player');
       return (
         <>
-          <Pressable accessibilityLabel="switch profile" onPress={() => setBar('administrator')} />
-          <Shell key={bar} bar={bar}>
+          <Pressable accessibilityLabel="switch profile" onPress={() => setArea('administrator')} />
+          <Shell key={area} startsDrawn={area === 'administrator'}>
             <FirstReading />
           </Shell>
         </>
       );
     }
     onAPhone(<Switcher />);
+    expect(firstReadings[0]).toBe(0);
     firstReadings.length = 0;
 
     fireEvent.press(screen.getByLabelText('switch profile'));
 
-    expect(firstReadings[0]).toBe(ADMINISTRATORS_BAR + INSET);
+    expect(firstReadings[0]).toBe(REACH);
   });
 });
 
 describe('the full reach — the toast’s', () => {
-  it('is the player’s bar and the inset, whether a bar is drawn, stood down or absent', () => {
+  it('is the dock’s, from the inset, whether a bar is drawn, stood down or absent', () => {
     onAPhone(
-      <Shell bar="player">
+      <Shell>
         <Readings />
       </Shell>,
     );
-    expect(read('full')).toBe(PLAYERS_BAR + INSET);
+    expect(read('full')).toBe(REACH);
 
     standDown();
-    expect(read('full')).toBe(PLAYERS_BAR + INSET);
+    expect(read('full')).toBe(REACH);
 
     screen.unmount();
     onAPhone(<Readings />);
-    expect(read('full')).toBe(PLAYERS_BAR + INSET);
+    expect(read('full')).toBe(REACH);
   });
 
-  it('is the player’s bar in the administrator’s area too, which it clears as well (9.2)', () => {
-    onAPhone(
-      <Shell bar="administrator">
-        <Readings />
-      </Shell>,
-    );
+  it('is the least lift and the 54 on a phone with no inset', () => {
+    onAPhone(<Readings />, NO_INSET);
 
-    expect(read('full')).toBe(PLAYERS_BAR + INSET);
+    expect(read('full')).toBe(LEAST_LIFT + DOCK);
   });
 });
 
 describe('the room at the bottom — the Undo toast’s', () => {
   it('is the reach while a bar is drawn, and the bottom inset while it stands down', () => {
     onAPhone(
-      <Shell bar="player">
+      <Shell>
         <Readings />
       </Shell>,
     );
-    expect(read('room')).toBe(PLAYERS_BAR + INSET);
+    expect(read('room')).toBe(REACH);
 
     standDown();
     expect(read('room')).toBe(INSET);

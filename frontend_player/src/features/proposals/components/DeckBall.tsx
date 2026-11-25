@@ -22,8 +22,8 @@
  * ## One bed, one value
  *
  * It is drawn on exactly one thing, the yes disc's `coralInk`, and so has exactly one colour:
- * `surface`, **6.1 `primary`'s own white mark at 5,89:1** — the treatment the ⚡Play disc and the
- * Chats badge already take on the same fill. Not volt because a tennis ball is volt-coloured:
+ * `surface`, **6.1 `primary`'s own white mark at 5,89:1** — the treatment the tab bar's badge
+ * already takes on the same fill. Not volt because a tennis ball is volt-coloured:
  * colour is picked by meaning and never by appearance (`theme.ts`), and the meaning here is *the
  * primary act's mark*. No `color` prop, for `Tick.tsx`'s reason — the bed is a fact about where
  * the mark is drawn, not a decision a caller makes.

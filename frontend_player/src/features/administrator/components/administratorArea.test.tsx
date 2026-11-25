@@ -60,6 +60,7 @@ import {
   clearanceAbove,
   endPadding,
   floatOf,
+  markerUnder,
   pageOf,
 } from '@/test-support/tabBarReach';
 import {
@@ -181,8 +182,8 @@ describe('the Groups tab', () => {
 
   /**
    * #881 (ADR-0210 §3): the area's bar floats over its screens as the player's does, and the area
-   * ends at **its** reach — its own bar, shorter by the disc it does not have. *New group* stands a
-   * gutter above it, and the last card scrolls clear of the button as it did.
+   * ends at its reach — the same dock's, with two columns (#883). *New group* stands a gutter above
+   * it, and the last card scrolls clear of the button as it did.
    */
   it('floats its bar over the list, New group a gutter above it and the last card clear of both', async () => {
     await launchAsAdministrator([O3_CLUB_GROUP, OPEN_PLAY_GROUP]);
@@ -856,6 +857,29 @@ describe('removed, an account that also plays', () => {
 });
 
 describe('the two tabs', () => {
+  /**
+   * **The area draws the player's dock with two columns** (#883, ADR-0210 §3, Q16): the same frame,
+   * the same marker, Groups and You — and the marker under whichever is lit.
+   */
+  it('draws the dock with its two tabs and the marker under the lit one', async () => {
+    await launchAsAdministrator([O3_CLUB_GROUP]);
+
+    expect(barFloats()).toBe(true);
+    expect(screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual([
+      'Groups',
+      'You',
+    ]);
+    expect(markerUnder()).toBe('Groups');
+
+    fireEvent.press(screen.getByRole('tab', { name: 'You' }));
+    await waitFor(() => expect(screen).toHavePathname(`/administrator/${CLUB_ID}/you`));
+    expect(markerUnder()).toBe('You');
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Groups' }));
+    await waitFor(() => expect(screen).toHavePathname(`/administrator/${CLUB_ID}`));
+    expect(markerUnder()).toBe('Groups');
+  });
+
   it('opens You, with the way out, and comes back to Groups', async () => {
     await launchAsAdministrator([O3_CLUB_GROUP]);
 

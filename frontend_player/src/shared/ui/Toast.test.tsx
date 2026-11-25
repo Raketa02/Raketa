@@ -32,21 +32,16 @@ const METRICS: Metrics = {
 };
 
 /**
- * The player's bar's height at the default text size — the hairline, the top padding, the ⚡Play
- * disc, the gap, the label and the foot (10.2) — worked out here from the theme rather than read back
- * from the bar, so a reach that drifted from it goes red.
+ * The dock's full reach on this phone — its lift, which is the bottom inset where that is larger
+ * than 12, and its 54 (10.2) — worked out here from the theme rather than read back from the bar,
+ * so a reach that drifted from it goes red. 88 on this notched phone.
  */
-const PLAYERS_BAR =
-  1 +
-  theme.space.xs +
-  theme.size.fab +
-  theme.space.xxs +
-  theme.type.tag.lineHeight +
-  theme.space.md;
+const FULL_REACH =
+  Math.max(theme.size.tabBar.lift, METRICS.insets.bottom) + theme.size.tabBar.height;
 
 /** A shell, under the host as the tabs are: its bar drawn, or standing down as in the chat. */
 function Shell({ drawn, children }: { readonly drawn: boolean; readonly children?: ReactNode }) {
-  useSaysTabBarReach('player', drawn);
+  useSaysTabBarReach(drawn);
   return <>{children}</>;
 }
 
@@ -246,9 +241,9 @@ describe('the host', () => {
   });
 
   /**
-   * **9 above the bar's full reach, on every screen** (ADR-0210 §3) — its height and the bottom inset
-   * from the insets alone, whether the bar is drawn, standing down or absent. In the chat, where the
-   * bar stands down, that is what keeps the toast clear of the composer.
+   * **9 above the bar's full reach, on every screen** (ADR-0210 §3) — the dock's lift and its 54, from
+   * the insets alone, whether the bar is drawn, standing down or absent. In the chat, where the bar
+   * stands down, that is what keeps the toast clear of the composer.
    */
   it.each([
     ['the bar drawn', { drawn: true }],
@@ -258,7 +253,8 @@ describe('the host', () => {
     render(shell);
     act(() => showToast({ message: 'Saved' }));
 
-    expect(hostStyle()?.bottom).toBe(PLAYERS_BAR + METRICS.insets.bottom + theme.space.sm);
+    expect(hostStyle()?.bottom).toBe(FULL_REACH + theme.space.sm);
+    expect(FULL_REACH).toBe(88);
   });
 
   /** Rule C: white on `mint` is 4,07:1, so the settled toast is `mintInk`. */

@@ -59,10 +59,11 @@ and the push kept for the screens pushed over a tab, which genuinely are ones.
 [ADR-0210](../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §3,
 design-system §10.1). It was a flex sibling under the stack, which ended every screen above it for
 free; it is now drawn absolutely at the phone's foot and owns no layout, so the screens draw to the
-bottom of the phone — the prefactor that leaves the dock (#883) a look change only. **The reach** is
-the room the bar takes there: its height and the bottom inset while it is drawn, and nothing while
-it stands down. `TabShell` says it (`useSaysTabBarReach('player', barShown)`), and so does the
-administrator's `AreaShell`, with its own shorter bar. It is a followed value in `shared/ui`
+bottom of the phone — the prefactor that left the dock (#883) a look change only. **The reach** is
+the room the bar takes there: the dock's lift and its 54 while it is drawn (66 on the A32, 88 on a
+notched iPhone, #883), and nothing while it stands down. `TabShell` says it
+(`useSaysTabBarReach(barShown)`), and so does the administrator's `AreaShell`, whose bar is the same
+dock with two columns. It is a followed value in `shared/ui`
 (`tabBarReach.ts`, the page band's pattern) rather than a context, because sheets and the toast
 host sit at the root, above the shell; a shell mounting puts its first value in place before what
 it holds renders, so no screen draws a first frame at the phone's foot. **What reads it**:
@@ -76,19 +77,36 @@ screen is what shows above the bar**: `ShellScreen` hands Home's rows its band l
 card under the bar is not seen and a FOR YOU line unfolding brings its foot to the bar's top, as
 before. **Rankings ends at the reach** like a pinned screen — whether the reader's row is on screen
 (the jump button) and where a jump centres it are FlatList's own measure of its frame, which takes no
-inset — so its rows do not pass under the bar; the dock (#883) inherits that call.
+inset — so its rows do not pass under the bar; the dock (#883) inherited that call.
 The Undo toast stands 9 above the reach, or above the inset in the chat (`useRoomAtTheBottom`, which
 _Start playing_ also ends at); the toast stands 9 above the **full** reach on every screen
 (`useFullTabBarReach`), so it still clears the chat's composer. `TAB_BAR_HEIGHT` is private to the bar
-now, and the look is unchanged: white, flush, the same height. **Three things it costs**: at the
-1.6 text cap the bar is about 7pt taller than its reach, inside every gap above it, until #883 fixes
-the dock at 54; on an iPhone with the keyboard up, a form that avoids it (New group, Edit group,
-Where you play) keeps the reach under its last field, room nobody sees until scrolled to the end; and
-a scroller's indicator now runs under the bar near the end of a list — iOS could stop it at the reach
-(`scrollIndicatorInsets`), Android has no such inset, so it is left for the dock's look (#883).
+now. **What it costs**: on an iPhone with the keyboard up, a form that avoids it (New group, Edit
+group, Where you play) keeps the reach under its last field, room nobody sees until scrolled to the
+end. Two costs #881 recorded went with the dock (#883): the bar no longer grows past its reach at the
+1.6 text cap — the dock is 54 at every size — and a scroller's indicator, drawn at the screen's edge,
+no longer runs under the bar, which stands 12 in from either side.
 `theShell.test.tsx`, the group page's Fill in, You're in and Games suites, `theFill.test.tsx` and
-`administratorArea.test.tsx` walk it against bar heights worked out from the theme
+`administratorArea.test.tsx` walk it against the reach worked out from the theme
 (`test-support/tabBarReach.ts`).
+
+**The bar is the dock, and the selection marker stands under the lit tab** ([#883](https://github.com/Raketa02/Raketa/issues/883),
+2026-11-25; ADR-0210 §2, §4–§7, design-system §10.2). `TabBar` draws a rounded slab 54 tall, 12 in
+from each side and lifted the larger of 12 and the bottom inset: `color.glass` over `expo-blur` on
+the iPhone, and opaque `surface` on Android, where the A32 measured the blur costing frames
+(`theme.glass.android`, off). Its three columns are Ionicons over `tag` labels — outlined in
+`tabIdle` while idle, filled `coral` with a `coralInk` label while lit, the bolt filled always — and
+the lit one sits on an opaque `coralSoft` capsule, 75 × 42, which is the dock's own layer under
+the words, placed from the window's width so the first frame has it. The ⚡Play disc, its ring and
+`shadow.fab` are gone, so Play dims under a finger like the other two; Home's badge stays on the
+house. **The shell is unchanged**: the lit tab is still the URL's, so the marker stands under
+whichever tab that is — under Play for a group opened from Home's _Groups heating up_, under Home
+inside a booked game — and **it does not travel yet**: on any change it is simply under the new tab
+([#884](https://github.com/Raketa02/Raketa/issues/884) makes it slide). The administrator's area
+draws the same dock with Groups (`people`) and You. `theShell.test.tsx` and
+`administratorArea.test.tsx` walk where the marker stands (`markerUnder`); the look is the phone
+walk's ([#885](https://github.com/Raketa02/Raketa/issues/885)), and a phone build needs a native
+rebuild for `expo-blur`.
 
 **On Android the bar stands down while the keyboard is up** ([#882](https://github.com/Raketa02/Raketa/issues/882),
 2026-11-25; ADR-0210 §9, design-system §10.1). Android shrinks the window for the keyboard, and the

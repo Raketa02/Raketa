@@ -204,12 +204,12 @@ export {
   ADMINISTRATOR_TAB_BAR_TABS,
   AdministratorTabBar,
   TabBar,
+  TAB_BAR_MARKER_TEST_ID,
   TAB_BAR_TABS,
   TAB_BAR_TEST_ID,
   type AdministratorTabBarKey,
   type AdministratorTabBarProps,
   type TabBarKey,
-  type TabBarKind,
   type TabBarProps,
   type TabBarTab,
 } from './TabBar';

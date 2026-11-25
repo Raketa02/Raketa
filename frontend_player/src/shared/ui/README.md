@@ -56,9 +56,9 @@ design-system doc, in the same commit.
   `voltStroke`, which is `coralInk`'s relationship to `coral`: one meaning, a second value,
   because the base colour cannot carry the role. It is not a `*Line`, which in this palette is
   a soft's border, and volt has no soft.
-- **Cards never cast a shadow.** Five shadows exist; all are for things that float, and
-  the deck card is one of them because it is not a card. The fifth, the ⚡Play disc's, is
-  the only one that is a colour rather than a dimming — and only on iOS.
+- **Cards never cast a shadow.** Five shadows exist for things that float, and the deck card is
+  one of them because it is not a card; the tab bar's dock is another, on the deck card's values,
+  in the slot the retired ⚡Play disc's tinted shadow left (#883). None is a colour.
 - **Every number is mono and tabular.** That is the mechanism that stops a row reflowing
   when a level changes from 2,71 to 2,80.
 - **Every state carries a word or a shape**, never colour alone.
@@ -432,11 +432,14 @@ for 6.13, and the placeholder button before that for `Button`.
 **The tab bar** (10.2) is the app's bottom chrome, and it is the drawn object only — it
 takes the active tab and a press handler and knows nothing about routes or stacks. **Its
 inventory of three is its own** — Home · ⚡Play · You — rather than a prop, because
-[ADR-0135](../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)
-fixes the family and the names, and because `theme.size.tabBar.labelMaxScale` is held against
-exactly those words in exactly three columns — a caller that could pass a fourth tab could break
-the fit without anything saying so. It drew five, with the old loop's Players and Chats behind a
-switch, until that loop was removed (#576). Feather from `@expo/vector-icons`,
-selection **in tone alone**, and the ⚡ is Feather `zap` rather than the character `⚡`,
-which carries `Emoji_Presentation=Yes` and would render in a colour this app does not choose.
-The bar owns the bottom safe-area inset; a CTA above it owns none.
+[ADR-0210](../../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §5
+fixes the family and the names, and because `theme.size.tabBar.labelMaxScale` and the selection
+marker are held against exactly those words in exactly three columns — a caller that could pass a
+fourth tab could break the fit without anything saying so. It drew five, with the old loop's
+Players and Chats behind a switch, until that loop was removed (#576). **It is the dock** (#883): a
+rounded slab floating over the screen's foot, glass on the iPhone and opaque `surface` on Android
+(`theme.glass`), Ionicons from `@expo/vector-icons` — outlined idle, filled lit, the bolt `flash`
+in both — with the lit tab's icon `coral` and label `coralInk` on the `coralSoft` selection marker.
+The ⚡ is a glyph rather than the character `⚡`, which carries `Emoji_Presentation=Yes` and
+would render in a colour this app does not choose. The dock's lift owns the bottom safe-area inset;
+a CTA above it owns none.

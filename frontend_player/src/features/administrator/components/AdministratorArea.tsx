@@ -109,11 +109,11 @@ function useLeaveOnRemoval(
 function AreaShell({ club }: { readonly club: AdministeredClub }) {
   const pathname = usePathname();
   // The area's bar floats over its screens as the player's does, and this shell says its reach —
-  // its own shorter bar's (ADR-0210 §3): the area's lists and forms end at it the same way. And it
-  // stands down as the player's does while the keyboard shrinks an Android window (§9, #882): not
-  // rendered, its reach nothing, so no bar rides up over the field being typed into.
+  // the same dock's, with two columns (ADR-0210 §3): the area's lists and forms end at it the same
+  // way. And it stands down as the player's does while the keyboard shrinks an Android window (§9,
+  // #882): not rendered, its reach nothing, so no bar rides up over the field being typed into.
   const barShown = !useKeyboardShrinksTheWindow();
-  useSaysTabBarReach('administrator', barShown);
+  useSaysTabBarReach(barShown);
 
   return (
     <View style={s.area}>

@@ -69,7 +69,9 @@ as the splash's alone. Neither is a dark mode, and neither is a licence for anot
   with a halo; Home's header's is `ink` Feather `mail` (10.3, #816). Never a third.
 - **Colour is picked by meaning:** coral = the one accent · mint = settled · amber =
   reversible, not yet wrong · red = ended badly · info = explanation, not status.
-- **§1.2's coral list is closed at six** — primary button, active tab, level mark, onboarding
+- **§1.2's coral list is closed at six** — primary button, active tab (the tab bar's **selection
+  marker**: an opaque `coralSoft` capsule under the lit tab's `coral` icon and `coralInk` label —
+  a `coralSoft` fill means _where you are_ on the bar only, ADR-0210 §4, #883), level mark, onboarding
   progress fill, hot tag, the tab bar's badge (the same mark at a segment's size, `CornerBadge`,
   counts a group page's Games, Fill in and You’re in and an Owner's requests on the group's tile —
   one meaning, every surface; on Games, Fill in and You’re in it counts what is **new since you
@@ -78,6 +80,10 @@ as the splash's alone. Neither is a dark mode, and neither is a licence for anot
   tab_ entry one level down, the current kind being the active sub-tab; not a seventh. A sixth-and-a-half is not a
   taste call: pick the meaning and you will land on `amber` or on `ink`, which is where the
   row stripe and the rail's current dot both landed.
+- **The tab bar is the one glass surface** (1.1's exception, 10.2, ADR-0210 §2): `color.glass`
+  over a blur on the iPhone, opaque `surface` on Android while `theme.glass.android` is off. It
+  draws Ionicons; **every other mark in the app stays Feather**. Neither is a licence for a second
+  glass surface or a second family.
 - **A `Tag`'s dot is the sport's and only the sport's — except on Home's game card, where it is
   the status's** and the sport is the word beside it (`STATUS_INK`, 6.4 as amended by #413). Under
   both: a dot is always accompanied by its name in text, and one surface gives the token one
@@ -93,8 +99,9 @@ as the splash's alone. Neither is a dark mode, and neither is a licence for anot
   things that float, and the deck card is one of them because it is not a card. The sixth is
   the club result both group searches draw (`ClubCard`, `shadow.clubResult`, 4.3,
   2026-09-27); the seventh is FOR YOU's line **while it is open** (`FoldingLine`,
-  `shadow.openLine`, 4.3, 7.37, #820). Neither is a licence for cards in general. The ⚡Play
-  disc's is the only tinted one, and only on iOS — Android's `elevation` cannot be coloured.
+  `shadow.openLine`, 4.3, 7.37, #820). Neither is a licence for cards in general. **None is
+  tinted**: the tab bar's dock (`shadow.dock`, the deck card's values) took the retired ⚡Play
+  disc's coral-tinted slot (#883, ADR-0210 §6).
 - **A FOR YOU line draws its content only while open** (`FoldingLine`, 7.37, #820): its size
   changes once and a layout transition moves the frames — never a height animated per frame —
   and a rail inside takes the line's bounds, snapping to its cards.

@@ -17,7 +17,7 @@
  * §3, [#881](https://github.com/Raketa02/Raketa/issues/881)). It was a flex sibling under the
  * stack, which ended every screen above it for free; now every screen inside the tabs draws to the
  * bottom of the phone and the bar is drawn over its foot. What it takes there is its **reach** —
- * its height and the bottom inset while it is drawn, nothing while it stands down — and this shell
+ * the dock's lift and its 54 while it is drawn, nothing while it stands down — and this shell
  * says it (`useSaysTabBarReach`). Every scroller ends at reach + its gap, the deck's buttons and
  * Post a game stand above it, a pinned button's screen ends at it, and the Undo toast follows it.
  *
@@ -106,7 +106,7 @@ export function TabShell() {
   const gamesNeedingYou = useHomeBadge();
   const keyboardShrinksTheWindow = useKeyboardShrinksTheWindow();
   const barShown = !barStandsDown(pathname) && !keyboardShrinksTheWindow;
-  useSaysTabBarReach('player', barShown);
+  useSaysTabBarReach(barShown);
 
   return (
     <View style={s.shell}>

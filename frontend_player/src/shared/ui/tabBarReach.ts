@@ -5,8 +5,9 @@
  *
  * The bar floats over the screen and owns no layout (10.1): every screen inside the tabs draws to
  * the bottom of the phone, so nothing ends above the bar because it is a flex sibling any more. What
- * used to be free is now **placed by one measure** — the bar's height and the bottom inset under it
- * while it is drawn, and **nothing while it stands down** (the chat, and Android's keyboard up):
+ * used to be free is now **placed by one measure** — the dock's lift and its 54 while it is drawn
+ * (#883: 66 on the A32, 88 on a notched iPhone), and **nothing while it stands down** (the chat, and
+ * Android's keyboard up):
  *
  * | What | Where |
  * | --- | --- |
@@ -36,7 +37,7 @@ import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { followable } from './onScreen';
-import { tabBarReachOver, type TabBarKind } from './TabBar';
+import { tabBarReachOver } from './TabBar';
 
 /** What the shell drawing a bar says — nothing while no shell has said anything. */
 const reach = followable<number>();
@@ -50,7 +51,7 @@ let opening: number | undefined;
 const reachNow = () => opening ?? reach.get() ?? 0;
 
 /**
- * **The reach now** — the bar's height and the bottom inset while a shell draws it, and nothing
+ * **The reach now** — the dock's lift and its height while a shell draws it, and nothing
  * while it stands down or outside every shell. A screen inside the tabs ends at it.
  */
 export function useTabBarReach(): number {
@@ -58,13 +59,13 @@ export function useTabBarReach(): number {
 }
 
 /**
- * **The full reach** — the player's bar's, from the insets alone, whether a bar is drawn, standing
- * down or absent. **The toast's**: it sits 9 above it on every screen, as it sat 9 above the full bar
- * on every screen before the bar floated — so in the chat, where there is no bar, it still clears the
- * composer, and in the administrator's area it clears that shorter bar too (9.2).
+ * **The full reach** — the dock's, from the insets alone, whether a bar is drawn, standing down or
+ * absent. **The toast's**: it sits 9 above it on every screen, as it sat 9 above the full bar on
+ * every screen before the bar floated — so in the chat, where there is no bar, it still clears the
+ * composer (9.2).
  */
 export function useFullTabBarReach(): number {
-  return tabBarReachOver('player', useSafeAreaInsets().bottom);
+  return tabBarReachOver(useSafeAreaInsets().bottom);
 }
 
 /**
@@ -77,8 +78,9 @@ export function useRoomAtTheBottom(): number {
 }
 
 /**
- * **What a shell says**: the reach of the bar it draws while `drawn`, and nothing while it stands
- * down — said again whenever either moves, and withdrawn when the shell goes.
+ * **What a shell says**: the dock's reach while `drawn`, and nothing while it stands down — said
+ * again whenever either moves, and withdrawn when the shell goes. Either shell's: the
+ * administrator's bar is the same dock with two columns, so it reaches as far.
  *
  * **A screen mounted with the shell reads it on its first render.** The shell renders before what it
  * holds, so on the shell's first render its value is put in place without telling anyone — the
@@ -86,11 +88,12 @@ export function useRoomAtTheBottom(): number {
  * Otherwise every screen would draw its first frame at the phone's foot and jump to the reach a frame
  * later: the administrator's *New group*, as the area opens. **It goes ahead of the shell it
  * replaces**: a profile switch swaps one shell for the other in one commit, the old one's reach still
- * standing while the new area renders — the code review's catch, a frame 14pt off.
+ * standing while the new area renders — the code review's catch, a frame 14pt off when the two bars
+ * were two heights.
  */
-export function useSaysTabBarReach(bar: TabBarKind, drawn: boolean): void {
+export function useSaysTabBarReach(drawn: boolean): void {
   const { bottom } = useSafeAreaInsets();
-  const said = drawn ? tabBarReachOver(bar, bottom) : 0;
+  const said = drawn ? tabBarReachOver(bottom) : 0;
   const mounting = useRef(true);
 
   if (mounting.current) opening = said;

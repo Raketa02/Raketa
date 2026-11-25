@@ -59,7 +59,9 @@ the centre, drawn from one Feather family
 ([ADR-0135](../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)), which is
 why `@expo/vector-icons` is **declared** in `package.json` rather than inherited through
 `expo`: the app's primary navigation renders through it, and an SDK bump could move or drop
-it with no signal in this app's own manifest. Play's five arrivals join them — the **switch**
+it with no signal in this app's own manifest. (_Since [#883](https://github.com/Raketa02/Raketa/issues/883)
+the bar is the dock: three columns of Ionicons from the same declared package, and the selection
+marker under the lit one — [`shell.md`](shell.md), design-system 10.2._) Play's five arrivals join them — the **switch**
 (6.12), the **fit pill** (7.10), the **balance bar** (7.11), the **court** (7.12) and the
 availability grid's **diff variant** — plus Now's one, the **rail's dots** (7.18), which are what a
 paging rail has **instead** of a peek rather than decoration hanging off one: they track the
@@ -297,7 +299,8 @@ Part 16.
 **`shared/ui` has a second tab bar, the administrator area's** (`AdministratorTabBar`, club 17): **Groups
 · You**, a second fixed inventory beside the five, drawn from the same columns — Feather, one weight,
 selection in tone alone — with no disc and no badge. `TabBarTab` and the columns are generic over the
-key so the two inventories share one drawing. Recorded in design-system Part 16.
+key so the two inventories share one drawing. Recorded in design-system Part 16. (_Since #883 it is the
+player's dock with two columns — Ionicons `people` for Groups, and the same marker._)
 
 **The phone keeps its third and last value, and a sheet can put a mark over its title**
 ([#518](https://github.com/Raketa02/Raketa/issues/518)). `PhonePreference` gains `lastProfile` — the

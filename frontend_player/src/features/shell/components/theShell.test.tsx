@@ -74,6 +74,7 @@ import {
   barFrame,
   clearanceAbove,
   endPadding,
+  markerUnder,
   pageOf,
   PLAYERS_BAR,
 } from '@/test-support/tabBarReach';
@@ -221,6 +222,65 @@ describe('what a player lands on', () => {
     const [datafile] = transport.requestsTo('GET', DATAFILE_PATH);
     expect(datafile?.url).toBe(`https://features.test.raketa.invalid${DATAFILE_PATH}`);
     expect(datafile?.headers.Authorization).toBeUndefined();
+  });
+});
+
+/**
+ * **The bar is the dock, and the selection marker stands under the lit tab** (#883, ADR-0210 §4,
+ * 10.2). The lit tab is the URL's, by the shell's one rule, and the marker is drawn from it with the
+ * filled icon and the coral words, so the three can never disagree. **It does not travel yet**
+ * (#884): on any change of lit tab it is simply under the new one, and inside a tab's own branch it
+ * does not move at all.
+ */
+describe('the dock and its selection marker', () => {
+  it('carries three tabs, each with its role, its name and whether it is the one lit', async () => {
+    await launchIntoTheApp();
+
+    expect(screen.getByRole('tab', { name: 'Home', selected: true })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Play', selected: false })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'You', selected: false })).toBeTruthy();
+  });
+
+  it('stands the marker under the tab the player lands on', async () => {
+    await launchIntoTheApp();
+
+    expect(markerUnder()).toBe('Home');
+  });
+
+  it('is under the newly lit tab after every press — at once, for now', async () => {
+    await launchIntoTheApp();
+
+    pressTab('You');
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+    expect(markerUnder()).toBe('You');
+
+    pressTab('Play');
+    await onPlay();
+    expect(markerUnder()).toBe('Play');
+
+    pressTab('Home');
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(markerUnder()).toBe('Home');
+  });
+
+  it('stays under Home inside Home — a booked game opened from it, and its chat and back', async () => {
+    stubHomeGames(transport, [homeGame()]);
+    stubBooking(transport, bookingDetails());
+    stubConversations(transport, [bookedRoomRow()]);
+    stubConversation(transport, bookedRoom());
+    stubEntries(transport, BOOKED_ROOM);
+    await launchSignedIn();
+
+    fireEvent.press(await screen.findByRole('button', { name: HOME_GAME_COPY.openGame }));
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    expect(markerUnder()).toBe('Home');
+
+    // The chat stands the bar down; it comes back with the marker already in place.
+    fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}/chat`));
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    expect(markerUnder()).toBe('Home');
   });
 });
 
@@ -1023,22 +1083,20 @@ describe('the bar stands down inside a booked game’s chat', () => {
  * It used to be a flex sibling under the stack, which ended every screen above it whether the screen
  * knew or not; now the screens draw to the bottom of the phone and the bar is drawn over their foot,
  * so a list that forgot the reach would leave its last row under the bar and nothing would throw.
- * **Nothing looks different**: the bar is as white, as flush and as tall as before, and every list
- * ends 15 above it as it did — the gap a page kept above the bar, now kept above its reach.
+ * **The bar is the dock** (#883): 54 tall, 12 in from each side and lifted 12 over the harness's zero
+ * inset, so its reach is 66, and every list ends 15 above it — the gap a page kept above the old bar.
  */
 describe('the bar floats over the screen, and the screens end at its reach', () => {
-  it('draws the bar over the screen at the phone’s foot — as tall, as white and as flush as before', async () => {
+  it('draws the bar over the screen as the dock — 12 clear of three edges, 54 tall, rounded', async () => {
     await launchIntoTheApp();
 
     expect(barFloats()).toBe(true);
-    // 10.2's bar, unchanged: `surface`, the hairline over it, its paddings (the harness has no inset).
     expect(barFrame()).toMatchObject({
-      backgroundColor: theme.color.surface,
-      borderTopWidth: 1,
-      borderTopColor: theme.color.line,
-      paddingTop: theme.space.xs,
-      paddingBottom: theme.space.md,
+      borderRadius: theme.radius.dock,
+      borderWidth: 1,
+      borderColor: theme.color.line,
     });
+    expect(PLAYERS_BAR).toBe(66);
   });
 
   it('scrolls a long Home to its last game fully clear of the bar, by today’s 15', async () => {

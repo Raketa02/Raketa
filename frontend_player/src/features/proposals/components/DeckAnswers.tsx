@@ -23,8 +23,9 @@
  * the 40 % fade for a locked one — so the three read as the app's buttons, and the row records
  * itself in Part 16 as the mock's circles rather than as a second button.
  *
- * **Marks, not words.** The ✕ is Feather's `x` — the family the bar draws
- * ([ADR-0135](../../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)) —
+ * **Marks, not words.** The ✕ is Feather's `x` — the app's family everywhere but the tab bar
+ * ([ADR-0135](../../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md),
+ * ADR-0210 §5) —
  * the **i** is the information mark's own serif letter (5.4), and the ball is **drawn**
  * (`DeckBall`): a white outline with its two seams, at Feather's proportion, on the coral. It was the
  * 🎾 emoji as text until 2026-09-15, which the platform substituted in its own colours and clipped

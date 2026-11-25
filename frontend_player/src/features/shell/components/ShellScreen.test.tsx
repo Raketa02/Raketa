@@ -29,23 +29,14 @@ const METRICS: Metrics = {
 };
 
 /**
- * The player's bar's height at the default text size (10.2) — worked out from the theme, never read
- * back from the bar: the hairline, the top padding, the ⚡Play disc, the gap, the label, the foot.
+ * The reach on this phone while the bar is drawn (10.2) — worked out from the theme, never read back
+ * from the bar: the dock's lift, which is the bottom inset where that is larger than 12, and its 54.
  */
-const PLAYERS_BAR =
-  1 +
-  theme.space.xs +
-  theme.size.fab +
-  theme.space.xxs +
-  theme.type.tag.lineHeight +
-  theme.space.md;
-
-/** The reach on this phone while the bar is drawn: the bar, and the bottom inset it pads itself with. */
-const REACH = PLAYERS_BAR + METRICS.insets.bottom;
+const REACH = Math.max(theme.size.tabBar.lift, METRICS.insets.bottom) + theme.size.tabBar.height;
 
 /** The tab shell around the screen: its bar drawn, or standing down as in the chat. */
 function Shell({ drawn, children }: { readonly drawn: boolean; readonly children: ReactNode }) {
-  useSaysTabBarReach('player', drawn);
+  useSaysTabBarReach(drawn);
   return <>{children}</>;
 }
 

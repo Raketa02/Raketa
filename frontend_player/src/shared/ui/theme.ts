@@ -66,6 +66,20 @@ const color = {
    *  so a shape on a card never vanishes into it. */
   skeletonSheen: '#F4F2ED',
 
+  // --- The tab bar: the one glass surface (1.1's exception, 10.2, ADR-0210 §2) ---
+  /** THE DOCK'S GLASS (#883): white at .88, over a blur wherever the platform draws the glass
+   *  (`theme.glass`), so the page passing under the dock shows as a soft wash. **88, not the
+   *  brief's two-thirds**: idle words must hold 4.5:1 over the darkest ground that passes under
+   *  the dock most often, Home's game card (`night`), and at .88 `tabIdle` reads **4.53** there and
+   *  4.90 over paper (WCAG 2.1 from the hex values, ADR-0210 §2). It falls a hair short over `ink`
+   *  (4.49) and black (4.44), which the blur's averaging is expected to close — #885 looks. Where
+   *  the dock draws no glass, its fill is `surface`. */
+  glass: 'rgba(255,255,255,0.88)',
+  /** AN IDLE TAB'S ICON AND LABEL (#883): `ink` at .62, **not `muted`** — an alpha ink darkens
+   *  with the ground under the glass, and a fixed `muted` doesn't (2.77 on two-thirds glass over
+   *  `night`). 4.90 over paper, 4.53 over `night`, through 88% glass. */
+  tabIdle: 'rgba(16,27,32,0.62)',
+
   // --- Accent: the only attention colour in the app ---
   coral: '#E8482B', // a MARK, not a text bed. ink on it 4.50 · white 3.89 (X)
   coralSoft: '#FDEBE6',
@@ -781,12 +795,11 @@ const radius = {
   tabMenu: 13,
   bubble: 13,
   toast: 12,
-  /** The ⚡Play disc. **There is no avatar rule here to be measured against** — see `avatar`
-   *  below. The disc is not a face and 11 is the prototype's measured value, kept
-   *  (docs/design-system.md 10.2).
-   *  The active state's RING is this grown by `size.tabBar.ringGap + ringStroke` on every
-   *  side, which is arithmetic the bar does rather than a second radius token. */
-  fab: 11,
+  /** The tab bar's dock (10.2, #883) — 22 on all four corners, beside the sheet's 22 on its top
+   *  two: the dock is the bottom chrome's other floating slab, and the brief's own corner. Its inner
+   *  rim is this less the 1pt hairline, which is arithmetic the bar does rather than a second
+   *  token. It took the retired ⚡Play disc's `fab` (11), which only the bar drew. */
+  dock: 22,
   /** The guide's hole (9.4) — the window cut in its dim around one figure. A button's 10, named
    *  for its role: a hole is not a control, and changing one must not change the other. */
   spotlight: 10,
@@ -1573,35 +1586,48 @@ const size = {
    *  below it, and the glyph is a step under `tabIcon` because it sits inside a fill. */
   rowLead: 28,
   rowLeadGlyph: 15,
-  /** The ⚡Play disc — 28 until the bar was built, unreferenced by anything, and off the
-   *  3pt grid at both values. **30**, which is what #227 drew and measured. */
-  fab: 30,
-  /** The tab bar — 10.2. The bar's own geometry is 10.2's and is read from `space`:
-   *  paddingTop `xs`, paddingBottom `md` + the bottom inset, an icon at `tabIcon`, and the
-   *  smallest step on the grid between the icon and its label. What is here is the four
-   *  values the grid and 10.2 do not between them supply.
+  /** The tab bar — 10.2: **the dock**, a rounded slab floating over the screen's foot, in equal
+   *  columns, an Ionicons icon over a `tag` label in each, and the selection marker under the lit
+   *  one ([ADR-0210](../../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md)
+   *  §2, §5, #883). The ⚡Play disc, its ring and their sizes (`fab` 30, `bolt` 15, `ringGap` and
+   *  `ringStroke` 2) retired with it (§6).
    *
-   *  `ringGap` and `ringStroke` are the ACTIVE state, kept as the two numbers 10.2 states
-   *  rather than pre-added into a 38pt ring: the ring is `size.fab` grown by both on every
-   *  side and its radius is `radius.fab` grown by both, and the bar does that arithmetic —
-   *  the same reason the level bar keeps 7.5's y coordinates as coordinates. The ring is
-   *  ABSOLUTELY positioned, so the 4pt it adds above the disc comes out of the bar's
-   *  existing 6pt top padding and the bar's height does not change between screens.
+   *  **54 tall at every text size and in every state.** The column's content is centred in it, and
+   *  the cap below is what keeps that content inside the marker: 18 + 3 + `tag`'s 12pt line at 1.6
+   *  is **40.2** inside 42, where a 20pt icon would be 42.2. The bar's **reach**, the room it
+   *  takes at the bottom, is the lift + 54 (`tabBarReach.ts`): 66 on the A32, 88 on a notched
+   *  iPhone.
    *
    *  `labelMaxScale` is the only Dynamic Type mechanism this surface has: Part 13 names the
    *  tab bar as the fixed-height exception AND permits `allowFontScaling={false}` only
    *  inside the level bar, which leaves a bounded multiplier and nothing else. It was
    *  **derived** over five columns — 1.7 over *Around*, 1.6 over *Players* (ADR-0169 §1) — and
    *  the bar is three since the old loop's two columns left it (#576): at a third of the screen
-   *  every word fits at more than twice this, so the width no longer decides it and it stays
-   *  where the five left it, bounding the bar's height. `tabBarLabelCap.test.ts` measures the
-   *  three shipped labels against the real Archivo 700 advances in the narrowest phone's column,
-   *  so a fourth tab or a longer word goes red rather than truncating on somebody's phone. */
+   *  every word fits at more than twice this, so the width no longer decides it. It stays where
+   *  the five left it, and it now holds the label inside the 42pt marker. `tabBarLabelCap.test.ts`
+   *  measures the icon and the three shipped labels against the real Archivo 700 advances, inside
+   *  the marker and inside the narrowest phone's column, so a fourth tab or a longer word goes red
+   *  rather than truncating on somebody's phone. */
   tabBar: {
-    /** ADR-0135: Feather `zap`, inside the disc, smaller than the 16pt box the flanks use. */
-    bolt: 15,
-    ringGap: 2,
-    ringStroke: 2,
+    /** The dock's height — the brief's 54, on the grid. */
+    height: 54,
+    /** Its distance from either side of the screen — the gutter's step below 15, so the page shows
+     *  either side of it. */
+    sideInset: space.md,
+    /** **The least** it is lifted off the bottom: the dock stands the larger of this and the bottom
+     *  inset above the phone's foot, so it rests on a notched iPhone's safe-area line and stands 12
+     *  clear of three edges on an Android phone with no inset. The brief's 10 is off the grid; 12
+     *  equals the side inset. */
+    lift: space.md,
+    /** THE SELECTION MARKER (#883, ADR-0210 §4): an opaque `coralSoft` capsule at `radius.pill`,
+     *  centred in the lit column, under its icon and label. 75 rather than the brief's 76, which is
+     *  off the grid. On the narrowest phone a column is (320 − 24) ÷ 3 = 98.7 wide, so the marker
+     *  keeps the 97.5 its stretch will peak at (#884) inside it. */
+    marker: { width: 75, height: 42 },
+    /** The icon's box — Ionicons at 18, the largest that keeps icon + 3 + the capped label inside
+     *  the marker (above). 16, `tabIcon`, is the fallback if 18 looks crowded on the phone (#885);
+     *  everywhere else in the app a 16pt Feather glyph stays `tabIcon`. */
+    icon: 18,
     labelMaxScale: 1.6,
     /** Home's badge — 10.2, and the one badge the bar carries.
      *
@@ -1613,17 +1639,16 @@ const size = {
      *  cap: a two-digit count spreads it into a lozenge at `radius.pill` and the digits stay
      *  tabular, so 1 -> 2 does not reflow the column.
      *
-     *  `badgeRise` is how far it stands above the 16pt icon box, and it is **not a new number**:
-     *  it is the 4 the active ring already takes out of the bar's own 6pt top padding, leaving
-     *  the same 2pt of clearance to the hairline. The bar's height never changes — a bar that
-     *  grew on arriving somewhere would move the four things that did not change in order to
-     *  announce the one that did.
+     *  `badgeRise` is how far it stands above the icon box — 16pt on the bell and the envelope,
+     *  `tabBar.icon`'s 18 on the bar. It was the 4 the ⚡Play disc's ring took out of the old
+     *  bar's 6pt top padding; the ring retired (#883) and **the 4 stays as the badge's own
+     *  number**. Out of the layout, so the dock is 54 whatever the count: its top is 6.5 inside
+     *  the dock's top edge at 1× and 2.9 at the cap.
      *
      *  Everything else is borrowed rather than invented: `coralInk` fill and a white mark at
-     *  5,89, which is 6.1 `primary`'s treatment and the correction the Play disc one column
-     *  away already took once; the horizontal padding and the overlap over the icon are
-     *  `space.xxs`. **No device has drawn this**, and `tabBadgeFit.test.ts` is what holds the
-     *  arithmetic that a device would otherwise have to. */
+     *  5,89, which is 6.1 `primary`'s treatment; the horizontal padding and the overlap over the
+     *  icon are `space.xxs`. `tabBadgeFit.test.ts` holds the arithmetic a device would otherwise
+     *  have to. */
     badge: 18,
     badgeRise: 4,
   },
@@ -1903,28 +1928,21 @@ const shadow = {
     shadowRadius: 20,
     elevation: 8,
   },
-  /** THE ⚡PLAY DISC — the fifth, and the only one that is a colour rather than a dimming.
-   *
-   *  From the prototype's `0 6px 14px -6px rgba(232,72,43,.7)`, and CALIBRATED rather than
-   *  copied: that rule carries a -6px spread against a 14px blur, so 6 of the 14 never
-   *  reach the paper and RN has no way to say so.
-   *
-   *    blur 14   -> radius 7    the halving the other four do
-   *    offset 6  -> 3           the spread eats the drop: 6 x (1 - 6/14) = 3,4
-   *    opacity .7 -> .40        and the same fraction of the ink: .7 x (1 - 6/14)
-   *
-   *  `coral` rather than a bespoke dark hex, because the tint is the whole point — the disc
-   *  is the one thing in the bottom chrome that floats, and it floats in its own colour.
-   *  ON ANDROID IT DOES NOT: `elevation` draws the platform's black shadow and RN exposes
-   *  no way to tint it, so the disc is raised on both platforms and glows on one. 6 seats it
-   *  below the deck card, which is right — the bar is chrome and every overlay passes over
-   *  it. */
-  fab: {
-    shadowColor: color.coral,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 7,
-    elevation: 6,
+  /** THE TAB BAR'S DOCK — the fifth (10.2, #883, ADR-0210 §6), in the slot the ⚡Play disc's
+   *  coral-tinted `fab` left when the disc retired, so the inventory stays at seven and none of
+   *  them is tinted any more. **The deck card's values**, the faintest of the shadows for things
+   *  that float over the page — the dock is lifted off the page, not a card on it. `elevation`
+   *  the deck card's 8: on Android's opaque dock it draws as it is (the A32 spike's T3, #880).
+   *  **Where the dock draws the glass — always on the iPhone — it is shadowed by `glass.shadow`
+   *  instead**, the same values as `boxShadow`, which is drawn outside the box only: a translucent
+   *  fill would show `elevation` through it, and gives iOS's shadow props no opaque fill to work an
+   *  outline from, so they would be drawn from the dock's pixels in an off-screen pass. */
+  dock: {
+    shadowColor: '#0B2B33',
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
   },
   /** THE CLUB RESULT — the sixth, and the only card-shaped surface that casts one: one drawing
    *  (`ClubCard`), in New group's home-club search and in Join a group's.
@@ -1933,7 +1951,7 @@ const shadow = {
    *  one club ended: on paper, a 1pt border between two white cards nine points apart is not
    *  enough to read a club and its groups as one object. It is the faintest and the tightest
    *  of the six — the result sits on the page it lifts from, it is not over anything — and its
-   *  `elevation` is the lowest, below the ⚡Play disc, because the bar passes over it. */
+   *  `elevation` is the lowest, below the dock's, because the bar passes over it. */
   clubResult: {
     shadowColor: '#0B2B33',
     shadowOffset: { width: 0, height: 3 },
@@ -2232,6 +2250,32 @@ const motion = {
 const layer = { sheet: 20, toast: 40, popover: 60 } as const;
 
 // ---------------------------------------------------------------------------
+// The glass — where the tab bar's dock draws `color.glass` over a blur, and how strong the blur
+// is (10.2, ADR-0210 §7). The one glass surface in the app (1.1), so one switch for it.
+// ---------------------------------------------------------------------------
+
+const glass = {
+  /** **Whether Android draws the glass — no** (the A32 spike, #880, ADR-0210 §7 amended
+   *  2026-11-25). `expo-blur`'s Android blur redraws everything behind the dock on the UI thread
+   *  whenever anything under it or on it changes, and it added frames over 16.7 ms to a scroll and
+   *  to the marker's slide on the A32, against a pass mark of none. So Android's dock is opaque
+   *  `surface` with the same shape, rim, hairline, shadow and marker. The iPhone draws the glass
+   *  always. Turning this on is a new measurement, not a taste call. */
+  android: false,
+  /** The blur's strength, `expo-blur`'s `intensity` (1–100): **100**, the brief's *strong blur*.
+   *  Picked over Home's dark card and its white rows on the A32 at the product owner's call, who had
+   *  no iPhone at hand; it has not been seen on an iPhone (#885). */
+  blur: 100,
+  /** `shadow.dock` as React Native's `boxShadow`, for a dock that draws the glass — the iPhone's,
+   *  and Android's if `android` is ever turned on. Drawn outside the box only, so nothing shows
+   *  through the translucent fill (the spike's T3, on Android). On the iPhone it also spares the
+   *  dock a shadow worked out from its pixels: iOS's shadow props on a view with no opaque fill take
+   *  an off-screen pass whenever the page moves under the blur, which can stop the blur drawing. The
+   *  iPhone has not drawn it yet (#885). */
+  shadow: [{ offsetX: 0, offsetY: 7, blurRadius: 20, color: 'rgba(11,43,51,0.12)' }],
+} as const;
+
+// ---------------------------------------------------------------------------
 
 export const theme = {
   color,
@@ -2248,6 +2292,7 @@ export const theme = {
   shadow,
   motion,
   layer,
+  glass,
 } as const;
 
 export type Theme = typeof theme;

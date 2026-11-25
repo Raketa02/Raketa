@@ -232,7 +232,8 @@ asymmetry with a proxy or a cookie session.
 - **`fetch` has no default timeout.** Timeouts are centralized in `shared/lib/http` as classes —
   no millisecond literal in a feature.
 - **Archivo ships no ✓, ✉, ★ or ⚡.** Every mark is drawn or is Feather (`@expo/vector-icons`,
-  declared in `package.json` on purpose — ADR-0135), never the character.
+  declared in `package.json` on purpose — ADR-0135) — **Ionicons on the tab bar alone**, from the
+  same package (ADR-0210 §5, #883) — never the character.
 - **Never log a token, an `Authorization` header, a password or a full payload.**
 - **A mounted Reanimated style makes every React Native `Modal` on Android unusable** (New
   Architecture + Reanimated 3.16): its content stays 0 × 0 and no press inside completes. No

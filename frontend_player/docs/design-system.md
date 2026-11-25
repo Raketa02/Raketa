@@ -106,18 +106,20 @@ Not aspirations — each is visible in the implementation and can be checked aga
 
 The app background is `--paper` `#F4F2ED`, a warm off-white, not pure white. Cards are
 `#FFFFFF` on top of it. **The contrast between surface and background is what creates
-depth**, so the app needs almost no shadow: three shadows exist in the whole system, and
-all three are for things that genuinely float.
+depth**, so the app needs almost no shadow: seven exist in the whole system, five of them for
+things that genuinely float ([4.3](#43-elevation)).
 
 A deliberate rejection of the "floating card on grey" pattern. Warm paper reads as a
 physical object; a card on it reads as a piece of paper on a desk.
 
-> **Decided by [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md),
-> not yet built (PRD [#878](https://github.com/Raketa02/Raketa/issues/878))** — one exception:
-> **the tab bar becomes the one glass surface**, 88% white over a blur, floating over the screen
-> (ADR-0210 §2). On Android it is opaque `surface`: the A32 spike measured the blur costing frames
-> (ADR-0210 §7, amended 2026-11-25). Nothing else becomes glass. This section is rewritten, with `theme.ts`, by
-> [#883](https://github.com/Raketa02/Raketa/issues/883).
+**One exception: the tab bar is glass** ([ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §2,
+[#883](https://github.com/Raketa02/Raketa/issues/883)). It is the one thing that floats over every
+main screen, and the product owner's design asks that it belong to the screen it is on, which paper
+cannot do. So the bar is a dock of `color.glass`, white at 88%, over a blur, and the page passes
+under it as a soft wash ([10.2](#102-the-tab-bar)). **Android draws it opaque `surface`**: the A32
+spike measured the blur costing frames (ADR-0210 §7, amended 2026-11-25), and `theme.glass.android`
+is the switch that says so. Paper is still the ground and cards still cast no shadow. **Nothing else
+becomes glass**: the next surface that wants to argues with this section, not with ADR-0210.
 
 ## 1.2 One accent, used sparingly
 
@@ -133,30 +135,24 @@ column where they open. Chats' is drawn only with Classic play; as the app ships
 on the bar.
 
 **The sixth entry is resolved on shape rather than hue** ([10.2](#102-the-tab-bar),
-[#326](https://github.com/Raketa02/Raketa/issues/326)). The bar draws coral twice now and the
-two do not mean the same thing, so the distinction the bar had already drawn is written down:
-**a coral stroke is where you are** — the ring around the ⚡Play disc — and **a `coralInk` fill
-is a thing to attend to** — the disc, and now the badge. Nothing else was honest: the palette
+[#326](https://github.com/Raketa02/Raketa/issues/326)). The bar draws coral more than once and the
+marks do not mean the same thing, so the distinction is written down in three lines: **a coral
+stroke is where you are** — the game card's ringed cell ([7.22](#722-the-game-card)); **a
+`coralInk` fill is a thing to attend to** — the badge; and **a `coralSoft` fill is where you are,
+on the bar** — the selection marker behind the lit tab, with its icon in `coral` and its label in
+`coralInk` ([ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §4,
+[#883](https://github.com/Raketa02/Raketa/issues/883)). **The list stays at six**: the marker _is_
+the active-tab entry, redrawn. The ⚡Play disc drew the first two lines on the bar, a ring round a
+`coralInk` fill, until it retired with #883. Nothing else was honest: the palette
 does not grow to accommodate a new meaning ([1.3](#13-semantic-colour-is-never-decorative)),
 `red` is _ended badly_ and a challenge waiting for you is its opposite, and a count of things
 **only you can clear** is what attention means.
 
-> **Decided by [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md),
-> not yet built (PRD [#878](https://github.com/Raketa02/Raketa/issues/878))** — a third line:
-> **a `coralSoft` fill is _where you are_, on the bar only.** That fill is the selection marker
-> behind the lit tab, with its icon in `coral` and its label in `coralInk` (ADR-0210 §4).
->
-> - **The list stays at six:** the marker _is_ the active-tab entry.
-> - **Home's badge stays a `coralInk` fill**, a thing to attend to.
-> - **The ⚡Play disc and its ring retire** (ADR-0210 §6), so the stroke line keeps the game card's
->   ringed cell as its example.
-> - **_On the bar only_ fences the line, and two things below stand as they are.**
->   - Rankings' own row is already tinted `coralSoft` for _where you are_ in a list (#775). It stays
->     a meaning above.
->   - The paging rail's current dot stays `ink`. Its reasoning, _a coral fill is not that_, is
->     amended for the bar alone.
->
-> This section is rewritten, with `theme.ts`, by [#883](https://github.com/Raketa02/Raketa/issues/883).
+**_On the bar_ fences the third line, and two things below stand as they are.** Rankings' own row
+is tinted `coralSoft` for _where you are_ in a list (#775), a meaning above that licenses no further
+surface. The paging rail's current dot stays `ink`: its reasoning, _a coral fill is not that_, is
+amended for the bar alone. And Home's badge stays a `coralInk` fill, so _something needs you_ and
+_you are here_ are kept apart on the dock by fill.
 
 **A list this short is a rule, and it refused two candidates in the same breath it admitted
 that one.** The challenge row's urgency stripe is `amber`
@@ -220,7 +216,7 @@ the card lost its bar (7.30, home refactor 5.1).
 the Friends tab is building, and the kind Games' deck shows (#862) — carries a **circle with
 `Tick`'s drawn white tick**: the current kind is the active sub-tab, so this is the list's second
 entry drawn inside a tab, not a seventh. **The circle is `coralInk`**, not `coral`: a white mark on
-a coral fill takes `coralInk` wherever it is drawn — the ⚡Play disc and the badge did first
+a coral fill takes `coralInk` wherever it is drawn — the badge did first, and the ⚡Play disc before it retired
 ([Rule C](#rule-c--text-on-a-saturated-fill)) — and the tick reads 5,89:1 on it. It is no count and
 carries none; the tick's shape and the line's `selected` say the fact besides, and it is drawn only
 while the player holds the menu open. Flagged for the product owner with the rest.
@@ -915,6 +911,7 @@ Everything else follows. A value outside the grid is a bug.
 | ------------------- | ----------------------------------------------- |
 | `pill` (height ÷ 2) | The chip — the only true pill                   |
 | 22 (top corners)    | Bottom sheet                                    |
+| 22                  | The tab bar's dock ([10.2](#102-the-tab-bar))   |
 | 18                  | The deck card — **not a card**, see below       |
 | 15                  | Dark card                                       |
 | 13                  | Card, popover                                   |
@@ -981,34 +978,29 @@ for Android:
 | **Popover**     | `shadowColor #0B1F2A`, offset `{0,8}`, opacity `.24`, radius `15`  | `elevation: 12` |
 | **Toast**       | `shadowColor #000`, offset `{0,6}`, opacity `.24`, radius `14`     | `elevation: 10` |
 | **Deck card**   | `shadowColor #0B2B33`, offset `{0,7}`, opacity `.12`, radius `20`  | `elevation: 8`  |
-| **⚡Play disc** | `shadowColor coral`, offset `{0,3}`, opacity `.40`, radius `7`     | `elevation: 6`  |
+| **Dock**        | `shadowColor #0B2B33`, offset `{0,7}`, opacity `.12`, radius `20`  | `elevation: 8`  |
 | **Club result** | `shadowColor #0B2B33`, offset `{0,3}`, opacity `.10`, radius `8`   | `elevation: 3`  |
 | **Open line**   | `shadowColor #0B2B33`, offset `{0,4}`, opacity `.10`, radius `12`  | `elevation: 3`  |
 
-The deck card is the **faintest** of the five that float, and the calibration is why: at
+The deck card is the **faintest** of the five that float — with the dock, which borrows its
+values — and the calibration is why: at
 `0 18px 40px -26px` it carries the largest negative spread of any shadow in the system — 26
 of 40 blur — so the offset comes down hardest and the opacity with it. It floats least, and
 its `elevation` says so. It is not the _tightest_: at radius 20 its blur ties the sheet's,
 because a 40px blur halves to 20 whatever is subtracted from its spread.
 
-### The fifth is a colour, and it is calibrated, not copied
+### The fifth is the dock's, in the disc's slot
 
-The ⚡Play disc ([10.2](#102-the-tab-bar)) is the only tinted shadow in the app: it is the one
-thing in the bottom chrome that floats, and it floats in its own colour rather than in a dim.
-The prototype's rule is `0 6px 14px -6px rgba(232,72,43,.7)` and **the negative spread is the
-whole of the calibration** — 6 of the 14 blur never reach the paper, and RN has no way to say
-so:
-
-| CSS          | Here     | Why                                            |
-| ------------ | -------- | ---------------------------------------------- |
-| blur `14`    | radius 7 | the halving the other four already do          |
-| offset `6`   | 3        | the spread eats the drop: 6 × (1 − 6/14) = 3,4 |
-| opacity `.7` | `.40`    | and the same fraction of the ink               |
-
-**On Android it is not a colour.** `elevation` draws the platform's own black shadow and RN
-exposes no way to tint it, so the disc is raised on both platforms and glows on one. Its 6
-seats it under the deck card, which is right: the bar is chrome, and every overlay passes over
-it.
+The tab bar's dock ([10.2](#102-the-tab-bar), [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §6,
+[#883](https://github.com/Raketa02/Raketa/issues/883)) takes the slot the ⚡Play disc's
+coral-tinted shadow left when the disc retired, so the inventory stays at seven and **no shadow is
+tinted any more**. It borrows the deck card's values, the faintest of the shadows for things that
+float over the page: the dock is lifted off the page, not a card on it. On Android's opaque dock its
+`elevation` draws as it is (the A32 spike's T3). **Wherever the dock draws the glass — always on
+the iPhone — it is shadowed by `glass.shadow` instead**, the same values as React Native's
+`boxShadow`, which is drawn outside the box only: a translucent fill would show `elevation`
+through it, and gives iOS's shadow props no opaque fill to work an outline from, so they would be
+drawn from the dock's pixels in an off-screen pass, which can stop the blur drawing.
 
 ### The sixth is a card's, and only one card's
 
@@ -1804,16 +1796,15 @@ change; a filled tile's border is already carrying whether it is the profile pho
 ([6.9](#69-the-photo-tile-and-picker)), so borrowing it for a press would have one line say
 two things and lose the argument at the moment both are true.
 
-Play's tab bar adds two, and the pair is the same rule twice — **one channel per state**:
+The tab bar adds one — **one channel per state**:
 
-| Element                                | Pressed                                                                 |
-| -------------------------------------- | ----------------------------------------------------------------------- |
-| Tab column ([10.2](#102-the-tab-bar))  | `opacity: .7`, on the **column** — it is the target, and it has no fill |
-| ⚡Play disc ([10.2](#102-the-tab-bar)) | `coral` — [6.1](#61-button) `primary`'s pressed fill, arriving free     |
+| Element                               | Pressed                                                                                |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
+| Tab column ([10.2](#102-the-tab-bar)) | `opacity: .7` on the **column** — its icon, label and badge; it is the target, no fill |
 
-The disc is the one column that does **not** dim, because it already has a second fill and
-dimming it as well would put two channels on one press. Its ring is untouched by a press for
-the same reason the shadow is: the ring says _you are here_, and a press is not that.
+**Every column dims, Play's too**, now that the ⚡Play disc and its pressed fill have retired
+(#883). The selection marker is drawn by the dock and not by the column, so a press never dims or
+moves it: the marker says _you are here_, and a press is not that.
 
 The chat map adds two, and one of them is a refusal:
 
@@ -5082,7 +5073,7 @@ a sentence away from the paragraph it belongs to.
 ## 9.2 Toast
 
 ```
-position  left 15, right 15, 9 above the tab bar's full reach — its height + the bottom inset (10.1)
+position  left 15, right 15, 9 above the tab bar's full reach — the dock's lift + its 54 (10.1)
 tst       background night, #fff, radius 12, padding 12 × 15, 12 / 600
 ok        background mintInk        ← Rule C, was mint (4.07:1)
 bad       background red
@@ -5294,7 +5285,7 @@ TopSafeArea           the top inset, as padding from the provider — down to th
   ScreenHeader        eyebrow + h1, optional back, optional right slot
   ScrollView          paddingHorizontal 15, paddingBottom reach + 15
   CTA                 conditional — the screen ends at the reach, and the CTA sits above the bar
-TabBar                over the screen's foot, equal columns, one per top-level destination
+TabBar                the dock, over the screen's foot — equal columns, one per top-level destination
 ```
 
 > **The tab bar floats over the screen and owns no layout**
@@ -5304,13 +5295,12 @@ TabBar                over the screen's foot, equal columns, one per top-level d
 > tabs draws to the bottom of the phone. It used to be a flex sibling below the stack, which ended
 > every screen above it whether the screen knew or not. Now each screen ends at the bar's **reach**:
 >
-> - **The reach is the room the bar takes at the bottom**: its height and the bottom inset while it
->   is drawn, and **nothing while it stands down**. Today that is the bar's 64 at the default text
->   size, plus the inset; the dock's lift + 54 replaces it with
->   [#883](https://github.com/Raketa02/Raketa/issues/883). It is a followed value in `shared/ui`
+> - **The reach is the room the bar takes at the bottom**: the dock's lift and its 54 while it is
+>   drawn — 66 on the A32, 88 on a notched iPhone ([#883](https://github.com/Raketa02/Raketa/issues/883))
+>   — and **nothing while it stands down**. It is a followed value in `shared/ui`
 >   (`tabBarReach.ts`, the page band's pattern), said by the shell and read by everything placed
 >   against the bottom — a value rather than a context, because sheets and the toast host sit at
->   the root, above the shell. The administrator's area says its own shorter bar's.
+>   the root, above the shell. The administrator's area says the same dock's.
 > - **A scroller ends with padding of reach + its own gap** — 15 for the page, the gap it kept above
 >   the bar — so its last row scrolls fully clear of the bar.
 > - **The Games deck's ✕ · i · ✓ stand at reach + 15.** The stage fills what is left, as before, and
@@ -5330,9 +5320,9 @@ TabBar                over the screen's foot, equal columns, one per top-level d
 >   composer. **The Undo toast follows the bar**: 9 above the reach while it is drawn, and 9 above
 >   the bottom inset while it stands down.
 >
-> **The bar's height is a floor at large text.** `labelMaxScale` grows its labels up to 1.6×, which
-> makes the bar about 7pt taller than the reach says — inside every gap kept above it — until the
-> dock's fixed 54 holds the label inside it (#883).
+> **The reach is exact at every text size.** The dock is 54 however large the labels grow:
+> `labelMaxScale` holds them inside the selection marker ([10.2](#102-the-tab-bar), #883). Until
+> #883 the bar grew about 7pt past its reach at the cap, inside every gap kept above it.
 >
 > **The bar stands down in two places**: the chat, and an Android phone with the keyboard up. Both
 > are below.
@@ -5344,10 +5334,10 @@ TabBar                over the screen's foot, equal columns, one per top-level d
 > areas at all**, so its own number gets worse on a real device rather than better. The CTA is
 > a **flex sibling** below the scroller, never a fixed element.
 >
-> **The tab bar owns the bottom safe-area inset and the CTA owns none.** The bar pads itself with
-> it, so the reach holds it, and a CTA above the bar must not apply it too: an inset applied twice
-> is 34pt of nothing on a notched device — and applied to the wrong one it is a CTA under the home
-> indicator.
+> **The tab bar owns the bottom safe-area inset and the CTA owns none.** The dock is lifted the
+> larger of 12 and the inset, so the reach holds it, and a CTA above the bar must not apply it too:
+> an inset applied twice is 34pt of nothing on a notched device — and applied to the wrong one it is
+> a CTA under the home indicator.
 >
 > **One screen is the exception, and it is the only one** ([Part 16](#part-16--amendments-after-locking),
 > 2026-09-11). The conversation **stands the tab bar down**: its composer replaces the bar for as
@@ -5404,67 +5394,109 @@ is now a caller of this rule rather than its home.
 ## 10.2 The tab bar
 
 ```
-equal columns, one per top-level destination
-paddingTop 6, paddingBottom = 12 + bottom safe-area inset
-icon 16 × 16, gap 3, label `tag`
-centre column: a 30pt disc, radius 11, 6.1 `primary`, shadow.fab
-active Play:   a 2pt `coral` ring, 2pt clear of the disc, ABSOLUTELY POSITIONED
+dock      54 tall · 12 in from each side · lifted the larger of 12 and the bottom inset
+          radius.dock 22 · a 1pt `line` hairline · a 1pt `surface` rim inside it · shadow.dock
+material  color.glass (white at .88) over a blur at 100 where theme.glass draws it, else surface
+columns   equal, one per top-level destination · Ionicons 18, gap 3, label `tag`, cap 1.6
+idle      outline icon and label in tabIdle (ink at .62)
+lit       filled icon in coral, label in coralInk, on the selection marker
+marker    opaque coralSoft, 75 × 42, radius.pill, centred in the lit column
+layers    glass → marker → icons and labels → badge
+press     the column's icon, label and badge dim to .7 · the marker ignores the press
 ```
 
-> **Decided by [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md),
-> not yet built (PRD [#878](https://github.com/Raketa02/Raketa/issues/878))** — **this section is
-> replaced** (ADR-0210 §2, §5, §6, §8):
->
-> - **The dock:** 54 tall, 12 in from each side, lifted the larger of 12 and the bottom inset,
->   radius 22, and glass.
-> - **The columns:** three equal Ionicons columns at 18pt, two in the Administrator's area, outlined
->   in `ink` at 62% when idle.
-> - **The selection marker:** opaque `coralSoft`, 75 × 42, behind the lit tab's filled `coral`
->   icon and `coralInk` label. It travels on a 460 ms spring.
-> - **Retired:** the ⚡Play disc, its ring and `shadow.fab`.
-> - **Kept:** Home's badge.
->
-> [ADR-0135](../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md) is superseded
-> for the bar. This section is rewritten, with `theme.ts`, by
-> [#883](https://github.com/Raketa02/Raketa/issues/883), and its motion by
-> [#884](https://github.com/Raketa02/Raketa/issues/884). Until then the text below describes the
-> bar as built.
+> **Rebuilt by [#883](https://github.com/Raketa02/Raketa/issues/883), 2026-11-25**, on
+> [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §2,
+> §4–§7, which supersedes [ADR-0135](../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)
+> for the bar. It replaced a flat `surface` strip, 64 tall, with Feather glyphs selected in tone
+> alone and a raised 30pt ⚡Play disc ringed in `coral` when Play was lit. **The marker stands still
+> for now**: it travels on a 460 ms spring with [#884](https://github.com/Raketa02/Raketa/issues/884),
+> which writes this section's motion.
 
 **Three columns** — `Home · ⚡Play · You`
-([#576](https://github.com/Raketa02/Raketa/issues/576)). The centre one is raised, and it is
-both an action and a destination: pressing it always opens Play's entry, and the screens that
-entry leads to are somewhere a player can be for a whole flow. That is what the ring is for.
-(Four, until the deck left for Players — ADR-0169 §1; five, with the old loop's Players and
-Chats behind the `classic_play` flag (#550), until that loop was removed. Home was **Now** until
-#550, renamed whole — key, label, copy — on its own route, `/`.) No caller passes tabs.
+([#576](https://github.com/Raketa02/Raketa/issues/576)), three equal places. Play was raised at the
+centre, a disc that read as a button to press even while you were in Play; it is an ordinary column
+now, and what pressing it does is unchanged. (Four, until the deck left for Players — ADR-0169 §1;
+five, with the old loop's Players and Chats behind the `classic_play` flag (#550), until that loop
+was removed. Home was **Now** until #550, renamed whole — key, label, copy — on its own route, `/`.)
+No caller passes tabs. **The Administrator's area draws the same dock with two columns**, Groups and
+You (ADR-0210 §3, Q16), from a second fixed inventory beside the three.
 
-### The disc is [6.1](#61-button) `primary` in a squircle
+### The dock, the one glass surface
 
-Not a new colour treatment, and this is the one exception the bar looked like it needed and
-does not have. The prototype's disc was **white on `coral` at 3.89:1** — the exact pairing
-[2.2](#22-accent-and-semantics)'s Rule C refuses outright, on the grounds that nothing in this
-app reaches the large-text threshold. `primary` already answers it: fill `coralInk`, white
-mark, brightening to `coral` on press. The press state arrives free and no colour is added.
+**A rounded slab over the screen's foot** (10.1): 54 tall, 12 in from each side, its corners at
+`radius.dock`, 22, beside the sheet's 22 on its top two. **It is lifted the larger of 12 and the
+bottom inset**, so on a notched iPhone it rests on the safe-area line, as iOS's own bars do, and on
+an Android phone with no inset it stands 12 clear of three edges. The bottom inset is the lift's: the
+dock pads itself with nothing. Its **reach**, lift + 54, is what every screen ends at — 66 on the
+A32, 88 on a notched iPhone, against the old bar's 64 and 98.
 
-Radius 11 rather than a third of its own box, which would land on 10. **There is no avatar
-rule in this system to be measuring against** — the `round(size × 0.33)` this paragraph once
-cited went with 7.4's seat avatar in the reset, and
-[#338](https://github.com/Raketa02/Raketa/issues/338) §5 refused to bring an avatar back at
-all. The 33 % share belongs to `CandidatePhoto`, over its own box, for **a face**. The disc is
-not a face, and 11 is the measured value.
+**The material is glass where the platform can afford it** — [1.1](#11-paper-not-glass)'s one
+exception. `color.glass`, white at .88, over `expo-blur` at intensity 100 with a light tint, so the
+page passing under the dock shows as a soft wash. **The iPhone always draws it. Android draws opaque
+`surface`**, the same shape, rim, hairline, shadow and marker: the A32 spike measured the blur adding
+frames over 16.7 ms to a scroll and to the marker's slide, against a pass mark of none (ADR-0210 §7,
+amended 2026-11-25). One switch says so, `theme.glass.android`, and turning it on is a new
+measurement rather than a taste call. 100 was picked on the A32 at the product owner's call and has
+not been seen on an iPhone.
 
-### The active state is a ring, in coral, and it is out of the layout
+**88%, not the brief's two-thirds**, because idle words must hold 4.5:1 over the darkest ground
+that passes under the dock most often, Home's game card, `night`: idle reads **4.53** there through
+88% glass, and 3.76 through two-thirds (WCAG 2.1 from the hex values). Over `ink` and black it falls
+a hair short, 4.49 and 4.44; the blur averages what passes under it, which the phone walk looks at
+(#885), and 90% is the figure that clears black.
 
-**2pt, `coral`, set 2pt clear of the disc.** The gap is the bar's own `surface`, so there is
-no collar to token and coral reads **3.89:1 on both edges** of the stroke — clearing 3:1 for a
-non-text indicator. Volt cleared it on neither: **1.25:1** against the bar and **2.86:1**
-against the disc, which is [2.2](#22-accent-and-semantics) as amended — _a fill anywhere, a
-stroke only on dark_ — measured rather than asserted.
+**Bounded and lifted.** A 1pt `line` hairline outside — `line` bounds a thing — and a 1pt `surface`
+rim inside it, the glass's bright edge, white on white on the opaque dock. `shadow.dock` lifts it
+with the deck card's values in the slot the disc's tinted `shadow.fab` left ([4.3](#43-elevation)).
+Where the dock draws the glass — the iPhone's, always — the shadow is `glass.shadow`, the same values
+as `boxShadow`, drawn outside the box only, so nothing shows through the translucent fill and iOS
+never works the shadow out from the dock's pixels. The iPhone has not drawn it yet (#885).
 
-**Absolutely positioned, and the bar's height never changes.** A bar that grew 8pt on arriving
-in Play would move the four things that did not change in order to announce the one that did.
-The 4pt the ring needs above the disc comes out of the 6pt top padding, leaving 2pt of
-clearance to the hairline.
+### Selection is a marker, a shape and a tone
+
+| Tab                          | Idle             | Lit      |
+| ---------------------------- | ---------------- | -------- |
+| `home`                       | `home-outline`   | `home`   |
+| `play`                       | **`flash`**      | `flash`  |
+| `you`                        | `person-outline` | `person` |
+| `groups` (the Administrator) | `people-outline` | `people` |
+
+**Idle** is an outline, icon and label in `tabIdle`, `ink` at .62 — not `muted`, because an alpha
+ink darkens with the ground under the glass and a fixed `muted` does not (2.77 on two-thirds glass
+over `night`). **Lit** is the filled glyph in `coral`, a mark at 3.38:1 on the marker, and the label
+in `coralInk`, words at 5.11:1, where `coral` would be 3.38 for a 9.5pt word — Rule C's spirit, and
+the tab's menu tick took `coralInk` first. Both sit on **the selection marker**: an opaque
+`coralSoft` capsule, 75 × 42 at `radius.pill`, centred in the lit column. **Opaque**, because the
+brief's coral at 13% turns a murky brown-red over a dark card; opaque, it looks the same over
+anything. It is [1.2](#12-one-accent-used-sparingly)'s active-tab entry redrawn, and its third line.
+
+**Play's bolt is `flash` in both states**: the brand's mark for a game being dealt, not a pictogram
+with an outline. On Play the marker and the colour carry the selection alone, which is one reason the
+marker is not optional.
+
+**Three channels, and they cannot disagree.** ADR-0135 refused a second state channel on the
+grounds that `ink` against `muted` was sufficient and a second was free to disagree with the first.
+The premise moved — the tab you were on was hard to see — and the channels are all drawn from one
+value, the lit tab the URL gives the shell, so the dock never shows two selected tabs. Selection is a
+filled shape and a capsule as well as a hue, so it survives greyscale and a red-green deficiency
+(WCAG 1.4.1).
+
+**Ionicons, on the bar alone.** Feather has no filled counterparts, so outline → filled cannot be
+drawn in it; Ionicons ships in the `@expo/vector-icons` package the app already declares, so the bar
+needs no dependency for it. **Feather stays on every other surface**, Home's header beside the bar
+included, and Ionicons' finer outline makes the bar read a touch lighter than the header above it —
+a cost the product owner accepted. One family on the bar, never mixed, and **every glyph name is
+typed against its family's `glyphMap`**, so a name the package does not ship is a compile error
+rather than a blank column nobody notices at 18pt. **The ⚡ is `flash` and never the character**:
+`U+26A1` carries `Emoji_Presentation=Yes`, so a bare `<Text>⚡</Text>` requests colour-emoji
+presentation and a `color` style has nothing to apply to.
+
+**The marker is the dock's own layer, not a part of a column.** Bottom to top: the glass, the
+marker, the icons and labels, the badge. Under the words, so the stretch #884 gives it never deforms
+a glyph; the dock's, so a press dims the column and never the marker; and placed under the lit
+column from the window's width, as every width in the app is, because a measured one would leave the
+dock's first frame without a marker.
 
 ### One badge, on Home, and on no other column
 
@@ -5482,11 +5514,10 @@ that is not filtered the way the surface it labels is filtered would be an unfil
 permanent chrome._ Play's outstanding yeses are filtered by the sport on screen and this bar
 has no sport, so that count still cannot come here.
 
-**`coralInk` fill, white mark, 5.89.** The design drew a white `1` on a `coral` disc at
-**3.89** — the one pairing [Rule C](#rule-c--text-on-a-saturated-fill) refuses outright, and
-the precise correction the ⚡Play disc one column away already took once
-([2.5](#25-contrast--computed)). The disc's own treatment is borrowed rather than reinvented,
-and no colour is added to the palette.
+**`coralInk` fill, white mark, 5.89** — 6.1 `primary`'s treatment, where white on `coral` would be
+**3.89**, the one pairing [Rule C](#rule-c--text-on-a-saturated-fill) refuses outright. It is a
+thing to attend to, and the marker is where you are: the two are kept apart by fill, so the dock's
+one coloured thing that means _selected_ is the marker.
 
 **The digit is mono and tabular** ([1.4](#14-numbers-are-monospaced-always)), so 1 → 2 does not
 reflow the column. **There is no cap**: a double-digit badge means something genuinely unusual,
@@ -5500,7 +5531,7 @@ half its readers.
 ```
 badge      18 minimum square, radius.pill, paddingHorizontal 3
 digit      num.xs, tabular, white on coralInk
-position   ABSOLUTE — rises 4 above the 16pt icon box, and sits 3 back over its right edge
+position   ABSOLUTE — rises 4 above the 18pt icon box, and sits 3 back over its right edge
 ```
 
 **18 is the digit's own box, rounded to the grid.** The count is mono (1.4), the smallest mono
@@ -5509,44 +5540,17 @@ made, for [15.3](#153-adding-a-token)'s reason: a seventh size step for one mark
 section says not to add. It is a **minimum width** and not a diameter, because there is no cap: a
 two-digit count spreads the mark into a lozenge at `radius.pill` while the figures stay tabular.
 
-**The rise is not a new number.** It is the 4pt the active ring already takes out of the bar's own
-6pt top padding, leaving the same 2pt of clearance to the hairline — so the badge, like the ring,
-is **out of the layout** and the bar's height is the same on every screen in the app. The 3pt it
-sits back over the glyph's right edge is the smallest step on the grid, and it is what makes the
-mark read as belonging to the icon rather than floating beside it.
+**The rise is the badge's own number now.** It was the 4pt the ⚡Play disc's ring took out of the
+old bar's 6pt top padding; the ring retired and the 4 stayed. The badge is **out of the layout**, so
+the dock is 54 whatever the count, and with the column's content centred its top stands **6.5**
+inside the dock's top edge at 1× and **2.9** at the label's cap. The 3pt it sits back over the
+glyph's right edge is the smallest step on the grid, and it is what makes the mark read as belonging
+to the icon rather than floating beside it.
 
-**No device has drawn this**, which was the reason 10.2 wrote no geometry
-([#338](https://github.com/Raketa02/Raketa/issues/338) §1). What stands in for one is
-[`tabBadgeFit.test.ts`](../src/shared/ui/tabBadgeFit.test.ts), which reads the real IBM Plex Mono
-out of the bundle and checks the digit inside the mark, the mark inside its column at two digits
-on the narrowest phone, and the rise against the padding the bar has to spend — the arrangement
-`tabBarLabelCap.test.ts` already uses for the label's cap.
-
-### Feather, and selection in tone alone
-
-The glyph set is **Feather from `@expo/vector-icons`**, declared in `package.json` rather than
-inherited transitively, and the inventory is these three
-([ADR-0135](../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)):
-
-| Tab    | Glyph  | Box                              |
-| ------ | ------ | -------------------------------- |
-| `home` | `home` | 16pt                             |
-| `play` | `zap`  | **15pt**, white, inside the disc |
-| `you`  | `user` | 16pt                             |
-
-**Selection changes tone and never shape**: `ink` selected, `muted` resting — 3.25:1, and a
-_lightness_ difference rather than a hue one, so it survives greyscale and a red-green
-deficiency. Feather has one weight and no filled counterparts, and that costs nothing here for
-exactly that reason: a family with outline/filled pairs would put a second state channel on
-top of a sufficient one, which is the same thing the ring refuses about the shadow.
-
-**The ⚡ is `zap` and never the character.** `U+26A1` carries `Emoji_Presentation=Yes`, so a
-bare `<Text>⚡</Text>` requests colour-emoji presentation and a `color` style has nothing to
-apply to — the one mark in the bar whose colour this app would not control, on the disc whose
-whole argument is a white mark.
-
-**Every glyph name is typed against its own family's `glyphMap`,** so a name the package does
-not ship is a compile error rather than a blank column nobody notices at 16pt.
+[`tabBadgeFit.test.ts`](../src/shared/ui/tabBadgeFit.test.ts) stands in for a device: it reads the
+real IBM Plex Mono out of the bundle and checks the digit inside the mark, the mark inside its
+column at two digits on the narrowest phone, and the mark inside the dock at the cap — the
+arrangement `tabBarLabelCap.test.ts` uses for the label.
 
 ### The label is `tag`, under a bounded cap
 
@@ -5558,26 +5562,27 @@ letters of _Players_ when the bar had five columns.
 `allowFontScaling={false}` only inside the level bar, so a bounded `maxFontSizeMultiplier` is
 the only mechanism left. **Its value, 1,6, was derived over five columns** — the largest step at
 which the longest label, _Players_, still fit the narrowest phone's column with the grid's
-smallest step held on each side. At three columns every word fits at more than twice that, so
-the width no longer decides it, and **it stays where the five left it**, bounding the bar's
-height (#576). [`tabBarLabelCap.test.ts`](../src/shared/ui/tabBarLabelCap.test.ts) holds the
-three labels inside their columns at it from the real Archivo Bold metrics, so a fourth tab or a
-longer word goes red rather than truncating on somebody's phone.
+smallest step held on each side. At three columns the width no longer decides it, and it stayed
+where the five left it (#576).
 
-**The bar's height is fixed against _state_, not against the OS text size**, and the two claims
-on this page are not the same claim. Nothing about being in Play changes the height — that is
-what the absolute ring is for. The label, however, scales: at the cap one line of `tag` goes
-12 → 20,4pt and the bar grows with it, which is [Part 13](#part-13--accessibility) working
-rather than failing. The 44pt figure below is a **minimum**, met at 1× and only exceeded from
-there.
+**It now holds the column inside the marker.** The dock is **54 at every text size and in every
+state** — nothing about being in Play, or carrying a count, changes it, and nor does the OS text
+size. The column's content is centred in it: the 18pt icon, the grid's smallest step, and one line
+of `tag`, which at the cap goes 12 → 19,2pt, so **18 + 3 + 19,2 = 40,2** inside the marker's 42. An
+icon at 20 would be 42,2, which is why it is 18; 16 is the fallback if 18 looks crowded on the phone
+(#885). [`tabBarLabelCap.test.ts`](../src/shared/ui/tabBarLabelCap.test.ts) holds that from the
+real Archivo Bold metrics, the three words inside the marker's width at the cap, and the marker's
+widest stretch, 97,5, inside the narrowest phone's column, (320 − 24) ÷ 3 = 98,7 — so a fourth tab,
+a longer word or a larger icon goes red rather than truncating on somebody's phone. Part 13's
+permission is unchanged: the labels scale, bounded, and freeze nowhere.
 
 Every tab needs an `accessibilityRole="tab"`, an `accessibilityLabel` and
 `accessibilityState={{ selected }}`. The visible label is not enough on its own. The glyph is
 **hidden** from the reader on every column, the bolt included — the label already names the
-tab, and the disc's own visible _Play_ is what announces the control.
+tab — and the marker is an empty drawing with nothing to announce.
 
-The column reaches the 44pt minimum by its own geometry — 30 + 3 + 12 inside the bar's
-padding — so there is no hit-slop to arrange.
+The column reaches the 44pt minimum by its own geometry — the dock's 52 inside its hairline, and a
+third of the narrowest phone's dock across, 98 — so there is no hit-slop to arrange.
 
 ## 10.3 The screen header
 
@@ -6841,6 +6846,9 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-24 | [5.6](#56-skeleton--the-loading-shape) · [`Skeleton.tsx`](../src/shared/ui/Skeleton.tsx) · `skeletonSweep.ts` · [`Reveal.tsx`](../src/shared/ui/Reveal.tsx) · `RankingsSkeleton.tsx`                                                                                                                                                                                                     | `motion.skeleton` named the sweep and its tilt (#868), and nothing drew the band: no primitive, no width for the band, and no rule for how a screen’s content takes the skeleton’s place                                                                                                                                                                     | **The primitive, 5.6.** `SkeletonBlock`, `SkeletonLine` and `SkeletonCircle` on a `SkeletonGround`, which runs the one clock and holds the one moving style; each shape measures its place on the ground once and draws its piece of the band on a still offset. **The band is half the screen’s width across its stripes**, and travels from its right edge on the ground’s top-left corner to its left edge on the bottom-right one. **`Reveal`**: the content underneath, hidden, one `fade`, a cut under reduced motion, decided at the first draw, never back once the content is in. Rankings is its first screen                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | PRD [#867](https://github.com/Raketa02/Raketa/issues/867), [#870](https://github.com/Raketa02/Raketa/issues/870). **The width is Shimmer’s, read from its source** (`dropoff = 0.5f` over `widthRatio = 1f`), as the sweep and the tilt are. **The travel is not**: Shimmer’s leaves part of every cycle with no band on screen, and the log asks for no pause (Q24). **One style on the ground**, because a style per shape ran some fifty mappers a frame on Rankings, and the router harness runs five minutes of frames on a navigation; one mapper costs the phone less too. **Measured against the ground**, not the window, because a pushed screen would be measured mid-flight. **Not seen on a device**: the band’s width and travel                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-11-25 | [10.1](#101-screen-structure) · `TabBar.tsx` · `tabBarReach.ts` · `ShellScreen.tsx` · `TabShell.tsx` · `Toast.tsx`                                                                                                                                                                                                                                                                       | The tab bar was a flex sibling under the shell’s stack, so every screen inside the tabs ended above it for free; the two toasts added `TAB_BAR_HEIGHT` and the bottom inset                                                                                                                                                                                  | **The bar floats over the screen and owns no layout** (ADR-0210 §3). Screens inside the tabs draw to the bottom of the phone and end at the bar’s **reach** — its height and the bottom inset while it is drawn, nothing while it stands down — which the shell says and every reader follows: a scroller ends at reach + its own gap, the deck’s ✕ · i · ✓ and Post a game stand above it, a pinned CTA’s screen ends at it, the Undo toast stands 9 above it (above the inset in the chat), and the toast 9 above the **full** reach on every screen. `TAB_BAR_HEIGHT` is private to the bar. The look is unchanged: white, flush, the same height                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | The dock’s prefactor (#881, PRD #878): after it, the glass, the lift and the 54 are only a look change. A followed value rather than a context, because sheets and the toast host sit at the root, above the shell                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-11-25 | [10.1](#101-screen-structure) · `keyboard.ts` · `KeyboardProvider.tsx` · `TabShell.tsx` · `AdministratorArea.tsx`                                                                                                                                                                                                                                                                        | The bar stood down in one place, the chat. On Android, where the window shrinks for the keyboard, a bar floating at its foot rode up above the keyboard and could cover the field being typed into                                                                                                                                                           | **On Android the bar stands down while the keyboard is up**, in both shells (ADR-0210 §9): not rendered, its reach nothing, nothing animated, and back when the keyboard goes. A form ends its own gap above the keyboard, and the Undo toast stands 9 above the bottom inset. An iPhone ignores the keyboard. `keyboard.ts` is the one listener for its show and hide (`KeyboardPort`, `fakeKeyboard()`), and the only importer of React Native’s `Keyboard`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | PRD #878, #882: once the bar floats, no scroller ends above it, so on Android a field just above the keyboard can sit under the bar — Intro, Name, New group, Edit group, Post a game, the area’s forms. The chat’s answer, not a second one. On an iPhone the keyboard is drawn over the window and covers the bar already                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-11-25 | [1.1](#11-paper-not-glass) · [10.2](#102-the-tab-bar) · [4.2](#42-radius) · `TabBar.tsx` · `theme.ts` `color.glass` `radius.dock` `size.tabBar` `glass` · `expo-blur`                                                                                                                                                                                                                    | Paper, not glass, with no exception. The bar was a flat `surface` strip flush with the phone’s foot, 64 tall plus the bottom inset it padded itself with, its height set by the ⚡Play disc and growing about 7pt at the 1.6 label cap                                                                                                                       | **The bar is the dock, the one glass surface** (ADR-0210 §2, §7): 54 tall at every text size, 12 in from each side, lifted the larger of 12 and the bottom inset, at `radius.dock` 22, bounded by a 1pt `line` hairline with a 1pt `surface` rim inside it. On the iPhone `color.glass`, white at .88, over `expo-blur` at intensity 100 (`glass.blur`); on Android opaque `surface`, because `glass.android` is off. Its reach is lift + 54: 66 on the A32, 88 on a notched iPhone. New tokens: `color.glass`, `radius.dock`, `size.tabBar.height` `sideInset` `lift`, and `glass.android` `blur` `shadow`. `expo-blur` is the one new dependency and owns no styling (ADR-0012)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | PRD #878, #883: the product owner’s design floats the bar as frosted glass so it belongs to the screen it is on. 88% holds idle words at 4.53:1 over Home’s dark game card; Android’s material is the A32 spike’s verdict (#880), the blur adding frames over 16.7 ms. 12 and 75 replace the brief’s 10 and 76, which are off the grid                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-11-25 | [10.2](#102-the-tab-bar) · [1.2](#12-one-accent-used-sparingly) · `TabBar.tsx` · `theme.ts` `color.tabIdle` `size.tabBar.marker` `size.tabBar.icon` · `CountBadge.tsx` `over`                                                                                                                                                                                                            | Feather at 16, the same glyph in both states, selection in tone alone: `ink` selected, `muted` resting (ADR-0135). Play a raised `coralInk` disc with a white `zap`, ringed in `coral` while lit; the badge risen 4 above a 16pt icon box                                                                                                                    | **Ionicons on the bar, and selection by marker, shape and tone** (ADR-0210 §4, §5, superseding ADR-0135 for the bar): `home`/`home-outline`, `flash` in both states, `person`/`person-outline`, and the Administrator’s `people`/`people-outline`, at 18 (`size.tabBar.icon`). Idle icon and label in `color.tabIdle`, `ink` at .62; the lit icon `coral` and label `coralInk`, on **the selection marker**, an opaque `coralSoft` capsule 75 × 42 (`size.tabBar.marker`) centred in the lit column, standing still until #884. Layers: glass → marker → icons and labels → badge; every column dims to .7 under a finger and the marker ignores it. 1.2 gains its third line, _a `coralSoft` fill is where you are, on the bar_, and the list stays at six. Home’s badge stays, risen 4 above the 18pt box (`CountBadge`’s `over`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | PRD #878: the tab you were on was hard to see, and Play’s disc read as a button to press while you were in Play. Feather has no filled glyphs, and Ionicons ships in the package already declared. `coralInk` for the label because `coral` on `coralSoft` is 3.38:1; opaque because coral at 13% goes murky over a dark card. 18 is the largest icon that keeps icon + 3 + the capped label, 40.2, inside the marker’s 42                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 2026-11-25 | [4.3](#43-elevation) · [6.6](#66-press-states) · `theme.ts` `shadow.dock` · `.claude/rules/design-system.md` · `CLAUDE.md`                                                                                                                                                                                                                                                               | The ⚡Play disc: `size.fab` 30, `radius.fab` 11, `size.tabBar.bolt` 15, `ringGap` and `ringStroke` 2, and `shadow.fab`, the one tinted shadow, coral on iOS. The disc was the one column that did not dim, brightening to `coral` instead                                                                                                                    | **Retired with the disc** (ADR-0210 §6): `size.fab`, `radius.fab`, `size.tabBar.bolt`, `ringGap`, `ringStroke` and `shadow.fab`. **`shadow.dock`** takes `fab`’s slot with the deck card’s values (`#0B2B33`, 0/7, radius 20, .12, `elevation` 8), so the inventory stays at seven and no shadow is tinted; wherever the dock draws the glass (the iPhone), it is shadowed by `glass.shadow`, the same values as `boxShadow`. The agent rules file drops the disc’s tinted shadow and names the marker under the active-tab entry; the player app’s `CLAUDE.md` gains Ionicons on the bar                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Play is one of three equal places in the product owner’s mocks, so its disc, ring and tint go. The deck card’s is the faintest shadow for things that float over the page. `elevation` draws cleanly on the opaque Android dock (the spike’s T3); a translucent dock gives neither platform’s own shadow an opaque fill, so it takes `boxShadow`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 # Part 17 — What the reset removed
 

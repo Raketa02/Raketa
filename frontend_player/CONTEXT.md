@@ -210,12 +210,13 @@ review comment and a test description all use the same word.
   "the tab navigator" — there isn't one. The one tab bar **floats over the stack**
   ([ADR-0210](../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §3, built
   by [#881](https://github.com/Raketa02/Raketa/issues/881)), not below it as a flex sibling, and
-  screens end at its **reach**: the room the bar takes at the bottom — its height and the bottom
-  inset while it is drawn, nothing while it stands down — a followed value the shell says
+  screens end at its **reach**: the room the bar takes at the bottom — the dock's lift and its 54
+  while it is drawn, nothing while it stands down — a followed value the shell says
   (`shared/ui`'s `tabBarReach.ts`). It stands down in the chat and, on Android, while the keyboard
-  is up ([#882](https://github.com/Raketa02/Raketa/issues/882)). **Decided, not yet built** (PRD
-  [#878](https://github.com/Raketa02/Raketa/issues/878)): the bar becomes a glass dock, whose reach
-  is its lift + 54. _Avoid_ confusing the
+  is up ([#882](https://github.com/Raketa02/Raketa/issues/882)). The bar is a rounded **dock**, glass
+  on the iPhone and opaque on Android, with the **selection marker** under the lit tab
+  ([#883](https://github.com/Raketa02/Raketa/issues/883)); _dock_ describes its look and is not its
+  name. _Avoid_ confusing the
   reach with the tab's menu's `TAB_REACH`, which is a touch slop. The one stack, the reset and what
   each tab opens don't change.
 - **Home** — the first tab, route `/`: the booked-games rail under the tab's own words —
@@ -977,7 +978,8 @@ comment and a commit message all use the same word.
   in both states, so there the marker and the colour carry it alone. When the lit tab changes it
   **travels** to the new one, on a spring that stretches as it moves. On the bar's first draw, or when the bar comes back, it is simply there
   ([ADR-0210](../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §4, §8;
-  decided, not yet built — PRD [#878](https://github.com/Raketa02/Raketa/issues/878)). The
+  drawn standing still by [#883](https://github.com/Raketa02/Raketa/issues/883), its travel
+  decided and not yet built — [#884](https://github.com/Raketa02/Raketa/issues/884)). The
   brief's own phrase. UI vocabulary, not a domain term. _Avoid_: pill (taken by `radius.pill`,
   `SportPill` and FOR YOU's count pill), highlight, and the ring (the ⚡Play disc's, which
   retires with the disc). Not **the tab's menu**, which is a group page's.

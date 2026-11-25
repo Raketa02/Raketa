@@ -9,34 +9,29 @@
  * drawn over the screen at the phone's foot, and a page's end padding, less the bar, is the gap the
  * last row keeps above it.
  *
- * **The bars' heights are worked out here from the theme**, never read back from the bar or the
- * reach — a reach that drifted from the bar it describes would leave a last row under it, and a suite
- * reading the same number as the screen would agree with it. The harness's insets are all zero
- * (`onboardingRouter.tsx`), so the reach is the bar's height alone.
+ * **The reach is worked out here from the theme**, never read back from the bar or the module — a
+ * reach that drifted from the dock it describes would leave a last row under it, and a suite reading
+ * the same number as the screen would agree with it. The harness's insets are all zero
+ * (`onboardingRouter.tsx`), so the dock stands at its least lift, 12, and reaches 12 + 54 = 66
+ * (#883).
  */
 
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import { screen } from 'expo-router/testing-library';
+import { Dimensions, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { screen, within } from 'expo-router/testing-library';
 
-import { TAB_BAR_TEST_ID, theme } from '@/shared/ui';
+import { TAB_BAR_MARKER_TEST_ID, TAB_BAR_TEST_ID, theme } from '@/shared/ui';
 
-/** The player's bar at the default text size: hairline, top padding, ⚡Play disc, gap, label, foot. */
-export const PLAYERS_BAR =
-  1 +
-  theme.space.xs +
-  theme.size.fab +
-  theme.space.xxs +
-  theme.type.tag.lineHeight +
-  theme.space.md;
+/** The dock's hairline, which its columns and its marker are laid inside. */
+const HAIRLINE = 1;
 
-/** The administrator's: the same, with the 16pt icon box where the player's has the disc. */
-export const ADMINISTRATORS_BAR =
-  1 +
-  theme.space.xs +
-  theme.size.tabIcon +
-  theme.space.xxs +
-  theme.type.tag.lineHeight +
-  theme.space.md;
+/**
+ * **What the player's bar takes at the bottom in the harness** — the dock's least lift and its
+ * height, over no inset: 66.
+ */
+export const PLAYERS_BAR = theme.size.tabBar.lift + theme.size.tabBar.height;
+
+/** **The administrator's** — the same dock with two columns, so the same reach. */
+export const ADMINISTRATORS_BAR = theme.size.tabBar.lift + theme.size.tabBar.height;
 
 /** A test instance as any query returns it — only its props and its way up are read. */
 interface Placed {
@@ -53,14 +48,43 @@ export function barFrame(): ViewStyle {
 }
 
 /**
- * **Whether the bar is drawn over the screen** — absolute, edge to edge, at the phone's foot — so it
- * takes no layout and every screen under it draws to the bottom of the phone.
+ * **Whether the bar is drawn over the screen as the dock** — absolute, 12 in from each side, at its
+ * least lift over the harness's zero inset, and 54 tall — so it takes no layout and every screen
+ * under it draws to the bottom of the phone.
  */
 export function barFloats(): boolean {
   const frame = barFrame();
+  const { sideInset, lift, height } = theme.size.tabBar;
   return (
-    frame.position === 'absolute' && frame.left === 0 && frame.right === 0 && frame.bottom === 0
+    frame.position === 'absolute' &&
+    frame.left === sideInset &&
+    frame.right === sideInset &&
+    frame.bottom === lift &&
+    frame.height === height
   );
+}
+
+/**
+ * **Which tab the selection marker stands under** — the name of the tab whose column its centre is
+ * in (its label alone: Home's spoken count is left off), or `undefined` when it is centred in none. The dock's columns divide the window less its side
+ * insets and hairlines equally, in the order the bar's tabs are announced — the bar's own, never a
+ * group page's.
+ */
+export function markerUnder(): string | undefined {
+  const tabs = within(screen.getByTestId(TAB_BAR_TEST_ID)).getAllByRole('tab');
+  const column =
+    (Dimensions.get('window').width - 2 * theme.size.tabBar.sideInset - 2 * HAIRLINE) / tabs.length;
+  const style = flat(screen.getByTestId(TAB_BAR_MARKER_TEST_ID).props.style);
+  const shift =
+    (style.transform as readonly { translateX?: number }[] | undefined)?.find(
+      (step) => step.translateX !== undefined,
+    )?.translateX ?? 0;
+  const centre =
+    (typeof style.left === 'number' ? style.left : 0) + shift + Number(style.width) / 2;
+  const at = Math.floor(centre / column);
+  if (Math.abs(centre - (at + 0.5) * column) > 0.01) return undefined;
+  const spoken = tabs[at]?.props.accessibilityLabel as string | undefined;
+  return spoken?.split(',')[0];
 }
 
 /**
