@@ -23,8 +23,11 @@
  * answer was given — in the question's place, or over the deck's area. Then the deck lands on the
  * kind named, and its own states follow: the cards, or *Nothing picked right now*.
  *
- * While the first read is on its way the tab says so with the muted spinner; a read that failed
- * says why and offers the retry, unless the failure is one no retry can mend.
+ * **While the first read is on its way, one deck-card block shimmers where the deck will stand**
+ * (`DeckSkeleton`, [#875](https://github.com/Raketa02/Raketa/issues/875)) — the group page reveals the
+ * tab once that read has finished, and while it retries the block stands here in the tab's own place.
+ * A read that failed says why and offers the retry, unless the failure is one no retry can mend; **a
+ * read held for a connection says it resumes** (the amber note), where a spinner used to turn forever.
  *
  * ## A pull reads it again, in every state but the first read's
  *
@@ -224,6 +227,7 @@ import { useSeeRows } from '../hooks/useSeenRows';
 
 import { DeckAnswers } from './DeckAnswers';
 import { DeckStage, SEEN, type DeckExit, type DragVerdict } from './DeckStage';
+import { DeckSkeleton } from './DeckSkeleton';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
 import { FindingGames } from './FindingGames';
 import {
@@ -298,6 +302,12 @@ export interface GamesDeckProps {
    * tab is (`GroupScreen`), and back on screen a read gone stale is read again. On unless said.
    */
   readonly onScreen?: boolean;
+  /**
+   * **Told whether something lies over the deck's area** — the door's panel, or finding (#875). The
+   * page reveals the tab for it even while the deck's first read is out: picked from the menu at the
+   * reveal's ceiling, the panel would otherwise open under the tab's skeleton, unseen.
+   */
+  readonly onCovered?: (covered: boolean) => void;
 }
 
 /** The card on its way out, and the answer that sent it there. */
@@ -317,6 +327,7 @@ export function GamesDeck({
   refreshControl,
   inView,
   onScreen = true,
+  onCovered,
 }: GamesDeckProps) {
   /** The card on its way off the stage, and its answer — until it has flown. */
   const [leaving, setLeaving] = useState<Leaving | undefined>(undefined);
@@ -626,20 +637,27 @@ export function GamesDeck({
         />
       </View>
     );
-  const covered = behindOverlay(panel !== undefined || finding !== undefined);
+  const overUp = panel !== undefined || finding !== undefined;
+  const covered = behindOverlay(overUp);
+  // The page is told, so it reveals what lies over the deck however far the deck's read has come.
+  const tellCovered = useLatest(onCovered);
+  useEffect(() => tellCovered.current?.(overUp), [overUp, tellCovered]);
 
-  // A swap's spinner stands in the stack's place, below; today's stands alone (#863).
+  // A swap's spinner stands in the stack's place, below; the first read's skeleton stands alone.
   if (deck === undefined && (swap === undefined || read.error !== null)) {
-    // Nothing to pull while the first read is on its way; one that failed pulls as its retry reads.
+    // Nothing to pull while the first read is on its way, its skeleton where the deck will stand
+    // (#875); one that failed pulls as its retry reads; one held for a connection says it resumes.
     const waiting =
-      read.error === null ? (
-        <View style={s.page}>
-          <ActivityIndicator accessibilityLabel={COPY.reading} color={theme.color.muted} />
-        </View>
-      ) : (
+      read.error !== null ? (
         <ScrollView testID={BODY} contentContainerStyle={s.page} refreshControl={refreshControl}>
           <ReadFailed error={read.error} onRetry={() => void read.refetch()} />
         </ScrollView>
+      ) : read.isPaused ? (
+        <View style={s.page}>
+          <Note variant="amber">{offlineMessage('resumes')}</Note>
+        </View>
+      ) : (
+        <DeckSkeleton />
       );
     // A door picked in the menu while this kind is read opens over the spinner or the failure, as
     // over the cards (#862) — and so does finding.

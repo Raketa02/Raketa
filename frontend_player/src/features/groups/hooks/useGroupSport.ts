@@ -73,11 +73,17 @@ export interface GroupSport {
    * to offer, and while either read is out.
    */
   readonly toOffer: readonly Sport[];
+  /**
+   * **Whether the filter has said** (#875) — both reads in, or the ratings read ended with nothing to
+   * say: refused, or held for a connection — never while it retries. What the group page's header
+   * waits on.
+   */
+  readonly answered: boolean;
   readonly choose: (sport: Sport) => void;
 }
 
 /** **A filter with nothing to say yet** — no sports, no sport, nothing to add, offer or ask. */
-const UNREAD: Omit<GroupSport, 'choose'> = {
+const UNREAD: Omit<GroupSport, 'choose' | 'answered'> = {
   sports: undefined,
   sport: undefined,
   toAdd: [],
@@ -138,7 +144,10 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
 
   // `null` is a phone that answered *nothing saved*; `undefined` is one still being read.
   if (rated === undefined || (account !== undefined && picked === undefined)) {
-    return { ...UNREAD, choose };
+    // The ratings refused or held for a connection: nothing more is coming. Not while they retry
+    // after one failure — the page keeps shimmering through the backoff, as for the group's read.
+    const ended = rated === undefined && (ratings.isError || ratings.isPaused);
+    return { ...UNREAD, answered: ended, choose };
   }
 
   return {
@@ -147,6 +156,7 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
     toAdd: sportsToAdd(rated, declared),
     needsALevel: needsALevel(rated, declared),
     toOffer: sportsToOffer(rated, declared),
+    answered: true,
     choose,
   };
 }
@@ -211,8 +221,8 @@ function readerIn(client: QueryClient): string | undefined {
 export function useDeclaredSport(declared: readonly Sport[] | undefined): GroupSport {
   const [picked, setPicked] = useState<Sport>();
 
-  if (declared === undefined) return { ...UNREAD, choose: setPicked };
+  if (declared === undefined) return { ...UNREAD, answered: false, choose: setPicked };
 
   const sport = picked !== undefined && declared.includes(picked) ? picked : declared[0];
-  return { ...UNREAD, sports: declared, sport, choose: setPicked };
+  return { ...UNREAD, sports: declared, sport, answered: true, choose: setPicked };
 }

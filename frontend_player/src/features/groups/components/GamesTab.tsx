@@ -63,6 +63,8 @@ export interface GamesTabProps {
    * On unless the page says otherwise.
    */
   readonly onScreen?: boolean;
+  /** Told whether the door's panel or finding lies over the deck (#875) — see `GamesDeck`. */
+  readonly onCovered?: (covered: boolean) => void;
 }
 
 export function GamesTab({
@@ -73,6 +75,7 @@ export function GamesTab({
   refreshControl,
   inView,
   onScreen = true,
+  onCovered,
 }: GamesTabProps) {
   const chosen = useGameIntent((state) => state.intent);
   const choose = useGameIntent((state) => state.choose);
@@ -86,6 +89,7 @@ export function GamesTab({
       {...(handle === undefined ? {} : { handle })}
       inView={inView}
       onScreen={onScreen}
+      {...(onCovered === undefined ? {} : { onCovered })}
       empty={<StartingCard group={group} sport={sport} />}
       {...(onTop === undefined ? {} : { onTop })}
       {...(refreshControl === undefined ? {} : { refreshControl })}

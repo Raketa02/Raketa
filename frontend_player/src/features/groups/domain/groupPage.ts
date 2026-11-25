@@ -11,6 +11,7 @@
  * own rule, and a second table of seats here would be a second answer to it.
  */
 
+import type { ReadStage } from '@/shared/lib/query-client';
 import { SPORTS, type Sport } from '@/shared/vocabulary/sport';
 
 import type { Group, GroupPerson, SportRoster } from './group';
@@ -170,6 +171,88 @@ export function levelCardReadsFinished({
   readonly groupsFinished: boolean;
 }): boolean {
   return ratingsFinished && (ratedInNothing !== true || groupsFinished);
+}
+
+/**
+ * **What the group page's two parts wait on** ([#875](https://github.com/Raketa02/Raketa/issues/875);
+ * PRD #867; the loading shimmer log §10) — the header and the tab bar first, then the body of the
+ * tab on screen, handed top-down to `shared/ui`'s `useRevealParts`.
+ *
+ * - `group` — **the group's own read**. Every part draws from it, so it is `ended` only once it is
+ *   refused or held for a connection, never while it retries: a page revealed through its backoff
+ *   would be a back arrow over nothing.
+ * - `sportAnswered` — whether the filter has said which sport the tabs are drawn for, or that none is
+ *   to be had. The phone's last pick is read before anything is drawn for a sport (ADR-0188 §4).
+ * - `body` — the first read of the body on screen (`bodyRead`).
+ */
+export interface GroupPageReads {
+  readonly group: ReadStage;
+  readonly sportAnswered: boolean;
+  readonly body: ReadStage;
+}
+
+/** Each part's flags, top-down — the header and the tab bar, then the body. */
+export interface GroupPageParts {
+  /** Whether each part's reads have finished — its content, its failure or its note is ready. */
+  readonly finished: readonly [boolean, boolean];
+  /** Whether each finished with its content — so a read set out again shimmers again. */
+  readonly landed: readonly [boolean, boolean];
+}
+
+/**
+ * **The header and the tab bar wait for the group and the sport; the body, for the tab's first
+ * read.** Without the group there is no tab to draw: the body is what the group's read ended with —
+ * its failure, or the offline note — and is ready once that read has ended.
+ */
+export function groupPageParts({ group, sportAnswered, body }: GroupPageReads): GroupPageParts {
+  const header = group !== 'reading' && sportAnswered;
+  const headerLanded = group === 'landed' && sportAnswered;
+  if (group !== 'landed') {
+    return { finished: [header, group === 'ended'], landed: [headerLanded, false] };
+  }
+  return {
+    finished: [header, sportAnswered && body !== 'reading'],
+    landed: [headerLanded, sportAnswered && body === 'landed'],
+  };
+}
+
+/**
+ * **The group's own read, as the page's reveal reads it** (#875) — `landed` once it holds the group;
+ * `ended` once it is refused or held for a connection, when the page says so; and otherwise
+ * `reading` — **a read that failed once and is retrying included**: every part draws from it, so
+ * through its backoff the page keeps shimmering rather than revealing a back arrow over nothing.
+ */
+export function groupReadStage({
+  landed,
+  refused,
+  held,
+}: {
+  readonly landed: boolean;
+  readonly refused: boolean;
+  readonly held: boolean;
+}): ReadStage {
+  if (landed) return 'landed';
+  return refused || held ? 'ended' : 'reading';
+}
+
+/**
+ * **What the body on screen waits on** (#875): Games', Fill in's and You’re in's first read
+ * (`tabRead`, the proposals feature's answer). **Friends waits on nothing** — its court draws its own
+ * *Building* — and nor does what stands in place of a tab (`drawsTheTab` false): the add-a-sport
+ * card, the level door.
+ */
+export function bodyRead(tab: GroupTab, drawsTheTab: boolean, tabRead: ReadStage): ReadStage {
+  return drawsTheTab && tab !== 'friends' ? tabRead : 'landed';
+}
+
+/**
+ * **Games' first read, as the page's reveal reads it** (#875) — the deck's read, unless **something
+ * lies over the deck's area** while it is out: the door's panel, picked from the menu once the tab
+ * bar is in, or finding after it. That is drawn, over the deck's own block, so the tab counts as
+ * finished — with nothing landed — for as long as it is up.
+ */
+export function gamesRead(deck: ReadStage, covered: boolean): ReadStage {
+  return covered && deck === 'reading' ? 'ended' : deck;
 }
 
 /** **One sport's roster** — `undefined` for a sport the group's read did not carry. */

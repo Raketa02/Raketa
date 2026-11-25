@@ -14,14 +14,16 @@
  *
  * **Its read is its own**: the live yeses (`yesesIn`) — picks, challenges and posts, never a rescue,
  * which goes straight to Home — in the list's order, soonest first, each row reading its own game's
- * details for the squares. While nothing is drawn yet, the spinner (*Reading You’re in*); a read held
- * offline says it resumes, and one refused says why with the retry. None of it touches Fill in. The
+ * details for the squares. **While nothing is drawn yet, its rows shimmer** (`BoardSkeleton`,
+ * [#875](https://github.com/Raketa02/Raketa/issues/875)) — the group page reveals the tab from that
+ * skeleton once its reads have finished (`youreInRead`), and while one retries the rows stand here; a
+ * read held offline says it resumes, and one refused says why with the retry. None of it touches Fill in. The
  * read starts as the page opens, for the tab's badge (`useYoureInBadge`), so the tab usually opens
  * already read.
  *
  * **No heading**: the tab's name does that job. **Empty, it is one of two things** (split Q3):
  * - the group's starting card the page hands in (`empty`), **only once Fill in's read has said there
- *   is nothing too** — never as a first frame, so while Fill in's read is on its way, the spinner;
+ *   is nothing too** — never as a first frame, so while Fill in's read is on its way, the rows' skeleton;
  * - otherwise one line, *You haven’t said yes to a game here yet* — while Fill in has a seat, and
  *   while Fill in could not say, since the starting card needs both reads.
  *
@@ -41,7 +43,7 @@
 
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { behindOverlay, theme } from '@/shared/ui';
@@ -54,6 +56,7 @@ import { useSeatsToFill } from '../hooks/useFillIn';
 import { useLiveYeses } from '../hooks/useLiveYeses';
 import { useSeeRows } from '../hooks/useSeenRows';
 
+import { BoardSkeleton } from './BoardSkeleton';
 import { FILL_IN_COPY } from './fillInCopy';
 import { HeldRead, isHeld } from './HeldRead';
 import { gameRoute } from './proposalRoutes';
@@ -90,10 +93,9 @@ export function YoureInBoard({ groupId, sport, empty, inView }: YoureInBoardProp
   );
 
   const drawn = (): ReactNode => {
-    const spinner = (
-      <ActivityIndicator accessibilityLabel={COPY.readingYoureIn} color={theme.color.muted} />
-    );
-    if (live.data === undefined) return isHeld(live) ? <HeldRead read={live} /> : spinner;
+    // While nothing is drawn yet, its rows' skeleton — the one the page reveals the tab from (#875).
+    const waiting = <BoardSkeleton />;
+    if (live.data === undefined) return isHeld(live) ? <HeldRead read={live} /> : waiting;
     const yeses = yesesIn(live.data.yeses, groupId, sport);
     if (yeses.length === 0) {
       switch (youreInEmpty(rescues.seats, isHeld(rescues.read))) {
@@ -102,7 +104,7 @@ export function YoureInBoard({ groupId, sport, empty, inView }: YoureInBoardProp
         case 'line':
           return <Text style={s.empty}>{COPY.noYeses}</Text>;
         case 'waiting':
-          return spinner;
+          return waiting;
       }
     }
     // The read's clock: the instant the list was received, as You › Payments reads its rows.

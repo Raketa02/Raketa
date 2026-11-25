@@ -44,6 +44,14 @@ export { FillInBoard, type FillInBoardProps } from './components/FillInBoard';
 export { YoureInBoard, type YoureInBoardProps } from './components/YoureInBoard';
 export { useFillInBadge } from './hooks/useFillIn';
 export { useYoureInBadge } from './hooks/useLiveYeses';
+/**
+ * **The group page's shimmer for the three tabs** (#875) — how far a tab's first read has come, for
+ * the page's reveal, and the skeleton each tab is revealed from: one deck-card block on Games, rows on
+ * Fill in and You’re in. The page draws them on its ground; the tabs draw them too while a read retries.
+ */
+export { useGroupTabRead, type GroupGamesTab } from './hooks/useGroupTabRead';
+export { DeckSkeleton } from './components/DeckSkeleton';
+export { BoardSkeleton } from './components/BoardSkeleton';
 export { FILL_IN_COPY } from './components/fillInCopy';
 export { parseGameDetailsParams } from './schemas/gameDetailsParams';
 export type { GameKind } from './domain/vocabulary';

@@ -10,6 +10,7 @@
  * server has swept it yet, as a card at its deadline leaves the deck.
  */
 
+import type { ReadStage } from '@/shared/lib/query-client';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { peopleOn, type DeckCard, type DeckPerson } from './deck';
@@ -113,6 +114,21 @@ export function youreInEmpty(
 ): YoureInEmpty {
   if (rescues === undefined) return rescuesHeld ? 'line' : 'waiting';
   return rescues.length === 0 ? 'startingCard' : 'line';
+}
+
+/**
+ * **How far You’re in's first read has come** ([#875](https://github.com/Raketa02/Raketa/issues/875))
+ * — what the group page's reveal waits on for the tab: the reader's live yeses, and **with no yes
+ * here, Fill in's read too**, since the starting card waits for it (`youreInEmpty`). `here` is how
+ * many yeses the read holds in this group and sport, `undefined` until it has landed.
+ */
+export function youreInRead(
+  yeses: ReadStage,
+  here: number | undefined,
+  rescues: ReadStage,
+): ReadStage {
+  if (yeses !== 'landed') return yeses;
+  return here !== undefined && here > 0 ? 'landed' : rescues;
 }
 
 /**

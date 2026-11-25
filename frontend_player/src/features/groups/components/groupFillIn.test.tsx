@@ -22,6 +22,7 @@ import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { theme } from '@/shared/ui';
 import {
   ANIA,
   DECK_READ_AT,
@@ -71,6 +72,9 @@ import {
 import { GROUPS_COPY } from './groupsCopy';
 
 const COPY = FILL_IN_COPY;
+
+/** A skeleton is hidden from a listener, so it is found with the hidden elements too. */
+const HIDDEN_TOO = { includeHiddenElements: true } as const;
 const SECOND = 1_000;
 
 const GAME_ID = 'a1000000-0000-4000-8000-000000000007';
@@ -221,11 +225,53 @@ describe('the Fill in tab (split mock 1)', () => {
     expect(fab()).toBeNull();
   });
 
-  it('shows its own muted spinner while its read is on its way', async () => {
+  // #875: a tab switched to with nothing read shimmers on its own — its body, and nothing above it.
+  it('shimmers only its own rows when switched to with nothing read, and fades them in as they land', async () => {
+    const row = seatToFill();
+    stubMyGroups(transport, [CREW]);
+    transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(PAGE));
+    stubGroupDeck(transport, CREW.id, groupDeck());
+    stubFillIn(transport, CREW.id, () => fillIn([row]));
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    fireEvent.press(await screen.findByLabelText('Play'));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    // Fill in's read sets out as the page opens, for its badge — and is held on its way.
+    const rescues = transport.hold('GET', fillInPath(CREW.id));
+    fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
+    // Games revealed the page, and its fade has run.
+    expect(await screen.findByText(GROUPS_COPY.games.nothingPicked)).toBeTruthy();
+    act(() => jest.advanceTimersByTime(theme.motion.fade + 16));
+
+    await pressFillIn();
+
+    const body = screen.getByTestId('group-body-reveal', HIDDEN_TOO);
+    const standing = within(body).getByTestId('reveal-skeleton', HIDDEN_TOO);
+    expect(within(standing).getByTestId('board-skeleton', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.queryByTestId(`seat-to-fill-${row.booking_id}`)).toBeNull();
+    // The header and the tab bar stay as they were: nothing above the body shimmers again.
+    expect(screen.queryByTestId('group-header-skeleton', HIDDEN_TOO)).toBeNull();
+    expect(screen.getByHintText(GROUPS_COPY.group.openInfo)).toBeTruthy();
+    expect(
+      within(screen.getByTestId('group-tabs-reveal')).queryByTestId('reveal-skeleton', HIDDEN_TOO),
+    ).toBeNull();
+
+    await act(async () => rescues.land());
+
+    expect(await screen.findByTestId(`seat-to-fill-${row.booking_id}`)).toBeTruthy();
+    act(() => jest.advanceTimersByTime(theme.motion.fade + 16));
+    expect(
+      within(screen.getByTestId('group-body-reveal')).queryByTestId('reveal-skeleton', HIDDEN_TOO),
+    ).toBeNull();
+  });
+
+  // #875: its rows shimmer, where a muted spinner stood — here in the tab's own place, the read
+  // timed out by the navigation and asked again.
+  it('shimmers its rows while its read is on its way', async () => {
     await openPageServing(neverResponds());
     await pressFillIn();
 
-    expect(await screen.findByLabelText(COPY.reading)).toBeTruthy();
+    expect(await screen.findAllByTestId('board-skeleton', HIDDEN_TOO)).not.toHaveLength(0);
     expect(screen.queryByText(COPY.noSeats)).toBeNull();
   });
 

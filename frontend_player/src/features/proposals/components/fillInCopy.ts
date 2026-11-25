@@ -24,10 +24,8 @@ export const FILL_IN_COPY = {
   rowHint: 'Opens the game’s details',
   /** A poster's hold. */
   holdHint: 'Hold to open their record',
-  reading: 'Reading Fill in',
   /** Fill in with no rescue — always this line, never the starting card (split Q3b). */
   noSeats: 'No seats to fill right now',
-  readingYoureIn: 'Reading You’re in',
   /** You’re in with no yes, while Fill in has a seat or could not say (split Q3). */
   noYeses: 'You haven’t said yes to a game here yet',
 } as const;

@@ -1,3 +1,5 @@
+import type { ReadStage } from '@/shared/lib/query-client';
+
 import type { DeckPerson } from './deck';
 import type { LiveYes } from './liveYes';
 import {
@@ -9,6 +11,7 @@ import {
   yesOnRow,
   yesesIn,
   youreInEmpty,
+  youreInRead,
   type SeatToFill,
 } from './fillIn';
 
@@ -139,5 +142,19 @@ describe('youreInEmpty — You’re in with no yes (#847, split Q3)', () => {
 
   it('waits while Fill in’s read is on its way — never the card as a first frame', () => {
     expect(youreInEmpty(undefined, false)).toBe('waiting');
+  });
+});
+
+// #875: when You’re in's first read has finished, for the group page's reveal.
+describe('youreInRead — how far You’re in’s reads have come', () => {
+  it.each<[string, ReadStage, number | undefined, ReadStage, ReadStage]>([
+    ['the yeses on their way', 'reading', undefined, 'landed', 'reading'],
+    ['the yeses refused, held or retrying', 'ended', undefined, 'landed', 'ended'],
+    ['a yes here: its rows, whatever Fill in does', 'landed', 2, 'reading', 'landed'],
+    ['no yes here, Fill in on its way: the card waits for it', 'landed', 0, 'reading', 'reading'],
+    ['no yes here, Fill in read: the starting card or the line', 'landed', 0, 'landed', 'landed'],
+    ['no yes here, Fill in refused, held or retrying', 'landed', 0, 'ended', 'ended'],
+  ])('%s', (_case, yeses, here, rescues, stage) => {
+    expect(youreInRead(yeses, here, rescues)).toBe(stage);
   });
 });

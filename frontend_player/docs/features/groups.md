@@ -1010,3 +1010,53 @@ keeps their room; the spinner's spoken name went with the spinner. Walked in
 `hottestGroupsPage.test.tsx`: the skeleton at the card's size filling the window, then the list; the
 empty line; the retries, the failure and _Try again_; the offline note and the connection back; and a
 pull. **Not seen on a device**: a look is owed at the card's shimmer and the fade onto the list.
+
+**A group's page shimmers until it is built, then reveals together** (2026-11-25,
+[#875](https://github.com/Raketa02/Raketa/issues/875); PRD #867, the loading shimmer log §10; design
+system 5.6). It opened blank — a back arrow over nothing while the group was read, and nothing at all
+offline. **Two parts, top-down** (`groupPageParts`): **the header and the tab bar**, which wait for
+the group's read and the sport, and **the body of the tab on screen**, which waits for that tab's
+first read (`proposals`' `useGroupTabRead`: the deck the tab draws, Fill in's rescues, or You’re
+in's yeses — and with none here Fill in's too, since the starting card waits for it). While they
+wait, on one `SkeletonGround`: **a monogram circle and a name bar** beside the real, pressable way
+back (`GroupHeader`'s `shimmering`, no pill), **the tab bar's shape** under them
+(`GroupPageSkeleton`), and the tab's own skeleton — **one deck-card block filling the stage** on
+Games, **rows** on Fill in and You’re in (`DeckSkeleton`, `BoardSkeleton`). They come in on one
+cross-fade once both parts have finished; **from 2.5 s after the page mounts the header and the tabs
+come first and the body keeps its skeleton** (`useRevealParts`). **Switching to a tab with nothing
+read shimmers only its body**: the scroller's `Reveal` is keyed by the tab, and a part once shown
+stays shown. **The offline gaps are closed by the shared rule**: the group's read held for a
+connection draws the amber note in the body, under the header's way back, and the deck's first read
+held offline draws it where a spinner turned for ever (`proposals.md`). A part revealed with a
+failure or the note shimmers again when its read sets out once more. **Unchanged**: _Finding …
+games for you…_, the Friends card's _Building_, the kind door, the first-time question, the tab menu
+and the kind swap's spinner (#876's).
+
+**Calls made here**: **the group's read retrying after one failure keeps the page shimmering**
+(`groupReadStage`) — the shared rule counts such a read finished so it cannot hold the rest of a
+screen, but every part here draws from this one, so revealing it would show a back arrow over
+nothing; a refusal or a hold is what ends it. **So does the ratings read** the sport is answered
+from (`useGroupSport`'s `answered`): retrying, it keeps the page shimmering rather than revealing a
+header with no pill over an empty body. **Friends waits on no read** — its court draws its own
+_Building_ — and nor do the add-a-sport card and the level door, so they come in with the header.
+**_+ Post a game_ comes in with the header and the tab bar**, never over a page still shimmering.
+**What lies over the deck reveals Games**: from the ceiling the tab bar is in and its menu works, so a
+door picked while the deck's first read is out opens its panel — and finding after it — over the
+deck's own block, the tab revealed for it (`gamesRead`, the deck's `onCovered`), never under the
+tab's skeleton, unseen.
+**The header is not cross-faded**: its tile, name and pill take the skeleton's place as the tab bar
+and the body fade in, as Home's numbers come with their part, because the way back must stay the
+real one, pressable and spoken, throughout. **Each `Reveal` keeps its place in the tree from the first
+frame** — Games', which is the body on Games until the group is read and the filter has said, and
+the scroller's, keyed by the tab — so the fade carries the skeleton standing then into what replaces
+it; an official group's add-a-sport card, which replaces Games' place, comes in without the fade.
+Out of sight behind another tab, Games draws no skeleton. The skeletons stand at the phone's text
+size; the tab bar's grows with `fontScale` from the segment's 25. Walked in `groupGames.test.tsx`
+(the shapes and the way back; together, though the deck lands first; the header and the tabs from
+the ceiling; the deck's block kept while the sport is read after the group, and through the ratings'
+retry; both offline notes and the connection back), `groupGamesDoor.test.tsx` (a door opened over
+the deck's block at the ceiling), `groupFillIn.test.tsx`
+(a switch shimmering only the rows), the boards' suites, `joinGroup.test.tsx` (a group joined a
+moment ago, opened from the list) and `groupPage.test.ts` (the parts' rule). **Not seen on a
+device** — a look is owed (the phone walk, #877): the shapes' sizes against the page, the fade, and
+the header's tile and name taking the circle's and the bar's place.

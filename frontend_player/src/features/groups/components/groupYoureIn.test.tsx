@@ -72,6 +72,9 @@ import {
 import { GROUPS_COPY } from './groupsCopy';
 
 const COPY = FILL_IN_COPY;
+
+/** A skeleton is hidden from a listener, so it is found with the hidden elements too. */
+const HIDDEN_TOO = { includeHiddenElements: true } as const;
 const START = GROUPS_COPY.youreIn;
 const SECOND = 1_000;
 
@@ -243,11 +246,12 @@ describe('the You’re in tab (split mock 2)', () => {
     expect(screen.getByRole('button', { name: GROUPS_COPY.group.tabs.youreIn })).toBeTruthy();
   });
 
-  it('shows its own spinner while its read is on its way', async () => {
+  // #875: its rows shimmer, where a spinner stood.
+  it('shimmers its rows while its read is on its way', async () => {
     transport.on('GET', LIVE_YESES_PATH, neverResponds());
     await openYoureIn();
 
-    expect(await screen.findByLabelText(COPY.readingYoureIn)).toBeTruthy();
+    expect(await screen.findAllByTestId('board-skeleton', HIDDEN_TOO)).not.toHaveLength(0);
     expect(screen.queryByText(START.others)).toBeNull();
   });
 
@@ -376,7 +380,7 @@ describe('You’re in with nothing on it', () => {
     await openTab(YOURE_IN);
     await waitFor(() => expect(transport.requestsTo('GET', LIVE_YESES_PATH)).toHaveLength(1));
 
-    expect(await screen.findByLabelText(COPY.readingYoureIn)).toBeTruthy();
+    expect(await screen.findAllByTestId('board-skeleton', HIDDEN_TOO)).not.toHaveLength(0);
     expect(screen.queryByText(START.others)).toBeNull();
     expect(screen.queryByText(COPY.noYeses)).toBeNull();
 

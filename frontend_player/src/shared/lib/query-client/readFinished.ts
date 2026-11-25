@@ -43,6 +43,21 @@ export function readHasFinished(read: ReadEnding | undefined): boolean {
 }
 
 /**
+ * **How far a read has come** ([#875](https://github.com/Raketa02/Raketa/issues/875)): `reading` —
+ * out, or not yet asked, with nothing to show; `landed` — it holds data, whatever it is doing now;
+ * `ended` — finished with nothing to show: refused, paused for a connection, or failed once and
+ * retrying. A part whose read has *ended* reveals what it draws then, the failure or the offline
+ * note, which is not its content — so when the read sets out again, *Try again* or the connection
+ * back, it is `reading` once more and the part's skeleton stands again (`shared/ui`'s `Reveal`).
+ */
+export type ReadStage = 'reading' | 'landed' | 'ended';
+
+export function readStage(read: ReadEnding | undefined): ReadStage {
+  if (read?.data !== undefined) return 'landed';
+  return readHasFinished(read) ? 'ended' : 'reading';
+}
+
+/**
  * **An answer read off the query cache**, drawn again only when it changes. `answer` must give a
  * value compared by identity — a flag, a word — never a new object or list on every call.
  *

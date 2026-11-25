@@ -1247,8 +1247,10 @@ refusal or the note is not the content, though: when _Try again_ or the connecti
 out once more with still nothing to draw, the skeleton stands again rather than a blank page. A
 screen of several reads, revealed together and top-down past a ceiling, is #871's amendment here.
 
-**Where it is drawn**: Rankings (#870). Home, the four See all screens and the group page follow
-(#871–#876); every other screen keeps its own loading drawing (the loading shimmer log §11). **Not
+**Where it is drawn**: Rankings (#870), Home (#871), the four See all screens (#872) and the group
+page (#875) — its header and tab bar, one deck-card block on Games and rows on Fill in and You’re in;
+the kind swap's skeleton follows (#876). Every other screen keeps its own loading drawing (the
+loading shimmer log §11). **Not
 seen on a device**: the tone, the beat, the tilt and the band's width on the A32 and an iPhone, and
 the cross-fade (the phone walk, #877); its frame cost on the A32 is #873's.
 

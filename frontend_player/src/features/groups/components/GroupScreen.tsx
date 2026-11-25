@@ -120,9 +120,30 @@
  * page asks for the deck of the kind the menu stands on, Fill in and the live yeses for the sport
  * it stands on (`useReadGroupGamesAhead`), and the tabs find them read or on their way.
  *
- * **Every state has its drawing.** While the read is on its way the header has only its way back.
- * `group_not_found` is one sentence, because the server gives the same answer for *no such group*
- * and *not one of yours* and both have one remedy; any other failure says why and offers the retry.
+ * **It shimmers until it is built, then reveals together** ([#875](https://github.com/Raketa02/Raketa/issues/875);
+ * PRD #867; the loading shimmer log §10): **two parts, top-down** (`groupPageParts`) — **the header
+ * and the tab bar**, which wait for the group and the sport, and **the body of the tab on screen**,
+ * which waits for that tab's first read (`proposals`' `useGroupTabRead`). While they wait, on one
+ * ground so one band crosses them all, **a monogram circle and a name bar** stand beside the real way
+ * back (`GroupHeader`'s `shimmering`), **the tab bar's shape** under them, and the tab's own skeleton
+ * — **one deck-card block** on Games, **rows** on Fill in and You’re in, nothing on Friends, which waits
+ * on no read here. Everything comes in on one cross-fade once both have finished; **from 2.5 s after
+ * the page mounts** (`useRevealParts`' ceiling) the header and the tabs come first and the body keeps
+ * its skeleton until its read finishes. **Switching to a tab with nothing read shimmers only its
+ * body** — the scroller's `Reveal` is keyed by the tab, and a part shown stays shown. Each `Reveal`
+ * keeps its place in the tree from the first frame, Games' and the scroller's alike, so the skeleton
+ * standing while the group is read is the one the body's fade carries away. A part revealed with a
+ * failure or the offline note shimmers again when its read sets out once more (`partOf`). **What lies
+ * over the deck's area reveals Games however far its read has come** (`gamesRead`, told by the deck's
+ * `onCovered`): a door picked from the menu once the tab bar is in opens its panel over the deck's own
+ * block, and finding after it, rather than under the tab's skeleton, unseen.
+ *
+ * **Every state has its drawing.** While the read is on its way the header has only its way back,
+ * beside the skeleton. **Held for a connection, the page says so** — the amber note in the body,
+ * where it once drew nothing at all. `group_not_found` is one sentence, because the server gives the
+ * same answer for *no such group* and *not one of yours* and both have one remedy; any other failure
+ * says why and offers the retry. **A read that failed once and is retrying keeps the page shimmering**
+ * (`groupReadStage`): every part draws from it, so revealing it would show a back arrow over nothing.
  * The tabs wait for the sport as well as the group: the phone is read before anything is drawn for
  * a sport, so nothing is drawn for one and then redrawn for another (ADR-0188 §4).
  */
@@ -134,6 +155,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LevelDoor, fromAGroup } from '@/features/onboarding/types';
 import {
+  BoardSkeleton,
+  DeckSkeleton,
   FillInBoard,
   YoureInBoard,
   forgetPostDraft,
@@ -141,16 +164,21 @@ import {
   useFillInBadge,
   useGamesBadge,
   useGamesMenu,
+  useGroupTabRead,
   type GamesDeckHandle,
   useReadGroupGamesAhead,
   useRereadGroupGames,
   useYoureInBadge,
 } from '@/features/proposals/types';
-import { codeMessage } from '@/shared/errors';
+import { codeMessage, offlineMessage } from '@/shared/errors';
 import {
+  Note,
+  Reveal,
   Segment,
+  SkeletonGround,
   TabMenu,
   theme,
+  useRevealParts,
   type MenuFrame,
   type SegmentMenu,
   type SegmentOption,
@@ -163,6 +191,10 @@ import {
   GAME_INTENTS,
   GROUP_TABS,
   OPENING_TAB,
+  bodyRead,
+  gamesRead,
+  groupPageParts,
+  groupReadStage,
   type GameIntent,
   type GroupTab,
 } from '../domain/groupPage';
@@ -178,6 +210,7 @@ import { AddSportCard } from './AddSportCard';
 import { FriendsTab, type FriendsTabHandle } from './FriendsTab';
 import { GamesTab } from './GamesTab';
 import { GroupHeader } from './GroupHeader';
+import { GroupTabsSkeleton } from './GroupPageSkeleton';
 import { anotherSportRoute, groupInfoRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
 import { fillInTabLabel, gamesTabLabel, menuTabLabel, youreInTabLabel } from './groupsPresentation';
@@ -320,6 +353,41 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
     chosenKind,
   );
 
+  // **The page's reveal** (#875; see the module note): the header and the tab bar, then the body of
+  // the tab on screen — together, or top-down from the ceiling. Games is asked after on its own too,
+  // since it stays mounted, out of sight, while another tab is on.
+  const playingNow = filter.toAdd.length === 0 ? filter.sport : undefined;
+  // What lies over the deck — the door's panel, finding — is drawn, however far its read has come.
+  const [deckCovered, setDeckCovered] = useState(false);
+  const gamesBody = gamesRead(
+    useGroupTabRead(groupId, playingNow, 'games', chosenKind),
+    deckCovered,
+  );
+  const boardRead = useGroupTabRead(
+    groupId,
+    playingNow,
+    tab === 'fillIn' || tab === 'youreIn' ? tab : undefined,
+    chosenKind,
+  );
+  const parts = groupPageParts({
+    group: groupReadStage({
+      landed: group !== undefined,
+      refused: read.error !== null,
+      held: read.isPaused,
+    }),
+    sportAnswered: filter.answered,
+    body: bodyRead(
+      tab,
+      playingNow !== undefined && !filter.needsALevel,
+      tab === 'games' ? gamesBody : boardRead,
+    ),
+  });
+  const { shown } = useRevealParts(parts.finished);
+  const top = partOf(shown, 1, parts.finished[0], parts.landed[0]);
+  const below = partOf(shown, 2, parts.finished[1], parts.landed[1]);
+  const games =
+    tab === 'games' ? below : partOf(shown, 2, gamesBody !== 'reading', gamesBody === 'landed');
+
   // The tab's menu — the page's own state (see the module note). The bar and the tab are measured
   // into refs, never state: the tab widens on every switch to Friends and back, and a measure in
   // state would draw the whole page again each time. They are read once, as the menu opens, and
@@ -401,182 +469,250 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <SportFilterFrame
-        filter={filter}
-        onAnother={(offer) => router.replace(anotherSportRoute(groupId, tab, offer))}
-        header={(pill, cover) => (
-          <GroupHeader
-            groupId={groupId}
-            group={group}
-            backLabel={COPY.back}
-            pill={pill}
-            cover={cover}
-            onOpen={() => router.push(groupInfoRoute(groupId))}
-          />
-        )}
-      >
-        {(sport, toAdd, needsALevel) => {
-          // The sport the four tabs are drawn for — none while the reader must add one.
-          const playing = toAdd.length === 0 ? sport : undefined;
-          // A tab offers its menu only where there is a sport to play — not on the add-a-sport card,
-          // not on the level door: Friends wherever its court is drawn, Games wherever a deck read
-          // has come back with its kinds (`useGamesMenu`).
-          const court = playing !== undefined && !needsALevel;
-          const offers = (key: GroupTab) =>
-            court && (key === 'friends' || (key === 'games' && gamesMenu !== undefined));
-          const menuOpen =
-            menu !== undefined && menu.tab === tab && menu.sport === playing && offers(tab);
-          const select = (next: GroupTab) => {
-            // A press on the selected tab that offers a menu opens it, or shuts it — on Games, not
-            // while an intent answer is on its way or its games are found: the chevron stays, inert.
-            if (next === tab && offers(next) && playing !== undefined) {
-              if (menuOpen) return setMenu(undefined);
-              if (next === 'games' && gamesMenu?.still === true) return;
-              hangMenu(next);
-              setMenu({ tab: next, sport: playing });
-              return;
-            }
-            setMenu(undefined);
-            setTab(next);
-          };
-          const menuOf = (key: GroupTab): SegmentMenu => ({
-            offered: offers(key),
-            open: menuOpen && tab === key,
-            onFrame: (frame) => {
-              tabFrames.current[key] = frame;
-            },
-          });
-          // Selected with its menu offered, a tab says the kind it holds: *Games, Competitive*.
-          const heldKind = (key: GroupTab): GameIntent | undefined =>
-            key === 'friends' ? friendsKind : key === 'games' ? gamesMenu?.kind : undefined;
-          const options = TABS.map((option) => {
-            if (option.key !== 'friends' && option.key !== 'games') return option;
-            const owned = { ...option, menu: menuOf(option.key) };
-            const held = heldKind(option.key);
-            return tab === option.key && owned.menu.offered && held !== undefined
-              ? { ...owned, accessibilityLabel: menuTabLabel(option.key, held) }
-              : owned;
-          });
-          return group === undefined ? (
-            read.error === null ? (
-              // The tabs' reads set out beside the group's — see the module note.
-              playing === undefined ? null : (
-                <ReadingAhead groupId={groupId} sport={playing} kind={kind} />
-              )
-            ) : (
-              <View style={s.body}>
-                <ReadFailure
-                  error={read.error}
-                  message={codeMessage(COPY.refused, read.error)}
-                  onRetry={() => void read.refetch()}
-                />
-              </View>
-            )
-          ) : (
-            <>
-              <View
-                testID="group-tabs"
-                style={s.tabs}
-                onLayout={({ nativeEvent }) => {
-                  barFrame.current = nativeEvent.layout;
-                }}
-              >
-                <GroupTabs
-                  groupId={groupId}
-                  sport={playing}
-                  options={options}
-                  selected={tab}
-                  onSelect={select}
-                />
-              </View>
-              {playing === undefined ? null : (
-                // The deck lays itself out — see the module note — and **stays mounted while
-                // another tab is on**, out of sight: coming back to Games shows the cards it
-                // already drew rather than drawing them again (see the module note).
-                <View
-                  style={tab === 'games' ? s.fill : s.gone}
-                  // Under an open menu the deck takes no touch: a press there only closes it.
-                  pointerEvents={menuOpen ? 'none' : 'auto'}
-                >
-                  <GamesTab
-                    group={group}
-                    sport={playing}
-                    handle={gamesDeck}
-                    onScreen={tab === 'games'}
-                    // A notice's deck sees nothing until it stands on the card's kind, and a
-                    // deck out of sight sees nothing at all.
-                    inView={inView && arrived && tab === 'games'}
-                    refreshControl={pullControl}
-                    {...(card === undefined ? {} : { onTop: card })}
+      {/* One ground for the page, so one band crosses the header, the tab bar and the body. */}
+      <SkeletonGround style={s.fill}>
+        <SportFilterFrame
+          filter={filter}
+          onAnother={(offer) => router.replace(anotherSportRoute(groupId, tab, offer))}
+          header={(pill, cover) => (
+            <GroupHeader
+              groupId={groupId}
+              group={group}
+              backLabel={COPY.back}
+              pill={pill}
+              cover={cover}
+              onOpen={() => router.push(groupInfoRoute(groupId))}
+              shimmering={!top.finished}
+            />
+          )}
+        >
+          {(sport, toAdd, needsALevel) => {
+            // The sport the four tabs are drawn for — none while the reader must add one.
+            const playing = toAdd.length === 0 ? sport : undefined;
+            // A tab offers its menu only where there is a sport to play — not on the add-a-sport card,
+            // not on the level door: Friends wherever its court is drawn, Games wherever a deck read
+            // has come back with its kinds (`useGamesMenu`).
+            const court = playing !== undefined && !needsALevel;
+            const offers = (key: GroupTab) =>
+              court && (key === 'friends' || (key === 'games' && gamesMenu !== undefined));
+            const menuOpen =
+              menu !== undefined && menu.tab === tab && menu.sport === playing && offers(tab);
+            const select = (next: GroupTab) => {
+              // A press on the selected tab that offers a menu opens it, or shuts it — on Games, not
+              // while an intent answer is on its way or its games are found: the chevron stays, inert.
+              if (next === tab && offers(next) && playing !== undefined) {
+                if (menuOpen) return setMenu(undefined);
+                if (next === 'games' && gamesMenu?.still === true) return;
+                hangMenu(next);
+                setMenu({ tab: next, sport: playing });
+                return;
+              }
+              setMenu(undefined);
+              setTab(next);
+            };
+            const menuOf = (key: GroupTab): SegmentMenu => ({
+              offered: offers(key),
+              open: menuOpen && tab === key,
+              onFrame: (frame) => {
+                tabFrames.current[key] = frame;
+              },
+            });
+            // Selected with its menu offered, a tab says the kind it holds: *Games, Competitive*.
+            const heldKind = (key: GroupTab): GameIntent | undefined =>
+              key === 'friends' ? friendsKind : key === 'games' ? gamesMenu?.kind : undefined;
+            const options = TABS.map((option) => {
+              if (option.key !== 'friends' && option.key !== 'games') return option;
+              const owned = { ...option, menu: menuOf(option.key) };
+              const held = heldKind(option.key);
+              return tab === option.key && owned.menu.offered && held !== undefined
+                ? { ...owned, accessibilityLabel: menuTabLabel(option.key, held) }
+                : owned;
+            });
+            // **Until the group has been read**, the body is what its read says: the failure with its
+            // retry, the offline note — or nothing, its skeleton standing — while the tabs' reads set
+            // out beside it (see the module note). At the gutter where it stands outside the scroller,
+            // which pads its own content.
+            const groupless = (inset: boolean) => {
+              const said =
+                read.error !== null ? (
+                  <ReadFailure
+                    error={read.error}
+                    message={codeMessage(COPY.refused, read.error)}
+                    onRetry={() => void read.refetch()}
                   />
-                </View>
-              )}
-              {tab === 'games' && playing !== undefined ? null : (
-                <ScrollView
-                  testID="group-page-body"
-                  contentContainerStyle={s.body}
-                  refreshControl={tab === 'friends' ? undefined : pullControl}
-                  // Under an open menu the page takes no touch: a press there only closes it.
-                  pointerEvents={menuOpen ? 'none' : 'auto'}
-                >
-                  {toAdd.length > 0 ? (
-                    <AddSportCard sports={toAdd} groupId={groupId} tab={tab} />
-                  ) : needsALevel ? (
-                    <LevelDoor from={fromAGroup(groupId, tab)} />
-                  ) : sport === undefined ? null : (
-                    <TabBody
-                      tab={tab}
-                      group={group}
-                      sport={sport}
-                      inView={inView && arrived}
-                      friendsTab={friendsTab}
-                    />
-                  )}
-                </ScrollView>
-              )}
-              {/* You’re in's alone (split override 1): the game it makes appears on that tab. */}
-              {tab === 'youreIn' && toAdd.length === 0 ? (
-                <View testID="post-a-game-fab" style={s.postAGame}>
-                  <PostAGame groupId={groupId} />
-                </View>
-              ) : null}
-              {/* The tab's menu, over the page, last — see the module note. */}
-              {tab === 'games' && court && gamesMenu !== undefined ? (
-                <TabMenu
-                  open={menuOpen}
-                  lines={kindMenuLines(gamesMenu.sides)}
-                  selected={gamesMenu.ticked}
-                  trigger={hung.trigger}
-                  bar={hung.bar}
-                  align="start"
-                  onClose={forgetMenu}
-                  // The deck takes the line: a door opens its panel, and a live kind — the one it
-                  // stands on too — is chosen and shuts a panel left open.
-                  onPick={(picked) => gamesDeck.current?.pick(picked)}
-                />
-              ) : null}
-              {tab === 'friends' && court ? (
-                <TabMenu
-                  open={menuOpen}
-                  lines={FRIENDS_LINES}
-                  selected={friendsKind}
-                  trigger={hung.trigger}
-                  bar={hung.bar}
-                  align="end"
-                  onClose={forgetMenu}
-                  onPick={(kind) => {
-                    // The kind it already is just closes the menu.
-                    if (kind !== friendsKind) friendsTab.current?.chooseKind(kind);
+                ) : read.isPaused ? (
+                  <Note variant="amber">{offlineMessage('resumes')}</Note>
+                ) : null;
+              return (
+                <>
+                  {said !== null && inset ? <View style={s.body}>{said}</View> : said}
+                  {read.error === null && playing !== undefined ? (
+                    <ReadingAhead groupId={groupId} sport={playing} kind={kind} />
+                  ) : null}
+                </>
+              );
+            };
+            // Games lays itself out, outside the page's scroller, and stays mounted while another tab
+            // is on; until the group is read and the filter has said, it is the body when the page
+            // is on Games. The scroller holds every other body. Each keeps its place in the tree from
+            // the first frame, so the reveal's one fade carries its skeleton into what replaces it
+            // (see the module note).
+            const gamesDrawn =
+              group === undefined || !filter.answered ? tab === 'games' : playing !== undefined;
+            const scrolled = !(tab === 'games' && gamesDrawn);
+            return (
+              <>
+                <View
+                  testID="group-tabs"
+                  style={s.tabs}
+                  onLayout={({ nativeEvent }) => {
+                    barFrame.current = nativeEvent.layout;
                   }}
-                />
-              ) : null}
-              <ForgetsAShutMenu shut={menu !== undefined && !menuOpen} forget={forgetMenu} />
-            </>
-          );
-        }}
-      </SportFilterFrame>
+                >
+                  <Reveal
+                    testID="group-tabs-reveal"
+                    sizedBy="skeleton"
+                    finished={top.finished}
+                    landed={top.landed}
+                    skeleton={<GroupTabsSkeleton />}
+                  >
+                    {group === undefined ? null : (
+                      <GroupTabs
+                        groupId={groupId}
+                        sport={playing}
+                        options={options}
+                        selected={tab}
+                        onSelect={select}
+                      />
+                    )}
+                  </Reveal>
+                </View>
+                {gamesDrawn ? (
+                  // The deck lays itself out — see the module note — and **stays mounted while
+                  // another tab is on**, out of sight: coming back to Games shows the cards it
+                  // already drew rather than drawing them again (see the module note).
+                  <View
+                    style={tab === 'games' ? s.fill : s.gone}
+                    // Under an open menu the deck takes no touch: a press there only closes it.
+                    pointerEvents={menuOpen ? 'none' : 'auto'}
+                  >
+                    <Reveal
+                      testID="group-games-reveal"
+                      style={s.fill}
+                      finished={games.finished}
+                      landed={games.landed}
+                      // Drawn only while it is the tab on screen: out of sight, nothing shimmers.
+                      skeleton={tab === 'games' ? <DeckSkeleton /> : null}
+                    >
+                      {group === undefined || playing === undefined ? (
+                        groupless(true)
+                      ) : (
+                        <GamesTab
+                          group={group}
+                          sport={playing}
+                          handle={gamesDeck}
+                          onScreen={tab === 'games'}
+                          onCovered={setDeckCovered}
+                          // A notice's deck sees nothing until it stands on the card's kind, and a
+                          // deck out of sight sees nothing at all.
+                          inView={inView && arrived && tab === 'games'}
+                          refreshControl={pullControl}
+                          {...(card === undefined ? {} : { onTop: card })}
+                        />
+                      )}
+                    </Reveal>
+                  </View>
+                ) : null}
+                {scrolled ? (
+                  <ScrollView
+                    testID="group-page-body"
+                    contentContainerStyle={s.body}
+                    refreshControl={tab === 'friends' ? undefined : pullControl}
+                    // Under an open menu the page takes no touch: a press there only closes it.
+                    pointerEvents={menuOpen ? 'none' : 'auto'}
+                  >
+                    {/* Keyed by the tab: one with nothing read yet shimmers on its own (#875). */}
+                    <Reveal
+                      key={tab}
+                      testID="group-body-reveal"
+                      sizedBy="skeleton"
+                      finished={below.finished}
+                      landed={below.landed}
+                      skeleton={tab === 'fillIn' || tab === 'youreIn' ? <BoardSkeleton /> : null}
+                    >
+                      {group === undefined ? (
+                        groupless(false)
+                      ) : toAdd.length > 0 ? (
+                        <AddSportCard sports={toAdd} groupId={groupId} tab={tab} />
+                      ) : needsALevel ? (
+                        <LevelDoor from={fromAGroup(groupId, tab)} />
+                      ) : sport === undefined ? null : (
+                        <TabBody
+                          tab={tab}
+                          group={group}
+                          sport={sport}
+                          inView={inView && arrived}
+                          friendsTab={friendsTab}
+                        />
+                      )}
+                    </Reveal>
+                  </ScrollView>
+                ) : null}
+                {/* You’re in's alone (split override 1): the game it makes appears on that tab. It
+                    comes in with the header and the tab bar (#875), never over a page still
+                    shimmering. */}
+                {top.landed && tab === 'youreIn' && toAdd.length === 0 ? (
+                  <View testID="post-a-game-fab" style={s.postAGame}>
+                    <PostAGame groupId={groupId} />
+                  </View>
+                ) : null}
+                {/* The tab's menu, over the page, last — see the module note. */}
+                {group !== undefined && tab === 'games' && court && gamesMenu !== undefined ? (
+                  <TabMenu
+                    open={menuOpen}
+                    lines={kindMenuLines(gamesMenu.sides)}
+                    selected={gamesMenu.ticked}
+                    trigger={hung.trigger}
+                    bar={hung.bar}
+                    align="start"
+                    onClose={forgetMenu}
+                    // The deck takes the line: a door opens its panel, and a live kind — the one it
+                    // stands on too — is chosen and shuts a panel left open.
+                    onPick={(picked) => gamesDeck.current?.pick(picked)}
+                  />
+                ) : null}
+                {group !== undefined && tab === 'friends' && court ? (
+                  <TabMenu
+                    open={menuOpen}
+                    lines={FRIENDS_LINES}
+                    selected={friendsKind}
+                    trigger={hung.trigger}
+                    bar={hung.bar}
+                    align="end"
+                    onClose={forgetMenu}
+                    onPick={(kind) => {
+                      // The kind it already is just closes the menu.
+                      if (kind !== friendsKind) friendsTab.current?.chooseKind(kind);
+                    }}
+                  />
+                ) : null}
+                <ForgetsAShutMenu shut={menu !== undefined && !menuOpen} forget={forgetMenu} />
+              </>
+            );
+          }}
+        </SportFilterFrame>
+      </SkeletonGround>
     </SafeAreaView>
   );
+}
+
+/**
+ * **A part's two words for its `Reveal`** (#875): shown, and finished — or landed — now. A part
+ * revealed with its failure or the offline note is no longer finished once its read sets out again,
+ * so its skeleton stands again rather than a blank; one revealed with its content stays revealed.
+ */
+function partOf(shown: number, place: number, finished: boolean, landed: boolean) {
+  return { finished: shown >= place && finished, landed: shown >= place && landed };
 }
 
 /**

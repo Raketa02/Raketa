@@ -13,9 +13,11 @@
  *
  * **Its read is its own**: `GET /pools/{id}/fill-in` for the page's sport (#545) — only rescues,
  * booked games that lost a player, which the reader fits and is free for — soonest first, each
- * leaving at its deadline (`useSeatsToFill`, on the read's clock). While nothing is drawn yet, the
- * muted spinner; a read held offline says it resumes, and one refused says why with the retry. None
- * of it touches You’re in, the tab beside it, which reads the reader's own live yeses.
+ * leaving at its deadline (`useSeatsToFill`, on the read's clock). **While nothing is drawn yet, its
+ * rows shimmer** (`BoardSkeleton`, [#875](https://github.com/Raketa02/Raketa/issues/875)) — the group
+ * page reveals the tab from that skeleton once the read has finished, and while it retries the rows
+ * stand here; a read held offline says it resumes, and one refused says why with the retry. None of
+ * it touches You’re in, the tab beside it, which reads the reader's own live yeses.
  *
  * **No heading** — the tab's name does that job — **and no *+ Post a game***, which floats over You’re
  * in, where the game it makes appears (split override 1). **Empty, it is one line, always** — *No
@@ -35,7 +37,7 @@
 
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { behindOverlay, theme } from '@/shared/ui';
@@ -47,6 +49,7 @@ import { useFill } from '../hooks/useFill';
 import { useSeatsToFill } from '../hooks/useFillIn';
 import { useSeeRows } from '../hooks/useSeenRows';
 
+import { BoardSkeleton } from './BoardSkeleton';
 import { FILL_IN_COPY } from './fillInCopy';
 import { HeldRead, isHeld } from './HeldRead';
 import { rescueRoute } from './proposalRoutes';
@@ -78,13 +81,8 @@ export function FillInBoard({ groupId, sport, inView }: FillInBoardProps) {
     inView && reading === undefined && fill.over === 'none',
   );
 
-  if (seats === undefined) {
-    return isHeld(read) ? (
-      <HeldRead read={read} />
-    ) : (
-      <ActivityIndicator accessibilityLabel={COPY.reading} color={theme.color.muted} />
-    );
-  }
+  // While nothing is drawn yet, its rows' skeleton — the one the page reveals the tab from (#875).
+  if (seats === undefined) return isHeld(read) ? <HeldRead read={read} /> : <BoardSkeleton />;
   if (seats.length === 0) return <Text style={s.empty}>{COPY.noSeats}</Text>;
 
   return (

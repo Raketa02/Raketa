@@ -29,6 +29,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { onboardingKeys } from '@/features/onboarding/types';
 import { PAYMENTS_COPY } from '@/features/payments/types';
 import { RECORD_TITLE } from '@/features/player_record/types';
 import { PROPOSALS_COPY, proposalKeys } from '@/features/proposals/types';
@@ -36,7 +37,7 @@ import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
-import { theme } from '@/shared/ui';
+import { REVEAL_CEILING, theme } from '@/shared/ui';
 import { BALANCE_FORECAST, LOSE_TILE, WIN_TILE } from '@/shared/vocabulary/forecastPresentation';
 import {
   ANIA,
@@ -100,6 +101,8 @@ import {
 } from '@/test-support/transport';
 
 import { useGameIntent } from '../store/gameIntent.store';
+
+import { GROUPS_COPY } from './groupsCopy';
 
 const COPY = PROPOSALS_COPY;
 
@@ -348,7 +351,9 @@ describe('the Games tab’s menu — where its chevron is drawn (#862)', () => {
     fireEvent.press(await screen.findByLabelText('Play'));
     fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
 
-    expect(await screen.findByLabelText(COPY.reading)).toBeTruthy();
+    // The deck's block, where a spinner stood (#875): the read timed out by the navigation and
+    // asked again, so the page is revealed and the tab keeps its block.
+    expect(await screen.findAllByTestId('deck-skeleton', HIDDEN_TOO)).not.toHaveLength(0);
     expect(chevron()).toBeNull();
     fireEvent.press(await gamesAlone());
     expect(screen.queryByTestId('tab-menu', HIDDEN_TOO)).toBeNull();
@@ -965,6 +970,223 @@ describe('the states around the deck', () => {
     fireEvent.press(retry);
 
     expect(await screen.findByLabelText(COPY.details)).toBeTruthy();
+  });
+});
+
+/**
+ * **The page shimmers until it is built, then reveals together** (#875; PRD #867; the loading
+ * shimmer log §10) — the header and the tab bar, which wait for the group and the sport, then Games'
+ * deck. Reads are held on their way by the fake server (`transport.hold`, deaf to the client's abort,
+ * so the navigation's timeout never fires them) and landed when the walk says. That navigation runs
+ * every pending timer, the 2.5 s ceiling's included once set, so a walk that holds the header reads
+ * the rule as it holds from the top: the deck is never revealed before the header. The rule's own
+ * table and its ceiling's timer are `groupPage.test.ts`'s and `Reveal.test.tsx`'s.
+ */
+describe('the page while its first reads are out (#875)', () => {
+  const GROUP_PATH = `/api/v1/groups/${CREW.id}`;
+  const RATINGS_PATH = '/api/v1/ratings';
+  const padelRating = rating('PADEL', 2.71);
+  /** Past Query's first retry's backoff (`queryClient.ts`'s `retryDelay`). */
+  const RETRY = 2_000;
+  /** A part's skeleton, standing in its `Reveal` until the fade has taken it — `null` once gone. */
+  const skeletonOf = (part: 'group-tabs-reveal' | 'group-games-reveal') => {
+    const reveal = screen.queryByTestId(part, HIDDEN_TOO);
+    return reveal === null ? null : within(reveal).queryByTestId('reveal-skeleton', HIDDEN_TOO);
+  };
+  const headerShimmers = () => screen.queryByTestId('group-header-skeleton', HIDDEN_TOO) !== null;
+  /** The header, by what it opens — the list's card under the page is named by the group too. */
+  const header = () => screen.queryByHintText(GROUPS_COPY.group.openInfo);
+  const pill = () => screen.queryByRole('button', { name: 'Sport: Padel' });
+  const tabBar = () => screen.queryByRole('button', { name: /^Fill in/ });
+  const deck = () => screen.queryByRole('button', { name: 'Not this time' });
+  const pastTheFade = () => act(() => jest.advanceTimersByTime(theme.motion.fade + 16));
+
+  /** Play, then the crew's card pressed with these reads held on their way. */
+  async function openHolding(paths: readonly string[]) {
+    stubMyGroups(transport, [CREW]);
+    transport.on('GET', GROUP_PATH, () => json(PAGE));
+    stubGroupDeck(transport, CREW.id, groupDeck({ cards: [deckCard()] }));
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    fireEvent.press(await screen.findByLabelText('Play'));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    const held = paths.map((path) => transport.hold('GET', path));
+    fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+    return held;
+  }
+
+  afterEach(() => onlineManager.setOnline(true));
+
+  it('stands a circle and a name bar by the real way back, the tab bar’s shape and one deck-card block', async () => {
+    await openHolding([GROUP_PATH, deckPath(CREW.id)]);
+
+    expect(headerShimmers()).toBe(true);
+    expect(header()).toBeNull();
+    expect(pill()).toBeNull();
+    expect(skeletonOf('group-tabs-reveal')).not.toBeNull();
+    expect(tabBar()).toBeNull();
+    const block = skeletonOf('group-games-reveal');
+    expect(block).not.toBeNull();
+    expect(within(block!).getByTestId('deck-skeleton', HIDDEN_TOO)).toBeTruthy();
+    expect(deck()).toBeNull();
+
+    // The way back is the real one, and answers while the page shimmers.
+    fireEvent.press(screen.getByRole('button', { name: GROUPS_COPY.group.back }));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+  });
+
+  it('reveals the header, the tabs and the deck together — never the deck first, though it lands first', async () => {
+    const [group, cards] = await openHolding([GROUP_PATH, deckPath(CREW.id)]);
+    // The deck sets out beside the group's read, so it can land first.
+    expect(transport.requestsTo('GET', deckPath(CREW.id)).length).toBeGreaterThan(0);
+
+    await act(async () => cards!.land());
+    expect(headerShimmers()).toBe(true);
+    expect(skeletonOf('group-games-reveal')).not.toBeNull();
+    expect(deck()).toBeNull();
+
+    await act(async () => group!.land());
+
+    expect(await screen.findByHintText(GROUPS_COPY.group.openInfo)).toBeTruthy();
+    expect(headerShimmers()).toBe(false);
+    expect(pill()).not.toBeNull();
+    expect(tabBar()).not.toBeNull();
+    expect(deck()).not.toBeNull();
+    pastTheFade();
+    expect(skeletonOf('group-tabs-reveal')).toBeNull();
+    expect(skeletonOf('group-games-reveal')).toBeNull();
+  });
+
+  it('from the ceiling, brings the header and the tabs in while the deck keeps its block', async () => {
+    const [cards] = await openHolding([deckPath(CREW.id)]);
+    act(() => jest.advanceTimersByTime(REVEAL_CEILING));
+
+    expect(header()).not.toBeNull();
+    expect(pill()).not.toBeNull();
+    expect(tabBar()).not.toBeNull();
+    expect(skeletonOf('group-games-reveal')).not.toBeNull();
+    expect(deck()).toBeNull();
+
+    await act(async () => cards!.land());
+
+    expect(await screen.findByRole('button', { name: 'Not this time' })).toBeTruthy();
+    pastTheFade();
+    expect(skeletonOf('group-games-reveal')).toBeNull();
+  });
+
+  /**
+   * The ratings were read at launch; asked again here — reset under Home's own observer — they are
+   * held on their way while the page opens, so the group lands before the sport is known.
+   */
+  async function openWithTheSportOut(ratings: () => Response | Promise<Response>) {
+    stubMyGroups(transport, [CREW]);
+    transport.on('GET', GROUP_PATH, () => json(PAGE));
+    stubGroupDeck(transport, CREW.id, groupDeck({ cards: [deckCard()] }));
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    fireEvent.press(await screen.findByLabelText('Play'));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    transport.on('GET', RATINGS_PATH, ratings);
+    const held = transport.hold('GET', RATINGS_PATH);
+    await act(async () => {
+      void queryClient.resetQueries({ queryKey: onboardingKeys.ratings() });
+    });
+    fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+    // The group is in: its tab bar is drawn, unseen under the bar's skeleton.
+    await waitFor(() => expect(screen.queryAllByText('Fill in', HIDDEN_TOO)).not.toHaveLength(0));
+    return held;
+  }
+
+  it('keeps the deck’s block in its place while the sport is read after the group', async () => {
+    const ratings = await openWithTheSportOut(() => json({ ratings: [padelRating] }));
+    // The group is in, the sport is not: the header waits, and the body is still Games' block.
+    expect(headerShimmers()).toBe(true);
+    const block = skeletonOf('group-games-reveal');
+    expect(block).not.toBeNull();
+    expect(within(block!).getByTestId('deck-skeleton', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.queryByTestId('group-page-body', HIDDEN_TOO)).toBeNull();
+
+    await act(async () => ratings.land());
+
+    expect(await screen.findByRole('button', { name: 'Not this time' })).toBeTruthy();
+    expect(header()).not.toBeNull();
+  });
+
+  it('keeps shimmering while the ratings are asked again after one failure', async () => {
+    let asked = 0;
+    const ratings = await openWithTheSportOut(() => {
+      asked += 1;
+      return asked === 1 ? errorResponse(503, 'unavailable') : json({ ratings: [padelRating] });
+    });
+
+    await act(async () => ratings.land());
+    // The refusal lands, short of the retry's backoff.
+    await act(() => jest.advanceTimersByTimeAsync(RETRY / 4));
+    expect(asked).toBe(1);
+    // Refused once and to be asked again: no sport yet, so no header and no tab bar over a blank body.
+    expect(headerShimmers()).toBe(true);
+    expect(skeletonOf('group-tabs-reveal')).not.toBeNull();
+    expect(tabBar()).toBeNull();
+
+    await act(() => jest.advanceTimersByTimeAsync(RETRY));
+
+    expect(asked).toBe(2);
+    expect(await screen.findByRole('button', { name: 'Not this time' })).toBeTruthy();
+    expect(header()).not.toBeNull();
+  });
+
+  it('says the group’s read is held for a connection — never a blank page — and builds it once back', async () => {
+    stubMyGroups(transport, [CREW]);
+    transport.on('GET', GROUP_PATH, () => json(PAGE));
+    stubGroupDeck(transport, CREW.id, groupDeck({ cards: [deckCard()] }));
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    fireEvent.press(await screen.findByLabelText('Play'));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    act(() => onlineManager.setOnline(false));
+    fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
+
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    expect(headerShimmers()).toBe(false);
+    expect(screen.getByRole('button', { name: GROUPS_COPY.group.back })).toBeTruthy();
+    expect(tabBar()).toBeNull();
+
+    act(() => onlineManager.setOnline(true));
+
+    expect(await screen.findByHintText(GROUPS_COPY.group.openInfo)).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Not this time' })).toBeTruthy();
+    expect(screen.queryByText(offlineMessage('resumes'))).toBeNull();
+  });
+
+  it('says the deck’s first read is held for a connection, where a spinner turned for ever', async () => {
+    // Refused once as the phone goes offline: Query asks again, and the retry waits for a connection.
+    transport.on('GET', deckPath(CREW.id), () => errorResponse(503, 'unavailable'));
+    stubMyGroups(transport, [CREW]);
+    transport.on('GET', GROUP_PATH, () => json(PAGE));
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    fireEvent.press(await screen.findByLabelText('Play'));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+    const held = transport.hold('GET', deckPath(CREW.id));
+    fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+
+    act(() => onlineManager.setOnline(false));
+    await act(async () => held.land());
+    await act(() => jest.advanceTimersByTimeAsync(RETRY));
+
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    expect(header()).not.toBeNull();
+    expect(tabBar()).not.toBeNull();
+    expect(screen.queryAllByTestId('deck-skeleton', HIDDEN_TOO)).toHaveLength(0);
+
+    stubGroupDeck(transport, CREW.id, groupDeck({ cards: [deckCard()] }));
+    act(() => onlineManager.setOnline(true));
+
+    expect(await screen.findByRole('button', { name: 'Not this time' })).toBeTruthy();
+    expect(screen.queryByText(offlineMessage('resumes'))).toBeNull();
   });
 });
 

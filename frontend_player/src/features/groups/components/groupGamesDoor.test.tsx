@@ -33,7 +33,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { TIMEOUT_MS } from '@/shared/lib/http';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
-import { theme } from '@/shared/ui';
+import { REVEAL_CEILING, theme } from '@/shared/ui';
 import {
   dealPath,
   deckCard,
@@ -447,9 +447,9 @@ describe('the deck never opens on the dimmed kind', () => {
 
   // The code review's catch (#862): the menu is drawn off the read of the kind the phone last stood
   // on, which says the intent shows only Competitive, while the deck reads Competitive itself — and a
-  // door drawn there is a door that opens, over the deck's spinner or its failure.
+  // door drawn there is a door that opens, over the deck's skeleton (#875) or its failure.
   it.each([
-    ['on its way', 'held', () => screen.findByLabelText(COPY.reading)],
+    ['on its way', 'held', () => screen.findAllByTestId('deck-skeleton', HIDDEN_TOO)],
     ['refused', 'refused', () => screen.findByRole('button', { name: COPY.readAgain })],
   ] as const)(
     'opens the door from the menu while the deck’s own read is %s',
@@ -457,6 +457,9 @@ describe('the deck never opens on the dimmed kind', () => {
       useGameIntent.setState({ intent: 'forFun' });
       unread = { kind: 'COMPETITIVE', how };
       await openGames('COMPETITIVE');
+      // While the deck's own read is out the page shimmers, and the tab bar comes in at the ceiling
+      // (#875): the menu is reached from there.
+      act(() => jest.advanceTimersByTime(REVEAL_CEILING));
       expect(await deckSays()).toBeTruthy();
       expect(await door('For fun')).toBeTruthy();
 

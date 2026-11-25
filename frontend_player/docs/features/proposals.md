@@ -2082,3 +2082,34 @@ _YOUR GAMES · 1_, a one-figure count being what nearly every Home draws. **`use
 refused, held for a connection, or failed once and retrying — off the cache, for the shell's reveal
 and for `rankings`' Top 10, which waits behind it. Walked in the shell's `homeReveal.test.tsx`; the
 rail's own walks are unchanged (`homeAndBookedGame.test.tsx`), every one of them past Home's read.
+
+## The group page's three tabs shimmer, and the deck's first read says when it is held offline (#875)
+
+[#875](https://github.com/Raketa02/Raketa/issues/875); PRD #867, the loading shimmer log §10; design
+system 5.6. The group page (`groups.md`) reveals its header and tab bar, then the body of the tab on
+screen; this feature says how far the three tabs it draws have come, and draws what they shimmer as.
+
+- **`useGroupTabRead`** answers, off the cache under the hooks' own keys, how far a tab's first read
+  has come — `shared/lib/query-client`'s `readStage`: `reading`, `landed`, or `ended` with
+  nothing to show (refused, held for a connection, or failed once and retrying). **Games** is the deck
+  the tab draws — the kind chosen, or the one the intent corrects it to, as `useGroupDeck` reads it;
+  **Fill in** its rescues; **You’re in** the reader's live yeses, and **with none here Fill in's read
+  too** (`youreInRead`), since the starting card waits for it (`youreInEmpty`). It asks for nothing.
+- **`DeckSkeleton`** — one deck-card block filling the stage, in the deck's own frame, the buttons'
+  row left bare so the card lands where the block stood. **`BoardSkeleton`** — three rows drawn as
+  `FillInRow` is: the white card with its stroke's room in no colour (coral or mint would say
+  _rescue_ or _yours_ about rows nobody has read), the title's and the club's bars at the phone's text
+  size, four seat squares and the row's button.
+- **They replace the spinners**: the deck's first read, Fill in's, and You’re in's — its own, and
+  the wait for Fill in's before the starting card. The page reveals each tab from its skeleton; **while
+  a read retries after a failure, the tab draws the same skeleton in its own place**, the reveal having
+  stopped waiting for it, so it shimmers on rather than spinning. Their spoken names (_Reading Fill
+  in_, _Reading You’re in_) went with the spinners (ADR-0198); the kind swap's spinner keeps
+  _Reading the games_ until #876.
+- **The deck's first read held for a connection says it resumes** — the amber note in the deck's
+  place, where a spinner turned for ever — as Fill in's and You’re in's held reads already did
+  (`HeldRead`).
+
+Walked in the group page's suites (`groupGames.test.tsx`, `groupFillIn.test.tsx`,
+`groupYoureIn.test.tsx`, `groupGamesDoor.test.tsx`) and `fillIn.test.ts` (`youreInRead`). **Not seen
+on a device**: the block's and the rows' sizes against what replaces them (the phone walk, #877).

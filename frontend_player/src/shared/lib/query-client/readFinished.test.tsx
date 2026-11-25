@@ -15,7 +15,13 @@ import {
 import { act, renderHook } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
-import { readHasFinished, useQueryCacheAnswer, useReadFinished } from './readFinished';
+import {
+  readHasFinished,
+  readStage,
+  useQueryCacheAnswer,
+  useReadFinished,
+  type ReadStage,
+} from './readFinished';
 
 type Read = Pick<QueryState, 'data' | 'status' | 'fetchStatus' | 'fetchFailureCount'>;
 
@@ -50,6 +56,42 @@ describe('readHasFinished', () => {
     ],
   ])('%s', (_case, read, finished) => {
     expect(readHasFinished(read)).toBe(finished);
+  });
+});
+
+/**
+ * **How far a read has come** (#875) — for a skeleton that must stand again when a read that ended
+ * with nothing to show sets out once more: *Try again*, or the connection back.
+ */
+describe('readStage', () => {
+  it.each<[string, Read | undefined, ReadStage]>([
+    ['a read nobody has asked for yet', undefined, 'reading'],
+    ['a read on its way', OUT, 'reading'],
+    ['a read waiting for what it is asked with', { ...OUT, fetchStatus: 'idle' }, 'reading'],
+    [
+      'a read that landed',
+      { ...OUT, data: ['Inés'], status: 'success', fetchStatus: 'idle' },
+      'landed',
+    ],
+    [
+      'a landed read being read again',
+      { ...OUT, data: ['Inés'], status: 'success', fetchStatus: 'fetching' },
+      'landed',
+    ],
+    [
+      'a landed read whose re-read was refused',
+      { ...OUT, data: ['Inés'], status: 'error', fetchStatus: 'idle', fetchFailureCount: 3 },
+      'landed',
+    ],
+    [
+      'a read refused',
+      { ...OUT, status: 'error', fetchStatus: 'idle', fetchFailureCount: 3 },
+      'ended',
+    ],
+    ['a read paused for a connection', { ...OUT, fetchStatus: 'paused' }, 'ended'],
+    ['a read that failed once and is retrying', { ...OUT, fetchFailureCount: 1 }, 'ended'],
+  ])('%s', (_case, read, stage) => {
+    expect(readStage(read)).toBe(stage);
   });
 });
 
