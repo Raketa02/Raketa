@@ -76,6 +76,22 @@ export function openingSport(
 }
 
 /**
+ * **The sport the deck last showed** (#775) — a player group's filter opening on the sport last
+ * picked while the reader is still rated in it, else the first they are rated in (`openingSport`):
+ * what Rankings and Home's Top 10 open on when the trophy names no sport. `null` for a reader rated in
+ * nothing, whose deck shows no sport; `undefined` while either read is out — the ratings, or the
+ * phone's saved sport, where `null` is a phone that answered *nothing saved*. The hook's answer and
+ * the launch's off the cache (#874) are this one.
+ */
+export function deckSport(
+  rated: readonly Sport[] | undefined,
+  saved: string | null | undefined,
+): Sport | null | undefined {
+  if (rated === undefined || saved === undefined) return undefined;
+  return openingSport(rated, saved ?? undefined) ?? null;
+}
+
+/**
  * **The sports a reader must add to see an official group's games** (story 57, #519) — every sport
  * it plays, in the registry's order, for a reader rated in none of them; nothing once they are
  * rated in one, and nothing for a player group, which plays whatever its members are rated in.

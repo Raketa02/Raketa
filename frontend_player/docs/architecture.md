@@ -225,6 +225,7 @@ native process starts                          (the OS launch window: a plain ni
    → wire focusManager / onlineManager to native state
    → read credentials from SecureStore
    → restore + validate/refresh the session    (not asked when the phone already knows it is offline — ADR-0209 §4)
+   → start warming Home                        (an account headed for the tabs, not known offline; never awaited — #874)
    → start reading the install referrer        (Android, first launch only; never awaited — #756)
    → initialise authenticated app state
    → load fonts
@@ -248,6 +249,20 @@ behind it, and when the sequence resolves the tree — or the startup failure sc
   would draw nothing declares itself blank, and the fade waits while any declaration stands. The
   entry gate holds while its decision is _pending_, so the splash never fades into a blank frame,
   and the shared gate never imports a feature to know it.
+- **Home's reads set out while the splash plays** (#874; ADR-0209 §2, amended 2026-11-24). Right
+  after the session is restored the sequence **starts** _warm Home_ and never awaits it, as it
+  starts the install referrer's read: the splash waits on no read, and the fade rule above is
+  unchanged. The step is the shell's (`warmHome`), composed from each feature's Home prefetch under
+  the very query definitions its hooks observe — keys, functions and options, Top 10's opening
+  sport included — so Home mounts onto reads that are fresh under the 30 s `staleTime` and sends
+  none of them again. **It runs only for an account the entry gate will send to the tabs**, by the
+  gate's own rule over the cached account (`onboarding`'s `entryDestinationAtLaunch`, the phone's
+  last profile read first for an account that runs a club's groups), and **never on a phone that
+  already knows it is offline**, by the check's own rule (`auth`'s `phoneKnowsItIsOffline`). The
+  root layout composes it, because `shared/lib/bootstrap` may not import a feature. **Launch
+  only**: after a sign-in Home mounts the moment the session opens, and nothing is warmed. Reads
+  create no views, so the motion on the UI thread is not touched; the A32's cold-start trace is its
+  acceptance (the phone walk, #877).
 - **Reduced motion is decided once, before the first frame**, from the OS's answer —
   `ReducedMotionProvider` starts from the setting as the process started, never a provisional
   `false` — and never switched mid-play.

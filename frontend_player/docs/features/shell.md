@@ -546,3 +546,56 @@ through a suite's day-long clock jump, inside an `act` that could not unmount it
 ended. **So the header's numbers held before the ceiling are walked by no suite**: the rule before the ceiling is `Reveal.test.tsx`'s, on the
 hook. **Not seen on a device**: the shimmer over Home, the card's block against a real card, the two
 fades, and a slow part coming in at the ceiling.
+
+**Home's reads set out while the splash plays** ([#874](https://github.com/Raketa02/Raketa/issues/874);
+PRD #867; ADR-0209 §2, amended 2026-11-24; the loading shimmer log §7, Q18). Since the tree mounts
+only once the ball is still, Home's own reads set out about 0.2 s before the fade, and a cold open
+often faded onto Home's skeleton. **Now a launch step, `hooks/warmHome`, sets them out as soon as the
+session is restored**, and on a normal connection the splash fades onto a Home that is already whole:
+every part finished at its first draw, so no skeleton and no fade (the rule above).
+
+- **Started, never awaited**: the root layout starts it as it starts the install referrer's read, and
+  the splash waits on no read — ADR-0209's fade rule is unchanged, and _ready_ still never means the
+  data has arrived.
+- **Every read the two parts wait on, under the very definitions their hooks observe** — keys,
+  functions and options — so Home finds each fresh under the app's 30 s `staleTime` and sends none
+  again. Each feature offers its Home read's prefetch on its public surface and the shell composes
+  them: `proposals`' `prefetchHome`, `onboarding`'s `prefetchSkillRatings`, `groups`'
+  `prefetchHomeGroups` (Groups heating up and your groups), `discovery`'s `prefetchPeopleLines`,
+  `notifications`' `prefetchNotices` and `rankings`' `prefetchTopTen`. **Top 10's chain is included**:
+  it sets out Home's read and the deck's two (the ratings and the sport last picked, `groups`'
+  `prefetchDeckSport`), works out the opening sport off the cache by the hook's own rule
+  (`openingSportIn` over `homeRankingIn` and `deckSportIn`, which ask `rankings`' `openingOf` and
+  `groups`' `deckSport` in `domain/`, as the hooks do), waiting for the deck's reads only when
+  the trophy names no sport, and then asks the row under the key the hook will look for.
+- **Only for an account the entry gate will send to the tabs** — never for one headed for the
+  naming, the profile steps, a club's area or _Start playing_. The gate's rule is callable outside its
+  hook now, as a rule over the account (`onboarding`'s `entryDestinationOf`, which the gate asks too,
+  so the two always agree), and the launch asks it of the account session restore cached
+  (`entryDestinationAtLaunch`) — first reading the profile the phone remembers, under the gate's own
+  definition, for an account that runs a club's groups (`decidedByTheLastProfile`), whose launch
+  waits for it. No account cached — the check failed, was refused, or was never sent — is nothing to
+  decide from, and nothing is warmed.
+- **Never on a phone that already knows it is offline**, by the launch check's own rule (`auth`'s
+  `phoneKnowsItIsOffline`, ADR-0209 §4).
+- **Launch only**: after a sign-in Home mounts the moment the session opens, and nothing is warmed.
+- **A call, for the user to check: the prefetches keep the hooks' retries** (the code review's
+  question). A read still retrying when Home mounts is joined, not sent again; one that has spent
+  every retry before Home mounts is asked again by Home's mount, as any failed read is, so a server
+  failing all through the splash is asked about twice as often. Without retries, a Home joining a
+  read still on its way would inherit none, and show a refusal on a single failure.
+- **Not warmed**, because no part waits on them: the faces' photographs, the booking rooms the chat
+  button asks after, and the phone's own lists — the games opened and removed, and the Rankings view
+  the trophy's place is drawn in — which Home reads itself in milliseconds, under the splash.
+
+The walks are `homeWarmUp.test.tsx`, through the harness's warmed launch (`test-support`'s
+`launchWarmed`): the session restored as the launch restores it, then `warmHome` against the
+harness's query client before the tree is rendered, its requests handed back as `early`. Home opens
+with no skeleton and each of its nine reads sent once, all early; Top 10 on the deck's sport when the
+trophy names none, the ratings held until Home's read has landed; an account that also runs a club's
+groups and wore Player last is warmed; one headed for the naming, the profile steps, a club's area or
+_Start playing_ — or that wore its club's profile last — sends none of Home's reads before its own
+screen; and a phone known to be offline sends none early. That the step starts after the session and
+is never awaited is `bootstrapApp.test.ts`'s. **Owed to the phone walk (#877)**: the A32's cold-start
+trace — frames over 20 ms in the splash's first 2.6 s no more than the amendment's 3–5 — and a look
+on a release build.

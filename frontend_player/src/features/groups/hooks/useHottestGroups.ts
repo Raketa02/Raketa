@@ -15,6 +15,7 @@
  */
 
 import {
+  queryOptions,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
@@ -32,6 +33,15 @@ import { joinHottestPages } from '../domain/hottest';
 import { readHottestGroups, readHottestGroupsPage } from '../use-cases/groupReads';
 
 import { groupKeys } from './groupKeys';
+import { myGroupsRead } from './useGroups';
+
+/** The row's read, as one definition — what the hook observes and Home's warm-up sets out (#874). */
+const hottestRead = queryOptions<HottestRow, AppError>({
+  queryKey: groupKeys.hottest(),
+  queryFn: ({ signal }) => readHottestGroups({ signal }),
+  // Its faces are friends first, and the sheet counts them: a friend write re-reads it (#801).
+  meta: LISTS_PEOPLE,
+});
 
 export function useHottestGroups() {
   const client = useQueryClient();
@@ -40,12 +50,7 @@ export function useHottestGroups() {
     void client.refetchQueries({ queryKey: groupKeys.hottest(), stale: true });
   });
 
-  return useQuery<HottestRow, AppError>({
-    queryKey: groupKeys.hottest(),
-    queryFn: ({ signal }) => readHottestGroups({ signal }),
-    // Its faces are friends first, and the sheet counts them: a friend write re-reads it (#801).
-    meta: LISTS_PEOPLE,
-  });
+  return useQuery(hottestRead);
 }
 
 /**
@@ -155,4 +160,13 @@ export function rereadHomeGroups(client: QueryClient): Promise<unknown> {
     client.invalidateQueries({ queryKey: groupKeys.hottest() }),
     client.invalidateQueries({ queryKey: groupKeys.mine() }),
   ]);
+}
+
+/**
+ * **Home's two group reads, set out before Home is drawn** (#874) — the launch's warm-up, during the
+ * splash: the row, and the Groups list the groupless line and the level card are drawn from, the two
+ * the pull reads again. Under the hooks' own definitions, so Home finds them fresh when it mounts.
+ */
+export function prefetchHomeGroups(client: QueryClient): Promise<unknown> {
+  return Promise.all([client.prefetchQuery(hottestRead), client.prefetchQuery(myGroupsRead)]);
 }

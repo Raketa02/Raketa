@@ -21,12 +21,17 @@ import { pageSport, type SeeAllSport } from '../domain/seeAll';
 import { readSameLevel, readSameLevelPage } from '../use-cases/sameLevel';
 
 import { discoveryKeys } from './discoveryKeys';
-import { usePeopleRow } from './usePeopleRow';
+import { peopleRowRead, usePeopleRow } from './usePeopleRow';
 import { useSeeAllPages, type SeeAllList } from './useSeeAllPages';
+
+/** Home's row's read — the hook's, and Home's warm-up's (#874). */
+export const sameLevelRow = peopleRowRead(discoveryKeys.sameLevel(), (signal) =>
+  readSameLevel({ signal }),
+);
 
 /** Home's row — re-read on return, holding still under a friend write (`usePeopleRow`). */
 export function useSameLevel() {
-  return usePeopleRow(discoveryKeys.sameLevel(), (signal) => readSameLevel({ signal }));
+  return usePeopleRow(sameLevelRow);
 }
 
 /** **See all** — best % first; a sport re-compares everybody in it, and keeps only them. */

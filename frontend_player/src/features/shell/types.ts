@@ -56,6 +56,12 @@ export { YOU_COPY } from './components/youCopy';
 export { HomeScreen } from './components/tabScreens';
 /** **What a level got changes on Home** (#765) — the entry gate's, as a rating pass ends. */
 export { useRereadAfterALevel } from './hooks/useRereadAfterALevel';
+/**
+ * **Home's reads, set out while the splash plays** (#874; ADR-0209 §2, amended 2026-11-24) — the
+ * launch step the root layout starts after session restore and never awaits, composed here from each
+ * feature's Home prefetch; the router harness's warmed launch runs the same one.
+ */
+export { warmHome } from './hooks/warmHome';
 
 /**
  * The You tab — **a screen rather than a placeholder**

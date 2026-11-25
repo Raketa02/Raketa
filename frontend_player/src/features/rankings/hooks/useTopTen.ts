@@ -32,8 +32,9 @@ import {
 } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 
+import { prefetchDeckSport } from '@/features/groups/types';
 import { onboardingKeys } from '@/features/onboarding/types';
-import { proposalKeys } from '@/features/proposals/types';
+import { prefetchHome, proposalKeys } from '@/features/proposals/types';
 import type { AppError } from '@/shared/errors';
 import { useOnReturn } from '@/shared/lib/platform';
 import { readHasFinished, useQueryCacheAnswer } from '@/shared/lib/query-client';
@@ -44,12 +45,13 @@ import {
   topTenFace,
   topTenReadFinished,
   type TopTen,
+  type TopTenAsk,
   type TopTenFace,
 } from '../domain/topTen';
 import { readTopTen } from '../use-cases/readTopTen';
 
 import { rankingKeys } from './rankingKeys';
-import { useOpeningSport } from './useRankingsSport';
+import { openingSportIn, useOpeningSport } from './useRankingsSport';
 
 /** **A sport picked on the pill**, and the pick it was made over — where a failed read goes back to. */
 interface PickedSport {
@@ -75,8 +77,9 @@ export function useTopTen(): TopTenRead {
 
   // No sport yet is `skipToken` under a key of its own, as `useDeckCounts` keeps it.
   const read = useQuery<TopTen | null, AppError>({
-    queryKey: keyOf(ask),
-    queryFn: ask === undefined ? skipToken : ({ signal }) => readTopTen(ask, { signal }),
+    ...(ask === undefined
+      ? { queryKey: rankingKeys.topTenUnasked(), queryFn: skipToken }
+      : topTenRead(ask)),
     placeholderData: keepPreviousData,
   });
 
@@ -109,9 +112,31 @@ export function useTopTen(): TopTenRead {
   };
 }
 
-/** A Top 10 read's key — the one asked, or no sport yet. */
-function keyOf(ask: ReturnType<typeof topTenAsk>) {
-  return ask === undefined ? rankingKeys.topTenUnasked() : rankingKeys.topTenAsked(ask);
+/** **One Top 10 read** — its key and its fetch: the row's, and Home's warm-up's (#874). */
+function topTenRead(ask: TopTenAsk) {
+  return {
+    queryKey: rankingKeys.topTenAsked(ask),
+    queryFn: ({ signal }: { readonly signal: AbortSignal }) => readTopTen(ask, { signal }),
+  };
+}
+
+/**
+ * **Top 10, set out before Home is drawn** (#874; ADR-0209 §2, amended 2026-11-24) — its chain
+ * included. The row opens on the trophy's sport, off Home's read, else on the deck's, off the ratings
+ * and the sport last picked (`openingSportIn`, the hook's own rule): so Home's read and the deck's two
+ * are set out first, the deck's waited on only when the trophy names no sport, and then the row is
+ * asked for the sport they name, under the key the hook will look for. Home finds it fresh when it
+ * mounts and asks nothing twice; with no sport named, nothing is asked.
+ */
+export async function prefetchTopTen(client: QueryClient): Promise<void> {
+  const deck = prefetchDeckSport(client);
+  await prefetchHome(client);
+  let ask = topTenAsk(undefined, openingSportIn(client));
+  if (ask === undefined) {
+    await deck;
+    ask = topTenAsk(undefined, openingSportIn(client));
+  }
+  if (ask !== undefined) await client.prefetchQuery<TopTen | null, AppError>(topTenRead(ask));
 }
 
 /**

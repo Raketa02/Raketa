@@ -92,8 +92,9 @@ import ResultRoute from '@/app/(onboarding)/result/[assessmentId]';
 import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
+import { fetchCurrentUserAtLaunch, restoreSession } from '@/features/auth/types';
 import { featureFlagKeys } from '@/features/feature_flags/types';
-import { HOME_COPY } from '@/features/shell/types';
+import { HOME_COPY, warmHome } from '@/features/shell/types';
 import { beginSession, setSessionStatus } from '@/shared/lib/auth';
 import { SplashHoldsProvider, type SplashHolds } from '@/shared/lib/bootstrap';
 import {
@@ -113,13 +114,22 @@ import {
   type ImagePickingPort,
   type LiveStreamPort,
   type LocationPort,
+  type Reachability,
 } from '@/shared/lib/platform';
 import { raisePhoneFlag } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 
 import { fakePayments } from './platform';
 import { FILTER_OFF, SERGIO_RELIABILITY } from './playerRecord';
-import { errorResponse, json, noContent, servedBody, type Transport, type Wire } from './transport';
+import {
+  errorResponse,
+  json,
+  noContent,
+  servedBody,
+  type RecordedRequest,
+  type Transport,
+  type Wire,
+} from './transport';
 
 /**
  * The Home tab's one line — which is what *the player is in the app* looks like on screen.
@@ -1520,6 +1530,44 @@ export function runInProgress(
 export async function launchSignedIn(initialUrl = '/') {
   await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
   renderRouter(ONBOARDING_ROUTES, { initialUrl });
+}
+
+/** What a warmed launch hands back: the requests its warm-up sent before the tree existed. */
+export interface WarmedLaunch {
+  readonly early: readonly RecordedRequest[];
+}
+
+/**
+ * **A cold launch with Home warmed while the splash played** (#874; ADR-0209 §2, amended 2026-11-24)
+ * — the root layout's sequence from session restore on, against this harness's query client, before
+ * the tree is rendered: the session restored as the launch restores it (its check sent, so the
+ * account is cached), then **the very step the root layout starts**, the shell's `warmHome`.
+ *
+ * - **The warm-up hears the phone's reachability the suite says** — `reachable` unless it says
+ *   otherwise — while the session check is always sent: a phone known to be offline skips the check
+ *   too, and then there is no account to decide from, which would hide whether the warm-up's own rule
+ *   holds.
+ * - **It is awaited here**, which a launch never does: the harness mounts no splash, and every read
+ *   landing before the tree is what a normal connection does under one.
+ * - **`early` is every request the warm-up sent**, the account's own read excluded.
+ */
+export async function launchWarmed(
+  transport: Transport,
+  {
+    initialUrl = '/',
+    reachability = 'reachable',
+  }: { readonly initialUrl?: string; readonly reachability?: Reachability } = {},
+): Promise<WarmedLaunch> {
+  await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+  await restoreSession(
+    () => fetchCurrentUserAtLaunch(queryClient),
+    async () => 'reachable',
+  );
+  const from = transport.requests.length;
+  await warmHome(queryClient, async () => reachability);
+  const early = transport.requests.slice(from);
+  renderRouter(ONBOARDING_ROUTES, { initialUrl });
+  return { early };
 }
 
 /**

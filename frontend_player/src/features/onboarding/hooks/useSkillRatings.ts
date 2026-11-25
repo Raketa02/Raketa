@@ -14,7 +14,7 @@
  * one, and a sport rated on another device should appear.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery, type QueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
 
@@ -23,9 +23,20 @@ import { listRatings } from '../use-cases/listRatings';
 
 import { onboardingKeys } from './onboardingKeys';
 
+/** The read, as one definition — what the hook observes and the launch sets out early. */
+const ratingsRead = queryOptions<readonly SkillRating[], AppError>({
+  queryKey: onboardingKeys.ratings(),
+  queryFn: ({ signal }) => listRatings({ signal }),
+});
+
 export function useSkillRatings() {
-  return useQuery<readonly SkillRating[], AppError>({
-    queryKey: onboardingKeys.ratings(),
-    queryFn: ({ signal }) => listRatings({ signal }),
-  });
+  return useQuery(ratingsRead);
+}
+
+/**
+ * **The ratings, set out before Home is drawn** (#874) — the launch's warm-up, during the splash: Home
+ * reads them for the level card and for Top 10's opening sport, and finds them fresh when it mounts.
+ */
+export function prefetchSkillRatings(client: QueryClient): Promise<void> {
+  return client.prefetchQuery(ratingsRead);
 }

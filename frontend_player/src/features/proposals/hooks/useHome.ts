@@ -52,6 +52,14 @@ export function useHome() {
 }
 
 /**
+ * **Home's read, set out before Home is drawn** (#874) — the launch's warm-up, during the splash: the
+ * read every hook over Home observes, so Home finds it fresh when it mounts and asks nothing twice.
+ */
+export function prefetchHome(client: QueryClient): Promise<void> {
+  return client.prefetchQuery<Home, AppError>(homeRead);
+}
+
+/**
  * **Whether Home's one read has finished** (#871) — landed, refused, held for a connection, or failed
  * once and retrying (`readHasFinished`): what *YOUR GAMES*, the envelope and the trophy's place wait
  * on before Home reveals them. Read off the cache, so it draws again only as it turns.
@@ -101,8 +109,22 @@ export function useHomeLevelAsks(): readonly HomeLevelAsk[] | undefined {
  */
 export function useHomeRanking(): HomeRanking | null | undefined {
   const home = useHome();
-  if (home.data !== undefined) return home.data.ranking ?? null;
-  return home.isError || home.fetchStatus === 'paused' ? null : undefined;
+  return rankingOf(home.data, home.isError || home.fetchStatus === 'paused');
+}
+
+/**
+ * **The trophy's ranking, off the cache** (#874) — `useHomeRanking`'s answer where no hook can ask:
+ * the launch's warm-up, which works out Top 10's opening sport before Home is drawn.
+ */
+export function homeRankingIn(client: QueryClient): HomeRanking | null | undefined {
+  const read = client.getQueryState<Home, AppError>(proposalKeys.home());
+  return rankingOf(read?.data, read?.status === 'error' || read?.fetchStatus === 'paused');
+}
+
+/** The one rule both ask: the read's ranking, none once it is refused or held with nothing read. */
+function rankingOf(home: Home | undefined, unanswered: boolean): HomeRanking | null | undefined {
+  if (home !== undefined) return home.ranking ?? null;
+  return unanswered ? null : undefined;
 }
 
 /**

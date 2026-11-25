@@ -39,7 +39,6 @@ import { useCallback, useRef, useState } from 'react';
 
 import {
   authKeys,
-  named,
   useCurrentUser,
   useLastProfile,
   type AuthenticatedUser,
@@ -47,7 +46,8 @@ import {
 import { useSessionStatus } from '@/shared/lib/auth';
 import type { AppError } from '@/shared/errors';
 
-import { entryDestination, type EntryDestination } from '../domain/entryDecision';
+import { decidedByTheLastProfile, type EntryDestination } from '../domain/entryDecision';
+import { entryDestinationOf } from '../use-cases/entryDestination';
 
 /**
  * **Why the gate could not be read** — two states, and they are not the same sentence.
@@ -98,7 +98,7 @@ export function useEntryDecision(): EntryDecision {
   // launch never waits — but the read is still made for it, so that an account gaining a club under
   // a mounted gate (an invitation accepted over the app) finds it long settled, rather than sending
   // the gate back to *pending* and unmounting the app it is drawing.
-  const runsAClub = (user.data?.profiles.administers.length ?? 0) > 0;
+  const runsAClub = user.data !== undefined && decidedByTheLastProfile(user.data.profiles);
   const last = useLastProfile(user.data?.id, enabled);
   const lastUnread = runsAClub && !last.settled;
 
@@ -171,12 +171,6 @@ export function useEntryDecision(): EntryDecision {
   const beingReplaced = staleAtMount && user.isFetching && !user.isFetchedAfterMount;
   if (beingReplaced) return { kind: 'pending' };
 
-  return entryDestination({
-    // A nickname (ADR-0199 §3): an account an Invitation opened holds none either, and the
-    // naming is still owed once it plays.
-    named: named(user.data),
-    hasPlayerProfile: user.data.hasPlayerProfile,
-    profiles: user.data.profiles,
-    ...(last.choice === undefined ? {} : { lastProfile: last.choice }),
-  });
+  // The rule over the account, the one the launch asks before it warms Home (#874): the two agree.
+  return entryDestinationOf(user.data, last.choice);
 }

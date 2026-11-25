@@ -201,8 +201,11 @@ reason. Zustand never holds API entities, tokens, a backend cache, or a global l
 Bootstrap is a **state**, never `user === undefined` — that ambiguity is what flashes a login
 screen while valid credentials are still being read out of the keychain. `shared/lib/bootstrap`
 runs one ordered sequence (error reporting → validate config → wire focus/online managers → read
-SecureStore → restore/validate session → start reading the install referrer, never awaited → load
-fonts → render) and nothing renders a route tree before it resolves. **Startup runs behind a drawn
+SecureStore → restore/validate session → start warming Home, never awaited → start reading the
+install referrer, never awaited → load fonts → render) and nothing renders a route tree before it
+resolves. **Warming Home** (#874) sets Home's reads out during the splash, under the shell's
+`warmHome`, only for an account the entry gate will send to the tabs and never on a phone known to
+be offline. **Startup runs behind a drawn
 splash and is never held** ([ADR-0209](../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)):
 the launch gate draws the splash first, lets the OS launch window go on the splash's first layout,
 mounts the tree underneath when the sequence resolves, and fades at the later of 2.6 s and the

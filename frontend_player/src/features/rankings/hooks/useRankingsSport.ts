@@ -17,14 +17,15 @@
  * the sport: the trophy's sport is the latest result's, and the deck's last sport is the deck's.
  */
 
+import type { QueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { useDeckSport } from '@/features/groups/types';
-import { useSkillRatings } from '@/features/onboarding/types';
-import { useHomeRanking } from '@/features/proposals/types';
+import { deckSportIn, useDeckSport } from '@/features/groups/types';
+import { onboardingKeys, useSkillRatings, type SkillRating } from '@/features/onboarding/types';
+import { homeRankingIn, useHomeRanking } from '@/features/proposals/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { openingSport, pillSports } from '../domain/ranking';
+import { openingOf, type Opening } from '../domain/ranking';
 
 export interface RankingsSport {
   /** The pill's sports, rated first — `undefined` while the ratings are read. */
@@ -41,13 +42,8 @@ export function useRankingsSport(asked: Sport | undefined): RankingsSport {
   return { sports, sport: picked ?? opening, pick: setPicked };
 }
 
-/** **The pill's sports, and the sport a ranking opens on** — before anything is picked. */
-export interface OpeningSport {
-  /** All four, rated first — `undefined` while the ratings are read. */
-  readonly sports: readonly Sport[] | undefined;
-  /** The sport asked for, else the trophy's, else the deck's, else padel — `undefined` until known. */
-  readonly opening: Sport | undefined;
-}
+/** **The pill's sports, and the sport a ranking opens on** — before anything is picked (`openingOf`). */
+export type OpeningSport = Opening;
 
 /**
  * **The reads behind the opening sport and the pill** — the page's, and Home's Top 10 row's
@@ -59,18 +55,27 @@ export function useOpeningSport(asked?: Sport): OpeningSport {
   const deck = useDeckSport();
   const trophy = useHomeRanking();
 
-  // A ratings read held for a connection, with nothing read yet, is one the page cannot wait on: it
-  // would wait out the whole time offline, shimmering. So it counts as refused — padel, or the deck's
-  // last — and the page's own read, held for the same connection, says the page is offline (#870).
-  const unrated =
-    ratings.isError || (ratings.data === undefined && ratings.fetchStatus === 'paused');
-  const rated = unrated ? [] : ratings.data?.map((rating) => rating.sport);
+  return openingOf(asked, {
+    rated: ratings.data?.map((rating) => rating.sport),
+    ratingsRefused: ratings.isError,
+    ratingsPaused: ratings.fetchStatus === 'paused',
+    deck,
+    trophy,
+  });
+}
 
-  return {
-    sports: rated === undefined ? undefined : pillSports(rated),
-    opening: openingSport(asked, {
-      trophy: trophy === undefined ? undefined : (trophy?.sport ?? null),
-      deck: unrated && deck === undefined ? null : deck,
-    }),
-  };
+/**
+ * **The sport Home's Top 10 opens on, off the cache** (#874) — `useOpeningSport`'s answer with nothing
+ * asked, where no hook can ask: the launch's warm-up, which reads the row before Home is drawn, under
+ * the key the row's hook will look for.
+ */
+export function openingSportIn(client: QueryClient): Sport | undefined {
+  const ratings = client.getQueryState<readonly SkillRating[]>(onboardingKeys.ratings());
+  return openingOf(undefined, {
+    rated: ratings?.data?.map((rating) => rating.sport),
+    ratingsRefused: ratings?.status === 'error',
+    ratingsPaused: ratings?.fetchStatus === 'paused',
+    deck: deckSportIn(client),
+    trophy: homeRankingIn(client),
+  }).opening;
 }

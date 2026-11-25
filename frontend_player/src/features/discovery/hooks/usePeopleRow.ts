@@ -16,7 +16,7 @@
  *   card leaves them as read, and the next read brings the new figure. Nothing polls for it.
  */
 
-import { useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
+import { queryOptions, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 
 import type { FriendRelation } from '@/features/friends/types';
 import type { AppError } from '@/shared/errors';
@@ -36,19 +36,28 @@ const HOLDS_STILL = holdsPeople<PeopleRow<Card>, FriendRelation>(
   (row, moved: RelationMoved<FriendRelation>) => withRelation(row, moved.playerId, moved.relation),
 );
 
-export function usePeopleRow<Person extends Card>(
+/**
+ * **A row's read, as one definition** — its key, its fetch and the hold under a friend write: what
+ * the row's hook observes and Home's warm-up sets out before Home is drawn (#874), so the two cannot
+ * differ in anything Home would ask again for.
+ */
+export function peopleRowRead<Person extends Card>(
   queryKey: QueryKey,
   read: (signal: AbortSignal) => Promise<PeopleRow<Person>>,
 ) {
-  const client = useQueryClient();
-
-  useOnReturn(() => {
-    void client.refetchQueries({ queryKey, stale: true });
-  });
-
-  return useQuery<PeopleRow<Person>, AppError>({
+  return queryOptions<PeopleRow<Person>, AppError>({
     queryKey,
     queryFn: ({ signal }) => read(signal),
     meta: HOLDS_STILL,
   });
+}
+
+export function usePeopleRow<Person extends Card>(row: ReturnType<typeof peopleRowRead<Person>>) {
+  const client = useQueryClient();
+
+  useOnReturn(() => {
+    void client.refetchQueries({ queryKey: row.queryKey, stale: true });
+  });
+
+  return useQuery(row);
 }

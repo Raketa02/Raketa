@@ -37,3 +37,5 @@ export { DISCOVERY_COPY, joinedLine, nobodyNewPlays } from './components/discove
 export { rereadDiscovery } from './hooks/useNewInRaketa';
 /** **Whether the three people lines have been read** (#871) — for the shell's reveal of FOR YOU. */
 export { useDiscoveryLinesFinished } from './hooks/useLinesFinished';
+/** **The three people lines, set out before Home is drawn** (#874) — the shell's warm-up. */
+export { prefetchPeopleLines } from './hooks/prefetchPeopleLines';

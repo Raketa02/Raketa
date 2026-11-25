@@ -8,6 +8,7 @@
  *  -> wire focusManager / onlineManager       <- here
  *  -> read credentials from SecureStore       <- here, via restoreSession
  *  -> restore + validate the session          <- here
+ *  -> start warming Home                      <- here, not awaited (#874)
  *  -> start reading the install referrer       <- here, not awaited (#756)
  *  -> load fonts                              <- here
  *  -> render, underneath the drawn splash     <- LaunchGate
@@ -57,6 +58,15 @@ export interface BootstrapSteps {
    */
   readonly restoreSession: () => Promise<void>;
   /**
+   * **Starts** reading what Home draws, so a cold open on a normal connection fades onto a Home that
+   * is already whole (#874; ADR-0209 §2, amended 2026-11-24). Supplied by the root layout — Home is
+   * the shell's, and its reads are its features' — and **never awaited**: the splash waits on no
+   * read. After the session, because the account it decides from is the one session restore left
+   * in the cache: only an account headed for the tabs is warmed, and never on a phone that already
+   * knows it is offline. It never throws.
+   */
+  readonly warmHome: () => void;
+  /**
    * **Starts** reading the link an Android install carried, once on the app's first launch, and
    * holds it as if it had been tapped (#756). Supplied by the root layout — links are a feature's —
    * and **never awaited**: the answer is Google Play's, another app's, and the splash does not wait
@@ -68,7 +78,7 @@ export interface BootstrapSteps {
 
 /**
  * The steps `shared/` can supply on its own. The root layout spreads this and adds the
- * three that have to come from a feature.
+ * four that have to come from a feature.
  */
 export const sharedBootstrapSteps = {
   validateConfig: loadEnv,
@@ -79,7 +89,7 @@ export const sharedBootstrapSteps = {
   loadFonts,
 } as const satisfies Omit<
   BootstrapSteps,
-  'restoreSession' | 'wireCredentials' | 'readInstallReferrer'
+  'restoreSession' | 'wireCredentials' | 'warmHome' | 'readInstallReferrer'
 >;
 
 export async function bootstrapApp(steps: BootstrapSteps): Promise<void> {
@@ -91,6 +101,10 @@ export async function bootstrapApp(steps: BootstrapSteps): Promise<void> {
   // that painted the unauthenticated tree and then corrected itself is the flash the
   // whole sequence exists to prevent.
   await steps.restoreSession();
+
+  // After the session, which has cached the account the warm-up decides from. Started, never
+  // awaited: the splash is held by nothing a read does.
+  steps.warmHome();
 
   // After the session, so a link it holds is held against the session the launch settled on.
   steps.readInstallReferrer();

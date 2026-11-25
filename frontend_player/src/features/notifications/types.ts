@@ -17,6 +17,8 @@ export { NoticesScreen } from './components/NoticesScreen';
 export { NoticeBell, type NoticeBellProps } from './components/NoticeBell';
 /** **Whether the bell's read has finished** (#871) — its number waits on it, for the shell's reveal. */
 export { useNoticesFinished } from './hooks/useRecentNotices';
+/** **The bell's read, set out before Home is drawn** (#874) — the shell's warm-up. */
+export { prefetchNotices } from './hooks/useRecentNotices';
 export { NoticesHost } from './components/NoticesHost';
 /** The bell's list, read again — for the shell, once a request it was about is answered on Home. */
 export { rereadNotices } from './hooks/notificationKeys';

@@ -21,6 +21,8 @@ export { useTopTenLine } from './components/TopTenLine';
 export { rereadTopTen } from './hooks/useTopTen';
 /** **Whether Top 10's read has finished** (#871) — behind its opening sport — for the shell's reveal. */
 export { useTopTenFinished } from './hooks/useTopTen';
+/** **Top 10, set out before Home is drawn, its chain included** (#874) — the shell's warm-up. */
+export { prefetchTopTen } from './hooks/useTopTen';
 
 /**
  * **Where Rankings is** — for the trophy, and for the entry gate landing a pass that began on

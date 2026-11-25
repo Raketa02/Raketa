@@ -17,6 +17,7 @@ function steps(overrides: Partial<BootstrapSteps> = {}): BootstrapSteps {
     wirePlatformManagers: () => {},
     wireCredentials: () => {},
     restoreSession: async () => {},
+    warmHome: () => {},
     readInstallReferrer: () => {},
     loadFonts: async () => {},
     ...overrides,
@@ -71,13 +72,22 @@ describe('bootstrapApp', () => {
       restoreSession: async () => {
         order.push('session');
       },
+      warmHome: record('home'),
       readInstallReferrer: record('referrer'),
       loadFonts: async () => {
         order.push('fonts');
       },
     });
 
-    expect(order).toEqual(['config', 'managers', 'credentials', 'session', 'referrer', 'fonts']);
+    expect(order).toEqual([
+      'config',
+      'managers',
+      'credentials',
+      'session',
+      'home',
+      'referrer',
+      'fonts',
+    ]);
   });
 
   /**
@@ -105,6 +115,40 @@ describe('bootstrapApp', () => {
     expect(asked).toBe(true);
     expect(resolved).toBe(true);
     play.resolve();
+  });
+
+  /**
+   * **Home's reads set out while the splash plays** (#874; ADR-0209 §2, amended 2026-11-24): the step
+   * is started once the session is restored — the account it decides from is cached by then — and the
+   * sequence never waits for it, so the splash is held by nothing a read does.
+   */
+  it('starts warming Home once the session is restored, and never waits for it', async () => {
+    const session = deferred();
+    const reads = deferred();
+    let warmed = false;
+    let resolved = false;
+
+    const run = bootstrapApp(
+      steps({
+        restoreSession: () => session.promise,
+        warmHome: () => {
+          warmed = true;
+          return reads.promise;
+        },
+      }),
+    ).then(() => {
+      resolved = true;
+    });
+
+    await Promise.resolve();
+    expect(warmed).toBe(false);
+
+    session.resolve();
+    // Home's reads never land here: a sequence that awaited the step would never resolve.
+    await run;
+    expect(warmed).toBe(true);
+    expect(resolved).toBe(true);
+    reads.resolve();
   });
 
   it('fails when the config does, without spending a launch on anything else', async () => {

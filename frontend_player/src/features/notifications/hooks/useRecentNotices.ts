@@ -9,7 +9,7 @@
  * moved by the visit the open list records (`useNoticesVisit`).
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery, type QueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
 import { useReadFinished } from '@/shared/lib/query-client';
@@ -18,6 +18,20 @@ import type { RecentNotices } from '../domain/notice';
 import { readNotices } from '../use-cases/notifications';
 
 import { notificationKeys } from './notificationKeys';
+
+/** The read, as one definition — every observer's, and Home's warm-up's (#874). */
+const noticesRead = queryOptions<RecentNotices, AppError>({
+  queryKey: notificationKeys.notices(),
+  queryFn: ({ signal }) => readNotices({ signal }),
+});
+
+/**
+ * **The bell's read, set out before Home is drawn** (#874) — the launch's warm-up, during the splash,
+ * so the bell's number is there when Home mounts and nothing asks twice.
+ */
+export function prefetchNotices(client: QueryClient): Promise<void> {
+  return client.prefetchQuery(noticesRead);
+}
 
 export function useRecentNotices({
   every = false,
@@ -31,9 +45,8 @@ export function useRecentNotices({
    */
   readonly opening?: boolean;
 } = {}) {
-  return useQuery<RecentNotices, AppError>({
-    queryKey: notificationKeys.notices(),
-    queryFn: ({ signal }) => readNotices({ signal }),
+  return useQuery({
+    ...noticesRead,
     refetchInterval: every,
     ...(opening ? { refetchOnMount: 'always' as const } : {}),
   });

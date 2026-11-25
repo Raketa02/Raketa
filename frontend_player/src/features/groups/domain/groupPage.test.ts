@@ -1,5 +1,6 @@
 import type { GroupPerson, SportRoster } from './group';
 import {
+  deckSport,
   faceIn,
   filterSports,
   gamesCard,
@@ -83,6 +84,27 @@ describe('the sport a group page opens on', () => {
 
   it('is none for a reader rated in none of an official group’s sports', () => {
     expect(openingSport(['tennis'], 'tennis', ['padel'])).toBeUndefined();
+  });
+});
+
+/** **The sport the deck last showed** — what Rankings and Top 10 open on past the trophy (#775, #874). */
+describe('the sport the deck last showed', () => {
+  it('is not known while the ratings or the phone are still being read', () => {
+    expect(deckSport(undefined, 'tennis')).toBeUndefined();
+    expect(deckSport(['tennis'], undefined)).toBeUndefined();
+  });
+
+  it('is the sport last picked while the reader is still rated in it', () => {
+    expect(deckSport(['padel', 'tennis'], 'tennis')).toBe('tennis');
+  });
+
+  it('is the first rated sport when nothing was saved, or the saved one is no longer rated', () => {
+    expect(deckSport(['tennis', 'padel'], null)).toBe('padel');
+    expect(deckSport(['tennis'], 'squash')).toBe('tennis');
+  });
+
+  it('is none for a reader rated in nothing', () => {
+    expect(deckSport([], 'padel')).toBeNull();
   });
 });
 

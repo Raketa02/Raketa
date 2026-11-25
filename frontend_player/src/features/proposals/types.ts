@@ -157,6 +157,11 @@ export { useHomeRanking } from './hooks/useHome';
  * the envelope and the trophy's place, and Top 10's opening sport behind them.
  */
 export { useHomeReadFinished } from './hooks/useHome';
+/**
+ * **Home's read set out before Home is drawn, and the trophy's ranking off the cache** (#874) — the
+ * shell's warm-up during the splash, and `rankings`' Top 10 opening sport worked out within it.
+ */
+export { homeRankingIn, prefetchHome } from './hooks/useHome';
 export type { HomeRanking } from './domain/home';
 export type { HomeLevelAsk, HomeLevelAsker } from './domain/home';
 

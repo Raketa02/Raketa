@@ -16,7 +16,7 @@
  * effects (`useGroupWrites.ts`).
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 
 import type { AppError } from '@/shared/errors';
@@ -35,13 +35,15 @@ import {
 
 import { groupKeys } from './groupKeys';
 
+/** The Groups list's read, as one definition — every hook over it, and Home's warm-up (#874). */
+export const myGroupsRead = queryOptions<readonly MyGroup[], AppError>({
+  queryKey: groupKeys.mine(),
+  queryFn: ({ signal }) => readMyGroups({ signal }),
+});
+
 /** `enabled` is Home's card's (#731): it asks which groups only of a player rated in nothing. */
 export function useMyGroups({ enabled = true }: { readonly enabled?: boolean } = {}) {
-  return useQuery<readonly MyGroup[], AppError>({
-    queryKey: groupKeys.mine(),
-    queryFn: ({ signal }) => readMyGroups({ signal }),
-    enabled,
-  });
+  return useQuery({ ...myGroupsRead, enabled });
 }
 
 /**

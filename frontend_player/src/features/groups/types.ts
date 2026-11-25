@@ -82,12 +82,22 @@ export { useInNoGroup } from './hooks/useGroups';
  */
 export { useHottestGroupsFinished } from './hooks/useHottestGroups';
 export { useInNoGroupFinished } from './hooks/useGroups';
+/**
+ * **Home's two group reads, set out before Home is drawn** (#874) — the shell's warm-up during the
+ * splash: Groups heating up and your groups, under the hooks' own reads.
+ */
+export { prefetchHomeGroups } from './hooks/useHottestGroups';
 /** The reads behind it — what a notice opening Home on its card marks stale (#731). */
 export { groupKeys } from './hooks/groupKeys';
 /**
  * **The sport the deck last showed** (#775) — Rankings opens on it when Home's trophy names no sport.
  */
 export { useDeckSport } from './hooks/useGroupSport';
+/**
+ * **The same sport off the cache, and its two reads set out early** (#874) — `rankings`' Top 10
+ * opening sport, worked out within the shell's warm-up before Home is drawn.
+ */
+export { deckSportIn, prefetchDeckSport } from './hooks/useGroupSport';
 
 /**
  * **The home-club search, for a Location area** ([#733](https://github.com/Raketa02/Raketa/issues/733),

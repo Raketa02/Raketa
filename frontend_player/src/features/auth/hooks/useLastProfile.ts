@@ -14,7 +14,7 @@
  * the app has on, and the next launch has to agree.
  */
 
-import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
@@ -60,6 +60,19 @@ export function useLastProfile(account: string | undefined, enabled: boolean): L
   });
 
   return { choice: read.data ?? undefined, settled: read.isSuccess };
+}
+
+/**
+ * **The same read, before any screen exists** (#874) — the launch's, which warms Home only for an
+ * account the entry gate will send to the tabs, and so must know first which profile an account that
+ * runs a club's groups wore last. Through the cache, under the gate's definition, so the gate finds
+ * it settled and never reads the phone twice. It rejects when the phone cannot be read.
+ */
+export async function fetchLastProfile(
+  client: QueryClient,
+  account: string,
+): Promise<ProfileChoice | undefined> {
+  return (await client.fetchQuery(lastProfileQuery(account))) ?? undefined;
 }
 
 /**

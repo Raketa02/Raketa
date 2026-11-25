@@ -25,12 +25,17 @@ import { pageSport, type SeeAllSport } from '../domain/seeAll';
 import { readNewInRaketa, readNewInRaketaPage } from '../use-cases/newInRaketa';
 
 import { discoveryKeys } from './discoveryKeys';
-import { usePeopleRow } from './usePeopleRow';
+import { peopleRowRead, usePeopleRow } from './usePeopleRow';
 import { useSeeAllPages, type SeeAllList } from './useSeeAllPages';
+
+/** Home's row's read — the hook's, and Home's warm-up's (#874). */
+export const newInRaketaRow = peopleRowRead<Joiner>(discoveryKeys.newInRaketa(), (signal) =>
+  readNewInRaketa({ signal }),
+);
 
 /** Home's row — re-read on return, holding still under a friend write (`usePeopleRow`). */
 export function useNewInRaketa() {
-  return usePeopleRow<Joiner>(discoveryKeys.newInRaketa(), (signal) => readNewInRaketa({ signal }));
+  return usePeopleRow(newInRaketaRow);
 }
 
 /** **See all** — 20 Joiners to a page, newest first; a sport keeps who holds a level in it. */

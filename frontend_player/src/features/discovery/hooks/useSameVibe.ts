@@ -19,12 +19,17 @@ import { pageSport, type SeeAllSport } from '../domain/seeAll';
 import { readSameVibe, readSameVibePage } from '../use-cases/sameVibe';
 
 import { discoveryKeys } from './discoveryKeys';
-import { usePeopleRow } from './usePeopleRow';
+import { peopleRowRead, usePeopleRow } from './usePeopleRow';
 import { useSeeAllPages, type SeeAllList } from './useSeeAllPages';
+
+/** Home's row's read — the hook's, and Home's warm-up's (#874). */
+export const sameVibeRow = peopleRowRead(discoveryKeys.sameVibe(), (signal) =>
+  readSameVibe({ signal }),
+);
 
 /** Home's row — re-read on return, holding still under a friend write (`usePeopleRow`). */
 export function useSameVibe() {
-  return usePeopleRow(discoveryKeys.sameVibe(), (signal) => readSameVibe({ signal }));
+  return usePeopleRow(sameVibeRow);
 }
 
 /** **See all** — most in common first; a sport keeps only who holds a level in it. */

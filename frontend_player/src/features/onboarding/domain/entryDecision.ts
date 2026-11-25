@@ -155,6 +155,16 @@ export function profileDestination(
     : { kind: 'administrator', clubId: club.clubId };
 }
 
+/**
+ * **Whether the launch waits for the profile the phone remembers** — an account that runs a club's
+ * groups, which opens in the profile it wore last (ADR-0188 §2) and so must not be routed before the
+ * phone has said which. Every other account has nothing else to have worn, and nothing waits for it.
+ * The gate's hook and the launch both ask it, so neither decides early where the other would wait.
+ */
+export function decidedByTheLastProfile(profiles: EntryInput['profiles']): boolean {
+  return profiles.administers.length > 0;
+}
+
 export function entryDestination({
   named,
   hasPlayerProfile,

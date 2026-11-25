@@ -22,6 +22,7 @@ import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-c
 
 import { fetchCurrentUserAtLaunch, refreshTokens, restoreSession } from '@/features/auth/types';
 import { readTheInstallReferrerOnce } from '@/features/links/types';
+import { warmHome } from '@/features/shell/types';
 import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
 import { LaunchGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
@@ -60,7 +61,19 @@ async function restoreSessionStep(): Promise<void> {
 }
 
 /**
- * The third: the link an Android install carried, read once on the first launch and held as if it
+ * The third: Home's reads, set out while the splash plays, so a cold open on a normal connection
+ * fades onto a Home that is already whole (#874; ADR-0209 §2, amended 2026-11-24). **Started, never
+ * awaited** — the splash waits on no read. The shell composes it, because Home is the shell's and
+ * its reads are its features'; it decides from the account session restore has just cached — only
+ * an account headed for the tabs is warmed — and reads the phone's reachability as the check did,
+ * skipping everything on a phone that already knows it is offline.
+ */
+function warmHomeStep(): void {
+  void warmHome(queryClient, readReachability);
+}
+
+/**
+ * The fourth: the link an Android install carried, read once on the first launch and held as if it
  * had been tapped (#756). Started, never awaited — the splash does not wait on Google Play.
  */
 function readInstallReferrerStep(): void {
@@ -74,6 +87,7 @@ export default function RootLayout() {
         ...sharedBootstrapSteps,
         wireCredentials: wireCredentialsStep,
         restoreSession: restoreSessionStep,
+        warmHome: warmHomeStep,
         readInstallReferrer: readInstallReferrerStep,
       }),
     [],

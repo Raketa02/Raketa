@@ -9,6 +9,7 @@ import {
   belowTheCard,
   joinPages,
   jumpPlace,
+  openingOf,
   openingSport,
   pillSports,
   placeIn,
@@ -53,6 +54,67 @@ describe('the sport the page opens on', () => {
 
   it('is not known yet while the deck’s sport is being read', () => {
     expect(openingSport(undefined, { trophy: null, deck: undefined })).toBeUndefined();
+  });
+});
+
+/**
+ * **The pill and the opening sport over the three reads as they stand** — the hook's and the launch's
+ * warm-up's off the cache, one rule (#874; #870 for the refused and offline ratings).
+ */
+describe('the pill and the opening sport, from the reads as they stand', () => {
+  const NOTHING_YET = {
+    rated: undefined,
+    ratingsRefused: false,
+    ratingsPaused: false,
+    deck: undefined,
+    trophy: undefined,
+  } as const;
+
+  it('opens on the trophy’s sport while the ratings and the deck are still out, with no pill yet', () => {
+    expect(openingOf(undefined, { ...NOTHING_YET, trophy: { sport: 'squash' } })).toEqual({
+      sports: undefined,
+      opening: 'squash',
+    });
+  });
+
+  it('opens on the deck’s sport when the trophy names none, the rated sports first on the pill', () => {
+    expect(
+      openingOf(undefined, { ...NOTHING_YET, rated: ['tennis'], deck: 'tennis', trophy: null }),
+    ).toEqual({ sports: ['tennis', 'padel', 'squash', 'badminton'], opening: 'tennis' });
+  });
+
+  it('waits while the trophy names none and the deck is still read', () => {
+    expect(
+      openingOf(undefined, { ...NOTHING_YET, rated: ['tennis'], trophy: null }).opening,
+    ).toBeUndefined();
+  });
+
+  it('reads a refused ratings read as no level anywhere: padel, all four in order', () => {
+    expect(openingOf(undefined, { ...NOTHING_YET, ratingsRefused: true, trophy: null })).toEqual({
+      sports: ['padel', 'tennis', 'squash', 'badminton'],
+      opening: 'padel',
+    });
+  });
+
+  it('reads one held for a connection with nothing read the same way — but not one already read', () => {
+    expect(
+      openingOf(undefined, { ...NOTHING_YET, ratingsPaused: true, trophy: null }).opening,
+    ).toBe('padel');
+    expect(
+      openingOf(undefined, {
+        ...NOTHING_YET,
+        rated: ['squash'],
+        ratingsPaused: true,
+        deck: 'squash',
+        trophy: null,
+      }).opening,
+    ).toBe('squash');
+  });
+
+  it('opens on the sport asked for, whatever the reads say', () => {
+    expect(openingOf('badminton', { ...NOTHING_YET, trophy: { sport: 'squash' } }).opening).toBe(
+      'badminton',
+    );
   });
 });
 

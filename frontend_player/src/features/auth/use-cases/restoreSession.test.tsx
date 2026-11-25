@@ -338,6 +338,7 @@ function renderLaunch() {
       restoreSession: async () => {
         await restoreSession(readAtLaunch, reachable);
       },
+      warmHome: () => {},
       readInstallReferrer: () => {},
       loadFonts: async () => {},
     });

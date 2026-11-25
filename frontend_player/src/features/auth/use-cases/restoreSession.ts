@@ -109,8 +109,12 @@ export async function restoreSession(
   }
 }
 
-/** Only a known `unreachable` skips the check; a read that fails says nothing about the network. */
-async function phoneKnowsItIsOffline(
+/**
+ * Only a known `unreachable` skips the check; a read that fails says nothing about the network.
+ * **The launch's one offline rule** (ADR-0209 §4): Home's warm-up, which starts once this has
+ * resolved, skips its reads on it too (#874), so the two never disagree about the phone.
+ */
+export async function phoneKnowsItIsOffline(
   readReachability: () => Promise<Reachability>,
 ): Promise<boolean> {
   try {
