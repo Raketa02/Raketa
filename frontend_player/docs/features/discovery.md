@@ -254,6 +254,17 @@ foregrounding, the pull, a block — brings the new figure. **The footer link ke
 and copy tests and the shell's `forYou.test.tsx`; the line suites now find a line by `lineNamed`, its
 title with or without a count.
 
+**New in Raketa's tiles are as wide as Players at your level's cards** (2026-11-24; design-system 7.7,
+7.31, Part 16). On a tile 0,355 of the line's content wide — two whole and the third cut — the
+nickname, the sports and _Joined …_ were too small to read, beside the line above standing one card and
+a peek. The `tiles` rail now hands each tile the peeking card's `railCardRatio` (0,74): one tile whole
+and the next peeking, settling on their edges as before. **Only the width moved**: the tile keeps its
+11:8, so it stands taller than the line above's cards, which are as tall as their content; its face,
+wash, _NEW_, round button and words are as they were, a lone tile keeps its width, and See all's grid
+is untouched. `portraitTile.railRatio` is gone, so the two lines read one ratio and cannot drift
+apart. Walked in `HomeRow.test.tsx`. **Not seen on a device** — a look is owed: the tile at its new
+size under Players at your level.
+
 **See all shimmers its own grid while its first page is read** (2026-11-24,
 [#872](https://github.com/Raketa02/Raketa/issues/872); PRD #867, the loading shimmer log §10; design
 system 5.6). The spinner at the top of an empty body is gone from all three. Under the real header,

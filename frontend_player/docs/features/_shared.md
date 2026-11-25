@@ -438,7 +438,8 @@ they derived went with the code.
 card's value moved whole since that card is gone), a tag top-left that lets touches through, a control
 top-right beside the tile's own press, and the words over the wash; its width and aspect are the
 caller's (`size.portraitTile`). Top 10's portrait (#805) is to draw it too. **`HomeRowRail`'s `tiles`**
-draws each at 0,355 of the content width, a lone one too. **The sport pill is generic over its
+draws each at the peeking card's `railCardRatio` of the content width, a lone one too — 0,355 until
+2026-11-24 (`discovery.md`). **The sport pill is generic over its
 choices** (`SportPillFrame<S>`, `SportPillWords<S>`) and may offer **`ALL_SPORTS`**, drawn with a
 two-toned dot; existing callers infer `Sport` and changed nothing. **`Button`** gained **`lead`**, a
 Feather plus or check before the words, never spoken, and **`settledSoft`**, mint's soft bed in its

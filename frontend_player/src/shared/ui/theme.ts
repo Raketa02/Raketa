@@ -1687,12 +1687,13 @@ const size = {
    *  40). */
   foldingLine: { pad: space.lg, border: 1, count: 16 },
   /** THE PORTRAIT TILE (#801; home rows 17–19; 7.31) — a face edge to edge with its words over the
-   *  wash. `railRatio` is a tile's share of the content width on a Home row, for `railCardRatio`'s
-   *  reason — a ratio, never a point value: home rows 17 draws two whole and the third cut at two
-   *  thirds (0,355 × 360 = 128pt, the third showing 84). `railAspect` and `gridAspect` are its height
-   *  over its width — 11:8 standing on a row, 9:8 in See all's two columns (home rows 19), MEASURED
-   *  off the mocks at 1× (384 × 528 and 266 × 297 pixels). */
-  portraitTile: { railRatio: 0.355, railAspect: 1.375, gridAspect: 1.125 },
+   *  wash. **Its width on a Home row is the peeking card's, `railCardRatio`** (2026-11-24): it was
+   *  0,355 here, home rows 17's two whole and the third cut, and the words on a tile that narrow were
+   *  hard to read beside the row above's cards — one ratio now, so the two rows cannot drift apart.
+   *  `railAspect` and `gridAspect` are its height over its width — 11:8 standing on a row, 9:8 in See
+   *  all's two columns (home rows 19), MEASURED off the mocks at 1× (384 × 528 and 266 × 297
+   *  pixels). */
+  portraitTile: { railAspect: 1.375, gridAspect: 1.125 },
   /** THE ROUND FRIEND BUTTON (#801; home rows 8, 10.3, 17, 18–18.3; 7.32) — MEASURED off the tiles at
    *  1× (72 pixels on a 384-pixel tile): a 24pt circle centred in its own 44pt press (`minTouch`) —
    *  a box, not a hitSlop, because a touch never lands past its parent on Android and a tile clips.

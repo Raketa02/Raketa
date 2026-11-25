@@ -161,14 +161,19 @@ describe('the Home row frame', () => {
     });
   });
 
-  /** New in Raketa's portrait tiles (#801; home rows 17): narrow, several on screen, the last cut. */
+  /**
+   * New in Raketa's portrait tiles (#801; home rows 17): since 2026-11-24 as wide as the peeking
+   * rail's card, the row above's — one whole and the next peeking.
+   */
   describe('the tiles rail', () => {
-    it('draws each tile at its share of the content width — a lone one too', () => {
+    it('draws each tile at the peeking card’s share of the content width — a lone one too', () => {
       render(<Row count={3} geometry="tiles" />);
-      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.portraitTile.railRatio);
+      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.railCardRatio);
+      expect(widthOf('card-2')).toBeCloseTo(content() * theme.size.railCardRatio);
 
+      // A portrait the width of the screen would be a poster: a lone tile keeps its width.
       screen.rerender(<Row count={1} geometry="tiles" />);
-      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.portraitTile.railRatio);
+      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.railCardRatio);
     });
 
     it('scrolls freely and draws no dots', () => {
@@ -281,7 +286,7 @@ describe('the Home row frame', () => {
           </HomeRowRail>
         </RailBoundsContext.Provider>,
       );
-      expect(rail().props.snapToInterval).toBeCloseTo(300 * theme.size.portraitTile.railRatio + 9);
+      expect(rail().props.snapToInterval).toBeCloseTo(300 * theme.size.railCardRatio + 9);
     });
 
     /** Top 10's numeral stands beside its card, so an item is wider than the width handed (#805). */

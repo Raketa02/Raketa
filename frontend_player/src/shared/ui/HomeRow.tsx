@@ -32,9 +32,10 @@
  * - **Paging**: every card the content width, snapping one at a time, and 7.18's dots under it,
  *   tracking the scroll — a paging rail takes the dots always, but for Needs your answer's *FRIENDS
  *   GAME*, which draws them from two (`dotsAlone`, #817).
- * - **Tiles** (#801; 7.31): New in Raketa's portrait tiles, each `portraitTile.railRatio` of the
- *   content width — two whole and the third cut, the cut the affordance. **A lone tile keeps its
- *   width**: a portrait the width of the screen would be a poster, not a tile. It scrolls freely.
+ * - **Tiles** (#801; 7.31): New in Raketa's portrait tiles, each the peeking card's
+ *   `railCardRatio` of the content width since 2026-11-24 — one whole and the next peeking, as
+ *   Players at your level's cards stand on the line above. **A lone tile keeps its width**: a
+ *   portrait the width of the screen would be a poster, not a tile. It scrolls freely.
  * - **Numbered** (#805; 7.36): Top 10's cards, each `topTen.railRatio` of the content width — the
  *   width handed is the card's, and the numeral the row stands beside it is the row's own, so the
  *   rail's items are wider than the width it hands: the row says how wide (`itemWidth`). A lone card
@@ -210,7 +211,7 @@ export function HomeRowRail<Card>({
   const { content, bleed } = bounds;
   const cardWidth =
     geometry === 'tiles'
-      ? content * theme.size.portraitTile.railRatio
+      ? content * theme.size.railCardRatio
       : geometry === 'numbered'
         ? content * theme.size.topTen.railRatio
         : paging || cards.length === 1
