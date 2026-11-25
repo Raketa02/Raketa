@@ -1273,8 +1273,9 @@ screen of several reads, revealed together and top-down past a ceiling, is #871'
 
 **Where it is drawn**: Rankings (#870), Home (#871), the four See all screens (#872) and the group
 page (#875) — its header and tab bar, one deck-card block on Games and rows on Fill in and You’re in;
-the kind swap's skeleton follows (#876). Every other screen keeps its own loading drawing (the
-loading shimmer log §11). **Not
+and the kind swap (#876), where the same block stands in the stack's place while a kind picked from
+the tab's menu is read, the stack's rise replacing the cross-fade. Every other screen keeps its own
+loading drawing (the loading shimmer log §11). **Not
 seen on a device**: the tone, the beat, the tilt and the band's width on the A32 and an iPhone, and
 the cross-fade (the phone walk, #877); its frame cost on the A32 is #873's.
 

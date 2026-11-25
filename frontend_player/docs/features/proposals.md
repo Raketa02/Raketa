@@ -1496,10 +1496,11 @@ it is read, at once where it was read before. **The buttons stay where both side
 kind left dealt a card and the kind picked **promises** one by the count its menu line shows,
 because that read is not in when the stack goes out; where one side is the group's starting card
 they fade with the stack (`buttonsMotion`), and a count the read then contradicts is the read's to
-settle. **A kind not read yet**: today's spinner stands centred in the stack's place, the buttons
-kept under it where they stay, until the read lands and the stack rises; **a refused read** goes out
-to today's failure with its retry, and the swap ends — a retry that lands draws the deck directly.
-A pick made while that spinner stands comes straight in, having no stack to send out; a pick made
+settle. **A kind not read yet**: the deck-card skeleton stands in the stack's place (#876, below —
+it was a spinner), the buttons kept under it where they stay, until the read lands and the stack
+rises; **a refused read** goes out to today's failure with its retry, and the swap ends — a retry
+that lands draws the deck directly.
+A pick made while that skeleton stands comes straight in, having no stack to send out; a pick made
 while the stack still goes out only changes where it lands. **A card still in flight holds the kind
 it leaves** (the code review's catch): the flight (240) outlasts the beat, and the card leaves that
 kind's read and carries that kind's answer, so the kind picked comes in once the card has flown. **No answer reaches a stack on the
@@ -2104,8 +2105,8 @@ screen; this feature says how far the three tabs it draws have come, and draws w
   the wait for Fill in's before the starting card. The page reveals each tab from its skeleton; **while
   a read retries after a failure, the tab draws the same skeleton in its own place**, the reveal having
   stopped waiting for it, so it shimmers on rather than spinning. Their spoken names (_Reading Fill
-  in_, _Reading You’re in_) went with the spinners (ADR-0198); the kind swap's spinner keeps
-  _Reading the games_ until #876.
+  in_, _Reading You’re in_) went with the spinners (ADR-0198); the kind swap's spinner kept
+  _Reading the games_ until #876 replaced it (below).
 - **The deck's first read held for a connection says it resumes** — the amber note in the deck's
   place, where a spinner turned for ever — as Fill in's and You’re in's held reads already did
   (`HeldRead`).
@@ -2113,3 +2114,39 @@ screen; this feature says how far the three tabs it draws have come, and draws w
 Walked in the group page's suites (`groupGames.test.tsx`, `groupFillIn.test.tsx`,
 `groupYoureIn.test.tsx`, `groupGamesDoor.test.tsx`) and `fillIn.test.ts` (`youreInRead`). **Not seen
 on a device**: the block's and the rows' sizes against what replaces them (the phone walk, #877).
+
+## A kind picked from the menu and not read yet shimmers in the stack's place (#876)
+
+[#876](https://github.com/Raketa02/Raketa/issues/876); PRD #867, the loading shimmer log §10 (Q26),
+amending the tab menu log §5.2. **On #863's uncached path the group page's deck-card block stands
+where the spinner stood.** The stack goes out as #863 built it, then the block stands in the stack's
+place, on the page's `SkeletonGround`, until the read lands. The new stack then rises into place as
+#863 built it. **The rise replaces the shimmer's cross-fade there.** The block goes the moment the
+read lands, as the spinner did, and no `Reveal` is involved. The page's own Games `Reveal` settled at
+the first landing and never shimmers again, so the deck draws the block itself, in `SwapStack`'s
+`waiting` slot, which now fills the stage's box rather than centring.
+
+- **It is the same block** (`DeckSkeleton.tsx`'s `SwapSkeleton`): the stage's box is already in the
+  page's gutter and already stops at the stage's step, so the block fills it. The buttons stay under
+  it where #863 keeps them.
+- **Where the deck draws no buttons under it, the block leaves their row bare**, as the tab's own block
+  does. That happens when the swap left the group's starting card, or the kind picked promised no
+  card. Either way the block ends where the card coming in will, and the buttons fade in under it.
+- **A read held for a connection says it resumes**: the amber note in the stack's place, where the
+  spinner turned for ever (#875's review). A skeleton stands only while a read is in flight (the log's
+  §4). Once the connection is back, the skeleton stands until the read lands, and then the stack
+  rises. **Where an answer held offline already says so on the line above the deck, the stack's place
+  stays empty** rather than saying it twice (the code review's catch).
+- **Out of sight it draws nothing** (the code review's catch). The deck stays mounted while another
+  tab is on, and the page draws no Games skeleton there (#875), so the block stands only while Games
+  is the tab on screen. Back on Games, it stands again until the read lands.
+- **Unchanged**: a cached swap; a refused read, which still ends the swap and draws today's failure
+  with its retry; a read retrying after a failure, which keeps the block, as the first read's does;
+  a pick under the block, which comes straight in; and the menu, which works throughout.
+  _Reading the games_ is no longer spoken there (ADR-0198). Game details, Post a game and the slot
+  sheet keep it on their own spinners.
+
+Walked in `groupGames.test.tsx`: the menu's uncached pick and #863's uncached path, asserting end
+states only, plus the starting card's bare row, the offline note said once, and the block out of
+sight. **Not seen on a device**: the
+block in the stack's place, and the cut to the rise (the phone walk, #877).

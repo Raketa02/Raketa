@@ -297,6 +297,21 @@ const menu = () => screen.queryByTestId('tab-menu');
 /** The selected Games tab drawing no menu: its name alone, with nothing expanded. */
 const gamesAlone = () => screen.findByRole('button', { name: 'Games', selected: true });
 
+/**
+ * The deck-card block standing in the stack's place while a kind picked from the menu is read (#876)
+ * — the group page's own block, where today's spinner stood — or `null` where none stands.
+ */
+function blockInTheStack() {
+  const stage = screen.queryByTestId('games-deck-stage', HIDDEN_TOO);
+  return stage === null ? null : within(stage).queryByTestId('deck-skeleton', HIDDEN_TOO);
+}
+
+/** The buttons' row the block leaves bare under it, where the deck draws no buttons. */
+function bareButtonsRow() {
+  const block = blockInTheStack();
+  return block === null ? null : within(block).queryByTestId('deck-skeleton-buttons', HIDDEN_TOO);
+}
+
 describe('the Games tab’s menu — where its chevron is drawn (#862)', () => {
   it('draws no row over the deck, and a chevron on the selected tab — spoken with the kind', async () => {
     await openGames(groupDeck({ segments: BOTH_KINDS, cards: [deckCard()] }));
@@ -452,18 +467,18 @@ describe('the Games tab’s menu — picking a kind (#862)', () => {
     expect(useGameIntent.getState().intent).toBe('forFun');
 
     // Competitive was read a moment ago: it comes in once For fun's stack has gone out, with no
-    // spinner between them (the swap itself is the next describe's, #863).
+    // skeleton between them (the swap itself is the next describe's, #863, #876).
     await pickKind('Games', 'Competitive');
 
     expect(menu()).toBeNull();
     expect(await screen.findByTestId(`game-card-${competitive.proposal_id}`)).toBeTruthy();
-    expect(screen.queryByLabelText(COPY.reading)).toBeNull();
+    expect(blockInTheStack()).toBeNull();
     expect(screen).toHavePathname(`/play/group/${CREW.id}`);
     expect(await menuTab('Games')).toBeTruthy();
     expect((await menuTab('Games')).props.accessibilityLabel).toBe('Games, Competitive');
   });
 
-  it('reads a kind not read yet under today’s spinner, the tabs, the chevron and the menu still up', async () => {
+  it('reads a kind not read yet under the deck-card skeleton, the tabs, the chevron and the menu still up', async () => {
     const { competitive, forFun, deal } = eitherDeck();
     await openGames(deal);
     await screen.findByTestId(`game-card-${competitive.proposal_id}`);
@@ -471,7 +486,8 @@ describe('the Games tab’s menu — picking a kind (#862)', () => {
 
     await pickKind('Games', 'For fun');
 
-    expect(await screen.findByLabelText(COPY.reading)).toBeTruthy();
+    await waitFor(() => expect(blockInTheStack()).not.toBeNull());
+    expect(screen.queryByLabelText(COPY.reading)).toBeNull();
     expect(screen.queryByTestId(`game-card-${competitive.proposal_id}`)).toBeNull();
     // The menu stays, drawn off Competitive's read, which carries the same counts.
     expect((await menuTab('Games')).props.accessibilityLabel).toBe('Games, For fun');
@@ -482,6 +498,7 @@ describe('the Games tab’s menu — picking a kind (#862)', () => {
     await pickKind('Games', 'Competitive');
     expect(screen.getByTestId(`game-card-${competitive.proposal_id}`)).toBeTruthy();
     expect(screen.queryByTestId(`game-card-${forFun.proposal_id}`)).toBeNull();
+    expect(blockInTheStack()).toBeNull();
   });
 
   it('says why a kind’s read failed, with its retry, and the menu still works', async () => {
@@ -607,7 +624,7 @@ describe('the Games deck swapped in place (#863)', () => {
   const KUBAS = KUBA().player_id;
 
   /**
-   * `kind`'s read held from now on, until the suite lands it — so the swap's spinner is certain to
+   * `kind`'s read held from now on, until the suite lands it — so the swap's skeleton is certain to
    * stand when the stack has gone out — and the other kind's as `others` deals it.
    */
   function holdRead(
@@ -662,7 +679,7 @@ describe('the Games deck swapped in place (#863)', () => {
     cameIn();
 
     expect(stackStands()).toEqual(AT_REST);
-    expect(screen.queryByLabelText(COPY.reading)).toBeNull();
+    expect(blockInTheStack()).toBeNull();
     expect(swipe(tile(KUBAS), commit + 40)).toBe(true);
     act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
     await waitFor(() =>
@@ -778,13 +795,16 @@ describe('the Games deck swapped in place (#863)', () => {
     // Going out, it is the starting card that goes.
     expect(screen.getByText('Nothing picked right now')).toBeTruthy();
     goneOut();
-    // The starting card had none, so none stand under the spinner: they come in with the cards.
-    expect(screen.getByLabelText(COPY.reading)).toBeTruthy();
+    // The starting card had none, so none stand under the block: it leaves their row bare, as the
+    // group page's own block does, and they come in with the cards.
+    expect(blockInTheStack()).not.toBeNull();
+    expect(bareButtonsRow()).not.toBeNull();
     expect(buttonsSeen()).toBeUndefined();
     await land(deal('FOR_FUN'));
     await screen.findByTestId(`game-card-${card.proposal_id}`);
     cameIn();
 
+    expect(blockInTheStack()).toBeNull();
     expect(buttonsSeen()).toBe(1);
     expect(swipe(tile(KUBAS), commit + 40)).toBe(true);
     act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
@@ -793,7 +813,12 @@ describe('the Games deck swapped in place (#863)', () => {
     );
   });
 
-  it('stands today’s spinner in the stack’s place while a kind not read yet is read, then brings it in', async () => {
+  /**
+   * **The uncached path** (#876, the loading shimmer log §10, Q26): the group page's deck-card block
+   * stands where today's spinner stood, and the stack's rise replaces the shimmer's cross-fade —
+   * asserted at the end of each beat.
+   */
+  it('stands the deck-card skeleton in the stack’s place while a kind not read yet is read, then brings it in', async () => {
     const { competitive, forFun, deal } = eitherDeck();
     takeYeses(forFun);
     await openGames(deal);
@@ -803,15 +828,17 @@ describe('the Games deck swapped in place (#863)', () => {
     await pickKind('Games', 'For fun');
     goneOut();
 
-    expect(screen.getByLabelText(COPY.reading)).toBeTruthy();
+    expect(blockInTheStack()).not.toBeNull();
+    expect(screen.queryByLabelText(COPY.reading)).toBeNull();
     expect(stackStands()).toEqual({ opacity: 0, down: RISE });
     expect(screen.queryByTestId(`game-card-${competitive.proposal_id}`, HIDDEN_TOO)).toBeNull();
-    // Both kinds deal cards: the buttons stay under it, answering nothing.
+    // Both kinds deal cards: the buttons stay under it, answering nothing — no bare row of its own.
     expect(buttonsSeen()).toBe(1);
+    expect(bareButtonsRow()).toBeNull();
 
     await land(deal('FOR_FUN'));
     expect(await screen.findByTestId(`game-card-${forFun.proposal_id}`)).toBeTruthy();
-    expect(screen.queryByLabelText(COPY.reading)).toBeNull();
+    expect(blockInTheStack()).toBeNull();
     cameIn();
 
     expect(stackStands()).toEqual(AT_REST);
@@ -841,6 +868,77 @@ describe('the Games deck swapped in place (#863)', () => {
     fireEvent.press(screen.getByRole('button', { name: COPY.readAgain }));
     expect(await screen.findByTestId(`game-card-${forFun.proposal_id}`)).toBeTruthy();
     expect(stackStands()).toEqual(AT_REST);
+  });
+
+  /**
+   * A skeleton stands only while a read is in flight (the loading shimmer log §4): one held for a
+   * connection says it resumes, where the swap's spinner used to turn for ever (#875's review).
+   */
+  it('says a kind picked offline waits for a connection, in the stack’s place, and brings it in once back', async () => {
+    const { competitive, forFun, deal } = eitherDeck();
+    await openGames(deal);
+    await screen.findByTestId(`game-card-${competitive.proposal_id}`);
+
+    act(() => onlineManager.setOnline(false));
+    try {
+      await pickKind('Games', 'For fun');
+      goneOut();
+
+      const stage = within(screen.getByTestId('games-deck-stage', HIDDEN_TOO));
+      expect(await stage.findByText(offlineMessage('resumes'))).toBeTruthy();
+      expect(blockInTheStack()).toBeNull();
+      expect(stackStands()).toEqual({ opacity: 0, down: RISE });
+    } finally {
+      act(() => onlineManager.setOnline(true));
+    }
+
+    expect(await screen.findByTestId(`game-card-${forFun.proposal_id}`)).toBeTruthy();
+    expect(screen.queryByText(offlineMessage('resumes'))).toBeNull();
+    cameIn();
+    expect(stackStands()).toEqual(AT_REST);
+  });
+
+  // The code review's catch: an answer held offline already says it above the deck.
+  it('says it once when an answer is held offline too — on the line above the deck', async () => {
+    const { competitive, deal } = eitherDeck();
+    takeYeses(competitive);
+    await openGames(deal);
+    await screen.findByTestId(`game-card-${competitive.proposal_id}`);
+
+    act(() => onlineManager.setOnline(false));
+    try {
+      fireEvent.press(screen.getByRole('button', { name: COPY.yes }));
+      act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+      expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+
+      await pickKind('Games', 'For fun');
+      goneOut();
+
+      expect(stackStands()).toEqual({ opacity: 0, down: RISE });
+      expect(screen.getAllByText(offlineMessage('resumes'))).toHaveLength(1);
+      expect(blockInTheStack()).toBeNull();
+    } finally {
+      act(() => onlineManager.setOnline(true));
+    }
+  });
+
+  // The code review's catch: a Games tab out of sight draws no skeleton (#875), the swap's neither.
+  it('draws no block while another tab is on, and stands it again back on Games', async () => {
+    const { competitive, deal } = eitherDeck();
+    await openGames(deal);
+    await screen.findByTestId(`game-card-${competitive.proposal_id}`);
+    holdRead('FOR_FUN', deal);
+
+    await pickKind('Games', 'For fun');
+    goneOut();
+    expect(blockInTheStack()).not.toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: /^Fill in/ }));
+    expect(await screen.findByRole('button', { name: /^Fill in/, selected: true })).toBeTruthy();
+    expect(blockInTheStack()).toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Games', selected: false }));
+    await waitFor(() => expect(blockInTheStack()).not.toBeNull());
   });
 
   it('draws a notice’s kind directly — no stack goes out, none comes in', async () => {

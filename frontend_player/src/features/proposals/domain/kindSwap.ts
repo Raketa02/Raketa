@@ -5,9 +5,9 @@
  *
  * **Two phases.** The stack **goes out** — the kind left is still the one drawn, sliding down and
  * fading — and then the kind picked **comes in**, rising into the same place once its read is in;
- * until it is, the stack is **away** and today's spinner stands in its place. Then the swap is over,
- * and only then does the deck take an answer: no answer reaches the stack going out, and the stack
- * coming in answers once it has landed.
+ * until it is, the stack is **away** and the deck-card skeleton stands in its place (#876). Then the
+ * swap is over, and only then does the deck take an answer: no answer reaches the stack going out,
+ * and the stack coming in answers once it has landed.
  *
  * **Only the cards move; the buttons stay** — they mean the same thing on both kinds — wherever
  * both sides of the swap have them: the kind left dealt a card, and the kind picked **promises**
@@ -53,7 +53,7 @@ export type ButtonsMotion = 'none' | 'kept' | 'out' | 'in';
 /** The deck as it stands at a pick: the kind drawn, whether it has the buttons, and the counts. */
 export interface DrawnAtThePick {
   readonly from: GameKind;
-  /** What stands where the stack stands — today's spinner has no stack to send out. */
+  /** What stands where the stack stands — a read on its way has no stack to send out. */
   readonly stack: StackDrawn;
   /** The buttons are drawn now. */
   readonly held: boolean;
@@ -64,7 +64,7 @@ export interface DrawnAtThePick {
 /**
  * **The swap a pick of `to` begins.** While the stack is still going out, the pick only changes
  * where it lands — the kind going out and the clock it goes on are unchanged; otherwise it begins
- * again from what is drawn now. **From today's spinner it comes straight in**: there is no stack to
+ * again from what is drawn now. **From a read on its way it comes straight in**: there is no stack to
  * send out, and the kind picked rises as soon as it is read — at once, where it was read before.
  */
 export function swapTo(swap: KindSwap | undefined, drawn: DrawnAtThePick, to: GameKind): KindSwap {

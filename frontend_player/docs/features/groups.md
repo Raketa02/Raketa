@@ -1029,8 +1029,9 @@ stays shown. **The offline gaps are closed by the shared rule**: the group's rea
 connection draws the amber note in the body, under the header's way back, and the deck's first read
 held offline draws it where a spinner turned for ever (`proposals.md`). A part revealed with a
 failure or the note shimmers again when its read sets out once more. **Unchanged**: _Finding …
-games for you…_, the Friends card's _Building_, the kind door, the first-time question, the tab menu
-and the kind swap's spinner (#876's).
+games for you…_, the Friends card's _Building_, the kind door, the first-time question and the tab
+menu. The kind swap's spinner became the same deck-card block in the stack's place (#876,
+`proposals.md`).
 
 **Calls made here**: **the group's read retrying after one failure keeps the page shimmering**
 (`groupReadStage`) — the shared rule counts such a read finished so it cannot hold the rest of a

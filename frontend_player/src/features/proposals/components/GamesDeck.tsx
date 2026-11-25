@@ -77,13 +77,14 @@
  * **The stack goes out and the other kind's comes in** (the tab menu log §5.1–§5.2; `KindSwap.tsx`
  * draws it, `domain/kindSwap.ts` rules it, `useKindSwap` times it): going out, the deck still draws
  * the kind it leaves, while the kind picked is read from the press; coming in, its stack rises into
- * the same place once that read is in — today's spinner standing in the stack's place until it is —
- * and the stage's own arrival is not run for its cards (`standing`). **Only the cards move**: the
- * stack, the starting card or the swap's spinner stand in one layer, drawn always, and the buttons
- * in another, kept where both kinds deal cards and faded where one side is the starting card. **No
- * answer reaches a stack on the move.** A failed read goes out to today's failure, and a change of
- * sport ends a swap. **Only a pick from the menu moves anything**: a notice's kind and the kind
- * finding lands on are the page's choice made directly, and draw the deck directly.
+ * the same place once that read is in — the group page's deck-card block standing in the stack's
+ * place until it is, or offline the note that it resumes (#876) — and the stage's own arrival is not
+ * run for its cards (`standing`). **Only the cards move**: the stack, the starting card and the
+ * block stand in one layer, drawn always, and the buttons in another, kept where both kinds deal
+ * cards and faded where one side is the starting card. **No answer reaches a stack on the move.** A
+ * failed read goes out to today's failure, and a change of sport ends a swap. **Only a pick from the
+ * menu moves anything**: a notice's kind and the kind finding lands on are the page's choice made
+ * directly, and draw the deck directly.
  *
  * ## The kind the intent doesn't want is a door (Q127)
  *
@@ -98,7 +99,7 @@
  * that now shows that kind closes it, a live kind picked closes it as the switch's press did, and a
  * change of sport closes it for good. **A door the menu draws is one that opens**: which kind is one
  * is this read's say, or while it is on its way or failed that of the reads the menu is drawn from
- * (`useKindsHeld`), and the panel — and finding after it — lies over the spinner or the failure too.
+ * (`useKindsHeld`), and the panel — and finding after it — lies over the skeleton or the failure too.
  *
  * **The answer is written here** (`useDeclarePlayIntent`), not in the panel: the panel can go while
  * the answer is out, and the answer must still land. While it is out, and while finding follows it,
@@ -166,14 +167,7 @@ import {
   type ReactNode,
   type Ref,
 } from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type RefreshControlProps,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, View, type RefreshControlProps } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
 import { useDeclarePlayIntent } from '@/features/player_profile/types';
@@ -227,7 +221,7 @@ import { useSeeRows } from '../hooks/useSeenRows';
 
 import { DeckAnswers } from './DeckAnswers';
 import { DeckStage, SEEN, type DeckExit, type DragVerdict } from './DeckStage';
-import { DeckSkeleton } from './DeckSkeleton';
+import { DeckSkeleton, SwapSkeleton } from './DeckSkeleton';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
 import { FindingGames } from './FindingGames';
 import {
@@ -238,14 +232,11 @@ import {
   stampsFor,
 } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
-import { PROPOSALS_COPY } from './proposalsCopy';
 import { GameCard } from './GameCard';
 import { KindDoor } from './KindDoor';
 import { SwapButtons, SwapStack } from './KindSwap';
 import { ReadFailed } from './ReadFailed';
 import { gameRoute, rescueRoute } from './proposalRoutes';
-
-const COPY = PROPOSALS_COPY;
 
 /**
  * The top card and the two real cards behind it — never a placeholder — and one more, which the
@@ -490,7 +481,7 @@ export function GamesDeck({
   const stack: StackDrawn =
     deck === undefined ? 'reading' : top === undefined ? 'nothing' : 'cards';
   const buttons = buttonsMotion(swap, stack);
-  /** Whether the deck stands as a stack a pick can swap: not today's first spinner, nor a failure. */
+  /** Whether the deck stands as a stack a pick can swap: not the first read's block, nor a failure. */
   const swappable =
     deck === undefined ? swap !== undefined && read.error === null : deck.segments.length > 0;
 
@@ -498,11 +489,11 @@ export function GamesDeck({
    * A line of the Games tab's menu, picked (`GamesDeckHandle`). A door opens its panel and moves
    * nothing; a live kind is the page's choice, as ever, and shuts a panel left open — as a press on
    * the switch's live kind did. **A live kind other than the one drawn swaps the deck in place**
-   * (#863): its stack goes out while the kind picked is read, and comes in once it is; from today's
-   * first spinner or a failure there is no stack to move, and the kind is drawn directly. While an
+   * (#863): its stack goes out while the kind picked is read, and comes in once it is; from the first
+   * read's skeleton or a failure there is no stack to move, and the kind is drawn directly. While an
    * answer is on its way, or its games are being found, nothing moves: finding lands it. Which kind
    * is a door is what the menu drew it from (`kinds`), so its panel opens even over this deck's
-   * spinner or its failure.
+   * skeleton or its failure.
    */
   const pick = (pressed: GameKind) => {
     if (declaring !== undefined || finding !== undefined) return;
@@ -643,7 +634,7 @@ export function GamesDeck({
   const tellCovered = useLatest(onCovered);
   useEffect(() => tellCovered.current?.(overUp), [overUp, tellCovered]);
 
-  // A swap's spinner stands in the stack's place, below; the first read's skeleton stands alone.
+  // A swap's skeleton stands in the stack's place, below (#876); the first read's stands alone.
   if (deck === undefined && (swap === undefined || read.error !== null)) {
     // Nothing to pull while the first read is on its way, its skeleton where the deck will stand
     // (#875); one that failed pulls as its retry reads; one held for a connection says it resumes.
@@ -659,7 +650,7 @@ export function GamesDeck({
       ) : (
         <DeckSkeleton />
       );
-    // A door picked in the menu while this kind is read opens over the spinner or the failure, as
+    // A door picked in the menu while this kind is read opens over the skeleton or the failure, as
     // over the cards (#862) — and so does finding.
     return overTheDeck === null ? (
       waiting
@@ -698,7 +689,22 @@ export function GamesDeck({
     </>
   );
 
-  // The stage, the starting card, or a swap's spinner, in the layer a swap moves — and the buttons
+  /**
+   * What stands in the stack's place while the kind picked is read (#876): the group page's block,
+   * where today's spinner stood — only while Games is on screen, as the page draws its own (#875) —
+   * or, held for a connection, the note that it resumes, unless the line above says so already for
+   * an answer (the code review's two catches).
+   */
+  const inTheStacksPlace = (): ReactNode => {
+    if (stack !== 'reading') return undefined;
+    if (read.isPaused) {
+      return answer.isPaused ? undefined : <Note variant="amber">{offlineMessage('resumes')}</Note>;
+    }
+    return onScreen ? <SwapSkeleton bareButtons={buttons === 'none'} /> : undefined;
+  };
+  const swapWaiting = inTheStacksPlace();
+
+  // The stage, the starting card, or a swap's skeleton, in the layer a swap moves — and the buttons
   // under it, in theirs (#863, `KindSwap`): drawn always, at rest when nothing swaps.
   const stage =
     top !== undefined ? (
@@ -755,16 +761,7 @@ export function GamesDeck({
               {...(stack === 'nothing'
                 ? {}
                 : { style: [s.stage, { minHeight: least }], testID: STAGE })}
-              {...(stack === 'reading'
-                ? {
-                    waiting: (
-                      <ActivityIndicator
-                        accessibilityLabel={COPY.reading}
-                        color={theme.color.muted}
-                      />
-                    ),
-                  }
-                : {})}
+              {...(swapWaiting === undefined ? {} : { waiting: swapWaiting })}
             >
               {stage}
             </SwapStack>
@@ -773,7 +770,7 @@ export function GamesDeck({
               // Nothing here reaches a stack going out. Coming in, the i opens the card coming in,
               // and ✕ and the ball wait for it to land (`answerTo`).
               <SwapButtons motion={buttons} inert={swap?.phase === 'out'}>
-                {/* Under a swap's spinner they are kept, answering nothing, with the game's own
+                {/* Under a swap's skeleton they are kept, answering nothing, with the game's own
                     names — there is no card yet to name them for. */}
                 <DeckAnswers
                   labels={top === undefined ? ANSWER_LABELS : answerLabels(top)}

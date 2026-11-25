@@ -64,7 +64,7 @@ describe('a pick from the Games tab’s menu begins a swap (#863)', () => {
     });
   });
 
-  it('comes straight in from today’s spinner, which has no stack to send out', () => {
+  it('comes straight in from a read on its way, which has no stack to send out', () => {
     const coming: KindSwap = { from: 'competitive', phase: 'in', held: true, promised: true };
 
     expect(
@@ -112,7 +112,7 @@ describe('the buttons on the swap', () => {
     expect(buttonsMotion(undefined, 'reading')).toBe('none');
   });
 
-  it('stay when both kinds deal cards — under the spinner too', () => {
+  it('stay when both kinds deal cards — under the skeleton too', () => {
     expect(buttonsMotion(out(true, true), 'cards')).toBe('kept');
     expect(buttonsMotion(coming(true, true), 'reading')).toBe('kept');
     expect(buttonsMotion(coming(true, true), 'cards')).toBe('kept');

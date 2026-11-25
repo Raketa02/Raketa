@@ -7,8 +7,11 @@
  *
  * **Going out** it slides `motion.kindSwap.rise` down and fades out over `.out`; **coming in** it
  * rises from the same `rise` below into its place and fades in over `.in`. **Away** — the kind picked
- * still on its way — it holds where going out left it, unseen, and today's spinner stands in its
- * place. **Opacity and a translation only**, on React Native's `Animated` and its native driver: no
+ * still on its way — it holds where going out left it, unseen, and what the deck hands it stands in
+ * its place, filling the stage's box: the deck-card skeleton, or the note that the read waits for a
+ * connection ([#876](https://github.com/Raketa02/Raketa/issues/876)). It goes the moment the read
+ * lands, and the rise is the motion there — it replaces the shimmer's cross-fade, which a swap never
+ * runs. **Opacity and a translation only**, on React Native's `Animated` and its native driver: no
  * layout prop moves frame by frame, and nothing is scaled — iOS rasterises a scaled layer blurred.
  * The stage inside it stands still; the cards a swap brings stand in place from their first frame,
  * so the layer's rise is the only motion (`DeckStage`'s `standing`). **Under reduced motion it is a
@@ -56,7 +59,10 @@ export interface SwapStackProps {
   readonly motion: StackMotion;
   /** The layer's own box: the stage's, or none round the starting card. */
   readonly style?: StyleProp<ViewStyle>;
-  /** What stands in the stack's place while a read is on its way — today's spinner. */
+  /**
+   * What stands in the stack's place while the kind picked is read — laid over the layer's box, the
+   * whole of it: the deck-card skeleton, or the offline note (#876).
+   */
   readonly waiting?: ReactNode;
   /** The layer's own box, to a test — the deck names the stage's. */
   readonly testID?: string;
@@ -143,10 +149,6 @@ const s = StyleSheet.create({
   // As tall as the box it is in, where that box has a height — the stage's — and its content's
   // height where it has none.
   grow: { flexGrow: 1 },
-  // Today's spinner, centred in the stack's place.
-  waiting: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  // What stands in the stack's place while the kind picked is read, over the whole of it.
+  waiting: StyleSheet.absoluteFillObject,
 });
