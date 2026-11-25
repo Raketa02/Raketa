@@ -19,6 +19,7 @@ read them. Landed by [#879](https://github.com/Raketa02/Raketa/issues/879) on 20
 | [menu_refactor.md](menu_refactor.md) | The product owner's brief, verbatim. Its mock paths point at their own desktop, so read each mock by the [index](#index)'s original name. The folder's `menu_refactor.pdf` holds the same text and isn't copied |
 | [decisions.md](decisions.md) | The grilling's decision log, verbatim. It holds every ruling with its reason; the facts it rests on (§2, with `file:line` positions as of 2026-11-24, the A32 measurements, and the contrast and overshoot computations); the docs and tests it reaches; and the question index Q1–Q26. Its status line and delivery section (§15) predate PRD #878. Its §12 lists five calls made while writing, all taken up by the PRD; the spec folder its call 5 suggests is this one |
 | [`mocks/`](mocks/) | The 3 mocks, renamed by what they show and numbered 1 to 3 (the [index](#index) gives each original name) |
+| [a32_spike.md](a32_spike.md) | The A32 spike's record ([#880](https://github.com/Raketa02/Raketa/issues/880), 2026-11-25): T1–T3 on debug native and release builds, with every A/B's numbers and run counts, the blur's strength, and what the spike learned for #883–#885. Its renders are in [`spike/`](spike/). They are measurement evidence, not mocks |
 
 **The record is [ADR-0210](../../adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md)**,
 *the tab bar floats as glass, and its selection travels*. It changes four things in the design
@@ -32,9 +33,12 @@ system:
 It also retires the ⚡Play disc, adds the app's first spring, and stands the bar down on Android
 while the keyboard is up.
 
-**Its §7, Android's material, is left open for the A32 spike**
-([#880](https://github.com/Raketa02/Raketa/issues/880)). The spike's numbers, its build and its run
-counts land in this folder. Where the log and PRD #878 disagree, PRD #878 wins. Where either
+**Its §7, Android's material, was completed by the A32 spike**
+([#880](https://github.com/Raketa02/Raketa/issues/880)) on 2026-11-25: **Android draws no glass**,
+so its dock is opaque `surface`, and the blur's strength is intensity 100. The slide's stutter
+while a tab mounts was confirmed, and its remedy is
+[#886](https://github.com/Raketa02/Raketa/issues/886). The spike's numbers, its builds and its run
+counts are in [a32_spike.md](a32_spike.md). Where the log and PRD #878 disagree, PRD #878 wins. Where either
 disagrees with ADR-0210, the ADR wins.
 
 **The ADR corrects the log in four places**, and the log is left verbatim:

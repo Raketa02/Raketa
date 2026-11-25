@@ -115,8 +115,8 @@ physical object; a card on it reads as a piece of paper on a desk.
 > **Decided by [ADR-0210](../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md),
 > not yet built (PRD [#878](https://github.com/Raketa02/Raketa/issues/878))** — one exception:
 > **the tab bar becomes the one glass surface**, 88% white over a blur, floating over the screen
-> (ADR-0210 §2). On Android it is glass only if the A32 spike passes (ADR-0210 §7); otherwise it is opaque
-> `surface`. Nothing else becomes glass. This section is rewritten, with `theme.ts`, by
+> (ADR-0210 §2). On Android it is opaque `surface`: the A32 spike measured the blur costing frames
+> (ADR-0210 §7, amended 2026-11-25). Nothing else becomes glass. This section is rewritten, with `theme.ts`, by
 > [#883](https://github.com/Raketa02/Raketa/issues/883).
 
 ## 1.2 One accent, used sparingly

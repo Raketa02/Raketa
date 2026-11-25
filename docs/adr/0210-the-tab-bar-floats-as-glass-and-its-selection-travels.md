@@ -1,8 +1,9 @@
 # ADR-0210 — The tab bar floats as glass, and its selection travels
 
-- **Status:** Accepted, **except §7, which is open.** Whether Android draws the glass is decided by
-  the A32 spike, [#880](https://github.com/Raketa02/Raketa/issues/880), which completes §7 with a
-  dated amendment. iPhone's glass and everything else here is settled.
+- **Status:** Accepted. **§7 was completed on 2026-11-25** by the A32 spike,
+  [#880](https://github.com/Raketa02/Raketa/issues/880), in a dated amendment: **Android draws no
+  glass**, so its dock is opaque `surface`. The slide's stutter while a tab mounts was confirmed, and
+  its named remedy is [#886](https://github.com/Raketa02/Raketa/issues/886), to be decided there.
 - **Date:** 2026-11-25
 - **Amends the player app's [design system](../../frontend_player/docs/design-system.md)
   §1.1, *Paper, not glass*,** with one exception: the tab bar is the one glass surface (§2).
@@ -397,6 +398,52 @@ built:
 **The outcome is recorded in one place in code:** a single theme-level switch saying whether
 Android draws the glass. #880 completes this section with a dated amendment: **Android draws the
 glass, yes or no.** It also adds the blur's strength and the measured numbers.
+
+> **Amended 2026-11-25 — Android draws the glass: no.** The A32 spike
+> ([#880](https://github.com/Raketa02/Raketa/issues/880)) measured a throwaway prototype dock on a
+> local branch that was never merged: `expo-blur`'s `dimezisBlurView` under 88% white, and the
+> 460 ms spring. The numbers, the builds and the run counts are in the spec folder's
+> [`a32_spike.md`](../specs/tab-bar-dock/a32_spike.md).
+>
+> - **T1 fails, so Android's dock is opaque `surface`.** The blur redraws everything behind the
+>   dock on the UI thread whenever anything under or on the dock changes.
+>   - Over You's rows of icons and dark controls, it added frames over 16.7 ms on both builds: 17 →
+>     26 on debug native and 6 → 16 on release, over six scrolls an arm.
+>   - On release, it also added them to the slide: 19 → 28 over twenty slides.
+>   - Over Play's plain white rows it added none.
+>   - The pass mark was *no frame added to either*. The dock keeps its shape, lift, radius, rim,
+>     hairline, shadow and marker. **The theme-level switch that #883 writes is off on Android.**
+>     The iPhone draws the glass.
+> - **T2 fails, and the fail is confirmed.**
+>   - With the blur off, 16 of 16 slides on debug native and 14 of 16 on release had a frame over
+>     33 ms.
+>   - The worst is Home → Play, up to 176 ms on release: Fabric creating Play's views on the UI
+>     thread mid-slide.
+>   - The slide also starts late. A real press draws nothing for 104–208 ms (release medians) while
+>     the new tab is rendered in JavaScript, against about 47 ms with no navigation.
+>   - **The named remedy, keeping the three tab roots mounted, is
+>     [#886](https://github.com/Raketa02/Raketa/issues/886)**, `needs-triage`, and is decided there.
+> - **The confirming build was made locally.** The Context's *no local release APK can be built* no
+>   longer holds: a checkout at a short path builds one. The product owner accepted that release
+>   build as T2's confirmation.
+> - **T3 passes, though Android no longer needs it.**
+>   - `boxShadow` drew the shadow outside the dock, and nothing showed through 88% or even 50%
+>     glass.
+>   - §6's worry about `elevation` didn't materialise on this dock: the blur's opaque copy of what's
+>     behind covers the shadow.
+>   - On the opaque Android dock, `shadow.dock`'s `elevation` draws as it is.
+> - **The blur's strength is intensity 100**, the brief's *strong blur*.
+>   - Under 88% white, 20, 60 and 100 look almost the same over Home's dark card and over white
+>     rows. 100 is the cleanest of the three: Android's blur draws the dock's own icons into its
+>     bitmap, and 100 is the one that leaves no grey ghosts of them.
+>   - The product owner has no iPhone at hand, and took the iPhone's value from the A32. **It
+>     hasn't been seen on an iPhone**, which #885 checks if one is available.
+>   - The brief's *touch more saturation* stays the iPhone's own material's.
+> - **The ticket's scroll couldn't run on Home.** Once the dock floats, Home doesn't scroll for the
+>   populated seed player, and its dark game card ends far above the dock. So the scroll ran on You
+>   and Play, and the strength renders lifted the dock over the card.
+> - **For #884:** Reanimated 3.16's `withSpring` takes `{ duration: 460, dampingRatio: 0.75 }`, so
+>   §8's fallback configuration isn't needed.
 
 ### 8. The selection marker travels — the app's first spring
 
