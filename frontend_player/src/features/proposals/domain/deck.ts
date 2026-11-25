@@ -36,6 +36,12 @@ export interface DeckPerson {
   readonly name?: string;
   /** Omitted when they have no photograph: the tile draws their poster. */
   readonly photoUrl?: string;
+  /**
+   * **Which photograph** `photoUrl` draws — the permanent id beside a link minted for one response
+   * and short-lived, so two reads of one person carry two links to one photograph. Travels with the
+   * link (`drawnTheSame`).
+   */
+  readonly photoId?: string;
   /** Their published Level in the card's sport — omitted while unrated. */
   readonly level?: number;
   /** They said yes: the **IN** tag, the only tag a dealt card's tile carries (Q69). */
@@ -620,6 +626,41 @@ export function weekCapOf(
 // ---------------------------------------------------------------------------
 // Answering
 // ---------------------------------------------------------------------------
+
+/**
+ * **Two reads of one card draw the same** — every field equal, but for a photograph's link. A read
+ * mints a fresh short-lived link to every photograph it carries, so two reads of a card nobody
+ * touched differ in their links alone; a person whose photograph is the same one (`photoId`) is
+ * drawn the same whatever the link. A link that changed with no id to say it is the same photograph
+ * is a change. What the deck redraws after a read is what this says moved (`GameCard`).
+ */
+export function drawnTheSame(was: DeckCard, now: DeckCard): boolean {
+  return sameValue(was, now);
+}
+
+function sameValue(was: unknown, now: unknown): boolean {
+  if (was === now) return true;
+  if (typeof was !== 'object' || typeof now !== 'object' || was === null || now === null) {
+    return false;
+  }
+  if (Array.isArray(was) || Array.isArray(now)) {
+    return (
+      Array.isArray(was) &&
+      Array.isArray(now) &&
+      was.length === now.length &&
+      was.every((item, at) => sameValue(item, now[at]))
+    );
+  }
+  const a = was as Readonly<Record<string, unknown>>;
+  const b = now as Readonly<Record<string, unknown>>;
+  const fields = Object.keys(a);
+  if (fields.length !== Object.keys(b).length) return false;
+  const samePhotograph = a['photoId'] !== undefined && a['photoId'] === b['photoId'];
+  return fields.every(
+    (field) =>
+      field in b && ((field === 'photoUrl' && samePhotograph) || sameValue(a[field], b[field])),
+  );
+}
 
 /**
  * **The deck without one card** — the card an answer took off it, dropped from the read the moment

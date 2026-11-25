@@ -54,7 +54,11 @@
  *
  * **Games lays itself out** (#553): the deck fills the page between the tabs and its three
  * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are
- * not a deck — the question, the starting card.
+ * not a deck — the question, the starting card. **It stays mounted while another tab is on**, out
+ * of sight and not laid out: three cards are some six hundred elements, and drawing them again on
+ * every return to Games kept the tab from answering the press. Out of sight it sees nothing (its
+ * `inView` is the page's and the tab's), and it reads again on its return if its read has gone
+ * stale — what the remount's own read used to bring (`GamesDeck`'s `onScreen`).
  *
  * **Games and Friends each hold a menu** (PRD #859; tab menu mocks 1 to 4, illustrations), where a
  * *Competitive | For fun* row stood under the tabs: selected, the tab draws a chevron and widens for
@@ -111,6 +115,11 @@
  * Info alone, which re-reads itself now (Q125); the tabs are drawn for a sport and read their own
  * rows.
  *
+ * **The tabs' reads set out with the group's.** The tabs are drawn once the group has been read,
+ * and their reads used to set out only then, a round trip behind; while the group is on its way the
+ * page asks for the deck of the kind the menu stands on, Fill in and the live yeses for the sport
+ * it stands on (`useReadGroupGamesAhead`), and the tabs find them read or on their way.
+ *
  * **Every state has its drawing.** While the read is on its way the header has only its way back.
  * `group_not_found` is one sentence, because the server gives the same answer for *no such group*
  * and *not one of yours* and both have one remedy; any other failure says why and offers the retry.
@@ -133,6 +142,7 @@ import {
   useGamesBadge,
   useGamesMenu,
   type GamesDeckHandle,
+  useReadGroupGamesAhead,
   useRereadGroupGames,
   useYoureInBadge,
 } from '@/features/proposals/types';
@@ -448,7 +458,12 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
               : owned;
           });
           return group === undefined ? (
-            read.error === null ? null : (
+            read.error === null ? (
+              // The tabs' reads set out beside the group's — see the module note.
+              playing === undefined ? null : (
+                <ReadingAhead groupId={groupId} sport={playing} kind={kind} />
+              )
+            ) : (
               <View style={s.body}>
                 <ReadFailure
                   error={read.error}
@@ -474,10 +489,12 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
                   onSelect={select}
                 />
               </View>
-              {tab === 'games' && playing !== undefined ? (
-                // The deck lays itself out — see the module note.
+              {playing === undefined ? null : (
+                // The deck lays itself out — see the module note — and **stays mounted while
+                // another tab is on**, out of sight: coming back to Games shows the cards it
+                // already drew rather than drawing them again (see the module note).
                 <View
-                  style={s.fill}
+                  style={tab === 'games' ? s.fill : s.gone}
                   // Under an open menu the deck takes no touch: a press there only closes it.
                   pointerEvents={menuOpen ? 'none' : 'auto'}
                 >
@@ -485,13 +502,16 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
                     group={group}
                     sport={playing}
                     handle={gamesDeck}
-                    // A notice's deck sees nothing until it stands on the card's kind.
-                    inView={inView && arrived}
+                    onScreen={tab === 'games'}
+                    // A notice's deck sees nothing until it stands on the card's kind, and a
+                    // deck out of sight sees nothing at all.
+                    inView={inView && arrived && tab === 'games'}
                     refreshControl={pullControl}
                     {...(card === undefined ? {} : { onTop: card })}
                   />
                 </View>
-              ) : (
+              )}
+              {tab === 'games' && playing !== undefined ? null : (
                 <ScrollView
                   testID="group-page-body"
                   contentContainerStyle={s.body}
@@ -559,6 +579,24 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
   );
 }
 
+/**
+ * While the group is on its way, the reads its tabs draw from set out beside it: the deck for the
+ * kind the menu stands on — a notice's card's, if it brought one — Fill in and the live yeses.
+ */
+function ReadingAhead({
+  groupId,
+  sport,
+  kind,
+}: {
+  readonly groupId: string;
+  readonly sport: Sport;
+  readonly kind: GameIntent | undefined;
+}) {
+  const chosen = useGameIntent((state) => state.intent);
+  useReadGroupGamesAhead(groupId, sport, kind ?? chosen);
+  return null;
+}
+
 /** The scrolled tabs drawn for the filter's sport; Games lays itself out. */
 function TabBody({
   tab,
@@ -598,6 +636,8 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   tabs: { marginHorizontal: theme.size.gutter },
   fill: { flex: 1 },
+  // The deck while another tab is on: kept, and not laid out.
+  gone: { display: 'none' },
   body: { padding: theme.size.gutter, gap: theme.space.sm },
   // Over the page's bottom corner, at the gutter (play 46).
   postAGame: { position: 'absolute', right: theme.size.gutter, bottom: theme.size.gutter },

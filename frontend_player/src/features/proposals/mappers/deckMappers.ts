@@ -67,6 +67,7 @@ export function toPerson(wire: Schemas['DeckTileSchema']): DeckPerson {
     ...(wire.friend ? { friend: true } : {}),
     ...(wire.nickname === null ? {} : { name: wire.nickname }),
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
+    ...(wire.photo_url === null || wire.photo_id === null ? {} : { photoId: wire.photo_id }),
     ...(wire.level === null ? {} : { level: wire.level }),
   };
 }

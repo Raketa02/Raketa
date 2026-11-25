@@ -9,8 +9,13 @@
  * 2. starts the sequence it is handed;
  * 3. lets the launch window go on the splash's first layout, and starts its clock there.
  *
- * When the sequence resolves, **the tree mounts underneath the splash** — or the startup failure
- * does, if it rejected — and the first screen starts its own requests under the motion.
+ * **The tree mounts underneath the splash once the sequence has resolved and the motion is still**
+ * (`DrawnSplash`'s `onStill`, at 1.78 s, or at once under reduced motion) — or the startup failure
+ * does, if the sequence rejected. A first screen is hundreds of views, and the phone creating them on
+ * the thread that moves the ball froze it mid-bounce: a 204 ms frame on the A32, and a run of 20–50 ms
+ * ones from 0.9 s into the motion. Kept out of layout it is no cheaper — Fabric creates and inserts a
+ * hidden view all the same — so it is not mounted at all until then, and the first screen's own
+ * requests set out under the still lockup (ADR-0209 §2, as amended 2026-11-24).
  *
  * **While the splash is up, the phone's bars belong to it** (#857). They are painted the field's
  * edge colour with light icons as the splash starts, so it reads edge to edge, and restored to
@@ -18,7 +23,8 @@
  * port's (`shared/lib/platform/systemBars.ts`); the gate checks no platform.
  *
  * **The fade starts at the later of** 2.6 s (0.9 s under reduced motion) and the first screen being
- * ready: the sequence settled, the tree laid out, and no hold standing (`splashHold.tsx`). It is a
+ * ready: the sequence settled, the motion still and the tree mounted and laid out, and no hold
+ * standing (`splashHold.tsx`). It is a
  * linear 0.5 s fade of the whole splash, after which the splash unmounts. Until then **it swallows
  * every touch**: it is drawn over everything the root draws, and the tree beneath takes none.
  *
@@ -70,6 +76,8 @@ type Sequence =
  */
 interface Clock {
   earliestPassed: boolean;
+  /** The splash's motion is over, and the tree may mount. */
+  still: boolean;
   settled: boolean;
   laidOut: boolean;
   holds: number;
@@ -113,11 +121,14 @@ export function LaunchGate({
 
   const [sequence, setSequence] = useState<Sequence>({ status: 'running' });
   const [splashGone, setSplashGone] = useState(false);
+  /** The motion is over: the tree may mount — see the module note. */
+  const [still, setStill] = useState(false);
 
   // The whole splash's opacity, which the fade takes to nothing.
   const shown = useSharedValue(1);
   const clock = useRef<Clock>({
     earliestPassed: false,
+    still: false,
     settled: false,
     laidOut: false,
     holds: 0,
@@ -152,7 +163,7 @@ export function LaunchGate({
   /** Begins the fade if both its conditions now hold, and never twice. */
   const fadeIfDue = useCallback(() => {
     const now = clock.current;
-    if (now.fadeBegun || !now.earliestPassed || !firstScreenReady(now)) return;
+    if (now.fadeBegun || !now.earliestPassed || !now.still || !firstScreenReady(now)) return;
 
     now.fadeBegun = true;
     // **Never** the OS's reduced motion here, which Reanimated would otherwise honour by jumping to
@@ -208,6 +219,13 @@ export function LaunchGate({
     );
   }, [launchWindow, reduced, fadeIfDue]);
 
+  // The motion is over: the tree mounts, and lays out — the fade's other condition.
+  const onSplashStill = useCallback(() => {
+    clock.current.still = true;
+    setStill(true);
+    fadeIfDue();
+  }, [fadeIfDue]);
+
   const onTreeLayout = useCallback(() => {
     clock.current.laidOut = true;
     fadeIfDue();
@@ -234,7 +252,7 @@ export function LaunchGate({
 
   return (
     <View style={s.root}>
-      {sequence.status === 'running' ? null : (
+      {sequence.status === 'running' || !still ? null : (
         <View
           style={s.tree}
           onLayout={onTreeLayout}
@@ -264,6 +282,7 @@ export function LaunchGate({
           opacity={shown}
           face={splashFace}
           onFirstLayout={onSplashLayout}
+          onStill={onSplashStill}
         />
       )}
     </View>

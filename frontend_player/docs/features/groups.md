@@ -979,6 +979,20 @@ page drawn at once on Home's line; a page-only card's join; a refusal; _Asked_; 
 to Home with the line still open. **Not seen on a device** — a look is owed: the page's header, the full-width card, the
 gaps and the pull.
 
+**Games stays mounted while another tab is on, and the page reads its tabs ahead of the group**
+(2026-11-24, a performance diagnosis on the A32). **Back to Games from any tab took ~0,4 s in a release
+build and ~0,6 s in a debug one before anything moved**: the tab was unmounted on the way out, so the
+way back drew the deck's three cards from nothing, and its remount read the deck again and drew them a
+second time. The deck now stays mounted out of sight (`display: none`), sees nothing while it is
+(`inView` is the page's and the tab's), and **reads again on its return if its read has gone stale** —
+what the remount's own read used to bring (`GamesDeck`'s `onScreen`). The way back is ~0,1 s. **A first
+open waited on a round trip it did not need**: the tabs are drawn once the group has been read, so the
+deck, Fill in and the live yeses set out only then; while the group is on its way the page now asks for
+them, and for the saved payment method a yes on the deck asks about, beside it
+(`useReadGroupGamesAhead`, Query's prefetch — nothing still fresh is asked again). A first open's deck
+landed ~1,4 s sooner. Walked in the router suites; `groupGames.test.tsx`'s failed reads now refuse
+until the retry or the pull, since the read ahead meets the refusal first.
+
 **Groups heating up shimmers while its first page is read** (2026-11-24,
 [#872](https://github.com/Raketa02/Raketa/issues/872); PRD #867, the loading shimmer log §10; design
 system 5.6). The spinner is gone. Under the real header, **the line's card stands as its skeleton at

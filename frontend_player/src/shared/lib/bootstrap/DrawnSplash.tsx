@@ -18,11 +18,20 @@
  * **The ball bounces it into place** (#856). The dot is the ball: one volt circle, drawn above the
  * letters, that drops in from just above the top edge, lands three times along the floor and comes
  * to rest as the full stop at 1.68 s, while *Rak*, *ie* and *ta* rise with its three landings. **One
- * clock moves all of it**, on the UI thread, from the splash's first layout to 1.78 s, when the word
- * is still; the ball's pose and each letter's are pure functions of that clock
- * (`domain/splashMotion.ts`), so the landings and the letters they shake up can never drift apart,
- * and the clock's end is exactly #855's still lockup. A face that arrives late sets its letters
- * where the clock has them by then, faded in over 0.15 s rather than all at once.
+ * clock moves all of it**, on the UI thread, for 1.78 s, when the word is still; the ball's pose and
+ * each letter's are pure functions of that clock (`domain/splashMotion.ts`), so the landings and the
+ * letters they shake up can never drift apart, and the clock's end is exactly #855's still lockup.
+ *
+ * **The clock starts on the splash's first layout when the face is there, and otherwise waits for
+ * it** — at most `faceWait`, 0.6 s — and starts a frame after the letters it brings are set. Setting
+ * seven letters is the phone creating seven views and laying out their text on the thread that
+ * moves the ball, and a face that answered mid-flight — a debug build fetches it from the dev
+ * server, about 0.45 s on the A32 — set them on *Rak*'s cue, the ball stuttering as the word came in.
+ * A release build reads the face from its bundle in milliseconds, so the ball starts on the first
+ * layout as before. A face that has still not answered at `faceWait` lets the ball go without it,
+ * and its letters come in where the clock has them by then, faded in over 0.15 s rather than all at
+ * once. **When the clock is at its end the splash says so** (`onStill`), and the gate mounts the
+ * tree underneath, whose views would otherwise be created while the ball is in the air (`LaunchGate`).
  *
  * **Under reduced motion nothing flies**: the clock stands at its end from the first frame, so the
  * ball is the dot and every letter is in place, and the lockup comes in over 0.15 s once the splash
@@ -44,7 +53,7 @@
  * announcement.
  */
 
-import { useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
@@ -95,13 +104,26 @@ export interface DrawnSplashProps {
   readonly face: SplashFace;
   /** The splash's first layout: the launch window may go, and the launch's clock starts. Once. */
   readonly onFirstLayout: () => void;
+  /**
+   * **The motion is over**, and the lockup still: the tree underneath may mount (`LaunchGate`).
+   * Once — at the first layout under reduced motion, where nothing flies.
+   */
+  readonly onStill: () => void;
 }
 
-export function DrawnSplash({
+/**
+ * The splash, drawn again only when what the gate hands it changes — which is never, once it has
+ * started: every prop the gate passes is stable. A re-render of the gate (the sequence settling,
+ * the motion going still) would otherwise commit the whole splash on the thread that moves the ball.
+ */
+export const DrawnSplash = memo(SplashDrawing);
+
+function SplashDrawing({
   reduced: handedOver,
   opacity,
   face,
   onFirstLayout,
+  onStill,
 }: DrawnSplashProps) {
   // The variant as the gate handed it over first: decided once, and never switched mid-play — nor
   // asking for the face a second time, as an effect that followed it would.
@@ -113,7 +135,18 @@ export function DrawnSplash({
    * What the lockup's coming in waits for: the splash laid out, and the face's answer — loaded, or
    * not to be had. Once.
    */
-  const due = useRef({ laidOut: false, answered: faceReady, begun: false });
+  const due = useRef({ laidOut: false, answered: faceReady, begun: false, moving: false });
+  /** The face's answer, as a render can see it: what the motion's start waits for (below). */
+  const [answered, setAnswered] = useState(faceReady);
+  /** The motion's own timers — its wait for the face, and its end. */
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    const pending = timers.current;
+    return () => pending.forEach(clearTimeout);
+  }, []);
+  // `onStill` as handed over now, for a timer set at the motion's start.
+  const stillNow = useRef(onStill);
+  stillNow.current = onStill;
 
   // The view's place on the screen, as the root's safe-area provider knows it: below an opaque
   // status bar it starts that bar's height down. The screen is the whole phone, bars and all.
@@ -145,6 +178,11 @@ export function DrawnSplash({
 
   const bringInTheLateLetters = useCallback(() => {
     if (reduced) return;
+    // Before the motion has begun its letters stand unseen below their places, and are simply there.
+    if (!due.current.moving) {
+      lettersIn.value = 1;
+      return;
+    }
     lettersIn.value = withTiming(1, {
       duration: LAUNCH_CLOCK.lockupIn,
       easing: Easing.linear,
@@ -165,6 +203,38 @@ export function DrawnSplash({
     });
   }, [reduced, lockup]);
 
+  /**
+   * **The motion, once**: the glow coming on with the ball's 0.39 s fall, the clock run to the still
+   * lockup, and the tree told when it is still. Under reduced motion the glow is already lit and the
+   * clock already at its end, and nothing is started.
+   */
+  const startTheMotion = useCallback(() => {
+    const now = due.current;
+    if (reduced || now.moving) return;
+    now.moving = true;
+    glow.value = withTiming(1, {
+      duration: LAUNCH_CLOCK.glowIn,
+      easing: Easing.linear,
+      reduceMotion: ReduceMotion.Never,
+    });
+    const still = splashStillAt(placed);
+    motion.value = withTiming(still, {
+      duration: still,
+      easing: Easing.linear,
+      reduceMotion: ReduceMotion.Never,
+    });
+    timers.current.push(setTimeout(() => stillNow.current(), still));
+  }, [reduced, glow, motion, placed]);
+
+  // **A face that answers late starts the motion a frame after its letters are set** — set in the
+  // commit its answer brings, and drawn before the ball moves, so no letter is ever set while the
+  // ball is in the air (see the module note).
+  useEffect(() => {
+    if (reduced || !answered || !due.current.laidOut || due.current.moving) return;
+    const frame = requestAnimationFrame(startTheMotion);
+    return () => cancelAnimationFrame(frame);
+  }, [reduced, answered, startTheMotion]);
+
   // **The face is asked for as the splash starts**, never behind the sequence's session check.
   // A face that cannot be read sets no letter — a family the phone never registered would draw the
   // word in the system's font at Archivo's places, misspaced, and iOS objects to it out loud in
@@ -176,6 +246,7 @@ export function DrawnSplash({
     const answered = (loaded: boolean) => () => {
       if (!live) return;
       due.current.answered = true;
+      setAnswered(true);
       if (loaded) {
         setFaceReady(true);
         bringInTheLateLetters();
@@ -192,21 +263,12 @@ export function DrawnSplash({
     if (due.current.laidOut) return;
     due.current.laidOut = true;
     // The variant is the gate's, decided once: under it the glow is already lit and the motion
-    // already over, and otherwise both run whatever Reanimated later hears from the OS. They start
-    // here, with the gate's clock, so the ball's 0.39 s fall is the glow's.
-    if (!reduced) {
-      glow.value = withTiming(1, {
-        duration: LAUNCH_CLOCK.glowIn,
-        easing: Easing.linear,
-        reduceMotion: ReduceMotion.Never,
-      });
-      const still = splashStillAt(placed);
-      motion.value = withTiming(still, {
-        duration: still,
-        easing: Easing.linear,
-        reduceMotion: ReduceMotion.Never,
-      });
-    }
+    // already over — the lockup is still from the first frame. Otherwise the motion starts here, with
+    // the gate's clock, when the face is already there; a face still on its way is waited for, a
+    // frame past its answer (above), and for no longer than `faceWait`.
+    if (reduced) onStill();
+    else if (due.current.answered) startTheMotion();
+    else timers.current.push(setTimeout(startTheMotion, LAUNCH_CLOCK.faceWait));
     bringInTheLockupIfDue();
     onFirstLayout();
   };

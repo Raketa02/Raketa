@@ -945,14 +945,14 @@ describe('the states around the deck', () => {
   // `groupBadges.test.tsx` (#850): the tab on screen draws none.
 
   it('says why a read failed, and reads again on the retry', async () => {
-    let refused = false;
+    // Refused until the player asks again: the page reads the deck ahead while the group is read,
+    // and the tab's own read meets the refusal too.
+    let refusing = true;
     stubMyGroups(transport, [CREW]);
     transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(PAGE));
-    transport.on('GET', deckPath(CREW.id), () => {
-      if (refused) return json(groupDeck({ cards: [deckCard()] }));
-      refused = true;
-      return errorResponse(429, 'rate_limited');
-    });
+    transport.on('GET', deckPath(CREW.id), () =>
+      refusing ? errorResponse(429, 'rate_limited') : json(groupDeck({ cards: [deckCard()] })),
+    );
     await launchSignedIn();
     // The deck's own clock, as `openGames` pins it: on the real one the card's book-by — two days
     // after the read — has passed since 2 October 2026, and the retried deck draws nothing.
@@ -960,7 +960,9 @@ describe('the states around the deck', () => {
     fireEvent.press(await screen.findByLabelText('Play'));
     fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
 
-    fireEvent.press(await screen.findByRole('button', { name: COPY.readAgain }));
+    const retry = await screen.findByRole('button', { name: COPY.readAgain });
+    refusing = false;
+    fireEvent.press(retry);
 
     expect(await screen.findByLabelText(COPY.details)).toBeTruthy();
   });
@@ -1006,19 +1008,20 @@ describe('pulling Games', () => {
   });
 
   it('pulls on a read that failed, as the retry does', async () => {
-    let refused = false;
+    // Refused until the player asks again: the page reads the deck ahead while the group is read,
+    // and the tab's own read meets the refusal too.
+    let refusing = true;
     stubMyGroups(transport, [CREW]);
     transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(PAGE));
-    transport.on('GET', deckPath(CREW.id), () => {
-      if (refused) return json(groupDeck({ cards: [deckCard()] }));
-      refused = true;
-      return errorResponse(429, 'rate_limited');
-    });
+    transport.on('GET', deckPath(CREW.id), () =>
+      refusing ? errorResponse(429, 'rate_limited') : json(groupDeck({ cards: [deckCard()] })),
+    );
     await launchSignedIn();
     jest.setSystemTime(DECK_READ_AT);
     fireEvent.press(await screen.findByLabelText('Play'));
     fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
     expect(await screen.findByRole('button', { name: COPY.readAgain })).toBeTruthy();
+    refusing = false;
 
     await act(async () => {
       pull();
@@ -1225,7 +1228,8 @@ describe('the card', () => {
     await openGames(groupDeck({ cards: [byKuba, byTheGroup] }));
 
     expect(await screen.findByRole('header', { name: 'kuba.w challenged you' })).toBeTruthy();
-    expect(screen.getByText('The group challenged you', HIDDEN_TOO)).toBeTruthy();
+    // Behind, and drawn a frame after the top card.
+    expect(await screen.findByText('The group challenged you', HIDDEN_TOO)).toBeTruthy();
   });
 
   it('draws a rescue’s ribbon, its Booked court and Pay with its share on the stamp', async () => {
@@ -1248,9 +1252,11 @@ describe('the card', () => {
       }),
     );
 
-    // The card behind is drawn first — the stage paints deepest first — so each is found by its
-    // words rather than by its place.
-    expect(await screen.findAllByTestId('game-countdown', HIDDEN_TOO)).toHaveLength(2);
+    // The card behind is drawn a frame after the top one, and the stage paints deepest first — so
+    // each is found by its words rather than by its place.
+    await waitFor(() =>
+      expect(screen.getAllByTestId('game-countdown', HIDDEN_TOO)).toHaveLength(2),
+    );
     expect(screen.getByText(/^21 h \d\d$/, HIDDEN_TOO)).toBeTruthy();
     expect(screen.getByText(/^\d\d? min$/, HIDDEN_TOO)).toBeTruthy();
   });
@@ -1388,18 +1394,25 @@ describe('the card', () => {
 
     await screen.findByTestId(`game-card-${owed.proposal_id}`);
     expect(screen.queryByTestId(`game-card-${other.proposal_id}`)).toBeNull();
-    expect(screen.getByTestId(`game-card-${other.proposal_id}`, HIDDEN_TOO)).toBeTruthy();
+    expect(await screen.findByTestId(`game-card-${other.proposal_id}`, HIDDEN_TOO)).toBeTruthy();
   });
 
   /** Q90: the cards behind fade as well as shrink, and they are real cards, never placeholders. */
-  it('draws the next two cards behind the top one, and no more', async () => {
-    const cards = [deckCard(), deckCard(), deckCard(), deckCard()];
+  it('draws the next two cards behind the top one, holds one more unseen, and no more', async () => {
+    const cards = [deckCard(), deckCard(), deckCard(), deckCard(), deckCard()];
     await openGames(groupDeck({ cards }));
 
     await screen.findByTestId(`game-card-${cards[0]!.proposal_id}`);
-    expect(screen.getByTestId(`game-card-${cards[1]!.proposal_id}`, HIDDEN_TOO)).toBeTruthy();
+    expect(
+      await screen.findByTestId(`game-card-${cards[1]!.proposal_id}`, HIDDEN_TOO),
+    ).toBeTruthy();
     expect(screen.getByTestId(`game-card-${cards[2]!.proposal_id}`, HIDDEN_TOO)).toBeTruthy();
-    expect(screen.queryByTestId(`game-card-${cards[3]!.proposal_id}`, HIDDEN_TOO)).toBeNull();
+    // The one after them, drawn and unseen once the top card has arrived, so a card leaving brings
+    // forward cards already drawn (`DeckStage`).
+    expect(
+      await screen.findByTestId(`game-card-${cards[3]!.proposal_id}`, HIDDEN_TOO),
+    ).toBeTruthy();
+    expect(screen.queryByTestId(`game-card-${cards[4]!.proposal_id}`, HIDDEN_TOO)).toBeNull();
   });
 });
 
@@ -1588,7 +1601,7 @@ describe('the deck read again while it is answered', () => {
     // The card under the thumb is the one it was, with Karol In on it; the risen game is behind it.
     expect(await screen.findByLabelText('karol.t, level 2,75, In')).toBeTruthy();
     expect(screen.queryByLabelText(/^zofia.b/)).toBeNull();
-    expect(screen.getByLabelText('zofia.b, level 2,69, In', HIDDEN_TOO)).toBeTruthy();
+    expect(await screen.findByLabelText('zofia.b, level 2,69, In', HIDDEN_TOO)).toBeTruthy();
 
     // Answered, it goes, and the risen game comes up next.
     transport.on('POST', noPath(reading.proposal_id), () => noContent());

@@ -9,6 +9,7 @@ import {
   countdownOf,
   courtTagOf,
   doorPanel,
+  drawnTheSame,
   findingAfterTheDoor,
   findingAfterTheQuestion,
   foldOf,
@@ -596,5 +597,53 @@ describe('why a rescue went, as the join says it (the bug report’s P1 on the r
         club_cancel_reason: 'WEATHER',
       }),
     ).toEqual({ reason: 'SHORT_AT_THE_CUT_OFF' });
+  });
+});
+
+describe('two reads of one card (the deck redraws only what changed)', () => {
+  const photo = (n: string) => ({ photoId: 'ph-1', photoUrl: `https://store.test/ph-1?sig=${n}` });
+
+  it('draw the same when every field is equal', () => {
+    expect(drawnTheSame(card(), card())).toBe(true);
+  });
+
+  it('draw the same when only a photograph’s link was minted again', () => {
+    const read = (n: string) =>
+      card({ sides: { yours: [YOU, person('Zofia', photo(n))], theirs: [person('Ania')] } });
+    expect(drawnTheSame(read('a'), read('b'))).toBe(true);
+  });
+
+  it('differ when the photograph itself changed', () => {
+    const read = (photoId: string) =>
+      card({
+        sides: {
+          yours: [YOU, person('Zofia', { photoId, photoUrl: `https://store.test/${photoId}` })],
+          theirs: [person('Ania')],
+        },
+      });
+    expect(drawnTheSame(read('ph-1'), read('ph-2'))).toBe(false);
+  });
+
+  it('differ when a link changed with no photograph to say it is the same one', () => {
+    const read = (url: string) =>
+      card({ sides: { yours: [YOU, person('Zofia', { photoUrl: url })], theirs: [] } });
+    expect(drawnTheSame(read('https://p/a'), read('https://p/b'))).toBe(false);
+  });
+
+  it('differ when anything else moved — somebody In, the count, a field gone', () => {
+    expect(drawnTheSame(card(), card({ inCount: 1 }))).toBe(false);
+    expect(
+      drawnTheSame(
+        card(),
+        card({
+          sides: {
+            yours: [YOU, person('Zofia', { isIn: true })],
+            theirs: [person('Ania'), person('Ewa')],
+          },
+        }),
+      ),
+    ).toBe(false);
+    const { forecast: _gone, ...withoutForecast } = card();
+    expect(drawnTheSame(card(), withoutForecast)).toBe(false);
   });
 });

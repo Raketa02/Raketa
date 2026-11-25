@@ -58,9 +58,22 @@ export interface GamesTabProps {
   readonly refreshControl?: ReactElement<RefreshControlProps>;
   /** Whether the page is the screen in view — what the deck shows is seen only while it is (#850). */
   readonly inView: boolean;
+  /**
+   * Whether the tab is the one on — the page keeps it mounted while another is (`GroupScreen`).
+   * On unless the page says otherwise.
+   */
+  readonly onScreen?: boolean;
 }
 
-export function GamesTab({ group, sport, onTop, handle, refreshControl, inView }: GamesTabProps) {
+export function GamesTab({
+  group,
+  sport,
+  onTop,
+  handle,
+  refreshControl,
+  inView,
+  onScreen = true,
+}: GamesTabProps) {
   const chosen = useGameIntent((state) => state.intent);
   const choose = useGameIntent((state) => state.choose);
 
@@ -72,6 +85,7 @@ export function GamesTab({ group, sport, onTop, handle, refreshControl, inView }
       onChoose={choose}
       {...(handle === undefined ? {} : { handle })}
       inView={inView}
+      onScreen={onScreen}
       empty={<StartingCard group={group} sport={sport} />}
       {...(onTop === undefined ? {} : { onTop })}
       {...(refreshControl === undefined ? {} : { refreshControl })}

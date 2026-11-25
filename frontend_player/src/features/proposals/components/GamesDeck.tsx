@@ -223,7 +223,7 @@ import { useLatest } from '../hooks/useLatest';
 import { useSeeRows } from '../hooks/useSeenRows';
 
 import { DeckAnswers } from './DeckAnswers';
-import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
+import { DeckStage, SEEN, type DeckExit, type DragVerdict } from './DeckStage';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
 import { FindingGames } from './FindingGames';
 import {
@@ -243,8 +243,11 @@ import { gameRoute, rescueRoute } from './proposalRoutes';
 
 const COPY = PROPOSALS_COPY;
 
-/** The top card and the two real cards behind it — never a placeholder. */
-const ON_THE_STAGE = 3;
+/**
+ * The top card and the two real cards behind it — never a placeholder — and one more, which the
+ * stage holds drawn and unseen, so a card leaving brings forward cards already drawn (`DeckStage`).
+ */
+const ON_THE_STAGE = SEEN + 1;
 
 /** Whichever scroller the tab is in — the one the page's pull is on. */
 const BODY = 'games-deck-body';
@@ -290,6 +293,11 @@ export interface GamesDeckProps {
    * deck shows is seen only while it is (#850).
    */
   readonly inView: boolean;
+  /**
+   * Whether the Games tab is the one on. The page keeps the deck mounted, out of sight, while another
+   * tab is (`GroupScreen`), and back on screen a read gone stale is read again. On unless said.
+   */
+  readonly onScreen?: boolean;
 }
 
 /** The card on its way out, and the answer that sent it there. */
@@ -308,6 +316,7 @@ export function GamesDeck({
   onTop,
   refreshControl,
   inView,
+  onScreen = true,
 }: GamesDeckProps) {
   /** The card on its way off the stage, and its answer — until it has flown. */
   const [leaving, setLeaving] = useState<Leaving | undefined>(undefined);
@@ -320,6 +329,15 @@ export function GamesDeck({
     begin: beginSwap,
     end: endSwap,
   } = useKindSwap(groupId, sport, chosen, leaving !== undefined);
+  // Back on screen after another tab, a read gone stale is read again — what drawing the deck afresh
+  // on every return used to bring, as Query reads a stale read on a mount. The read on screen stays
+  // until it lands, and one already on its way is let land.
+  const wasOnScreen = useRef(onScreen);
+  useEffect(() => {
+    const back = onScreen && !wasOnScreen.current;
+    wasOnScreen.current = onScreen;
+    if (back && read.isStale) void read.refetch({ cancelRefetch: false });
+  }, [onScreen, read]);
   const drop = useDropCard(groupId, sport, kind);
   const dealtIn: DealtIn = { groupId, sport, kind };
   const fill = useFillYes(dealtIn);
@@ -446,12 +464,13 @@ export function GamesDeck({
   const top = shown[0];
   useEffect(() => setUnderThumb(top?.proposalId), [top?.proposalId]);
 
-  // The cards on the stage, and the least height the tallest of them can get to — the stage is laid
-  // out at no less, and where the page leaves less the scroller scrolls (#865, see the module note).
-  // Until one of them has said, the last height holds — after an answer, a swap, a new deal — so the
-  // stage never drops to the page and back.
+  // The cards on the stage, and the least height the tallest of those the player sees can get to —
+  // the stage is laid out at no less, and where the page leaves less the scroller scrolls (#865, see
+  // the module note). The card held in reserve has no say until it is seen: it would move the stage
+  // under the card on top a moment after it was drawn. Until a card seen has said, the last height
+  // holds — after an answer, a swap, a new deal — so the stage never drops to the page and back.
   const onStage = shown.slice(0, ON_THE_STAGE);
-  const said = onStage.flatMap((card) => leasts[card.proposalId] ?? []);
+  const said = shown.slice(0, SEEN).flatMap((card) => leasts[card.proposalId] ?? []);
   const lastLeast = useRef(0);
   if (said.length > 0) lastLeast.current = Math.max(...said);
   const least = lastLeast.current;
@@ -516,6 +535,13 @@ export function GamesDeck({
         ? rescueRoute(groupId, card.proposalId)
         : gameRoute(groupId, card.proposalId, sport, card.kind),
     );
+  // The top card's press, the same function from render to render — whatever is on top when it is
+  // pressed — so a deck redrawn for something else does not draw its cards again (`GameCard`'s memo).
+  const onTheTop = useLatest({ top, open });
+  const openTop = useCallback(() => {
+    const { top: pressed, open: go } = onTheTop.current;
+    if (pressed !== undefined) go(pressed);
+  }, [onTheTop]);
 
   /**
    * One answer, from the drag or a button — the two paths cannot disagree about who may fly. A yes
@@ -668,7 +694,7 @@ export function GamesDeck({
         onAnswer={(said) => answerTo(said, top)}
         onLeft={() => cardLeft(top)}
         stamps={stampsFor(top, chargesAtOnce(top))}
-        cards={onStage.map((card, depth) => ({
+        cards={onStage.map((card) => ({
           key: card.proposalId,
           card: (
             <GameCard
@@ -677,12 +703,10 @@ export function GamesDeck({
               at={at}
               day={gameDayOf(card.startsAt, at)}
               today={weekday}
-              {...(depth === 0
-                ? {
-                    onOpen: () => open(card),
-                    onPerson: (person: DeckPerson) => setReading(person),
-                  }
-                : {})}
+              // Every card's, so the one coming forward is not drawn again to gain them:
+              // behind, the stage makes it inert (`GameCard`).
+              onOpen={openTop}
+              onPerson={setReading}
               onLeast={cardLeast}
             />
           ),

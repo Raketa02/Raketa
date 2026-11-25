@@ -22,11 +22,16 @@ import { readLiveYeses, readPaymentsToConfirm } from '../use-cases/liveYeses';
 import { proposalKeys } from './proposalKeys';
 import { useUnseenCount } from './useSeenRows';
 
-export function useLiveYeses() {
-  return useQuery<LiveYeses, AppError>({
+/** The reader's live yeses — the read, as its observers and the group page's read ahead ask it. */
+export function liveYesesQuery() {
+  return {
     queryKey: proposalKeys.liveYeses(),
-    queryFn: ({ signal }) => readLiveYeses({ signal }),
-  });
+    queryFn: ({ signal }: { signal: AbortSignal }) => readLiveYeses({ signal }),
+  };
+}
+
+export function useLiveYeses() {
+  return useQuery<LiveYeses, AppError>(liveYesesQuery());
 }
 
 /**

@@ -63,7 +63,10 @@ describe('a card', () => {
         club: { id: 'gone', name: null },
         sides: {
           yours: [youTile()],
-          theirs: [ANIA({ nickname: null, level: null }), EWA({ photo_url: 'https://p/e.jpg' })],
+          theirs: [
+            ANIA({ nickname: null, level: null }),
+            EWA({ photo_id: 'ph-e', photo_url: 'https://p/e.jpg' }),
+          ],
         },
         forecast: null,
       }),
@@ -74,6 +77,8 @@ describe('a card', () => {
     const [ania, ewa] = read?.sides.theirs ?? [];
     expect(ania).toEqual({ playerId: ANIA().player_id, isYou: false, isIn: false });
     expect(ewa?.photoUrl).toBe('https://p/e.jpg');
+    // Which photograph the link draws, so a link minted again for it is not a change (drawnTheSame).
+    expect(ewa?.photoId).toBe('ph-e');
     expect(read?.sides.yours[0]?.isYou).toBe(true);
   });
 

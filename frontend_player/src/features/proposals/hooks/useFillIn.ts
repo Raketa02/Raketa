@@ -28,12 +28,16 @@ export interface FillInObserver {
   readonly retryOnMount?: boolean;
 }
 
-export function useFillIn(groupId: string, sport: Sport, observer: FillInObserver = {}) {
-  return useQuery<FillIn, AppError>({
+/** A group's Fill in for one sport — the read, as every observer and the page's read ahead ask it. */
+export function fillInQuery(groupId: string, sport: Sport) {
+  return {
     queryKey: proposalKeys.fillIn(groupId, sport),
-    queryFn: ({ signal }) => readFillIn(groupId, sport, { signal }),
-    ...observer,
-  });
+    queryFn: ({ signal }: { signal: AbortSignal }) => readFillIn(groupId, sport, { signal }),
+  };
+}
+
+export function useFillIn(groupId: string, sport: Sport, observer: FillInObserver = {}) {
+  return useQuery<FillIn, AppError>({ ...fillInQuery(groupId, sport), ...observer });
 }
 
 /**

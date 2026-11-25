@@ -26,6 +26,15 @@ export const LAUNCH_CLOCK = {
    * `domain/splashMotion.ts`).
    */
   lockupIn: 150,
+  /**
+   * **The longest the motion waits for the wordmark's face**, from the splash's first layout. A face
+   * there at the start — a release build reads it from the bundle in milliseconds — starts the motion
+   * on that layout; one still on its way — a debug build fetches it from the dev server — is waited
+   * for, so its seven letters are never set while the ball is in the air, and past this the ball
+   * goes without them and they come in late, over `lockupIn`. Short enough that the motion is still
+   * by 2.38 s, before the fade's earliest start.
+   */
+  faceWait: 600,
 } as const;
 
 /** What the fade waits for, besides its earliest start. */

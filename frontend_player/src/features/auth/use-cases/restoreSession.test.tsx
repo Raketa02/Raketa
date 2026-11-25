@@ -7,7 +7,7 @@
  */
 
 import { onlineManager, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import {
@@ -24,6 +24,7 @@ import { LaunchGate, bootstrapApp } from '@/shared/lib/bootstrap';
 import { TIMEOUT_MS } from '@/shared/lib/http';
 import type { Reachability } from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
+import { ReducedMotionProvider } from '@/shared/ui';
 import type { AppError } from '@/shared/errors';
 import {
   errorResponse,
@@ -317,7 +318,9 @@ describe('relaunching on a phone that already knows it is offline', () => {
 
 /**
  * The tree mounts **under the launch's drawn splash** (ADR-0209), hidden from a screen reader until
- * the splash has gone — and nothing lays out here, so it never goes. What is mounted is the question.
+ * the splash has gone — and the tree never lays out here, so it never goes. What is mounted is the
+ * question. The tree mounts once the sequence has resolved and the splash's motion is still, so the
+ * launch is drawn under reduced motion, still from the splash's first layout, which it is given.
  */
 const UNDER_THE_SPLASH = { includeHiddenElements: true } as const;
 
@@ -345,11 +348,16 @@ function renderLaunch() {
 
   render(
     <QueryClientProvider client={queryClient}>
-      <LaunchGate run={run}>
-        <Recorder seen={seen} />
-      </LaunchGate>
+      <ReducedMotionProvider value>
+        <LaunchGate run={run}>
+          <Recorder seen={seen} />
+        </LaunchGate>
+      </ReducedMotionProvider>
     </QueryClientProvider>,
   );
+  fireEvent(screen.getByTestId('drawn-splash', UNDER_THE_SPLASH), 'layout', {
+    nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } },
+  });
 
   return seen;
 }

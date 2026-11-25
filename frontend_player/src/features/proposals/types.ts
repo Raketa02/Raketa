@@ -34,6 +34,7 @@ export { PaymentsToConfirm } from './components/PaymentsToConfirm';
 export { useGamesBadge } from './hooks/useGroupDeck';
 /** What the group page's pull re-reads on Games, Fill in and You’re in — the tabs this feature draws. */
 export { useRereadGroupGames } from './hooks/useGroupDeck';
+export { useReadGroupGamesAhead } from './hooks/useGroupDeck';
 /**
  * **A group's Fill in and You’re in tabs** (#557, split by #847) — the rescues, and the reader's own
  * live yeses, each drawn by the group page as a tab of its own with the badge its tab reads. The page

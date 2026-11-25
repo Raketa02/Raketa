@@ -1920,6 +1920,39 @@ unchanged: the deck's card flies at once, so nothing on it needs to say it is wa
 and `rescues.test.tsx` hold the one request behind a busy button. **Not seen on a device**: the
 handover from the count to the send, which is meant to show nothing at all.
 
+## The deck draws only what changed, and never on the beat the next swipe needs (2026-11-24)
+
+A performance diagnosis on the A32, with the JS thread profiled over CDP and React's commits counted
+through the devtools hook. **After a pass the next card could not be touched for about 0,8–1 s**: the
+drag and the buttons are refused while a card is `leaving`, and the commit that clears it waited on
+React drawing **every card on the stage four times an answer** — the card leaving, the card gone, the
+two reads the answer sends — about 200 elements and four generated posters a card, plus **the new
+third card's first drawing in that very commit**. Three changes, the logic untouched:
+
+- **`GameCard` is memoised on what it shows** — the card, its day, the weekday, its two doors and the
+  countdown the clock gives it, never the clock itself, which moves on every read and every card
+  dropped. A card read again compares by **`drawnTheSame`** (`domain/deck.ts`): every field but a
+  photograph's link, which a read mints afresh for every photograph it carries (`photo_url`, minted
+  per response); the person now carries the wire's **`photoId`** beside it, so a link minted again for
+  the same photograph is no change. The comparison is by value, so a list that shifted by one — which
+  hands back new objects for cards that did not change — draws nothing again either. A card held back
+  keeps the link it was drawn with: its photograph is already on screen.
+- **Every card gets the top card's two doors** (`openTop`, which opens whatever is on top, and
+  `setReading`), so the card coming forward is not drawn again to gain them; behind, the stage's
+  `pointerEvents` `none` and its hiding from a listener keep it inert.
+- **The stage holds one card more, drawn and unseen** (`DeckStage`'s `SEEN` + 1), where the third card
+  stands before its arrival, so a card leaving brings forward three cards already drawn and the commit
+  that frees the stage draws none; the card after them is drawn once the new top card has arrived.
+  **A card new to the stage behind the top one is drawn a frame after it** — the deck's first drawing
+  carries one card, not three, which is what a group page's push waits on.
+
+Measured on the A32, release-mode JS on a debug build: a pass's freeing commit from ~0,8 s to ~0,45 s
+after the press (0,24 s of it the flight), the JS thread busy ~0,6–0,9 s of the next two seconds
+instead of ~1,25 s. Walked in `deckStage.test.tsx` (the frame, the reserve, no card drawn in the freeing
+commit), `domain/deck.test.ts` (`drawnTheSame`) and the router suites, which now wait the frame for a
+card behind. **The backend's own times were not touched**: `POST /no` and the deck's read took
+0,5–1,4 s each on this machine's Docker.
+
 ## The card's tiles take one shape per court (#864)
 
 **A deck tile no longer stretches.** It took whatever height the card left it (`fill`, down to

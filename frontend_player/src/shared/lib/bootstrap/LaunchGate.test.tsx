@@ -43,6 +43,8 @@ const FADE = 500;
 const GLOW_IN = 390;
 /** The lockup's short fade-in under reduced motion, where nothing flies (#855, #856). */
 const LOCKUP_IN = 150;
+/** The longest the motion waits for its face, from the splash's first layout. */
+const FACE_WAIT = 600;
 
 /** A few frames of a 60 Hz screen: long enough for an animation started on a tick to show. */
 const A_FEW_FRAMES = 50;
@@ -198,13 +200,41 @@ function layOutTheSplash() {
   fireEvent(screen.getByTestId(SPLASH, HIDDEN_TOO), 'layout', LAYOUT);
 }
 
+/**
+ * Whether the first screen lays out once it is mounted — it mounts underneath the splash only once
+ * the motion is still, so a launch says *when it is there, lay it out* rather than doing it now.
+ */
+let appLaysOut = false;
+let appLaidOut: ReturnType<typeof screen.getByTestId> | null = null;
+
 function layOutTheApp() {
-  fireEvent(screen.getByTestId(APP, HIDDEN_TOO), 'layout', LAYOUT);
+  appLaysOut = true;
+  layOutTheAppIfMounted();
 }
 
-/** Moves the clock to `ms` after the splash's first layout. */
+function layOutTheAppIfMounted() {
+  if (!appLaysOut) return;
+  const app = screen.queryByTestId(APP, HIDDEN_TOO);
+  if (app === null || app === appLaidOut) return;
+  appLaidOut = app;
+  fireEvent(app, 'layout', LAYOUT);
+}
+
+/** When the motion is still, and the tree may mount: 1.78 s after the splash's first layout. */
+const STILL = 1780;
+
+/**
+ * Moves the clock to `ms` after the splash's first layout, **a frame at a time** — as a phone's
+ * clock moves, so what one frame sets off runs in the next rather than when a long advance ends —
+ * laying out a first screen the moment it has mounted.
+ */
 function clockTo(ms: number) {
-  act(() => jest.advanceTimersByTime(splashLaidOutAt + ms - Date.now()));
+  const target = splashLaidOutAt + ms;
+  while (Date.now() < target) {
+    const step = Math.min(16, target - Date.now());
+    act(() => jest.advanceTimersByTime(step));
+    layOutTheAppIfMounted();
+  }
 }
 
 /** Lets a settled sequence's promise land. */
@@ -237,6 +267,8 @@ async function launchReady(options: Launch = {}) {
 beforeEach(() => {
   jest.useFakeTimers();
   pressed.mockClear();
+  appLaysOut = false;
+  appLaidOut = null;
 });
 
 afterEach(() => {
@@ -293,12 +325,15 @@ describe('the launch', () => {
     expect(runs).toBe(1);
   });
 
-  it('mounts the tree underneath the splash once the sequence resolves', async () => {
+  it('mounts the tree underneath the splash once the sequence resolves and the motion is still', async () => {
     const startup = deferred();
     launch({ run: () => startup.promise });
     layOutTheSplash();
 
-    expect(screen.queryByText('the app')).toBeNull();
+    expect(screen.queryByText('the app', HIDDEN_TOO)).toBeNull();
+
+    clockTo(STILL);
+    expect(screen.queryByText('the app', HIDDEN_TOO)).toBeNull();
 
     await act(async () => startup.resolve());
 
@@ -307,8 +342,31 @@ describe('the launch', () => {
     expect(opacityOf(SPLASH)).toBe(1);
   });
 
+  /**
+   * A first screen is hundreds of views, and the phone creating them on the thread that moves the
+   * ball froze it mid-bounce — kept out of layout they are created all the same. So however early
+   * the sequence resolves, the tree mounts once the motion is still.
+   */
+  it('mounts no tree while the ball is in the air, however early the sequence resolved', async () => {
+    await launchReady();
+    expect(screen.queryByText('the app', HIDDEN_TOO)).toBeNull();
+
+    clockTo(STILL - 1);
+    expect(screen.queryByText('the app', HIDDEN_TOO)).toBeNull();
+
+    clockTo(STILL);
+    expect(screen.getByText('the app', HIDDEN_TOO)).toBeTruthy();
+  });
+
+  it('mounts it from the first layout under reduced motion, where nothing flies', async () => {
+    await launchReady({ reduced: true });
+
+    expect(screen.getByText('the app', HIDDEN_TOO)).toBeTruthy();
+  });
+
   it('keeps the tree from a screen reader until the splash is gone', async () => {
     await launchReady();
+    clockTo(STILL);
 
     expect(screen.queryByText('the app')).toBeNull();
     expect(screen.getByText('the app', HIDDEN_TOO)).toBeTruthy();
@@ -323,6 +381,7 @@ describe('the launch', () => {
    */
   it('tells the tree it is covered until the splash is gone, not just until the fade begins', async () => {
     await launchReady({ app: <Covered /> });
+    clockTo(STILL);
 
     expect(screen.getByText('covered', HIDDEN_TOO)).toBeTruthy();
 
@@ -453,6 +512,7 @@ describe('the fade', () => {
 
   it('swallows every touch until the splash is gone, not just until the fade begins', async () => {
     await launchReady();
+    clockTo(STILL);
 
     // By its words while it is covered: a control under a hidden tree is no role a query can name.
     fireEvent.press(screen.getByText('the app', HIDDEN_TOO));
@@ -472,6 +532,7 @@ describe('the fade', () => {
     });
     layOutTheSplash();
     await settle();
+    clockTo(STILL);
 
     expect(screen.getByText('Raketa could not start', HIDDEN_TOO)).toBeTruthy();
     expect(screen.getByText(/EXPO_PUBLIC_API_URL/, HIDDEN_TOO)).toBeTruthy();
@@ -1024,14 +1085,46 @@ describe('the lockup', () => {
       expect(ball.elevation).toBeUndefined();
     });
 
-    it('flies the ball before the face has loaded, and fades the letters in as the clock has them', async () => {
+    /**
+     * Setting seven letters is the phone creating seven views and laying out their text on the
+     * thread that moves the ball: a face that answered mid-flight stuttered the ball as the word came
+     * in. So a face still on its way is waited for, and the ball starts a frame after its letters are
+     * set — where the clock's start has them, unseen below their places.
+     */
+    it('waits for a face still on its way, and starts a frame after its letters are set', async () => {
+      const face = faceStillLoading();
+      launch({ face });
+      layOutTheSplash();
+      await settle();
+
+      clockTo(400);
+      const start = theBall();
+      expect(start.y + 6 * start.scaleY).toBeLessThanOrEqual(0);
+      expect(letters()).toHaveLength(0);
+
+      await face.arrive();
+      const startsAt = Date.now() - splashLaidOutAt + FRAME;
+      expect(letters()).toHaveLength(7);
+      expect(shown()).toEqual([0, 0, 0, 0, 0, 0, 0]);
+      // There before the motion, so nothing about them is late: no fade of their own.
+      expect(opacityOf(LETTERS)).toBe(1);
+
+      clockTo(startsAt + 900);
+      expect(shown()).toEqual([1, 1, 1, 0, 0, 0, 0]);
+
+      clockTo(startsAt + STILL_AT + FRAME);
+      expect(shown()).toEqual([1, 1, 1, 1, 1, 1, 1]);
+      expectTheBallOnTheDot();
+    });
+
+    it('lets the ball go without its face after 0,6 s, and fades the letters in as the clock has them', async () => {
       const face = faceStillLoading();
       launch({ face });
       layOutTheSplash();
       await settle();
 
       // Falling from its first bounce, between the first two landings.
-      clockTo(860);
+      clockTo(FACE_WAIT + 860);
       expect(letters()).toHaveLength(0);
       expect(theBall().y).toBeLessThan(placedFor(WHOLE_SCREEN).floor);
 
@@ -1046,8 +1139,23 @@ describe('the lockup', () => {
       clockTo(arrivedAt + LOCKUP_IN + A_FEW_FRAMES);
       expect(opacityOf(LETTERS)).toBe(1);
 
-      clockTo(STILL_AT + FRAME);
+      clockTo(FACE_WAIT + STILL_AT + FRAME);
       expect(shown()).toEqual([1, 1, 1, 1, 1, 1, 1]);
+    });
+
+    it('still fades at 2,6 s when its face kept it waiting the longest it waits', async () => {
+      const face = faceStillLoading();
+      launch({ face });
+      layOutTheSplash();
+      await settle();
+      layOutTheApp();
+
+      clockTo(FACE_WAIT + STILL_AT);
+      layOutTheApp();
+      clockTo(FADE_AT - 1);
+      expect(opacityOf(SPLASH)).toBe(1);
+      clockTo(FADE_AT + A_FEW_FRAMES);
+      expect(opacityOf(SPLASH)).toBeLessThan(1);
     });
 
     it('lands the ball as the dot alone when the face could not be read', async () => {

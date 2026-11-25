@@ -80,12 +80,26 @@
  *
  * ## What a card behind the top one is
  *
- * The same drawing with no doors: no press, no tile buttons, hidden from a listener by the stage.
- * One component for both, so the card coming forward is the element it already was.
+ * The same drawing, with the same doors, and **inert**: the stage lays it under `pointerEvents`
+ * `none` and hides it from a listener, so no press reaches it. One component for both, so the card
+ * coming forward is the element it already was — and is not drawn again to gain doors it already
+ * had (the deck hands every card the top card's two, which open whatever is on top).
+ *
+ * ## A card is drawn again only when what it shows has changed
+ *
+ * A card is some two hundred elements, four of them generated posters, and the deck redraws
+ * itself four times an answer — the card leaving, the card gone, and the two reads the answer
+ * sends — so it used to draw all three cards on the stage each time, on the very thread the next
+ * swipe needs. **It is memoised on what it shows**: the card (`drawnTheSame` — a read mints a new
+ * link to every photograph, and a list that shifted by one hands back new objects for cards that
+ * did not change), its day, the weekday, its two doors, and **the countdown the deck's clock gives
+ * it — never the clock**, which moves on every read and every card taken off the read, while what
+ * a ribbon says moves only when a minute does. A card held back keeps the link it was drawn with:
+ * its photograph is already on screen, and the next change that redraws it brings a fresh one.
  */
 
 import Feather from '@expo/vector-icons/Feather';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   PixelRatio,
   Pressable,
@@ -104,6 +118,7 @@ import {
   completesIt,
   countdownOf,
   courtTagOf,
+  drawnTheSame,
   foldOf,
   headlineOf,
   inAcrossVersions,
@@ -172,7 +187,32 @@ const AT_REST = {
   between: BASE.between,
 } as const;
 
-export function GameCard({
+/** One card — drawn again only when what it shows has changed (see the module note). */
+export const GameCard = memo(CardDrawing, showsTheSame);
+
+/** Whether two renders of a card would draw the same thing — `GameCard`'s memo. */
+function showsTheSame(was: GameCardProps, now: GameCardProps): boolean {
+  return (
+    (was.card === now.card || drawnTheSame(was.card, now.card)) &&
+    was.seatsPerSide === now.seatsPerSide &&
+    was.today === now.today &&
+    was.onOpen === now.onOpen &&
+    was.onPerson === now.onPerson &&
+    was.onLeast === now.onLeast &&
+    sameFields(was.day, now.day) &&
+    sameFields(countdownOf(was.card.deadline, was.at), countdownOf(now.card.deadline, now.at))
+  );
+}
+
+/** Two small values of one shape — a day, a countdown — field by field. */
+function sameFields<T extends object>(a: T | undefined, b: T | undefined): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  const fields = Object.keys(a) as (keyof T)[];
+  return fields.length === Object.keys(b).length && fields.every((field) => a[field] === b[field]);
+}
+
+function CardDrawing({
   card,
   seatsPerSide,
   at,

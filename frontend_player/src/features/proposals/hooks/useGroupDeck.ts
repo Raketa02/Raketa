@@ -49,8 +49,9 @@ import {
   type QueryClient,
   type QueryKey,
 } from '@tanstack/react-query';
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
+import { paymentMethodQuery } from '@/features/payments/types';
 import { usePlayIntentOnItsWay } from '@/features/player_profile/types';
 import { isAppError, type AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -73,7 +74,9 @@ import { dealTheGroupNow } from '../use-cases/dealNow';
 import { readGroupDeck } from '../use-cases/deckReads';
 
 import { proposalKeys } from './proposalKeys';
+import { fillInQuery } from './useFillIn';
 import { useLatest } from './useLatest';
+import { liveYesesQuery } from './useLiveYeses';
 import { useUnseenCount } from './useSeenRows';
 
 function deckQuery(groupId: string, sport: Sport, kind: GameKind, enabled = true) {
@@ -83,6 +86,26 @@ function deckQuery(groupId: string, sport: Sport, kind: GameKind, enabled = true
       readGroupDeck(groupId, sport, kind, { signal }),
     enabled,
   };
+}
+
+/**
+ * **A group page's reads, set out beside the group's own** — the deck for the sport the page stands
+ * on and the kind its switch chose, Fill in, the live yeses You’re in counts, and the saved method a
+ * yes on the deck asks about (`usePaymentSetupNeeded`). The page draws its
+ * tabs only once the group has been read, so the tabs' reads used to set out after it, one round
+ * trip behind; while the group is on its way the page asks for them here, and the tabs find them
+ * read or on their way. Query's own prefetch: a read still fresh is not asked again, and one on its
+ * way is shared. A sport the group's read then corrects — an official group's own — is the tabs' to
+ * read; this one is not drawn.
+ */
+export function useReadGroupGamesAhead(groupId: string, sport: Sport, chosen: GameKind): void {
+  const client = useQueryClient();
+  useEffect(() => {
+    void client.prefetchQuery(deckQuery(groupId, sport, chosen));
+    void client.prefetchQuery(fillInQuery(groupId, sport));
+    void client.prefetchQuery(liveYesesQuery());
+    void client.prefetchQuery(paymentMethodQuery());
+  }, [client, groupId, sport, chosen]);
 }
 
 /**
