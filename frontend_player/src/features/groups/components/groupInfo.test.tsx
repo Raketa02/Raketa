@@ -741,6 +741,31 @@ describe('pulling the page', () => {
   });
 });
 
+// **The page's scroller stands alone in a view of its own** (2026-11-25; architecture.md's platform
+// rules). On an Android phone, as a bare sibling of the tab bar and the deck, the offset it scrolled
+// never reached what Fabric's `measure` reads, so every press it had scrolled in — Friends' *Send game
+// and pay* and *Pick a different court* — took a resting thumb's first move for a slide off the
+// button and dropped the press. That lives in the native shadow tree, beyond this renderer: what this
+// holds is the cure's shape, on Friends — which keeps no pull — and on a tab that pulls.
+describe('the page’s scroller', () => {
+  const alone = () => {
+    const frame = screen.getByTestId('group-page-scroll-frame');
+    expect(frame.children).toHaveLength(1);
+    expect(within(frame).getByTestId('group-page-body')).toBeTruthy();
+  };
+
+  it('stands alone in a view of its own, on Friends and on a tab that pulls', async () => {
+    await openPage({ members: KAZIMIERZ });
+    fireEvent.press(await tab('Friends'));
+    await tab('Friends, Competitive', true);
+    alone();
+
+    fireEvent.press(await tab('Fill in'));
+    await tab('Fill in', true);
+    alone();
+  });
+});
+
 // #529 F2: what another phone changed reached Info only by a pull. Opening it, and coming back to
 // it, are looks too (Q125).
 describe('Info re-reads', () => {

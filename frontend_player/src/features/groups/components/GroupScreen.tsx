@@ -627,39 +627,46 @@ export function GroupScreen({ groupId, inView, arrival, returning }: GroupScreen
                   </View>
                 ) : null}
                 {scrolled ? (
-                  <ScrollView
-                    testID="group-page-body"
-                    contentContainerStyle={[s.body, { paddingBottom: reach + theme.size.gutter }]}
-                    refreshControl={tab === 'friends' ? undefined : pullControl}
-                    // Under an open menu the page takes no touch: a press there only closes it.
-                    pointerEvents={menuOpen ? 'none' : 'auto'}
-                  >
-                    {/* Keyed by the tab: one with nothing read yet shimmers on its own (#875). */}
-                    <Reveal
-                      key={tab}
-                      testID="group-body-reveal"
-                      sizedBy="skeleton"
-                      finished={below.finished}
-                      landed={below.landed}
-                      skeleton={tab === 'fillIn' || tab === 'youreIn' ? <BoardSkeleton /> : null}
+                  // **The scroller stands alone in a view of its own.** On Android, as a bare
+                  // sibling of the tab bar and the deck, the offset it scrolled never reached what
+                  // Fabric's `measure` reads, and every press it had scrolled in dropped at a
+                  // resting thumb's first move — Friends' *Send game and pay* among them
+                  // (architecture.md's platform rules).
+                  <View testID="group-page-scroll-frame" style={s.fill}>
+                    <ScrollView
+                      testID="group-page-body"
+                      contentContainerStyle={[s.body, { paddingBottom: reach + theme.size.gutter }]}
+                      refreshControl={tab === 'friends' ? undefined : pullControl}
+                      // Under an open menu the page takes no touch: a press there only closes it.
+                      pointerEvents={menuOpen ? 'none' : 'auto'}
                     >
-                      {group === undefined ? (
-                        groupless(false)
-                      ) : toAdd.length > 0 ? (
-                        <AddSportCard sports={toAdd} groupId={groupId} tab={tab} />
-                      ) : needsALevel ? (
-                        <LevelDoor from={fromAGroup(groupId, tab)} />
-                      ) : sport === undefined ? null : (
-                        <TabBody
-                          tab={tab}
-                          group={group}
-                          sport={sport}
-                          inView={inView && arrived}
-                          friendsTab={friendsTab}
-                        />
-                      )}
-                    </Reveal>
-                  </ScrollView>
+                      {/* Keyed by the tab: one with nothing read yet shimmers on its own (#875). */}
+                      <Reveal
+                        key={tab}
+                        testID="group-body-reveal"
+                        sizedBy="skeleton"
+                        finished={below.finished}
+                        landed={below.landed}
+                        skeleton={tab === 'fillIn' || tab === 'youreIn' ? <BoardSkeleton /> : null}
+                      >
+                        {group === undefined ? (
+                          groupless(false)
+                        ) : toAdd.length > 0 ? (
+                          <AddSportCard sports={toAdd} groupId={groupId} tab={tab} />
+                        ) : needsALevel ? (
+                          <LevelDoor from={fromAGroup(groupId, tab)} />
+                        ) : sport === undefined ? null : (
+                          <TabBody
+                            tab={tab}
+                            group={group}
+                            sport={sport}
+                            inView={inView && arrived}
+                            friendsTab={friendsTab}
+                          />
+                        )}
+                      </Reveal>
+                    </ScrollView>
+                  </View>
                 ) : null}
                 {/* You’re in's alone (split override 1): the game it makes appears on that tab. It
                     comes in with the header and the tab bar (#875), never over a page still

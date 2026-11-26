@@ -1028,6 +1028,22 @@ sessions.
   a FOR YOU line's content fades and slides on React Native's own `Animated` on the native driver
   (`FoldingLine`). What measured harmless above the same rail: the line's border colour, a
   Reanimated style, and Reanimated's layout transitions on the line and its fold.
+- **The group page's scroller stands alone in a view of its own.** On Android (React Native
+  0.76.9, Reanimated 3.16.7), as a bare sibling of the page's tab bar and its deck, the vertical
+  `ScrollView` that draws Fill in, You’re in and Friends never had its offset reach what `measure`
+  reads: sampled every frame for a second after each scroll, a view at the top of its content
+  stayed where it stood unscrolled (measured 2026-11-25: _Pick a different court_ drawn at 672
+  measured at 866, the 194 points the page had scrolled). Every button the page had scrolled in
+  then dropped a resting thumb's press, as above — Friends' _Send game and pay_ and _Pick a
+  different court_ took several taps. Inside any view of its own — a plain `View`, one with
+  `collapsable={false}`, or the `RefreshControl` the pulling tabs wrap it in — the offset arrives
+  frame by frame and every press lands. Taking away did not cure it: the reveal round the
+  scroller's content, the tab bar's reveal, its Reanimated layout transition and its chevron, the
+  deck kept mounted, the tab menus, or mounting the scroller with the page rather than on a tab
+  switch. And Home's and Members' bare scrollers, beside their own headers, measured right. So
+  the rule is this page's, from evidence, not a law of every scroller — which part of the page
+  breaks the bare one is not known. When a press inside a scroller drops on Android, log
+  `measure` against the touch's `pageY` before suspecting anything else.
 
 ### The live surface
 
