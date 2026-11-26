@@ -367,6 +367,8 @@ export function FoldingLine({
       content: screen - 2 * theme.size.gutter - 2 * (BORDER + PAD),
       bleed: PAD,
       snaps: true,
+      // The line's card, a little wider than the page's (2026-11-26).
+      cardRatio: theme.size.lineCardRatio,
     }),
     [screen],
   );

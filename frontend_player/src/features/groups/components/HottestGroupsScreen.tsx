@@ -179,6 +179,7 @@ function Body({
         <HottestGroupCard
           group={item}
           width={width}
+          layout="page"
           onOpen={() => taps.openSheet(item.id)}
           onChip={(action) => taps.chip(item, action)}
         />

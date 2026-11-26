@@ -23,7 +23,7 @@
 
 import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { Dimensions, FlatList, StyleSheet, type TextStyle } from 'react-native';
+import { Dimensions, FlatList, StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
 
 import { FRIENDS_COPY, roundLabel } from '@/features/friends/types';
 import { GROUPS_COPY } from '@/features/groups/types';
@@ -55,7 +55,7 @@ import {
 import { PLAYERS_BAR } from '@/test-support/tabBarReach';
 
 import { DISCOVERY_COPY, nobodyToCompareIn } from './discoveryCopy';
-import { SAME_LEVEL_CARD_SKELETON } from './SameLevelCard';
+import { SAME_LEVEL_CARD_SKELETON, sameLevelCardHeight } from './SameLevelCard';
 
 const COPY = DISCOVERY_COPY.sameLevel;
 
@@ -283,6 +283,32 @@ describe('the line on Home', () => {
     expect(
       within(screen.getByTestId('same-level')).getByRole('link', { name: COPY.seeAllLabel }),
     ).toBeTruthy();
+  });
+
+  /**
+   * 2026-11-26: on the line the card is `lineCardRatio` of the line's content, a little wider than the
+   * page's 0,74 — the next one shows a little less — and keeps its shape: every vertical gap grows by
+   * the width's factor onto the 3pt grid, so it stands as much taller as wider, as near as the grid
+   * comes: within half a step.
+   */
+  it('draws each card at the line’s share, as much taller as it is wider, through its gaps', async () => {
+    levelServer();
+    await homeWithTheRow();
+
+    const { border, pad } = theme.size.foldingLine;
+    const content = Dimensions.get('window').width - 2 * theme.size.gutter - 2 * (border + pad);
+    const drawn = StyleSheet.flatten(
+      screen.getByTestId(`same-level-${ZOFIA.player_id}`).props.style as ViewStyle,
+    );
+    expect(drawn.width).toBeCloseTo(content * theme.size.lineCardRatio);
+    // 15 above and 6 under in See all: 24 and 9 on the line.
+    expect(drawn).toMatchObject({ paddingTop: theme.space.xxl, paddingBottom: theme.space.sm });
+
+    const grown = theme.size.lineCardRatio / theme.size.railCardRatio;
+    const list = sameLevelCardHeight(1, 'list');
+    expect(Math.abs(sameLevelCardHeight(1, 'row') - list * grown)).toBeLessThanOrEqual(
+      theme.space.xxs / 2,
+    );
   });
 
   it('is hidden while the read holds nobody — no level anywhere', async () => {
@@ -578,6 +604,12 @@ describe('See all', () => {
     expect(listed()).toEqual(ROW.map((one) => one.player_id));
     const list = within(screen.getByTestId('same-level-list'));
     expect(list.getAllByText('2 sports')).toHaveLength(2);
+    // The card's own gaps, not the line's grown ones (2026-11-26).
+    expect(
+      StyleSheet.flatten(
+        list.getByTestId(`same-level-${ZOFIA.player_id}`).props.style as ViewStyle,
+      ),
+    ).toMatchObject({ paddingTop: theme.space.lg, paddingBottom: theme.space.xs });
   });
 
   it('offers All and the sports served; a sport re-reads with it and re-compares everybody there', async () => {

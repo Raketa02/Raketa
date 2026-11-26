@@ -441,8 +441,8 @@ they derived went with the code.
 card's value moved whole since that card is gone), a tag top-left that lets touches through, a control
 top-right beside the tile's own press, and the words over the wash; its width and aspect are the
 caller's (`size.portraitTile`). Top 10's portrait (#805) is to draw it too. **`HomeRowRail`'s `tiles`**
-draws each at the peeking card's `railCardRatio` of the content width, a lone one too — 0,355 until
-2026-11-24 (`discovery.md`). **The sport pill is generic over its
+draws each at `portraitTile.railRatio` (0,70) of the content width, a lone one too — 0,355 until
+2026-11-24, the peeking card's 0,74 until 2026-11-26 (`discovery.md`). **The sport pill is generic over its
 choices** (`SportPillFrame<S>`, `SportPillWords<S>`) and may offer **`ALL_SPORTS`**, drawn with a
 two-toned dot; existing callers infer `Sport` and changed nothing. **`Button`** gained **`lead`**, a
 Feather plus or check before the words, never spoken, and **`settledSoft`**, mint's soft bed in its
@@ -600,3 +600,13 @@ show and hide.
   with `Platform.OS`. The harness takes it through `stubKeyboard` and `resetKeyboard`.
 - **`BottomSheet.test.tsx`** spies on `Keyboard.dismiss` through `jest.requireActual`, as
   `payments.test.ts` already did, because the fence reaches tests too.
+
+**A FOR YOU line's peeking card is a little wider than the page's** (2026-11-26; design-system 7.7,
+7.37, Part 16). **`RailBounds` carries `cardRatio`**, the share a peeking card takes of the bounds'
+content: the page's default is `railCardRatio` (0,74), and `FoldingLine` hands `lineCardRatio` (0,83),
+a token of its own though the request card's `requestCardRatio` is the same number by choice. So
+Groups heating up's, Players at your level's and Players with your vibe's cards are 290 of the line's
+349 on a 411pt phone, the next one's edge 65 (`discovery.md`, `groups.md`); To confirm's peeking rail,
+outside any line, keeps 0,74. The `tiles` rail reads `portraitTile.railRatio` (0,70) and the
+`numbered` rail `topTen.railRatio` (0,31, `rankings.md`), neither from the bounds. Walked in
+`HomeRow.test.tsx` and `FoldingLine.test.tsx`.

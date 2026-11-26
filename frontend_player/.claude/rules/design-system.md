@@ -63,8 +63,14 @@ as the splash's alone. Neither is a dark mode, and neither is a licence for anot
   `0.74 × content width` — never a fixed 362 or 268. Those are the prototype's phone picture.
   A **paging** rail takes the content width whole and draws 7.18's dots, because a card with
   no peek has no affordance until something else carries it — always, but for Needs your
-  answer's FRIENDS GAME, which draws them from two (`dotsAlone`, #817). The one wider peeking card is
-  Needs your answer's request tile, `requestCardRatio` (0.83, the `wide` rail, #816).
+  answer's FRIENDS GAME, which draws them from two (`dotsAlone`, #817). Two wider peeking cards,
+  0.83 each by choice and each its own token: Needs your answer's request tile
+  (`requestCardRatio`, the `wide` rail, #816), and **FOR YOU's line card** (`lineCardRatio`, what
+  an open line's `RailBounds` hands a peeking rail — Groups heating up, Players at your level,
+  Players with your vibe). **The line card keeps its shape**: its height is its drawing's, so it
+  grows through its own vertical gaps, each ×1.6 onto the grid (`layout: 'row'`), never by a
+  height worked out at runtime. New in Raketa's tile is `portraitTile.railRatio` (0.70), Top 10's
+  card `topTen.railRatio` (0.31).
 - **Two envelopes, one meaning — _someone asked you_.** The round friend button's is `volt`
   with a halo; Home's header's is `ink` Feather `mail` (10.3, #816). Never a third.
 - **Colour is picked by meaning:** coral = the one accent · mint = settled · amber =

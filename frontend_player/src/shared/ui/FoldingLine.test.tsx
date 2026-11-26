@@ -402,7 +402,10 @@ describe('the content, moving', () => {
 });
 
 describe('a rail inside it', () => {
-  /** Home refactor 6: the tile's share is of the line's content, the next one cut at its edge. */
+  /**
+   * Home refactor 6: the tile's share is of the line's content, the next one cut at its edge — the
+   * line's card, a little wider than the page's (2026-11-26).
+   */
   it('takes its shares of the line’s content, its first card at the line’s inset', () => {
     const lineContent =
       Dimensions.get('window').width -
@@ -417,14 +420,14 @@ describe('a rail inside it', () => {
     );
 
     expect(flat(screen.getByTestId('card-0').props.style).width).toBeCloseTo(
-      lineContent * theme.size.railCardRatio,
+      lineContent * theme.size.lineCardRatio,
     );
     const rail = screen.UNSAFE_getByType(ScrollView);
     expect(flat(rail.props.style)).toMatchObject({
       marginHorizontal: -theme.size.foldingLine.pad,
     });
     expect(rail.props.snapToInterval).toBeCloseTo(
-      lineContent * theme.size.railCardRatio + theme.space.sm,
+      lineContent * theme.size.lineCardRatio + theme.space.sm,
     );
   });
 

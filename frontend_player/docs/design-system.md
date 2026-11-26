@@ -2939,6 +2939,7 @@ carried an explainer's arrow, close and modality to a choice made with one tap.
 
 ```
 child width  0.74 × content width     ← the PEEKING rail; NOT 268pt, see Part 0.2
+             0.83 × the line's content ← the PEEKING rail in an open FOR YOU line (lineCardRatio)
 child width  1.00 × content width     ← the PAGING rail; the dots are 7.18
 scroller     Part 8's Strip                    ← the snap, the gap 9 and the bleed
 card         marginBottom 0, flex 1, column
@@ -2973,15 +2974,17 @@ bottom **so footers align across cards of differing height** — which is the wh
 can hold a card with a 40pt figure beside one with none.
 
 **A third, for portrait tiles** ([#801](https://github.com/Raketa02/Raketa/issues/801), home rows
-17): New in Raketa's tiles are **the peeking card's width, `size.railCardRatio` (0,74) of the
-content** — one whole and the next peeking, as Players at your level's cards stand on the line above
-([Part 16](#part-16--amendments-after-locking) 2026-11-24; it was 0,355, two whole and the third cut).
-At 11:8 a tile stands taller than that row's cards, which are as tall as their content. **A lone tile
-keeps its width** (a portrait the width of the screen is a poster), and the rail scrolls freely with
-no dots ([7.31](#731-the-portrait-tile)).
+17): New in Raketa's tiles are **`size.portraitTile.railRatio` (0,70) of the content** — one whole
+and the next peeking, a little narrower than the line cards either side
+([Part 16](#part-16--amendments-after-locking) 2026-11-26; it was 0,355, two whole and the third cut,
+then the peeking card's 0,74 from 2026-11-24 — at the line card's 0,83 a portrait would be a poster).
+At 11:8 a tile stands taller than those lines' cards, which are as tall as their content. **A lone
+tile keeps its width** (a portrait the width of the screen is a poster), and the rail scrolls freely
+with no dots ([7.31](#731-the-portrait-tile)).
 
 **A fourth, numbered** ([#805](https://github.com/Raketa02/Raketa/issues/805), home rows 25–25.3):
-Top 10's cards are `size.topTen.railRatio` (0,29) of the content width — the width the rail hands is
+Top 10's cards are `size.topTen.railRatio` (0,31 since 2026-11-26, from 0,29) of the content width,
+their 1,48 kept — the width the rail hands is
 the card's, and the numeral standing beside each is the row's own, so an item is wider than the width
 handed and _10_'s wider still. **A lone card keeps its width**, the rail scrolls freely with no dots,
 and the cut at the right edge is the affordance ([7.36](#736-top-10-the-numbered-card-and-the-rows-sport-pill)).
@@ -3010,7 +3013,16 @@ bleed and the widths rather than copying them. **The heading's line holds the he
 ([7.37](#737-for-you-the-folding-line-and-its-footer)). **A rail in an open FOR YOU line takes its
 bounds from the line** (`RailBounds`): every geometry's share is of the line's content, it bleeds to
 the line's inner edge, and it snaps to its cards' edges; Top 10's rail steps by an item, its numeral
-beside its card (`itemWidth`).
+beside its card (`itemWidth`). **A peeking card there is the line card, `size.lineCardRatio` (0,83)**
+([Part 16](#part-16--amendments-after-locking) 2026-11-26) — the line's `RailBounds.cardRatio`, a
+little wider than the page's 0,74, so the card on screen is a little bigger and the next one shows a
+little less (290 of 349 and 65 on a 411pt phone, where 0,74 left 258 and 97). The request card's
+share by choice, its own token. **It keeps its shape**: a card's height is its drawing's, so Groups
+heating up's card, Players at your level's and Players with your vibe's tile each draw two sets of
+vertical gaps — their own in their other place, and on the line every one ×1,6 onto the 3pt grid,
+within half a step of growing as much as the width did ([7.30](#730-homes-hottest-groups-the-card-the-group-sheet-and-the-withdraw-sheet),
+[7.34](#734-same-competitive-level-the-card-and-the-comparison-sheet), [7.35](#735-same-vibe-the-tinted-tile-and-the-vibe-sheet)).
+The sides' insets, the words and the shapes keep their sizes.
 
 ## 7.8 The confidence ring
 
@@ -4483,7 +4495,11 @@ queued, as it arrives.
 
 ```
 card        5.1's card, its padding moved inside so the band runs to its edges · overflow hidden ·
-            a peeking rail card (7.7, 0,74 × content) on Home's row frame (HomeRow)
+            the line card (7.7, lineCardRatio 0,83 × the line's content) in FOR YOU's line, the
+            content width on the Groups heating up page
+gaps        the page's: 9 shield → name · 6 name → figures · 3 number → words · 9 figures → foot ·
+            12 under the foot — on the line each ×1,6 onto the grid: 15 · 9 · 6 · 15 · 18
+            (layout 'row'), so the card stands as much taller as it stands wider
 band        size.hottest.band (39) · the group's MONOGRAM_HUES colour · diagonal stripes
             size.hottest.stripe (9) wide, as far apart, in groupBandStripe (white 0,12)
 shield      7.20's shield, size.hottest.shieldTop (15) below the card's top, md from its left
@@ -4539,8 +4555,8 @@ card's height without the bar and the line, against 5.1.
 ## 7.31 The portrait tile
 
 ```
-tile        a width and an aspect, the caller's: Home's row 0,74 × content at 11:8
-            (size.railCardRatio / size.portraitTile.railAspect), See all's column at 9:8 (.gridAspect)
+tile        a width and an aspect, the caller's: Home's row 0,70 × the line's content at 11:8
+            (size.portraitTile.railRatio / .railAspect), See all's column at 9:8 (.gridAspect)
             radius.cardDark (15) · overflow hidden · night under the face while it loads
 face        PlayerPhoto's media, edge to edge — the photograph, or the poster
 wash        a linear ramp in the tile's box: nothing at 40 % of the height → portraitWash
@@ -4629,7 +4645,10 @@ device**: either paint, the names' shrink at a Home row card's width.
 
 ```
 card        5.2's dark card — radius.cardDark, lg padding (xs at the foot) — on levelCardGround,
-            no shadow · a peeking rail card on Home's row (7.7), the content width in See all
+            no shadow · the line card on Home's line (7.7, lineCardRatio), the content width in See all
+gaps        See all's: 15 above · 3 face → name → level · 12 pairing → bar · 6 bar → foot · 6 under,
+            the middle's 3 % → EVEN and 6 → the sport — on the line each ×1,6 onto the grid:
+            24 · 6 · 18 · 9 · 9, the middle's 6 and 9 (layout 'row'); the sides lg in both
 pairing     a row: the reader | the % | them · each side a face (size.sameLevel.face, 44,
             PlayerPhoto's face box) over h2 surface "You" / the nickname and num.s tabular
             onDarkTiny level · the middle: the % at num.xl tabular in the game cards' ink by
@@ -4668,7 +4687,10 @@ sheet's blocks keep the gap. **Not seen on a device**: the foot with _2 sports �
 
 ```
 tile        5.1's light card — surface, a 1pt line border, radius.card (13), clipped, no shadow ·
-            a peeking rail card on Home's row (7.7), a column of two in See all
+            the line card on Home's line (7.7, lineCardRatio), a column of two in See all
+gaps        the grid's: 12 above the head · 9 under it · 6 between the chips' lines — on the line
+            each ×1,6 onto the grid: 21 · 15 · 9 (layout 'row'), the three lines' room with them;
+            the sides md and the chips xs apart along a line in both
 tint        a linear wash from the top-left corner: the player's poster hue (courtPosterFor, its
             light stop) at TINTED_TILE.tint (0,12) → nothing at TINTED_TILE.until (0,7) of the
             diagonal · hidden from a listener
@@ -4713,7 +4735,7 @@ numeral     type.numeral (Archivo 800, 108, tracked −16) as SVG text, 1–10 �
             (2 × outline = 3), then the fill — numeralTop → numeralFoot down the figures, volt
             on the reader's own · its box worked out from Archivo's tabular figures (0,625 em
             each, 0,699 em over the baseline) · hidden from a listener
-card        7.31's portrait tile at size.topTen.railRatio (0,29) of the content width and
+card        7.31's portrait tile at size.topTen.railRatio (0,31) of the content width and
             size.topTen.aspect (1,48) · marginLeft −size.topTen.overlap (24) over the numeral ·
             no tag, no corner
 words       the nickname h2 surface, "You" on the reader's own · the level num.tiny tabular
@@ -4797,8 +4819,9 @@ open        border ink · shadow.openLine (4.3's seventh) · the chevron turned 
             space.xs under a footer or the inset under a rail with none
 rail        7.7's, in the line's bounds: its shares are of the line's content (the column less
             the border and the inset each side), bleeding to the line's inner edge, the first
-            card at the inset · every geometry snaps to its cards' edges · clipped by the card's
-            radius
+            card at the inset · a peeking card is the line card, size.lineCardRatio (0,83), its
+            gaps grown ×1,6 to keep its shape (7.7) · every geometry snaps to its cards' edges ·
+            clipped by the card's radius
 footer      FoldingLineFooter: a row minTouch tall · an optional control at its left (Top 10's
             switcher, #821) · the link at its right, taking the room before it (marginLeft
             auto): the words rlValue ink, a hidden ›, a link 44 tall, pressed opacity .7 · a
@@ -6926,6 +6949,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-11-25 | [10.2](#102-the-tab-bar) · [1.2](#12-one-accent-used-sparingly) · `TabBar.tsx` · `theme.ts` `color.tabIdle` `size.tabBar.marker` `size.tabBar.icon` · `CountBadge.tsx` `over`                                                                                                                                                                                                            | Feather at 16, the same glyph in both states, selection in tone alone: `ink` selected, `muted` resting (ADR-0135). Play a raised `coralInk` disc with a white `zap`, ringed in `coral` while lit; the badge risen 4 above a 16pt icon box                                                                                                                    | **Ionicons on the bar, and selection by marker, shape and tone** (ADR-0210 §4, §5, superseding ADR-0135 for the bar): `home`/`home-outline`, `flash` in both states, `person`/`person-outline`, and the Administrator’s `people`/`people-outline`, at 18 (`size.tabBar.icon`). Idle icon and label in `color.tabIdle`, `ink` at .62; the lit icon `coral` and label `coralInk`, on **the selection marker**, an opaque `coralSoft` capsule 75 × 42 (`size.tabBar.marker`) centred in the lit column, standing still until #884. Layers: glass → marker → icons and labels → badge; every column dims to .7 under a finger and the marker ignores it. 1.2 gains its third line, _a `coralSoft` fill is where you are, on the bar_, and the list stays at six. Home’s badge stays, risen 4 above the 18pt box (`CountBadge`’s `over`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | PRD #878: the tab you were on was hard to see, and Play’s disc read as a button to press while you were in Play. Feather has no filled glyphs, and Ionicons ships in the package already declared. `coralInk` for the label because `coral` on `coralSoft` is 3.38:1; opaque because coral at 13% goes murky over a dark card. 18 is the largest icon that keeps icon + 3 + the capped label, 40.2, inside the marker’s 42                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 2026-11-25 | [4.3](#43-elevation) · [6.6](#66-press-states) · `theme.ts` `shadow.dock` · `.claude/rules/design-system.md` · `CLAUDE.md`                                                                                                                                                                                                                                                               | The ⚡Play disc: `size.fab` 30, `radius.fab` 11, `size.tabBar.bolt` 15, `ringGap` and `ringStroke` 2, and `shadow.fab`, the one tinted shadow, coral on iOS. The disc was the one column that did not dim, brightening to `coral` instead                                                                                                                    | **Retired with the disc** (ADR-0210 §6): `size.fab`, `radius.fab`, `size.tabBar.bolt`, `ringGap`, `ringStroke` and `shadow.fab`. **`shadow.dock`** takes `fab`’s slot with the deck card’s values (`#0B2B33`, 0/7, radius 20, .12, `elevation` 8), so the inventory stays at seven and no shadow is tinted; wherever the dock draws the glass (the iPhone), it is shadowed by `glass.shadow`, the same values as `boxShadow`. The agent rules file drops the disc’s tinted shadow and names the marker under the active-tab entry; the player app’s `CLAUDE.md` gains Ionicons on the bar                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Play is one of three equal places in the product owner’s mocks, so its disc, ring and tint go. The deck card’s is the faintest shadow for things that float over the page. `elevation` draws cleanly on the opaque Android dock (the spike’s T3); a translucent dock gives neither platform’s own shadow an opaque fill, so it takes `boxShadow`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-11-25 | [10.2](#102-the-tab-bar) · [1.5](#15-nothing-animates-that-does-not-have-to) · [Part 13](#part-13--accessibility) · `TabBar.tsx` · `tabMarkerMotion.ts` · `theme.ts` `motion.tabMarker` · `CLAUDE.md`                                                                                                                                                                                    | The selection marker stood still (#883): on any change of the lit tab it was simply under the new one, and the icon and label switched at once. No spring anywhere in the app; 1.5’s list ended at the skeleton’s sweep; `CLAUDE.md` said never to scale a layer to move things                                                                              | **The marker travels** (ADR-0210 §8): on every change of the lit tab after the dock’s first draw it slides to the new one on `motion.tabMarker`, a 460 ms spring at damping ratio 0.75 — the app’s first, and 1.5’s new entry — overshooting by 2.8 % of its trip and settling. It stretches with its own motion: wide and flat with its speed while it speeds up, the widening turned over into a recoil as it brakes, calibrated so Home → You is 1.30 × 0.84 a third of the way and 0.94 × 1.06 near 70 %, half that across one column, exactly 1 × 1 at rest and never past 1.30. A press mid-flight starts a new spring from the marker’s place and speed, carrying its shape. Each column draws its icon and label twice, idle and selected, cross-faded: the new tab’s selected layer over 300 ms on `easeDecel` from 140, the old tab idle at once. One clock on the UI thread; only `transform` and `opacity` move; the stretch is a scale on a layer that holds no word or glyph, the one exception `CLAUDE.md`’s rule now names. Nothing moves on the dock’s first draw, on its return after the chat or the keyboard, or on a press of the lit tab; under reduced motion the marker is placed and the colours switch at once, as Part 13 now says. The spring is `tabMarkerMotion.ts`’s own, settled within a thousandth of its trip by 460 ms                                                                                                                                                                                                      | PRD #878 and the brief: _the coral pill doesn’t disappear and reappear — it travels_, on _a spring curve, not a straight ease-out_; a spring is also what lets a press mid-flight turn the marker from where it is. The stretch follows the motion rather than keyframes on the trip, which could not meet both the brief’s fixed numbers and its far jump stretching more, and which a retarget would restart, snapping the shape. Speed in columns, so a wide phone stretches no more than a narrow one. Its own spring rather than `withSpring`, which takes the duration and damping ratio but keeps to itself the speed and braking the stretch is drawn from. A cross-fade of two layers, because a colour animated per frame is neither transform nor opacity. The feel is the phone walk’s (#885)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-11-26 | [7.7](#77-the-card-rail) · 7.30 · 7.31 · 7.34 · 7.35 · 7.36 · 7.37 · Appendix B · `theme.ts` `size.lineCardRatio` `size.portraitTile.railRatio` `size.topTen.railRatio` · `HomeRow.tsx` `RailBounds.cardRatio` · `HottestGroupCard` `SameLevelCard` `SameVibeTile` `SharedTags` (`layout`)                                                                                               | A peeking card in a FOR YOU line was `railCardRatio` (0,74) of the line's content, the next one's edge a good third of a card (97 of 349 on a 411pt phone); New in Raketa's tiles the same 0,74; Top 10's cards `topTen.railRatio` 0,29                                                                                                                      | **FOR YOU's peeking cards are the line card, `size.lineCardRatio` (0,83) of the line's content** — Groups heating up's, Players at your level's and Players with your vibe's: 290 of 349 on a 411pt phone, the next one's edge 65. The line hands it in its bounds (`RailBounds.cardRatio`); the page's peeking rail, To confirm's, keeps 0,74. **Each keeps its shape**: its height is its drawing's, so it draws two sets of vertical gaps (`layout`) — its other place's as they were, and on the line every one ×1,6 onto the 3pt grid: Groups 9·6·3·9·12 → 15·9·6·15·18 (188 → 212), the level card 15·3·3·12·6·6 → 24·6·6·18·9·9 and its middle's 3·6 → 6·9 (226 → 253), the vibe tile 12·9·6·6 → 21·15·9·9 (182 → 203) — each within half a step of the width's factor. The sides' insets, the words, the faces, the bar and the chips keep their sizes; a lone card takes the content width at the grown height. **New in Raketa's tiles are `portraitTile.railRatio` (0,70)**, their 11:8 kept (244 × 336); **Top 10's cards 0,31**, their 1,48 kept (108 × 160, the numeral its 108). See all, the Groups heating up page and the request card are untouched                                                                                                                                                                                                                                                                                                                                                                                          | Asked for by the product owner: the card on screen a little bigger, the next one seen a little less, keeping its shape so the room inside grows with it rather than the card flattening. 0,83 is the wide peeking share the theme already holds — the request card's, measured off home refactor 2 — but its own token, so neither moves the other. The gaps grow by one factor so tight pairs stay the tightest and nothing comes apart; on the grid each card lands within 1,5pt of the exact shape, and no height is worked out at runtime. A portrait at 0,83 would stand 399 tall, a poster, so New in Raketa's tile stepped down rather than up and the 2026-11-24 tie to the level cards ends. Top 10 grew no further than 0,31: past it the third item's edge is gone on a 360pt phone                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 # Part 17 — What the reset removed
 
@@ -6987,7 +7011,8 @@ TYPE        Archivo everywhere · IBM Plex Mono for every number
 SPACE       a 3pt grid · 9 between cards · 15 at the gutter
             content width = screen − 30 · rail card = 0.74 × content, or 1.0 with dots
             request tile = 0.83 × content in Needs your answer, buttons level at the foot
-            portrait tile = 0.74 × content on a Home row (the rail card's), 11:8
+            line card = 0.83 × the line's content in FOR YOU, its gaps ×1,6 — its shape kept
+            portrait tile = 0.70 × the line's content on a Home row, 11:8 · Top 10's card 0.31
             photo carousel card = 0.5 × content, 4:5
 RADIUS      bigger surface, rounder · dark card 15, light card 13
 TOUCH       44 × 44pt minimum reachable · hitSlop when the visual is smaller · two exceptions: 6.8's hour cell, a face behind another on Home's ask card (26 across)

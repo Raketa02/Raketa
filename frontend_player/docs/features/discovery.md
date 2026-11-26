@@ -265,6 +265,25 @@ is untouched. `portraitTile.railRatio` is gone, so the two lines read one ratio 
 apart. Walked in `HomeRow.test.tsx`. **Not seen on a device** — a look is owed: the tile at its new
 size under Players at your level.
 
+**FOR YOU's cards stand a little bigger, and New in Raketa's tiles a little smaller** (2026-11-26;
+design-system 7.7, 7.31, 7.34, 7.35, Part 16). The card on screen was 0,74 of the line's content and
+the next one's edge showed a good third of a card; now **Players at your level's cards and Players with
+your vibe's tiles are `lineCardRatio` (0,83) of it** — 290 of 349 on a 411pt phone, the next one's
+edge 65 where it was 97 — with Groups heating up's (`groups.md`). A rail in an open line takes the share
+from the line (`RailBounds.cardRatio`); the page's peeking rail keeps 0,74. **Each keeps its shape**:
+its height is its drawing's, so every vertical gap grows by the width's factor (×1,6) onto the 3pt
+grid — the card 15·3·3·12·6·6 to 24·6·6·18·9·9 down it, its middle's 3·6 to 6·9 (226 → 253); the
+tile's 12·9·6·6 to 21·15·9·9 (182 → 203), its chips' lines 9 apart, their room kept to match
+(`sharedTagsRoom`) — each within half a grid step of growing as much as the width did. The words, the
+faces, the bar, the chips and the sides' insets are their own size; a lone card takes the content
+width at the same grown height. **The places keep theirs**: `layout` says which, and See all's list and
+grid draw the gaps they had. **New in Raketa's tiles step down to `portraitTile.railRatio` (0,70)**,
+their 11:8 kept (244 × 336 on a 411pt phone): at 0,83 a portrait would have stood 399 tall, a poster,
+so the 2026-11-24 tie to the level cards ends — one ratio a geometry again. Walked in
+`sameLevel.test.tsx`, `sameVibe.test.tsx` (each card's width, its gaps on the line and in See all, its
+height grown by the width's factor), `HomeRow.test.tsx` and `FoldingLine.test.tsx`. **Not seen on a
+device** — a look is owed on the A32: the three lines' cards and the tiles between them.
+
 **See all shimmers its own grid while its first page is read** (2026-11-24,
 [#872](https://github.com/Raketa02/Raketa/issues/872); PRD #867, the loading shimmer log §10; design
 system 5.6). The spinner at the top of an empty body is gone from all three. Under the real header,

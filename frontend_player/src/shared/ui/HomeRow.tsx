@@ -23,19 +23,21 @@
  * **`HomeRowRail`** is the rail, in 7.7's geometries over Part 8's Strip — neither restated here: the
  * gap 9, the bleed through a negative margin against the gutter.
  *
- * - **Peeking** (the default): a card is `railCardRatio` of the content width, so the next one's
- *   edge is the affordance; **a lone card takes the content width**, since there is nothing to
- *   peek at. It scrolls freely unless the row asks it to **snap** a card at a time.
+ * - **Peeking** (the default): a card is `railCardRatio` of the content width — **`lineCardRatio`
+ *   in an open FOR YOU line** (2026-11-26), a little wider — so the next one's edge is the
+ *   affordance; **a lone card takes the content width**, since there is nothing to peek at. It
+ *   scrolls freely unless the row asks it to **snap** a card at a time.
  * - **Wide** (#816): the peeking rail at the request card's wider share, `requestCardRatio` — a
  *   friend request and an ask for a level in Needs your answer. A lone card takes the content
  *   width, as on the peeking rail. It scrolls freely.
  * - **Paging**: every card the content width, snapping one at a time, and 7.18's dots under it,
  *   tracking the scroll — a paging rail takes the dots always, but for Needs your answer's *FRIENDS
  *   GAME*, which draws them from two (`dotsAlone`, #817).
- * - **Tiles** (#801; 7.31): New in Raketa's portrait tiles, each the peeking card's
- *   `railCardRatio` of the content width since 2026-11-24 — one whole and the next peeking, as
- *   Players at your level's cards stand on the line above. **A lone tile keeps its width**: a
- *   portrait the width of the screen would be a poster, not a tile. It scrolls freely.
+ * - **Tiles** (#801; 7.31): New in Raketa's portrait tiles, each `portraitTile.railRatio` of the
+ *   content width since 2026-11-26 — one whole and the next peeking, a little narrower than the
+ *   line cards either side, since a portrait as wide as they are would stand as a poster. **A lone
+ *   tile keeps its width**: a portrait the width of the screen would be a poster, not a tile. It
+ *   scrolls freely.
  * - **Numbered** (#805; 7.36): Top 10's cards, each `topTen.railRatio` of the content width — the
  *   width handed is the card's, and the numeral the row stands beside it is the row's own, so the
  *   rail's items are wider than the width it hands: the row says how wide (`itemWidth`). A lone card
@@ -47,7 +49,8 @@
  *
  * **The content is the line's, not the page's** (#820): a rail in an open FOR YOU line takes its
  * shares of the line's content width and bleeds to the line's inner edge, its first card at the
- * line's inset — what `RailBounds` says, which the line provides. Outside a line it is the page's:
+ * line's inset — what `RailBounds` says, which the line provides, a peeking card's wider share with
+ * it (`lineCardRatio`, 2026-11-26). Outside a line it is the page's:
  * the screen less the gutters, bleeding through the gutter. **There every rail snaps** to its cards'
  * edges (the brief: *the tiles swipe sideways and settle on tile edges*).
  *
@@ -141,6 +144,11 @@ export interface RailBounds {
   readonly bleed: number;
   /** **Every card snaps** — a rail in a folding line settles on its cards' edges. */
   readonly snaps: boolean;
+  /**
+   * **A peeking card's share of `content`** — the page's `railCardRatio`, a folding line's wider
+   * `lineCardRatio` (2026-11-26). The other geometries keep their own.
+   */
+  readonly cardRatio: number;
 }
 
 export const RailBoundsContext = createContext<RailBounds | undefined>(undefined);
@@ -203,22 +211,23 @@ export function HomeRowRail<Card>({
     content: screen - 2 * theme.size.gutter,
     bleed: theme.size.gutter,
     snaps: false,
+    cardRatio: theme.size.railCardRatio,
   };
   /** Which card is on screen — the dots' only input, on a paging rail. */
   const [current, setCurrent] = useState(0);
 
   const paging = geometry === 'paging';
-  const { content, bleed } = bounds;
+  const { content, bleed, cardRatio } = bounds;
   const cardWidth =
     geometry === 'tiles'
-      ? content * theme.size.railCardRatio
+      ? content * theme.size.portraitTile.railRatio
       : geometry === 'numbered'
         ? content * theme.size.topTen.railRatio
         : paging || cards.length === 1
           ? content
           : geometry === 'wide'
             ? content * theme.size.requestCardRatio
-            : content * theme.size.railCardRatio;
+            : content * cardRatio;
   const step = (itemWidth?.(cardWidth) ?? cardWidth) + STRIP_GAP;
   const snaps = paging || snap || bounds.snaps;
   const watching = onScreen !== undefined;

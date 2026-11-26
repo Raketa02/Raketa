@@ -51,6 +51,7 @@ import {
 
 import { GROUPS_COPY } from './groupsCopy';
 import { hottestChipLabel } from './groupsPresentation';
+import { hottestCardHeight } from './HottestGroupCard';
 import { SportDots } from './SportDots';
 
 const HOT = GROUPS_COPY.hottest;
@@ -371,6 +372,33 @@ describe('the card', () => {
     expect(card(OGRODY).props.accessibilityLabel).toBe(
       'Ogrody 33 Club, hottest, 14 games this week, 11 players',
     );
+  });
+
+  /**
+   * 2026-11-26: on the line the card is `lineCardRatio` of the line's content, a little wider than the
+   * page's 0,74, and keeps its shape — every vertical gap grows by the width's factor onto the 3pt
+   * grid, so it stands as much taller as it stands wider, as near as the grid comes: within half a
+   * step. The page keeps its own.
+   */
+  it('stands as much taller on the line as it stands wider, through its gaps alone', async () => {
+    hottestServer([OGRODY, KAZIMIERZ, PODGORZE]);
+    await launchSignedIn();
+    await openLine(HOT.line);
+
+    const gapOf = (testID: string) =>
+      StyleSheet.flatten(
+        within(screen.getByTestId(`hottest-${OGRODY.id}`)).getByTestId(testID).props
+          .style as ViewStyle,
+      ).gap;
+    // A number over its words, 3 apart on the page: 6 on the line.
+    expect(gapOf('hottest-games')).toBe(theme.space.xs);
+
+    const grown = theme.size.lineCardRatio / theme.size.railCardRatio;
+    const page = hottestCardHeight(1, 'page');
+    expect(Math.abs(hottestCardHeight(1, 'row') - page * grown)).toBeLessThanOrEqual(
+      theme.space.xxs / 2,
+    );
+    expect(hottestCardHeight(1, 'row')).toBeGreaterThan(page);
   });
 
   /** ADR-0205 §5, Q22: the heat bar, *+N this month* and the sport line leave the card. */

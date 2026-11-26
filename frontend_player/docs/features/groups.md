@@ -1061,3 +1061,15 @@ the deck's block at the ceiling), `groupFillIn.test.tsx`
 moment ago, opened from the list) and `groupPage.test.ts` (the parts' rule). **Not seen on a
 device** — a look is owed (the phone walk, #877): the shapes' sizes against the page, the fade, and
 the header's tile and name taking the circle's and the bar's place.
+
+**Groups heating up's card stands a little bigger on Home** (2026-11-26; design-system 7.7, 7.30,
+Part 16). On the line it is `lineCardRatio` (0,83) of the line's content, where it was 0,74 — 290 of
+349 on a 411pt phone, the next card's edge 65 where it was 97 — as Players at your level's and Players
+with your vibe's are (`discovery.md`). **It keeps its shape**: its height is its drawing's, so every
+vertical gap grows by the width's factor (×1,6) onto the 3pt grid — 9·6·3·9·12 to 15·9·6·15·18 from the
+shield to the foot (188 → 212), within half a grid step of growing as much as the width did. The band,
+the shield, the words, the faces, the chip and the sides' inset are their own size. **The page keeps
+its own** (`layout`: `'row'` on the line, `'page'` on the Groups heating up page), and so does its
+skeleton (`hottestCardHeight`, the page's by default). Walked in `hottestGroups.test.tsx` (the line's
+gaps, the height grown by the width's factor) and `hottestGroupsPage.test.tsx` (the page's gaps).
+**Not seen on a device** — a look is owed on the A32.

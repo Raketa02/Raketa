@@ -26,6 +26,12 @@
  *
  * **Everything is the server's**: the tag, the figures, the faces.
  *
+ * **Two places, two sets of gaps** (`layout`, 2026-11-26). On the Groups heating up page the card is
+ * drawn at its own gaps. On Home's line it is `lineCardRatio` of the line's content, wider than the
+ * page's 0,74, and **keeps its shape**: every vertical gap grows by the same factor onto the 3pt grid
+ * (`GAPS`) — 9·6·3·9·12 to 15·9·6·15·18 — so its height grows as its width did, the words and shapes
+ * their own size and the sides their own inset.
+ *
  * **While Groups heating up's first page is read, the card stands as its skeleton**
  * (`HottestGroupCardSkeleton`, [#872](https://github.com/Raketa02/Raketa/issues/872)): 5.1's white
  * card is always there, so it is drawn as itself, at the card's own height, with the shapes every
@@ -55,17 +61,23 @@ import { gamesThisWeekWords, hottestCardLabel, hottestChipLabel } from './groups
 const HOT = GROUPS_COPY.hottest;
 const SIZE = theme.size.hottest;
 
+/** **Where the card stands** — Home's line, or the Groups heating up page. */
+export type HottestCardLayout = 'row' | 'page';
+
 export interface HottestGroupCardProps {
   readonly group: HottestGroup;
   readonly width: number;
+  /** Home's line draws the line's gaps; the page, the card's own. */
+  readonly layout: HottestCardLayout;
   /** Anywhere but the chip: the group sheet. */
   readonly onOpen: () => void;
   /** The chip, by what it offers: join, ask, the withdraw sheet, or the group's page. */
   readonly onChip: (action: GroupAction) => void;
 }
 
-export function HottestGroupCard({ group, width, onOpen, onChip }: HottestGroupCardProps) {
+export function HottestGroupCard({ group, width, layout, onOpen, onChip }: HottestGroupCardProps) {
   const [pressed, setPressed] = useState(false);
+  const room = ROOM[layout];
   const opens = {
     onPress: onOpen,
     onPressIn: () => setPressed(true),
@@ -87,7 +99,7 @@ export function HottestGroupCard({ group, width, onOpen, onChip }: HottestGroupC
           <GroupMonogram monogram={group.monogram} size="shield" shape="shield" />
         </View>
 
-        <View style={s.body}>
+        <View style={[s.body, room.body]}>
           <Text style={s.name} numberOfLines={1}>
             {group.name}
           </Text>
@@ -95,14 +107,21 @@ export function HottestGroupCard({ group, width, onOpen, onChip }: HottestGroupC
             <Figure
               value={group.gamesThisWeek}
               words={gamesThisWeekWords(group.gamesThisWeek)}
+              layout={layout}
               testID="hottest-games"
             />
-            <Figure value={group.memberCount} words={HOT.players} end testID="hottest-players" />
+            <Figure
+              value={group.memberCount}
+              words={HOT.players}
+              end
+              layout={layout}
+              testID="hottest-players"
+            />
           </View>
         </View>
       </Pressable>
 
-      <View style={s.foot}>
+      <View style={[s.foot, room.foot]}>
         <Pressable
           {...opens}
           style={s.faces}
@@ -154,15 +173,17 @@ function Figure({
   value,
   words,
   end = false,
+  layout,
   testID,
 }: {
   readonly value: number;
   readonly words: string;
   readonly end?: boolean;
+  readonly layout: HottestCardLayout;
   readonly testID: string;
 }) {
   return (
-    <View style={[s.figure, end ? s.figureEnd : undefined]} testID={testID}>
+    <View style={[s.figure, ROOM[layout].figure, end ? s.figureEnd : undefined]} testID={testID}>
       <Text style={s.value}>{value}</Text>
       <Text style={s.words} numberOfLines={1}>
         {words}
@@ -235,15 +256,15 @@ export function HottestGroupCardSkeleton({
       <View style={s.skeletonShield}>
         <SkeletonBlock style={s.skeletonShieldTile} />
       </View>
-      <View style={s.body}>
+      <View style={[s.body, ROOM.page.body]}>
         <SkeletonLine role={theme.type.h2} width="50%" />
         <View style={s.figures}>
           {/* Two figures each, as most cards draw. Worked out at the call. */}
-          <View style={s.figure}>
+          <View style={[s.figure, ROOM.page.figure]}>
             <SkeletonWords role={FIGURE} words="14" />
             <SkeletonWords role={theme.type.tiny} words={gamesThisWeekWords(14)} />
           </View>
-          <View style={[s.figure, s.figureEnd]}>
+          <View style={[s.figure, ROOM.page.figure, s.figureEnd]}>
             <SkeletonWords role={FIGURE} words="11" style={s.skeletonEnd} />
             <SkeletonWords role={theme.type.tiny} words={HOT.players} style={s.skeletonEnd} />
           </View>
@@ -254,31 +275,68 @@ export function HottestGroupCardSkeleton({
 }
 
 /**
- * **The card's height**, read off its drawing: its border; the band; the body under it — the
- * shield's overhang and `sm` (`BODY_TOP`), the name, `xs`, and the figures, each number over its
- * words `xxs` apart; and the foot — `sm` above, `md` below, and between them the faces' reach, a
- * button tall, the chip beside them a step shorter. The words' lines grow with the phone's text size
- * (`fontScale`), as the OS grows them.
+ * **The card's height**, read off its drawing in its place (`layout`, the page's by default): its
+ * border; the band; the body under it — the shield's overhang and a gap (`bodyTop`), the name, a gap,
+ * and the figures, each number over its words a gap apart; and the foot — a gap above and one below,
+ * and between them the faces' reach, a button tall, the chip beside them a step shorter. The words'
+ * lines grow with the phone's text size (`fontScale`), as the OS grows them.
  */
-export function hottestCardHeight(fontScale: number): number {
-  const { space, type, num, size } = theme;
+export function hottestCardHeight(fontScale: number, layout: HottestCardLayout = 'page'): number {
+  const { type, num, size } = theme;
+  const gaps = GAPS[layout];
   return (
     2 * CARD_BORDER +
     SIZE.band +
-    BODY_TOP +
+    bodyTop(layout) +
     type.h2.lineHeight * fontScale +
-    space.xs +
+    gaps.nameToFigures +
     num.m.lineHeight * fontScale +
-    space.xxs +
+    gaps.figureToWords +
     type.tiny.lineHeight * fontScale +
-    space.sm +
+    gaps.figuresToFoot +
     size.btn +
-    space.md
+    gaps.footToEdge
   );
 }
 
-/** Below the band: the shield's overhang under it, then 9 to the name. */
-const BODY_TOP = SIZE.shieldTop + theme.size.monogram.shield - SIZE.band + theme.space.sm;
+/**
+ * **The card's vertical gaps, in its two places** (2026-11-26) — the page's, the drawing's own; and
+ * Home's line's, where the card is `lineCardRatio` of the content rather than 0,74: each ×1,6 onto
+ * the 3pt grid, so the card's height grows as its width did (188 → 212 at the OS's own text size,
+ * the exact 211). Top to bottom, as the card draws them.
+ */
+const GAPS: Readonly<
+  Record<
+    HottestCardLayout,
+    {
+      readonly shieldToName: number;
+      readonly nameToFigures: number;
+      readonly figureToWords: number;
+      readonly figuresToFoot: number;
+      readonly footToEdge: number;
+    }
+  >
+> = {
+  page: {
+    shieldToName: theme.space.sm,
+    nameToFigures: theme.space.xs,
+    figureToWords: theme.space.xxs,
+    figuresToFoot: theme.space.sm,
+    footToEdge: theme.space.md,
+  },
+  row: {
+    shieldToName: theme.space.lg,
+    nameToFigures: theme.space.sm,
+    figureToWords: theme.space.xs,
+    figuresToFoot: theme.space.lg,
+    footToEdge: theme.space.xl,
+  },
+};
+
+/** Below the band: the shield's overhang under it, then the gap to the name. */
+function bodyTop(layout: HottestCardLayout): number {
+  return SIZE.shieldTop + theme.size.monogram.shield - SIZE.band + GAPS[layout].shieldToName;
+}
 
 /** 5.1's card border, a `line` point all round. */
 const CARD_BORDER = 1;
@@ -336,14 +394,11 @@ const s = StyleSheet.create({
     backgroundColor: theme.color.ink,
   },
   tagWord: { ...theme.type.tag, color: theme.color.surface },
-  body: {
-    paddingTop: BODY_TOP,
-    paddingHorizontal: theme.space.md,
-    gap: theme.space.xs,
-  },
+  // The gaps are the place's (`ROOM`); the sides are the card's, in both.
+  body: { paddingHorizontal: theme.space.md },
   name: { ...theme.type.h2, color: theme.color.ink },
   figures: { flexDirection: 'row', gap: theme.space.md },
-  figure: { flex: 1, gap: theme.space.xxs },
+  figure: { flex: 1 },
   // The players, held against the card's right edge (home refactor 5.1).
   figureEnd: { alignItems: 'flex-end' },
   value: { ...theme.num.m, ...theme.tabular, color: theme.color.ink },
@@ -353,9 +408,19 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: theme.space.sm,
     paddingHorizontal: theme.space.md,
-    paddingTop: theme.space.sm,
-    paddingBottom: theme.space.md,
   },
   // 34 and `hit.btn` reach 44 (6.5), the same reach as a button beside it.
   faces: { flex: 1, minHeight: theme.size.btn, justifyContent: 'center' },
 });
+
+/** **The gaps drawn, in a place** — `GAPS` as styles. */
+function roomOf(layout: HottestCardLayout) {
+  const gaps = GAPS[layout];
+  return StyleSheet.create({
+    body: { paddingTop: bodyTop(layout), gap: gaps.nameToFigures },
+    figure: { gap: gaps.figureToWords },
+    foot: { paddingTop: gaps.figuresToFoot, paddingBottom: gaps.footToEdge },
+  });
+}
+
+const ROOM = { page: roomOf('page'), row: roomOf('row') } as const;

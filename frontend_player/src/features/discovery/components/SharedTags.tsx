@@ -12,6 +12,9 @@
  * drawn until all of them are in**, so a chip never stands for a frame and then leaves; the three
  * lines' room is kept from the first frame, so the tile never grows under the reader.
  *
+ * **The lines stand `xs` apart, or as far as the tile says** (`lineGap`, 2026-11-26): Home's line
+ * draws its tile with every gap grown, these among them; the chips beside each other keep `xs`.
+ *
  * The chips are 6.4's `ok` tag — mint, green bold words — with the tag's emoji, as on the record;
  * *+N more* is its `more` tag. None is a control, and none is spoken: the tile's name says every tag
  * the two share (`vibeTileLabel`).
@@ -30,18 +33,25 @@ import { tagsThatFit } from './tagFit';
 /** The cap (the screens §6.2). */
 const LINES = 3;
 
-/** Between chips, both ways — the record's tag row's gap. */
+/** Between chips, both ways unless the tile says otherwise — the record's tag row's gap. */
 const GAP = theme.space.xs;
 
-/** **The three lines' room**, kept from the first frame — and held by a tile's skeleton (#872). */
-export const SHARED_TAGS_ROOM = LINES * TAG_HEIGHT + (LINES - 1) * GAP;
+/** **The three lines' room** at a gap between them — kept from the first frame. */
+export function sharedTagsRoom(lineGap: number = GAP): number {
+  return LINES * TAG_HEIGHT + (LINES - 1) * lineGap;
+}
+
+/** **The three lines' room** at `xs` — See all's grid, and held by a tile's skeleton (#872). */
+export const SHARED_TAGS_ROOM = sharedTagsRoom();
 
 export interface SharedTagsProps {
   /** The tags the two share, in the vocabulary's order. */
   readonly tags: readonly SocialTagId[];
+  /** **Between the lines** — `xs`, as beside each other, unless the tile grows it. */
+  readonly lineGap?: number;
 }
 
-export function SharedTags({ tags }: SharedTagsProps) {
+export function SharedTags({ tags, lineGap = GAP }: SharedTagsProps) {
   const [line, setLine] = useState<number>();
   const [widths, setWidths] = useState<Readonly<Partial<Record<SocialTagId, number>>>>({});
   const [moreWidths, setMoreWidths] = useState<Readonly<Record<number, number>>>({});
@@ -66,13 +76,13 @@ export function SharedTags({ tags }: SharedTagsProps) {
 
   return (
     <View
-      style={s.room}
+      style={{ minHeight: sharedTagsRoom(lineGap) }}
       onLayout={(event) => setLine(widthOf(event))}
       testID="shared-tags"
       pointerEvents="none"
     >
       {whole === undefined ? null : (
-        <View style={s.lines}>
+        <View style={[s.lines, { rowGap: lineGap }]}>
           {tags.slice(0, whole).map((id) => (
             <View key={id} style={s.chip}>
               <Tag label={socialTagLabel(id)} variant="ok" />
@@ -126,9 +136,9 @@ export function SharedTags({ tags }: SharedTagsProps) {
 }
 
 const s = StyleSheet.create({
-  // The three lines' room, kept from the first frame — 6.4's own height, three times.
-  room: { minHeight: SHARED_TAGS_ROOM },
-  lines: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
+  // The three lines' room — 6.4's own height three times, and the two gaps between them — is drawn
+  // inline, since the gap is the tile's (`sharedTagsRoom`); so is the gap between the lines.
+  lines: { flexDirection: 'row', flexWrap: 'wrap', columnGap: GAP },
   // A chip is never wider than the line: one that would be is cut by its own ellipsis — the width it
   // was measured at.
   chip: { maxWidth: '100%' },

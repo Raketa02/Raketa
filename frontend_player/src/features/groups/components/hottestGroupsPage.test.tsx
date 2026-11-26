@@ -342,6 +342,10 @@ describe('the list', () => {
     const ogrody = within(list().getByTestId(`hottest-${OGRODY.id}`));
     expect(ogrody.getByText(OGRODY.name)).toBeTruthy();
     expect(within(ogrody.getByTestId('hottest-games')).getByText('59')).toBeTruthy();
+    // The card's own gaps, not the line's grown ones (2026-11-26): a number 3 over its words.
+    expect(StyleSheet.flatten(ogrody.getByTestId('hottest-games').props.style).gap).toBe(
+      theme.space.xxs,
+    );
     expect(list().getByTestId('hottest-tag-HOTTEST', { includeHiddenElements: true })).toBeTruthy();
   });
 

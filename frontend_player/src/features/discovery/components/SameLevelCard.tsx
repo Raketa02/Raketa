@@ -26,6 +26,12 @@
  *
  * Home's row hands the rail's width; See all stretches the card across the content.
  *
+ * **Two places, two sets of gaps** (`layout`, 2026-11-26). In See all the card is drawn at its own
+ * gaps. On Home's line it is `lineCardRatio` of the line's content, wider than the page's 0,74, and
+ * **keeps its shape**: every vertical gap grows by the same factor onto the 3pt grid (`GAPS`) —
+ * 15·3·3·12·6·6 to 24·6·6·18·9·9 down the card, the middle's 3·6 to 6·9 — so its height grows as its
+ * width did, the words, the faces and the bar their own size and the sides their own inset.
+ *
  * **While See all's first page is read, the card is one skeleton block** (`SAME_LEVEL_CARD_SKELETON`,
  * [#872](https://github.com/Raketa02/Raketa/issues/872)): a dark card is drawn as a `skeleton` block,
  * never a dark one (design system 5.6), at its own corner and at the height its drawing gives it.
@@ -52,10 +58,15 @@ import {
 } from './discoveryCopy';
 import type { SeeAllSkeletonTile } from './SeeAllScreen';
 
+/** **Where the card stands** — Home's line, or See all's list. */
+export type SameLevelCardLayout = 'row' | 'list';
+
 export interface SameLevelCardProps {
   readonly player: SameLevelPlayer;
   /** The reader's face, on the left — none drawn while the reader is not known. */
   readonly you: ReaderFace | undefined;
+  /** Home's line draws the line's gaps; See all, the card's own. */
+  readonly layout: SameLevelCardLayout;
   /** Home's row: the rail's width. See all leaves it out, and the card takes the content width. */
   readonly width?: number;
   /** Their face or nickname: their record. */
@@ -64,18 +75,26 @@ export interface SameLevelCardProps {
   readonly onCompare: () => void;
 }
 
-export function SameLevelCard({ player, you, width, onOpen, onCompare }: SameLevelCardProps) {
+export function SameLevelCard({
+  player,
+  you,
+  layout,
+  width,
+  onOpen,
+  onCompare,
+}: SameLevelCardProps) {
   const COPY = DISCOVERY_COPY.sameLevel;
   const shown = player.shown;
   const more = moreSportsOf(player);
+  const room = ROOM[layout];
 
   return (
     <View
-      style={[s.card, width === undefined ? undefined : { width }]}
+      style={[s.card, room.card, width === undefined ? undefined : { width }]}
       testID={`same-level-${player.playerId}`}
     >
       <View style={s.pairing}>
-        <View style={s.side}>
+        <View style={[s.side, room.side]}>
           {you === undefined ? (
             <View style={s.noFace} />
           ) : (
@@ -98,8 +117,8 @@ export function SameLevelCard({ player, you, width, onOpen, onCompare }: SameLev
           >
             {formatPercent(shown.percentEven)}
           </Text>
-          <Text style={s.even}>{COPY.even}</Text>
-          <View style={s.sport}>
+          <Text style={[s.even, room.even]}>{COPY.even}</Text>
+          <View style={[s.sport, room.sport]}>
             <View style={[s.dot, { backgroundColor: theme.sport[shown.sport] }]} />
             <Text style={s.sportName} numberOfLines={1}>
               {sportLabel(shown.sport)}
@@ -112,7 +131,7 @@ export function SameLevelCard({ player, you, width, onOpen, onCompare }: SameLev
           accessibilityLabel={player.nickname}
           onPress={onOpen}
           hitSlop={theme.hit.peopleRow}
-          style={({ pressed }) => [s.side, pressed ? s.pressed : undefined]}
+          style={({ pressed }) => [s.side, room.side, pressed ? s.pressed : undefined]}
         >
           <PlayerPhoto
             playerId={player.playerId}
@@ -126,7 +145,7 @@ export function SameLevelCard({ player, you, width, onOpen, onCompare }: SameLev
         </Pressable>
       </View>
 
-      <View style={s.bar}>
+      <View style={room.bar}>
         <ComparisonBar
           yours={shown.yourLevel}
           theirs={shown.theirLevel}
@@ -138,7 +157,7 @@ export function SameLevelCard({ player, you, width, onOpen, onCompare }: SameLev
         />
       </View>
 
-      <View style={s.foot}>
+      <View style={[s.foot, room.foot]}>
         <View style={s.words}>
           {more === undefined ? null : (
             <Pressable
@@ -172,7 +191,7 @@ export function SameLevelCard({ player, you, width, onOpen, onCompare }: SameLev
 
 /** **A card while See all's first page is read** (#872): one block, as tall as the card. */
 export const SAME_LEVEL_CARD_SKELETON: SeeAllSkeletonTile = {
-  height: (_width, fontScale) => cardHeight(fontScale),
+  height: (_width, fontScale) => sameLevelCardHeight(fontScale, 'list'),
   Tile: SameLevelCardSkeleton,
 };
 
@@ -181,30 +200,74 @@ function SameLevelCardSkeleton() {
 }
 
 /**
- * **The card's height**, read off its drawing: `lg` above and `xs` below; the pairing — the taller
- * of a side (the face, the nickname and the level, `xxs` apart) and the middle (the %, *EVEN* `xxs`
- * under it, the sport `xs` under that); the comparison bar `md` under it (its *YOU* row, the mark's
- * row and the band names, `ComparisonBar`'s three, set at a fixed size); and the foot `xs` under
- * that, a reach tall. Every other line grows with the phone's text size, as the OS grows it.
+ * **The card's height** in its place, read off its drawing: a gap above and one below; the pairing —
+ * the taller of a side (the face, the nickname and the level, a gap apart) and the middle (the %,
+ * *EVEN* a gap under it, the sport a gap under that); the comparison bar a gap under it (its *YOU*
+ * row, the mark's row and the band names, `ComparisonBar`'s three, set at a fixed size); and the foot
+ * a gap under that, a reach tall. Every other line grows with the phone's text size, as the OS grows
+ * it.
  */
-function cardHeight(fontScale: number): number {
-  const { space, type, num, size } = theme;
+export function sameLevelCardHeight(fontScale: number, layout: SameLevelCardLayout): number {
+  const { type, num, size } = theme;
+  const gaps = GAPS[layout];
   const bar = size.comparisonBar;
   const line = (role: { readonly lineHeight: number }) => role.lineHeight * fontScale;
-  const side = FACE + space.xxs + line(type.h2) + space.xxs + line(num.s);
+  const side = FACE + gaps.inSide + line(type.h2) + gaps.inSide + line(num.s);
   const middle =
     line(num.xl) +
-    space.xxs +
+    gaps.toEven +
     line(type.eyebrow) +
-    space.xs +
+    gaps.toSport +
     Math.max(size.sportDot, line(type.rlLabel));
   const comparison =
     type.tag.lineHeight + bar.labelGap + bar.markHeight + bar.namesTop + type.tag.lineHeight;
   const foot = Math.max(size.minTouch, line(type.rlValue));
-  return space.lg + Math.max(side, middle) + space.md + comparison + space.xs + foot + space.xs;
+  return (
+    gaps.top + Math.max(side, middle) + gaps.toBar + comparison + gaps.toFoot + foot + gaps.bottom
+  );
 }
 
 const FACE = theme.size.sameLevel.face;
+
+/**
+ * **The card's vertical gaps, in its two places** (2026-11-26) — See all's, the drawing's own; and
+ * Home's line's, where the card is `lineCardRatio` of the content rather than 0,74: each ×1,6 onto
+ * the 3pt grid, so the card's height grows as its width did (226 → 253 at the OS's own text size,
+ * the exact 253). Top to bottom, as the card draws them; `toEven` and `toSport` are the middle's.
+ */
+const GAPS: Readonly<
+  Record<
+    SameLevelCardLayout,
+    {
+      readonly top: number;
+      readonly inSide: number;
+      readonly toEven: number;
+      readonly toSport: number;
+      readonly toBar: number;
+      readonly toFoot: number;
+      readonly bottom: number;
+    }
+  >
+> = {
+  list: {
+    top: theme.space.lg,
+    inSide: theme.space.xxs,
+    toEven: theme.space.xxs,
+    toSport: theme.space.xs,
+    toBar: theme.space.md,
+    toFoot: theme.space.xs,
+    bottom: theme.space.xs,
+  },
+  row: {
+    top: theme.space.xxl,
+    inSide: theme.space.xs,
+    toEven: theme.space.xs,
+    toSport: theme.space.sm,
+    toBar: theme.space.xl,
+    toFoot: theme.space.sm,
+    bottom: theme.space.sm,
+  },
+};
 
 const s = StyleSheet.create({
   // The whole card, at the dark card's corner.
@@ -213,41 +276,29 @@ const s = StyleSheet.create({
   card: {
     backgroundColor: theme.color.levelCardGround,
     borderRadius: theme.radius.cardDark,
+    // The sides are the card's; the top and the foot are the place's (`ROOM`).
     paddingHorizontal: theme.space.lg,
-    paddingTop: theme.space.lg,
-    paddingBottom: theme.space.xs,
   },
   pairing: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  side: { alignItems: 'center', gap: theme.space.xxs, minWidth: FACE },
+  side: { alignItems: 'center', minWidth: FACE },
   noFace: { width: FACE, height: FACE },
   name: { ...theme.type.h2, color: theme.color.surface, maxWidth: 2 * FACE },
   level: { ...theme.num.s, ...theme.tabular, color: theme.color.onDarkTiny },
   middle: { flex: 1, alignItems: 'center', paddingHorizontal: theme.space.xs },
   // The game card's figure (num.xl) — large text, which is what lets the three inks stand here.
   figure: { ...theme.num.xl, ...theme.tabular },
-  even: {
-    ...theme.type.eyebrow,
-    color: theme.color.onDarkTiny,
-    marginTop: theme.space.xxs,
-  },
-  sport: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.xs,
-    marginTop: theme.space.xs,
-  },
+  even: { ...theme.type.eyebrow, color: theme.color.onDarkTiny },
+  sport: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
   dot: {
     width: theme.size.sportDot,
     height: theme.size.sportDot,
     borderRadius: theme.radius.dot,
   },
   sportName: { ...theme.type.rlLabel, color: theme.color.onDarkTiny },
-  bar: { marginTop: theme.space.md },
   foot: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: theme.space.xs,
     minHeight: theme.size.minTouch,
   },
   words: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
@@ -256,3 +307,18 @@ const s = StyleSheet.create({
   // 6.6: a press on a dark card dims what was pressed.
   pressed: { opacity: 0.7 },
 });
+
+/** **The gaps drawn, in a place** — `GAPS` as styles. */
+function roomOf(layout: SameLevelCardLayout) {
+  const gaps = GAPS[layout];
+  return StyleSheet.create({
+    card: { paddingTop: gaps.top, paddingBottom: gaps.bottom },
+    side: { gap: gaps.inSide },
+    even: { marginTop: gaps.toEven },
+    sport: { marginTop: gaps.toSport },
+    bar: { marginTop: gaps.toBar },
+    foot: { marginTop: gaps.toFoot },
+  });
+}
+
+const ROOM = { list: roomOf('list'), row: roomOf('row') } as const;

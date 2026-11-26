@@ -92,6 +92,7 @@ const SameLevel = memo(function SameLevel({
             key={player.playerId}
             player={player}
             you={you}
+            layout="row"
             width={width}
             onOpen={() =>
               setReading({

@@ -56,6 +56,7 @@ export function SameLevelScreen() {
         <SameLevelCard
           player={player}
           you={you}
+          layout="list"
           onOpen={() =>
             setReading({ playerId: player.playerId, foundIn: foundAtSameLevel(player.shown.sport) })
           }

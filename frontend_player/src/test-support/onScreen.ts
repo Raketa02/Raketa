@@ -123,14 +123,14 @@ export const pageAtRow = (top: number) => top + RAIL_TOP;
 
 /**
  * Scrolls a peeking rail in an open line so its card `at` stands at the rail's start — wholly on
- * screen, the card before it gone and the one after it peeking, under half. A card is its share of
- * the line's content, not the page's.
+ * screen, the card before it gone and the one after it peeking, under half. A card is the line's
+ * share (`lineCardRatio`) of the line's content, not the page's.
  */
 export function scrollRowToCard(lineTestId: string, at: number): void {
   const width = Dimensions.get('window').width;
   const { border, pad } = theme.size.foldingLine;
   const content = width - 2 * theme.size.gutter - 2 * (border + pad);
-  const step = content * theme.size.railCardRatio + theme.space.sm;
+  const step = content * theme.size.lineCardRatio + theme.space.sm;
   act(() => {
     fireEvent.scroll(railOf(lineTestId), {
       nativeEvent: {

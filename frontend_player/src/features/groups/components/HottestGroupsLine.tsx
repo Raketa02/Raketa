@@ -76,6 +76,7 @@ const HottestGroups = memo(function HottestGroups({
             key={group.id}
             group={group}
             width={width}
+            layout="row"
             onOpen={() => taps.openSheet(group.id)}
             onChip={(action) => taps.chip(group, action)}
           />

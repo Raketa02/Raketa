@@ -57,7 +57,8 @@ import { PLAYERS_BAR } from '@/test-support/tabBarReach';
 import { rereadDiscovery } from '../hooks/useNewInRaketa';
 
 import { DISCOVERY_COPY, moreTags, nobodySharesYourTagsIn } from './discoveryCopy';
-import { SAME_VIBE_TILE_SKELETON } from './SameVibeTile';
+import { SAME_VIBE_TILE_SKELETON, sameVibeTileHeight } from './SameVibeTile';
+import { SHARED_TAGS_ROOM, sharedTagsRoom } from './SharedTags';
 
 const COPY = DISCOVERY_COPY.sameVibe;
 const HIDDEN = { includeHiddenElements: true } as const;
@@ -323,6 +324,33 @@ describe('a tile', () => {
     expect(tile(KUBA).getByText('2 things in common')).toBeTruthy();
     expect(tile(ANIA).getByText('50%')).toBeTruthy();
     expect(tile(ANIA).getByText('1 thing in common')).toBeTruthy();
+  });
+
+  /**
+   * 2026-11-26: on the line the tile is `lineCardRatio` of the line's content, a little wider than the
+   * page's 0,74, and keeps its shape — every vertical gap grows by the width's factor onto the 3pt
+   * grid (12·9·6·6 to 21·15·9·9), so it stands as much taller as wider, as near as the grid comes:
+   * within half a step of the 182 it stood at 0,74. See all's grid keeps its own.
+   */
+  it('stands at the line’s share, as much taller as it is wider, through its gaps', async () => {
+    vibeServer();
+    await homeWithTheRow();
+
+    const { border, pad } = theme.size.foldingLine;
+    const content = Dimensions.get('window').width - 2 * theme.size.gutter - 2 * (border + pad);
+    const drawn = StyleSheet.flatten(
+      screen.getByTestId(`same-vibe-${KAROL.player_id}`).props.style,
+    );
+    expect(drawn.width).toBeCloseTo(content * theme.size.lineCardRatio);
+    // The chips' three lines 9 apart, not 6: their room is the grown one.
+    const room = StyleSheet.flatten(tile(KAROL).getByTestId('shared-tags').props.style);
+    expect(room.minHeight).toBe(sharedTagsRoom(theme.space.sm));
+    expect(sharedTagsRoom(theme.space.sm)).toBeGreaterThan(SHARED_TAGS_ROOM);
+
+    const grown = theme.size.lineCardRatio / theme.size.railCardRatio;
+    expect(Math.abs(sameVibeTileHeight(1, 'row') - 182 * grown)).toBeLessThanOrEqual(
+      theme.space.xxs / 2,
+    );
   });
 
   it('is washed in the poster’s hue, and speaks who, the %, the count and every tag shared', async () => {

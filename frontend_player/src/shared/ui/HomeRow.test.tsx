@@ -162,18 +162,19 @@ describe('the Home row frame', () => {
   });
 
   /**
-   * New in Raketa's portrait tiles (#801; home rows 17): since 2026-11-24 as wide as the peeking
-   * rail's card, the row above's — one whole and the next peeking.
+   * New in Raketa's portrait tiles (#801; home rows 17): since 2026-11-26 their own share, a little
+   * narrower than the line cards either side — one whole and the next peeking.
    */
   describe('the tiles rail', () => {
-    it('draws each tile at the peeking card’s share of the content width — a lone one too', () => {
+    it('draws each tile at the portrait’s own share of the content width — a lone one too', () => {
       render(<Row count={3} geometry="tiles" />);
-      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.railCardRatio);
-      expect(widthOf('card-2')).toBeCloseTo(content() * theme.size.railCardRatio);
+      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.portraitTile.railRatio);
+      expect(widthOf('card-2')).toBeCloseTo(content() * theme.size.portraitTile.railRatio);
+      expect(theme.size.portraitTile.railRatio).toBeLessThan(theme.size.lineCardRatio);
 
       // A portrait the width of the screen would be a poster: a lone tile keeps its width.
       screen.rerender(<Row count={1} geometry="tiles" />);
-      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.railCardRatio);
+      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.portraitTile.railRatio);
     });
 
     it('scrolls freely and draws no dots', () => {
@@ -249,10 +250,11 @@ describe('the Home row frame', () => {
 
   /**
    * **Inside a folding line** (#820): a tile's share is of the line's content, the rail bleeds to the
-   * line's inner edge, and every rail settles on its tiles' edges (the brief).
+   * line's inner edge, and every rail settles on its tiles' edges (the brief). A peeking card takes
+   * the share the line says (2026-11-26).
    */
   describe('inside a folding line', () => {
-    const LINE = { content: 300, bleed: 15, snaps: true } as const;
+    const LINE = { content: 300, bleed: 15, snaps: true, cardRatio: 0.8 } as const;
     const inLine = (geometry?: 'tiles' | 'numbered', itemWidth?: (card: number) => number) =>
       render(
         <RailBoundsContext.Provider value={LINE}>
@@ -269,14 +271,14 @@ describe('the Home row frame', () => {
     it('takes its shares of the line’s content, and bleeds to its inner edge', () => {
       inLine();
 
-      expect(widthOf('card-0')).toBeCloseTo(300 * theme.size.railCardRatio);
+      expect(widthOf('card-0')).toBeCloseTo(300 * LINE.cardRatio);
       expect(flat(rail().props.style)).toMatchObject({ marginHorizontal: -15 });
       expect(flat(rail().props.contentContainerStyle)).toMatchObject({ paddingHorizontal: 15 });
     });
 
     it('snaps to its cards’ edges, a peeking rail and a tiles rail alike', () => {
       inLine();
-      expect(rail().props.snapToInterval).toBeCloseTo(300 * theme.size.railCardRatio + 9);
+      expect(rail().props.snapToInterval).toBeCloseTo(300 * LINE.cardRatio + 9);
       expect(rail().props.decelerationRate).toBe('fast');
 
       screen.rerender(
@@ -286,7 +288,7 @@ describe('the Home row frame', () => {
           </HomeRowRail>
         </RailBoundsContext.Provider>,
       );
-      expect(rail().props.snapToInterval).toBeCloseTo(300 * theme.size.railCardRatio + 9);
+      expect(rail().props.snapToInterval).toBeCloseTo(300 * theme.size.portraitTile.railRatio + 9);
     });
 
     /** Top 10's numeral stands beside its card, so an item is wider than the width handed (#805). */

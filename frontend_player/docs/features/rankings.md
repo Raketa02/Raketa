@@ -445,3 +445,10 @@ Walked in `topTen.test.tsx` (the footer's order and words, the bar's direction a
 name and destination); the drawing's direction in `SportPill.test.tsx` and `RowSportPill.test.tsx`.
 **Not seen on a device** — a look is owed against home refactor 12, 13: the pill at the footer's left,
 the link at its right, and the bar sliding open to the right over the link.
+
+**Top 10's cards stand a little bigger** (2026-11-26; design-system 7.7, 7.36, Part 16).
+`size.topTen.railRatio` is 0,31 of the line's content, from 0,29, the card's 1,48 kept: 108 × 160 on a
+411pt phone, where it was 101 × 150, beside FOR YOU's other cards growing (`discovery.md`). Two items
+stand whole and 34 of the third shows; past 0,31 the third's edge would be gone on a 360pt phone, and
+with it the rail's affordance. The numeral stays `type.numeral`'s 108 and its 24 under the card.
+Walked in `HomeRow.test.tsx`. **Not seen on a device** — a look is owed on the A32.

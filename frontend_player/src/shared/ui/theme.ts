@@ -1686,6 +1686,19 @@ const size = {
    *  content's 540 pixels, 0,833. A RATIO, for `railCardRatio`'s reason; the next card's edge is
    *  still the affordance, at 0,17 of the content less the gap. */
   requestCardRatio: 0.83,
+  /** **THE LINE CARD** — a peeking rail's card in an open FOR YOU line: Groups heating up's, Players
+   *  at your level's and Players with your vibe's (Part 16 2026-11-26). WIDER than the page's 0,74,
+   *  so the card on screen is a little bigger and the next one shows a little less: on a 411pt
+   *  phone the card is 290 of the line's 349 and the next one's edge 65, where 0,74 left 258 and 97.
+   *  **The request card's share by choice, not by rule** — its own token, so neither card moves
+   *  when the other does. A RATIO, for `railCardRatio`'s reason.
+   *
+   *  **The card keeps its shape**: its height is its drawing's, never its width's, so it grows by
+   *  `lineCardRatio / railCardRatio` through its own gaps — every vertical gap ×1,6, onto the 3pt
+   *  grid, as near the exact shape as the grid comes (within half a step, 1,5pt). Each card owns its
+   *  two sets of gaps (`HottestGroupCard`, `SameLevelCard`, `SameVibeTile`); See all and the Groups
+   *  heating up page keep the page's. */
+  lineCardRatio: 0.83,
   /** THE PHOTO CAROUSEL's card — all of a player's photos, sideways, on the record
    *  ([#799](https://github.com/Raketa02/Raketa/issues/799)) and the vibe sheet (home rows 23, #803),
    *  over Part 8's Strip (Part 16 2026-11-14). A card's share of the content width, for
@@ -1712,13 +1725,16 @@ const size = {
    *  40). */
   foldingLine: { pad: space.lg, border: 1, count: 16 },
   /** THE PORTRAIT TILE (#801; home rows 17–19; 7.31) — a face edge to edge with its words over the
-   *  wash. **Its width on a Home row is the peeking card's, `railCardRatio`** (2026-11-24): it was
-   *  0,355 here, home rows 17's two whole and the third cut, and the words on a tile that narrow were
-   *  hard to read beside the row above's cards — one ratio now, so the two rows cannot drift apart.
+   *  wash. **`railRatio` is its width on a Home row: 0,70 of the line's content** (2026-11-26). It
+   *  was 0,355 until 2026-11-24, home rows 17's two whole and the third cut, words too narrow to
+   *  read; then the peeking card's 0,74. When the lines either side widened to `lineCardRatio`, a
+   *  portrait at 0,83 stood 399 tall on a 411pt phone — a poster — so it stepped down instead, a
+   *  little under its old width: one tile whole and the next peeking (244 × 336 there, 111 of the
+   *  next). Its own ratio again, apart from the cards around it.
    *  `railAspect` and `gridAspect` are its height over its width — 11:8 standing on a row, 9:8 in See
    *  all's two columns (home rows 19), MEASURED off the mocks at 1× (384 × 528 and 266 × 297
    *  pixels). */
-  portraitTile: { railAspect: 1.375, gridAspect: 1.125 },
+  portraitTile: { railRatio: 0.7, railAspect: 1.375, gridAspect: 1.125 },
   /** THE ROUND FRIEND BUTTON (#801; home rows 8, 10.3, 17, 18–18.3; 7.32) — MEASURED off the tiles at
    *  1× (72 pixels on a 384-pixel tile): a 24pt circle centred in its own 44pt press (`minTouch`) —
    *  a box, not a hitSlop, because a touch never lands past its parent on Android and a tile clips.
@@ -1731,7 +1747,8 @@ const size = {
    *  its YOU 3 above. `onDarkBand` is a band's `tint` over the card's ground — #344B5A, #31514E and
    *  #534541 measured, each its tint at 0,26–0,31 — where the light bar takes 7.5's `inactiveOpacity`.
    *  `nameMinScale` is how far a band's name may shrink to stay on one line under its band on a Home
-   *  row's card, where _ESTABLISHED_ has 30 % of 0,74 × content less the padding. */
+   *  row's card, where _ESTABLISHED_ has 30 % of the card less the padding — 0,74 of the content
+   *  when it was measured, `lineCardRatio` since 2026-11-26, so it shrinks less now, never more. */
   comparisonBar: {
     trackHeight: 8,
     markWidth: 6,
@@ -1753,8 +1770,10 @@ const size = {
   /** TOP 10'S CARD ([#805](https://github.com/Raketa02/Raketa/issues/805); home rows 2, 25–27; 7.36)
    *  — MEASURED off home rows 2 at 1,5 to the point and 25–26 at 3:
    *
-   *  - `railRatio` — a card's share of the content width, for `railCardRatio`'s reason: 104pt of 360
-   *    in both mocks, narrower than New in Raketa's tile, because the numeral stands beside each one.
+   *  - `railRatio` — a card's share of the content width, for `railCardRatio`'s reason, narrower than
+   *    New in Raketa's tile because the numeral stands beside each one. 0,29 (104pt of 360 in both
+   *    mocks) until 2026-11-26, then 0,31 — a little bigger, its 1,48 kept: 108 × 160 on a 411pt
+   *    phone, two items whole and 34 of the third; past 0,31 the third's edge is gone on a 360pt one.
    *  - `aspect` — its height over its width: 154 over 104.
    *  - `overlap` — how much of the numeral's box the card covers, from the right: home rows 26 shows
    *    32pt of the *1*'s ink and 25 39pt of the *2*'s, which at `type.numeral` leaves 24 under the card.
@@ -1768,7 +1787,7 @@ const size = {
    *    the baseline, and the deepest under it (the *9*'s tail). The numeral's box is worked out from
    *    them, so they change with the role's face or not at all. */
   topTen: {
-    railRatio: 0.29,
+    railRatio: 0.31,
     aspect: 1.48,
     overlap: 24,
     ring: 2.5,
