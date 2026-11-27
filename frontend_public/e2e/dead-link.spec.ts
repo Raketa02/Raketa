@@ -12,7 +12,7 @@ test('a code no group has says Nothing at that link, answered 404', async ({ pag
 
   expect(response?.status()).toBe(404);
   await expect(page.getByRole('heading', { level: 1, name: 'Nothing at that link' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open in Raketa' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toHaveCount(0);
 });
 
 test("a deleted group's link says Nothing at that link", async ({ page, groups }) => {

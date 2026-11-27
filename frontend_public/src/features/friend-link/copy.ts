@@ -8,7 +8,7 @@ export const FRIEND_LINK_COPY = {
    * and taps the button once more (the friends mechanics §4.3); on Android the store button has
    * carried it through, and the line costs nothing.
    */
-  comeBack: `Once you have the app, come back here and tap ${GET_THE_APP_COPY.openInRaketa}`,
+  comeBack: `Once you have the app, come back here and tap ${GET_THE_APP_COPY.openInRakieta}`,
 } as const;
 
 /** *Tomek invited you to play on Raketa*: the page's heading, and the preview's title. */

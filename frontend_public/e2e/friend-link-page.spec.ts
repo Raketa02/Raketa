@@ -8,7 +8,7 @@ import { APP_STORE_URL, GOOGLE_PLAY_URL, SITE_URL } from './suite';
 /**
  * **The friend link's page** (#755, the friends mechanics §4.3): Zofia taps Tomek's
  * `rakieta.app/f/<code>` on a phone without Raketa. The page says who invited her, with his face,
- * and shows the way in: the stores, and **Open in Raketa** for when she comes back.
+ * and shows the way in: the stores, and **Open in Rakieta** for when she comes back.
  */
 
 test('a friend link says who invited you, with their face', async ({ page, friendLinks }) => {
@@ -38,7 +38,7 @@ test('somebody with no photograph is drawn without a face', async ({ page, stub,
   expect(stub.storageOpened()).toEqual([]);
 });
 
-test('the page shows the way in: both stores, what to do once installed, and Open in Raketa', async ({
+test('the page shows the way in: both stores, what to do once installed, and Open in Rakieta', async ({
   page,
   friendLinks,
 }) => {
@@ -58,11 +58,11 @@ test('the page shows the way in: both stores, what to do once installed, and Ope
   });
   // The install forgets the link on an iPhone, so she comes back and taps it once more.
   await expect(
-    page.getByText('Once you have the app, come back here and tap Open in Raketa'),
+    page.getByText('Once you have the app, come back here and tap Open in Rakieta'),
   ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open in Raketa' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toHaveAttribute(
     'href',
-    'raketa://f/k7pq2mxa',
+    'rakieta://f/k7pq2mxa',
   );
 });
 
@@ -91,7 +91,7 @@ test('a link replaced by a New link says Nothing at that link, answered 404', as
 
   expect(response?.status()).toBe(404);
   await expect(page.getByRole('heading', { level: 1, name: 'Nothing at that link' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open in Raketa' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Google Play' })).toHaveCount(0);
 });
 
@@ -151,6 +151,6 @@ test.describe('without JavaScript', () => {
       page.getByRole('heading', { level: 1, name: 'Tomek invited you to play on Raketa' }),
     ).toBeVisible();
     await expect(page.getByRole('main').locator('img')).toHaveJSProperty('naturalWidth', 300);
-    await expect(page.getByRole('link', { name: 'Open in Raketa' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toBeVisible();
   });
 });

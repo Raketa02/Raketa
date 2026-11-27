@@ -104,13 +104,13 @@ const Fields = z.object({
   /** Where the Google Play button goes: Raketa's listing. */
   GOOGLE_PLAY_URL: httpUrl,
   /**
-   * The player app's own scheme, without `://`: **Open in Raketa** goes to
+   * The player app's own scheme, without `://`: **Open in Rakieta** goes to
    * `<APP_SCHEME>://<route>`, such as `join/<code>`. The app declares one scheme at every
    * environment (`frontend_player`'s `app.config.ts`), and so does the backend's `APP_SCHEME`.
    */
   APP_SCHEME: matching(
     /^[a-z][a-z0-9+.-]*$/i,
-    'must be a URL scheme such as raketa, without ://',
+    'must be a URL scheme such as rakieta, without ://',
   ).refine((scheme) => !NOT_AN_APP_SCHEME.includes(scheme.toLowerCase()), {
     error: "must be the app's own scheme, not a web or script scheme",
   }),

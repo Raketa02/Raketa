@@ -7,7 +7,7 @@ export interface AppLinks {
   /** The listing, carrying the page's own link as the install referrer where the page asks. */
   readonly googlePlay: string;
   /** `<APP_SCHEME>://<route>`, which the app opens at that route (#520). */
-  readonly openInRaketa: string;
+  readonly openInRakieta: string;
 }
 
 /**

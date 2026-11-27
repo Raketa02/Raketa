@@ -94,6 +94,6 @@ test.describe('without JavaScript', () => {
 
     await expect(page.getByRole('heading', { level: 1, name: 'Ogrody 33 Club' })).toBeVisible();
     await expect(page.getByText('11 members')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Open in Raketa' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toBeVisible();
   });
 });

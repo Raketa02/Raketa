@@ -45,9 +45,9 @@ are never redefined here. Where a word below meets a domain word, it points back
 - **Tile** — a Group's **monogram** (root `CONTEXT.md`, _Group_) as drawn: its letters on the fill
   its colour key picks from eight.
 - **The way in** — the `get-the-app` feature: the App Store and Google Play buttons, a line saying
-  what to do once installed, and **Open in Raketa**. On every page a live link opens; a dead
+  what to do once installed, and **Open in Rakieta**. On every page a live link opens; a dead
   link has nothing to open.
-- **Open in Raketa** — a link to `<APP_SCHEME>://<route>`, the app at the route the page is about
+- **Open in Rakieta** — a link to `<APP_SCHEME>://<route>`, the app at the route the page is about
   (`join/<code>`, `f/<code>`), for a phone that has the app but where the link didn't open it
   (ADR-0187 §4). _Avoid_: deep link (the web-domain links that open the app are the app-link
   files').

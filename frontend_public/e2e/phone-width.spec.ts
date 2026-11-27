@@ -38,7 +38,7 @@ test('the group page fits a phone, however long the name and however many the sp
 
   for (const code of ['k7pq2mxa', 'k7pq2mxb']) {
     await page.goto(`/join/${code}`);
-    await expect(page.getByRole('link', { name: 'Open in Raketa' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toBeVisible();
     await fitsSideways(page, `/join/${code}`);
   }
 });
@@ -57,7 +57,7 @@ test('the friend link’s page fits a phone, however long the nickname', async (
 
   for (const code of ['k7pq2mxa', 'k7pq2mxb']) {
     await page.goto(`/f/${code}`);
-    await expect(page.getByRole('link', { name: 'Open in Raketa' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toBeVisible();
     await fitsSideways(page, `/f/${code}`);
   }
 });
@@ -99,7 +99,7 @@ test('the invitation and reset pages fit a phone, in every state, refusals and a
 
   for (const path of [`/invite/${token(302)}`, `/reset/${token(303)}`, `/reset/${token(304)}`]) {
     await page.goto(path);
-    await expect(page.getByRole('link', { name: 'Open in Raketa' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toBeVisible();
     await fitsSideways(page, path);
   }
 });

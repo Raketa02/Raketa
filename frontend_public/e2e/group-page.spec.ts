@@ -24,7 +24,7 @@ test('a group link opens the group: its tile, its name, where it plays, its spor
   await expect(page.getByText('11 members')).toBeVisible();
 });
 
-test('the page shows the way in: both stores, where the link goes after sign-up, and Open in Raketa', async ({
+test('the page shows the way in: both stores, where the link goes after sign-up, and Open in Rakieta', async ({
   page,
   groups,
 }) => {
@@ -44,8 +44,8 @@ test('the page shows the way in: both stores, where the link goes after sign-up,
   });
   await expect(page.getByText('After you sign up, paste this link in Play › Join')).toBeVisible();
   // For a phone where the app is installed and the link didn't open it: the app's own scheme.
-  await expect(page.getByRole('link', { name: 'Open in Raketa' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toHaveAttribute(
     'href',
-    'raketa://join/k7pq2mxa',
+    'rakieta://join/k7pq2mxa',
   );
 });

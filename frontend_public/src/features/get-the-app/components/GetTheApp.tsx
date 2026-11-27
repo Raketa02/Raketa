@@ -10,7 +10,7 @@ import styles from './GetTheApp.module.css';
 
 /**
  * **The way in**, on every page a link opens without the app: the two stores, a line saying what
- * to do once installed, and **Open in Raketa** for a phone that has the app but where the link
+ * to do once installed, and **Open in Rakieta** for a phone that has the app but where the link
  * didn't open it (ADR-0187 §4). What the line is about, such as an invitation's code, goes above
  * the stores.
  */
@@ -38,8 +38,8 @@ export function GetTheApp({
         {next === undefined ? null : <p className={styles.next}>{next}</p>}
       </CardSection>
       <CardSection>
-        <ButtonLink href={links.openInRaketa} tone="outline">
-          {GET_THE_APP_COPY.openInRaketa}
+        <ButtonLink href={links.openInRakieta} tone="outline">
+          {GET_THE_APP_COPY.openInRakieta}
         </ButtonLink>
       </CardSection>
     </>

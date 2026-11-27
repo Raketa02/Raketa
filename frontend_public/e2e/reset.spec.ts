@@ -19,9 +19,9 @@ test('a reset link sets a new password, then says to sign in to the app with it'
 
   await expect(page.getByRole('heading', { level: 1, name: 'Set a new password' })).toBeVisible();
   await expect(page.getByText('Setting it signs your account out on every phone.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open in Raketa' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toHaveAttribute(
     'href',
-    `raketa://reset/${link}`,
+    `rakieta://reset/${link}`,
   );
   expect(stub.requests('post', RESET_READ).map((request) => request.body)).toEqual([
     { token: link },
@@ -38,9 +38,9 @@ test('a reset link sets a new password, then says to sign in to the app with it'
     { token: link, password: 'tomek2026k' },
   ]);
   await expect(page.getByRole('button', { name: 'Set password' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Open in Raketa' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toHaveAttribute(
     'href',
-    'raketa://',
+    'rakieta://',
   );
 });
 
@@ -121,9 +121,9 @@ for (const [state, sentence] of [
     await expect(page.getByRole('heading', { level: 1, name: 'Set a new password' })).toBeVisible();
     await expect(page.getByRole('main').getByRole('status')).toHaveText(sentence);
     await expect(page.getByRole('button', { name: 'Set password' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Open in Raketa' })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toHaveAttribute(
       'href',
-      'raketa://',
+      'rakieta://',
     );
   });
 }

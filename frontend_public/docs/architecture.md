@@ -42,7 +42,7 @@ e2e/                   the Playwright suite and its stub backend (§7)
   - `invitation` and `password-reset`: reading a link, and what each page says in each state;
   - `set-password`: what both of those pages share: a link's state, the form, its checks and its
     actions;
-  - `get-the-app`: the two stores and **Open in Raketa**, which every page about a link offers
+  - `get-the-app`: the two stores and **Open in Rakieta**, which every page about a link offers
     (ADR-0187 §4). A dead link and the error page offer neither: there is nothing there for the
     app to open. It also holds `APP_ROUTES`, the routes the app and this site both answer
     (`join`, `f`, `invite`, `reset`), written once for every link, redirect and claim;
@@ -100,7 +100,7 @@ Failures that are nobody's doing are logged by code and trace id, never with a p
 - **A code or token in an address is untrusted route input** (ADR-0187 §7). A group's or a friend
   link's code that is not letters and digits, or a token that is not the URL-safe letters the
   backend mints, leads nowhere without asking the backend, and nothing else is ever put into a link
-  this site draws, the preview's and **Open in Raketa**'s included.
+  this site draws, the preview's and **Open in Rakieta**'s included.
 - **A token travels in a body**, as the contract has it, so it is in no backend access log. It is
   in this site's own, since it is in the page's address.
 - **A page and its preview tags read once.** `generateMetadata` and the page both ask; the query
@@ -173,7 +173,7 @@ worded as the app words it. While it is valid the page offers the form.
 - **Raketa is named only where ADR-0187 names it**: _after you install, open Raketa and enter this
   code_ (§4) and _Open Raketa and sign in with your email and password_ (§8). Everywhere else
   these pages say _the app_, as the copy rule has it.
-- **Open in Raketa** opens the app at `invite/<token>` or `reset/<token>` while the link works
+- **Open in Rakieta** opens the app at `invite/<token>` or `reset/<token>` while the link works
   (#520), and at the app's start once it can't, where the person signs in.
 
 ## 6. Configuration
@@ -196,7 +196,7 @@ would log a failed `register()` and go on serving 500s. `APP_ENV` selects defaul
 site's own address and both store links must be `https://` in every deployed environment.
 `API_URL` is server-to-server and carries no scheme rule (`docs/environments.md`). `APP_SCHEME`
 is the app's own scheme, without `://`, and a web or script scheme is refused, so **Open in
-Raketa** can only ever open the app.
+Rakieta** can only ever open the app.
 
 **The app-link files** (`/.well-known/apple-app-site-association` and
 `/.well-known/assetlinks.json`) are made per request from those settings, as JSON with no redirect.
@@ -209,7 +209,7 @@ and the friend link's page (the friends mechanics §4.3): `referrer=<PUBLIC_SITE
 or `/f/<code>`, set on `GOOGLE_PLAY_URL` by parsing it, so a setting that does not parse is
 refused at start. Play hands it to the app on its first launch, which opens it as if it had been
 tapped (#756). An iPhone has no such thing, so the App Store button is the listing as it is, and
-the friend link's page says to come back and tap **Open in Raketa**. The invitation and reset
+the friend link's page says to come back and tap **Open in Rakieta**. The invitation and reset
 pages carry nothing: Play keeps a referrer for 90 days, and a token is a credential.
 
 ## 7. The test seam
@@ -265,4 +265,4 @@ allows no variable for.
 narrow column on anything wider. A link owner's face stands where a group's tile does, a box rounded
 at a third of its side, as the app rounds a face. A button that leaves the site (for a store, or for
 the app) is a plain `<a>`: the stores' are filled with ink, as their own badges are, and **Open in
-Raketa** is outlined. A form's one button is coral, as the club website's is.
+Rakieta** is outlined. A form's one button is coral, as the club website's is.

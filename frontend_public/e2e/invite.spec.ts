@@ -37,9 +37,9 @@ test('an invitation link greets the person by name for the club, with the code a
     'href',
     GOOGLE_PLAY_URL,
   );
-  await expect(page.getByRole('link', { name: 'Open in Raketa' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toHaveAttribute(
     'href',
-    `raketa://invite/${link}`,
+    `rakieta://invite/${link}`,
   );
   // The token went in a body, never a path, as the contract has it.
   expect(stub.requests('post', INVITATION_READ).map((request) => request.body)).toEqual([
@@ -72,9 +72,9 @@ test('Set your password here sets it by the link, then says to open Raketa and s
   // The link is spent: its code no longer opens anything, and there is nothing left to set.
   await expect(page.getByText('K7PQ2MXA')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Set password' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Open in Raketa' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toHaveAttribute(
     'href',
-    'raketa://',
+    'rakieta://',
   );
 });
 
@@ -174,9 +174,9 @@ for (const [state, sentence] of [
     await expect(page.getByRole('main').getByRole('status')).toHaveText(sentence);
     await expect(page.getByText('Your code')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Set password' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Open in Raketa' })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toHaveAttribute(
       'href',
-      'raketa://',
+      'rakieta://',
     );
   });
 }
@@ -289,7 +289,7 @@ test.describe('without JavaScript', () => {
       }),
     ).toBeVisible();
     await expect(page.getByText('K7PQ2MXA', { exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Open in Raketa' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toBeVisible();
   });
 });
 

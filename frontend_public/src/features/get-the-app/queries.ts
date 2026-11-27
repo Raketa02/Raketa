@@ -25,7 +25,7 @@ export function appLinks(
     googlePlay: carryThroughInstall
       ? withInstallReferrer(config.googlePlayUrl, `${config.siteUrl}/${route}`)
       : config.googlePlayUrl,
-    openInRaketa: `${config.appScheme}://${route}`,
+    openInRakieta: `${config.appScheme}://${route}`,
   };
 }
 
