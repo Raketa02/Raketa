@@ -18,8 +18,16 @@
  * │ ▎       · free to leave until then          │
  * └─────────────────────────────────────────────┘
  * [ We played ]                                     the result, once the hour has come
- * BALANCE FORECAST …                                the Game's own forecast (details 9)
+ * BALANCE FORECAST …  /  SOCIAL VIBE …              the Game's own pairing, as its kind's card
  * ```
+ *
+ * **The pairing's card is the kind's** (#841, ADR-0207 §5): a competitive game draws the Balance
+ * forecast and its stakes, as it always did; **a For-fun game draws the Social vibe card** its
+ * details opened on before the last yes, where *A friendly — nothing moves.* stood — so a For-fun
+ * game reads the same before and after it is booked, and at the court. It is `games`'
+ * `GamePairingCard`, drawn on the same occasions as the forecast was (`showsForecast`); its columns
+ * are the tiles' own people, in the tiles' order (`vibeColumnsOf`), and on For fun the vs line is
+ * spoken, since the vibe card does not say who partners whom and the forecast's split row did.
  *
  * **Nothing to show at the desk** (ADR-0195): players walk straight to the court, so the details
  * carry no QR code and no check-in code, on the game's day or any other.
@@ -56,7 +64,7 @@
  *   your card*** under the card opens the same confirmation.
  * - **A full game gone back to filling** (Q106, #629) — *Seat open* in amber, no court and no Chat,
  *   the share nobody pays over *1 seat open · books when it's full · nobody paid*; its way out is a game still filling's, ***Withdraw***, free and never on the record, as
- *   on a *You're In* row — no sheet in front of it, and back to Home, which no longer holds it.
+ *   on a *You’re in* row — no sheet in front of it, and back to Home, which no longer holds it.
  * - **A rescue seen from outside** (A4.3, #545) — opened from a *Seat open* card or a *Seats to fill*
  *   row, by a member the open seat is offered to: the players *paid*, the reader in the dashed seat
  *   that opened (*You complete it* on the last one, *You?* while more are open), the court, the share
@@ -104,13 +112,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { OPEN_THE_CHAT, useBookingRoom } from '@/features/conversations/types';
-import { GameForecast, tapsAreOpen } from '@/features/games/types';
+import { GamePairingCard, tapsAreOpen } from '@/features/games/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { formatZloty } from '@/shared/formatting/ratingFormat';
 import { showToast } from '@/shared/store/toast.store';
-import { behindOverlay, Button, courtSeatCount, ScreenHeader, theme } from '@/shared/ui';
+import {
+  behindOverlay,
+  Button,
+  courtSeatCount,
+  ScreenHeader,
+  theme,
+  useTabBarReach,
+} from '@/shared/ui';
 
 import { peopleOn, rowsOf, type DeckPerson } from '../domain/deck';
+import { vibeColumnsOf } from '../domain/details';
 import { confirmationOf, paymentToConfirmOn, yesOnRescue } from '../domain/fill';
 import { seatsShown, twoWayLeaveIn } from '../domain/friendsGame';
 import {
@@ -208,6 +224,8 @@ function Booked({
   readonly receivedAt: number;
   readonly groupName: string | undefined;
 }) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const me = useCurrentUser().data?.id;
   const room = useBookingRoom(game.bookingId);
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
@@ -296,7 +314,7 @@ function Booked({
                 ),
               })}
         />
-        <ScrollView contentContainerStyle={s.body}>
+        <ScrollView contentContainerStyle={[s.body, { paddingBottom: reach + theme.size.gutter }]}>
           <View style={s.game}>
             <GameGround />
             <View accessible accessibilityRole="header">
@@ -309,9 +327,10 @@ function Booked({
               singles={seats === 2}
               // The last seat open: your yes completes it, as the card says (A2.3).
               completes={completesTheRescue(game)}
-              fill={false}
               onPerson={setReading}
               {...(rescue === undefined ? {} : { rescue: { share } })}
+              // For fun draws no forecast, whose split row said the sides — so the line says them.
+              speaksSides={game.kind === 'forFun'}
             />
 
             <GameFacts facts={facts} accent={ink} />
@@ -361,7 +380,11 @@ function Booked({
           )}
 
           {game.showsForecast && me !== undefined && game.gameId !== undefined ? (
-            <GameForecast gameId={game.gameId} playerId={me} />
+            <GamePairingCard
+              gameId={game.gameId}
+              playerId={me}
+              columns={vibeColumnsOf({ top, bottom })}
+            />
           ) : null}
 
           {rescue === undefined || toConfirm !== undefined ? null : (

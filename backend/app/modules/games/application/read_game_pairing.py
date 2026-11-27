@@ -24,37 +24,70 @@ prices a friendly, and this side asserts the same thing on what comes back — a
 provider that priced one anyway is a wrong branch made loud rather than a
 figure rendered.
 
+**A For-fun game carries its Social vibe beside the pairing** (#835;
+``docs/adr/0207`` §5, §6). A friendly's court is asked its tags — one question,
+``TagsOnTheCourt`` — and ``vibe.py`` works the court's number and the reader's
+rows out of them with the Match Fit engine's own function, so the booked game
+reads what its card and its details read. **On the same occasions as the
+pairing and no wider**: the refusals above come first, and a court with a seat
+open draws no vibe, on the ground it draws no forecast. A competitive game asks
+nothing. **The tags are read before the Levels, and fail soft**: on Postgres a
+failed statement aborts the request's transaction, so a Levels read the port
+swallows must not come first, and a tags read that fails is logged and drawn as
+no vibe, as the port draws a Levels read that fails. The forecast is still the
+port's to send on a friendly — the apps already on phones read it — and the new
+app draws the vibe in its place.
+
 **Render nothing.** The use case returns the port's answer beside the instant and
 does no arithmetic; the route does none either. The engine's numbers cross
-unrounded, and decimal formatting is the client's.
+unrounded, and decimal formatting is the client's. The vibe is the one whole
+percent here, because a card prints it so and the booked game must print the
+same.
 """
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import final
 from uuid import UUID
 
 from app.kernel import Clock, Instant, instant, invariant
 from app.modules.games.domain.errors import NoGameOfYoursHasThatId, PairingIsHistory
+from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind
-from app.modules.games.domain.ports import CourtPairing, GameRepository, Pairing
+from app.modules.games.domain.ports import (
+    CourtPairing,
+    GameRepository,
+    Pairing,
+    TagsOnTheCourt,
+)
 from app.modules.games.domain.standing import GameStanding
+from app.modules.games.domain.vibe import CourtVibe, court_vibe_of
+
+logger = logging.getLogger(__name__)
 
 
 @final
 @dataclass(frozen=True, slots=True)
 class GamePairingRead:
-    """The instant the game was read at, and what the matcher made of its court.
+    """The instant the game was read at, what the matcher made of its court,
+    and — on a For-fun game — its Social vibe.
 
     ``pairing`` is ``None`` where the Levels themselves could not be read, and a
     ``Pairing`` with the forecast absent where the seats were read and the
     matcher could not price the court. The route draws the same absence for
     both, by decision; the log tells them apart.
+
+    ``vibe`` is ``None`` on a competitive game, on a court with a seat open,
+    and where nobody on it holds a tag that counts. It is read beside the
+    pairing and never from it: the Levels and the tags are two reads, and
+    either is drawn without the other.
     """
 
     read_at: Instant
     pairing: Pairing | None
+    vibe: CourtVibe | None = None
 
 
 @final
@@ -62,10 +95,16 @@ class ReadGamePairing:
     """One game's pairing, computed for one reader on its court."""
 
     def __init__(
-        self, *, games: GameRepository, pairings: CourtPairing, clock: Clock
+        self,
+        *,
+        games: GameRepository,
+        pairings: CourtPairing,
+        tags: TagsOnTheCourt,
+        clock: Clock,
     ) -> None:
         self._games = games
         self._pairings = pairings
+        self._tags = tags
         self._clock = clock
 
     async def execute(self, game_id: UUID, reader_id: UUID) -> GamePairingRead:
@@ -75,6 +114,10 @@ class ReadGamePairing:
             raise NoGameOfYoursHasThatId()
         if game.standing_at(now) is not GameStanding.AWAITING_ENTRY:
             raise PairingIsHistory()
+        # The tags before the Levels: on Postgres a failed read aborts the
+        # request's transaction, so a Levels read the port swallows would cost
+        # the vibe if the tags were asked after it.
+        vibe = await self._vibe_of(game, reader_id)
         pairing = await self._pairings.pairing_for(
             sport=game.sport,
             kind=game.kind,
@@ -96,7 +139,27 @@ class ReadGamePairing:
             "court, and this one is not yet the court that will play "
             "(docs/adr/0162)",
         )
-        return GamePairingRead(read_at=now, pairing=pairing)
+        return GamePairingRead(read_at=now, pairing=pairing, vibe=vibe)
+
+    async def _vibe_of(self, game: Game, reader_id: UUID) -> CourtVibe | None:
+        """A For-fun court's Social vibe for the reader — **asked only of a
+        friendly whose every seat is filled**, so a competitive game reads no
+        tags at all and a court somebody has left draws no vibe, as it draws
+        no forecast.
+
+        **A tags read that fails is no vibe, and logged**: the block is
+        omitted on its own ground, the posture the pairing port holds for the
+        Levels (``docs/adr/0161`` §4), rather than a game screen refused.
+        """
+
+        if game.kind is not GameKind.FRIENDLY or not game.line_up.is_complete:
+            return None
+        try:
+            held = await self._tags.held_by(game.line_up.players)
+        except Exception:
+            logger.warning("the court's Social tags could not be read", exc_info=True)
+            return None
+        return court_vibe_of(game.line_up, reader_id, held)
 
 
 __all__ = ["GamePairingRead", "ReadGamePairing"]

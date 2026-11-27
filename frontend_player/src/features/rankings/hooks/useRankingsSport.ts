@@ -8,20 +8,24 @@
  * **draws no sport until it knows which** (ADR-0188 §4: no screen draws one choice and then jumps to
  * another), so with nothing asked it waits for Home's read and then the deck's two, the phone's and
  * the ratings'. A ratings read that fails is no level anywhere for this purpose: padel, and all four
- * in the app's order — the page still opens, and a sport with no level says so on its card.
+ * in the app's order — the page still opens, and a sport with no level says so on its card. **So is
+ * one held for a connection with nothing read yet** (#870), as Home's own read is for the trophy:
+ * the page opens, and its read says it is offline rather than the page shimmering for as long as the
+ * phone is.
  *
  * **A pick is held while the page is up and kept nowhere.** The phone remembers the view (#777), not
  * the sport: the trophy's sport is the latest result's, and the deck's last sport is the deck's.
  */
 
+import type { QueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { useDeckSport } from '@/features/groups/types';
-import { useSkillRatings } from '@/features/onboarding/types';
-import { useHomeRanking } from '@/features/proposals/types';
+import { deckSportIn, useDeckSport } from '@/features/groups/types';
+import { onboardingKeys, useSkillRatings, type SkillRating } from '@/features/onboarding/types';
+import { homeRankingIn, useHomeRanking } from '@/features/proposals/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { openingSport, pillSports } from '../domain/ranking';
+import { openingOf, type Opening } from '../domain/ranking';
 
 export interface RankingsSport {
   /** The pill's sports, rated first — `undefined` while the ratings are read. */
@@ -38,13 +42,8 @@ export function useRankingsSport(asked: Sport | undefined): RankingsSport {
   return { sports, sport: picked ?? opening, pick: setPicked };
 }
 
-/** **The pill's sports, and the sport a ranking opens on** — before anything is picked. */
-export interface OpeningSport {
-  /** All four, rated first — `undefined` while the ratings are read. */
-  readonly sports: readonly Sport[] | undefined;
-  /** The sport asked for, else the trophy's, else the deck's, else padel — `undefined` until known. */
-  readonly opening: Sport | undefined;
-}
+/** **The pill's sports, and the sport a ranking opens on** — before anything is picked (`openingOf`). */
+export type OpeningSport = Opening;
 
 /**
  * **The reads behind the opening sport and the pill** — the page's, and Home's Top 10 row's
@@ -56,14 +55,27 @@ export function useOpeningSport(asked?: Sport): OpeningSport {
   const deck = useDeckSport();
   const trophy = useHomeRanking();
 
-  const unrated = ratings.isError;
-  const rated = unrated ? [] : ratings.data?.map((rating) => rating.sport);
+  return openingOf(asked, {
+    rated: ratings.data?.map((rating) => rating.sport),
+    ratingsRefused: ratings.isError,
+    ratingsPaused: ratings.fetchStatus === 'paused',
+    deck,
+    trophy,
+  });
+}
 
-  return {
-    sports: rated === undefined ? undefined : pillSports(rated),
-    opening: openingSport(asked, {
-      trophy: trophy === undefined ? undefined : (trophy?.sport ?? null),
-      deck: unrated && deck === undefined ? null : deck,
-    }),
-  };
+/**
+ * **The sport Home's Top 10 opens on, off the cache** (#874) — `useOpeningSport`'s answer with nothing
+ * asked, where no hook can ask: the launch's warm-up, which reads the row before Home is drawn, under
+ * the key the row's hook will look for.
+ */
+export function openingSportIn(client: QueryClient): Sport | undefined {
+  const ratings = client.getQueryState<readonly SkillRating[]>(onboardingKeys.ratings());
+  return openingOf(undefined, {
+    rated: ratings?.data?.map((rating) => rating.sport),
+    ratingsRefused: ratings?.status === 'error',
+    ratingsPaused: ratings?.fetchStatus === 'paused',
+    deck: deckSportIn(client),
+    trophy: homeRankingIn(client),
+  }).opening;
 }

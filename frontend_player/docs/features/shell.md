@@ -6,7 +6,8 @@
 > changes what this feature does. Index: [`README.md`](README.md).
 
 **The shell is three tabs over one stack, and it remembers nothing.** `TabShell` mounts the
-`TabBar` once, below the navigator, and reads the active column off the current path —
+`TabBar` once, over the navigator's foot (below it until #881, see the next paragraph), and reads
+the active column off the current path —
 `tabForPathname`, by the **first** segment, so ⚡Play stays lit for every screen inside Play.
 It is a `Stack` and deliberately **not** `<Tabs>`, which keeps a history per tab and restores
 it: built that way, a player who leaves a screen and comes back lands on it, and _back goes
@@ -45,13 +46,101 @@ composer replaces it ([#400](https://github.com/Raketa02/Raketa/issues/400)): `b
 beside `tabForPathname` names the whole path, `TabShell` does not render the bar there rather than
 hiding it, and the room takes the bottom safe-area inset the bar owns everywhere else — the one
 exception to design-system §10.1, recorded in Part 16. The column stays lit while the bar is
-down. **No sentence the shell writes says "nothing is happening"** — it began as Now's refusal,
+down. It also stands down on Android while the keyboard is up, on any route (below). **No sentence the shell writes says "nothing is happening"** — it began as Now's refusal,
 because Now is where a game lands and asserting emptiness would be a lie one tap after one did, and
 it governs every empty state the shell writes. `shellCopy.test.ts` holds that refusal, and it
 **moved with the copy** rather than being deleted when the placeholder it was written for died.
 The bar's **transitions** follow the two moves: `none` by default, because a replace that slid in
 from the right would read as going deeper on the gesture whose meaning is that nothing was kept,
 and the push kept for the screens pushed over a tab, which genuinely are ones.
+
+**The bar floats over the screen, and every screen inside the tabs ends at its reach**
+([#881](https://github.com/Raketa02/Raketa/issues/881), 2026-11-25;
+[ADR-0210](../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §3,
+design-system §10.1). It was a flex sibling under the stack, which ended every screen above it for
+free; it is now drawn absolutely at the phone's foot and owns no layout, so the screens draw to the
+bottom of the phone — the prefactor that left the dock (#883) a look change only. **The reach** is
+the room the bar takes there: the dock's lift and its 54 while it is drawn (66 on the A32, 88 on a
+notched iPhone, #883), and nothing while it stands down. `TabShell` says it
+(`useSaysTabBarReach(barShown)`), and so does the administrator's `AreaShell`, whose bar is the same
+dock with two columns. It is a followed value in `shared/ui`
+(`tabBarReach.ts`, the page band's pattern) rather than a context, because sheets and the toast
+host sit at the root, above the shell; a shell mounting puts its first value in place before what
+it holds renders, so no screen draws a first frame at the phone's foot. **What reads it**:
+`ShellScreen` ends its page at reach + 15 — or, with an `action`, ends its layout at the reach so
+the CTA sits above the bar in flow — and every tab screen with its own scroller ends at reach + the
+gap it kept (the group page and its tabs, the deck's ✕ · i · ✓, game details, the booked game,
+Post a game, Edit group, Join a group, Members, New group, Play, the See all pages, _Groups heating
+up_ and the administrator's screens). Post a game and _New group_ stand at reach + the gutter, and
+Group info and the administrator's You end at the reach, their feet pinned. **What a page says is on
+screen is what shows above the bar**: `ShellScreen` hands Home's rows its band less the reach, so a
+card under the bar is not seen and a FOR YOU line unfolding brings its foot to the bar's top, as
+before. **Rankings ends at the reach** like a pinned screen — whether the reader's row is on screen
+(the jump button) and where a jump centres it are FlatList's own measure of its frame, which takes no
+inset — so its rows do not pass under the bar; the dock (#883) inherited that call.
+The Undo toast stands 9 above the reach, or above the inset in the chat (`useRoomAtTheBottom`, which
+_Start playing_ also ends at); the toast stands 9 above the **full** reach on every screen
+(`useFullTabBarReach`), so it still clears the chat's composer. `TAB_BAR_HEIGHT` is private to the bar
+now. **What it costs**: on an iPhone with the keyboard up, a form that avoids it (New group, Edit
+group, Where you play) keeps the reach under its last field, room nobody sees until scrolled to the
+end. Two costs #881 recorded went with the dock (#883): the bar no longer grows past its reach at the
+1.6 text cap — the dock is 54 at every size — and a scroller's indicator, drawn at the screen's edge,
+no longer runs under the bar, which stands 12 in from either side.
+`theShell.test.tsx`, the group page's Fill in, You're in and Games suites, `theFill.test.tsx` and
+`administratorArea.test.tsx` walk it against the reach worked out from the theme
+(`test-support/tabBarReach.ts`).
+
+**The bar is the dock, and the selection marker stands under the lit tab** ([#883](https://github.com/Raketa02/Raketa/issues/883),
+2026-11-25; ADR-0210 §2, §4–§7, design-system §10.2). `TabBar` draws a rounded slab 54 tall, 12 in
+from each side and lifted the larger of 12 and the bottom inset: `color.glass` over `expo-blur` on
+the iPhone, and opaque `surface` on Android, where the A32 measured the blur costing frames
+(`theme.glass.android`, off). Its three columns are Ionicons over `tag` labels — outlined in
+`tabIdle` while idle, filled `coral` with a `coralInk` label while lit, the bolt filled always — and
+the lit one sits on an opaque `coralSoft` capsule, 75 × 42, which is the dock's own layer under
+the words, placed from the window's width so the first frame has it. The ⚡Play disc, its ring and
+`shadow.fab` are gone, so Play dims under a finger like the other two; Home's badge stays on the
+house. **The shell is unchanged**: the lit tab is still the URL's, so the marker stands under
+whichever tab that is — under Play for a group opened from Home's _Groups heating up_, under Home
+inside a booked game. The administrator's area draws the same dock with Groups (`people`) and You.
+`theShell.test.tsx` and `administratorArea.test.tsx` walk where the marker stands (`markerUnder`);
+the look is the phone
+walk's ([#885](https://github.com/Raketa02/Raketa/issues/885)), and a phone build needs a native
+rebuild for `expo-blur`.
+
+**The marker travels** ([#884](https://github.com/Raketa02/Raketa/issues/884), 2026-11-25; ADR-0210
+§8, design-system §10.2). On every change of the lit tab after the dock's first draw it slides to
+the new one on `motion.tabMarker`'s spring — 460 ms at damping ratio 0.75, so it overshoots by a few
+points and settles — stretching like a bubble with its own speed and recoiling as it brakes, and
+the new tab colours in from 140 ms into the slide while the tab left goes idle at once. The shell
+needs nothing for it: the lit tab is the URL's, so a press, a landing, a notice landing in another
+tab, a group opened from Home's _Groups heating up_ and back all change the one value the bar is
+handed, and **the bar cannot tell them apart**. Nothing moves where that value does not change — a
+press of the lit tab, a branch's own pushes — and nothing moves on the dock's first draw, which is
+also every time it comes back after the chat or Android's keyboard, since the shell draws it anew.
+Under Reduce motion the marker is placed and the colours switch at once. `markerTravels.test.tsx`
+walks it through the shell, `hottestGroups.test.tsx` the trip to Play and back, and
+`administratorArea.test.tsx` the Administrator's two tabs. **A press while the marker is still
+travelling cannot be walked through the router harness**, whose flush on the second navigation lands
+the first slide, so the turn mid-flight is the bar's own suite's. The feel is the phone walk's
+(#885), and so is whether the slide stutters while a tab's screen mounts under it
+([#886](https://github.com/Raketa02/Raketa/issues/886), measured on the A32 by the spike).
+
+**On Android the bar stands down while the keyboard is up** ([#882](https://github.com/Raketa02/Raketa/issues/882),
+2026-11-25; ADR-0210 §9, design-system §10.1). Android shrinks the window for the keyboard, and the
+floating bar sits at the window's foot, so it would ride up above the keyboard and over a field near
+it: Intro, Name, New group, Edit group, Post a game and the administrator's forms, whose pages no
+longer end above the bar. `TabShell` and `AreaShell` both read `useKeyboardShrinksTheWindow` (up, on
+a phone whose window resizes for it) and treat it as the chat's room is treated. The bar is not
+rendered and the reach is nothing, so a form's page ends its own 15 above the keyboard and the Undo
+toast stands 9 above the bottom inset; the toast keeps the full reach. Nothing animates, and the bar
+is back, its column lit, when the keyboard goes. An iPhone draws its keyboard over the window and the
+hook never answers yes there, so nothing redraws. **The platform's `keyboard.ts` is the app's one
+listener for the keyboard's show and hide.** It already held the avoidance value and the dismissal,
+so the reading joined it (ADR-0210 §9 corrects the PRD's _a new port_), and the lint fences React
+Native's `Keyboard` to it as it fences `Share` to the share port. `theShell.test.tsx` walks New group
+on both phones with `fakeKeyboard()`, `administratorArea.test.tsx` the area's New official group,
+and `theFill.test.tsx` the Undo toast. **Not seen on a device**: the bar going and coming with the
+keyboard is for the phone walk (#885).
 
 **You draws one more of another feature's sections: the Location area sentence**
 ([#462](https://github.com/Raketa02/Raketa/issues/462)). `AreaUpdatesNote` sits under
@@ -292,9 +381,310 @@ row's reads list people (`LISTS_PEOPLE`) and every friend write re-reads those. 
 Home rows mechanics §9.2). `HomeScreen` turns on `ShellScreen`'s **`watchesOnScreen`** — forwarded,
 not designed, and off on every other shell screen, whose scroller says nothing of where it is. With
 it on, the page's scroller hands its rows `shared/ui`'s `PageOnScreen` (`useWatchedPage`): how far
-it is scrolled and how tall it shows, sampled ten times a second and read again where a drag or a
-fling comes to rest — and **nothing while Home is not the screen in view**, a screen pushed over it,
+it is scrolled and how tall it shows, sampled every frame and read again where a drag or a fling
+comes to rest — and **nothing while Home is not the screen in view**, a screen pushed over it,
 another tab, the app in the background (`useFocusEffect` and `useAppInBackground` in a child, so a
 shell screen drawn outside a navigator never asks; coming back says the band again). Nothing drawn
 changes, and nothing re-renders as the page moves: the band is followed, not state. What a row does
 with it is `discovery`'s.
+
+**Every frame, because ten times a second stopped every press on Home on Android** (2026-11-21,
+`ON_SCREEN_SAMPLE_MS`). React Native 0.76's Android scroll view throttles _every_ scroll event by the
+page's `scrollEventThrottle`, the end of a scroll included, so a scroll that came to rest within 100
+ms of the last sample — a FOR YOU line scrolling the page to show itself, always; a fling, now and
+then — never said it had. `ScrollView`, having heard the momentum begin and never its end, took
+itself for still moving and claimed every touch that started on it: no line header, tile, face,
+friend button, pill or link on Home reached its press until the reader dragged the page. On a Galaxy
+A32, eleven of eleven presses across the five lines failed at 100 and none at 16, under which
+Android throttles nothing. A larger figure here is that bug again.
+
+**Home's header reads envelope, bell, trophy, and what waits on the player is behind the envelope**
+([#816](https://github.com/Raketa02/Raketa/issues/816), PRD #810;
+[ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§1, §2, §4; home refactor 1 and 2). `HomeScreen`'s right slot is `NeedsYourAnswer`, then
+`notifications`' `NoticeBell`, then `rankings`' `RankingTrophy` in the corner — the trophy took it from
+the bell, so the paragraph on #775 above that says _the bell keeps the corner_ was true until this one.
+**The envelope** is an `ink` Feather `mail` in a 44pt target named _Needs your answer_, drawn only
+while a friend request or an ask for a level waits; the slot is right-aligned, so without it the bell
+and the trophy stay put. **It opens Needs your answer**, `shared/ui`'s `BottomSheet` with
+`closesOnSwipe` (✕, the scrim, or a pull down its head), kept mounted so its title takes a screen
+reader's focus on opening. It holds `friends`' `FriendRequestsSection` and `LevelAsksSection`, handed
+what is other features' as `HomeFriendRows` handed it before: the chip and the record
+(`player_record`'s), and the bell's re-read. **Where the sheet stands is `domain/needsYourAnswer`'s**:
+closed, open, or aside under a record a face opened — drawn inside the sheet, for iOS's second-window
+reason (`discovery`'s vibe sheet) — and up only while something waits. **The last answer closes it for
+good** and the envelope goes; something arriving later brings the envelope back and never the sheet.
+**Get your level or Carry on closes it for good, then starts**: the start navigates, so the shell runs
+`friends`' `useGetAskedLevel` beside the sheet, never in it, and shows the _level asked_ notice's toast
+for a start that fails. **Home's body** loses FRIEND REQUESTS and ASKED FOR A LEVEL, and _Get your
+level_ is drawn whether or not someone asked (`groups`' rule, [`groups.md`](groups.md)). _TO CONFIRM_
+and FRIENDS GAME stay on Home until #817 moves them into the sheet; the envelope's count is #819's.
+The walk is `theShell.test.tsx` (_Needs your answer_: the header's order with and without the envelope,
+the mark, the title's focus, the sections' order and hidden empties, ✕, the scrim and the pull, the
+self-close and what arrives after it). **Not seen on a device**: the header against mock 1, the sheet
+against mock 2, the pull and its spring back.
+
+**TO CONFIRM and FRIENDS GAME join the sheet, first and second, and links and notices land on it**
+([#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1; Q14, Q24, Q25, Q32). The sheet
+reads **TO CONFIRM · n**, **FRIENDS GAME · n**, then `friends`' two — `proposals`'
+`ToConfirmSection` and `FriendsGameSection` above `friends`' sections — and **Home's body is _Get your
+level_, _Your games_ and the five rows**. The envelope counts all four off `proposals`'
+`useAnswersWaiting`: a read in flight or refused counts nothing, so a failed _To confirm_ read draws
+no envelope by itself (ADR-0205 §3). **Home's tab badge is unchanged** — `needing_you`, the payments
+to confirm among it.
+
+- **The fill is carried in** (`proposals`' `useSheetFill` / `FillInASheet`): a sheet keeps the root's
+  contexts only, and the fill is mounted around the tabs, so the shell reads it beside the sheet and
+  hands it in. Its overlays — the confirmation **Confirm** and **Fix** open, the setup an
+  invitation's _Accept_ opens, _It's a game!_ — are drawn inside the sheet while it is up, for the
+  record's iOS reason.
+- **Where the sheet stands grew two states** (`domain/needsYourAnswer`): `underTheFill`, beneath what
+  the fill put up — back when it goes if anything still waits, closed with it when nothing does, and
+  **closed for good once _It's a game!_ was raised**, whatever still waits; and `asked`.
+- **A link or a notice asks for it** (`openNeedsYourAnswer`, `components/needsYourAnswerAsked.ts`):
+  Home laid down as `openTab` lays it, and the kept Home's sheet told, by a module-level listener as
+  `homeStart`'s landing is. **An ask nobody hears is held** for the next Home to subscribe — a stack
+  that began somewhere else gets its Home from `openTab` itself, mounted after the ask — and taken
+  once. The sheet hears the fill again as it opens, so one opened over a fill sheet already up
+  steps aside under it. **Asked, it waits for the reads behind it** — Home's and the payments to
+  confirm, which the link or the notice re-read — and opens once they land if anything waits by then,
+  or stays closed: the sheet is never shown empty. Its callers are `links`' friend link and
+  `notifications`' `FRIEND_REQUEST` and `FRIENDS_GAME_INVITATION`.
+
+The walks: `theShell.test.tsx` (the four sections' order, the envelope for a payment or an invitation
+alone), `proposals`' `friendsGames.test.tsx` and `homeAndBookedGame.test.tsx` (the tiles, answering,
+the setup's and the confirmation's hand-back, _It's a game!_ closing the sheet, the badge), and
+`links`' and `notifications`' suites for the landings. **Not seen on a device**: the To confirm and
+Friends game tiles against mock 2, and every sheet the fill draws over this one — on iOS each is a
+native window opened inside the sheet's; nothing in jest can show that it presents.
+
+**The envelope carries the bell's count mark, and closing the sheet records a visit**
+([#819](https://github.com/Raketa02/Raketa/issues/819), ADR-0205 §2, §3; home refactor 1). The badge
+is `shared/ui`'s `CountBadge`, tone `news`, in ink — **the bell's, unchanged** (design-system 10.3) —
+on a glyph box of its own inside the 44pt target, as the bell's is: _99+_ above 99, nothing at
+nought (`envelopeFigure`, `shellCopy.ts`). **It counts what arrived since the sheet was last closed**,
+as the server counts it on Home's read (`proposals`' `useAnswersWaiting`). Spoken on the envelope's
+name, _Needs your answer, 2 new_, exactly above 99 (`envelopeSpoken`), and hidden as a mark. **While
+anything waits the envelope stays**, with a count or without.
+
+- **Every way the sheet goes for good is a close** (`wentForGood`, `domain/needsYourAnswer`): from
+  open, aside or under the fill to closed — ✕, a swipe, the backdrop, the self-close after the last
+  answer, a record or a fill's sheet closing over nothing left, _It's a game!_, and a hand-off to a
+  screen — or straight to asked, a link or a notice asking again in the render that closed it.
+  Stepping aside is not, since the sheet comes back; nor is a sheet a link or a notice asked for that
+  never opened, since nothing was shown. **A sheet a link or a notice opened counts the same.**
+  `NeedsYourAnswer` reads the step in an effect, after the reducer has moved, and calls `proposals`'
+  `useNeedsYourAnswerVisit`, which owns the watermark, the write and the badge
+  ([`proposals.md`](proposals.md)).
+- **What the visit says was seen is what the sheet was shown on** (`sheetIsShown`): open with
+  something in it. Up beneath a record or a fill's sheet is not shown — their scrim covers it — so a
+  read that lands under _It's a game!_, which closes the sheet for good, stays new.
+- **The envelope, and so the sheet, are drawn off Home's one read now**, _TO CONFIRM_ included: the
+  paragraph on #817 above that says _a failed To confirm read draws no envelope by itself_ and that
+  an ask waits for _Home's and the payments to confirm_ was true until this one. A failed Home read
+  draws no envelope, and an ask waits for Home's alone.
+
+The walk is `envelopeCount.test.tsx`. **Not seen on a device**: the badge on the envelope against
+mock 1, where it sits over the mail mark's corner as the bell's does over the bell.
+
+**The five Home rows fold into FOR YOU, and which line is open is the shell's**
+([#820](https://github.com/Raketa02/Raketa/issues/820), ADR-0205 §5, §8; the Home rows screens §1,
+§2; home refactor 3–13). Under _Your games_, `ForYou` draws `shared/ui`'s `FoldingLines` — the eyebrow
+_FOR YOU_ (`HOME_COPY.forYou`) — and five `FoldingLine`s in ADR-0205 §5's order, each its feature's:
+`groups`' `useHottestGroupsLine`, `discovery`'s `useSameLevelLine`, `useNewInRaketaLine` and
+`useSameVibeLine`, and `rankings`' `useTopTenLine`. **Each hands its title, what it unfolds and its
+footer, or `undefined` while its read is out, empty or failed**, so the shell knows from one call per
+line whether to draw it, and **every line's read runs when Home opens**, open or not. With all five
+hidden, FOR YOU is not drawn. The paragraphs above that say `HomeScreen` draws `HottestGroupsRow` and
+`NewInRaketaRow` were true until this one.
+
+- **A hook that hands back elements**, rather than a component per line, because the shell must know
+  which lines are shown — to hide FOR YOU and to close a line that empties — and a component that
+  draws `null` cannot say so without a second read of every row or a state copied up through an
+  effect. The read, a people line's on-screen reporter and Top 10's pick are held at the line's level,
+  which lives while Home does; what the line unfolds is drawn only while it is open.
+- **Which line is open is `domain/forYou`** (pure, `forYou.test.ts`) **kept by `useOpenLine`**: a
+  press on a closed line opens it; on the open line's header closes it; on another line folds the
+  first and unfolds the second once `motion.lineFold` has run, and **whatever is pressed while a line
+  folds waits for that fold** — so an unfold never runs beside one — all at once under Reduce motion.
+  Which line Home starts on (`lineToStartOn`) and whether FOR YOU is drawn (`forYouShown`) are the
+  domain's too. A line
+  that stops being shown closes, and comes back closed. **Every line starts closed**, but **for a
+  reader in no group Groups heating up opens by itself** once it is shown and until the reader
+  presses anything — and stays open when a join from it makes them a member. **Home's own state,
+  never a store**: Home is kept under every tab (`TAB_STACK`), so the open line outlives a tab switch
+  and a screen pushed over Home, and goes with Home at a restart or a sign-out — never kept.
+- **The page shows what opened** (`PageReveal`): `ShellScreen` provides it on a page that watches,
+  scrolling just far enough that the unfolding line's foot stands at the page's — at once under
+  Reduce motion — from the band it already follows for the on-screen reports. **Only a line the
+  reader pressed open asks** (`pressed`, handed down as `reveals`): Groups heating up opening by
+  itself for a groupless reader never scrolls Home under them.
+- **Every line's content is memoised**: all five hooks run in `ForYou`, so a re-read of one line
+  renders the others' frames again, and their cards only if their own data moved.
+- **The groupless line** reads _Join a group to get games — see Groups heating up, just below._
+  (`GROUPS_COPY.hottest.groupless`).
+
+The walk is `forYou.test.tsx`; each line's own is its feature's suite. **Not seen on a device**: the
+fold, the unfold, the switch, the lines sliding and the page easing down, against home refactor 3–13.
+
+**FOR YOU's lines show their counts** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+ADR-0205 §5, §6; home refactor 3, 4, 7). A line's parts carry its `count`, and `ForYou` hands it to the
+`FoldingLine` as it hands the title — the shell decides nothing about it: what a count counts is each
+feature's read, the pill and its _99+_ are `shared/ui`'s. Four lines carry one, Top 10 none.
+**Nothing new reads**: the count is on each line's own read, so it moves when that read does — a
+return after 30 seconds, foregrounding, Home's pull, a push or a write that re-reads the row. Walked
+in `forYou.test.tsx`'s _the counts_: each line's figure, the cap, no pill on Top 10, the pill kept
+open, the spoken names, _See all N_ in the people lines' footers, and the pull and a return moving
+the figure.
+
+**Play's Explore goes behind the `explore` feature flag, off** ([#826](https://github.com/Raketa02/Raketa/issues/826),
+[ADR-0206](../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)
+§11). `PlayScreen` asks `useFeatureOnMount('explore')` **once, when it mounts**, and draws one of
+two components — the answer cannot change under either, so neither reads what the other reads.
+**Off** — the code default, and every environment's value — is the Administrator's Groups tab
+exactly: `TopSafeArea` + a pinned `ScreenHeader` titled **Groups** (`PLAY_COPY.title`; an h1, a
+header to a listener, no eyebrow, no sub-line, nothing on the right) over `GroupsSection`,
+unchanged, with **+ New** and **Join** where they are at the top of the list. No segment is drawn,
+and Explore cannot be reached: the remembered segment is the only way in, so the off branch never
+calls `usePlaySegment` — it **does not wait on the segment read and never writes it**, and a saved
+`explore` stays on the phone, the player's own choice for the day the feature flag comes on. It is
+not wrapped in `ShellScreen`, whose scroller would nest the list's. **On** is the paragraph above,
+unchanged: the prominent segment, the remembered segment, Groups first. **Anything unknown is off**
+— no datafile yet, offline, a host that never answers, a datafile refused for its `schemaVersion`
+with none saved, no signed-in player — so the switcher is drawn only on an explicit on, and a
+datafile that lands while Play is up changes nothing until Play next mounts: Explore never appears
+under the player's thumb. The bottom tab stays **Play**. The walks are
+`components/theExploreGate.test.tsx` (nothing served, served off, a saved `explore` read past and
+still saved, served on with a saved Explore reopening, a datafile arriving while Play is up, an
+unknown `schemaVersion` with and without a saved datafile, and one refused mid-session);
+`playSegment.test.tsx`'s walks run with `explore` served on (`launchWithExplore`), and
+`theShell.test.tsx` finds Play by its title. **Not seen on a device**: the title over the list, and
+the switcher back through a locally served datafile.
+
+**Home shimmers until it is built, then reveals together** ([#871](https://github.com/Raketa02/Raketa/issues/871);
+PRD #867; the loading shimmer log §5, §6, Q11–Q16). Home was about ten reads drawn as each landed —
+the envelope, the level card, _Your games · 0_ and its sentences, then FOR YOU's lines one by one.
+**Now it has two parts, top-down** (`hooks/useHomeParts`), each waiting on its reads:
+
+| Part                                    | Draws                                              | Waits for                                                                                                      |
+| --------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **1 — your things**                     | the header's numbers, the level card, _Your games_ | Home's own read; the ratings, and your groups where the level card needs them; in-no-group; the bell's notices |
+| **2 — FOR YOU**, all its lines together | the heading and whichever lines have content       | Groups heating up; the three people lines; Top 10, behind its opening sport                                    |
+
+- **The skeleton**, while a part waits: _Your games_' heading bar and one game card's block at the
+  rail's real card size (`proposals`' `YourGamesSkeleton`), and FOR YOU's heading bar and four closed
+  lines at the line's real height (`ForYouSkeleton`) — **no level card and no envelope**, which are
+  often absent. Both stand on one `SkeletonGround`, so one band crosses them; it draws itself again
+  as it is laid out only while a shape stands, so once Home has revealed a line folding under it
+  costs nothing. The heading bars are as wide as their words (`shared/ui`'s `SkeletonWords`, the words
+  set unseen in the heading's role, _Your games_' with a one-figure count); the card's block is as
+  tall as the rows every card draws, read off its drawing — the tags, three facts, the large button.
+  Each part is a `Reveal` **sized by its skeleton** while it waits, since its content is nothing until
+  its read lands.
+- **The rule** is `shared/ui`'s `useRevealParts`: **before the ceiling, everything together** once both
+  parts have finished, on one cross-fade; **at the ceiling, 2.5 s after Home mounts**, the finished
+  parts from the top, stopping at the first that is not — never FOR YOU before your things — and then
+  each in turn as it finishes. **A read has finished** once it has landed, been refused, paused for a
+  connection, or **failed once and started retrying** (`shared/lib/query-client`'s `readHasFinished`),
+  read off Query's cache by each feature's own `use…Finished` (the level card's and Top 10's rules
+  over those reads are their features' `domain/`'s, `levelCardReadsFinished` and
+  `topTenReadFinished`) — `proposals`' `useHomeReadFinished`,
+  `groups`' `useLevelCardFinished`, `useInNoGroupFinished` and `useHottestGroupsFinished`,
+  `notifications`' `useNoticesFinished`, `discovery`'s `useDiscoveryLinesFinished` and `rankings`'
+  `useTopTenFinished` — each drawing `HomeScreen` again only as it turns, so a background re-read
+  draws nothing new. **Photo bytes are never waited for.**
+- **The header is drawn for real from the start** — the title, the bell, the trophy — and **its
+  numbers wait for your things**: the envelope (`showsEnvelope`), the bell's badge (`NoticeBell`'s
+  `showsCount`) and the trophy's place (`RankingTrophy`'s `showsPlace`) come with them, or, past the
+  ceiling, each as it lands: they sit in the right-aligned slot and push nothing down. Held back, each
+  is said nowhere — the bell's and the trophy's names are the bare ones.
+- **When**: only if something is unread at the first draw — a Home whose reads are all cached is
+  simply drawn, no skeleton and no fade — and **once per mount**: a part shown stays shown, and Home is
+  kept, so a return to Home, a pull and a background re-read never shimmer.
+- **The ground and each reveal pass on where they stand on the page** (`SectionOnPage`): FOR YOU's
+  rows are measured through them, so the on-screen reports and the page showing an unfolding line
+  are as they were.
+
+Calls made here, for the user to check:
+
+- **Top 10 does not hold FOR YOU behind a failing read** (`useTopTenFinished`): it cannot set out
+  until its opening sport is known — Home's read and the ratings — so one of those failing and
+  retrying counts Top 10 as finished too. Otherwise one failing read would hold FOR YOU through its
+  whole backoff, which is what the retrying rule is for. Top 10's line then joins FOR YOU, at its
+  foot, when it lands.
+- **_Your games_ keeps its skeleton while its first read retries** (the code review's catch): Home
+  stops waiting for it and reveals around it, and the rail comes in where its skeleton stood when it
+  lands or is refused — never drawn in later above FOR YOU, pushing it down. **The level card and a
+  FOR YOU line do not**: the card is often absent and draws no skeleton, so a ratings read that lands
+  _rated in nothing_ while your groups retry draws it in at the top when they land; and a line whose
+  read fails stays out of FOR YOU until it is read, as before.
+- **Offline with nothing read, _Your games_ says so** under its heading, in the amber note, with no
+  count — as a refusal says it in coral, now with no count either (`proposals`' record).
+
+The walks are `homeReveal.test.tsx`: the skeleton with every read out (one card, four lines, the real
+header), no _· 0_ before Home's read, FOR YOU landing first and nothing shown until your things do,
+the bell's read and Home's failing once and counting as finished — Top 10 not waited for behind
+Home's — from the ceiling your things while FOR YOU shimmers, never FOR YOU first while the header's
+numbers come as they land, and no skeleton on a return or a pull. **The harness runs every pending
+timer on a navigation, the launch's included, so the ceiling has passed by the time a walk looks, and
+a held read is deaf to the client's timeout** (`test-support/transport`'s `deafToAborts`) — else it
+would time out under the launch, which is a read failing once. **The sweep costs those suites
+nothing**: a shape joins the ground's clock only once it is laid out, and the harness lays nothing
+out — before that change Home's skeleton swept through every navigation's minutes of frames, and
+through a suite's day-long clock jump, inside an `act` that could not unmount it until the jump
+ended. **So the header's numbers held before the ceiling are walked by no suite**: the rule before the ceiling is `Reveal.test.tsx`'s, on the
+hook. **Not seen on a device**: the shimmer over Home, the card's block against a real card, the two
+fades, and a slow part coming in at the ceiling.
+
+**Home's reads set out while the splash plays** ([#874](https://github.com/Raketa02/Raketa/issues/874);
+PRD #867; ADR-0209 §2, amended 2026-11-24; the loading shimmer log §7, Q18). Since the tree mounts
+only once the ball is still, Home's own reads set out about 0.2 s before the fade, and a cold open
+often faded onto Home's skeleton. **Now a launch step, `hooks/warmHome`, sets them out as soon as the
+session is restored**, and on a normal connection the splash fades onto a Home that is already whole:
+every part finished at its first draw, so no skeleton and no fade (the rule above).
+
+- **Started, never awaited**: the root layout starts it as it starts the install referrer's read, and
+  the splash waits on no read — ADR-0209's fade rule is unchanged, and _ready_ still never means the
+  data has arrived.
+- **Every read the two parts wait on, under the very definitions their hooks observe** — keys,
+  functions and options — so Home finds each fresh under the app's 30 s `staleTime` and sends none
+  again. Each feature offers its Home read's prefetch on its public surface and the shell composes
+  them: `proposals`' `prefetchHome`, `onboarding`'s `prefetchSkillRatings`, `groups`'
+  `prefetchHomeGroups` (Groups heating up and your groups), `discovery`'s `prefetchPeopleLines`,
+  `notifications`' `prefetchNotices` and `rankings`' `prefetchTopTen`. **Top 10's chain is included**:
+  it sets out Home's read and the deck's two (the ratings and the sport last picked, `groups`'
+  `prefetchDeckSport`), works out the opening sport off the cache by the hook's own rule
+  (`openingSportIn` over `homeRankingIn` and `deckSportIn`, which ask `rankings`' `openingOf` and
+  `groups`' `deckSport` in `domain/`, as the hooks do), waiting for the deck's reads only when
+  the trophy names no sport, and then asks the row under the key the hook will look for.
+- **Only for an account the entry gate will send to the tabs** — never for one headed for the
+  naming, the profile steps, a club's area or _Start playing_. The gate's rule is callable outside its
+  hook now, as a rule over the account (`onboarding`'s `entryDestinationOf`, which the gate asks too,
+  so the two always agree), and the launch asks it of the account session restore cached
+  (`entryDestinationAtLaunch`) — first reading the profile the phone remembers, under the gate's own
+  definition, for an account that runs a club's groups (`decidedByTheLastProfile`), whose launch
+  waits for it. No account cached — the check failed, was refused, or was never sent — is nothing to
+  decide from, and nothing is warmed.
+- **Never on a phone that already knows it is offline**, by the launch check's own rule (`auth`'s
+  `phoneKnowsItIsOffline`, ADR-0209 §4).
+- **Launch only**: after a sign-in Home mounts the moment the session opens, and nothing is warmed.
+- **A call, for the user to check: the prefetches keep the hooks' retries** (the code review's
+  question). A read still retrying when Home mounts is joined, not sent again; one that has spent
+  every retry before Home mounts is asked again by Home's mount, as any failed read is, so a server
+  failing all through the splash is asked about twice as often. Without retries, a Home joining a
+  read still on its way would inherit none, and show a refusal on a single failure.
+- **Not warmed**, because no part waits on them: the faces' photographs, the booking rooms the chat
+  button asks after, and the phone's own lists — the games opened and removed, and the Rankings view
+  the trophy's place is drawn in — which Home reads itself in milliseconds, under the splash.
+
+The walks are `homeWarmUp.test.tsx`, through the harness's warmed launch (`test-support`'s
+`launchWarmed`): the session restored as the launch restores it, then `warmHome` against the
+harness's query client before the tree is rendered, its requests handed back as `early`. Home opens
+with no skeleton and each of its nine reads sent once, all early; Top 10 on the deck's sport when the
+trophy names none, the ratings held until Home's read has landed; an account that also runs a club's
+groups and wore Player last is warmed; one headed for the naming, the profile steps, a club's area or
+_Start playing_ — or that wore its club's profile last — sends none of Home's reads before its own
+screen; and a phone known to be offline sends none early. That the step starts after the session and
+is never awaited is `bootstrapApp.test.ts`'s. **Owed to the phone walk (#877)**: the A32's cold-start
+trace — frames over 20 ms in the splash's first 2.6 s no more than the amendment's 3–5 — and a look
+on a release build.

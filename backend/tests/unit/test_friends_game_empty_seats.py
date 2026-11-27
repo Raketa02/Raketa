@@ -140,6 +140,22 @@ def test_anybody_in_invites_a_friend_of_theirs_into_the_empty_seat():
     assert booking.waiting_at(WEDNESDAY) == (seat,)
 
 
+def test_each_invitation_arrives_when_its_seat_was_invited_into():
+    """What *Needs your answer* dates an invitation by (#815): the card's own
+    seats at the send, a seat invited into later at that invitation — and an
+    answer never moves it."""
+
+    booking = _ania_said_no()
+    booking.invite(PIOTR, by=EWA, seat_of=ANIA, at=WEDNESDAY)
+
+    arrivals = {seat.player_id: seat.invited_at for seat in booking.invited}
+
+    assert arrivals == {EWA: MONDAY, MAGDA: MONDAY, ANIA: MONDAY, PIOTR: WEDNESDAY}
+    assert {
+        seat.player_id: seat.invited_at for seat in _replayed(booking).invited
+    } == arrivals
+
+
 def test_an_invitation_never_runs_past_the_cut_off():
     booking = _ania_said_no()
 

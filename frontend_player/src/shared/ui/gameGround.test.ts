@@ -10,7 +10,14 @@
  * and the grid sit.
  */
 
-import { composite, contrast, hueAngle, hueDistance, parse } from '@/test-support/contrast';
+import {
+  composite,
+  contrast,
+  hueAngle,
+  hueDistance,
+  luminance,
+  parse,
+} from '@/test-support/contrast';
 
 import { theme } from './theme';
 
@@ -92,5 +99,53 @@ describe('what sits on the card’s own beds', () => {
   it('tells the grid’s bright cell from the dark past 3:1, and the dim one by position and name', () => {
     expect(ratio(theme.color.volt, theme.color.gameCellDark)).toBeGreaterThanOrEqual(LARGE);
     expect(ratio(theme.color.gameCellDim, theme.color.gameCellDark)).toBe(2.07);
+  });
+});
+
+/**
+ * The Social vibe row's inks (#838; ADR-0207 §8, 7.38): volt and the two lower bands, each the
+ * figure on the ground and the fill under `ink`, against the track it fills — `onDarkTag` over the
+ * ground, which is mock 2's track to the pixel (white at 0,14).
+ */
+describe('the Social vibe row', () => {
+  const TRACK_RGB = composite([255, 255, 255], parse(theme.color.onDarkTag).alpha, MIDDLE_RGB);
+  const TRACK = `rgb(${TRACK_RGB.map(Math.round).join(', ')})`;
+  const BANDS = [theme.color.volt, theme.color.gameVoltDim, theme.color.gameGrey];
+
+  it('carries every band’s figure past AA on the ground — no figure needs large text’s 3:1', () => {
+    expect(ratio(theme.color.gameVoltDim, MIDDLE)).toBe(5.31);
+    expect(ratio(theme.color.gameGrey, MIDDLE)).toBe(5.05);
+    for (const figure of BANDS) expect(ratio(figure, MIDDLE)).toBeGreaterThanOrEqual(AA);
+  });
+
+  it('carries the name in ink on every fill, and in white on the track', () => {
+    expect(ratio(theme.color.ink, theme.color.gameVoltDim)).toBe(6.06);
+    expect(ratio(theme.color.ink, theme.color.gameGrey)).toBe(5.77);
+    for (const fill of BANDS) expect(ratio(theme.color.ink, fill)).toBeGreaterThanOrEqual(AA);
+    expect(ratio(theme.color.surface, TRACK)).toBe(9.9);
+  });
+
+  it('tells every fill from the track it fills, as a mark must', () => {
+    expect(ratio(theme.color.gameVoltDim, TRACK)).toBe(3.43);
+    expect(ratio(theme.color.gameGrey, TRACK)).toBe(3.26);
+    for (const fill of BANDS) expect(ratio(fill, TRACK)).toBeGreaterThanOrEqual(LARGE);
+  });
+
+  it('is one hue family: the dimmed volt is volt’s, the grey night’s, and neither is the forecast’s', () => {
+    const volt = hueAngle(parse(theme.color.volt).rgb);
+    expect(hueDistance(hueAngle(parse(theme.color.gameVoltDim).rgb), volt)).toBeLessThan(5);
+    const night = hueAngle(parse(theme.color.night).rgb);
+    expect(hueDistance(hueAngle(parse(theme.color.gameGrey).rgb), night)).toBeLessThan(5);
+    for (const fill of BANDS) {
+      expect([theme.color.gameGreen, theme.color.gameAmber, theme.color.gameRed]).not.toContain(
+        fill,
+      );
+    }
+  });
+
+  it('dims in order: volt, then the dimmed volt, then the grey a shade under it', () => {
+    const [volt, dim, grey] = BANDS.map((colour) => luminance(parse(colour).rgb));
+    expect(volt).toBeGreaterThan(dim ?? 1);
+    expect(dim).toBeGreaterThan(grey ?? 1);
   });
 });

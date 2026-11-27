@@ -1,5 +1,5 @@
-"""Wire schemas for the people rows (#793, #794, #795, #796; ``docs/adr/0204``
-§12).
+"""Wire schemas for the people rows (#793, #794, #795, #796, #812;
+``docs/adr/0204`` §12, ``docs/adr/0205`` §6).
 
 **The reader is never in a body**, and every relation is the reader's own —
 the one wire vocabulary every face carries, Friends' ``FriendRelation``. What a
@@ -21,12 +21,18 @@ from app.kernel import Sport, instant
 from app.modules.discovery.application.new_in_raketa import (
     JoinerCard,
     NewInRaketaPage,
+    NewInRaketaRow,
 )
 from app.modules.discovery.application.same_level import (
     SameLevelCard,
     SameLevelPage,
+    SameLevelRow,
 )
-from app.modules.discovery.application.same_vibe import SameVibeCard, SameVibePage
+from app.modules.discovery.application.same_vibe import (
+    SameVibeCard,
+    SameVibePage,
+    SameVibeRow,
+)
 from app.modules.discovery.domain.errors import (
     NotANewInRaketaPage,
     NotASameLevelPage,
@@ -36,9 +42,18 @@ from app.modules.discovery.domain.new_in_raketa import JoinerKey
 from app.modules.discovery.domain.rest import A_REPORT, OnScreenRow
 from app.modules.discovery.domain.same_level import Comparison, SameLevelKey
 from app.modules.discovery.domain.same_vibe import VibeKey
+from app.modules.discovery.domain.totals import COUNTED_UP_TO
 from app.modules.friends.domain.relation import FriendRelation
 
 _EPOCH = instant(datetime(1970, 1, 1, tzinfo=timezone.utc))
+
+#: What every row's ``total`` says after who it counts.
+_A_TOTAL = (
+    " — each person once, under the row's own exclusions — **counted up to "
+    "100**: 100 reads *100 or more*, drawn *99+*. The line's count and *See all "
+    "N ›*: who there is to explore, never how many are good matches. `0` with "
+    "an empty row."
+)
 
 
 def cursor_of(key: JoinerKey) -> str:
@@ -137,6 +152,19 @@ class NewInRaketaResponse(BaseModel):
             "within each. **Empty hides the row.**"
         )
     )
+    total: int = Field(
+        ge=0,
+        le=COUNTED_UP_TO,
+        description="How many the row could show: everybody who joined in the "
+        "last 30 days" + _A_TOTAL,
+    )
+
+    @classmethod
+    def of(cls, row: NewInRaketaRow) -> "NewInRaketaResponse":
+        return cls(
+            players=[NewInRaketaPlayerSchema.of(card) for card in row.cards],
+            total=row.total,
+        )
 
 
 class NewInRaketaPageResponse(BaseModel):
@@ -310,6 +338,19 @@ class SameLevelResponse(BaseModel):
             "you hold no level anywhere, or nobody shares a sport with you."
         )
     )
+    total: int = Field(
+        ge=0,
+        le=COUNTED_UP_TO,
+        description="How many the row could show: everybody holding a level in "
+        "any sport you hold one in" + _A_TOTAL,
+    )
+
+    @classmethod
+    def of(cls, row: SameLevelRow) -> "SameLevelResponse":
+        return cls(
+            players=[SameLevelPlayerSchema.of(card) for card in row.cards],
+            total=row.total,
+        )
 
 
 class SameLevelPageResponse(BaseModel):
@@ -390,8 +431,8 @@ class SameVibePlayerSchema(BaseModel):
         le=100,
         description=(
             "The **vibe %**, 1 − ½ⁿ for n shared tags, rounded: 50, 75, 88, 94, "
-            "97, 98 for 1–6 — the white circle, *98%*. Every tag counts the "
-            "same, and skill plays no part."
+            "97, 98, 99, 100 for 1–8 — the white circle, *98%*. Every tag "
+            "counts the same, and skill plays no part."
         ),
     )
     in_common: int = Field(
@@ -442,6 +483,19 @@ class SameVibeResponse(BaseModel):
             "weakest gap's place. **Empty hides the row.**"
         )
     )
+    total: int = Field(
+        ge=0,
+        le=COUNTED_UP_TO,
+        description="How many the row could show: everybody sharing at least "
+        "one Social tag with you" + _A_TOTAL,
+    )
+
+    @classmethod
+    def of(cls, row: SameVibeRow) -> "SameVibeResponse":
+        return cls(
+            players=[SameVibePlayerSchema.of(card) for card in row.cards],
+            total=row.total,
+        )
 
 
 class SameVibePageResponse(BaseModel):

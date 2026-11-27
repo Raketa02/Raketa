@@ -30,7 +30,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { codeMessage } from '@/shared/errors';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
-import { behindOverlay, Button, Note, ScreenHeader, theme } from '@/shared/ui';
+import { behindOverlay, Button, Note, ScreenHeader, theme, useTabBarReach } from '@/shared/ui';
 
 import type { Group } from '../domain/group';
 import { detailsUnchanged } from '../domain/groupInfo';
@@ -72,6 +72,8 @@ export function EditGroupScreen({ groupId }: { readonly groupId: string }) {
 
 /** Mounted once the group is read, so the form opens holding what the group says. */
 function EditGroupForm({ group }: { readonly group: Group }) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const [name, setName] = useState(group.name);
   const [joinPolicy, setJoinPolicy] = useState(group.joinPolicy);
   const edit = useEditGroup(group.id);
@@ -109,7 +111,10 @@ function EditGroupForm({ group }: { readonly group: Group }) {
 
   return (
     <KeyboardAvoidingView style={s.body} behavior={KEYBOARD_AVOIDANCE}>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[s.content, { paddingBottom: reach + theme.space.lg }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <GroupNameCard name={name} onName={setName} />
         <WhoCanJoinCard joinPolicy={joinPolicy} onJoinPolicy={setJoinPolicy} noSportNote={false} />
 
@@ -151,7 +156,6 @@ const s = StyleSheet.create({
   body: { flex: 1 },
   content: {
     paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
 });

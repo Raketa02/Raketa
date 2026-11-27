@@ -28,7 +28,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { codeMessage } from '@/shared/errors';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { showToast } from '@/shared/store/toast.store';
-import { Button, Note, ScreenHeader, theme } from '@/shared/ui';
+import { Button, Note, ScreenHeader, theme, useTabBarReach } from '@/shared/ui';
 
 import type { SearchedClub } from '../domain/group';
 import type { JoinPolicy } from '../domain/vocabulary';
@@ -50,6 +50,8 @@ const COPY = GROUPS_COPY.newGroup;
 export const NEW_GROUP_PAGE_TEST_ID = 'new-group-page';
 
 export function NewGroupScreen() {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const [name, setName] = useState('');
   const [typed, setTyped] = useState('');
   const [homeClub, setHomeClub] = useState<SearchedClub>();
@@ -76,7 +78,7 @@ export function NewGroupScreen() {
       <KeyboardAvoidingView style={s.body} behavior={KEYBOARD_AVOIDANCE}>
         <ScrollView
           testID={NEW_GROUP_PAGE_TEST_ID}
-          contentContainerStyle={s.content}
+          contentContainerStyle={[s.content, { paddingBottom: reach + theme.space.lg }]}
           keyboardShouldPersistTaps="handled"
           scrollEventThrottle={SCROLL_EVENT_EVERY_MS}
           onScroll={(event) => {
@@ -126,7 +128,6 @@ const s = StyleSheet.create({
   // The sections stand apart by space alone, now that no card bounds them.
   content: {
     paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.lg,
     gap: theme.space.xl,
   },
 });

@@ -6,13 +6,17 @@
  */
 
 import { getSameLevel, getSameLevelPage, type Cancellable } from '../api/discoveryApi';
+import type { PeopleRow } from '../domain/peopleRow';
 import type { SameLevelPlayer } from '../domain/sameLevel';
 import type { SeeAllAsk, SeeAllPage } from '../domain/seeAll';
-import { toPageAsked, toSameLevelPage, toSameLevelPlayers } from '../mappers/discoveryMappers';
+import { toPageAsked, toSameLevelPage, toSameLevelRow } from '../mappers/discoveryMappers';
 
-/** Home's row — up to 10, in the server's order; none while the reader holds no level. */
-export function readSameLevel(options: Cancellable = {}): Promise<readonly SameLevelPlayer[]> {
-  return getSameLevel(options).then((answer) => toSameLevelPlayers(answer.players));
+/**
+ * Home's row — up to 10, in the server's order, and how many it could show (#822); none while the
+ * reader holds no level.
+ */
+export function readSameLevel(options: Cancellable = {}): Promise<PeopleRow<SameLevelPlayer>> {
+  return getSameLevel(options).then(toSameLevelRow);
 }
 
 /** One page of See all — with a sport, everybody holding a level in it, compared there. */

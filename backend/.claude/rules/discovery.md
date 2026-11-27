@@ -12,16 +12,17 @@ paths:
 
 # Discovery
 
-Decisions that are load-bearing and not obvious from the code (#793, #794, #795, #796;
+Decisions that are load-bearing and not obvious from the code (#793, #794, #795, #796, #812;
 [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
-§4–§7, §9, §10; `docs/specs/home-rows/` §4.6, §6–§9, §12, §16). The words are root
+§4–§7, §9, §10; [ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§6; `docs/specs/home-rows/` §4.6, §6–§9, §12, §16). The words are root
 `CONTEXT.md`'s *Discovery* section and the words §31.5–§31.8, §31.10.
 
 - **The people rows' context, with no aggregate and no event of its own** — it registers nothing
   in the catalog. It owns *Same competitive level players*, *New in Raketa* and *Same vibe
   players*, their See all reads and the copies they read. **New in Raketa** (#793), **Same
-  competitive level** (#794, with the current levels), **Same vibe** (#795) and **the rest
-  count** (#796) are built.
+  competitive level** (#794, with the current levels), **Same vibe** (#795), **the rest
+  count** (#796) and **each row's total** (#812) are built.
 - **The player directory, a stated exception to *derived, never stored*** (ADR-0204 §10;
   `backend/CLAUDE.md`): `discovery_players` (migration 0073) — **one row per account**: the
   nickname (`users`), and, once it holds a Player profile, `plays` with the profile's *joined*
@@ -211,7 +212,8 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   Social tag with the reader**; every tag counts the same and **skill plays no part**, so a
   reader with no level sees it too (Q14) and no level is read but See all's sport. **The vibe
   %** is 1 − ½ⁿ for n shared tags, **a half rounded up** (`vibe_percent`: 87,5 reads 88): 50,
-  75, 88, 94, 97, 98. **The order** (`VibeKey`) is more shared first, then **fewer of their
+  75, 88, 94, 97, 98, and since a player may hold eight (ADR-0207 §7, #829) 99 and 100 — 100
+  true, since eight shared are both players' eight. **The order** (`VibeKey`) is more shared first, then **fewer of their
   tags the reader doesn't hold**, then the player id. A person on the row is a `VibePlayer` —
   never a *match* (the glossary's _Avoid_ for the % is *match %*). **The row**: §9's rule, a
   good match **two shared tags or more** (`GOOD_MATCH`), a rested player a gap (#796); it reads
@@ -232,6 +234,10 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   tag it no longer lists stands last); the domain's tags are the directory's sets. **The
   reader's own tags are the directory's too** (`tags_of`), so a tag change — theirs or the
   reader's — reads into the read after its delivery, as every field the follower writes.
+  **`tags_of_each` is the same read for many, in one statement** (#830): Proposals' deck reads
+  every For-fun table's tags through it (`DirectoryPlayersTags`, ADR-0207 §11), and since
+  #835 Games' pairing reads a booked For-fun court's (`DirectoryTagsOnTheCourt`), so the copy
+  this context keeps is the one a Social vibe is worked out from, and its lag is theirs too.
 - **Measured at 50,000** (#795; Postgres 17 in Docker on the laptop, the real adapters, the
   seeded store plus 50,000 synthetic players written straight into the directory's two tables,
   2–6 tags each at random, 40% with a padel level; her six tags): **the row 53 ms** (5
@@ -252,12 +258,16 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   have rows in their context's register.
 - **Seeded by `app/seeds/same_vibe.py`**, after Same competitive level: **no player of its
   own** — she holds six tags (`catalog.HER_TAGS`, the protagonists' three and three more where
-  the cohort's own draws meet hers at every count: `cohort-d-01` all six, `cohort-a-13` and
-  `cohort-a-16` five), the ranking's crowd shares two and the New in Raketa joiners one — and
-  **a request each way from the row**, each pair read first: she asks `cohort-a-13`
-  (`SHE_ASKS`, five in common) and `cohort-d-01` (`ASKS_HER`, six) asks her. **A store seeded
-  before #795** committed her three, and the commit is idempotent, so the layer gives her the
-  six through *Edit tags*' own `ChangeSocialTags`, which records nothing once they are hers.
+  the cohort's own draws meet hers at every count: `cohort-a-01` all six, `cohort-a-15` and
+  `cohort-d-07` five — re-picked, two of them among ADR-0207's eight, when #832 redrew the
+  cohort from all twenty-seven tags), the ranking's crowd shares two, the For-fun deck's four
+  five to one, and the New in Raketa joiners none — and
+  **a request each way from the row**, each pair read first: she asks `cohort-a-15`
+  (`SHE_ASKS`, five in common) and `cohort-a-01` (`ASKS_HER`, six) asks her. **A store seeded
+  before #795** committed her three — and one seeded before #832 her old six — and the commit
+  is idempotent, so the layer gives her the six through *Edit tags*' own `ChangeSocialTags`,
+  which records nothing once they are hers; the runner does the same for every cohort member
+  whose stored tags aren't their row's (`_ensure_the_drawn_tags`, `seeds.md`).
   `assert_same_vibe` reads her row and every See all page among the screens and fails the run
   by name unless the row holds `min(10, See all)`, sits inside See all in the rule's order,
   **every count from one to six is in See all**, a friend shares two tags or more, and — **on
@@ -303,3 +313,46 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   the `users` row and runs the real follower.
 - **Not seeded**: nothing on the dev store rests, since five reported days can't be walked in one
   run and the seed reports none. A rested card is walked in the API tests.
+- **Each row's read answers a `total`** (#812; ADR-0205 §6; `domain/totals.py`): how many the row
+  could show — **everybody who qualifies, never its good matches** — under the row's own `WHERE`
+  and the reader's blocks, **each person once**, `0` for an empty or hidden row; FOR YOU's line
+  count and *See all N ›*. ADR-0205 calls them the rows' *pools*; the code doesn't, since **Pool**
+  is the glossary's word for whom a game is dealt to. Additive on the wire
+  (`NewInRaketaResponse`, `SameLevelResponse`, `SameVibeResponse`); See all carries none. **Counted
+  up to 100** (`COUNTED_UP_TO`, `capped`), because the phone draws *99+* past 99: counting on buys
+  nothing on screen and costs a scan of everybody who qualifies. **Each adds at most one statement
+  to its row's read, and none scores anybody**:
+  - *New in Raketa*: **the row itself when it came back short of ten** (it is everybody); otherwise
+    `how_many_joined`, one count with a `LIMIT 100` inside it (`count_up_to`) on
+    `ix_discovery_players_joined_at`'s range.
+  - *Same vibe*: **`count(*) OVER ()` on the first batch's page** (`alike(…, counting=True)`,
+    `Alike.listed`), over every player the `WHERE` keeps before the `LIMIT` — read from the top,
+    so its list is everybody sharing a tag. **Never a second pass**, and a later batch and See all
+    don't count: the window holds the whole list before the sort.
+  - *Same competitive level*: **what the windows already read** (`_Widening.read`, distinct players)
+    once they read everybody (`read_everybody`) or 100; otherwise `how_many_hold`, one count over the
+    directory with an `EXISTS` on a level in one of the reader's sports — each player once by
+    construction — and a `LIMIT 100` (`count_up_to`). **Never another window**, and nobody's %
+    worked out. A row that fills in a near window with fewer than 100 read is the one that counts.
+  - **A count never answers fewer than the cards**: it is a later statement, so under READ
+    COMMITTED it can see somebody leave whom the row read; each count's answer is
+    `max(what the row read, the count)`.
+  - **The cap is a `LIMIT 100`, not the ticket's 101**: a 101st row would tell 100 from more than
+    100, which an answer capped at 100 never does.
+  - **Held by `statements`** (`tests/conftest.py`, any API test's): each row's API test counts the
+    statements on the row's own tables, where any total's cost lands (the neighbours' — the session,
+    the blocks, Friends, the rating — are the cards', and move with their owners): New in Raketa
+    reads the directory once below ten and twice from ten, the second a count; Same vibe reads the
+    tag rows twice, the reader's and the one pass, and See all's pass has no window; Same
+    competitive level counts nothing after a drained or hundred-strong read and once, with one
+    window read, otherwise. **Each count is walked against every exclusion** where only it could let
+    somebody in. `tests/unit/test_same_level_widening.py` holds the total to the brute force, at most
+    one count. **The seed** fails each layer unless its total is its See all's length, capped.
+  - **Measured at 50,000** (#812; a scratch Postgres 17 in Docker on the laptop, the real adapters,
+    50,000 synthetic players written straight into the three tables — 2–6 tags each, padel for all,
+    tennis for 40%, squash for 30, about 1,900 new in the month): `how_many_joined` 1.1 ms (5.9 ms
+    uncapped, for scale); `how_many_hold` 1.3 ms in padel and tennis and 1.3 ms in squash, where
+    only 30 qualify — the planner drives a small sport from its levels, so the count never walks
+    the directory; Same vibe's first batch 117 ms counting against 106 ms without, the window's
+    whole cost (that store's pass is slower than #795's 62 ms: more tags held). ADR-0205 §6's timing
+    of Home on the phone still comes before the branch merges.

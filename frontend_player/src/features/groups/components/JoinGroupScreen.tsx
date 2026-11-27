@@ -25,7 +25,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useClipboard } from '@/shared/lib/platform';
-import { Chip, CloseControl, ScreenHeader, TextField, theme } from '@/shared/ui';
+import { Chip, CloseControl, ScreenHeader, TextField, theme, useTabBarReach } from '@/shared/ui';
 
 import { searchOutcome } from '../domain/groupRules';
 import { useJoinSearch, type ClubSearchState } from '../hooks/useClubSearch';
@@ -44,6 +44,8 @@ export interface JoinGroupScreenProps {
 }
 
 export function JoinGroupScreen({ link }: JoinGroupScreenProps = {}) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const clipboard = useClipboard();
   const [typed, setTyped] = useState(link ?? '');
   const search = useJoinSearch(typed);
@@ -83,7 +85,7 @@ export function JoinGroupScreen({ link }: JoinGroupScreenProps = {}) {
       </View>
 
       <ScrollView
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, { paddingBottom: reach + theme.space.lg }]}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={SCROLL_EVENT_EVERY_MS}
         onScroll={(event) => {
@@ -125,7 +127,6 @@ const s = StyleSheet.create({
   field: { paddingHorizontal: theme.size.gutter, paddingBottom: theme.space.sm },
   content: {
     paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
   nothing: {

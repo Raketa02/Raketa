@@ -17,6 +17,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Joiner, JoinerPage, JoinerSport } from '../domain/joiner';
 import type { RestingRow } from '../domain/onScreen';
+import type { PeopleRow } from '../domain/peopleRow';
 import type { LevelComparison, SameLevelPlayer } from '../domain/sameLevel';
 import type { SameVibePlayer } from '../domain/sameVibe';
 import type { PageAsked } from '../api/discoveryApi';
@@ -36,6 +37,11 @@ export function toJoiner(wire: Schemas['NewInRaketaPlayerSchema']): Joiner {
     }),
     relation: wire.relation,
   };
+}
+
+/** **Home's New in Raketa** — the ten newest in the server's order, and its total (#822). */
+export function toNewInRaketaRow(wire: Schemas['NewInRaketaResponse']): PeopleRow<Joiner> {
+  return { people: wire.players.map(toJoiner), total: wire.total };
 }
 
 export function toJoinerPage(wire: Schemas['NewInRaketaPageResponse']): JoinerPage {
@@ -79,6 +85,14 @@ export function toSameLevelPlayers(
   });
 }
 
+/**
+ * **Home's Same competitive level** — the cards this build can draw, and the total as served (#822):
+ * the pool counts a card this build leaves out, as it counts everybody the row does not show.
+ */
+export function toSameLevelRow(wire: Schemas['SameLevelResponse']): PeopleRow<SameLevelPlayer> {
+  return { people: toSameLevelPlayers(wire.players), total: wire.total };
+}
+
 export function toSameLevelPage(
   wire: Schemas['SameLevelPageResponse'],
 ): SeeAllPage<SameLevelPlayer> {
@@ -117,6 +131,11 @@ export function toSameVibePlayer(wire: Schemas['SameVibePlayerSchema']): SameVib
     sharedTags: wire.shared_tags.flatMap((served) => toSocialTagId(served) ?? []),
     relation: wire.relation,
   };
+}
+
+/** **Home's Same vibe** — the ten in the server's order, and its total (#822). */
+export function toSameVibeRow(wire: Schemas['SameVibeResponse']): PeopleRow<SameVibePlayer> {
+  return { people: wire.players.map(toSameVibePlayer), total: wire.total };
 }
 
 export function toSameVibePage(wire: Schemas['SameVibePageResponse']): SeeAllPage<SameVibePlayer> {

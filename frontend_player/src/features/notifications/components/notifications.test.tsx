@@ -24,6 +24,7 @@ import {
 import { gameKeys } from '@/features/games/types';
 import { GROUPS_COPY } from '@/features/groups/types';
 import { RECORD_TITLE } from '@/features/player_record/types';
+import { NEEDS_YOUR_ANSWER_COPY } from '@/features/shell/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
@@ -67,8 +68,10 @@ import {
   stubPush,
   stubRunsInProgress,
 } from '@/test-support/onboardingRouter';
+import { envelope, sheetTitle } from '@/test-support/needsYourAnswer';
 import { fakePush, PUSH_TOKEN, type FakePush } from '@/test-support/platform';
 import { servedReliability } from '@/test-support/playerRecord';
+import { menuSays, menuTab } from '@/test-support/tabMenu';
 import {
   errorResponse,
   installTransport,
@@ -1064,7 +1067,7 @@ describe('the recent notices, behind the bell on Home', () => {
     );
   });
 
-  it('opens a Challenge in the kind it was dealt in, the card on top — the switch moved to it', async () => {
+  it('opens a Challenge in the kind it was dealt in, the card on top — the deck moved to it', async () => {
     const first = deckCard({ kind: 'FOR_FUN' });
     const challenge = deckCard({ kind: 'FOR_FUN', type: 'CHALLENGE' });
     stubNotices(transport, [
@@ -1098,9 +1101,9 @@ describe('the recent notices, behind the bell on Home', () => {
     fireEvent.press(await screen.findByRole('button', { name: /^Ola challenges you/ }));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
 
-    expect(
-      await screen.findByRole('button', { name: 'For fun, 2 games', selected: true }),
-    ).toBeTruthy();
+    // The Games tab says the kind it moved to, and its menu ticks it (#862).
+    expect((await menuTab('Games')).props.accessibilityLabel).toBe('Games, For fun');
+    expect(await menuSays('Games', 'For fun, 2 games', true)).toBeTruthy();
     fireEvent.press(await screen.findByRole('button', { name: 'Game details' }));
     await waitFor(() =>
       expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${challenge.proposal_id}`),
@@ -1584,6 +1587,8 @@ describe('Get your level — a notice about no game, opening Home', () => {
     expect(screen.getByRole('button', { name: 'Pick your sports' })).toBeTruthy();
     // Home itself, not a second Home pushed over the list: there is nothing to go back to.
     expect(screen.queryByLabelText('Back')).toBeNull();
+    // Its card is Home's, not one that waits in Needs your answer (#817): no sheet comes up.
+    expect(sheetTitle()).toBeNull();
   });
 
   it('the banner opens Home, from wherever she is', async () => {
@@ -1624,10 +1629,11 @@ describe('Get your level — a notice about no game, opening Home', () => {
 // ---------------------------------------------------------------------------
 
 /**
- * **A friend request opens Home, and *You're friends* opens the friend's record** (the friends
- * mechanics §12). The backend pushes the person each names as `player_id` — a request opens Home,
- * where its card is; *You're friends* opens `RECORD`, a sheet drawn over wherever the player is,
- * since a record is not a screen.
+ * **A friend request opens Home with Needs your answer up, and *You're friends* opens the friend's
+ * record** (the friends mechanics §12; ADR-0205 §1, #817). The backend pushes the person each names
+ * as `player_id` — a request opens Home with the sheet its card waits in already up, once Home is
+ * read again, and as it is when nothing waits by then; *You're friends* opens `RECORD`, a sheet
+ * drawn over wherever the player is, since a record is not a screen.
  */
 describe('a friend’s notices', () => {
   const ASKED: Wire['HomeFriendRequestSchema'] = {
@@ -1648,6 +1654,7 @@ describe('a friend’s notices', () => {
     reliability_band: 'VERY_HIGH',
     percent_even: null,
     in_common: null,
+    levels: [],
   };
   const REQUEST = notice({
     kind: 'FRIEND_REQUEST',
@@ -1697,7 +1704,8 @@ describe('a friend’s notices', () => {
     );
   });
 
-  it('a request’s row behind the bell opens Home, on its card', async () => {
+  // The request waits in Needs your answer since #816, and its notice lands with the sheet up (#817).
+  it('a request’s row behind the bell opens Home with Needs your answer up, the request in it', async () => {
     stubNotices(transport, [REQUEST], { newCount: 1 });
     await launchSignedIn();
     fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
@@ -1706,9 +1714,37 @@ describe('a friend’s notices', () => {
     fireEvent.press(await screen.findByRole('button', { name: /^New\. ines\.d wants to be/ }));
 
     await waitFor(() => expect(screen).toHavePathname('/'));
-    expect(await screen.findByRole('header', { name: requestsHeading(1) })).toBeTruthy();
+    expect(await screen.findByRole('header', { name: NEEDS_YOUR_ANSWER_COPY.title })).toBeTruthy();
+    expect(screen.getByRole('header', { name: requestsHeading(1) })).toBeTruthy();
     expect(screen.getByText(wantsToBeYourFriend('ines.d'))).toBeTruthy();
     expect(screen.queryByLabelText('Back')).toBeNull();
+  });
+
+  it('a request, pushed and tapped, opens Home with the sheet up from wherever the player is', async () => {
+    await launchSignedIn();
+    fireEvent.press(await screen.findByLabelText('You'));
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+
+    act(() => phone.tap({ notice_id: REQUEST.notice_id, kind: 'FRIEND_REQUEST', opens: 'HOME' }));
+
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(await screen.findByRole('header', { name: NEEDS_YOUR_ANSWER_COPY.title })).toBeTruthy();
+    expect(screen.getByText(wantsToBeYourFriend('ines.d'))).toBeTruthy();
+  });
+
+  /** Answered on another phone by the time Home is read again: Home as it is, no sheet. */
+  it('a request answered elsewhere opens Home as it is — never an empty sheet', async () => {
+    stubNotices(transport, [REQUEST], { newCount: 1 });
+    await launchSignedIn();
+    fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+    stubHomeGames(transport, [], { friend_requests: [] });
+
+    fireEvent.press(await screen.findByRole('button', { name: /^New\. ines\.d wants to be/ }));
+
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    await waitFor(() => expect(envelope()).toBeNull());
+    expect(sheetTitle()).toBeNull();
   });
 
   it('You’re friends, behind the bell, opens the friend’s record over the list', async () => {
@@ -1933,7 +1969,9 @@ describe('an ask for a Level', () => {
       // Done lands on the crew’s Friends tab, in padel — the page under the picker.
       fireEvent.press(screen.getByRole('button', { name: FRIENDS_COPY.picker.done }));
       await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
-      expect(await screen.findByRole('button', { name: 'Friends', selected: true })).toBeTruthy();
+      expect(
+        await screen.findByRole('button', { name: /^Friends(,|$)/, selected: true }),
+      ).toBeTruthy();
       // And back from the page is the list the notice was opened from.
       fireEvent.press(await screen.findByLabelText(GROUPS_COPY.group.back));
       await waitFor(() => expect(screen).toHavePathname('/notices'));
@@ -1950,7 +1988,9 @@ describe('an ask for a Level', () => {
       expect(await screen.findByRole('checkbox', { name: /^zofia\.b/ })).toBeTruthy();
       fireEvent.press(await screen.findByLabelText('Back'));
       await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
-      expect(await screen.findByRole('button', { name: 'Friends', selected: true })).toBeTruthy();
+      expect(
+        await screen.findByRole('button', { name: /^Friends(,|$)/, selected: true }),
+      ).toBeTruthy();
     });
   });
 });

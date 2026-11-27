@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import final
 from uuid import UUID
@@ -17,9 +18,14 @@ from app.modules.groups.domain.hottest import (
     GAMES_WINDOW,
     NEW_WINDOW,
     GroupActivity,
+    HeatPlace,
     HeatTag,
+    HotGroup,
     faces_to_show,
+    heat_order,
     hottest_groups,
+    page_after,
+    total_of,
 )
 from app.modules.groups.domain.ports import (
     GroupAdministrators,
@@ -62,24 +68,31 @@ class HottestGroupCard:
     friends_count: int
 
 
-class ReadHottestGroups:
-    """Home's *Hottest groups* (#792; the Home rows mechanics §5) — up to six of
-    the groups with the most going on, **whether the reader is in them or
-    not**, their own included.
+@final
+@dataclass(frozen=True, slots=True)
+class HottestGroupsRow:
+    cards: tuple[HottestGroupCard, ...]
+    #: Every group of three or more — the page's whole list — counted up to
+    #: 100 (``domain/hottest.py``).
+    total: int
 
-    **Worked out on every read**: the heat of every group of three or more,
-    from two counts — the members, and who of them joined in the last 30 days,
-    off the groups projections; the games booked in each with a court time in
-    the last 7 days, off Bookings' through ``GroupBornGames`` — and then the
-    rule (``domain/hottest.py``). Only the six it keeps are read whole.
 
-    **Nine questions at most, whatever the number of groups**: the counts, the
-    games and the six listings; the three a club's card asks (``at_clubs``:
-    every dot's ratings, who runs the official ones, every Owner's and
-    runner's nickname); their clubs; and — one question each about the union
-    — the reader's relation to every member and the faces drawn. A group page
-    is still members-only: this read shows a group, never the way into it.
-    """
+@final
+@dataclass(frozen=True, slots=True)
+class HottestGroupsPage:
+    """A page of *Groups heating up* (#813; ``docs/adr/0205`` §7)."""
+
+    cards: tuple[HottestGroupCard, ...]
+    #: The place the next page is read after; ``None`` on the last page.
+    next: HeatPlace | None
+    #: The row's total, on the first page only — ``None`` on a page read after
+    #: a cursor, where the first page's stands.
+    total: int | None
+
+
+class _ReadsHeat:
+    """What the row and the page both read: every group's heat, and the cards
+    for the groups chosen."""
 
     def __init__(
         self,
@@ -102,19 +115,23 @@ class ReadHottestGroups:
         self._administrators = administrators
         self._clock = clock
 
-    async def execute(self, reader_id: UUID) -> tuple[HottestGroupCard, ...]:
+    async def _activities(self) -> list[GroupActivity]:
+        """Every group of three or more, with what its heat is made of: one
+        count over the members and one over the games, whatever the number of
+        groups."""
+
         now = self._clock.now()
         crowds = await self._directory.crowds(
             at_least=AT_LEAST_PLAYERS, joined_after=instant(now - NEW_WINDOW)
         )
         if not crowds:
-            return ()
+            return []
         games = await self._games.born_between(
             [crowd.group_id for crowd in crowds],
             after=instant(now - GAMES_WINDOW),
             by=now,
         )
-        ranked = hottest_groups(
+        return [
             GroupActivity(
                 group_id=crowd.group_id,
                 games_this_week=games.get(crowd.group_id, 0),
@@ -122,7 +139,15 @@ class ReadHottestGroups:
                 players=crowd.players,
             )
             for crowd in crowds
-        )
+        ]
+
+    async def _cards(
+        self, reader_id: UUID, ranked: Sequence[HotGroup]
+    ) -> tuple[HottestGroupCard, ...]:
+        """These groups read whole, in this order, for the reader."""
+
+        if not ranked:
+            return ()
         listings = await self._directory.listings(
             [hot.activity.group_id for hot in ranked]
         )
@@ -186,3 +211,62 @@ class ReadHottestGroups:
                 )
             )
         return tuple(cards)
+
+
+class ReadHottestGroups(_ReadsHeat):
+    """Home's *Hottest groups* (#792; the Home rows mechanics §5) — up to six of
+    the groups with the most going on, **whether the reader is in them or
+    not**, their own included.
+
+    **Worked out on every read**: the heat of every group of three or more,
+    from two counts — the members, and who of them joined in the last 30 days,
+    off the groups projections; the games booked in each with a court time in
+    the last 7 days, off Bookings' through ``GroupBornGames`` — and then the
+    rule (``domain/hottest.py``). Only the six it keeps are read whole.
+
+    **Its total** (#813) is the number of groups the members were counted for,
+    up to 100: **no statement of its own**.
+
+    **Eleven questions at most, whatever the number of groups**: the counts, the games
+    and the six listings (three: the groups, their members, who waits); the
+    three a club's card asks (``at_clubs``: every dot's ratings, who runs the
+    official ones, every Owner's and runner's nickname); their clubs; and —
+    one question each about the union — the reader's relation to every member
+    and the faces' nicknames. **And one profile per face drawn** — up to six a
+    card — the faces' own cost (``ProfileGroupFaces`` folds each profile for
+    its first photograph). A group page is still members-only: this read shows
+    a group, never the way into it.
+    """
+
+    async def execute(self, reader_id: UUID) -> HottestGroupsRow:
+        activities = await self._activities()
+        return HottestGroupsRow(
+            cards=await self._cards(reader_id, hottest_groups(activities)),
+            total=total_of(activities),
+        )
+
+
+class ReadHottestGroupsPage(_ReadsHeat):
+    """*Groups heating up* (#813; ``docs/adr/0205`` §7; the Home rows mechanics
+    §5.10) — **every** group of three or more, the reader's own included, in
+    the row's one order, twenty at a time: the row is its first six.
+
+    **Worked out on every read, as the row is**, from the same two counts and
+    the same rule (``heat_order``), and only the page's twenty are read whole:
+    the row's questions, about twenty groups, and a profile per face — up to
+    120 on a full page. A page is read **after a place** in the
+    order (``HeatPlace``), so a group whose heat moved between two pages may
+    shift — read twice, or missed — which is accepted. The first page carries
+    the total, which is the row's.
+    """
+
+    async def execute(
+        self, reader_id: UUID, *, after: HeatPlace | None
+    ) -> HottestGroupsPage:
+        activities = await self._activities()
+        page, behind = page_after(heat_order(activities), after)
+        return HottestGroupsPage(
+            cards=await self._cards(reader_id, page),
+            next=behind,
+            total=total_of(activities) if after is None else None,
+        )

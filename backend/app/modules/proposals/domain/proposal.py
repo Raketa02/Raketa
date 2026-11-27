@@ -169,6 +169,11 @@ class Reopened:
 
     reason: ReopenReason
     seat_charge_id: UUID | None
+    #: When their share was refused — the seat reopening then, or, for a time
+    #: to pay that ran out, the refusal it was given for: **a change of state
+    #: never moves it**, so *Needs your answer* never reads *Fix your card*
+    #: turning into *Confirm* as a new payment (#815).
+    refused_at: Instant
 
     @property
     def payment_to_confirm(self) -> UUID | None:
@@ -231,6 +236,11 @@ class Paying:
     reason: ReopenReason
     seat_charge_id: UUID
     until: Instant
+    #: When their payment **first came to need confirming** — a payer refused
+    #: again keeps it, as they keep their time, unless the refusal before had
+    #: nothing to confirm (terms or a method): what *Needs your answer* dates
+    #: the payment to confirm by (#815).
+    refused_at: Instant
     #: To fix the card, before the cut-off — or to pay, from it on (#638).
     time_to: TimeTo = TimeTo.PAY
 
@@ -1035,6 +1045,7 @@ class Proposal:
             self.reopened[event.player_id] = Reopened(
                 reason=ReopenReason(event.reason),
                 seat_charge_id=event.seat_charge_id,
+                refused_at=instant(event.occurred_at),
             )
         elif isinstance(event, YesPaused):
             self._a_seat_opened(event.player_id)
@@ -1043,10 +1054,18 @@ class Proposal:
             )
             self.paused = (*self.paused, event.player_id)
         elif isinstance(event, TimeToPayGiven):
+            already = self.paying.get(event.player_id)
             self.paying[event.player_id] = Paying(
                 reason=ReopenReason(event.reason),
                 seat_charge_id=event.seat_charge_id,
                 until=instant(event.until),
+                # A payment to confirm arrives when it first comes to need
+                # confirming: a refusal for terms or a method had none.
+                refused_at=(
+                    already.refused_at
+                    if already is not None and already.payment_to_confirm is not None
+                    else instant(event.occurred_at)
+                ),
                 time_to=TimeTo(event.time_to),
             )
             if self.payment_awaited_at is None:
@@ -1060,7 +1079,9 @@ class Proposal:
                 paying = self.paying.pop(player)
                 self.yeses = tuple(p for p in self.yeses if p != player)
                 self.reopened[player] = Reopened(
-                    reason=paying.reason, seat_charge_id=paying.seat_charge_id
+                    reason=paying.reason,
+                    seat_charge_id=paying.seat_charge_id,
+                    refused_at=paying.refused_at,
                 )
             at = instant(event.occurred_at)
             self.fell_back_at = at

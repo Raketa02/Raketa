@@ -10,7 +10,8 @@ the mechanics (§6–§8) and
 
 **The deck is one read, and a game's details are another.** `GET /pools/{id}/deck?sport&kind` — the
 pool filed under the group's id — is the deck: the segments, the badge, the capped weeks and the
-cards in the order dealt, each the reader's own version with its sides, forecast, overlap and court.
+cards in the order dealt, each the reader's own version with its sides, forecast — or on For fun its
+Social vibe — overlap and court.
 A game's details (`GameDetailsScreen`, `/play/group/[groupId]/game/[proposalId]?sport&kind`) are
 **`GET /proposals/{id}`** since #557 (#542 serves it): who is In, the sides, the club and its
 distance, the status and **what the reader may do now** — see the #557 section below. Until #557 the
@@ -24,6 +25,70 @@ beside the faces. **Who is free is drawn once two are In** (`inCount`): alone on
 the overlap has nobody to overlap with. And no paragraph explains what a yes costs: the share and
 its line under it say it, and the first yes's payment setup says the rest.
 
+**The details read top to bottom: the top card, the game card, _Who is free_**
+([#836](https://github.com/Raketa02/Raketa/issues/836); for fun 3–6; design-system 7.22), for both
+kinds. The top card comes first — the kind's own (below: the Balance forecast, or the Social vibe
+card) — then the dark game card: the status tag, the tiles, the vs line, WHERE · DAY ·
+TIME · YOUR SHARE, the offline note while an answer waits, and **what the reader may do, in the
+card's own foot**, right under the facts it answers. _Not this time_ (secondary, at its words' width)
+is on the left and the yes (primary, the rest) on the right, side by side, as mocks 4 and 6 draw
+them; _Withdraw_, _Leave the game_ and _Confirm your payment_ take that place, full width, when they
+are the state's action — _Leave_ over _Confirm_ while both are, since side by side they overflow a
+small phone. **The yes keeps its words**: _I'm in_, _Pay 32 zł_ when it completes the game,
+_Booking…_ while it books, the spinner while it is sent, held while another booking counts down —
+never the mocks' _I'm in · books it · 27 zł_. **The header keeps _Padel_ / _Padel · For fun_**, never
+their _Padel · 3 of 4 in_: the count is the status tag's alone (the For-fun record's overrides 2 and
+3). _Who is free_ follows the card. **Not seen on a device.**
+
+**A competitive game's details open on the full Balance forecast, with what is at stake**
+([#839](https://github.com/Raketa02/Raketa/issues/839); ADR-0207 §6; for fun 3–4). Before saying
+yes the reader reads both sides' levels with _gap_ and the signed gap between them, the bar with the
+sides' names, the % and its word, _A counted game — a confirmed score moves everybody's level._, and
+_If you win +0,08 · If you lose −0,07_ — **two tiles or none**. It is **the booked game's own block**,
+moved to `shared/ui` (`ForecastBlock`, `StakeTiles`) with its words
+(`shared/vocabulary/forecastPresentation.ts`) since two features draw it (ADR-0207 §6), so the two
+screens draw one thing. It is drawn from the details read (#833): the forecast with `your_side`,
+`their_side` and `gap`, fed to the bar as served — the deck card's `foldOf` is not used here, so **the
+details' bar can lean a little differently from the card's**, which reads the tiles' mean Levels until
+the deck card is served a gap too (owed to the backend; _The bar's fold_, below) — and `at_stake`, which the server sends only while every
+seat is named and the game is still the reader's to play, so an open seat, a reader who said no or a
+game that ended draws the block without tiles. The bar's labels are `barLabels`' stems, the split
+row's spoken name `forecastSides`' whole nicknames, both off one split of the court. **The kind
+decides the card** (`topCardOf`): **never on For fun**, even if a read sent a forecast — the deck
+card's `headlineOf` rule — and nothing at all, with nothing said, where the read could not forecast
+the game. A **provisional** figure (a seat open, read as matching its partner) is drawn as served, as
+the deck card and the details drew it before; the booked game never receives one. **The deck card is
+unchanged**: no stakes there. Walked in `competitiveDetails.test.tsx`; the booked game's
+`forecastBlock.test.tsx` passed untouched. **Not seen on a device.**
+
+**A For-fun game's details open on the Social vibe card** ([#840](https://github.com/Raketa02/Raketa/issues/840);
+ADR-0207 §6; for fun 7, which leads over 5 and 6). How much the whole table shares, and who shares
+yours. **The top**: _SOCIAL VIBE_, the big % in its band's paper ink with its word beside it, and the
+bar full width below — **the deck card's own number**, so the % swiped on is the % looked at, worded
+and banded by `socialVibeBand` as the card's row is. **The grid**: a column per person named on the
+reader's version — **you first, as _You_, then the others as the tiles stand** (`rowsOf`: the side
+with more people In on top, the people In first in a row), so the faces read in the order of the
+tiles below; mock 5's _Magda, Filip, You, Kuba_ is overruled by mock 7's. Four columns for doubles,
+two for singles; a seat still open is nobody, at the read's table and here. Each column is a round
+face with the nickname under it on one line, shortened with an ellipsis. **The rows are your tags
+only**, in the read's order — the vocabulary's — each with its emoji and label, 💘 like any other;
+**a dot under every carrier**, your own included, as the read names them (`carried_by`). **A row
+somebody else carries is on a pale volt band** with ink words and olive dots; **a row only you have
+is grey**, with a grey dot and no band. Somebody else counts only through a column, so a carrier the
+read names who stands on no tile shares nothing visible. **The grid has no taps**, and is spoken a row
+at a time — _Stays for a drink: you, kuba.w_ (`socialVibeRowSpoken`) — the column heads hidden, since
+every row names its carriers. **The rule is `topCardOf`'s** (`domain/details.ts`): For fun opens on
+the vibe card and never a forecast, even one a read sent; competitive on its forecast and never a
+vibe; nothing at all where the read sends none — fewer than two named, or nobody holding a tag that
+counts. A tag code this build can't name is left off by the mapper (ADR-0207 §7). **The card is
+`shared/ui`'s `SocialVibeCard`**, handed a `SocialVibeGrid` (`shared/vocabulary/socialVibeGrid.ts`),
+because a booked game draws it too (#841, `games`, below): the columns and the shared rows are each
+feature's rule, the paint the card's. **Live**: a tag saved in the You tab
+(`useChangeSocialTags`) marks every deck read and every details read stale, beside the record — the
+vibe is worked out on every read and stored nowhere — so a game reopened draws the new rows and
+number. Walked in `forFunDetails.test.tsx`. **Not seen on a device**: the card against for fun 7, the
+lower bands' paper inks, a long nickname's ellipsis, and eight rows.
+
 **Nothing the server decides is re-derived.** The order, the sides, the forecast's figure, the grade
 and every cell's shade are the read's. What the client decides is how a dealt card is drawn:
 `rowsOf` puts **the side with more people In on top, yours on a tie**, and within a row the people In,
@@ -36,8 +101,9 @@ and never this feature's component ([#786](https://github.com/Raketa02/Raketa/is
 `auth.md`). **A change to the card's look here does not reach it by itself: whoever changes the card
 checks the hero.**
 
-**The kind is the switch's, corrected by the intent.** The group page's Competitive · For fun switch
-(`groups`' game-intent store, which Friends shares) hands in the kind chosen; the read says which
+**The kind is the page's, corrected by the intent.** The group page's Games tab's menu — its
+Competitive · For fun switch until #862, below — hands in the kind chosen (`groups`' game-intent
+store, no longer Friends' since #757); the read says which
 segments the player's intent shows, and a choice it does not show is read again as the segment it
 does (`resolveKind`, `useGroupDeck`'s second query) — so a For-fun player never lands on an empty
 Competitive deck. No segments at all is no intent declared: `DeclarationInterstitial` replaces
@@ -56,7 +122,7 @@ the yes charges at once, every yes with the share after it since Q124) and the t
 
 **An answer flies on the press and the server settles it.** The card in flight is held by `GamesDeck`
 (component state), so a re-read landing mid-flight cannot pull it off the stage; when it has flown it
-is dropped from the cached read (`withoutCard`, its segment's count and the badge following), and the
+is dropped from the cached read (`withoutCard`, its segment's count following), and the
 answer settling re-reads every deck of the group. **A refusal is a toast**, handled on the mutation
 rather than on the call — TanStack drops a `mutate` call's own callbacks when a later call is made,
 and a player answers the next card before the last reply lands — and `refusalOutcome` decides the
@@ -68,7 +134,7 @@ held and the card stays gone, with the amber _resumes_ note.
 `refreshControl` and put on whichever scroller the tab is in: the one-time question's, the starting
 card's, a failed read's (the pull mends it as the retry does), and **the deck's own**, a scroller with
 nothing to scroll that exists for the pull — its content is the page's height (`flexGrow: 1`), so the
-stage still takes what the switch and the buttons leave. A drag down is the pull's and a drag across
+stage still takes what the cap line and the buttons leave. A drag down is the pull's and a drag across
 is the card's, because `DeckStage` claims only a move further across than down, and React Native's
 Android refresh layout lets go of a touch once it has moved across. A pull's read is drawn as every
 read is (below): the card being read stays on top. What the pull re-reads is
@@ -110,9 +176,28 @@ theirs, a short side read as its present member (the engine's own provisional). 
 the server's. **Owed to the backend**: serving the signed gap on `DeckForecastSchema`, which would
 make the fold the engine's too.
 
+**A For-fun card leads with its Social vibe, and never with a forecast**
+([#838](https://github.com/Raketa02/Raketa/issues/838); ADR-0207 §5, §8; for fun 1–2). Below the
+tiles and the vs line, where a competitive card draws its forecast, a For-fun card draws
+`shared/ui`'s `SocialVibeRow`: the deck's `vibe.pct` beside a 0–100 bar filled to it, with _Social
+vibe_ inside, spoken _Social vibe, 82 percent, Great vibe_. **`headlineOf` (`domain/deck.ts`) is the
+rule**: the kind's own number or nothing, so a For-fun card draws no forecast even if one is sent,
+and a competitive card no vibe — the Friends card and Post a game's fits read it too (#842), so it
+takes only the two numbers and the kind. The row keeps the forecast row's height, so the ribbon, tiles, vs
+line, grid and court block stand where they stood. **The vs line speaks where no forecast is
+drawn** (`GameTiles`' `speaksSides`): the forecast's name said the sides, the row's does not, so on
+For fun — and on a card the server could not forecast — the line is read as _You and zofia.b against
+ania.k and ewa.m_ (`sidesSpoken`); under a forecast it stays a drawing, said once. **The bands are the app's**
+(`shared/vocabulary/socialVibePresentation.ts`, the words §33): _Great vibe_ 70+, _Good vibe_ 45+,
+_Some common ground_ 20+, _Fresh mix_ below, drawn volt, volt, `gameVoltDim`, `gameGrey` — never the
+forecast's green / amber / red. The figure is the server's, never derived here. **Not seen on a
+device**: the row against for fun 1–2, the two lower bands' colours, and the name's two colours
+where a short fill ends inside it.
+
 **The card is not one element.** Its tiles are buttons — each opens `PlayerRecordSheet`, a press
 where the Players deck asks for a long one — so the card's parts speak for themselves (the ribbon a
-header, each tile, the forecast, the grid as one sentence, the court block) and the details are
+header, each tile, the forecast — or the Social vibe and the vs line — the grid as one sentence, the
+court block) and the details are
 reached by the **i**, the accessible path the drag never is.
 
 **Money prints whole złoty without grosze** (`formatZloty`: _32 zł_, _27,50 zł_ when there are some)
@@ -135,8 +220,8 @@ deadline leaves silently rather than lingering until the next read to be refused
 and never a decision: the server stays the authority on whether a game is over. **The details'
 answers are the read's `actions`** (#557), not a flag of the screen's, and their DAY carries the
 date — _Saturday_ over _3 Oct_, _· next week_ from seven days out (A4.1). **The weekly cap's line sits
-under the switch**, above the deck (A1, A2.1). _Book it now_'s court block has a solid **green**
-border — the tag's own — and _Booked_ keeps `voltStroke`. The game card's three corals are recorded
+directly under the tabs**, above the deck (A1, A2.1; under the switch until #862). _Book it now_'s
+court block has a solid **green** border — the tag's own — and _Booked_ keeps `voltStroke`. The game card's three corals are recorded
 in the design system's §1.2 as meanings it already had (a stroke is _where_, a `coralInk` fill is
 attention). **Owed to the backend**: a distance for the details' WHERE (A4.1 draws _3,1 km_; a deck
 card carries none).
@@ -284,8 +369,10 @@ they stand for**. A booked game's Game is in `GET /games` too, so the rail leave
 out of its own cards and `useGamesNeedingYou` leaves them out of the Classic half of the badge; the
 bar's Home count is the two halves added (`useHomeBadge`: the server's `needing_you`, which counts
 the cards that need you and every payment to confirm). Booked cards come first, in their read's
-order. **_TO CONFIRM_ is on Home too**, above the rail: the badge counts a payment to confirm, and a
-count with nothing on the tab to answer it would be a dead end.
+order. **_TO CONFIRM_ was on Home too**, above the rail: the badge counts a payment to confirm, and a
+count with nothing on the tab to answer it would be a dead end. _(Since #817 it waits in Needs your
+answer, behind Home's envelope, a tile per payment — below; the badge still counts it, and the
+envelope on the tab is where it is answered.)_
 
 **A card is the Now card's shell with a booking's content** (`HomeGameCard`): the status as a grey
 tag with the status's dot, _New_ until opened, the sport word; WHERE (club + court), DAY and TIME on
@@ -319,8 +406,31 @@ with the court and the distance, DAY, TIME to the read's `ends_at`, and the mone
 (`moneyRow`); once the hour has come, today's **We played** / **Confirm the result**, which opens
 today's game screen at the Game the booking opened (`BookedGameResult`, `/booking/[id]/result`:
 `GameScreen` with the score leading and its three Classic slots empty); and the Game's own
-forecast (`games`' `GameForecast`) while the booking says to draw it. The filling details and the booked ones share `GameFacts` and
+pairing (`games`' `GamePairingCard`) while the booking says to draw it. The filling details and the booked ones share `GameFacts` and
 `OthersFaces`.
+
+**A booked For-fun game draws the Social vibe card where _A friendly — nothing moves._ stood**
+([#841](https://github.com/Raketa02/Raketa/issues/841); ADR-0207 §5, §6; the backend's #835), so a
+For-fun game reads the same before and after it is booked. The card under the game card is the
+**kind's**, chosen in `games` (`pairingCardOf`) off the Game's own pairing: For fun draws the vibe
+card — the court's number, and a row for each of your tags with a dot under everybody who carries it
+— and ignores the forecast the pairing still sends for older apps; competitive draws the Balance
+forecast and its stakes, unchanged. **On the same occasions, and to the same people, as the forecast
+was**: the booking's `shows_forecast` still decides whether the card is drawn at all — the game
+booked, and the game at the court (`NEEDS_RESULT`, its first half hour's door _Who's here_), every
+seat filled — and nothing where the pairing sends no vibe (a seat open, nobody holding a tag that
+counts), with no forecast standing in. **The columns are the tiles'**: this feature hands `games` the
+people as the tiles above stand, you first (`vibeColumnsOf`, shared with the details' grid), with
+the faces the booking carries — the Game's seats hold neither that order nor a photograph — and
+`games` sets the dots off the pairing's carriers. **On For fun the vs line is spoken**
+(`GameTiles`' `speaksSides`): the forecast's split row said who partners whom, and the vibe card
+does not. **Live**: a tag saved in the You tab marks the Game's pairing stale too, as it does the
+deck and the details, so the game reopened draws the new rows and number. Walked in
+`bookedForFunGame.test.tsx` — the booked game, the same game at the court, a competitive one
+unchanged, and a tag edit. **A call**: _the game at the court_ (ADR-0207 §5's table) is read as
+these details at the game's hour, the one surface that draws the court's pairing there — the result
+screen _Who's here_ opens (`BookedGameResult`) has drawn no pairing since Classic play left (#576),
+and §5's _no wider_ keeps it so. **Not seen on a device**: the card under a booked game's card.
 
 **The chat is reached from the details** (A4.4, §14.3) — and, since #619, from the Home card's
 bubble too (Q100, below). _Chat_ is drawn while the
@@ -362,7 +472,8 @@ terminal sentence.
   `refunded_grosze`), below.
 - **The result is today's screen**, opened from the details by _We played_ / _Confirm the result_ —
   no mock draws where the act sits on a booked game.
-- **_TO CONFIRM_ above Home's rail**, because the badge counts it.
+- **_TO CONFIRM_ above Home's rail**, because the badge counts it. _(Moved into Needs your answer by
+  #817, ADR-0205 §1.)_
 - **The status colours**: amber for waiting, a seat open and the two result acts; mint for booked
   and counted; `gameRed` for called off.
 
@@ -389,7 +500,7 @@ only rescues — booked games that lost a player, the reader fits and is free fo
 leaving at its deadline on the read's clock (`standingSeats`). A row (`SeatToFillRow`, framed `coral`):
 _Padel · Saturday 16:00_ (_· friendly_ for For fun), the club and, bold, _fills by Fri 16:00_ before
 the cut-off or _offered until the start_ after it — the read says which; the players' posters (a hold
-opens the record), a dashed **?** per open seat, and a volt **Pay 27 zł**. _You're In_ is the
+opens the record), a dashed **?** per open seat, and a volt **Pay 27 zł**. _You’re in_ is the
 reader's live yeses in this group and sport (`yesesIn`); a row (`YoureInRow`, framed `mint`) is the
 yes's game, club and _book by Sat 13:00_ with **its squares read off the game's own details**
 (`useProposal`: everybody In, then the open seats dashed) and _Withdraw_ **only once those details
@@ -397,8 +508,125 @@ say the reader may** (`mayWithdraw`) — so it is hidden while the full game wai
 when the `actions` hold _Leave_ instead, and before the read lands: a withdrawal then is a departure,
 with no sheet in front of it. One read a row, because the live yes does not carry who is In.
 Each row's upper block opens its game. Sections only when they have rows; with neither, the group's
-starting card. The tab's badge is the read's `badge`, filed under the group's root
+starting card. The tab's badge was the read's `badge` (until #849, below), filed under the group's root
 (`proposalKeys.fillIn`), so every answer in the group and every changed limit re-reads it.
+
+**Fill in and You’re in are a board each since #847** ([#847](https://github.com/Raketa02/Raketa/issues/847),
+PRD #844; the screens A3; split mocks 1 and 2). The rows above are unchanged; what changed is the page
+round them. **`FillInBoard` is the Fill in tab**: the rescues alone, read through `useSeatsToFill`
+(the read, its clock, and the rows standing on it), with no heading, the muted spinner (_Reading Fill
+in_), the offline note and the refusal with its retry (`HeldRead`), and — with no rescue — one line
+in 10.1's empty look, _No seats to fill right now_, never the starting card. **`YoureInBoard` is the
+You’re in tab**: the live yeses in the list's order, soonest first, with no heading, its own spinner
+(_Reading You’re in_), note and refusal, read on the list's own clock (its `dataUpdatedAt`, as You ›
+Payments reads it). **Empty, it draws what the page hands in (`empty`, the starting card) only once
+Fill in's read has said there is nothing too** — it asks the same query the Fill in tab and its badge
+read, so that costs no request — with the spinner while Fill in's read is on its way, and otherwise
+_You haven’t said yes to a game here yet_, including while Fill in's read could not say. _Withdraw_
+on the last row leaves the tab on that state. **The You’re in badge is `useYoureInBadge`**: the rows'
+count — plain until #849 (below) — which the page's tab bar reads, so the live-yeses read starts as
+the page opens.
+**So an answer no longer waits for the live yeses** (`reread`'s `yeses: 'start'`): with the badge
+observing them on every tab, an awaited re-read would hold a deck's card hidden and a _Booking…_ busy
+for a badge's read, retries and all — the code review's catch — and a badge never holds anything up.
+A pull and a withdrawal still wait (`'wait'`): the pull's spinner stops once every tab is read, and a
+withdrawn row stays busy until it leaves. The empty state's rule is the domain's (`youreInEmpty`), and
+You’re in asks Fill in's read with `retryOnMount: false`, so opening it never re-asks a refused read
+whose refusal only Fill in draws.
+The two headings and their presentation functions went (`seatsToFillHeader`, `youreInHeader`).
+**Made easy first, with no behaviour change** (89cc83c5): the board was split into the two, each
+owning its read, while Fill in still stacked both, and the Fill in suite passed unchanged — which
+found one trap: **a board mounted on a refused read reads it again** (Query's retry on mount), so a
+stack that unmounted a board with each refusal asked for ever; it keeps both mounted.
+
+**The two badges count what the reader hasn't seen** ([#849](https://github.com/Raketa02/Raketa/issues/849),
+[ADR-0208](../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md);
+PRD #844; split Q2b, Q10–Q12). The product owner's rule is over every choice: **a badge is a nudge,
+not a ledger** — it never costs a request or a wait, and where being exact would, the simpler rule
+wins.
+
+- **The rule is the domain's** (`domain/seen.ts`, beside the Fill in rules): a badge is the ids the
+  tab counts now minus the ids seen (`unseenCount`); a look leaves seen what was seen and what is
+  on screen, among the ids still counted (`afterALook`), so the set is cut back with every write and
+  never grows past the tab; one entry per group, sport and tab (`seenEntry`); and a stored value that
+  is not a list of ids is _nothing seen_ (`seenFrom`). **The ids** are `fillIn.ts`'s: Fill in's, the booking of each rescue
+  still standing on the read's clock (`rescueIds`); You’re in's, the proposal of each live yes in
+  this group and sport (`yesIds`). A row is known by its id, so one that only changed — its cut-off
+  passed, its book-by moved, somebody joined — stays seen.
+- **`useFillInBadge` and `useYoureInBadge` count unseen** (`useUnseenCount`, `hooks/useSeenRows.ts`).
+  **Fill in's read's `badge` is no longer read** — the mapper drops it and `FillIn` has no such
+  field; it stays on the wire for older installed apps. The Fill in badge reads `useSeatsToFill`,
+  so a rescue past its deadline leaves the count as it leaves the tab.
+- **The boards mark what they draw** (`useSeeRows`): every id on the board, whenever the rows change
+  while the board is `inView` — the page the screen in view, handed down from the route file
+  (`useScreenInView`) — with no player's record sheet of its own open and nothing of the fill's up
+  (`useFill().over`: _It's a game!_, the payment setup, a refused share's confirmation, a rescue
+  gone). **This is the rule in full, not the simplification ADR-0208 §7 allows** (marking on
+  opening the tab and on leaving it): a row a pull or a re-read brings while the tab is on screen is
+  seen at once, and one that arrives while a game's details, Info or _Post a game_ is pushed over
+  the page, or a sheet is up, is seen only once the page is uncovered — and stays new if the app
+  dies meanwhile. **The one cover not followed is the sport bar**, a popover over the header the
+  player opened to change the page: under the nudge rule, following it would be machinery for
+  being exact.
+- **What a look cuts the set back to is the read's rows** (`TabLook`'s `counted`), not only the
+  ones drawn: on Fill in the tab bar runs a clock of its own beside the board's, so a rescue past its
+  deadline can leave the board a moment before it leaves the badge, and it stays seen until the read
+  lets it go — never _1 new_ for a row that is gone (the code review's catch). On You’re in the two
+  lists are one.
+- **Kept on the phone, never waited on** (the phone-preferences store's `seenRows.<entry>`, per
+  account, forgotten at sign-out whichever way it ends): read once into the query cache, never
+  paused for the network and never stale, and **no badge until it has been read**; a look writes the
+  cache first and the phone second, not as a mutation, and fetches what was kept before writing over
+  it, as the opened games do. A look that changed nothing writes nothing (`sameSeen`), one that
+  finds the cache emptied under it — the session ended mid-read — writes nothing either, so a
+  sign-out is never undone, and one cut short is simply lost.
+
+Walked in `groupBadges.test.tsx`, and mutation-checked: dropping the cover, the record sheet, the
+fill's overlays, the phone's write or the selected tab's rule each turns a walk red. The two clocks'
+race is not walked — it needs the bar's and the board's ticks to land in a given order. **Not walked: a phone read that is
+held** — a suite cannot hold the store without importing AsyncStorage, which the lint fence keeps to
+two modules — so _no badge until read_ is `useUnseenCount`'s one line, read, not run.
+
+**The Games badge counts what the reader hasn't seen too, across both kinds**
+([#850](https://github.com/Raketa02/Raketa/issues/850), ADR-0208; PRD #844). The same rule and the
+same phone memory as Fill in's and You’re in's, on the deck read's new field:
+
+- **The ids are the read's `in_card_ids`** (#846): the cards with somebody In with the reader across
+  every segment the intent shows — the kind not read too, Competitive first, never a rescue's. The
+  mapper reads them into `GroupDeck.inCardIds`, and **`games_badge` is no longer read**: `GroupDeck`
+  has no such field, and the number stays on the wire for older installed apps. **`useGamesBadge` is
+  `useUnseenCount`** over those ids, off the deck read the tab already makes for the kind the deck
+  is on: no extra request, and nothing reads the other kind's deck.
+- **A list per kind** (`gamesSeen(kind)`, ADR-0208 §1), and the badge counted against both
+  (`GAMES_SEEN`; `useUnseenCount` takes the lists a badge is counted against). A first cut kept one
+  list for both, which a look cut back to whatever read was drawn — and **the other kind's read,
+  held from an earlier visit, can be older than a card seen since**, so moving the deck there made
+  a card she had just looked at new again (the code review's catch). Each kind's list is cut back
+  only by its own kind's read now, which is the newest that kind has.
+- **The deck marks the whole of the kind on screen** (`GamesDeck`, `useSeeRows`): **every card the
+  read dealt** (`GroupDeck.dealtIds`) — not only the top one, and the ones this build cannot draw
+  too, which `cards` leaves out but the ids still count, so a visit to their kind clears them rather
+  than a badge no visit could — whenever they change while the page is `inView` and nothing is over
+  the deck: no player's record, nothing of the fill's (`useFill().over`), and neither the door's
+  panel nor _Finding…_ over its area. The other kind's cards keep what they had — new, or seen on an
+  earlier visit — and move only when the deck does; opening the Games tab's menu, which counts both
+  kinds, sees neither (#862).
+- **A notice's card is seen as any visit is** — but only once the deck stands on its kind. The page
+  moves the kind in an effect, which runs after the deck's own, so on a page whose reads are still
+  cached the deck is drawn for one frame on the kind it stood on; `GroupScreen` hands the deck
+  `inView` false until it has moved the kind (the code review's catch).
+- **`withoutCard` leaves the ids to the server**: the answered card was on screen and is seen, and a
+  seen list cut back to an edit made before the server had the answer would forget it — new again
+  when a refusal puts the card back. The menu's count still follows at once.
+
+Walked in `groupBadges.test.tsx` and mutation-checked: marking both kinds' ids, marking only the top
+card, marking only the drawn cards, one list for both kinds, dropping the page's cover, the record
+sheet, the fill's overlays or the notice's wait, and a badge on the selected Games tab each turns a
+walk red. **Not walked: the door's panel and _Finding…_ as covers** — a card dealt under either is
+marked once it lifts, and only the app dying in between would show the difference; they are followed
+because they hide the cards, and cost nothing. **Left as it was**: a record opened from the only card
+goes when a re-read empties the deck, and comes back by itself with the next card (`reading` is
+never cleared) — older than this, and the marking follows it, since the sheet is over the cards.
 
 **A rescue is a card the deck already drew, now answered at its booking.** A _Seat open_ card's id is
 its booking's (#545): the yes is `POST /bookings/{id}/seats` and the no `POST /bookings/{id}/no`
@@ -445,12 +673,14 @@ button where the read gives none (the hour has come, the game is over). **The sa
 full game while it waits for one payment** (#625), sent as the withdrawal (`useLeaveWhileWaiting`,
 `DELETE /proposals/{id}/yes`), and the game fills again.
 
-**The filling details are `GET /proposals/{id}`** (A4.2; owed by #556). The status tag — _Filling · 2
+**The filling details are `GET /proposals/{id}`** (A4.2; owed by #556). The kind's top card above the
+card (since #836; a competitive game's full forecast and stakes since #839, a For-fun game's Social
+vibe card since #840), then the status tag — _Filling · 2
 of 4 in_, _Waiting for one payment_ amber, _Booked_, or how it ended unfilled — WHERE with the distance
 and no court, the share with _if it fills · book by_ or _Waiting for one payment · until 14:40 · Nobody
-pays until it's in_, the forecast, the grid, the paragraph while it fills, and **the actions the read names, in its order**:
-_I'm in_ / _Not this time_, _Withdraw_, _Leave the game_, _Confirm your payment_ (the fill's
-confirmation, on the payment the read names). Nothing about the game is held by the screen: every
+pays until it's in_, and in the card's foot **the actions the read names**:
+_Not this time_ beside _I'm in_, _Withdraw_, _Leave the game_, _Confirm your payment_ (the fill's
+confirmation, on the payment the read names); the grid under the card. Nothing about the game is held by the screen: every
 answer re-reads the details (`reread` takes `proposalKeys.proposals()`), each button busy until the
 read lands. **The one fold**: whether a yes from the details books, which a card carries and the read
 does not — the deck's own rule read off the seats and the In count (`courtOfDetails`: the last seat is
@@ -495,7 +725,7 @@ backend's #545 note); the push and in-app notices of a seat opening (#549, #559)
 enabled (#558, below). **Owed to the backend**: ~~a `called_off_reason` for the club's own cancel and
 for a full game a player left~~ — both came: the club's cancel is `CANCELLED_BY_THE_CLUB` (#547), and a
 full game a player left is no longer called off but stays on the others' Home as _Seat open_ (#624,
-#629, below); and who is In on the live yes, which would save _You're In_ its read a row. **Nothing here has been seen on a
+#629, below); and who is In on the live yes, which would save _You’re in_ its read a row. **Nothing here has been seen on a
 device.**
 
 **Posting a game is this feature's** ([#558](https://github.com/Raketa02/Raketa/issues/558); the
@@ -511,12 +741,12 @@ a changed Games & money — re-reads the grid and its sheet with the decks.
 **The screen is `PostAGameScreen`, mounted by `groups`** (`PostAGamePage`, `/play/group/[groupId]/post`)
 because only the group knows what it hands in: the sports the reader may post in here (the page's own
 filter — rated in, among an official group's declared ones), each with how many members are rated in
-it (_Padel 10_, the roster's count), the sport the page is on and the kind its switch stands on. The
+it (_Padel 10_, the roster's count), the sport the page is on and the kind its deck stands on. The
 edge still points one way. **The draft is a feature store** (`store/postDraft.store.ts`): the four
 controls, the week shown and the pick, kept while the player stays in the group and forgotten when
 the group's page goes (`forgetPostDraft`, called by the page) and after a post. The sport and the
 kind are absent from the draft until chosen, so the page's sport and **the player's intent** — the
-switch's kind as the deck corrects it (`useGroupDeck`'s, a read the page has made already) — stand in
+deck's kind as the deck corrects it (`useGroupDeck`'s, a read the page has made already) — stand in
 without being frozen before the read lands.
 
 **The controls** (A5.1): SPORT a row of chips with the sport's dot and its count; KIND Competitive /
@@ -550,7 +780,7 @@ other refusal the shared retry; offline, the amber _resumes_.
 _Nobody who fits is free then_, a courtless one _No court is free then — every game needs a court._
 — and is read for the controls the grid was read with: the headline (_5 of your best fits free
 then_, _only 2 fit · may not fill_ where a court is free and fewer than a full game are, each with
-_· outside your hours_), the fits (7.16's card panels, the name whole, _2,75 · 93_), the free courts
+_· outside your hours_), the fits (7.16's card panels, the name whole, _2,75 · 93_ — the kind's own number, below), the free courts
 home club first with their own _4 free_, and **Already happening here**: rescues (_Pay 30 zł_)
 then posts still filling (no court number, _I'm in_, and _Pay 32 zł_ on a post's last seat, Q124). **A court tapped is the pick**, replacing the
 last, and the sheet closes so the ringed cell and the open button are what follows; on the picked
@@ -564,13 +794,31 @@ copied into the store. **A fit opens their record in the
 sheet's place** — two sheets are never up at once, BuilderScreen's rule — and closing it brings the
 sheet back.
 
+**A fit's second figure is the post's kind's own number** (#842; ADR-0207 §5, over #834's `vibe`).
+The fits are lined by the kind the sheet was read for (`PostingSlot.kind`, the read's own, as the
+Friends card's), and `fitLine` / `fitSpoken` lead through the deck card's `headlineOf`, so one rule
+says which number every compact surface draws: a competitive post keeps
+_2,75 · 93_ and _a 93 % even game_, unchanged; **a For-fun post's fit reads _2,69 · 83%_, the Social
+vibe of the poster and that player**, spoken _zofia.b, level 2,69, Social vibe, 83 percent, Great
+vibe_ — the row's own sentence — and draws no forecast, even one a read sent. The figure is the
+row's and the card's (`socialVibeShown`: whole, held to 0–100, banded as printed). **The % is coloured by
+its band on paper** with the Social vibe card's figure inks (`SOCIAL_VIBE_CARD_FIGURE`: `oliveInk`,
+`oliveInkDim`, `vibeGrey`, each past AA on the sheet's `surface`); the Level and the dot stay
+`muted`, so the line is one `num.tiny` with the figure a nested span. **The fits stand in the
+server's order** — on For fun the highest vibe first, a tie to the most even (#834) — and nothing
+here sorts them. **No mock draws it** (the for-fun mocks' README): designed from ADR-0207 §9.4,
+which makes the row's number Post a game's figure, with the % sign the row prints, since a bare
+figure would read as the forecast's. **Not seen on a device**: the olive figures at `num.tiny`.
+
 **Joining from the sheet is the fill's** (`useFill`, `useFillYes`): the sheet closes first, so the
 payment setup never opens over it; a rescue counts its ten seconds behind _Undo_ and pays, raising
 _It's a game!_ off the booking's read (a sheet's rescue holds no sides, as a row's does not); a
 post's _I'm in_ is `POST /proposals/{id}/yes` — a free vote, or **on its last seat a _Book it now_
 behind the ten seconds**, as on a card (`yesOnPost`, read off the seats as the details' rule is) — and
 a refusal is the deck's toast (`post_not_open_to_you`
-has words now). Then the player goes back to the group's page, the toast following them there.
+has words now). Then the player **lands** on the group's page on You’re in, as a post does
+(`onLanded`, #848) — a post's yes is on the tab, and a rescue's _It's a game!_ rises over the page
+with the page left on You’re in under it — the toast following them there.
 
 **Post — you're In** (A5.4) is shut until a court is picked, with _Pick an hour with a court on the
 map first._ under it; once picked, the line says the post (_Saturday 17:00 · Ogrody 33 · 27 zł each
@@ -579,10 +827,16 @@ guard the server answers with is said in the helper's place, announced, **for th
 about** — a new pick, a removed one or a new sport clears it: `payment_method_required` (and the
 setup), `live_posts_exhausted`, `games_per_week_booked`
 (the week), `you_play_then`, `nobody_fits_then`, `court_hour_not_for_sale`. Posted, the draft is
-forgotten, _Posted — 5 of your best fits have it._ is toasted, and the player is back on the page on
-**Fill in › You're In** — the page turned to Fill in under the screen when it opened
-(`groups`' `groupTab.store`), so every way back lands there. A post settling after the player has
-left does not pop the page as well. Not retried: a second post is a second game. **No
+forgotten, _Posted — 5 of your best fits have it._ is toasted, and the player **lands** on the page
+on **You’re in**, where the new game is, from either door (#848; until then the page was turned
+there under the screen as it opened — Fill in › its yeses section until #847). **Backing out is not
+landing**: the chevron, the hardware back and the swipe return to the page on the tab the screen was
+opened from, and the chevron names it — _Back to You’re in_ or _Back to Games_. Both are the group
+page's to know (`groups`' `groupTab.store`), so the screen is handed the chevron's name
+(`backLabel`), the way back (`onLeave`) and the landing (`onLanded`), and turns no page itself. A
+post settling after the player has backed out toasts, and neither pops the page nor turns it. **The
+two-live-posts guard** says _You already have 2 posts live — withdraw one in You’re in to post
+again._, the tab's own spelling (it said _You’re In_). Not retried: a second post is a second game. **No
 `Idempotency-Key`**: the button is busy while the post is in flight, and the server refuses a second
 post at an hour the poster already plays (`you_play_then`) — so a duplicate is refused, never booked. **Challenge cards**
 (_Kuba Wiśniewski challenged you_, _The group challenged you_) are #553's and unchanged; the suite
@@ -684,7 +938,7 @@ that list on the group page any more.
 ([#615](https://github.com/Raketa02/Raketa/issues/615); the backend's #613; the mechanics §14.1, the
 screens A4.2 and A8). Either details' money row draws the card's line word for word, on a line of its
 own under the share: the booked details opened from the card, and the filling details opened from a
-_You're In_ row (`GameFacts`' `below`). It first ran on after the figure, so the card and its details
+_You’re in_ row (`GameFacts`' `below`). It first ran on after the figure, so the card and its details
 said one thing two ways; the user ruled it under the figure, as Home draws it (2026-10-09). **Every
 booked money row has drawn its words under the figure since** — _PAID 40 zł_ over _Paid · 38,40 zł back if
 you leave by Wed 19:00_, the seat open, why a game is off, the rescue's _fills by_ — the user's
@@ -781,12 +1035,12 @@ is booked.
 
 **Its way out is a game still filling's** (#629). The details draw _Seat open_ with no court and no
 Chat, and the share over the card's line. At the foot, **_Withdraw_** stands where _Leave the game_
-does, since the read gives no `leaving`. It is free and never on the record, as on a _You're In_
+does, since the read gives no `leaving`. It is free and never on the record, as on a _You’re in_
 row, with no sheet and no toast: `DELETE /proposals/{id}/yes` with the booking's id, which is the
 game's (`useWithdrawFillingAgain`), then back to Home, which no longer holds the game. It is gone
 once the game is called off. A refused withdrawal (the game ended, or filled again meanwhile) is
 a toast, and the booking is read again so the details draw what it is now. **Every withdrawal reads
-Home again** (`rereadAfterWithdrawing`), so _Withdraw_ on the game's _You're In_ row takes the card
+Home again** (`rereadAfterWithdrawing`), so _Withdraw_ on the game's _You’re in_ row takes the card
 off Home too.
 
 **Calls made here, open for the product owner**:
@@ -800,7 +1054,7 @@ off Home too.
   that didn't fill again in time and for a seat that opened after the book-by. _A seat was open past
   its last moment to book_ is true of both. The notice says the first as _It didn't fill again before
   its last moment to book_. The lost court uses the notice's own words.
-- **No toast after _Withdraw_**, as on a _You're In_ row: the details close onto a Home without the
+- **No toast after _Withdraw_**, as on a _You’re in_ row: the details close onto a Home without the
   card.
 
 **Owed by the root**: the root `CONTEXT.md`'s **Seat open** still says _decided and not yet built
@@ -1102,7 +1356,7 @@ confirm a booking, and a desk that is shut until 16:00 called off every game tha
 morning, so every club now books the moment the last yes lands. **What went**, with the wire's
 `waiting_for_the_club`, `club_confirms`, `answer_by` (the score's own `answer_by` stays), `HomeStatus`'
 and `ProposalStatus`' `WAITING_FOR_THE_CLUB`, `TURNED_DOWN`, and `CalledOffReason`'s `REFUSED` and
-`NO_ANSWER`: the _Waiting for the club_ tag and its amber _waiting for the club_ on a _You're In_ row;
+`NO_ANSWER`: the _Waiting for the club_ tag and its amber _waiting for the club_ on a _You’re in_ row;
 _answers by_ on Home, the details, the rail's clock and _It's a game!_ (`answerByAhead`,
 `answersByWords`, `waitingWords`, `itsAGameWaiting`, `ItsAGameAtTheClub` and its since-mount read,
 `useBookingSinceMount`); the fill's `waiting` outcome; _said no_ and _didn't answer in time_
@@ -1168,8 +1422,9 @@ nickname is said as its owner wrote it. The harness's deck and Home people are h
 
 **The kind you don't play is a door** ([#740](https://github.com/Raketa02/Raketa/issues/740),
 [ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
-§2, Q127). The switch draws both kinds always (`switchSides`): the read's segments are the kinds the
-intent shows, and the one missing is drawn dimmed with no number — `Segment`'s `door`, its label at
+§2, Q127). _As built, on the switch — #862 moved the door into the Games tab's menu (below); what
+it says and opens is unchanged._ The switch draws both kinds always (`switchSides`): the read's
+segments are the kinds the intent shows, and the one missing is drawn dimmed with no number — `Segment`'s `door`, its label at
 .8 and nothing else, so it is the same box and the same reach as the live kind. Ania reads
 _Competitive · 7_ and a bare _For fun_, Kuba the mirror, and Zofia's _Either suits me_ is unchanged;
 an undeclared sport still draws the first-time question and no switch. **The deck still never opens
@@ -1182,14 +1437,15 @@ them, so neither moved. The panel is the first-time question's dark card and ans
 other kind is missing and what each answer costs in the live segment's count (`doorPresentation`, the
 words §28: a singular, and a zero that drops the number); _Either suits me_ is first, on the
 `primary` fill. An answer is `PUT /play-intents/{sport}` on `DECK` for the page's sport alone, and on
-landing the switch moves to the kind tapped and the group's decks are read again, as after the
-first-time question. _Keep_, a press on the live kind and Android's back close it and send nothing,
+landing the deck moves to the kind tapped and the group's decks are read again, as after the
+first-time question. _Keep_, a press on the live kind (the live kind picked in the menu since #862)
+and Android's back close it and send nothing,
 and a refusal is the interstitial's coral note above the card. A read that shows the kind tapped
 closes it, and so does a change of sport, for good. **The write is the deck's, not the panel's**:
 `GamesDeck` holds `useDeclarePlayIntent` and hands the panel the answer in flight. The panel can go
 while an answer is out — a read that now shows the kind, or a change of sport — and an answer held
-by the panel's own mutation then lost its landing: the switch never moved and nothing was read
-again. While an answer is out nothing on the switch moves, and neither _Keep_ nor back closes it. The
+by the panel's own mutation then lost its landing: the deck never moved and nothing was read
+again. While an answer is out no pick moves anything, and neither _Keep_ nor back closes it. The
 panel scrolls inside the area, so at a large text size _Keep_ is a drag away rather than cut off.
 **Calls made
 without a ruling**: the door is spoken _For fun, not a kind you play_; the panel's answers keep the
@@ -1198,6 +1454,66 @@ the panel covers the cards on paper rather than over a scrim. `groupGamesDoor.te
 against a fake server that holds each sport's intent. **Not seen on a device**: the dim, and the
 panel over the stack — the ticket asks for that walk. _Finding…_ after an answer is #741's.
 
+**The switch leaves the deck for the Games tab's menu** ([#862](https://github.com/Raketa02/Raketa/issues/862),
+PRD #859; the screens A1, A2.1; tab menu mocks 1 and 3 as illustrations). **`GamesDeck` draws no
+switch**: above the deck stand only the weekly cap's line and the offline note, directly under the
+page's tabs, and the deck takes the height. The menu is the group page's; this feature gives it
+what to draw and takes what it picks. **What to draw is `useGamesMenu`** — `kindMenu`
+(`domain/deck.ts`) off the deck reads the page already holds, both kinds' watched and never fetched
+(`enabled: false`), so the chevron costs no request: the chosen kind's read or, while it is read or
+after it failed, the other kind's, since both carry the same pair of counts; nothing before either
+has come back, nor while the first-time question is up. The kind it stands on is the deck's
+(`resolveKind` against the chosen kind's read), so the tick and the cards never disagree, and it is
+ticked only while it is live. **And whether it is still**: an intent answer on its way for the sport
+(`player_profile`'s `usePlayIntentOnItsWay`, on the declaration's new mutation key) or finding
+under way for the group and sport (`proposalKeys.finding`, `useFindGames`' key) — the mutations'
+own state, never a copy. **Its words are `kindMenuLines`**: each live kind's words ending in
+today's count (`switchSides`', the switch's rule unchanged), spoken _Competitive, 7 games_; the
+door the kind's words alone, spoken as it was (`doorSpoken`). `segmentLabel`'s _Competitive · 7_
+went with the switch. **What it picks comes through `GamesDeckHandle.pick`**: a door opens the panel
+and moves nothing; a live kind is `onChoose`'s and shuts a panel left open, as the switch's live
+kind did; nothing moves while an answer or finding is out. **Which kind is a door is what the menu
+was drawn from** (`useKindsHeld`, `kindsHeld`): the deck's own read, or while it is on its way or
+failed the reads the menu holds, so a door drawn there opens — its panel, and finding after it, lie
+over the deck's spinner or its failure as over the cards (the code review's catch: the remembered
+kind corrected to the intent's, and that kind's read not in yet). The reads held are read straight
+off the cache with no observer, which a never-fetching observer would have made the reads' own. Walked in the group page's
+suites (`groups.md`), with `domain/deck.test.ts` and `deckPresentation.test.ts` for the rule and
+the words. **Not seen on a device** (#866).
+
+**A kind picked in the menu swaps the deck in place** ([#863](https://github.com/Raketa02/Raketa/issues/863),
+PRD #859; the tab menu log §5.1, §5.2). **The stack goes out** — `motion.kindSwap.rise` (24) down
+and faded over `.out` (200) — and **the other kind's comes in**, up from `rise` below into the same
+place over `.in` (250): opacity and a translation on the native driver, nothing scaled, the stage
+told its cards stand in place from their first frame (`DeckStage`'s `standing`) so its own arrival —
+a step up and a shrink to full size — does not run under the swap's. **Only the cards move**: the
+layer the stack stands in is drawn always, round the stage, the starting card or a swap's spinner
+(`KindSwap.tsx`'s `SwapStack`), and the buttons stand in one of their own (`SwapButtons`). **The
+rules are pure** (`domain/kindSwap.ts`): while the stack goes out the deck still draws the kind it
+leaves (`kindDrawn`), and the kind picked is read from the press, as before — the hook
+(`useKindSwap`) holds an observer on both, so the swap costs that read nothing — and comes in once
+it is read, at once where it was read before. **The buttons stay where both sides have them**: the
+kind left dealt a card and the kind picked **promises** one by the count its menu line shows,
+because that read is not in when the stack goes out; where one side is the group's starting card
+they fade with the stack (`buttonsMotion`), and a count the read then contradicts is the read's to
+settle. **A kind not read yet**: the deck-card skeleton stands in the stack's place (#876, below —
+it was a spinner), the buttons kept under it where they stay, until the read lands and the stack
+rises; **a refused read** goes out to today's failure with its retry, and the swap ends — a retry
+that lands draws the deck directly.
+A pick made while that skeleton stands comes straight in, having no stack to send out; a pick made
+while the stack still goes out only changes where it lands. **A card still in flight holds the kind
+it leaves** (the code review's catch): the flight (240) outlasts the beat, and the card leaves that
+kind's read and carries that kind's answer, so the kind picked comes in once the card has flown. **No answer reaches a stack on the
+move** (`takesAnswers`, guarded in `answerTo` as well as by the layers' touch): the buttons take no
+touch while the stack goes out, and coming in ✕ and the ball wait for it to land while the i opens
+the card coming in. **Under reduced motion it is a crossfade**: nothing travels and the two fades
+run, faded rather than skipped for the reason the design system's 1.5 gives. **Only a pick moves anything**: a notice's kind and the kind finding lands on are drawn
+directly, and a change of sport ends a swap. Walked in `groupGames.test.tsx` (_the Games deck
+swapped in place_, at the end of each beat and never mid-motion), with the badges suite landing the
+swap before it answers (`landTheSwap`), the door suite's finding drawing directly,
+`domain/kindSwap.test.ts` for the rules and `deckStage.test.tsx` for `standing`. **Not seen on a
+device** (#866).
+
 **After an intent answer on Games, the tab is finding** ([#741](https://github.com/Raketa02/Raketa/issues/741),
 [ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
 §4, the screens A2.1 state 5). The deck read straight after an answer used to come before Raketa had
@@ -1205,24 +1521,24 @@ dealt anything for it, so a new player and Ania both landed on a false _Nothing 
 Now the door's panel and the first-time question both hand their landed answer to
 **`useFindGames`**. It sends `POST /pools/{id}/deal`, then marks the group's reads stale, re-reads
 the page's Fill in (who a seat is offered to reads the intent) and reads **the deck it lands on**,
-once. Then the switch moves there. Meanwhile **`FindingGames`** says _Finding for-fun games for
+once. Then the deck moves there. Meanwhile **`FindingGames`** says _Finding for-fun games for
 you…_ (the words §28) where the answer was given: in the question's place, or over the deck's area
 on the panel's ground. After _Either suits me_ on the first-time question it says _Finding games for
-you…_, and the deck stays where the switch stood (`findingAfterTheQuestion`). **It never hangs and
+you…_, and the deck stays on the kind it stood on (`findingAfterTheQuestion`). **It never hangs and
 never says it failed**:
 
 - a failed deal (the network, `pool_not_found`, a server error) falls through to the read;
 - a deal that never answers is given up at the request's own timeout;
 - that read is tried once and never paused for a reconnect (`networkMode: 'always'` on both);
-- a read that fails leaves the deck as it stands. The switch doesn't move, so with the connection
+- a read that fails leaves the deck as it stands. The kind doesn't move, so with the connection
   gone the player keeps the deck the phone has, not a spinner over one no read can reach;
 - a failure that isn't a request's is a bug, and is thrown on, not swallowed.
 
-Nothing is retried. The switch is still while finding, as it is while an answer is out. **The switch
-lands on the mutation, not on the call** (`useFindGames`' `onLanded`). A call's own callback is
-dropped when the tab unmounts, so a player who left Games mid-finding came back on the old kind.
-Moving the switch only at the end is what keeps the order **PUT, deal, deck**: moving it first would
-read the new kind's deck before the deal, for nobody. The landing moves the app-wide switch even if
+Nothing is retried. The Games tab's menu is still while finding, as it is while an answer is out
+(the switch was, until #862). **The kind lands on the mutation, not on the call** (`useFindGames`'
+`onLanded`). A call's own callback is dropped when the tab unmounts, so a player who left Games mid-finding came back on the old kind.
+Moving the kind only at the end is what keeps the order **PUT, deal, deck**: moving it first would
+read the new kind's deck before the deal, for nobody. The landing moves the app-wide kind even if
 the page has gone to another sport meanwhile, as moving it at the answer would have. An answer on the You tab asks for no deal, and
 the jobs deal those groups. `useRereadDeck` lost its one caller and went. `stubGroupDeck` now answers
 the deal with `204`, so a suite that answers the first-time question doesn't pass by the
@@ -1296,6 +1612,20 @@ more. Seat someone else._ **A court picked that is no longer for sale** is hande
 (`onCourtGone`) and the card asks again for one it proposes, saying nothing (a call). Anything else:
 why, with _Try again_.
 
+**The number is the kind's own, and the switch flips it** (#842; ADR-0207 §5, over #834's `vibe`).
+The card carries the kind it was read for (`FriendsCard.kind`) and leads through the deck's own
+`headlineOf`: on Competitive the forecast, as above; on **For fun the Social vibe row**
+(`SocialVibeRow`, 7.38) where the figure, its word and the bar stood — the line-up's vibe, everybody
+seated however they stand, so a swap never moves it — and **no forecast, even one a read sent**. The
+switch is part of the card's key, so a flip reads the card again and the number flips with it. **No
+mock draws it** (the for-fun mocks' README): the row is the deck card's, drawn as-is — the % beside
+its 0–100 bar rather than friends 9's centred figure — since ADR-0207 §9.4 makes it the Friends
+card's row too, and the rest of the card does not move. **The vs line is spoken where no forecast is
+drawn** (`sidesSpoken`, _You and ewa.m against magda.p and ania.k_), the deck card's rule: the
+forecast's name says the sides and the vibe row's does not — which also gives a competitive card the
+server could not forecast its sides, which it said nowhere before. **Not seen on a device**: the row
+in the card's column, between the vs line and the overlap grid.
+
 **The court panel is `CourtBlock`, with three props the deck leaves off**: the tag's words (§29.6's
 _Court available_), the share as _25 zł each_, and _Ogrody 33 is full at 10:00_ under the line on
 another club's court. It wears _Book it now_'s bed and border — the court is named and sending books
@@ -1345,9 +1675,10 @@ sentence above it until the line-up asks anew; `court_hour_not_for_sale` lets a 
 _two games waiting_, the sender's hour and week are said in the sheet, above the maximum so the
 maximum stays right above the order (a toast once it is closed).
 
-**FRIENDS GAME · n is `FriendsGamesRow`**, at the very top of Home — above _TO CONFIRM_ too, since an
+**FRIENDS GAME · n was `FriendsGamesRow`**, at the very top of Home — above _TO CONFIRM_ too, since an
 invitation runs out in hours — the friend requests row's geometry, one card full width, two or more
-peeking. A card: _tomek.k's game_, the deck ribbon's clock (_1 h 35_, `coralInk` under an hour —
+peeking. _(Since #817 it is `FriendsGameSection`, in Needs your answer, on the paging rail — below;
+the card is unchanged.)_ A card: _tomek.k's game_, the deck ribbon's clock (_1 h 35_, `coralInk` under an hour —
 coral text on paper), the four faces as the yes screen's tiles (✓ — a `mintInk` disc at 6.9's remove
 square's size with the drawn tick — on those In, faded at 0.4 on those still to answer, the reader
 last as _You_), _Saturday 10:00 · Ogrody 33 · Court 3 · Padel ·
@@ -1449,3 +1780,373 @@ the button was.
 **Not seen on a device**: two `onDark` buttons side by side under a long nickname, wrapping at a
 narrow width; the glossed answers' two-line lines in the sheet; the picker with one seat pushed over
 the details.
+
+## Needs your answer's first two sections (#817)
+
+[ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§1; home refactor 2. **_TO CONFIRM_ and _FRIENDS GAME_ leave Home for Needs your answer**, the sheet
+Home's envelope opens (`shell`'s), where they stand first and second, before `friends`' FRIEND
+REQUESTS and ASKED FOR A LEVEL. This feature draws them (`ToConfirmSection`, `FriendsGameSection`);
+the shell places them.
+
+- **TO CONFIRM · n is a tile per payment** (`ToConfirmSection`), first because a seat is held with
+  the shortest deadline (Q14, Q32). Each tile is the row it was: _Padel · Saturday 15:00_ (two lines
+  at most), _Bonarka Arena · 32 zł_, then _Confirm your payment by 14:40_ in amber or _Fix your card by
+  14:40_ over _Nothing is paid now_, and **Confirm** or **Fix** at its foot, spoken as the row's.
+  7.7's peeking rail at its standard 0.74 — the one wider card is the request's — every tile as tall
+  as the tallest, so the buttons sit level (Q3). **The time leaves the tile at the deadline, and the
+  tile stays**, saying the seat is theirs to take back while free, as the row did — the ticket's _a
+  tile leaves at its deadline, as today_ is read as today's behaviour, which ADR-0205 §1 states. The
+  read is still its own (`GET /players/me/payments-to-confirm`, ADR-0205 §3): **a read in flight,
+  refused or empty draws nothing**, and counts nothing, so a failed read draws no envelope by itself.
+- **You › Payments keeps `PaymentsToConfirm`**, its card of rows, looking as it did; Home's tab
+  badge still counts every payment to confirm (`needing_you`). **The row and the tile say one thing**
+  (`toConfirmWords`, `fillPresentation.ts`) and hand the fill one ask (`confirmAskOf`,
+  `domain/fill.ts`), so the payment-window rules (Q109, Q113) live once.
+- **FRIENDS GAME · n is one big tile at a time** (`FriendsGameSection`; Q9, Q46): the paging rail,
+  every card the content width, snapping, **its dots from two** (`HomeRowRail`'s `dotsAlone`, 7.18
+  as amended), held inside the rail when a card leaves from its end. The card is #759's, whole.
+  **What it draws and what the sheet counts are one list on one clock**: the section is handed
+  `useAnswersWaiting`'s `friendsGames` — the invitations still waiting on the read's clock — by the
+  sheet's owner, which reads them all session; so the sheet never opens on a section that has
+  stopped drawing, and a section opened late does not start its clock at the read.
+- **What waits is counted here** (`useAnswersWaiting`): the four sections' counts off this feature's
+  reads, and whether a read behind them is on its way — what a link or a notice that asks for the
+  sheet waits on.
+
+**The fill, carried into the sheet** (`useSheetFill` / `FillInASheet`). A sheet keeps the root's
+contexts only — on Android its content is drawn by the root's overlay host, outside the tabs the
+fill is mounted around — so `useFill` inside it would throw on a device while every jest suite (iOS,
+in place) stayed green. The shell reads the fill outside the sheet and hands it in. **And the fill's
+overlays are drawn inside the sheet while it is up**: **Confirm** and **Fix** open the confirmation,
+an invitation's _Accept_ the setup or _It's a game!_ — sheets opened from a sheet, which iOS drops
+when they are a second native window opened beside the first (design-system 9.1). `FillProvider`
+draws them at its own place while no sheet hosts them, and reports what it has up (`over`: nothing,
+a sheet, or _It's a game!_), which Needs your answer steps aside under, and closes for good after
+_It's a game!_. **An invitation's own confirmation is the fill's too** (`confirmOwn`): it was the
+card's own sheet, and the sheet did not know it was up — so a confirmed accept, which takes the
+invitation off Home's read, emptied the sheet and closed it under the confirmation while the accept
+was still asked again. Now the fill draws it, confirmed the card's way (the accept again), and the
+sheet steps aside under it as under the rest.
+
+**Calls left as they are, from #817's review**: a failed _To confirm_ read leaves Home's badge with
+no envelope — ADR-0205 §3 and the decision log §3.6 accept it, the notice and the email carrying the
+deadline; the saved-method read starts when the card mounts, in the sheet, so a first _Accept_
+pressed before it lands is answered by the server's `payment_method_required` and the setup opens
+then, the fill's own fallback; the fill's overlays are handed to the sheet through the host's
+context, so its countdown re-renders the sheet's owner once a second during a deck yes's ten
+seconds; and a portal for every sheet opened from a sheet, in `ModalStage`, would replace the
+record's and the fill's two ways of doing it — a change of its own.
+
+**Not seen on a device**: the To confirm tile and the Friends game tile against mock 2; the paging
+rail's snap in a sheet; the confirmation, the setup and _It's a game!_ over the sheet on iOS (each
+inside it) and on Android (the overlay host's next layer); _It's a game!_ raised as the sheet's own
+tile leaves it.
+
+## What is new in Needs your answer, and the visit (#819)
+
+[ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§2, §3; home refactor 1; the backend's #815. **Home's envelope carries a count of what arrived since
+the player last closed Needs your answer**, kept on the server as the bell's is, so every phone
+agrees. This feature owns Home's read, the visit and its cache effect (`hooks/useNeedsYourAnswer.ts`);
+the shell draws the badge and says when the sheet went for good ([`shell.md`](shell.md)).
+
+- **Home's read carries it** (`needs_your_answer`): `newCount`, the badge, and **the read's
+  watermark**, the newest arrival among everything waiting, kept exactly as served — the visit hands
+  it back untouched, never re-formatted and never the phone's clock (`NeedsYourAnswerNews`,
+  `domain/home.ts`). No watermark while nothing waits; a server older than #815 reads as nothing new.
+- **TO CONFIRM moved onto Home's read**, so all four sections come from the one read the watermark
+  covers (`payments_to_confirm`, the same rows as `GET /players/me/payments-to-confirm`, read by the
+  same mapper, `toPaymentToConfirmRows`). Drawn from their own read, a payment Home's read covered
+  could be marked seen without the sheet having shown it; #815 served the rows on Home for that
+  reason, and its contract asks the sheet to draw them from there. **This replaces #817's _the read
+  is still its own_ above, and ADR-0205 §3's _To confirm's rows stay on their own read_**, which left
+  serving them on Home to the backend ticket. The decision log's rule holds the same way: a failed
+  read — now Home's — counts nothing and draws no envelope. **You › Payments, a booked game's details
+  and a rescue's keep their own read**, which starts from Home's rows wherever it holds none
+  (`usePaymentsToConfirm`'s `initialData`), stamped with Home's read's time so its words are said
+  against that read and it runs again once stale: Home no longer reads it all session, and a screen
+  that opened on a payment would draw _Pay_ for a moment before _Confirm_. Not a placeholder, whose
+  time is nought and would say _Saturday_ against 1970; not written in by each Home read either,
+  since an unobserved seed is collected after five minutes and the gap comes back.
+- **The visit names the watermark of the newest read the sheet was shown on** (`watermarkShown`,
+  `useNeedsYourAnswerVisit`): open — never beneath a record or a fill's sheet, whose scrim covers it,
+  so a read that lands under _It's a game!_ is still new after it. Every item of that read was on
+  screen, so whatever arrived while the sheet was open and a re-read brought in is seen, and whatever
+  reached the server after that read is still new. A read that comes once nothing waits has no
+  watermark, so the self-close after the last answer names the read that held it. Nothing shown,
+  nothing sent.
+- **The badge goes at the close, and nothing is written into Home's read** (`newCountAfter`): a read
+  whose watermark is no later than a visit this phone sent — on its way or recorded, read off the
+  mutation cache by the visit's key — holds nothing new. **Home is read again once the visit lands**,
+  so the badge is then what the server counts. A first version wrote _nothing new_ into the cached
+  read after stopping any read in flight; #819's review showed that the stopped read could be the one
+  taking an answered card off, that the write restarted Home's read clock and turned the countdowns
+  back, and that any read started before the visit landed put the badge back anyway. A visit that
+  fails for good counts for nothing, and the badge returns.
+- **Retried, and held while offline** (`retry: shouldRetryQuery`, the default `networkMode`), unlike
+  the fill's writes and the bell's visit: the route records a watermark only when it is later than
+  the last and answers `204` either way, so a repeat moves nothing, and a visit that lands late marks
+  seen only what the read it names showed.
+
+**Calls left as they are, from #819's review**: a row this build drops — a sport it cannot name, a
+refusal that does not wait for the player — is still in the server's count and watermark, so an old
+build may badge what it cannot draw and mark it seen, which only a newer build could have shown;
+_TO CONFIRM_'s tiles keep the phone's clock, as You › Payments' rows do, where Home's cards and
+FRIENDS GAME run on the read's — the tile and the row say one thing (`toConfirmWords`); and the
+envelope's figure and name repeat the bell's rule in `shell`'s copy rather than sharing it, two
+callers being short of the third that would earn a shared home.
+
+The walks: `shell`'s `envelopeCount.test.tsx`, over a server faked by #815's rules — the badge, its
+cap and the spoken name; the visit on ✕, the backdrop, a pull, the self-close, _Get your level_ and a
+sheet a notice opened, and none for stepping aside under a record; the badge gone at once while the
+visit is in flight, Home read after it, the envelope staying; a read landing before the visit
+keeping it gone, and a visit refused for good bringing it back; an arrival shown while open seen,
+one the phone never read coming back as new; and _TO CONFIRM_ drawn from Home's read. The rules are
+unit-tested in `domain/home.test.ts` and the shell's `domain/needsYourAnswer.test.ts`. The harness's
+Home serves the payments to confirm' rows unless a suite names its own (`stubHome`), as the server
+does. **Not seen on a device**: the badge on the envelope against mock 1.
+
+**A booked yes stays _Booking…_ until it lands, not only while it counts**
+([`decisions.md`](../../../docs/specs/busy-indicator/decisions.md) §3.3, 2026-11-21). The fill's
+`counting` ends at zero, which is the moment the send begins, so the details' **Pay 32 zł** and a
+rescue's **Pay 27 zł** (`TakeTheSeat`) came back pressable while the booking — the money — was still
+on its way. The booked yes now sends under its own mutation key, **`proposalKeys.bookingYeses()`**,
+nested under `answers()` so the deck's `useAnswersOnTheirWay` still counts it, and
+`useBookingsOnTheirWay` reads the cards whose send is pending off the mutation cache — not the host's
+one mutation result, because a second booking can count and send while a slow first one is still
+out. `useFillYes().sending(id)` hands it to the screen, and both buttons stay busy — 6.1's spinner and
+_Booking…_ — through the ten seconds and the send alike, taking no press. Optimistic answers are
+unchanged: the deck's card flies at once, so nothing on it needs to say it is waiting. `theFill.test.tsx`
+and `rescues.test.tsx` hold the one request behind a busy button. **Not seen on a device**: the
+handover from the count to the send, which is meant to show nothing at all.
+
+## The deck draws only what changed, and never on the beat the next swipe needs (2026-11-24)
+
+A performance diagnosis on the A32, with the JS thread profiled over CDP and React's commits counted
+through the devtools hook. **After a pass the next card could not be touched for about 0,8–1 s**: the
+drag and the buttons are refused while a card is `leaving`, and the commit that clears it waited on
+React drawing **every card on the stage four times an answer** — the card leaving, the card gone, the
+two reads the answer sends — about 200 elements and four generated posters a card, plus **the new
+third card's first drawing in that very commit**. Three changes, the logic untouched:
+
+- **`GameCard` is memoised on what it shows** — the card, its day, the weekday, its two doors and the
+  countdown the clock gives it, never the clock itself, which moves on every read and every card
+  dropped. A card read again compares by **`drawnTheSame`** (`domain/deck.ts`): every field but a
+  photograph's link, which a read mints afresh for every photograph it carries (`photo_url`, minted
+  per response); the person now carries the wire's **`photoId`** beside it, so a link minted again for
+  the same photograph is no change. The comparison is by value, so a list that shifted by one — which
+  hands back new objects for cards that did not change — draws nothing again either. A card held back
+  keeps the link it was drawn with: its photograph is already on screen.
+- **Every card gets the top card's two doors** (`openTop`, which opens whatever is on top, and
+  `setReading`), so the card coming forward is not drawn again to gain them; behind, the stage's
+  `pointerEvents` `none` and its hiding from a listener keep it inert.
+- **The stage holds one card more, drawn and unseen** (`DeckStage`'s `SEEN` + 1), where the third card
+  stands before its arrival, so a card leaving brings forward three cards already drawn and the commit
+  that frees the stage draws none; the card after them is drawn once the new top card has arrived.
+  **A card new to the stage behind the top one is drawn a frame after it** — the deck's first drawing
+  carries one card, not three, which is what a group page's push waits on.
+
+Measured on the A32, release-mode JS on a debug build: a pass's freeing commit from ~0,8 s to ~0,45 s
+after the press (0,24 s of it the flight), the JS thread busy ~0,6–0,9 s of the next two seconds
+instead of ~1,25 s. Walked in `deckStage.test.tsx` (the frame, the reserve, no card drawn in the freeing
+commit), `domain/deck.test.ts` (`drawnTheSame`) and the router suites, which now wait the frame for a
+card behind. **The backend's own times were not touched**: `POST /no` and the deck's read took
+0,5–1,4 s each on this machine's Docker.
+
+## The card's tiles take one shape per court (#864)
+
+**A deck tile no longer stretches.** It took whatever height the card left it (`fill`, down to
+`tileMin`), so its shape was the phone's: 1,90 : 1 on the user's A32, with 32pt of face above the
+name strip. Now doubles are **1,75 : 1** — the details' value, named `doublesTile` for both screens
+— and singles **3:4** (`singlesTile`), the photo's own crop. The evidence is the tab menu log's §2
+and §6.2 and the theme's comment, never a mock: mock 3's ~1,6 is not used. A game's details keep
+1,75 for both court shapes (out of #859's scope): `GameTiles` with no `geometry` is the details'.
+
+**`deckCardGeometry` sizes the card, and the card measures.** It is a pure module of numbers. From
+the stage (the card's own box, which is the stage's), the court's shape and the measured heights of
+the blocks whose height is words — the ribbon, the _vs_ line, the forecast or vibe row, the grid,
+the court block and the versions line — it gives the tiles' size and every gap. A tile is as wide
+as its column; where the card's height runs out, it is as tall as the room allows at the same
+shape, narrower and centred in its column; and never below `tileMin` — which #865 replaced with the
+narrowest tile, the one its words' cap is derived for (the next section). **The height a tile
+leaves goes in equal shares to the gaps between the blocks** — the tiles, the _vs_ line, the
+forecast or vibe row, the grid and the court block, with the hairline in the middle of its gap — so
+the card still fills its stage and the three stacked cards stay one size. _4 people are In on this game_ is a caption to the tiles and stays at its own
+gap under them: a call made here, since the log names five blocks and not it.
+
+`GameCard` measures with `onLayout` (`useCardRoom`), and **draws a card unseen until it has
+measured itself once**: its blocks must be laid out to be measured, so it cannot draw nothing, as
+the sign-in hero does, and a card drawn first at the wrong size would jump a frame later — the court
+block sliding down 29pt on a tall phone. Until then, and always under Jest, which lays nothing out,
+its tiles are their column's width at their shape and its gaps at rest, so every part is there to
+find and press, and the router suites pass unchanged. Once measured it is never unseen again: **a
+block that appears later** — a forecast arriving, the versions line on a second version — keeps the
+card at its last size until it answers, rather than dropping it back. **A block measured again
+within a pixel and a half is the same block** (`sameLength`): Yoga rounds a block's top and bottom
+to the phone's pixels, so a block the gaps moved can report a pixel more or less, which would move
+the gaps again, and again. The column caps even the floor, so in a window narrower than any phone
+a tile is never wider than its column. A size is asserted only through the module
+(`deckCardGeometry.test.ts`: the five phones, both shapes, the ratio, width- against height-bound,
+the floor, the even spread, and the table's sizes for the same room); `gameCard.test.tsx` plays the
+layouts a phone would and holds the card to what the module says, and when — unseen until the last
+block answers, the last size kept for a block that appears, nothing redrawn within a pixel.
+
+**The measuring draws each card again once it is first laid out** — once, if a commit's layouts
+arrive together, as Fabric delivers them; not counted on a device. The tile's photograph
+(`TilePhoto`) and the grid are memoised, so that drawing redraws the boxes, not the faces or the
+week. **At the floor a tile keeps its shape**, so on a 320 × 568 phone a singles tile is 40,5pt wide
+and a doubles tile 94,5, where they were their column's 128,5 squashed to 54: the ticket's rule (the
+ratio on every phone, `tileMin` as the floor), with the card already not fitting there — until #865
+replaced the floor with the tile's content and brought the scroll (the next section). **Not seen on
+a device** (#866): the shapes on the A32 and an iPhone, the spread on a tall phone, the first frame,
+and the floor on the smallest phone.
+
+## The tile's words are capped, its floor is what they need, and a card the page cannot hold scrolls (#865)
+
+**A tile of one shape is a fixed box, so its foot's words are capped** — the design system's rule
+for words in a fixed box (7.22, the tab bar's and the ON COURT mark's mechanism): they may neither
+be frozen nor grow without bound. The name, IN, FRIEND, the level line and _paid_, _You complete
+it_, and a rescue's open seat — its words and its price — take `maxFontSizeMultiplier`
+`footMaxScale`, **1,3**, through `GameTiles` and `CardTag`'s `maxScale`; the level line is one line
+now, as every other line in the foot was. `gameTileFoot.test.ts` derives it from the bundled Archivo
+Bold and IBM Plex Mono against the smallest tile the card draws: the largest step at which
+_2,71 · paid_ still fits across it and the open seat, the tallest foot, still fits down it — both
+1,3.
+
+**That smallest tile is the floor, `tileNarrowest`**: the narrowest phone's column, 128,5 wide, at
+the tile's shape (73,4 doubles, 171,3 singles). `tileMin` (54) is retired: it was a height beside
+the content, already short of the open seat's 61. The floor does not move with the text size,
+because up to the cap the foot fits it and past the cap the foot does not grow — so
+`deckCardGeometry` takes no font scale. **A call made here, flagged to the user**: _You complete
+it_ fills that tile exactly at 1,0, in both its registers (110,1 of 110,5 in the Level's mono on your
+tile, 104,9 of 107,5 in the name's role on the open seat), so a cap derived over it would be 1,0 —
+a freeze, which Part 13 refuses. It is capped with the rest and cut by its box above 1,0 on the
+narrowest tile, as the name always was (the ON COURT mark's Sport is the precedent). And the open
+seat's price line, _27 zł · court booked_ (146,8 at 1,0), was already wider than every column but a
+412's: its figure is whole and the words after it are cut, as before the cap. Neither is a new cut;
+both are recorded in the fit test.
+
+**Short room shrinks every box on the card at one share, and never a word** (`scale`). The tiles at
+their shape, narrower and centred; the body's padding above and below; every gap; and the week
+grid's cells, their gaps and its width, centred, so a cell keeps its shape. The words — the ribbon,
+the _vs_ line, the forecast or vibe row, the grid's grade and letters, the court block, the versions
+line — are measured and passed through as they are. **The grid is now measured by its words**
+(`OverlapGrid`'s `onWordsLaidOut`, round the grade and the day letters): its cells are the
+geometry's to shrink, so measuring the whole grid would feed the module's own answer back into it.
+The card's sides are its width, which the room never takes, so they and the gap between two tiles
+stay at rest. Where the tiles reach the floor, every other box stops at that share too.
+
+**Where even that does not fit, the deck scrolls.** The geometry gives every card its **least**
+height — its tiles at the floor and every box at that share, independent of the stage — and the
+card tells the deck (`onLeast`, once measured and whenever it changes, and takes it back when it
+leaves). The deck lays the stage out at no less than the tallest of the cards the player sees, so
+the stack stays one size — not the card held in reserve, which would move the stage under the top
+card a moment after it was drawn — and **until one of them has said, the last height holds**: after
+an answer, a swap or a new deal the stage never drops to the page and grows back. The area round it
+grows from its content rather than from nought (`flexGrow`, where `flex: 1` would have sized it
+from nothing and let the stage overflow a scroller that never grew). So the scroller that was there
+only for the pull scrolls: the card at its least, the ✕ · i · ball buttons below it, a drag across
+still the card's and a drag down the scroller's. **A card on the deck stays unseen until its stage
+holds it**, as it stays unseen until it has measured itself: shown in a stage shorter than its
+least, it would be cut off at the foot for the frames the deck takes to grow the stage. Once seen it
+is never unseen again. At 1,0, for the base card: a 320 × 568 scrolls (435
+against 276 — its column is the floor, so nothing there can shrink); a 360 × 800 shrinks every box
+to 0,98 and fits; the A32, a 390 iPhone and a 412 × 915 stand at rest. At the largest text size
+(iOS's _AX5_, 3,571) every phone scrolls, its tiles at the floor.
+
+Walked in `deckCardGeometry.test.ts` (the five phones at 1,0 and the largest, both shapes: the
+ratio, the shrink with every word as measured, the floor, the least, the scroll threshold),
+`gameTileFoot.test.ts` (the cap and the floor against the fonts), `gameCard.test.tsx` (the caps on
+the foot's words, the grid and the padding at the share, the least told) and
+`groupGamesRoom.test.tsx` (the router harness: a 320 × 568's layouts lay the stage out at the card's
+least, with the buttons in the scroller under it, and the height held after an answer until the
+card coming up has measured). **Not seen on a device** (#866): the cap at the
+largest text size, the shrink on a 360 phone and the scroll on the smallest.
+
+## Your games is not drawn before its read lands (#871)
+
+**`HomeRail` draws nothing until Home's read lands** ([#871](https://github.com/Raketa02/Raketa/issues/871);
+PRD #867; the loading shimmer log §6, Q16): it never says _Your games · 0_, nor the empty sentences,
+while it does not know. **This reverses the rail's first rule** (#556, #576) — the sentences were _not
+gated on the read having landed_ because they were true of everybody, and holding them back would
+have left a blank screen; the count over them was not true, and the shell now draws Home's skeleton
+in the rail's place meanwhile: the heading's bar and one card's block, **`YourGamesSkeleton`**,
+exported for it — a block as tall as the rows every card draws (`homeCardHeight`, read off
+`HomeGameCard`: the dark card's padding, the tags, three facts, the large button). **A refused read
+says so under the heading with no count** (`gamesHeading(undefined)`) — it said _· 0_ over the coral
+note — and **a read waiting for a connection says so** in amber, which it did not at all. **A first
+read that failed once and is retrying keeps the rail's skeleton in its place**: Home stops waiting for
+it (`useHomeReadFinished`) and reveals around it, and the rail comes in where the skeleton stood when
+it lands or is refused, so it never pushes FOR YOU down. The skeleton's heading bar is as wide as
+_YOUR GAMES · 1_, a one-figure count being what nearly every Home draws. **`useHomeReadFinished`** says whether Home's read has finished — landed,
+refused, held for a connection, or failed once and retrying — off the cache, for the shell's reveal
+and for `rankings`' Top 10, which waits behind it. Walked in the shell's `homeReveal.test.tsx`; the
+rail's own walks are unchanged (`homeAndBookedGame.test.tsx`), every one of them past Home's read.
+
+## The group page's three tabs shimmer, and the deck's first read says when it is held offline (#875)
+
+[#875](https://github.com/Raketa02/Raketa/issues/875); PRD #867, the loading shimmer log §10; design
+system 5.6. The group page (`groups.md`) reveals its header and tab bar, then the body of the tab on
+screen; this feature says how far the three tabs it draws have come, and draws what they shimmer as.
+
+- **`useGroupTabRead`** answers, off the cache under the hooks' own keys, how far a tab's first read
+  has come — `shared/lib/query-client`'s `readStage`: `reading`, `landed`, or `ended` with
+  nothing to show (refused, held for a connection, or failed once and retrying). **Games** is the deck
+  the tab draws — the kind chosen, or the one the intent corrects it to, as `useGroupDeck` reads it;
+  **Fill in** its rescues; **You’re in** the reader's live yeses, and **with none here Fill in's read
+  too** (`youreInRead`), since the starting card waits for it (`youreInEmpty`). It asks for nothing.
+- **`DeckSkeleton`** — one deck-card block filling the stage, in the deck's own frame, the buttons'
+  row left bare so the card lands where the block stood. **`BoardSkeleton`** — three rows drawn as
+  `FillInRow` is: the white card with its stroke's room in no colour (coral or mint would say
+  _rescue_ or _yours_ about rows nobody has read), the title's and the club's bars at the phone's text
+  size, four seat squares and the row's button.
+- **They replace the spinners**: the deck's first read, Fill in's, and You’re in's — its own, and
+  the wait for Fill in's before the starting card. The page reveals each tab from its skeleton; **while
+  a read retries after a failure, the tab draws the same skeleton in its own place**, the reveal having
+  stopped waiting for it, so it shimmers on rather than spinning. Their spoken names (_Reading Fill
+  in_, _Reading You’re in_) went with the spinners (ADR-0198); the kind swap's spinner kept
+  _Reading the games_ until #876 replaced it (below).
+- **The deck's first read held for a connection says it resumes** — the amber note in the deck's
+  place, where a spinner turned for ever — as Fill in's and You’re in's held reads already did
+  (`HeldRead`).
+
+Walked in the group page's suites (`groupGames.test.tsx`, `groupFillIn.test.tsx`,
+`groupYoureIn.test.tsx`, `groupGamesDoor.test.tsx`) and `fillIn.test.ts` (`youreInRead`). **Not seen
+on a device**: the block's and the rows' sizes against what replaces them (the phone walk, #877).
+
+## A kind picked from the menu and not read yet shimmers in the stack's place (#876)
+
+[#876](https://github.com/Raketa02/Raketa/issues/876); PRD #867, the loading shimmer log §10 (Q26),
+amending the tab menu log §5.2. **On #863's uncached path the group page's deck-card block stands
+where the spinner stood.** The stack goes out as #863 built it, then the block stands in the stack's
+place, on the page's `SkeletonGround`, until the read lands. The new stack then rises into place as
+#863 built it. **The rise replaces the shimmer's cross-fade there.** The block goes the moment the
+read lands, as the spinner did, and no `Reveal` is involved. The page's own Games `Reveal` settled at
+the first landing and never shimmers again, so the deck draws the block itself, in `SwapStack`'s
+`waiting` slot, which now fills the stage's box rather than centring.
+
+- **It is the same block** (`DeckSkeleton.tsx`'s `SwapSkeleton`): the stage's box is already in the
+  page's gutter and already stops at the stage's step, so the block fills it. The buttons stay under
+  it where #863 keeps them.
+- **Where the deck draws no buttons under it, the block leaves their row bare**, as the tab's own block
+  does. That happens when the swap left the group's starting card, or the kind picked promised no
+  card. Either way the block ends where the card coming in will, and the buttons fade in under it.
+- **A read held for a connection says it resumes**: the amber note in the stack's place, where the
+  spinner turned for ever (#875's review). A skeleton stands only while a read is in flight (the log's
+  §4). Once the connection is back, the skeleton stands until the read lands, and then the stack
+  rises. **Where an answer held offline already says so on the line above the deck, the stack's place
+  stays empty** rather than saying it twice (the code review's catch).
+- **Out of sight it draws nothing** (the code review's catch). The deck stays mounted while another
+  tab is on, and the page draws no Games skeleton there (#875), so the block stands only while Games
+  is the tab on screen. Back on Games, it stands again until the read lands.
+- **Unchanged**: a cached swap; a refused read, which still ends the swap and draws today's failure
+  with its retry; a read retrying after a failure, which keeps the block, as the first read's does;
+  a pick under the block, which comes straight in; and the menu, which works throughout.
+  _Reading the games_ is no longer spoken there (ADR-0198). Game details, Post a game and the slot
+  sheet keep it on their own spinners.
+
+Walked in `groupGames.test.tsx`: the menu's uncached pick and #863's uncached path, asserting end
+states only, plus the starting card's bare row, the offline note said once, and the block out of
+sight. **Not seen on a device**: the
+block in the stack's place, and the cut to the rise (the phone walk, #877).

@@ -779,17 +779,19 @@ PROTAGONIST_TAGS: tuple[str, ...] = (
     SocialTag.WARMS_UP_PROPERLY.value,
 )
 
-#: **Hers alone: the three above and three more** — six, the most a player may
-#: hold — so *Same vibe players* (#795) shows her every overlap from one tag to
-#: six. The three more are where the cohort's own draws meet hers at each count
-#: (``app/seeds/same_vibe.py`` reads them back, and fails the run by name if a
-#: count goes missing); the other protagonists keep the three, and so does the
-#: cohort's close-match rule, which is about the three.
+#: **Hers alone: the three above and three more** — six, the most a player could
+#: hold when #795 wrote it (eight since ADR-0207 §7) — so *Same vibe players*
+#: shows her every overlap from one tag to six. The three more are where the
+#: cohort's own draws meet hers at each count (``app/seeds/same_vibe.py`` reads
+#: them back, and fails the run by name if a count goes missing), so they were
+#: picked again when #832 redrew the cohort from all twenty-seven — two of them
+#: among ADR-0207's eight. The other protagonists keep the three, and so does
+#: the cohort's close-match rule, which is about the three.
 HER_TAGS: tuple[str, ...] = (
     *PROTAGONIST_TAGS,
-    SocialTag.BOOKS_THE_NEXT_ONE.value,
-    SocialTag.LAUGHS_OFF_MISTAKES.value,
-    SocialTag.SETTLES_UP_ON_THE_SPOT.value,
+    SocialTag.GENEROUS_ON_LINE_CALLS.value,
+    SocialTag.HAPPY_TO_SHARE_TIPS.value,
+    SocialTag.HAPPY_TO_SWAP_PARTNERS.value,
 )
 
 #: Settled, and clear of the fourteen-day window on the far side.

@@ -18,6 +18,12 @@
  *   `none` is the overlay's reduced-motion call and the layer is simply there. Only the
  *   arrival: an overlay is unmounted the moment it closes, as every caller does, and the
  *   window's slide-out was the one thing the native window did that this does not.
+ *   **The arrival starts when the layer is first laid out**, not when the stage opens
+ *   (2026-11-21). The host draws the layer a commit after the stage hands it over, and a
+ *   sheet's first commit can be long — the player record's took 235 ms of a 260 ms slide on a
+ *   Galaxy A32 — so a clock started at the hand-over had all but run out before there was a
+ *   layer to move, and the sheet simply appeared. Started on the layer's layout, every frame of
+ *   the slide is drawn.
  * - **Touch.** Ordinary: the stage is laid out like any view, so the scrim takes the tap, the
  *   controls take their presses and the sheet's scroll view scrolls.
  * - **A window over a window.** A stage rendered inside another stage's children — a sheet opened
@@ -30,7 +36,7 @@
  * stable so its state survives the re-statement.
  */
 
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef } from 'react';
 import { Animated, BackHandler, Easing, StyleSheet, useWindowDimensions } from 'react-native';
 
 import type { ModalStageProps } from './ModalStage';
@@ -66,8 +72,18 @@ export function ModalStage({
     return () => subscription.remove();
   }, [visible]);
 
-  useEffect(() => {
-    if (!visible) return undefined;
+  /** Whether the layer is on screen — laid out since the stage last opened. */
+  const laidOut = useRef(false);
+  /** The arrival waiting for its layer to be on screen; the layer's first layout starts it. */
+  const waiting = useRef<Animated.CompositeAnimation>();
+
+  // A layout effect: the value is at its start before the layer can be laid out, so the first frame
+  // the layer is drawn is the first frame of the motion.
+  useLayoutEffect(() => {
+    if (!visible) {
+      laidOut.current = false;
+      return undefined;
+    }
     if (animationType === 'none') {
       progress.setValue(1);
       return undefined;
@@ -84,9 +100,21 @@ export function ModalStage({
       ),
       useNativeDriver: true,
     });
-    arrival.start();
-    return () => arrival.stop();
+    // Already on screen — the motion changed under an open stage — and no layout is coming.
+    if (laidOut.current) arrival.start();
+    else waiting.current = arrival;
+    return () => {
+      waiting.current = undefined;
+      arrival.stop();
+    };
   }, [visible, animationType, progress]);
+
+  const arrive = () => {
+    laidOut.current = true;
+    const arrival = waiting.current;
+    waiting.current = undefined;
+    arrival?.start();
+  };
 
   const motion =
     animationType === 'slide'
@@ -107,6 +135,7 @@ export function ModalStage({
     <Animated.View
       style={[StyleSheet.absoluteFill, { zIndex: theme.layer[order] }, motion]}
       testID="modal-stage"
+      onLayout={arrive}
       {...behindOverlay(covered)}
     >
       {children}

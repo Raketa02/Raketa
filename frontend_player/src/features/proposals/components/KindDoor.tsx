@@ -1,6 +1,6 @@
 /**
- * **The other kind's door, opened** — the panel a press on the switch's dimmed kind opens over the
- * deck ([#740](https://github.com/Raketa02/Raketa/issues/740);
+ * **The other kind's door, opened** — the panel the Games tab's menu's dimmed line opens over the
+ * deck (the switch's dimmed kind until #862) ([#740](https://github.com/Raketa02/Raketa/issues/740);
  * [ADR-0201](../../../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
  * §2; the screens A2.1; the words §28).
  *
@@ -16,8 +16,9 @@
  * ## In place, over the deck, and taking no height from it
  *
  * Not a route and not a sheet: `GamesDeck` draws this **over the deck's area** — on a ground it
- * lays absolutely over it, the paper the cards stand on, under the switch the player tapped — so the stage underneath keeps the
- * size it measured and nothing in the stack moves (Q7's argument against a line under the switch).
+ * lays absolutely over it, the paper the cards stand on, under the cap line and the tabs, the menu
+ * the player picked from folded away first — so the stage underneath keeps the size it measured and
+ * nothing in the stack moves (Q7's argument against a line under the switch).
  * It scrolls inside that area rather than growing it, so on a short phone or at a large text size
  * *Keep* is reached by a drag, never cut off and never by pushing the cards.
  *
@@ -33,12 +34,12 @@
  * words `playIntentPresentation` gives every screen that asks — because it writes the same fact,
  * reported on the same **`DECK`** surface (ADR-0201 §2; `DeclarationInterstitial`). What differs is
  * what it says: why the other kind is missing, and **what each answer costs** in the player's own
- * count of the kind they play, the one their switch shows. And one answer is **highlighted**:
+ * count of the kind they play, the one their menu shows. And one answer is **highlighted**:
  * *Either suits me* comes first on the `primary` fill, because it is the answer that loses nothing;
  * the kind tapped and *Keep* are `onDark`, as the first-time question's three are (5.2 as amended).
  *
  * **The write is the deck's** (`onAnswer`, the answer in flight as `answering`, a refusal as
- * `refusal`), not this panel's: an answer must still land — the switch moved to the kind tapped,
+ * `refusal`), not this panel's: an answer must still land — the deck moved to the kind tapped,
  * the group read again — when the panel has gone meanwhile, by a re-read that shows the kind or a
  * change of sport, and a write held by this component would be dropped with it. A refusal is the
  * first-time question's coral note above the card.

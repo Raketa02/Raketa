@@ -1,16 +1,19 @@
 /**
  * **A game still filling, off the wire** — `GET /proposals/{id}` (#542) read into the domain's
  * shape ([#557](https://github.com/Raketa02/Raketa/issues/557)). The deck mapper's narrowings for
- * the same fields — the tiles, the challenger, the forecast and the grid are a card's — and a sport
- * this build cannot name, or a game cell outside the week, is nothing to draw.
+ * the same fields — the tiles, the challenger and the grid are a card's — and a sport this build
+ * cannot name, or a game cell outside the week, is nothing to draw. **The kind's card is the
+ * details' own** since #833: a competitive game's figure with both side strengths and the signed
+ * gap, and what is at stake beside it; a For-fun game's Social vibe with your tags' rows.
  */
 
 import { toSport } from '@/features/onboarding/types';
 import type { components } from '@/generated/schema';
+import { toSocialTagId } from '@/shared/vocabulary/socialTags';
 
-import type { ProposalDetails } from '../domain/details';
+import type { DetailsVibeRow, ProposalDetails } from '../domain/details';
 
-import { toChallenger, toClub, toDeckSides, toForecast, toKind, toOverlap } from './deckMappers';
+import { toChallenger, toClub, toDeckSides, toKind, toOverlap } from './deckMappers';
 import { toYourPayment } from './fillMappers';
 import { toPaymentDueBy } from './homeMappers';
 
@@ -46,7 +49,55 @@ export function toProposalDetails(
     noFreeCancellation: wire.no_free_cancellation,
     ...toPaymentDueBy(wire),
     sides: toDeckSides(wire.sides),
-    ...toForecast(wire.forecast),
+    ...toDetailsForecast(wire.forecast),
+    ...toAtStake(wire.at_stake),
+    ...toDetailsVibe(wire.vibe),
     overlap,
   };
+}
+
+/**
+ * A For-fun game's Social vibe and your tags' rows (#833), in the read's order. **A tag this build
+ * cannot name is left off** (ADR-0207 §7): the server sends codes only, and a row with no words is
+ * not drawn. Nothing where the read sends none, nor from an older server's read.
+ */
+function toDetailsVibe(
+  wire: Schemas['DetailsVibeSchema'] | null | undefined,
+): Pick<ProposalDetails, 'vibe'> {
+  if (wire === null || wire === undefined) return {};
+  const rows = wire.rows.flatMap((row): DetailsVibeRow[] => {
+    const tag = toSocialTagId(row.tag);
+    return tag === undefined ? [] : [{ tag, carriedBy: row.carried_by }];
+  });
+  return { vibe: { pct: wire.pct, rows } };
+}
+
+/**
+ * The forecast as a server sends it — the full one since #833, or **an older server's**, the card's
+ * figure alone, with no strengths and no gap.
+ */
+type ServedForecast = Pick<Schemas['DetailsForecastSchema'], 'pct' | 'provisional'> &
+  Partial<Pick<Schemas['DetailsForecastSchema'], 'your_side' | 'their_side' | 'gap'>>;
+
+/**
+ * A competitive game's full forecast — the figure, and the two side strengths and the signed gap it
+ * was read from, nested as the block draws them (#833). **Nothing from an older server** that sends
+ * the figure alone: the block needs both halves, and a block of blanks is worse than none.
+ */
+function toDetailsForecast(wire: ServedForecast | null): Pick<ProposalDetails, 'forecast'> {
+  if (wire === null) return {};
+  const { your_side: yourSide, their_side: theirSide, gap } = wire;
+  if (yourSide === undefined || theirSide === undefined || gap === undefined) return {};
+  return {
+    forecast: { pct: wire.pct, provisional: wire.provisional, split: { yourSide, theirSide, gap } },
+  };
+}
+
+/** What is at stake for the reader — the pair, or nothing; absent from an older server's read. */
+function toAtStake(
+  wire: Schemas['DetailsAtStakeSchema'] | null | undefined,
+): Pick<ProposalDetails, 'atStake'> {
+  return wire === null || wire === undefined
+    ? {}
+    : { atStake: { winDelta: wire.win_delta, lossDelta: wire.loss_delta } };
 }

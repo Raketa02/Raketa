@@ -14,6 +14,9 @@ shared glossary [`../CONTEXT.md`](../CONTEXT.md), which all three apps obey. See
 > Chats tab, Find a game, challenges, plans and the old game card, the `/games/[id]` route, the
 > feature flags and sign-up's radius and opt-in steps left the code, and every term that named
 > only them went with them.
+>
+> **The feature flags came back on 2026-11-21** ([#826](https://github.com/Raketa02/Raketa/issues/826),
+> ADR-0206), with one key, `explore`, and without the tester mark: see **Feature flag**.
 
 ## Glossary — player-app technical terms
 
@@ -95,11 +98,40 @@ review comment and a test description all use the same word.
   `isLoggedIn`, a bare `isLoading` — none can express "still restoring", which is what
   causes a login screen to flash over a valid session.
 - **Bootstrap sequence** — the one ordered startup path in `shared/lib/bootstrap`
-  (reporting → config → focus/online wiring → keychain → session → splash → tree).
-  _Avoid_: "init", "app setup" — those name a place, not an order, and the order is the
-  point.
-- **Splash gate** — holding `expo-splash-screen` until bootstrap resolves _and_ the fonts
-  are loaded. The mechanism that makes the tri-state visible-free.
+  (reporting → config → focus/online wiring → keychain → session → install referrer → fonts →
+  tree), run **behind the drawn splash**. _Avoid_: "init", "app setup" — those name a place, not
+  an order, and the order is the point.
+- **Launch gate** — the one owner of a cold open (`LaunchGate`,
+  [ADR-0209](../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)): it
+  draws the **drawn splash** on its first render, lets the **launch window** go on the splash's
+  first layout, runs the bootstrap sequence behind it, mounts the tree underneath when the
+  sequence resolves, and fades the splash at the later of 2.6 s (0.9 s under reduced motion) and
+  the first screen being ready. While the splash is up it holds the phone's **system bars**,
+  painted the field's edge as the splash starts and restored as the fade starts (#857). Nothing
+  renders a route tree before the sequence resolves, which
+  is what keeps the tri-state from showing. _Avoid_: "splash gate" — it was the bootstrap gate's
+  hold on `expo-splash-screen` until startup ended, and **startup is never held now**.
+- **Launch window** — the OS's own splash, drawn from the tap until the first JavaScript frame: a
+  plain `#0B2B33` field with no icon (`app.config.ts`, the splash-screen plugin), the drawn splash's edge
+  colour, so the two read as one field. _Avoid_: "native splash" as if it were the app's splash.
+- **Drawn splash** — the first screen of every cold open, drawn rather than played from a file
+  (`DrawnSplash`): its ground, a radial glow on `splashGroundEdge`, and the **lockup** — _Rakieta_
+  and its `volt` dot, centred as one on the full screen rather than on the app's view, the word's
+  seven letters placed from Archivo 800's own numbers (`splashGeometry`, #855). Under full motion the
+  dot is a **ball** that bounces the lockup into place — three landings, _Rak_ · _ie_ · _ta_ rising
+  with them — and comes to rest as the full stop (`splashMotion`, #856). It swallows every touch
+  until it is gone and plays once per JavaScript process; while it **covers** the tree
+  (`useCoveredBySplash`), iOS's modal stage is held back and a toast's hold does not start. Not
+  sign-in's _It's a game!_ picture, which `auth` calls its stage's splash (`StageSplash`).
+- **Hold** — a screen under the drawn splash declaring itself blank (`useSplashHold`), so the fade
+  waits for it. The entry gate holds while its decision is _pending_. A hold delays only the fade,
+  and once the fade has begun nothing stops it.
+- **System bars** — the phone's status bar and, on Android, its navigation bar, behind the tenth
+  platform port (`SystemBarsPort`, #857). While the drawn splash is up they are **painted** its
+  edge colour with light icons. As the fade starts they are **restored**: the status bar to
+  whatever the screens' own status bars ask for, the navigation bar to the system's own look.
+  _Avoid_: "status bar" for the pair. An iPhone has only the one, and the navigation bar is the
+  half that differs.
 - **Token manager** — the module in `shared/lib/auth` owning raw token values and their
   **in-memory mirror** (read from the keychain once at bootstrap; written back atomically
   on every change). _Avoid_: "token store" — it is not a Zustand store and never will be.
@@ -175,7 +207,18 @@ review comment and a test description all use the same word.
   Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it, which is the
   whole of what [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. Home is the
   bottom of the stack and is kept; You and Play are laid over it fresh by every press. _Avoid_:
-  "the tab navigator" — there isn't one.
+  "the tab navigator" — there isn't one. The one tab bar **floats over the stack**
+  ([ADR-0210](../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §3, built
+  by [#881](https://github.com/Raketa02/Raketa/issues/881)), not below it as a flex sibling, and
+  screens end at its **reach**: the room the bar takes at the bottom — the dock's lift and its 54
+  while it is drawn, nothing while it stands down — a followed value the shell says
+  (`shared/ui`'s `tabBarReach.ts`). It stands down in the chat and, on Android, while the keyboard
+  is up ([#882](https://github.com/Raketa02/Raketa/issues/882)). The bar is a rounded **dock**, glass
+  on the iPhone and opaque on Android, with the **selection marker** under the lit tab
+  ([#883](https://github.com/Raketa02/Raketa/issues/883)); _dock_ describes its look and is not its
+  name. _Avoid_ confusing the
+  reach with the tab's menu's `TAB_REACH`, which is a touch slop. The one stack, the reset and what
+  each tab opens don't change.
 - **Home** — the first tab, route `/`: the booked-games rail under the tab's own words —
   `features/proposals`' `HomeRail` over `GET /home`, with the payments to confirm above it. It
   was **Now** until [#550](https://github.com/Raketa02/Raketa/issues/550), and the rename is
@@ -235,7 +278,7 @@ naming, the steps, Home — eight screens, and no questionnaire.
   — that is one Assessment, and a pass is a sequence of them; **"session"** — that is the auth
   session, and the two have different lifetimes; also "onboarding state", "wizard".
 - **Level door** — the one dark card a player rated in nothing meets **in a player group**, in
-  place of Games, Fill in and Friends, _Post a game_ and Members (`LevelDoor`, onboarding's;
+  place of Games, Fill in, You’re in and Friends, _Post a game_ and Members (`LevelDoor`, onboarding's;
   `needsALevel`, groups') — ADR-0200 §2. It offers one of two things, by `levelDoor`'s rule:
   **_Get your level_** — _pick the sports you play, a few questions each_ — opening the picker
   over every sport with nothing ticked; or, with a run left halfway, **_Carry on with your padel
@@ -370,7 +413,11 @@ naming, the steps, Home — eight screens, and no questionnaire.
 - **Play segment** — _Groups_ or _Explore_, the two pages the Play tab opens on (#512): Groups
   is the player's groups, Explore the blank page the rebuilt Find a game grows in
   (`features/find_a_game_next`). The shell's, remembered per account by the phone-preferences
-  store, and **Groups** whenever nothing — or nothing this build recognises — was saved.
+  store, and **Groups** whenever nothing — or nothing this build recognises — was saved. **There
+  are two only while the `explore` feature flag is on** (#826, ADR-0206 §11): off — the code
+  default, and the app as it ships — Play is the groups under one _Groups_ title, with no
+  segment, and a saved `explore` is **read past and never written**, so it is still the player's
+  when the feature flag comes on.
   _Avoid_: "tab" — Play is the tab and these are its segments.
 
 A group's page is Play's too (`/play/group/[groupId]`), and its **Games** tab is the deck
@@ -798,8 +845,9 @@ it.
   "device module", "native service" — a module holding several capabilities is the utils bucket
   this app bans, and a capability is one file.
 - **Phone-preferences store** — `shared/lib/preferences`, the **choices a player made that the
-  phone keeps for them**: one key per account per value, the only AsyncStorage importer, and
-  **emptied at every sign-out** as a step of `endSession`
+  phone keeps for them**: one key per account per value, one of the two AsyncStorage importers
+  (the other is the feature flags' saved datafile), and **emptied at every sign-out** as a step of
+  `endSession`
   ([ADR-0188](../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)).
   Four values — the **Play segment** since #512, the last sport, the last profile and the booked
   games this phone has opened — and a stale or unreadable one is its default, judged by the
@@ -808,6 +856,19 @@ it.
   account (#756).
   _Avoid_: "settings", "local storage", "cache" — it holds a choice, never a copy of the server,
   and never a credential.
+- **Feature flag** — a named switch, defined in `Raketa02/raketa-features` and turned on or off by
+  a pull request there, that answers _is this feature on_ for the signed-in player, **decided on the
+  phone** by the Featurevisor SDK from the datafile built for the app's environment
+  (`features/feature_flags`, [ADR-0206](../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)).
+  Every key is declared once with its **code default**, which is what a phone with no readable
+  datafile gets; the datafile is fetched at cold start and on every return to the foreground,
+  kept on the phone as the **saved datafile**, and never waited for. **A gated screen reads it
+  once, when it mounts** (`useFeatureOnMount`). One key today, **`explore`**, off. **Not a phone
+  flag**: _the guide was shown_ and _the install referrer was read_ are marks the phone raised
+  itself and keeps (ADR-0200 §8, #756); a feature flag is decided elsewhere and only read here.
+  _Avoid_: bare "flag" for it — the phone's marks already have that word — "toggle" as a noun,
+  "kill switch" (it acts at the next mount, never instantly), and "config" (it is never derived
+  from the environment).
 - **Permission state** — the four answers a platform port gives about a capability:
   `undetermined | granted | denied | blocked`. **Denied and blocked are different
   refusals** — denied can be asked again at the moment the player understands why; blocked
@@ -905,6 +966,32 @@ comment and a commit message all use the same word.
   applied from the second row onward.
 - **Tag vs chip** — a **tag** is a 9.5pt state pill and is **never pressable**; a **chip**
   is a pressable filter pill and the only true pill in the app. A pressable tag is a chip.
+- **The tab's menu** — the small white picker that hangs from a group page's selected Games or
+  Friends tab, holding the kind — the deck's on Games (#862), the game being built's on Friends:
+  `TabMenu`, design-system 9.5 (#861). Opened by a second press
+  on the tab, whose chevron says it is there. UI vocabulary, not a domain term: the kind it picks is
+  the glossary's. _Avoid_: dropdown, popover (7.6's popover explains a word; this picks), the
+  switch (the row it replaced).
+- **Selection marker** — the soft coral capsule behind the lit tab's icon and label on the tab
+  bar: opaque `coralSoft`, 75 × 42, drawn under the words. It is one of the lit tab's three marks,
+  beside the filled icon and the coral colour, and the only one that moves. Play's bolt is filled
+  in both states, so there the marker and the colour carry it alone. When the lit tab changes it
+  **travels** to the new one, on a spring that stretches as it moves. On the bar's first draw, or when the bar comes back, it is simply there
+  ([ADR-0210](../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §4, §8;
+  drawn by [#883](https://github.com/Raketa02/Raketa/issues/883), its travel by
+  [#884](https://github.com/Raketa02/Raketa/issues/884), `tabMarkerMotion.ts`). The
+  brief's own phrase. UI vocabulary, not a domain term. _Avoid_: pill (taken by `radius.pill`,
+  `SportPill` and FOR YOU's count pill), highlight, and the ring (the ⚡Play disc's, which
+  retires with the disc). Not **the tab's menu**, which is a group page's.
+- **Skeleton · ground · reveal** — a screen's **skeleton** is the grey shapes standing where its
+  content will be while its first read is out, one band of light sweeping across them: `Skeleton`'s
+  block, line and circle, laid out by the screen (design-system 5.6, #870). They stand on a
+  **ground** (`SkeletonGround`), which runs the one clock and is what every shape measures its place
+  against, so one band crosses them all. The **reveal** (`Reveal`) is the content, drawn underneath
+  and hidden, coming in on one fade once its read has finished; decided at the first draw, and never
+  back once the content is in. UI vocabulary, not domain terms. _Avoid_: shimmer for the shapes
+  (the shimmer is the band), placeholder, loading state (the architecture doc's menu of states
+  names the skeleton as one drawing of _initial loading_), spinner.
 - **Marked card** — the pressable card's third border, and the one that is **not about the
   control**: pressed (`coral`) and selected (`ink`) are things the reader has done to the card,
   where **marked** (`voltStroke`, 1pt) is a standing fact about whoever is drawn on it. The

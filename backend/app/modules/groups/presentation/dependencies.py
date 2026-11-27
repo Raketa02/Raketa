@@ -56,7 +56,10 @@ from app.modules.groups.application.commands import Administering
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
 from app.modules.groups.application.delete_group import DeleteGroup
 from app.modules.groups.application.edit_group import EditGroup
-from app.modules.groups.application.hottest_groups import ReadHottestGroups
+from app.modules.groups.application.hottest_groups import (
+    ReadHottestGroups,
+    ReadHottestGroupsPage,
+)
 from app.modules.groups.application.join_group import JoinGroup
 from app.modules.groups.application.leave_group import LeaveGroup
 from app.modules.groups.application.official_groups import (
@@ -362,6 +365,33 @@ def get_read_hottest_groups(
 
 
 ReadHottestGroupsDep = Annotated[ReadHottestGroups, Depends(get_read_hottest_groups)]
+
+
+def get_read_hottest_groups_page(
+    directory: GroupDirectoryDep,
+    games: GroupBornGamesDep,
+    clubs: HomeClubsDep,
+    ratings: RatedGroupMembersDep,
+    faces: GroupFacesDep,
+    relations: MemberRelationsDep,
+    administrators: GroupAdministratorsDep,
+    clock: ClockDep,
+) -> ReadHottestGroupsPage:
+    return ReadHottestGroupsPage(
+        directory=directory,
+        games=games,
+        clubs=clubs,
+        ratings=ratings,
+        faces=faces,
+        relations=relations,
+        administrators=administrators,
+        clock=clock,
+    )
+
+
+ReadHottestGroupsPageDep = Annotated[
+    ReadHottestGroupsPage, Depends(get_read_hottest_groups_page)
+]
 
 
 def get_leave_group(

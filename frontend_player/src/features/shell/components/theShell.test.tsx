@@ -9,15 +9,20 @@
  * **stack**: what is underneath, and whether there is anything underneath at all.
  *
  * **The bar is Home · ⚡Play · You, for good** ([#576](https://github.com/Raketa02/Raketa/issues/576)):
- * the old loop's Players and Chats columns, and the flag that brought them back, are gone.
+ * the old loop's Players and Chats columns, and the feature flag that brought them back, are gone.
+ * Play's own feature flag, `explore` (#826), is walked in `theExploreGate.test.tsx`; here Play is
+ * as it ships, titled *Groups*.
  */
 
+import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
-import type { ScrollView } from 'react-native';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { AccessibilityInfo, Platform, StyleSheet, View, type ScrollView } from 'react-native';
 
 import { authKeys, NICKNAME_ROW_TITLE } from '@/features/auth/types';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
+import { levelAsksHeading, notNowLabel, requestsHeading } from '@/features/friends/types';
+import { GROUPS_COPY } from '@/features/groups/types';
 import {
   AREA_LINE,
   INTRO_TITLE,
@@ -44,8 +49,8 @@ import {
   reliabilityLine,
   scoreRingLabel,
 } from '@/features/player_record/types';
-import { HOME_GAME_COPY } from '@/features/proposals/types';
-import { doorRowLabel } from '@/shared/ui';
+import { HOME_GAME_COPY, proposalKeys } from '@/features/proposals/types';
+import { doorRowLabel, theme, TopSafeArea } from '@/shared/ui';
 import {
   BOOKED_ROOM,
   BOOKING,
@@ -56,28 +61,60 @@ import {
   stubBooking,
   stubHomeGames,
 } from '@/test-support/home';
+import { invitation } from '@/test-support/friendsGame';
+import {
+  closeNeedsYourAnswer,
+  envelope,
+  openNeedsYourAnswer,
+  sheetTitle,
+} from '@/test-support/needsYourAnswer';
 import { scrollerOf } from '@/test-support/pinned';
+import {
+  barFloats,
+  barFrame,
+  clearanceAbove,
+  endPadding,
+  markerUnder,
+  pageOf,
+  PLAYERS_BAR,
+} from '@/test-support/tabBarReach';
+import { fakeKeyboard, type FakeKeyboard } from '@/test-support/platform';
+import { pullDown } from '@/test-support/swipe';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { forgetPhonePreferences } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  DATAFILE_PATH,
   GATE_USER,
+  HOME_PATH,
   launchSignedIn,
   OWN_RECORD_SERVED,
+  resetKeyboard,
   PROFILE_OPTIONS_SERVED,
   PROFILE_SURFACE_SERVED,
   stubConversation,
   stubConversations,
   stubEntries,
   stubGate,
+  stubHome,
+  stubKeyboard,
+  stubMyGroups,
+  stubNotices,
   stubOwnRecord,
+  stubPaymentsToConfirm,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
-import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
+import {
+  installTransport,
+  json,
+  noContent,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
 
-import { HOME_COPY, PLAY_COPY } from './shellCopy';
+import { HOME_COPY, NEEDS_YOUR_ANSWER_COPY, PLAY_COPY } from './shellCopy';
 import { YOU_COPY } from './youCopy';
 
 /** One rating and a committed profile: the gate's fourth answer is *the app*. */
@@ -95,8 +132,11 @@ const RATING: Wire['RatingResponse'] = {
 
 let transport: Transport;
 
-/** *The player is on Play*: its *Groups* segment, which is what the tab opens on. */
-const onPlay = () => screen.findByRole('button', { name: PLAY_COPY.segment.groups });
+/**
+ * *The player is on Play*: its *Groups* title — what the tab draws as it ships, with `explore` at
+ * its code default, off (#826). The switcher is the gate's suite and the segment suite's.
+ */
+const onPlay = () => screen.findByRole('header', { name: PLAY_COPY.title });
 
 beforeEach(() => {
   transport = installTransport();
@@ -158,9 +198,11 @@ describe('what a player lands on', () => {
 
   /**
    * **The old loop asks the server nothing** — the bar used to hold its challenges, games and
-   * plans for the session, and a flags host's datafile was fetched the moment the app opened.
+   * plans for the session. **What the gate asks for is one datafile** (#826, ADR-0206 §6): this
+   * environment's, from the features host rather than the API, with no token, read once at launch
+   * and not again by Play — the gate reads what is in hand when it mounts.
    */
-  it('reads none of the old loop’s lists, and no datafile', async () => {
+  it('reads none of the old loop’s lists, and the datafile once, from the features host', async () => {
     await launchIntoTheApp();
     pressTab('You');
     await waitFor(() => expect(screen).toHavePathname('/you'));
@@ -176,7 +218,74 @@ describe('what a player lands on', () => {
     ]) {
       expect(asked).not.toContain(old);
     }
-    expect(asked.filter((path) => path.includes('featurevisor'))).toEqual([]);
+    expect(asked.filter((path) => path.includes('featurevisor'))).toEqual([DATAFILE_PATH]);
+    const [datafile] = transport.requestsTo('GET', DATAFILE_PATH);
+    expect(datafile?.url).toBe(`https://features.test.raketa.invalid${DATAFILE_PATH}`);
+    expect(datafile?.headers.Authorization).toBeUndefined();
+  });
+});
+
+/**
+ * **The bar is the dock, and the selection marker stands under the lit tab** (#883, ADR-0210 §4,
+ * 10.2). The lit tab is the URL's, by the shell's one rule, and the marker is drawn from it with the
+ * filled icon and the coral words, so the three can never disagree. On a change of lit tab it
+ * travels to the new one (#884, walked in `markerTravels.test.tsx`), and inside a tab's own branch it
+ * does not move at all.
+ */
+describe('the dock and its selection marker', () => {
+  it('carries three tabs, each with its role, its name and whether it is the one lit', async () => {
+    await launchIntoTheApp();
+
+    expect(screen.getByRole('tab', { name: 'Home', selected: true })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Play', selected: false })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'You', selected: false })).toBeTruthy();
+  });
+
+  it('stands the marker under the tab the player lands on', async () => {
+    await launchIntoTheApp();
+
+    expect(markerUnder()).toBe('Home');
+  });
+
+  it('comes to rest under the newly lit tab after every press', async () => {
+    // The slide takes `motion.tabMarker.slide`, from the frame after the press's navigation.
+    const settle = () => act(() => jest.advanceTimersByTime(theme.motion.tabMarker.slide + 16));
+    await launchIntoTheApp();
+
+    pressTab('You');
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+    settle();
+    expect(markerUnder()).toBe('You');
+
+    pressTab('Play');
+    await onPlay();
+    settle();
+    expect(markerUnder()).toBe('Play');
+
+    pressTab('Home');
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    settle();
+    expect(markerUnder()).toBe('Home');
+  });
+
+  it('stays under Home inside Home — a booked game opened from it, and its chat and back', async () => {
+    stubHomeGames(transport, [homeGame()]);
+    stubBooking(transport, bookingDetails());
+    stubConversations(transport, [bookedRoomRow()]);
+    stubConversation(transport, bookedRoom());
+    stubEntries(transport, BOOKED_ROOM);
+    await launchSignedIn();
+
+    fireEvent.press(await screen.findByRole('button', { name: HOME_GAME_COPY.openGame }));
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    expect(markerUnder()).toBe('Home');
+
+    // The chat stands the bar down; it comes back with the marker already in place.
+    fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}/chat`));
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    expect(markerUnder()).toBe('Home');
   });
 });
 
@@ -596,6 +705,238 @@ describe('Home, kept', () => {
 });
 
 /**
+ * **Needs your answer** ([#816](https://github.com/Raketa02/Raketa/issues/816),
+ * [#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1–§2; home refactor 1 and 2): the
+ * header's envelope, there only while something waits, and the sheet it opens. What each section's
+ * tiles say and do is `friends`' and `proposals`' suites'; this is the frame — the header's order, the
+ * sheet's title, focus and ways out, the four sections' order, and the self-close.
+ */
+describe('Needs your answer', () => {
+  const INES: Wire['HomeFriendRequestSchema'] = {
+    player_id: 'e0000000-0000-4000-8000-000000000816',
+    nickname: 'ines.d',
+    photo_id: null,
+    photo_url: null,
+    asked_at: '2026-11-17T07:00:00Z',
+    by_link: false,
+    from_ranking: false,
+    from_new_players: false,
+    from_same_level: false,
+    from_same_vibe: false,
+    group: null,
+    sport: 'PADEL',
+    level: 3.4,
+    player_score: 98,
+    reliability_band: 'VERY_HIGH',
+    percent_even: null,
+    in_common: null,
+    levels: [],
+  };
+  const KUBA_ASKS: Wire['HomeLevelAskSchema'] = {
+    sport: 'SQUASH',
+    askers: [
+      {
+        player_id: 'e0000000-0000-4000-8000-000000000817',
+        nickname: 'kuba.w',
+        photo_id: null,
+        photo_url: null,
+      },
+    ],
+  };
+  const SET_ASIDE = `/api/v1/friends/requests/${INES.player_id}/set-aside`;
+  /** A share refused while the reader was elsewhere, waiting in TO CONFIRM (#817). */
+  const A_PAYMENT: Wire['app__modules__proposals__presentation__schemas__PaymentToConfirmSchema'] =
+    {
+      seat_charge_id: 'f1000000-0000-4000-8000-000000000001',
+      refusal: 'AUTHENTICATION_REQUIRED',
+      proposal_id: 'f1000000-0000-4000-8000-000000000002',
+      pool_id: 'f1000000-0000-4000-8000-000000000003',
+      sport: 'PADEL',
+      kind: 'COMPETITIVE',
+      starts_at: '2026-10-03T14:00:00Z',
+      club: { id: 'f1000000-0000-4000-8000-000000000004', name: 'Bonarka Arena' },
+      share_grosze: 3200,
+      book_by: '2026-10-02T11:00:00Z',
+      confirm_by: null,
+      time_to: null,
+    };
+
+  /** Home's read, holding `waiting` until *Not now* takes Inés's request off it. */
+  function serveHome(waiting: Partial<Wire['HomeResponse']>) {
+    stubHome(transport, waiting);
+    transport.on('POST', SET_ASIDE, () => {
+      stubHome(transport, { ...waiting, friend_requests: [] });
+      return noContent();
+    });
+  }
+
+  /** The header's three, left to right, by what each is. */
+  const header = () =>
+    screen
+      .getAllByRole('button')
+      .map((node) =>
+        node.props.testID === 'needs-your-answer-envelope'
+          ? 'envelope'
+          : node.props.testID === 'ranking-trophy'
+            ? 'trophy'
+            : /^Recent notifications/.test(String(node.props.accessibilityLabel))
+              ? 'bell'
+              : undefined,
+      )
+      .filter((one) => one !== undefined);
+
+  /** The section headings the sheet draws under its title, top to bottom. */
+  const sections = () =>
+    within(screen.getByTestId('bottom-sheet'))
+      .getAllByRole('header')
+      .map((node) => node.props.children as unknown)
+      .filter((text): text is string => typeof text === 'string');
+
+  it('reads envelope, bell, trophy — the trophy in the far-right corner — while something waits', async () => {
+    serveHome({ friend_requests: [INES] });
+    await launchIntoTheApp();
+
+    await waitFor(() => expect(envelope()).not.toBeNull());
+    expect(header()).toEqual(['envelope', 'bell', 'trophy']);
+  });
+
+  it('is an ink Feather mail mark in a 44pt target, named Needs your answer', async () => {
+    serveHome({ friend_requests: [INES] });
+    await launchIntoTheApp();
+
+    const mark = await waitFor(() => {
+      const found = envelope();
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    expect(mark.props.accessibilityLabel).toBe(NEEDS_YOUR_ANSWER_COPY.title);
+    expect(StyleSheet.flatten(mark.props.style)).toMatchObject({
+      width: theme.size.minTouch,
+      height: theme.size.minTouch,
+    });
+    const glyph = within(mark).UNSAFE_getByType(Feather);
+    expect(glyph.props.name).toBe('mail');
+    expect(glyph.props.color).toBe(theme.color.ink);
+  });
+
+  it('draws no envelope while nothing waits, and the bell and the trophy keep their places', async () => {
+    serveHome({});
+    await launchIntoTheApp();
+
+    await waitFor(() => expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(0));
+    expect(envelope()).toBeNull();
+    expect(header()).toEqual(['bell', 'trophy']);
+  });
+
+  it('opens on the envelope, its title taking the focus, TO CONFIRM, FRIENDS GAME, FRIEND REQUESTS, ASKED FOR A LEVEL', async () => {
+    stubPaymentsToConfirm(transport, [A_PAYMENT]);
+    serveHome({
+      needing_you: 1,
+      friends_games: [invitation()],
+      friend_requests: [INES],
+      level_asks: [KUBA_ASKS],
+    });
+    await launchIntoTheApp();
+    // Nothing that waits is on Home itself.
+    await waitFor(() => expect(envelope()).not.toBeNull());
+    expect(screen.queryByTestId('to-confirm')).toBeNull();
+    expect(screen.queryByTestId('friends-games')).toBeNull();
+    expect(screen.queryByTestId('friend-requests')).toBeNull();
+    expect(screen.queryByTestId('level-asks')).toBeNull();
+    const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+
+    try {
+      // Only what the press moves: Home's own launch may move focus before it.
+      focus.mockClear();
+      await openNeedsYourAnswer();
+      await screen.findByTestId('to-confirm');
+
+      expect(focus).toHaveBeenCalledTimes(1);
+      expect(sections()).toEqual([
+        'To confirm · 1',
+        'Friends game · 1',
+        requestsHeading(1),
+        levelAsksHeading(1),
+      ]);
+    } finally {
+      focus.mockRestore();
+    }
+  });
+
+  /** #817: a payment to confirm or a friends game invitation waits there too, alone. */
+  it.each<[string, () => void]>([
+    ['a payment to confirm', () => stubPaymentsToConfirm(transport, [A_PAYMENT])],
+    ['a friends game invitation', () => serveHome({ friends_games: [invitation()] })],
+  ])('draws the envelope for %s alone', async (_, waiting) => {
+    serveHome({});
+    waiting();
+    await launchIntoTheApp();
+
+    await waitFor(() => expect(envelope()).not.toBeNull());
+    await openNeedsYourAnswer();
+    expect(sections()).toHaveLength(1);
+  });
+
+  it('hides a section with nothing in it', async () => {
+    serveHome({ level_asks: [KUBA_ASKS] });
+    await launchIntoTheApp();
+
+    await openNeedsYourAnswer();
+
+    expect(sections()).toEqual([levelAsksHeading(1)]);
+    expect(screen.queryByTestId('friend-requests')).toBeNull();
+  });
+
+  it('closes on ✕, on the backdrop and on a pull down its head, and the envelope stays', async () => {
+    serveHome({ friend_requests: [INES] });
+    await launchIntoTheApp();
+
+    await openNeedsYourAnswer();
+    closeNeedsYourAnswer();
+    await waitFor(() => expect(sheetTitle()).toBeNull());
+
+    await openNeedsYourAnswer();
+    fireEvent.press(screen.getByTestId('bottom-sheet-scrim', { includeHiddenElements: true }));
+    await waitFor(() => expect(sheetTitle()).toBeNull());
+
+    await openNeedsYourAnswer();
+    expect(pullDown(sheetTitle()!, theme.size.sheetSwipe.close)).toBe(true);
+    await waitFor(() => expect(sheetTitle()).toBeNull());
+
+    expect(envelope()).not.toBeNull();
+  });
+
+  it('closes itself on the last answer, and the envelope goes', async () => {
+    serveHome({ friend_requests: [INES] });
+    stubNotices(transport, []);
+    await launchIntoTheApp();
+    await openNeedsYourAnswer();
+
+    fireEvent.press(screen.getByRole('button', { name: notNowLabel(INES.nickname) }));
+
+    await waitFor(() => expect(transport.requestsTo('POST', SET_ASIDE)).toHaveLength(1));
+    await waitFor(() => expect(sheetTitle()).toBeNull());
+    expect(envelope()).toBeNull();
+    expect(header()).toEqual(['bell', 'trophy']);
+  });
+
+  it('stays closed when something new arrives after the last answer — the envelope comes back', async () => {
+    serveHome({ friend_requests: [INES] });
+    stubNotices(transport, []);
+    await launchIntoTheApp();
+    await openNeedsYourAnswer();
+    fireEvent.press(screen.getByRole('button', { name: notNowLabel(INES.nickname) }));
+    await waitFor(() => expect(envelope()).toBeNull());
+
+    stubHome(transport, { level_asks: [KUBA_ASKS] });
+    await act(() => queryClient.invalidateQueries({ queryKey: proposalKeys.home() }));
+
+    await waitFor(() => expect(envelope()).not.toBeNull());
+    expect(sheetTitle()).toBeNull();
+  });
+});
+
+/**
  * **The shell outlives the entry gate re-reading the player, and a shell built from nothing opens
  * on Home.** Two facts, and the first press after a cold start on a device was where they were both
  * found false at once: bootstrap **seeds** the player into the cache, so the gate's own read of
@@ -655,7 +996,7 @@ describe('the shell survives the gate re-reading the player', () => {
 
     expect(screen).toHavePathname('/you');
     expect(await screen.findByRole('header', { name: YOU_COPY.title })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: PLAY_COPY.segment.groups })).toBeNull();
+    expect(screen.queryByRole('header', { name: PLAY_COPY.title })).toBeNull();
     expect(screen.getAllByRole('tab')).toHaveLength(3);
   });
 
@@ -701,7 +1042,7 @@ describe('the shell survives the gate re-reading the player', () => {
 
     expect(await screen.findByText(HOME_COPY.empty.line)).toBeTruthy();
     expect(screen).toHavePathname('/');
-    expect(screen.queryByRole('button', { name: PLAY_COPY.segment.groups })).toBeNull();
+    expect(screen.queryByRole('header', { name: PLAY_COPY.title })).toBeNull();
     expect(screen.getAllByRole('tab')).toHaveLength(3);
   });
 });
@@ -710,8 +1051,8 @@ describe('the shell survives the gate re-reading the player', () => {
  * **The bar stands down inside a booked game's chat, and nowhere else.** The composer replaces it
  * there so the keyboard and the stream get the whole screen
  * ([#400](https://github.com/Raketa02/Raketa/issues/400)) — and it is *not rendered* rather than
- * hidden, because the bar is a flex sibling of the navigator and a hidden one would still take its
- * height and the bottom inset. The details the room is pushed over keep their bar, which is what a
+ * hidden, and its reach is nothing, because a hidden bar would still be a reach every screen kept
+ * clear of (#881). The details the room is pushed over keep their bar, which is what a
  * prefix match under `/booking/…` would get wrong.
  */
 describe('the bar stands down inside a booked game’s chat', () => {
@@ -739,5 +1080,159 @@ describe('the bar stands down inside a booked game’s chat', () => {
 
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
     expect(tabs()).toHaveLength(3);
+  });
+});
+
+/**
+ * **The bar floats over the screen, and every screen ends at its reach** (#881, ADR-0210 §3, 10.1).
+ * It used to be a flex sibling under the stack, which ended every screen above it whether the screen
+ * knew or not; now the screens draw to the bottom of the phone and the bar is drawn over their foot,
+ * so a list that forgot the reach would leave its last row under the bar and nothing would throw.
+ * **The bar is the dock** (#883): 54 tall, 12 in from each side and lifted 12 over the harness's zero
+ * inset, so its reach is 66, and every list ends 15 above it — the gap a page kept above the old bar.
+ */
+describe('the bar floats over the screen, and the screens end at its reach', () => {
+  it('draws the bar over the screen as the dock — 12 clear of three edges, 54 tall, rounded', async () => {
+    await launchIntoTheApp();
+
+    expect(barFloats()).toBe(true);
+    expect(barFrame()).toMatchObject({
+      borderRadius: theme.radius.dock,
+      borderWidth: 1,
+      borderColor: theme.color.line,
+    });
+    expect(PLAYERS_BAR).toBe(66);
+  });
+
+  it('scrolls a long Home to its last game fully clear of the bar, by today’s 15', async () => {
+    stubHomeGames(
+      transport,
+      Array.from({ length: 8 }, (_, at) => {
+        const id = String(at + 1).padStart(12, '0');
+        return homeGame({
+          booking_id: `3f2b8c1e-0000-4000-8000-${id}`,
+          game_id: `4f2b8c1e-0000-4000-8000-${id}`,
+        });
+      }),
+    );
+    await launchSignedIn();
+
+    const games = await screen.findAllByRole('button', { name: HOME_GAME_COPY.openGame });
+    const page = pageOf(games[games.length - 1] as (typeof games)[number]);
+
+    expect(page).toBeDefined();
+    expect(clearanceAbove(page as NonNullable<typeof page>)).toBe(theme.space.lg);
+  });
+
+  it('scrolls a long Play to its last group fully clear of the bar, by today’s 15', async () => {
+    stubMyGroups(
+      transport,
+      Array.from({ length: 12 }, (_, at) => ({
+        id: `a0000000-0000-4000-8000-${String(at + 1).padStart(12, '0')}`,
+        kind: 'PLAYER' as const,
+        name: `Crew ${at + 1}`,
+        monogram: { letters: 'Cr', colour: 1 },
+        sports: ['PADEL' as const],
+        member_count: 6,
+        home_club: { id: 'c0000000-0000-4000-8000-000000000001', name: 'Centrum Ruchu' },
+      })),
+    );
+    await launchIntoTheApp();
+
+    pressTab('Play');
+    const page = pageOf(await screen.findByRole('button', { name: /^Crew 12,/ }));
+
+    expect(page).toBeDefined();
+    expect(clearanceAbove(page as NonNullable<typeof page>)).toBe(theme.space.lg);
+  });
+
+  it('ends You at the bar — Sign out pinned above it, and the rows ending above Sign out', async () => {
+    await launchIntoTheApp();
+    pressTab('You');
+    const signOut = await screen.findByLabelText('Sign out');
+
+    // The screen Sign out is pinned on — Home stays laid down under every tab, so there are two.
+    const you = screen
+      .UNSAFE_getAllByType(TopSafeArea)
+      .find((frame) => within(frame).queryByLabelText('Sign out') !== null);
+    const frame = StyleSheet.flatten((you as NonNullable<typeof you>).findByType(View).props.style);
+    // The layout ends at the reach, so Sign out sits above the bar in flow, never under it…
+    expect(frame.paddingBottom).toBe(PLAYERS_BAR);
+    // …and the rows end at Sign out, with nothing scrolling between it and the bar.
+    expect(scrollerOf(signOut)).toBeUndefined();
+    const rows = pageOf(screen.getByText(NICKNAME_ROW_TITLE));
+    expect(clearanceAbove(rows as NonNullable<typeof rows>, 0)).toBe(theme.space.lg);
+  });
+});
+
+/**
+ * **On Android, the bar stands down while the keyboard is up** (#882, ADR-0210 §9, 10.1). Android
+ * shrinks the window for the keyboard, and the bar floats at the window's foot — so it would ride up
+ * above the keyboard and over the field being typed into, now that the scroller no longer ends above
+ * it. It stands down as it does in the chat: not rendered, its reach nothing, so the space it kept
+ * goes with it; and it comes back when the keyboard goes. **An iPhone ignores the keyboard**, which
+ * is drawn over the window and covers the bar there already.
+ */
+describe('on Android, the bar stands down while the keyboard is up', () => {
+  let keyboard: FakeKeyboard;
+  let phone: jest.ReplaceProperty<typeof Platform.OS> | undefined;
+  const tabs = () => screen.queryAllByRole('tab');
+
+  beforeEach(() => {
+    keyboard = fakeKeyboard();
+    stubKeyboard(keyboard);
+  });
+
+  afterEach(() => {
+    resetKeyboard();
+    phone?.restore();
+    phone = undefined;
+  });
+
+  /** New group, a tab screen with a field — under Play, where *New group* opens it. */
+  async function openNewGroup(os: typeof Platform.OS) {
+    phone = jest.replaceProperty(Platform, 'OS', os);
+    await launchIntoTheApp();
+    pressTab('Play');
+    fireEvent.press(await screen.findByRole('button', { name: GROUPS_COPY.list.newGroupLabel }));
+    await screen.findByRole('header', { name: GROUPS_COPY.newGroup.title });
+  }
+
+  /** The end padding of New group's page, found from its name field. */
+  const formEnd = () => {
+    const page = pageOf(screen.getByLabelText(GROUPS_COPY.newGroup.name));
+    return endPadding(page as NonNullable<typeof page>);
+  };
+
+  it('draws no tab while the keyboard is up, and New group’s page ends at its own 15', async () => {
+    await openNewGroup('android');
+    expect(tabs()).toHaveLength(3);
+    expect(formEnd()).toBe(PLAYERS_BAR + theme.space.lg);
+
+    act(() => keyboard.raise());
+
+    expect(tabs()).toHaveLength(0);
+    expect(formEnd()).toBe(theme.space.lg);
+  });
+
+  it('draws the three tabs again when the keyboard goes, and the reach with them', async () => {
+    await openNewGroup('android');
+    act(() => keyboard.raise());
+    expect(tabs()).toHaveLength(0);
+
+    act(() => keyboard.drop());
+
+    expect(tabs()).toHaveLength(3);
+    expect(screen.getByRole('tab', { name: 'Play', selected: true })).toBeTruthy();
+    expect(formEnd()).toBe(PLAYERS_BAR + theme.space.lg);
+  });
+
+  it('changes nothing on an iPhone, where the keyboard covers the bar', async () => {
+    await openNewGroup('ios');
+
+    act(() => keyboard.raise());
+
+    expect(tabs()).toHaveLength(3);
+    expect(formEnd()).toBe(PLAYERS_BAR + theme.space.lg);
   });
 });

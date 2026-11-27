@@ -1,7 +1,11 @@
 /**
- * **TOP 10 on Home, walked through the real route tree** ([#805](https://github.com/Raketa02/Raketa/issues/805),
- * PRD #789; ADR-0204; the Home rows mechanics §3, §10, §12; the screens §7; the words §31.1, §31.11),
- * with only `fetch` faked.
+ * **Top 10 on Home — FOR YOU's last line — walked through the real route tree**
+ * ([#805](https://github.com/Raketa02/Raketa/issues/805), PRD #789; [#820](https://github.com/Raketa02/Raketa/issues/820),
+ * [#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0204, ADR-0205 §5; the Home rows
+ * mechanics §3, §10, §12; the screens §7; the words §31.1, §31.11), with only `fetch` faked. Every
+ * test opens the line first, as a player would: closed, it draws no card, no switcher and no link;
+ * open, its foot holds the switcher, *Padel ›*, on the left, opening rightwards, and *Open the
+ * rankings ›* on the right.
  *
  * Tomek is 7th of the ten in padel at 2,71, *▲ 1*; Inés leads at 3,40, *▼ 1*; **Marek, at 4th, and
  * Tomek have blocked each other** — the row shows him at his true place, and his record reads *This
@@ -22,6 +26,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { savePhonePreference } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import { theme } from '@/shared/ui';
+import { footerParts, isOpen, lineHeader, lineTitles, openLine } from '@/test-support/forYou';
 import {
   GATE_USER,
   HOME_PATH,
@@ -133,7 +138,7 @@ interface TopTenServer {
 
 /**
  * **Tomek, rated in padel and tennis**, with Home's trophy as given, every sport as above, the records
- * a card opens, and the Rankings page `Rankings ›` lands on.
+ * a card opens, and the Rankings page `Open the rankings ›` lands on.
  */
 function topTenServer({
   trophy = { sport: 'PADEL', general_place: 7, friends_place: null },
@@ -195,7 +200,7 @@ function topTenServer({
   transport.on('GET', recordPath(MAREK.player_id), () => errorResponse(404, 'record_unavailable'));
   transport.on('POST', REQUESTS_PATH, () => json<Wire['RelationResponse']>({ relation: 'SENT' }));
 
-  // The page `Rankings ›` opens — what is on it is the Rankings suite's.
+  // The page `Open the rankings ›` opens — what is on it is the Rankings suite's.
   for (const sport of SPORT_ORDER) {
     transport.on('GET', rankingPath(sport), () =>
       json<Wire['RankingResponse']>({
@@ -262,17 +267,17 @@ const cardsDrawn = () =>
     .queryAllByTestId(/^top-ten-card-/)
     .map((node) => (node.props.testID as string).replace('top-ten-card-', ''));
 const pill = (sport: string) => row().getByRole('button', { name: `Sport: ${sport}` });
-
-/** The section headings Home draws, top to bottom. */
-const headings = () =>
-  screen
-    .getAllByRole('header')
-    .map((node) => node.props.children as string)
-    .filter((text) => typeof text === 'string');
+/** What stands in the open line's footer, left to right — the switcher, the link. */
+const footer = () =>
+  footerParts(row().getByTestId('folding-line-footer'), (part) =>
+    within(part).queryByRole('button', { name: /^Sport:/ }) === null
+      ? 'something else'
+      : 'switcher',
+  );
 
 async function homeWithTheRow() {
   await launchSignedIn();
-  return screen.findByRole('header', { name: TOP_TEN_COPY.heading });
+  await openLine(TOP_TEN_COPY.line);
 }
 
 function unfold(current: string) {
@@ -294,26 +299,50 @@ function numeralFills(player: Wire['TopTenPlayerSchema']): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// The row
+// The line
 // ---------------------------------------------------------------------------
 
-describe('the row on Home', () => {
-  it('stands last of Home’s rows, with the sport pill and Rankings › on its heading’s line', async () => {
+describe('the line on Home', () => {
+  it('stands last of FOR YOU’s lines, closed — no card, no switcher, no Open the rankings ›', async () => {
+    topTenServer();
+    await launchSignedIn();
+
+    await screen.findByRole('button', { name: TOP_TEN_COPY.line });
+    expect(lineTitles().at(-1)).toBe(TOP_TEN_COPY.line);
+    expect(isOpen(TOP_TEN_COPY.line)).toBe(false);
+    expect(cardsDrawn()).toEqual([]);
+    expect(row().queryByRole('button', { name: /^Sport:/ })).toBeNull();
+    expect(row().queryByRole('link')).toBeNull();
+    expect(row().queryByText(TOP_TEN_COPY.rankings)).toBeNull();
+  });
+
+  /**
+   * ADR-0205 §5, #821, home refactor 12, 13: the switcher, *Padel ›*, at the open line's foot on the
+   * left, and *Open the rankings ›* on the right.
+   */
+  it('opens onto the cards, Padel › at its foot’s left and Open the rankings › at its right', async () => {
     topTenServer();
     await homeWithTheRow();
 
-    expect(headings().at(-1)).toBe(TOP_TEN_COPY.heading);
-    expect(await row().findByRole('button', { name: 'Sport: Padel' })).toBeTruthy();
-    expect(row().getByRole('link', { name: topTenRankingsLabel('padel') })).toBeTruthy();
+    await waitFor(() => expect(cardsDrawn()).toHaveLength(10));
+    const switcher = await row().findByRole('button', { name: 'Sport: Padel' });
+    expect(within(switcher).getByText('Padel')).toBeTruthy();
+    expect(within(switcher).getByText('›', HIDDEN)).toBeTruthy();
+    const link = row().getByRole('link', { name: 'Open the rankings in padel' });
+    expect(within(link).getByText('Open the rankings')).toBeTruthy();
+    expect(within(link).getByText('›', HIDDEN)).toBeTruthy();
+    // The switcher first, at the footer's left; the link ends the row, at its right.
+    expect(footer()).toEqual(['switcher', 'link']);
+    expect(StyleSheet.flatten(link.props.style as ViewStyle)).toMatchObject({ marginLeft: 'auto' });
   });
 
-  it('is gone with its heading while nobody is ranked in any sport', async () => {
+  it('is hidden while nobody is ranked in any sport', async () => {
     topTenServer({ ranked: { PADEL: [], TENNIS: [], SQUASH: [], BADMINTON: [] } });
     await launchSignedIn();
 
     await waitFor(() => expect(reads().length).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('header', { name: TOP_TEN_COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: TOP_TEN_COPY.line })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -323,7 +352,7 @@ describe('the row on Home', () => {
 
     await waitFor(() => expect(reads().length).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('header', { name: TOP_TEN_COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: TOP_TEN_COPY.line })).toBeNull();
   });
 });
 
@@ -376,6 +405,8 @@ describe('which sport it opens on', () => {
       await homeHeld;
       return json<Wire['HomeResponse']>({
         read_at: '2026-11-15T08:00:00Z',
+        payments_to_confirm: [],
+        needs_your_answer: { new_count: 0, watermark: null },
         needing_you: 0,
         games: [],
         friend_requests: [],
@@ -402,18 +433,37 @@ describe('which sport it opens on', () => {
   });
 });
 
-describe('the pill', () => {
-  it('offers all four sports, rated first, the current one last', async () => {
+describe('the switcher', () => {
+  /**
+   * #821 (ADR-0205 §5, Q19, Q37): it slides open to the right — the current sport at the bar's left
+   * end, where the pill stood, its chevron turned back, and the others after it.
+   */
+  it('slides open to the right: the current sport first, where the pill stood, then the other three', async () => {
     topTenServer();
     await homeWithTheRow();
+    fireEvent(await row().findByTestId('row-sport-pill'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 7, width: 90, height: 30 } },
+    });
 
     unfold('Padel');
 
+    const bar = within(screen.getByTestId('sport-bar'));
     expect(
-      within(screen.getByTestId('sport-bar'))
-        .getAllByRole('button')
-        .map((option) => option.props.accessibilityLabel as string),
-    ).toEqual(['Tennis', 'Squash', 'Badminton', 'Padel']);
+      bar.getAllByRole('button').map((option) => option.props.accessibilityLabel as string),
+    ).toEqual(['Padel', 'Tennis', 'Squash', 'Badminton']);
+    expect(within(bar.getByRole('button', { name: 'Padel' })).getByText('‹', HIDDEN)).toBeTruthy();
+    expect(
+      StyleSheet.flatten(screen.getByTestId('row-sport-bar-slot').props.style as ViewStyle),
+    ).toMatchObject({
+      left: -theme.size.groupPage.filterPad,
+      right: 0,
+      top: 7,
+      alignItems: 'flex-start',
+    });
+    // Open, it lies over the footer, and a tap on it folds the bar rather than leaving Home.
+    fireEvent.press(screen.getByTestId('sport-filter-backdrop', HIDDEN));
+    expect(screen.queryByTestId('sport-bar')).toBeNull();
+    expect(screen).toHavePathname('/');
   });
 
   it('a pick reads that sport exactly, and nothing else on Home', async () => {
@@ -438,7 +488,7 @@ describe('the pill', () => {
     expect(reads().at(-1)).toContain('sport=SQUASH');
     expect(reads().at(-1)).not.toContain('prefer=');
     expect(others()).toEqual(before);
-    expect(headings().at(-1)).toBe(TOP_TEN_COPY.heading);
+    expect(isOpen(TOP_TEN_COPY.line)).toBe(true);
   });
 
   it('reads Nobody ranked in badminton yet for a sport with nobody in it', async () => {
@@ -450,9 +500,46 @@ describe('the pill', () => {
 
     expect(await row().findByText(nobodyRankedLine('badminton'))).toBeTruthy();
     expect(cardsDrawn()).toEqual([]);
-    // The heading, the pill and Rankings › stay.
+    // The line, the switcher and Open the rankings › stay.
     expect(row().getByRole('button', { name: 'Sport: Badminton' })).toBeTruthy();
     expect(row().getByRole('link', { name: topTenRankingsLabel('badminton') })).toBeTruthy();
+  });
+
+  /**
+   * A second pick cancels the first's read, so when the second is refused the pick it goes back to has
+   * nothing read yet: the cards drawn stay, and the line stays open under the reader (#820).
+   */
+  it('stays open on a second pick before the first lands, the second refused', async () => {
+    const server = topTenServer();
+    server.refuse('TENNIS');
+    await homeWithTheRow();
+    await waitFor(() => expect(cardsDrawn()).toHaveLength(10));
+    const release = server.hold();
+
+    pickOnThePill('Padel', 'Squash');
+    pickOnThePill('Squash', 'Tennis');
+    await act(async () => release());
+
+    await waitFor(() => expect(reads().some((url) => url.includes('sport=TENNIS'))).toBe(true));
+    expect(await row().findByRole('button', { name: 'Sport: Squash' })).toBeTruthy();
+    await waitFor(() => expect(cardsDrawn()).toEqual([KUBA.player_id, ZOFIA_SQUASH.player_id]));
+    expect(isOpen(TOP_TEN_COPY.line)).toBe(true);
+  });
+
+  /** The pick is the line's, not what it unfolds: held while Home is up, a close included. */
+  it('keeps the sport picked across a close and an open', async () => {
+    topTenServer();
+    await homeWithTheRow();
+    await waitFor(() => expect(cardsDrawn()).toHaveLength(10));
+    pickOnThePill('Padel', 'Squash');
+    await waitFor(() => expect(cardsDrawn()).toEqual([KUBA.player_id, ZOFIA_SQUASH.player_id]));
+
+    fireEvent.press(lineHeader(TOP_TEN_COPY.line));
+    await waitFor(() => expect(cardsDrawn()).toEqual([]));
+    await openLine(TOP_TEN_COPY.line);
+
+    expect(await row().findByRole('button', { name: 'Sport: Squash' })).toBeTruthy();
+    expect(cardsDrawn()).toEqual([KUBA.player_id, ZOFIA_SQUASH.player_id]);
   });
 
   it('puts the pill back, the cards never having left, when a pick cannot be read', async () => {
@@ -590,7 +677,7 @@ describe('a card opens the record', () => {
   });
 });
 
-describe('Rankings ›', () => {
+describe('Open the rankings ›', () => {
   it('opens the Rankings page on the row’s sport, in General, with the Home tab lit', async () => {
     topTenServer();
     // Friends was the last look; Top 10 is drawn from General, so the page opens there.
@@ -600,7 +687,8 @@ describe('Rankings ›', () => {
     pickOnThePill('Padel', 'Squash');
     await waitFor(() => expect(cardsDrawn()).toHaveLength(2));
 
-    fireEvent.press(row().getByRole('link', { name: topTenRankingsLabel('squash') }));
+    // Named by what it opens, in the sport picked.
+    fireEvent.press(row().getByRole('link', { name: 'Open the rankings in squash' }));
 
     await waitFor(() => expect(screen).toHavePathname('/rankings'));
     await waitFor(() =>

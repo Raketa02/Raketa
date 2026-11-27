@@ -1,4 +1,4 @@
-"""The Social tag vocabulary: nineteen permanent ids, three groups, one home.
+"""The Social tag vocabulary: twenty-seven permanent ids, three groups, one home.
 
 Two claims are load-bearing here and neither is about behaviour.
 
@@ -11,9 +11,10 @@ the profiles that hold it — and that change should redden this file, be argued
 with, and then be made here too. **Adding one should redden it too**, which is
 what happened on 2026-08-26 when ``OPEN_TO_MEET_SOMEONE`` was appended to
 ``WHY_YOU_ARE_HERE`` — an addition rather than an edit, with nothing above it
-moved and nothing retired.
+moved and nothing retired. It reddened again on 2026-11-22, when ADR-0207 §7
+appended eight more, each at the end of its group (#829).
 
-**The closed-vocabulary tripwire below was not widened to admit it**, and must
+**The closed-vocabulary tripwire below was not widened to admit them**, and must
 not be for anything else either: an id that needs the guard relaxed is an id that
 belongs to a different product.
 
@@ -37,6 +38,8 @@ from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_VOCABULARY,
     SocialTag,
     SocialTagGroup,
+    UNCOUNTED_SOCIAL_TAGS,
+    counted,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -56,6 +59,9 @@ EXPECTED: tuple[tuple[str, tuple[str, ...]], ...] = (
             "SETTLES_UP_ON_THE_SPOT",
             "BOOKS_THE_NEXT_ONE",
             "SHARES_A_LIFT",
+            "STAYS_FOR_A_COFFEE",
+            "UP_FOR_A_BITE_AFTER",
+            "KEEPS_IN_TOUCH",
         ),
     ),
     (
@@ -67,6 +73,10 @@ EXPECTED: tuple[tuple[str, tuple[str, ...]], ...] = (
             "GENEROUS_ON_LINE_CALLS",
             "QUIET_AND_FOCUSED",
             "WARMS_UP_PROPERLY",
+            "HAPPY_TO_SWAP_PARTNERS",
+            "PATIENT_WITH_BEGINNERS",
+            "HAPPY_TO_SHARE_TIPS",
+            "BRINGS_THE_ENERGY",
         ),
     ),
     (
@@ -79,6 +89,7 @@ EXPECTED: tuple[tuple[str, tuple[str, ...]], ...] = (
             "HERE_FOR_A_REGULAR_GAME",
             "HERE_TO_GET_BACK_INTO_IT",
             "OPEN_TO_MEET_SOMEONE",
+            "NEW_IN_TOWN",
         ),
     ),
 )
@@ -94,13 +105,16 @@ def test_the_vocabulary_is_exactly_these_ids_in_their_served_order():
     assert served == EXPECTED
 
 
-def test_there_are_nineteen_tags_in_three_groups():
+def test_there_are_twenty_seven_tags_in_three_groups():
     # The groups are not evenly sized and never had to be: what was specified is
     # the three groups, and nothing renders a group's count. The even split the
     # first eighteen happened to have ended when the nineteenth was appended.
-    assert len(SocialTag) == 19
+    assert len(SocialTag) == 27
     assert len(SocialTagGroup) == 3
-    assert sum(len(tags) for tags in SOCIAL_TAG_VOCABULARY.values()) == 19
+    assert sum(len(tags) for tags in SOCIAL_TAG_VOCABULARY.values()) == 27
+    assert {
+        group.value: len(tags) for group, tags in SOCIAL_TAG_VOCABULARY.items()
+    } == {"AFTER_THE_MATCH": 9, "ON_THE_COURT": 10, "WHY_YOU_ARE_HERE": 8}
 
 
 def test_every_tag_belongs_to_exactly_one_group():
@@ -132,6 +146,24 @@ def test_the_vocabulary_is_closed_to_the_person_rather_than_the_game():
         words = set(tag.value.split("_"))
         assert not words & forbidden, tag.value
         assert "LOOKING_FOR" not in tag.value, tag.value
+
+
+def test_open_to_meet_someone_is_the_one_tag_that_does_not_count():
+    """Shown like any other and never counted — in a table's Social vibe or in
+    building one — so the For-fun deck never seats people together because of
+    that motive (``docs/adr/0207`` §2)."""
+
+    assert {tag.value for tag in UNCOUNTED_SOCIAL_TAGS} == {"OPEN_TO_MEET_SOMEONE"}
+    held = [
+        SocialTag.OPEN_TO_MEET_SOMEONE,
+        SocialTag.STAYS_FOR_A_DRINK,
+        SocialTag.HERE_TO_MEET_PLAYERS,
+    ]
+    assert counted(held) == {
+        SocialTag.STAYS_FOR_A_DRINK,
+        SocialTag.HERE_TO_MEET_PLAYERS,
+    }
+    assert counted([]) == frozenset()
 
 
 def _string_literals(path: Path) -> set[str]:

@@ -49,18 +49,39 @@ describe('the record’s Social tag row', () => {
     expect(recordTagRow([], undefined)).toEqual({ kind: 'hidden' });
   });
 
-  it('draws at most the row’s own width, which is the profile step’s ceiling', () => {
-    const seven: readonly SocialTagId[] = [
-      'PLAYS_TO_WIN',
-      'STAYS_FOR_A_DRINK',
-      'QUIET_AND_FOCUSED',
-      'HERE_TO_IMPROVE',
-      'SHARES_A_LIFT',
-      'WARMS_UP_PROPERLY',
-      'BOOKS_THE_NEXT_ONE',
-    ];
-    const row = recordTagRow(seven, undefined);
+  /** ADR-0207 §7: a player holds 2 to 8, so the record draws up to eight — the new ones too. */
+  const EIGHT: readonly SocialTagId[] = [
+    'STAYS_FOR_A_DRINK',
+    'STAYS_FOR_A_COFFEE',
+    'KEEPS_IN_TOUCH',
+    'PLAYS_TO_WIN',
+    'PATIENT_WITH_BEGINNERS',
+    'BRINGS_THE_ENERGY',
+    'HERE_TO_IMPROVE',
+    'NEW_IN_TOWN',
+  ];
 
-    expect(row.kind === 'unknown' ? row.tags : []).toHaveLength(6);
+  it('draws all eight a player may hold, the shared ones tinted', () => {
+    expect(recordTagRow(EIGHT, undefined)).toEqual({ kind: 'unknown', tags: EIGHT });
+
+    const matched: SocialTagOverlap = {
+      kind: 'shared',
+      tags: [
+        { id: 'STAYS_FOR_A_COFFEE', shared: true },
+        { id: 'NEW_IN_TOWN', shared: true },
+      ],
+    };
+    const row = recordTagRow(EIGHT, matched);
+
+    expect(row.kind === 'shared' ? row.tags : []).toEqual(
+      EIGHT.map((id) => ({ id, shared: id === 'STAYS_FOR_A_COFFEE' || id === 'NEW_IN_TOWN' })),
+    );
+  });
+
+  it('draws at most the row’s own width, which is the profile step’s ceiling', () => {
+    const nine: readonly SocialTagId[] = [...EIGHT, 'HAPPY_TO_SHARE_TIPS'];
+    const row = recordTagRow(nine, undefined);
+
+    expect(row.kind === 'unknown' ? row.tags : []).toEqual(EIGHT);
   });
 });

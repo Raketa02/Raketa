@@ -10,8 +10,14 @@ writes, and a card's forecast is computed for the reader's own version now.
 games they have booked — then the proposals dealt to them, filtered by those
 before anybody else is read about; then **one read per provider over the union
 of every card left**: who is still in the pool, which pairs on them fit (per kind,
-since the level window is the kind's), the forecasts of every arrangement, and
-the people. Nothing is asked per card.
+since the level window is the kind's), the forecasts of every arrangement, the
+people, and — for the For-fun cards alone — everybody's Social tags, which each
+friendly's Social vibe is worked out from in place of its forecast
+(``docs/adr/0207`` §2, §5; #830). Nothing is asked per card.
+
+**Each segment is ordered by its kind** (``domain/deck.py``): Competitive by
+§8.2's keys, For fun by the best company first — the owed cards, then the
+rescues by vibe, then every other card by the vibe it shows.
 
 **The filters** (§4.1, §5.3, §6.6): a kind the reader's Play intent does not
 want, a share above *most I'll pay*, a week at their games per week, an hour
@@ -33,8 +39,10 @@ reader sits in the seat that opened first; the players read *paid*.
 **Around the deck**: a count per segment the reader's intent shows — none while
 they have declared nothing, which is the question that replaces the deck — the
 Games badge (cards with somebody already In, across those segments — a rescue's
-players have paid, and are not In), and the weeks at the cap, so the tab can say
-*your games this week are booked*.
+players have paid, and are not In) and the ids of the cards it counts, the
+segment not dealt included, so the phone can tell which are new (#846;
+``docs/adr/0208``), and the weeks at the cap, so the tab can say *your games
+this week are booked*.
 
 **Across groups** (``ReadDeckCounts``, #739; Q127): how many cards each kind
 deals the reader in one sport, summed over every group they are in — what the
@@ -95,6 +103,7 @@ from app.modules.proposals.domain.ports import (
     GamesAndMoneyRepository,
     PlayerFit,
     PlayersInPlay,
+    PlayersTags,
     Pools,
     ProposalDirectory,
     ProposalRepository,
@@ -127,6 +136,10 @@ class GroupDeck:
     #: Cards with somebody already In with the reader, across those segments —
     #: a rescue's players have paid, and are not In.
     games_badge: int
+    #: The cards ``games_badge`` counts, by id (#846; ``docs/adr/0208``):
+    #: the segments in the switch's order, each in the order dealt — so the
+    #: same list whichever segment is asked for. Its length is ``games_badge``.
+    in_card_ids: tuple[UUID, ...]
     games_per_week: int
     capped_weeks: tuple[CappedWeek, ...]
     #: The requested segment's cards, in the order they are dealt.
@@ -172,8 +185,10 @@ class ReadGroupDeck:
         offers: RescueOffers,
         players: PlayersInPlay,
         relations: ReaderRelations,
+        tags: PlayersTags,
         clock: Clock,
     ) -> None:
+        self._tags = tags
         self._offers = offers
         self._relations = relations
         self._players = players
@@ -245,6 +260,27 @@ class ReadGroupDeck:
         people = await with_the_readers_friends(
             people, reader=reader, relations=self._relations
         )
+        # Every For-fun card says its table's Social vibe, worked out from
+        # everybody's tags now — one question for all of them, and none while
+        # no friendly is dealt (`docs/adr/0207` §2, §11). Asked whichever
+        # segment is read: the vibe orders the For-fun segment, and which of
+        # the same people's hours it keeps is what the Games badge counts.
+        tags = await self._tags.tags_of(
+            {
+                *(
+                    player
+                    for proposal, view in views
+                    if proposal.kind is SearchMode.FOR_FUN
+                    for player in view.people
+                ),
+                *(
+                    player
+                    for rescue in rescues
+                    if rescue.game.kind is SearchMode.FOR_FUN
+                    for player in (reader, *rescue.game.players)
+                ),
+            }
+        )
 
         cards: list[DeckCard] = []
         read = 0
@@ -260,6 +296,7 @@ class ReadGroupDeck:
                     weeks=[people[player].week for player in view.people],
                     terms=terms[proposal.club_id],
                     now=now,
+                    tags=tags,
                     indoor=court_kinds.get((proposal.club_id, sport, proposal.start)),
                 )
             )
@@ -277,6 +314,7 @@ class ReadGroupDeck:
                         zone=CLUB_ZONE,
                     ),
                     now=now,
+                    tags=tags,
                 )
             )
 
@@ -285,6 +323,11 @@ class ReadGroupDeck:
             for kind in shown
         }
         dealt_now = segments.get(command.kind, ())
+        # Every segment shown, not only the one dealt: the badge is the tab's,
+        # and the phone tells the new ones from these ids (`docs/adr/0208`).
+        in_card_ids = tuple(
+            card.proposal_id for kind in shown for card in segments[kind] if card.in_
+        )
         return GroupDeck(
             pool_id=pool.id,
             sport=sport,
@@ -292,7 +335,8 @@ class ReadGroupDeck:
             segments=tuple(
                 DeckSegment(kind=kind, count=len(segments[kind])) for kind in shown
             ),
-            games_badge=sum(1 for kind in shown for card in segments[kind] if card.in_),
+            games_badge=len(in_card_ids),
+            in_card_ids=in_card_ids,
             games_per_week=deal.games_per_week,
             capped_weeks=deal.capped,
             cards=dealt_now,

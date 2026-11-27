@@ -33,13 +33,19 @@
  * (the fill's, `setUpFirst`) and the post goes once a method is; a guard the server answers with is
  * said in the helper's place (`postRefusal`) — the live yeses, two live posts, the week's games, a
  * game at that hour, nobody free, the court gone. **Posted**, the draft is forgotten, a toast says how
- * many best fits have it, and the player is back on the group's page — which went to Fill in when this
- * screen opened, so *You're In* is where they land, by this or by any way back.
+ * many best fits have it, and the player **lands** on the group's page on You’re in, where the new
+ * game is (`onLanded`, #848) — from either door.
+ *
+ * **Backing out is not landing** (#848): the chevron, the hardware back and the swipe return to the
+ * page as it was, on the tab this screen was opened from, which the chevron names (`backLabel`) —
+ * both the group page's to know, so both are handed in. A post settling after the player backed out
+ * toasts and leaves the page where they are.
  *
  * **Joining from a sheet** is the fill's, as every yes is: a rescue's *Pay 30 zł* counts its ten
  * seconds behind *Undo* and pays; a post's *I'm in* is a free vote — or, on its last seat, *Pay 32
- * zł* and the fill too (`waitsForUndo` on *Book it now*, Q124). The sheet closes first, then the player goes back to Fill
- * in, the toast following them there.
+ * zł* and the fill too (`waitsForUndo` on *Book it now*, Q124). The sheet closes first, then the
+ * player lands on You’re in, as a post does — the post's yes is there, and a rescue's *It's a game!*
+ * rises over the page with the page left on You’re in under it — the toast following them there.
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -58,6 +64,7 @@ import {
   behindOverlay,
   courtSeatCount,
   theme,
+  useTabBarReach,
 } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 import { sportLabel } from '@/features/onboarding/types';
@@ -128,8 +135,12 @@ export interface PostAGameScreenProps {
   readonly openingSport: Sport;
   /** The kind the group's switch stands on — corrected by the reader's intent. */
   readonly chosen: GameKind;
-  /** Back to the group's page — on Fill in, which it went to when this screen opened. */
+  /** The chevron's name — the tab a back-out returns to (*Back to Games*, #848). */
+  readonly backLabel: string;
+  /** Back to the group's page as it was, on the tab this screen was opened from. */
   readonly onLeave: () => void;
+  /** Back to the group's page on You’re in — after a post, or a join from a sheet (#848). */
+  readonly onLanded: () => void;
 }
 
 /** Doubles — four on the court — where *Mixed pairs* is offered. Read off the court's seats. */
@@ -142,8 +153,12 @@ export function PostAGameScreen({
   sports,
   openingSport,
   chosen,
+  backLabel,
   onLeave,
+  onLanded,
 }: PostAGameScreenProps) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const draft = usePostDraftStore((state) => draftFor(state, groupId));
   const keepIn = usePostDraftStore((state) => state.keep);
   const forget = usePostDraftStore((state) => state.forget);
@@ -183,8 +198,8 @@ export function PostAGameScreen({
   const guard = guarded !== undefined && guarded.pick === draft.pick ? guarded.words : undefined;
   const readAt = grid.data === undefined ? Date.now() : Date.parse(grid.data.readAt);
 
-  // Leave only from a screen still up: a post settling after the player went back must not pop
-  // the group's page too.
+  // Land only from a screen still up: a post settling after the player backed out must neither pop
+  // the group's page too nor turn it under them.
   const here = useRef(true);
   useEffect(
     () => () => {
@@ -192,9 +207,9 @@ export function PostAGameScreen({
     },
     [],
   );
-  const leave = useCallback(() => {
-    if (here.current) onLeave();
-  }, [onLeave]);
+  const land = useCallback(() => {
+    if (here.current) onLanded();
+  }, [onLanded]);
 
   const fill = useFill();
   const fillYes = useFillYes({ groupId, sport, kind });
@@ -203,7 +218,7 @@ export function PostAGameScreen({
     onPosted: (posted) => {
       forget(groupId);
       showToast({ message: postedToast(posted) });
-      leave();
+      land();
     },
     onRefused: (error, asked) => {
       if (error.code === 'payment_method_required') fill.setUpThen(() => sendLater.current());
@@ -259,7 +274,7 @@ export function PostAGameScreen({
     }
     const go = () => {
       landPostLater.current(card);
-      leave();
+      land();
     };
     if (fillYes.setUpFirst(go)) return;
     go();
@@ -275,7 +290,7 @@ export function PostAGameScreen({
     }
     const go = () => {
       fill.book({ card: seat, dealtIn: { groupId, sport: row.sport, kind: row.kind } });
-      leave();
+      land();
     };
     if (fillYes.setUpFirst(go)) return;
     go();
@@ -315,8 +330,8 @@ export function PostAGameScreen({
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.screen} {...behindOverlay(overlay)}>
-        <ScreenHeader title={COPY.title} onBack={onLeave} backLabel={COPY.back} />
-        <ScrollView contentContainerStyle={s.body}>
+        <ScreenHeader title={COPY.title} onBack={onLeave} backLabel={backLabel} />
+        <ScrollView contentContainerStyle={[s.body, { paddingBottom: reach + theme.space.xxxl }]}>
           <Control label={COPY.sport}>
             <ScrollView
               horizontal
@@ -490,7 +505,8 @@ function GridPlaceholder({
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
-  body: { padding: theme.size.gutter, gap: theme.space.lg, paddingBottom: theme.space.xxxl },
+  // Its end is the bar's reach and `xxxl`, set where the reach is read.
+  body: { padding: theme.size.gutter, gap: theme.space.lg },
   control: { gap: theme.space.sm },
   flab: { ...theme.type.flab, color: theme.color.ink, textTransform: 'uppercase' },
   aside: { ...theme.type.rlLabel, color: theme.color.muted },

@@ -25,6 +25,13 @@ don't play and accounts that are gone (``docs/adr/0204`` §10): the projection's
 for each ten the row takes, about the cards that could be fresh — good matches
 the reader is not connected with — and nobody else, since a rest changes nothing
 for them. See all rests nobody.
+
+**The row's total** (#812; ``totals``) is everybody holding a level in one of
+the reader's sports. The windows the row read already found them — all of them
+once the last window is read, and a hundred is as far as a total counts — so
+those cost nothing; a row that filled in a near window with fewer than a
+hundred read asks one count, stopping at 100. **No window is read to count**,
+and nobody is scored for it.
 """
 
 from __future__ import annotations
@@ -59,6 +66,7 @@ from app.modules.discovery.domain.same_level import (
     compared,
     same_level_player,
 )
+from app.modules.discovery.domain.totals import COUNTED_UP_TO, capped
 
 #: The windows a read widens through — the gap either side of the reader's
 #: level in each sport compared — doubling from two hundredths. ``None`` is
@@ -90,6 +98,14 @@ class SameLevelCard:
     #: Every shared sport, most even first.
     comparisons: tuple[Comparison, ...]
     relation: Relation
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SameLevelRow:
+    cards: tuple[SameLevelCard, ...]
+    #: How many the row could show, counted up to 100 (``totals``).
+    total: int
 
 
 @final
@@ -141,6 +157,18 @@ class _Widening:
         self._seen: set[UUID] = set()
         self._waiting: list[_Found] = []
         self._done = not self._around
+
+    @property
+    def read(self) -> int:
+        """Everybody the windows have read so far, each once."""
+
+        return len(self._seen)
+
+    @property
+    def read_everybody(self) -> bool:
+        """The last window, everybody, is read: ``read`` is the whole crowd."""
+
+        return self._done
 
     async def next_window(self) -> tuple[_Found, ...] | None:
         if self._done:
@@ -267,16 +295,17 @@ class ReadSameLevel:
         self._rests = rests
         self._cards = _Cards(relations=relations, faces=faces)
 
-    async def execute(self, reader: UUID) -> tuple[SameLevelCard, ...]:
+    async def execute(self, reader: UUID) -> SameLevelRow:
         mine = await self._levels.of_player(reader)
         if not mine:
-            return ()
+            return SameLevelRow(cards=(), total=0)
+        leaving_out = {reader, *await self._blocks.either_way(reader)}
         widening = _Widening(
             levels=self._levels,
             even=self._even,
             mine=mine,
             in_sport=None,
-            leaving_out={reader, *await self._blocks.either_way(reader)},
+            leaving_out=leaving_out,
         )
         row = RowOfTen()
         taken: dict[UUID, _Found] = {}
@@ -310,9 +339,31 @@ class ReadSameLevel:
                         relation=relations[one.player.player_id],
                         rested=one.player.player_id in rested,
                     )
-        return await self._cards.of(
-            [taken[player.player_id] for player in row.row()], relations
+        return SameLevelRow(
+            cards=await self._cards.of(
+                [taken[player.player_id] for player in row.row()], relations
+            ),
+            total=await self._total(widening, mine, leaving_out),
         )
+
+    async def _total(
+        self,
+        widening: _Widening,
+        mine: Mapping[Sport, CurrentLevel],
+        leaving_out: Collection[UUID],
+    ) -> int:
+        """Everybody holding a level in one of the reader's sports — what the
+        windows read, once they read everybody or a hundred; otherwise one
+        count, stopping at the cap. **Never another window.** The count is a
+        later statement, so it may see somebody leave whom a window read: it
+        never answers fewer than the windows did."""
+
+        if widening.read_everybody or widening.read >= COUNTED_UP_TO:
+            return capped(widening.read)
+        counted = await self._levels.how_many_hold(
+            tuple(mine), leaving_out=leaving_out, up_to=COUNTED_UP_TO
+        )
+        return capped(max(widening.read, counted))
 
 
 @final

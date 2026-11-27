@@ -9,6 +9,7 @@
  * │                  87%                      │  the server's figure, its colour the bar's tone
  * │               Very even                   │
  * │ [ You + Ewa         │  Magda + Ania ]     │  your side on the left (Q70)
+ * │ 67%  [ Social vibe ██████████░░░░░ ]      │  — or, on For fun, the Social vibe row (#842)
  * │              Slim overlap                 │  OverlapGrid — the deck's
  * │  M  T  W  T  F  S  S …                    │
  * │ ┌ Court available          25 zł each ┐  │  CourtBlock, *Book it now*'s bed: sending books it
@@ -25,6 +26,13 @@
  * court above draws the faces), and **no shadow**: the deck card floats on its stage, this one sits
  * in the page's column, and cards never cast one (4.3). **Send game and pay 25 zł** (volt, friends 8)
  * opens the send sheet (`SendGame`, #759); sent, the court goes back to empty (`onSent`).
+ *
+ * **The number is the kind's own** (ADR-0207 §5, #842; the deck's `headlineOf`): Competitive's
+ * forecast as friends 9 lays it out, For fun's Social vibe as the deck card draws it —
+ * `SocialVibeRow`, the % beside its 0–100 bar, the line-up's vibe whoever stands beside whom. The
+ * switch is a new question, so flipping it reads the card again and flips the number with it. A
+ * For-fun card draws no forecast even if one is sent. **The vs line speaks where no forecast is
+ * drawn**: the forecast's name says the sides, the vibe row's does not (`GameTiles`' rule).
  *
  * ## Every state has its drawing
  *
@@ -48,11 +56,19 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { offlineMessage } from '@/shared/errors';
 import { formatPercent } from '@/shared/formatting/ratingFormat';
-import { BALANCE_FIGURE, BalanceBar, Button, Note, courtSeatCount, theme } from '@/shared/ui';
+import {
+  BALANCE_FIGURE,
+  BalanceBar,
+  Button,
+  Note,
+  SocialVibeRow,
+  courtSeatCount,
+  theme,
+} from '@/shared/ui';
 import { balanceTone, balanceWord } from '@/shared/vocabulary/balancePresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { foldOf, rowsOf } from '../domain/deck';
+import { foldOf, headlineOf, rowsOf } from '../domain/deck';
 import {
   isCourtGone,
   refusalOf,
@@ -67,7 +83,7 @@ import { gameDayOf, weekdayAt } from '../domain/when';
 import { useFriendsCard } from '../hooks/useFriendsCard';
 
 import { CourtBlock } from './CourtBlock';
-import { barLabels, forecastSpoken, vsLine } from './deckPresentation';
+import { barLabels, forecastSpoken, sidesSpoken, vsLine } from './deckPresentation';
 import { FindACourtSheet } from './FindACourtSheet';
 import { FRIENDS_CARD_COPY } from './friendsCardCopy';
 import { courtShare, fullAtLine, refusalLine } from './friendsCardPresentation';
@@ -251,16 +267,23 @@ function ReadCard({
   const { top, bottom } = rowsOf(sides, seatsPerSide);
   const labels = barLabels([top, bottom]);
   const marker = fullAtLine(court, card.homeClub);
+  // The kind's own number, or none (ADR-0207 §5): flipping the switch flips it.
+  const headline = headlineOf(card);
 
   return (
     <View style={s.card} testID="friends-card">
       <GameGround />
       <View style={s.body}>
-        {/* The sides as a line. Decorative to a listener: the forecast's name says them. */}
+        {/* The sides as a line. Decorative to a listener where the forecast's name says them;
+            spoken where nothing else does — For fun's Social vibe, or no forecast read. */}
         <View
           style={s.vs}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
+          {...(headline?.kind === 'forecast'
+            ? {
+                accessibilityElementsHidden: true,
+                importantForAccessibility: 'no-hide-descendants',
+              }
+            : { accessible: true, accessibilityLabel: sidesSpoken(top, bottom) })}
         >
           <View style={s.rule} />
           <Text style={s.vsWords} numberOfLines={1}>
@@ -269,8 +292,10 @@ function ReadCard({
           <View style={s.rule} />
         </View>
 
-        {card.forecast === undefined ? null : (
-          <Forecast pct={card.forecast.pct} fold={foldOf(sides) ?? 0} labels={labels} />
+        {headline === undefined ? null : headline.kind === 'vibe' ? (
+          <SocialVibeRow pct={headline.pct} />
+        ) : (
+          <Forecast pct={headline.pct} fold={foldOf(sides) ?? 0} labels={labels} />
         )}
 
         <OverlapGrid overlap={overlap} today={weekdayAt(readAt)} />

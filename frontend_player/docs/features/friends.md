@@ -1,4 +1,4 @@
-# friends — requests, Members' pills, the record's Add friend, Home's FRIEND REQUESTS and ASKED FOR A LEVEL
+# friends — requests, Members' pills, the record's Add friend, Needs your answer's FRIEND REQUESTS and ASKED FOR A LEVEL
 
 The client side of the backend's **Friends** context: a player asks a group-mate to be friends from
 Members or from their record, answers a request on Home, and sees who is a friend on every face.
@@ -452,3 +452,76 @@ or a notice opened included. A tag, not their keys: `discovery` draws this featu
 `reread` is now optional on the ask, cancel and remove hooks, and the round button takes none where
 its surface is a people list. The request card's three exclusive booleans this paragraph flagged for
 #802/#803 were folded into one discriminant by #802 (above).
+
+## FRIEND REQUESTS and ASKED FOR A LEVEL move into Needs your answer (#816)
+
+**Both rows left Home for the sheet the header's envelope opens** ([#816](https://github.com/Raketa02/Raketa/issues/816),
+PRD #810; [ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§1; home refactor 2). They are `FriendRequestsSection` and `LevelAsksSection` now, renamed from
+`…Row`, and the shell's `NeedsYourAnswer` holds them, FRIEND REQUESTS first, each drawing nothing
+while it holds nothing. What the paragraphs above say about _Home: FRIEND REQUESTS · n above Your
+games_ and _ASKED FOR A LEVEL … before Your games_ was true until this one; their reads, writes,
+busy rules and re-reads are unchanged.
+
+- **The tile is wider**: the row frame's `wide` rail, `size.requestCardRatio` (0,83) of the content,
+  measured off mock 2, the next tile peeking and a lone one at the content width. The ask is drawn as
+  the request card (the screens §6.4), so it takes the same width. **Every tile stands as tall as the
+  tallest, its title held to two lines and its buttons at its foot**, so the buttons sit level (Q3).
+- **A request says who and their chip, and no where-line** (Q2): _With you in Kazimierz crew · Padel
+  3,40 ·_, _Invited you to Raketa_, _Found you in the padel ranking_ and the three Home rows' lines are
+  gone, and so is `whereLine` with its words. `proposals` still maps `foundBy`, the group and the one
+  sport, since the server still serves them; nothing here draws them. #818 adds the sender's sport
+  levels (below).
+- **An ask says its title and nothing under it**: _A few questions, and they can add you to a game._
+  and _You're on question 5._ are gone; the button still reads **Carry on** for a run left halfway.
+- **The coral button's start is the shell's to run.** It navigates, and nothing in a sheet reads the
+  navigation (`docs/architecture.md` Part 13), so `useGetAskedLevel` is exported and called beside the
+  sheet; `LevelAsksSection` takes `starting` and an `onStart` that closes the sheet for good and
+  starts. The _level asked_ notice's toast for a start that fails is the shell's to show, as before.
+- **A face still opens the record**, now over the sheet, drawn inside it (`discovery`'s vibe sheet's
+  pattern: iOS drops a native window opened while another is closing).
+
+The walks are rewritten: `friends.test.tsx` (_FRIEND REQUESTS in Needs your answer_: behind the
+envelope, the tile's words and widths, no where-line, answering, the last answer closing the sheet, a
+request arriving while it is open, the record over it) and `levelAsks.test.tsx` (the section, the coral
+button closing the sheet and starting, Not now, and _Get your level on Home_ with and without an ask).
+**Not seen on a device**: both tiles against mock 2, two lines of title, the buttons level across a
+rail of two.
+
+## A friend request names every sport the sender plays (#818)
+
+**The tile reads what the sender plays, under who asks** ([#818](https://github.com/Raketa02/Raketa/issues/818),
+PRD #810; ADR-0205 §1, §10; Q28): _ines.d wants to be your friend_, then _● Padel 3,40 · ● Tennis
+2,90_, then the chip. It is #814's `levels` on each of Home's `friend_requests`, which `proposals`
+maps onto `HomeFriendRequest.levels` — every sport the sender holds a published Level in, **in the
+order served**, the app's sport order, which nothing here re-sorts. A sport this build cannot name is
+dropped, and a server older than #814 sends none, so no line.
+
+- **Each sport is its dot, its name and its Level**, drawn as New in Raketa's tile draws a sport (a
+  `sportDot` before the words), in the muted tiny mono the where-line stood in, tabular as every
+  figure. The `·` between two sports is held to the one before it, so a line that wraps ends in one
+  rather than starting with one (`sportLevelEntries`, a call).
+- **Two lines at most, a sport never split.** The entries wrap whole, and the line is capped at two of
+  its own lines, scaled by the phone's text size (`useWindowDimensions().fontScale`), since React
+  Native scales a text's line height with its size: a larger text setting draws two larger lines,
+  never one and a half. What a third line would hold is not drawn: by the mono's advance, four
+  sports should fit two lines on a 393pt phone, and a narrower one may drop the last (an estimate,
+  not a measurement). `numberOfLines` cannot do it, as the line is a row of dots and words, not one
+  text. A sport too wide for a whole line, at a large text size on a narrow phone, is held to the
+  line's width and ends in an ellipsis rather than running past the tile with its Level cut off.
+- **No Level, no line**: the title and the chip close up, as before #818.
+- **Buttons stay level.** The title, the line and the chip are each held, so the tallest tile has a
+  bound, and #816's frame stands every tile as tall as it with the buttons at its foot.
+- **Spoken**, who asks and the levels are one element, _ines.d wants to be your friend, Padel 3,40,
+  Tennis 2,90_ (`requestTileLabel`, a call), every sport included, those a third line would hold too.
+  The face, the chip and the two buttons keep their own names.
+- **The request's own `sport` and `level` are still mapped and never drawn**: they are an older app's,
+  and `level` is the entry in `levels` for `sport`.
+
+`friends.test.tsx` walks it (_the sport-levels line_): two sports in order, with their dots and mono
+figures; the spoken name; no line without a Level; four sports wrapping, held to two lines; and tiles
+with no line, one and two side by side, the rail stretching them and each one's buttons at its foot.
+The fixtures of every suite that serves Home, a row or a request were brought up to the regenerated
+contract (#812–#815's `total`, `needs_your_answer`, `payments_to_confirm` and `levels`).
+**Not seen on a device**: the line against mock 2's subtitle, the wrap and the cap on a narrow phone
+and at a large text size, the dots' alignment with the mono figures.

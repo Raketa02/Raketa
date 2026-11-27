@@ -17,6 +17,7 @@
  * | `getPaymentsToConfirm` | `GET /players/me/payments-to-confirm` — every refused share of the reader's still waiting for them (#555) |
  * | `postPaymentConfirmation` | `POST /seat-charges/{id}/confirmation` — *I confirmed my payment*: the yes again (#555) |
  * | `getHome` | `GET /home` — the reader's booked games, soonest first, and Home's badge (#542, #556) |
+ * | `postNeedsYourAnswerVisit` | `POST /players/me/needs-your-answer/visit` — Needs your answer went for good, naming the watermark of the read it showed (#815, #819) |
  * | `getBooking` | `GET /bookings/{id}` — one booked game in detail, for a player in it or one offered its open seat (#542, #545) |
  * | `postSeat` | `POST /bookings/{id}/seats` — *I'm in* on a rescue: the seat taken, paid at once (#545) |
  * | `postRescueNo` | `POST /bookings/{id}/no` — a no to a *Seat open* card (#545) |
@@ -188,6 +189,24 @@ export function getHome({ signal }: Cancellable = {}): Promise<Schemas['HomeResp
 }
 
 /**
+ * **Needs your answer went for good** (#815, #819; ADR-0205 §3) — `watermark` is `GET /home`'s
+ * `needs_your_answer.watermark` from the read the sheet was last drawn from, as served: everything
+ * that arrived up to it is seen on every phone. `204`, also for a watermark no later than the last
+ * visit's, which never moves it back — so a repeat is safe. `watermark_in_the_future` (400) for one
+ * past the server's clock, which no read served.
+ */
+export function postNeedsYourAnswerVisit(
+  body: Schemas['NeedsYourAnswerVisitRequest'],
+): Promise<void> {
+  return httpRequest({
+    method: 'POST',
+    path: '/api/v1/players/me/needs-your-answer/visit',
+    body,
+    authenticated: true,
+  });
+}
+
+/**
  * **A booked game in detail**, for a player in it, or for a member its open seat is offered to, who
  * reads it from outside (`rescue`, #545).
  * `booking_not_found` (404) for a booking that does not exist and for one that is neither.
@@ -259,7 +278,7 @@ export function getProposal(
 
 /**
  * **A group's Fill in tab** for one sport (#545) — *Seats to fill*, soonest first, and the tab's
- * badge. *You're In* is the live yeses. `pool_not_found` for no such group and one the reader is not
+ * badge. *You’re in* is the live yeses. `pool_not_found` for no such group and one the reader is not
  * in; `block_state_unavailable` (503) when who fits whom could not be read.
  */
 export function getFillIn(

@@ -46,6 +46,13 @@ that arrow. No ``Forecast``, no ``Split`` and no ``Stakes`` is borrowed from the
 engines: a provider that reached for the type one directory over would be the
 second-spelling trap the contract's own comment names.
 
+**``TagsOnTheCourt`` is read beside it** (#835; ``docs/adr/0207`` §11): the
+Social tags of the people on a For-fun court, as they hold them now, which the
+pairing read works its Social vibe out from (``vibe.py``) — the court's number
+and the reader's rows. Declared here in this context's words rather than
+borrowed from Proposals' ``PlayersTags``: the two contexts read one copy of the
+tags, and neither imports the other.
+
 **``GameClubs`` is the third port consumed here** (#657; ``docs/adr/0195``
 §3): where a booked game's club is, so an attendance tap can be measured against
 it. **The Game does not know its club** — a booking does — so the demand is on
@@ -73,6 +80,7 @@ from app.modules.games.domain.attendance import Turnout
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, LineUp
 from app.modules.games.domain.results import Outcome
+from app.modules.player_profile.domain.social_tags import SocialTag
 
 #: How many results *Last 5* draws. The card's own number, and the only place it
 #: is written on this side of the wire.
@@ -257,6 +265,36 @@ class OpponentVarietyQuery(Protocol):
         it: whether a game was played is folded from the record against a clock,
         and one response's facts are folded against one instant.
         """
+        ...
+
+
+@runtime_checkable
+class PlayedTogetherQuery(Protocol):
+    """*Which of these people have played a game together?* — the pairs, over
+    the whole record (#831; ``docs/adr/0207`` §3).
+
+    **For a set, and answered in pairs**: a For-fun table prefers people who
+    are new faces to each other, so its reader asks about a whole pool at once
+    and needs nothing about any game but who was on its court. **No game id, no
+    sport and no count cross**: two people either have shared an evening or
+    they have not.
+
+    **Played is the aggregate's own word** (``Game.was_played_at``): a game
+    from its entry onward — scored, argued over, or a full court nobody
+    recorded — whatever its kind, a friendly included, since meeting is not
+    evidence about a Level. A game called off, started short, or still ahead
+    put nobody on a court together, and somebody who left a game before it was
+    played was never on its court with anybody (``line_up.players``).
+
+    **Cost.** One substring read for everybody asked, then the streams found:
+    bounded by how many games these people have ever been seated in.
+    """
+
+    async def played_together_among(
+        self, player_ids: Collection[UUID], *, now: Instant
+    ) -> frozenset[frozenset[UUID]]:
+        """Every pair of these people who have been on the court of one game
+        played by ``now`` — a pair being two of them, never anybody else."""
         ...
 
 
@@ -583,6 +621,24 @@ class CourtPairing(Protocol):
         ...
 
 
+@runtime_checkable
+class TagsOnTheCourt(Protocol):
+    """**The Social tags of the people on a court, as they hold them now** —
+    what a booked For-fun game's Social vibe is worked out from on every
+    pairing read, and stored nowhere (``docs/adr/0207`` §2, §11; #835). One
+    question for the whole court, asked only on a For-fun game with every seat
+    filled."""
+
+    async def held_by(
+        self, players: Collection[UUID]
+    ) -> Mapping[UUID, frozenset[SocialTag]]:
+        """Everybody asked is answered: an empty set for a player who holds
+        none, or whose tags have not reached the provider's copy yet. Every tag
+        is answered, the ones that never count at a table included — leaving
+        them out is the vibe's own rule, beside the vocabulary."""
+        ...
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class GameClub:
@@ -701,6 +757,8 @@ __all__ = [
     "GameRepository",
     "OpponentVariety",
     "OpponentVarietyQuery",
+    "PlayedTogetherQuery",
     "PlayerNames",
+    "TagsOnTheCourt",
     "Turnout",
 ]

@@ -27,7 +27,8 @@ Games deck, the fill, rescues, posting and the booked game call:
     forecast and the two side strengths it was read from.
 
 ``v1``
-    The arithmetic: the forecast between two sides and the hours a court shares.
+    The arithmetic: the forecast between two sides, the hours a court shares,
+    and a For-fun table's Social vibe (``docs/adr/0207`` §2, #830).
 
 **Neither the ruleset nor anything here is ever selected by the environment** —
 `local`, `development`, `staging` and `production` run the same numbers

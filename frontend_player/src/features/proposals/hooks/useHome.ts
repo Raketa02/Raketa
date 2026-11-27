@@ -14,10 +14,12 @@ import { useCallback } from 'react';
 
 import { useReaderId } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
+import { useReadFinished } from '@/shared/lib/query-client';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { anySeatToOpen, type FriendsGameInvitation } from '../domain/friendsGame';
+import type { PaymentToConfirm } from '../domain/fill';
+import { anySeatToOpen, invitationWaits, type FriendsGameInvitation } from '../domain/friendsGame';
 import {
   openedToKeep,
   withoutLevelAsksIn,
@@ -39,10 +41,42 @@ import {
 import { proposalKeys } from './proposalKeys';
 import { useDeckClock } from './useDeckClock';
 
+/** Home's one read — what every hook over it observes. */
+const homeRead = {
+  queryKey: proposalKeys.home(),
+  queryFn: ({ signal }: { readonly signal: AbortSignal }) => readHome({ signal }),
+};
+
 export function useHome() {
-  return useQuery<Home, AppError>({
-    queryKey: proposalKeys.home(),
-    queryFn: ({ signal }) => readHome({ signal }),
+  return useQuery<Home, AppError>(homeRead);
+}
+
+/**
+ * **Home's read, set out before Home is drawn** (#874) — the launch's warm-up, during the splash: the
+ * read every hook over Home observes, so Home finds it fresh when it mounts and asks nothing twice.
+ */
+export function prefetchHome(client: QueryClient): Promise<void> {
+  return client.prefetchQuery<Home, AppError>(homeRead);
+}
+
+/**
+ * **Whether Home's one read has finished** (#871) — landed, refused, held for a connection, or failed
+ * once and retrying (`readHasFinished`): what *YOUR GAMES*, the envelope and the trophy's place wait
+ * on before Home reveals them. Read off the cache, so it draws again only as it turns.
+ */
+export function useHomeReadFinished(): boolean {
+  return useReadFinished(proposalKeys.home());
+}
+
+/**
+ * **TO CONFIRM · n** (#817, #819) — the payments the reader has to confirm, off Home's one read:
+ * `undefined` while it is in flight or refused, which draws no section. Selected, so the section
+ * draws again only when its rows move, not on every change to Home.
+ */
+export function useHomePaymentsToConfirm() {
+  return useQuery<Home, AppError, readonly PaymentToConfirm[]>({
+    ...homeRead,
+    select: (home) => home.paymentsToConfirm,
   });
 }
 
@@ -55,35 +89,42 @@ export function useHomeFriendRequests(): readonly HomeFriendRequest[] | undefine
   return useHome().data?.friendRequests;
 }
 
-/** Nothing to draw, one value for every render that says so. */
-const NO_LEVEL_ASKS: readonly HomeLevelAsk[] = [];
-
 /**
  * **ASKED FOR A LEVEL · n** (#765) — the friends' asks for a level waiting on the reader, one per
- * sport, off Home's one read. `undefined` only **while Home has yet to answer**: the row draws
- * nothing then, and nor does Home's *Get your level*, which this row stands in place of for a
- * player rated in nothing (the friends screens §6.4) — so neither is drawn and then swapped for the
- * other. A read refused, or waiting for a connection with nothing held, is **none known**: no row,
- * and *Get your level* is free to say why nothing is happening. The cards are `friends`' to draw and
- * answer; the read is Home's, and so this feature's.
+ * sport, off Home's one read: `undefined` while it is in flight or refused, which draws no section,
+ * as an empty list does. They wait in Needs your answer since #816, where `friends` draws and answers
+ * them; the read is Home's, and so this feature's. Until #816 Home's *Get your level* gave way to
+ * them, and told *not yet read* from *none* here; it no longer reads them (ADR-0205 §4).
  */
 export function useHomeLevelAsks(): readonly HomeLevelAsk[] | undefined {
-  const home = useHome();
-  if (home.data !== undefined) return home.data.levelAsks;
-  return home.isError || home.fetchStatus === 'paused' ? NO_LEVEL_ASKS : undefined;
+  return useHome().data?.levelAsks;
 }
 
 /**
- * **The trophy left of the bell** (#775) — the reader's ranking, off Home's one read: `undefined`
- * only **while Home has yet to answer**; `null` once it has and there is none — no result in any
- * sport — and, as for the level asks, while it is refused or waiting for a connection with nothing
- * held: none known. The trophy is drawn either way, a number only with a place, and Rankings opens on
+ * **The trophy in the header's corner** (#775; right of the bell since #816) — the reader's ranking,
+ * off Home's one read: `undefined` only **while Home has yet to answer**; `null` once it has and
+ * there is none — no result in any sport — and while it is refused or waiting for a connection with
+ * nothing held: none known. The trophy is drawn either way, a number only with a place, and Rankings opens on
  * its sport; it is `rankings`' to draw, and the read is Home's, and so this feature's.
  */
 export function useHomeRanking(): HomeRanking | null | undefined {
   const home = useHome();
-  if (home.data !== undefined) return home.data.ranking ?? null;
-  return home.isError || home.fetchStatus === 'paused' ? null : undefined;
+  return rankingOf(home.data, home.isError || home.fetchStatus === 'paused');
+}
+
+/**
+ * **The trophy's ranking, off the cache** (#874) — `useHomeRanking`'s answer where no hook can ask:
+ * the launch's warm-up, which works out Top 10's opening sport before Home is drawn.
+ */
+export function homeRankingIn(client: QueryClient): HomeRanking | null | undefined {
+  const read = client.getQueryState<Home, AppError>(proposalKeys.home());
+  return rankingOf(read?.data, read?.status === 'error' || read?.fetchStatus === 'paused');
+}
+
+/** The one rule both ask: the read's ranking, none once it is refused or held with nothing read. */
+function rankingOf(home: Home | undefined, unanswered: boolean): HomeRanking | null | undefined {
+  if (home !== undefined) return home.ranking ?? null;
+  return unanswered ? null : undefined;
 }
 
 /**
@@ -118,10 +159,33 @@ export function useHomeFriendsGames(): {
 }
 
 /**
- * **Home's two reads, read again** — the games, the badge with them, and *TO CONFIRM* above them
- * (#556, #625): what a notice arriving changes. *Confirm your payment by 14:40 to keep your seat*
- * puts a row there, and *Your time to pay ran out* takes the time off it, as the games' lines move
- * with every other notice.
+ * **FRIENDS GAME · n, as drawn** (#759, #817) — the invitations still waiting on the read's clock,
+ * which ticks while one does: a card whose time runs out leaves at that instant
+ * (`invitationWaits`), as the server would no longer list it. `undefined` while Home's read is in
+ * flight or refused. Needs your answer's owner reads them once, counts them and hands them to the
+ * section, so the envelope never opens on a section that has nothing left to draw.
+ */
+export interface FriendsGamesWaiting {
+  readonly waiting: readonly FriendsGameInvitation[] | undefined;
+  /** Now, on the read's clock — what each card's countdown and faces are drawn at. */
+  readonly now: number;
+}
+
+export function useFriendsGamesWaiting(): FriendsGamesWaiting {
+  const { invitations, readAt, receivedAt } = useHomeFriendsGames();
+  const now = useReadClock(readAt, receivedAt, (invitations?.length ?? 0) > 0);
+  return {
+    waiting: invitations?.filter((one) => invitationWaits(one.friendsGame, now)),
+    now,
+  };
+}
+
+/**
+ * **Home's two reads, read again** — Home's, with the games, the badge and all of Needs your
+ * answer, *TO CONFIRM* among it since #819; and the payments to confirm' own, which You › Payments
+ * and a booked game draw (#556, #625, #817): what a notice arriving changes. *Confirm your payment
+ * by 14:40 to keep your seat* puts a row there, and *Your time to pay ran out* takes the time off
+ * it, as the games' lines move with every other notice.
  */
 export function rereadHome(client: QueryClient) {
   // The live yeses too: a game a notice says filled may have been filled by somebody else's yes, and

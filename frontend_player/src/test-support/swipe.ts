@@ -1,5 +1,5 @@
 /**
- * A finger on a swipe row, as a test can move it.
+ * A finger on a swipe row, as a test can move it — and, since #816, on a sheet's head (`pullDown`).
  *
  * Jest does no hit testing and moves no finger, so a swipe is driven at the responder handlers
  * the way `RadiusSlider.test.tsx` drives the slider's — but **not through `fireEvent`**, and the
@@ -53,16 +53,20 @@ export function gestureSurfaceOf(card: Node): Node | undefined {
 let tick = 0;
 
 /**
- * One finger, having travelled from `from` to `to` on the page.
+ * One finger, having travelled from `from` to `to` on the page, over `elapsed` milliseconds.
  *
  * `touchHistory` is what `PanResponder` reads its `dx` and `dy` from — the difference between the
  * touch's previous and current page positions — and `mostRecentTimeStamp` has to advance on every
- * move or the responder treats the move as one it has already accounted for.
+ * move or the responder treats the move as one it has already accounted for. **The time between two
+ * moves is what it reads a speed from** (`vy`, points per millisecond), so a pull that a speed
+ * decides says how long it took.
  */
-function finger(from: Point, to: Point) {
-  tick += 1;
+function finger(from: Point, to: Point, elapsed = 1) {
+  tick += elapsed;
   return {
     nativeEvent: {
+      // The touch's own clock, as a device stamps every touch event.
+      timestamp: tick,
       pageX: to[0],
       pageY: to[1],
       touches: [{ pageX: to[0], pageY: to[1] }],
@@ -77,7 +81,7 @@ function finger(from: Point, to: Point) {
           currentTimeStamp: tick,
           previousPageX: from[0],
           previousPageY: from[1],
-          previousTimeStamp: tick - 1,
+          previousTimeStamp: tick - elapsed,
           startPageX: from[0],
           startPageY: from[1],
           startTimeStamp: 0,
@@ -174,6 +178,37 @@ export function release(card: Node): void {
 
 /** Where each finger `dragTo` has not yet lifted is resting, so `release` lifts it from there. */
 const held = new Map<Node, Point>();
+
+/**
+ * **A pull down on a sheet's head** (9.1 as amended by #816): down, the move that claims it (the
+ * sheet's intent distance), `travel` further down over `ms` milliseconds, and up.
+ *
+ * `ms` is what makes it a pull or a flick: a second for a deliberate pull, a few milliseconds for a
+ * flick. `held` is how long the finger rests where the travel left it before it lifts. As with
+ * `swipe`, `travel` is what the finger does after the head has claimed it.
+ *
+ * @returns whether the head claimed it. A sheet that does not close on a swipe is left untouched.
+ */
+export function pullDown(
+  node: Node,
+  travel: number,
+  { ms = 1000, held = 1 }: { ms?: number; held?: number } = {},
+): boolean {
+  const surface = gestureSurfaceOf(node);
+  if (surface === undefined) return false;
+
+  const claimed: Point = [START[0], START[1] + theme.size.sheetSwipe.intent];
+  const end: Point = [START[0], claimed[1] + travel];
+
+  deliver(surface, 'onStartShouldSetResponderCapture', finger(START, START));
+  deliver(surface, 'onMoveShouldSetResponderCapture', finger(START, claimed));
+  if (deliver(surface, 'onMoveShouldSetResponder', finger(START, claimed)) !== true) return false;
+
+  deliver(surface, 'onResponderGrant', finger(START, claimed));
+  deliver(surface, 'onResponderMove', finger(claimed, end, ms));
+  deliver(surface, 'onResponderRelease', finger(end, end, held));
+  return true;
+}
 
 /**
  * A whole swipe on `card`: down, the move that claims it, the travel that counts, and up.

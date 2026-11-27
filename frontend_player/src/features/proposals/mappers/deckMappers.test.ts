@@ -13,6 +13,7 @@ import {
   youTile,
   ZOFIA,
 } from '@/test-support/groupDeck';
+import type { Wire } from '@/test-support/transport';
 
 import { toDeckCard, toGroupDeck, toWireKind } from './deckMappers';
 
@@ -62,7 +63,10 @@ describe('a card', () => {
         club: { id: 'gone', name: null },
         sides: {
           yours: [youTile()],
-          theirs: [ANIA({ nickname: null, level: null }), EWA({ photo_url: 'https://p/e.jpg' })],
+          theirs: [
+            ANIA({ nickname: null, level: null }),
+            EWA({ photo_id: 'ph-e', photo_url: 'https://p/e.jpg' }),
+          ],
         },
         forecast: null,
       }),
@@ -73,6 +77,8 @@ describe('a card', () => {
     const [ania, ewa] = read?.sides.theirs ?? [];
     expect(ania).toEqual({ playerId: ANIA().player_id, isYou: false, isIn: false });
     expect(ewa?.photoUrl).toBe('https://p/e.jpg');
+    // Which photograph the link draws, so a link minted again for it is not a change (drawnTheSame).
+    expect(ewa?.photoId).toBe('ph-e');
     expect(read?.sides.yours[0]?.isYou).toBe(true);
   });
 
@@ -83,6 +89,21 @@ describe('a card', () => {
     const [, kuba] = read?.sides.yours ?? [];
     expect(kuba?.friend).toBe(true);
     for (const other of read?.sides.theirs ?? []) expect(other).not.toHaveProperty('friend');
+  });
+
+  it('reads a For-fun card’s Social vibe, and nothing where the server sent none (#838)', () => {
+    const fun = toDeckCard(deckCard({ kind: 'FOR_FUN', forecast: null, vibe: { pct: 82 } }));
+    expect(fun?.vibe).toEqual({ pct: 82 });
+    expect(fun).not.toHaveProperty('forecast');
+    expect(toDeckCard(deckCard({ vibe: null }))).not.toHaveProperty('vibe');
+  });
+
+  /** A server from before #830 sends no `vibe` at all: the card is still drawn, with no vibe. */
+  it('reads no vibe from an older server’s card, rather than failing the deck', () => {
+    const { vibe: _unsent, ...older } = deckCard();
+    const card = toDeckCard(older as unknown as Wire['DeckCardSchema']);
+    expect(card).not.toHaveProperty('vibe');
+    expect(card).toMatchObject({ kind: 'competitive' });
   });
 
   it('reads a challenge whose poster withdrew as nobody named', () => {
@@ -127,13 +148,37 @@ describe('the deck', () => {
       { kind: 'competitive', count: 2 },
       { kind: 'forFun', count: 0 },
     ]);
-    expect(read.gamesBadge).toBe(1);
+    expect(read.inCardIds).toEqual([first.proposal_id]);
     expect(read.gamesPerWeek).toBe(2);
     expect(read.cappedWeeks).toEqual([{ startsOn: '2026-09-28', booked: 2 }]);
     expect(read.cards.map((card) => card.proposalId)).toEqual([
       first.proposal_id,
       second.proposal_id,
     ]);
+  });
+
+  // #850: the app counts the ids, across both kinds, and the server's number stays on the wire for
+  // older installed apps — never read, so a number that disagrees with the ids changes nothing.
+  it('reads the badge’s ids across both kinds, and never the server’s count', () => {
+    const forFun = 'c0000000-0000-4000-8000-0000000000f1';
+    const read = toGroupDeck(groupDeck({ in_card_ids: [forFun], games_badge: 4 }));
+
+    expect(read.inCardIds).toEqual([forFun]);
+    expect(read).not.toHaveProperty('gamesBadge');
+  });
+
+  // #850's review: a card this build cannot draw is still counted, so a look must be able to see it.
+  it('keeps the id of every card dealt, the ones it cannot draw too', () => {
+    const drawn = deckCard({ in_count: 1 });
+    const undrawable = deckCard({
+      in_count: 1,
+      overlap: { grade: 'HIGH', cells: overlapCells(), game: { day: 0, range: 'EVENING' } },
+    });
+    const read = toGroupDeck(groupDeck({ cards: [drawn, undrawable] }));
+
+    expect(read.cards.map((card) => card.proposalId)).toEqual([drawn.proposal_id]);
+    expect(read.dealtIds).toEqual([drawn.proposal_id, undrawable.proposal_id]);
+    expect(read.inCardIds).toEqual([drawn.proposal_id, undrawable.proposal_id]);
   });
 
   it('writes the kind back in the wire’s spelling', () => {

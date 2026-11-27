@@ -8,10 +8,15 @@
  *  -> wire focusManager / onlineManager       <- here
  *  -> read credentials from SecureStore       <- here, via restoreSession
  *  -> restore + validate the session          <- here
+ *  -> start warming Home                      <- here, not awaited (#874)
  *  -> start reading the install referrer       <- here, not awaited (#756)
  *  -> load fonts                              <- here
- *  -> hide the splash screen                  <- BootstrapGate
- *  -> render
+ *  -> render, underneath the drawn splash     <- LaunchGate
+ *
+ * **It runs behind the drawn splash, and nothing waits on it to show one** (ADR-0209 §2). It no
+ * longer ends by hiding a native splash: the launch gate lets the OS launch window go on the drawn
+ * splash's first layout, before this has done anything, and fades the splash when the first screen
+ * is ready.
  *
  * Only the steps whose code exists are implemented; the rest are inserted here as their
  * slices land, so there is never a second place that runs work at launch.
@@ -44,12 +49,23 @@ export interface BootstrapSteps {
    */
   readonly wireCredentials: () => void;
   /**
-   * Reads the keychain and asks the server whether what it found is still a session.
+   * Reads the keychain and asks the server whether what it found is still a session — unless
+   * the phone already knows it is offline, as the online manager believes once it has the first
+   * answer `wirePlatformManagers` asked for (ADR-0209 §4). So that step stays before this one.
    *
    * Supplied by the root layout rather than defaulted here: it belongs to the auth
    * feature, and `shared/` may never import a feature.
    */
   readonly restoreSession: () => Promise<void>;
+  /**
+   * **Starts** reading what Home draws, so a cold open on a normal connection fades onto a Home that
+   * is already whole (#874; ADR-0209 §2, amended 2026-11-24). Supplied by the root layout — Home is
+   * the shell's, and its reads are its features' — and **never awaited**: the splash waits on no
+   * read. After the session, because the account it decides from is the one session restore left
+   * in the cache: only an account headed for the tabs is warmed, and never on a phone that already
+   * knows it is offline. It never throws.
+   */
+  readonly warmHome: () => void;
   /**
    * **Starts** reading the link an Android install carried, once on the app's first launch, and
    * holds it as if it had been tapped (#756). Supplied by the root layout — links are a feature's —
@@ -62,7 +78,7 @@ export interface BootstrapSteps {
 
 /**
  * The steps `shared/` can supply on its own. The root layout spreads this and adds the
- * three that have to come from a feature.
+ * four that have to come from a feature.
  */
 export const sharedBootstrapSteps = {
   validateConfig: loadEnv,
@@ -73,7 +89,7 @@ export const sharedBootstrapSteps = {
   loadFonts,
 } as const satisfies Omit<
   BootstrapSteps,
-  'restoreSession' | 'wireCredentials' | 'readInstallReferrer'
+  'restoreSession' | 'wireCredentials' | 'warmHome' | 'readInstallReferrer'
 >;
 
 export async function bootstrapApp(steps: BootstrapSteps): Promise<void> {
@@ -85,6 +101,10 @@ export async function bootstrapApp(steps: BootstrapSteps): Promise<void> {
   // that painted the unauthenticated tree and then corrected itself is the flash the
   // whole sequence exists to prevent.
   await steps.restoreSession();
+
+  // After the session, which has cached the account the warm-up decides from. Started, never
+  // awaited: the splash is held by nothing a read does.
+  steps.warmHome();
 
   // After the session, so a link it holds is held against the session the launch settled on.
   steps.readInstallReferrer();

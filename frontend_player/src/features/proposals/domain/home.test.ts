@@ -19,6 +19,8 @@ import {
   shareAt,
   shownStatus,
   stakeOnTheDetails,
+  newCountAfter,
+  watermarkShown,
   withoutLevelAsksIn,
   type BookedMoney,
   type Home,
@@ -779,6 +781,8 @@ describe('withoutLevelAsksIn — a level got ends its sport’s card (#765)', ()
     games: [],
     friendRequests: [],
     friendsGames: [],
+    paymentsToConfirm: [],
+    needsYourAnswer: { newCount: 0, watermark: '2026-10-01T07:00:00.000Z' },
     levelAsks: [
       { sport: 'padel', askers: [{ playerId: 'p-tomek', nickname: 'tomek.k' }] },
       { sport: 'squash', askers: [{ playerId: 'p-kuba', nickname: 'kuba.w' }] },
@@ -793,5 +797,70 @@ describe('withoutLevelAsksIn — a level got ends its sport’s card (#765)', ()
 
   it('is the same Home when no card stood in those sports', () => {
     expect(withoutLevelAsksIn(home, ['tennis'])).toBe(home);
+  });
+});
+
+/**
+ * **Which watermark a closing sheet names** (#819, ADR-0205 §3): the newest read the sheet was shown
+ * on — open, never covered by a record or a fill's sheet, where a read lands unseen.
+ */
+describe('watermarkShown — what a close says was seen (#819)', () => {
+  const W1 = '2026-10-01T07:00:00.120Z';
+  const W2 = '2026-10-01T07:40:00.450Z';
+
+  it('moves to each read the open sheet is shown on', () => {
+    expect(watermarkShown(undefined, true, W1)).toBe(W1);
+    expect(watermarkShown(W1, true, W2)).toBe(W2);
+  });
+
+  it('keeps what it held while the sheet is covered — under a record, a fill’s sheet, It’s a game!', () => {
+    expect(watermarkShown(W1, false, W2)).toBe(W1);
+    expect(watermarkShown(undefined, false, W2)).toBeUndefined();
+  });
+
+  /** The last answer's read holds nothing, so the close names the read that held the answer. */
+  it('keeps what it held through a read with nothing waiting', () => {
+    expect(watermarkShown(W1, true, undefined)).toBe(W1);
+  });
+});
+
+/**
+ * **The envelope's badge after this phone's visits** (#819): nothing new in a read no later than a
+ * visit sent — on its way or recorded — and the server's count in one newer than all of them.
+ */
+describe('newCountAfter — the badge gone at the close, whatever read lands first (#819)', () => {
+  const news = (newCount: number, watermark?: string) => ({
+    newCount,
+    ...(watermark === undefined ? {} : { watermark }),
+  });
+
+  it('is the server’s count before any visit', () => {
+    expect(newCountAfter(news(2, '2026-10-01T07:40:00.450Z'), [])).toBe(2);
+  });
+
+  it('is nothing for a read whose newest arrival a visit covers — at or before it', () => {
+    expect(newCountAfter(news(2, '2026-10-01T07:40:00.450Z'), ['2026-10-01T07:40:00.450Z'])).toBe(
+      0,
+    );
+    expect(newCountAfter(news(2, '2026-10-01T07:00:00Z'), ['2026-10-01T07:40:00.450Z'])).toBe(0);
+  });
+
+  /** Compared to the millisecond, as the route compares them, however each instant is spelled. */
+  it('compares instants, not their spelling', () => {
+    expect(newCountAfter(news(1, '2026-10-01T07:40:00Z'), ['2026-10-01T07:40:00.000Z'])).toBe(0);
+    expect(newCountAfter(news(1, '2026-10-01T09:40:00+02:00'), ['2026-10-01T07:40:00Z'])).toBe(0);
+  });
+
+  it('is the server’s count for a read with something newer than every visit', () => {
+    expect(
+      newCountAfter(news(1, '2026-10-01T07:50:00Z'), [
+        '2026-10-01T07:00:00Z',
+        '2026-10-01T07:40:00.450Z',
+      ]),
+    ).toBe(1);
+  });
+
+  it('is the server’s count while nothing waits', () => {
+    expect(newCountAfter(news(0), ['2026-10-01T07:40:00.450Z'])).toBe(0);
   });
 });

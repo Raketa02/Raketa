@@ -134,6 +134,8 @@ export function deckCard(extra: Partial<Wire['DeckCardSchema']> = {}): Wire['Dec
     no_free_cancellation: false,
     sides: { yours: [youTile(), ZOFIA()], theirs: [ANIA(), EWA()] },
     forecast: { pct: 87, provisional: false },
+    // A competitive card's — a For-fun card sends a vibe and no forecast (#830).
+    vibe: null,
     overlap: {
       grade: 'SLIM',
       cells: overlapCells({ '6:AFTERNOON': 'BRIGHT', '5:EVENING': 'DIM' }),
@@ -199,9 +201,37 @@ export function proposalDetails(
     payment_due_by: null,
     time_to: null,
     sides: card.sides,
-    forecast: card.forecast,
+    forecast: detailsForecast(card),
+    // A suite that walks the stakes or the Social vibe card serves them (#833).
+    at_stake: null,
+    vibe: null,
     overlap: card.overlap,
     ...extra,
+  };
+}
+
+/**
+ * **The card's forecast as the details read it** (#833): the card's figure, with the two side
+ * strengths beside it — here each side's mean tile Level (the engine's are its own; a fixture's
+ * need only agree with the tiles) — and the gap between them, subtracted unrounded as the engine
+ * does. None where the server would send none: For fun, an empty side, or somebody unrated.
+ */
+function detailsForecast(card: Wire['DeckCardSchema']): Wire['DetailsForecastSchema'] | null {
+  if (card.forecast === null) return null;
+  const strength = (tiles: readonly Tile[]): number | undefined => {
+    const levels = tiles.map((one) => one.level);
+    if (levels.length === 0 || levels.some((level) => level === null)) return undefined;
+    return (levels as readonly number[]).reduce((sum, level) => sum + level, 0) / levels.length;
+  };
+  const yours = strength(card.sides.yours);
+  const theirs = strength(card.sides.theirs);
+  if (yours === undefined || theirs === undefined) return null;
+  const hundredths = (value: number) => Math.round(value * 100) / 100;
+  return {
+    ...card.forecast,
+    your_side: hundredths(yours),
+    their_side: hundredths(theirs),
+    gap: hundredths(yours - theirs),
   };
 }
 
@@ -218,6 +248,15 @@ export function withYourYes(
     sides: { yours: mark(details.sides.yours), theirs: mark(details.sides.theirs) },
   };
 }
+
+/**
+ * **The dark game card on a game's details** — the status, the tiles, the facts and, in its foot,
+ * what the reader may do now (#836). A suite asks `within` it that an action is the card's.
+ */
+export const DETAILS_CARD = 'game-details-card';
+
+/** **A game's details, the screen** — what a suite walks in reading order, the deck behind left out. */
+export const DETAILS_SCREEN = 'game-details';
 
 /** Serve a game's details — fixed, or read off the suite's own state at each request. */
 export function stubProposal(
@@ -324,6 +363,9 @@ export function groupDeck(
   extra: Partial<Wire['GroupDeckResponse']> = {},
 ): Wire['GroupDeckResponse'] {
   const cards = extra.cards ?? [];
+  // The cards the badge counts, by id (#846): this deck's own, since a suite deals one segment —
+  // `bothKinds` deals two.
+  const inCardIds = extra.in_card_ids ?? somebodyIn(cards);
   return {
     pool_id: 'a0000000-0000-4000-8000-000000000011',
     sport: 'PADEL',
@@ -332,12 +374,50 @@ export function groupDeck(
       { kind: 'COMPETITIVE', count: cards.filter((card) => card.kind === 'COMPETITIVE').length },
       { kind: 'FOR_FUN', count: cards.filter((card) => card.kind === 'FOR_FUN').length },
     ],
-    games_badge: cards.filter((card) => card.in_count > 0).length,
+    // Kept for older installed apps, always the ids' number — and never read since #850.
+    games_badge: inCardIds.length,
+    in_card_ids: inCardIds,
     games_per_week: 2,
     capped_weeks: [],
     cards,
     ...extra,
   };
+}
+
+/**
+ * The ids of the cards with somebody In with the reader, in the order dealt — never a `SEAT_OPEN`
+ * card's, whose players have paid and are not In (#846).
+ */
+function somebodyIn(cards: readonly Wire['DeckCardSchema'][]): string[] {
+  return cards
+    .filter((card) => card.in_count > 0 && card.type !== 'SEAT_OPEN')
+    .map((card) => card.proposal_id);
+}
+
+/**
+ * **A deck that deals both kinds, as the server does** — each kind's read deals its own cards, and
+ * every read carries what the server counts across both: the switch's two counts, and the cards
+ * with somebody In (#846), Competitive first, so the ids are the same whichever kind is read. Hand
+ * it to `stubGroupDeck`.
+ */
+export function bothKinds({
+  competitive = [],
+  forFun = [],
+}: {
+  readonly competitive?: readonly Wire['DeckCardSchema'][];
+  readonly forFun?: readonly Wire['DeckCardSchema'][];
+}): (kind: Wire['SearchMode'] | undefined) => Wire['GroupDeckResponse'] {
+  const inCardIds = [...somebodyIn(competitive), ...somebodyIn(forFun)];
+  return (kind) =>
+    groupDeck({
+      kind: kind ?? 'COMPETITIVE',
+      segments: [
+        { kind: 'COMPETITIVE', count: competitive.length },
+        { kind: 'FOR_FUN', count: forFun.length },
+      ],
+      cards: [...(kind === 'FOR_FUN' ? forFun : competitive)],
+      in_card_ids: inCardIds,
+    });
 }
 
 /**

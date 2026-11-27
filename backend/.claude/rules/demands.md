@@ -97,7 +97,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `bookings`; it went with desk check-in (#651). **Its second row now is `GameClubs`**
   (#657): where a booked game's club is — its name and map point, and how far a position is
   from it in great-circle metres — signed by `bookings` (`BookedGameClubs`), so an attendance
-  tap is measured against the place the game is played.
+  tap is measured against the place the game is played. **Its third is `TagsOnTheCourt`**
+  (#835, below): the Social tags on a For-fun court, signed over Discovery's player directory.
   **The twelfth, `bookings_demands.py`, is what Bookings publishes** (#544), beside its
   consumer register as `games_demands.py` stands beside `game_demands.py`: who kept the booked
   games they held a seat on (`BookingHistoryQuery`), *keeps plans*' input.
@@ -155,6 +156,39 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   **A request from *Same vibe* has a row in two registers** (#795): Proposals'
   `TagsInCommon` and Notifications' `TagsInCommon` — each context's own port, each signed over
   the Player profile (`ProfileTagsInCommon`) — how many Social tags two players hold today.
+  **A For-fun table's Social vibe has a row in the tenth** (#830; ADR-0207 §11):
+  Proposals' `PlayersTags`, *these players' tags now*, signed by `DirectoryPlayersTags` over
+  Discovery's `PlayerDirectory.tags_of_each` — the player directory's copy, one statement for
+  everybody asked — and contracted with the tags committed over HTTP and the outbox drained,
+  as the directory hears them (💘 included: dropping it is the vibe's rule, not the port's).
+  **A competitive game's details add a row to the tenth** (#833; ADR-0207 §6): Proposals'
+  **`ReadersStakes`**, what a counted result would do to the reader's Level on the sides drawn,
+  signed by `MatcherReadersStakes` over the booked game's own stakes function
+  (`at_stake_on_the_court`, through the matcher's `AtStakeQuery`), contracted against
+  `AtStakeQuery`'s court read whatever the sides' order, and absent with nothing to move or to
+  price against.
+  **Building a For-fun table adds a row to two registers** (#831; ADR-0207 §3, §11): Proposals'
+  **`PlayedWith`**, *who already knows whom* — the pairs of one of `players` and one of `among`
+  who have played a game together or are friends — signed by `GamesAndFriendsPlayedWith` over
+  Games' and Friends' own reads, contracted with a friendly played through the Game's own
+  repository, friendships through `friends_world.py`, a request and a friendship ended that
+  make nobody known, and a game still ahead that makes nobody known; and, on `games_demands.py`,
+  the **seventh** published port, **`PlayedTogetherQuery`** (`EventSourcedGameHistory`, a fourth
+  port on that class): every pair of the people asked on one court **played** by `now`
+  (`Game.was_played_at`), either kind, never a stranger on the court, never a game ahead, called
+  off or started short, and never a leaver. **Friends gets no row and no method**: Friends
+  answers nothing about two other people (`friends.md`), so the adapter asks
+  `ReadRelations.friends_among` from each person's own side.
+  **A booked For-fun game's Social vibe adds a third row to `game_demands.py`** (#835;
+  ADR-0207 §11 — *Games declares its own tags port*): **`TagsOnTheCourt`**, the Social tags
+  of the people on a court as they hold them now (`held_by`), signed by
+  `DirectoryTagsOnTheCourt` (`games/infrastructure/directory_tags.py`) over Discovery's
+  `PlayerDirectory.tags_of_each` — the copy and the one statement Proposals' `PlayersTags`
+  reads, so a card and its booked game read one tag set — and contracted as `PlayersTags` is:
+  the tags committed over HTTP and the outbox drained, 💘 included, everybody asked answered
+  (none for an account holding none or unknown), and a tag edit read after its delivery. A
+  second port over the same read rather than a row naming Proposals' type: each consumer
+  declares its demand in its own words, and `games` imports no Proposals type.
   **A row carries a builder, and not always over a bare session.** Most build over a
   session; `payments_demands.py`'s and `push_demands.py`'s build over the settings, and
   `general_order_demands.py`'s over a Redis client.

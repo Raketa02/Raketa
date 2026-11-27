@@ -21,11 +21,16 @@ import {
 
 import { paymentKeys } from './paymentKeys';
 
-export function usePaymentMethod() {
-  return useQuery<PaymentMethodStanding, AppError>({
+/** The reader's saved method — the read, as its observers ask it and a screen reads it ahead. */
+export function paymentMethodQuery() {
+  return {
     queryKey: paymentKeys.current(),
-    queryFn: ({ signal }) => readPaymentMethod({ signal }),
-  });
+    queryFn: ({ signal }: { signal: AbortSignal }) => readPaymentMethod({ signal }),
+  };
+}
+
+export function usePaymentMethod() {
+  return useQuery<PaymentMethodStanding, AppError>(paymentMethodQuery());
 }
 
 /**

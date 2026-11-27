@@ -30,6 +30,9 @@ EXPECTED_GROUPS: list[tuple[str, list[str]]] = [
             "SETTLES_UP_ON_THE_SPOT",
             "BOOKS_THE_NEXT_ONE",
             "SHARES_A_LIFT",
+            "STAYS_FOR_A_COFFEE",
+            "UP_FOR_A_BITE_AFTER",
+            "KEEPS_IN_TOUCH",
         ],
     ),
     (
@@ -41,6 +44,10 @@ EXPECTED_GROUPS: list[tuple[str, list[str]]] = [
             "GENEROUS_ON_LINE_CALLS",
             "QUIET_AND_FOCUSED",
             "WARMS_UP_PROPERLY",
+            "HAPPY_TO_SWAP_PARTNERS",
+            "PATIENT_WITH_BEGINNERS",
+            "HAPPY_TO_SHARE_TIPS",
+            "BRINGS_THE_ENERGY",
         ],
     ),
     (
@@ -53,6 +60,7 @@ EXPECTED_GROUPS: list[tuple[str, list[str]]] = [
             "HERE_FOR_A_REGULAR_GAME",
             "HERE_TO_GET_BACK_INTO_IT",
             "OPEN_TO_MEET_SOMEONE",
+            "NEW_IN_TOWN",
         ],
     ),
 ]
@@ -71,14 +79,14 @@ async def test_the_vocabulary_is_served_grouped_and_in_order(client):
 
 
 @pytest.mark.asyncio
-async def test_nineteen_tags_are_served(client):
+async def test_twenty_seven_tags_are_served(client):
     resp = await client.get(OPTIONS_PATH)
     tags = [
         tag["id"] for group in resp.json()["social_tag_groups"] for tag in group["tags"]
     ]
 
-    assert len(tags) == 19
-    assert len(set(tags)) == 19
+    assert len(tags) == 27
+    assert len(set(tags)) == 27
 
 
 @pytest.mark.asyncio
@@ -101,7 +109,7 @@ async def test_the_social_tag_floor_and_ceiling_are_served(client):
 
     assert resp.json()["social_tag_selection"] == {
         "minimum_tags": 2,
-        "maximum_tags": 6,
+        "maximum_tags": 8,
     }
 
 

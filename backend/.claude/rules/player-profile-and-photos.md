@@ -145,3 +145,23 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   lookups. Measured on the busy seed deck: signing took a group's page from 52 to 20 ms and
   the deck read 160 → 118–137 ms; the lookup cut the overlap's share of the deck fivefold
   under cProfile (123 → 24 ms) and the read to 98 ms.
+- **The Social tag vocabulary is 27 ids, and a player holds 2 to 8**
+  ([ADR-0207](../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §7, #829). `domain/social_tags.py` is its one home, and its docstring is the vocabulary's record:
+  why each id is about the game, and the ones struck. Eight were **appended**, each at the end of
+  its group (`STAYS_FOR_A_COFFEE`, `UP_FOR_A_BITE_AFTER`, `KEEPS_IN_TOUCH`;
+  `HAPPY_TO_SWAP_PARTNERS`, `PATIENT_WITH_BEGINNERS`, `HAPPY_TO_SHARE_TIPS`, `BRINGS_THE_ENERGY`;
+  `NEW_IN_TOWN`), the one change the vocabulary allows: an id is stored for ever, so nothing
+  moves, nothing is renamed, and a retired tag is hidden and still honoured. **The tripwire against tags about the person** (`tests/unit/test_social_tag_vocabulary.py`) was
+  not touched to admit them, and must never be. **`SOCIAL_TAG_SELECTION_BOUNDS` is 2–8**
+  (was 2–6), served at `GET /player-profile/options` and re-checked by `chosen` on both writes,
+  the commit and `PUT /players/me/social-tags`, under `social_tag_selection_out_of_bounds`; a
+  stream's selection is folded by `recorded` and never re-counted, so a six recorded before
+  still replays. **Which tags don't count at a table is a constant beside the vocabulary**
+  (ADR-0207 §2, #830): `UNCOUNTED_SOCIAL_TAGS` — 💘 `OPEN_TO_MEET_SOMEONE` alone — and
+  `counted(tags)`, which every context asking the Match Fit engine for a Social vibe calls
+  first, so they all drop the same ones; the tag is still held and shown everywhere.
+  **The seed's cohort draws from all twenty-seven, up to eight** (#832): the redraw moved
+  every member's tags and nothing else in `cohort.json`, Same vibe's seed picked her last
+  three tags and its two names again, and a store seeded before it is given the new draw
+  through *Edit tags*' own use case (`seeds.md`).

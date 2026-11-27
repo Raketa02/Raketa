@@ -1,7 +1,8 @@
 /**
- * **Every sentence a group's Fill in tab composes from a value** — the sections' heads, a row's
- * title and subtitle, and each row spoken ([#557](https://github.com/Raketa02/Raketa/issues/557);
- * the screens A3; mocks 11–13). The fixed words are `fillInCopy.ts`.
+ * **Every sentence a group's Fill in and You’re in tabs compose from a value** — a row's title and
+ * subtitle, and each row spoken ([#557](https://github.com/Raketa02/Raketa/issues/557), split by
+ * #847, which took the two sections' heads away; the screens A3; mocks 12–13). The fixed words are
+ * `fillInCopy.ts`.
  *
  * A row names its game as the court block does — *Saturday*, *Tomorrow*, a weekday with its date a
  * week out (`gameDayWords`) — and a moment as the money line does, *Fri 16:00*: every day and hour is
@@ -24,16 +25,6 @@ const COPY = FILL_IN_COPY;
 
 /** A drawn line's parts aloud: the mocks' dots are commas to a listener. */
 const SPOKEN_JOIN = ', ';
-
-/** *Seats to fill · 1* */
-export function seatsToFillHeader(count: number): string {
-  return `${COPY.seatsToFill}${LINE_JOIN}${count}`;
-}
-
-/** *You're In · 1* */
-export function youreInHeader(count: number): string {
-  return `${COPY.youreIn}${LINE_JOIN}${count}`;
-}
 
 /** *Padel · Saturday 16:00*, and *· friendly* after a For fun game's. */
 export function rowTitle(
@@ -77,7 +68,7 @@ export function seatRowLabel(row: SeatToFill, day: GameDay | undefined): string 
   ].join(SPOKEN_JOIN);
 }
 
-/** **A You're In row's door, spoken** — *Padel · Saturday 15:00, Bonarka Arena, book by Sat 13:00*. */
+/** **A You’re in row's door, spoken** — *Padel · Saturday 15:00, Bonarka Arena, book by Sat 13:00*. */
 export function yesRowLabel(yes: LiveYes, day: GameDay | undefined): string {
   return [rowTitle(yes, day), clubName(yes), yesWhen(yes)].join(SPOKEN_JOIN);
 }

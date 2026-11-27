@@ -52,6 +52,7 @@ from app.kernel import Instant, Sport
 from app.modules.discovery.application.new_in_raketa import JoinerCard
 from app.modules.discovery.domain.new_in_raketa import ON_THE_ROW
 from app.modules.discovery.domain.relation import Relation
+from app.modules.discovery.domain.totals import capped
 from app.modules.friends.application.commands import AnswerCommand, AskCommand
 from app.modules.friends.domain.friendship import Where
 from app.modules.friends.domain.relation import FriendRelation, RequestOrigin
@@ -277,9 +278,10 @@ async def assert_new_in_raketa(
     clock = FixedClock(at=now)
     async with session_factory() as session:
         her = await _her(session)
-        row = await build_read_new_in_raketa(
+        read = await build_read_new_in_raketa(
             session, settings=settings, clock=clock
         ).execute(her)
+        row = read.cards
         everyone: list[JoinerCard] = []
         page = await build_read_new_in_raketa_page(
             session, settings=settings, clock=clock
@@ -308,6 +310,11 @@ async def assert_new_in_raketa(
         raise RuntimeError(
             f"{len(listed)} joiners in See all and only {len(row)} on her row"
         )
+    if read.total != capped(len(listed)):
+        raise RuntimeError(
+            f"her New in Raketa line counts {read.total} and See all lists "
+            f"{len(listed)}"
+        )
     if seeded.created:
         expected = {
             JOINED_TODAY: Relation.NONE,
@@ -326,8 +333,9 @@ async def assert_new_in_raketa(
         if seeded.ids[PLAYS_TENNIS] not in {card.player_id for card in tennis.cards}:
             raise RuntimeError("See all's tennis leaves out the tennis joiner")
     return (
-        f"New in Raketa: {len(row)} on her row, {len(everyone)} in See all "
-        f"(pill: {', '.join(sport.value.title() for sport in page.sports)})"
+        f"New in Raketa: {len(row)} on her row of {read.total}, {len(everyone)} "
+        f"in See all (pill: "
+        f"{', '.join(sport.value.title() for sport in page.sports)})"
     )
 
 

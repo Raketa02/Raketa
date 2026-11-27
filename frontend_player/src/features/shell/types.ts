@@ -31,10 +31,16 @@ export { ShellScreen, type ShellScreenProps } from './components/ShellScreen';
  * change and the rules the sentences carry are not.
  */
 export { HOME_COPY, PLAY_COPY } from './components/shellCopy';
+/**
+ * **Needs your answer's words** (#816) — read by the suites that open the sheet the envelope opens
+ * to reach what waits in it, for the reason above.
+ */
+export { NEEDS_YOUR_ANSWER_COPY } from './components/shellCopy';
 
 /**
- * **Play** — the *Groups | Explore* segment and the page under it
- * ([#512](https://github.com/Raketa02/Raketa/issues/512)).
+ * **Play** — the groups under a *Groups* title, or, with the `explore` feature flag on, the
+ * *Groups | Explore* segment and the page under it ([#512](https://github.com/Raketa02/Raketa/issues/512),
+ * [#826](https://github.com/Raketa02/Raketa/issues/826)).
  */
 export { PlayScreen } from './components/PlayScreen';
 
@@ -50,6 +56,12 @@ export { YOU_COPY } from './components/youCopy';
 export { HomeScreen } from './components/tabScreens';
 /** **What a level got changes on Home** (#765) — the entry gate's, as a rating pass ends. */
 export { useRereadAfterALevel } from './hooks/useRereadAfterALevel';
+/**
+ * **Home's reads, set out while the splash plays** (#874; ADR-0209 §2, amended 2026-11-24) — the
+ * launch step the root layout starts after session restore and never awaits, composed here from each
+ * feature's Home prefetch; the router harness's warmed launch runs the same one.
+ */
+export { warmHome } from './hooks/warmHome';
 
 /**
  * The You tab — **a screen rather than a placeholder**
@@ -77,6 +89,14 @@ export { InviteAFriendScreen } from './components/InviteAFriendScreen';
  * (#520), and *Get your level*'s notice laying Home down (#731).
  */
 export { openTab } from './components/shellNavigation';
+
+/**
+ * **Open Home with Needs your answer up** (#817, ADR-0205 §1; Q25) — where a link or a notice that
+ * pointed at one of the sheet's cards lands: the friend link (`links`), a friend request's and a
+ * friends game invitation's notice (`notifications`). Home is laid down as `openTab` lays it, and the
+ * sheet opens once the reads they re-read land, if anything waits by then.
+ */
+export { openNeedsYourAnswer } from './components/needsYourAnswerAsked';
 
 /**
  * **Arrive in the app on a screen inside a tab**, its start beneath it, in one reset made before the

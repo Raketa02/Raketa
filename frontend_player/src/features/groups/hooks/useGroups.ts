@@ -16,11 +16,12 @@
  * effects (`useGroupWrites.ts`).
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 
 import type { AppError } from '@/shared/errors';
 import { useOnReturn } from '@/shared/lib/platform';
+import { useReadFinished } from '@/shared/lib/query-client';
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -34,13 +35,15 @@ import {
 
 import { groupKeys } from './groupKeys';
 
+/** The Groups list's read, as one definition — every hook over it, and Home's warm-up (#874). */
+export const myGroupsRead = queryOptions<readonly MyGroup[], AppError>({
+  queryKey: groupKeys.mine(),
+  queryFn: ({ signal }) => readMyGroups({ signal }),
+});
+
 /** `enabled` is Home's card's (#731): it asks which groups only of a player rated in nothing. */
 export function useMyGroups({ enabled = true }: { readonly enabled?: boolean } = {}) {
-  return useQuery<readonly MyGroup[], AppError>({
-    queryKey: groupKeys.mine(),
-    queryFn: ({ signal }) => readMyGroups({ signal }),
-    enabled,
-  });
+  return useQuery({ ...myGroupsRead, enabled });
 }
 
 /**
@@ -162,4 +165,13 @@ export function useGroupInfo(groupId: string) {
  */
 export function useInNoGroup(): boolean {
   return useMyGroups().data?.length === 0;
+}
+
+/**
+ * **Whether the read `useInNoGroup` answers from has finished** (#871) — your groups, landed, refused,
+ * held for a connection, or failed once and retrying: *YOUR GAMES*' line waits on it before Home
+ * reveals it. Read off the cache, so it draws again only as it turns.
+ */
+export function useInNoGroupFinished(): boolean {
+  return useReadFinished(groupKeys.mine());
 }

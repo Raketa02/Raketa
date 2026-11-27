@@ -29,6 +29,7 @@ import {
   type RefObject,
 } from 'react';
 import { AccessibilityInfo, StyleSheet, View, findNodeHandle } from 'react-native';
+import { useReducedMotion as useReducedMotionAtStart } from 'react-native-reanimated';
 
 /** A ref to whatever should hold accessibility focus — a host element, not a component. */
 export type FocusTarget = RefObject<View | null>;
@@ -187,8 +188,9 @@ export function moveAccessibilityFocus(target: FocusTarget | undefined): void {
 function useAccessibilityFlag(
   read: () => Promise<boolean>,
   event: 'reduceMotionChanged' | 'screenReaderChanged',
+  initial = false,
 ): boolean {
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState(initial);
 
   useEffect(() => {
     let live = true;
@@ -228,7 +230,10 @@ export function useReducedMotion(): boolean {
   return useContext(ReducedMotionContext);
 }
 
-/** The one place this app asks the OS about motion. `false` until a provider says otherwise. */
+/**
+ * The one place this app asks the OS about motion. `false` outside a provider; inside one, the OS's
+ * answer from the first render on.
+ */
 const ReducedMotionContext = createContext(false);
 
 export interface ReducedMotionProviderProps {
@@ -246,13 +251,55 @@ export interface ReducedMotionProviderProps {
  *
  * Mounted at the root, so nothing else has to wire it up and nothing else may: a second
  * provider inside a screen would be a second answer to a question the device answers once.
+ *
+ * **Its first answer is already the OS's, never a provisional `false`** (ADR-0209 §2). The
+ * asynchronous read lands after the first frame, and the launch's drawn splash decides its variant
+ * once, before it. So the state starts from Reanimated's answer — the setting as the process
+ * started, which the native side hands the JavaScript runtime as it installs and which is therefore
+ * there before anything renders — and the subscription follows the switch from then on.
  */
 export function ReducedMotionProvider({ value, children }: ReducedMotionProviderProps) {
-  const os = useAccessibilityFlag(READ_REDUCE_MOTION, 'reduceMotionChanged');
+  const atStart = useReducedMotionAtStart();
+  const os = useAccessibilityFlag(READ_REDUCE_MOTION, 'reduceMotionChanged', atStart);
 
   return (
     <ReducedMotionContext.Provider value={value ?? os}>{children}</ReducedMotionContext.Provider>
   );
+}
+
+/**
+ * **Whether the launch's drawn splash still covers this tree**
+ * ([ADR-0209](../../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)
+ * §2). For the first seconds of a cold open the first screen is mounted underneath the splash,
+ * which is drawn over everything the root draws and swallows every touch until it is gone.
+ *
+ * Drawing it last covers what is in the tree. Two things it cannot cover that way read this
+ * instead:
+ *
+ * - **iOS's modal stage** is a native window, presented above the whole app, splash and all, so it
+ *   is held back while covered and presented as the splash goes (`ModalStage.tsx`). Android's stage
+ *   is a layer in the tree and is simply covered with it.
+ * - **A toast's hold** would run out unseen under the splash, so it starts once the splash is gone
+ *   (`Toast.tsx`).
+ *
+ * `false` outside the launch gate — the router suites' own root, which draws no splash — and for
+ * the rest of the process once the splash has gone. Provided by `shared/lib/bootstrap`'s launch
+ * gate, which `shared/ui` cannot import: the gate draws with this module.
+ */
+export function useCoveredBySplash(): boolean {
+  return useContext(SplashCoverContext);
+}
+
+const SplashCoverContext = createContext(false);
+
+export interface SplashCoverProviderProps {
+  readonly covered: boolean;
+  readonly children: ReactNode;
+}
+
+/** The launch gate's, around the tree it mounts under the splash; a test's, around one it covers. */
+export function SplashCoverProvider({ covered, children }: SplashCoverProviderProps) {
+  return <SplashCoverContext.Provider value={covered}>{children}</SplashCoverContext.Provider>;
 }
 
 /**

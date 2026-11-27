@@ -7,7 +7,7 @@
  *
  * ## The ceiling refuses; it does not rotate
  *
- * A seventh press is answered with `refused`, and the refusal carries **no selection** —
+ * A ninth press is answered with `refused`, and the refusal carries **no selection** —
  * there is deliberately nothing for a caller to write back. Dropping the oldest to make
  * room would remove a choice the player made without telling them, and the ceiling exists
  * so a profile stays a signal rather than a checklist. Removal is never blocked: the
@@ -44,7 +44,7 @@ export type SocialTagSelectionChange =
  * Press a tag: add it, remove it, or refuse it because the selection is full.
  *
  * Removal is checked **first**, so a press on a selected tag at the ceiling removes it
- * rather than being refused for being a seventh — it is not one.
+ * rather than being refused for being a ninth — it is not one.
  *
  * The selection is appended to in **press order**. What a player picked first is a fact
  * about them, and re-sorting to the vocabulary's order would throw it away before the

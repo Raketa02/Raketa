@@ -47,6 +47,8 @@ export { useSocialStepAdmission, type SocialStepAdmission } from './hooks/useSoc
  */
 export type { PlayIntentSurface } from './api/playerProfileApi';
 export { useDeclarePlayIntent } from './hooks/useProfileSurface';
+/** Whether a declaration for a sport is on its way — the Games tab's menu is still meanwhile (#862). */
+export { usePlayIntentOnItsWay } from './hooks/useProfileSurface';
 
 /**
  * **The location moves on a cold start** — silently, after a day in the background, never on

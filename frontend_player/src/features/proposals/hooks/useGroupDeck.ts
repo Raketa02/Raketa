@@ -9,6 +9,7 @@
  * | `useWithdrawYes` | `DELETE /proposals/{id}/yes` — the details' *Withdraw* |
  * | `useDropCard` | the answered card off the read the moment it has flown |
  * | `useFindGames` | after an intent answer on Games: the group dealt now, then its deck read (#741) |
+ * | `useGamesMenu` | the Games tab's menu, off the reads already held — nothing asked (#862) |
  * | `useRereadGroupGames` | the decks, Fill in, the games' details and the live yeses — a pull |
  * | `useAnswersOnTheirWay` | the cards whose answers are still on their way — hidden from a read |
  *
@@ -48,19 +49,35 @@ import {
   type QueryClient,
   type QueryKey,
 } from '@tanstack/react-query';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
+import { paymentMethodQuery } from '@/features/payments/types';
+import { usePlayIntentOnItsWay } from '@/features/player_profile/types';
 import { isAppError, type AppError } from '@/shared/errors';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { resolveKind, withoutCard, type Finding, type GroupDeck } from '../domain/deck';
+import {
+  kindMenu,
+  kindsHeld,
+  resolveKind,
+  withoutCard,
+  type DeckSegment,
+  type Finding,
+  type GroupDeck,
+  type KindMenu,
+} from '../domain/deck';
 import { isRescue, type DealtIn, type YesAnswer, type YesOn } from '../domain/fill';
+import { GAMES_SEEN } from '../domain/seen';
 import type { GameKind } from '../domain/vocabulary';
 import { answerCard, withdrawYes, type AnswerToCard } from '../use-cases/answers';
 import { dealTheGroupNow } from '../use-cases/dealNow';
 import { readGroupDeck } from '../use-cases/deckReads';
 
 import { proposalKeys } from './proposalKeys';
+import { fillInQuery } from './useFillIn';
 import { useLatest } from './useLatest';
+import { liveYesesQuery } from './useLiveYeses';
+import { useUnseenCount } from './useSeenRows';
 
 function deckQuery(groupId: string, sport: Sport, kind: GameKind, enabled = true) {
   return {
@@ -69,6 +86,26 @@ function deckQuery(groupId: string, sport: Sport, kind: GameKind, enabled = true
       readGroupDeck(groupId, sport, kind, { signal }),
     enabled,
   };
+}
+
+/**
+ * **A group page's reads, set out beside the group's own** — the deck for the sport the page stands
+ * on and the kind its switch chose, Fill in, the live yeses You’re in counts, and the saved method a
+ * yes on the deck asks about (`usePaymentSetupNeeded`). The page draws its
+ * tabs only once the group has been read, so the tabs' reads used to set out after it, one round
+ * trip behind; while the group is on its way the page asks for them here, and the tabs find them
+ * read or on their way. Query's own prefetch: a read still fresh is not asked again, and one on its
+ * way is shared. A sport the group's read then corrects — an official group's own — is the tabs' to
+ * read; this one is not drawn.
+ */
+export function useReadGroupGamesAhead(groupId: string, sport: Sport, chosen: GameKind): void {
+  const client = useQueryClient();
+  useEffect(() => {
+    void client.prefetchQuery(deckQuery(groupId, sport, chosen));
+    void client.prefetchQuery(fillInQuery(groupId, sport));
+    void client.prefetchQuery(liveYesesQuery());
+    void client.prefetchQuery(paymentMethodQuery());
+  }, [client, groupId, sport, chosen]);
 }
 
 /**
@@ -83,12 +120,95 @@ export function useGroupDeck(groupId: string, sport: Sport, chosen: GameKind) {
   return { read: kind === chosen ? asked : corrected, kind };
 }
 
-/** **The Games tab's badge** — cards where somebody is already In with you, across the segments. */
+/**
+ * **The Games tab's badge** — the cards where somebody is already In with you, across both kinds,
+ * that you haven't seen on either kind's list (#850, ADR-0208): the ids off the deck read the tab
+ * draws, so the count costs no second request and nothing reads the other kind's deck. `GamesDeck`
+ * marks what it shows, on the list of the kind it shows.
+ */
 export function useGamesBadge(groupId: string, sport: Sport, chosen: GameKind): number {
-  return useGroupDeck(groupId, sport, chosen).read.data?.gamesBadge ?? 0;
+  const counted = useGroupDeck(groupId, sport, chosen).read.data?.inCardIds;
+  return useUnseenCount(groupId, sport, GAMES_SEEN, counted);
 }
 
-/** Take a card off the read it was dealt on — its segment's count and the badge following it. */
+/**
+ * **The Games tab's menu, as the group page draws it** (#862, PRD #859) — `kindMenu` off the deck
+ * reads the page already holds, and whether it is **still**: an intent answer on its way for the
+ * sport, or its games being found (`useFindGames`), read off the mutations' own state. The page draws
+ * the chevron while the menu is there, and a tap on the tab opens it unless it is still.
+ *
+ * **It asks for nothing**: both kinds' reads are read as the cache holds them (`useReadsHeld`) — the
+ * badge's read and the deck's are the ones that go out — so the chevron costs no request, and the
+ * other kind's read, held from an earlier look, keeps the menu up while the kind just picked is
+ * read. No sport to play — the *add a sport* card — no menu.
+ */
+export function useGamesMenu(
+  groupId: string,
+  sport: Sport | undefined,
+  chosen: GameKind,
+): GamesMenu | undefined {
+  const { asked, other } = useReadsHeld(groupId, sport, chosen);
+  const declaring = usePlayIntentOnItsWay(sport);
+  const finding = useFindingOnItsWay(groupId, sport);
+  const menu = kindMenu(chosen, asked, other);
+  return menu === undefined ? undefined : { ...menu, still: declaring || finding };
+}
+
+/**
+ * **The kinds the page's reads hold for this sport** (`kindsHeld`) — the pair the Games tab's menu is
+ * drawn from, which the deck asks which kind is a door while its own read is not in (#862).
+ */
+export function useKindsHeld(
+  groupId: string,
+  sport: Sport,
+  chosen: GameKind,
+): readonly DeckSegment[] | undefined {
+  const { asked, other } = useReadsHeld(groupId, sport, chosen);
+  return kindsHeld(asked, other);
+}
+
+/**
+ * **Both kinds' deck reads, as the cache holds them now** — their kinds, read straight off the cache
+ * and followed as it changes, with **no observer kept**: an observer that never fetches would still
+ * count as the read's (a query whose observers are all disabled is skipped by a re-read, and is never
+ * let go while the page is up), and these only look.
+ */
+function useReadsHeld(groupId: string, sport: Sport | undefined, chosen: GameKind) {
+  const client = useQueryClient();
+  const follow = useCallback(
+    (changed: () => void) => client.getQueryCache().subscribe(changed),
+    [client],
+  );
+  const held = (kind: GameKind) =>
+    sport === undefined
+      ? undefined
+      : client.getQueryData<GroupDeck>(proposalKeys.deck(groupId, sport, kind))?.segments;
+  const asked = useSyncExternalStore(follow, () => held(chosen));
+  const other = useSyncExternalStore(follow, () => held(otherKind(chosen)));
+  return { asked, other };
+}
+
+/** The Games tab's menu, and whether a tap on the tab may open it — see `useGamesMenu`. */
+export interface GamesMenu extends KindMenu {
+  /** An intent answer on its way for the sport, or its games being found: drawn, and inert. */
+  readonly still: boolean;
+}
+
+/** The kind that is not this one. */
+function otherKind(kind: GameKind): GameKind {
+  return kind === 'competitive' ? 'forFun' : 'competitive';
+}
+
+/** Whether finding is under way for this group and sport — the deck's or a deck since gone. */
+function useFindingOnItsWay(groupId: string, sport: Sport | undefined): boolean {
+  const finding = useMutationState({
+    filters: { mutationKey: proposalKeys.finding(groupId), status: 'pending' },
+    select: (mutation) => (mutation.state.variables as GamesToFind | undefined)?.sport,
+  });
+  return sport !== undefined && finding.includes(sport);
+}
+
+/** Take a card off the read it was dealt on — its segment's count and the badge's ids following. */
 export function dropCard(
   client: QueryClient,
   {
@@ -138,6 +258,7 @@ export function useFindGames(groupId: string, onLanded: (kind: GameKind) => void
   const client = useQueryClient();
   const landed = useLatest(onLanded);
   return useMutation<boolean, AppError, GamesToFind>({
+    mutationKey: proposalKeys.finding(groupId),
     mutationFn: ({ sport, finding }) =>
       findGames(client, { groupId, sport, kind: finding.landsOn }),
     onSuccess: (read, { finding }) => {
@@ -184,13 +305,13 @@ function unlessAFailedRequest(error: unknown): void {
 
 /**
  * **A pull on the group page's Games or Fill in** — what a yes settling re-reads (`reread`): the
- * group's decks and its Fill in, the games' details *You're In*'s rows draw their squares from, and
- * the live yeses that are *You're In*. Only the reads on screen go out at once; the rest are marked
+ * group's decks and its Fill in, the games' details *You’re in*'s rows draw their squares from, and
+ * the live yeses that are *You’re in*. Only the reads on screen go out at once; the rest are marked
  * stale. Settles once they have, so the pull's spinner stops when the tab is drawn again.
  */
 export function useRereadGroupGames(groupId: string): () => Promise<void> {
   const client = useQueryClient();
-  return () => reread(client, groupId, { yeses: true }).then(() => undefined);
+  return () => reread(client, groupId, { yeses: 'wait' }).then(() => undefined);
 }
 
 /** What a caller is told of a refused write — the refusal, and which answer it refused. */
@@ -242,7 +363,8 @@ export function useAnswerCard<Card extends YesOn = YesOn>(
       if (answer !== null) handlers.current.onAnswered?.(answer, asked);
     },
     onError: (error, asked) => handlers.current.onRefused?.(error, asked),
-    onSettled: (_answer, _error, { said }) => reread(client, groupId, { yeses: said === 'yes' }),
+    onSettled: (_answer, _error, { said }) =>
+      reread(client, groupId, { yeses: said === 'yes' ? 'start' : 'leave' }),
   });
 }
 
@@ -267,16 +389,23 @@ export function useWithdrawYes(groupId: string, onRefused?: OnRefused<string>) {
  * yeses when the answer could have moved them — a yes adds one and a withdraw takes one away (You ›
  * Payments, #554); a no never touched a yes. Awaited, so the answer is pending until the deck or the
  * details on screen have been read again — **in turn** (`readAgainInTurn`).
+ *
+ * **The live yeses are waited for only where they are drawn** (`yeses: 'wait'`): a pull, whose
+ * spinner stops once every tab is read, and a withdrawal, whose row stays busy until it leaves You’re
+ * in. An answer only **starts** their read (`'start'`): the page's tab bar reads them on every tab
+ * for You’re in's badge (#847), so waiting would hold a deck's card hidden and a *Booking…* busy for
+ * a badge's read, retries and all — and a badge never holds anything up.
  */
 export function reread(
   client: QueryClient,
   groupId: string,
-  { yeses }: { readonly yeses: boolean },
+  { yeses }: { readonly yeses: 'wait' | 'start' | 'leave' },
 ) {
+  if (yeses === 'start') void readAgainInTurn(client, proposalKeys.liveYeses());
   return Promise.all([
     readAgainInTurn(client, proposalKeys.group(groupId)),
     readAgainInTurn(client, proposalKeys.proposals()),
-    ...(yeses ? [readAgainInTurn(client, proposalKeys.liveYeses())] : []),
+    ...(yeses === 'wait' ? [readAgainInTurn(client, proposalKeys.liveYeses())] : []),
   ]);
 }
 
@@ -334,7 +463,7 @@ function answeredCard(asked: unknown): string | undefined {
  */
 export function rereadAfterWithdrawing(client: QueryClient, groupId: string) {
   return Promise.all([
-    reread(client, groupId, { yeses: true }),
+    reread(client, groupId, { yeses: 'wait' }),
     client.invalidateQueries({ queryKey: proposalKeys.home() }),
   ]);
 }

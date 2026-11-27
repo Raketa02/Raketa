@@ -13,7 +13,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Slot, router, type Href } from 'expo-router';
-import { act, renderRouter } from 'expo-router/testing-library';
+import { act, renderRouter, waitFor } from 'expo-router/testing-library';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ReducedMotionProvider } from '@/shared/ui';
@@ -38,6 +38,7 @@ import NewInRaketaRoute from '@/app/(app)/(tabs)/new-in-raketa';
 import RankingsRoute from '@/app/(app)/(tabs)/rankings';
 import SameLevelRoute from '@/app/(app)/(tabs)/same-level';
 import SameVibeRoute from '@/app/(app)/(tabs)/same-vibe';
+import HottestGroupsRoute from '@/app/(app)/(tabs)/hottest-groups';
 import HomeRoute from '@/app/(app)/(tabs)/index';
 import PlayRoute from '@/app/(app)/(tabs)/play/index';
 import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
@@ -91,11 +92,15 @@ import ResultRoute from '@/app/(onboarding)/result/[assessmentId]';
 import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
-import { HOME_COPY } from '@/features/shell/types';
+import { fetchCurrentUserAtLaunch, restoreSession } from '@/features/auth/types';
+import { featureFlagKeys } from '@/features/feature_flags/types';
+import { HOME_COPY, warmHome } from '@/features/shell/types';
 import { beginSession, setSessionStatus } from '@/shared/lib/auth';
+import { SplashHoldsProvider, type SplashHolds } from '@/shared/lib/bootstrap';
 import {
   ClipboardProvider,
   HapticsProvider,
+  KeyboardProvider,
   ShareProvider,
   ImagePickingProvider,
   LiveStreamProvider,
@@ -106,17 +111,27 @@ import {
   type PaymentsPort,
   type PushPort,
   type HapticsPort,
+  type KeyboardPort,
   type SharePort,
   type ImagePickingPort,
   type LiveStreamPort,
   type LocationPort,
+  type Reachability,
 } from '@/shared/lib/platform';
 import { raisePhoneFlag } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 
 import { fakePayments } from './platform';
 import { FILTER_OFF, SERGIO_RELIABILITY } from './playerRecord';
-import { errorResponse, json, noContent, type Transport, type Wire } from './transport';
+import {
+  errorResponse,
+  json,
+  noContent,
+  servedBody,
+  type RecordedRequest,
+  type Transport,
+  type Wire,
+} from './transport';
 
 /**
  * The Home tab's one line — which is what *the player is in the app* looks like on screen.
@@ -170,6 +185,8 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/new-in-raketa': NewInRaketaRoute,
   '(app)/(tabs)/same-level': SameLevelRoute,
   '(app)/(tabs)/same-vibe': SameVibeRoute,
+  // The Groups heating up page, behind its line's *All groups ›* (#823).
+  '(app)/(tabs)/hottest-groups': HottestGroupsRoute,
   // You is a directory since the tab was built (ADR-0179): the root, and one screen per row
   // pushed over it, each under the tab's first segment so the column stays lit. Spelled
   // `you/index` as the file tree spells it, because the shell names the pushed screens to give
@@ -366,6 +383,23 @@ export function resetShare(): void {
 }
 
 /**
+ * The soft keyboard this tree types under, for the suites about the bar standing down while it is up
+ * on Android (#882). Same shape and reasons as the share sheet above; unset is the device's port over
+ * React Native's own `Keyboard`, which nothing in jest ever brings up.
+ */
+let keyboard: KeyboardPort | undefined;
+
+/** Run the tree against this keyboard. Call before `launchSignedIn`. */
+export function stubKeyboard(port: KeyboardPort): void {
+  keyboard = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetKeyboard(): void {
+  keyboard = undefined;
+}
+
+/**
  * The payment provider this tree saves a card through, for the suite whose screen is You ›
  * Payments (#552). **Like the live channel, it always has a fake**: the device's port would reach
  * Stripe's SDK, which jest's setup has made answer *no error* to everything — a card saved without a
@@ -404,9 +438,34 @@ export function resetPush(): void {
 }
 
 /**
- * The providers the real root layout composes, without the bootstrap sequence — fonts, the
- * splash screen and config validation are the launch path's business and have their own
- * tests.
+ * **The splash's holds, counted as the launch gate counts them** (ADR-0209 §3). The harness mounts no
+ * launch gate — no suite waits out a splash — so a screen that says it is blank says it here, and the
+ * entry gate's suite reads how many such declarations stand. Every tree withdraws its own as it
+ * unmounts, so the count is back to nought between tests.
+ */
+let holdsStanding = 0;
+
+const SPLASH_HOLDS: SplashHolds = {
+  place: () => {
+    holdsStanding += 1;
+    let withdrawn = false;
+    return () => {
+      if (withdrawn) return;
+      withdrawn = true;
+      holdsStanding -= 1;
+    };
+  },
+};
+
+/** How many screens of the tree say, right now, that they are blank and the splash must wait. */
+export function splashHoldsStanding(): number {
+  return holdsStanding;
+}
+
+/**
+ * The providers the real root layout composes, without the launch gate — the drawn splash, the
+ * startup sequence, fonts and config validation are the launch path's business and have their own
+ * tests (`LaunchGate.test.tsx`). Its one interface with the tree, the hold, is recorded instead.
  */
 function TestRoot() {
   return (
@@ -422,9 +481,11 @@ function TestRoot() {
             would — rather than the context's `false`, which is what a tree with no provider
             answers whatever the OS says. */}
         <ReducedMotionProvider>
-          <WithPorts>
-            <Slot />
-          </WithPorts>
+          <SplashHoldsProvider holds={SPLASH_HOLDS}>
+            <WithPorts>
+              <Slot />
+            </WithPorts>
+          </SplashHoldsProvider>
         </ReducedMotionProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
@@ -450,11 +511,18 @@ function WithPorts({ children }: { readonly children: ReactNode }) {
   const withShare =
     share === undefined ? withPayments : <ShareProvider port={share}>{withPayments}</ShareProvider>;
 
-  const withClipboard =
-    clipboard === undefined ? (
+  const withKeyboard =
+    keyboard === undefined ? (
       withShare
     ) : (
-      <ClipboardProvider port={clipboard}>{withShare}</ClipboardProvider>
+      <KeyboardProvider port={keyboard}>{withShare}</KeyboardProvider>
+    );
+
+  const withClipboard =
+    clipboard === undefined ? (
+      withKeyboard
+    ) : (
+      <ClipboardProvider port={clipboard}>{withKeyboard}</ClipboardProvider>
     );
 
   const withHaptics =
@@ -549,8 +617,9 @@ export const RUNS_IN_PROGRESS_PATH = '/api/v1/assessments/in-progress';
 export const PROFILE_OPTIONS_PATH = '/api/v1/player-profile/options';
 
 /**
- * The nineteen Social tags in their three groups and the selection bounds — as
- * `GET /player-profile/options` answers.
+ * The twenty-seven Social tags in their three groups and the selection bounds, 2 to 8 — as
+ * `GET /player-profile/options` answers since ADR-0207 §7 (#829): the eight new ones at the end
+ * of their groups.
  *
  * The order here is the order the picker must render, because the picker renders what it
  * is served and sorts nothing. A suite that wants a shorter vocabulary passes its own.
@@ -566,6 +635,9 @@ export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
         { id: 'SETTLES_UP_ON_THE_SPOT' },
         { id: 'BOOKS_THE_NEXT_ONE' },
         { id: 'SHARES_A_LIFT' },
+        { id: 'STAYS_FOR_A_COFFEE' },
+        { id: 'UP_FOR_A_BITE_AFTER' },
+        { id: 'KEEPS_IN_TOUCH' },
       ],
     },
     {
@@ -577,6 +649,10 @@ export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
         { id: 'GENEROUS_ON_LINE_CALLS' },
         { id: 'QUIET_AND_FOCUSED' },
         { id: 'WARMS_UP_PROPERLY' },
+        { id: 'HAPPY_TO_SWAP_PARTNERS' },
+        { id: 'PATIENT_WITH_BEGINNERS' },
+        { id: 'HAPPY_TO_SHARE_TIPS' },
+        { id: 'BRINGS_THE_ENERGY' },
       ],
     },
     {
@@ -589,10 +665,11 @@ export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
         { id: 'HERE_FOR_A_REGULAR_GAME' },
         { id: 'HERE_TO_GET_BACK_INTO_IT' },
         { id: 'OPEN_TO_MEET_SOMEONE' },
+        { id: 'NEW_IN_TOWN' },
       ],
     },
   ],
-  social_tag_selection: { minimum_tags: 2, maximum_tags: 6 },
+  social_tag_selection: { minimum_tags: 2, maximum_tags: 8 },
 };
 
 export const PROFILE_SURFACE_PATH = '/api/v1/players/me/profile';
@@ -794,6 +871,98 @@ export function stubSportsmanship(
   );
 }
 
+/**
+ * Where the feature-flag datafile is fetched from, as the fake socket sees it: the features host
+ * is stripped from the URL exactly as the API's is, and `development` is the environment
+ * `jest.config.js` sets (ADR-0206 §3, §4).
+ */
+export const DATAFILE_PATH = '/development/featurevisor-player.json';
+
+/**
+ * **The datafile the flags host serves — or none.**
+ *
+ * Not a wire type: the file is the flags repo's, not the API's, and the app checks its envelope
+ * rather than generating one. So it is described as the object it is, and a suite about a feature
+ * flag builds the one it needs.
+ *
+ * `'none'` is a 404 — what the flags repo's serve script answers for a file it has not built, and
+ * a failure the app does not retry, so a suite that says nothing about feature flags is not left
+ * with a read going round underneath it.
+ */
+export function stubDatafile(
+  transport: Transport,
+  served: Readonly<Record<string, unknown>> | 'none' = 'none',
+) {
+  transport.on('GET', DATAFILE_PATH, () =>
+    served === 'none' ? new Response('Not Found', { status: 404 }) : json(served),
+  );
+}
+
+/**
+ * **A datafile as the flags repo builds one** — each named feature on or off for everybody, which
+ * is `percentage: 100` or `0` on one `everyone` rule in the repo's YAML. Enough for every walk
+ * about a gate; a walk about *who* a rule reaches spells its own traffic.
+ *
+ * The rest is what CLI 3.11.0 emits today. `schemaVersion` is the one fact the app refuses a
+ * datafile on, so a walk about that refusal overrides it.
+ */
+export function datafileFor(
+  features: Readonly<Record<string, 'on' | 'off'>>,
+  overrides: Readonly<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
+  return {
+    schemaVersion: '2',
+    featurevisorVersion: '3.11.0',
+    revision: '1',
+    segments: {},
+    features: Object.fromEntries(
+      Object.entries(features).map(([key, state]) => [
+        key,
+        {
+          bucketBy: 'playerId',
+          traffic: [{ key: 'everyone', segments: '*', percentage: state === 'on' ? 100000 : 0 }],
+        },
+      ]),
+    ),
+    variables: {},
+    ...overrides,
+  };
+}
+
+/**
+ * **The datafile has been answered, and the answer is in hand** — the moment a toggle has
+ * *reached the app* (ADR-0206 §6).
+ *
+ * Nothing on screen says so, by design: a gate reads its feature flag once, when it mounts, so a
+ * datafile landing under a mounted screen changes nothing a player could see. A walk about a gate
+ * therefore waits on the read itself — `count` requests made, and no datafile read still running —
+ * before it mounts the screen it is asking about.
+ */
+export async function datafileSettled(transport: Transport, count = 1) {
+  await waitFor(() =>
+    expect(transport.requestsTo('GET', DATAFILE_PATH).length).toBeGreaterThanOrEqual(count),
+  );
+  await waitFor(() => expect(queryClient.isFetching({ queryKey: featureFlagKeys.all })).toBe(0));
+}
+
+/**
+ * **Explore, switched on** — for every suite that walks Play's *Groups | Explore* switcher. Since
+ * [#826](https://github.com/Raketa02/Raketa/issues/826) Play is Groups under a Groups title without
+ * a datafile; `explore` brings the switcher back.
+ *
+ * Served, launched, and **waited on before anything presses Play**: a gate reads its feature flag
+ * once, when its screen mounts, so a Play press that raced the datafile would land on the Groups
+ * title — correctly, and not what the suite is about. Call it where the suite would have called
+ * `launchSignedIn`, after `stubGate` (which serves no datafile) — and again for a relaunch: it
+ * waits on one read more than the walk had made before it.
+ */
+export async function launchWithExplore(transport: Transport, initialUrl = '/') {
+  const asked = transport.requestsTo('GET', DATAFILE_PATH).length;
+  stubDatafile(transport, datafileFor({ explore: 'on' }));
+  await launchSignedIn(initialUrl);
+  await datafileSettled(transport, asked + 1);
+}
+
 export const MY_GROUPS_PATH = '/api/v1/groups';
 
 /**
@@ -807,29 +976,41 @@ export function stubMyGroups(transport: Transport, groups: readonly Wire['MyGrou
   );
 }
 
-/** Home's Hottest groups (#800) — none unless the suite says, so the row is hidden. */
+/**
+ * Home's Hottest groups (#800) — none unless the suite says, so the row is hidden. **Its total is the
+ * groups served unless the suite says** (#822): the server's counts a pool the row only samples.
+ */
 export const HOTTEST_GROUPS_PATH = '/api/v1/hottest-groups';
 
 export function stubHottestGroups(
   transport: Transport,
   groups: readonly Wire['HottestGroupSchema'][] = [],
+  total: number = groups.length,
 ) {
   transport.on('GET', HOTTEST_GROUPS_PATH, () =>
-    json<Wire['HottestGroupsResponse']>({ groups: [...groups] }),
+    json<Wire['HottestGroupsResponse']>({ groups: [...groups], total }),
   );
 }
+
+/**
+ * The Groups heating up page (#823) — the transport drops `?after`, so one responder answers each
+ * page.
+ */
+export const HOTTEST_GROUPS_ALL_PATH = '/api/v1/hottest-groups/all';
 
 /** Home's New in Raketa (#801) — nobody unless the suite says, so the row is hidden. */
 export const NEW_IN_RAKETA_PATH = '/api/v1/new-in-raketa';
 /** New in Raketa's See all — the transport drops `?sport&after`, so one responder answers each page. */
 export const NEW_IN_RAKETA_ALL_PATH = '/api/v1/new-in-raketa/all';
 
+/** Its total is the players served unless the suite says (#822). */
 export function stubNewInRaketa(
   transport: Transport,
   players: readonly Wire['NewInRaketaPlayerSchema'][] = [],
+  total: number = players.length,
 ) {
   transport.on('GET', NEW_IN_RAKETA_PATH, () =>
-    json<Wire['NewInRaketaResponse']>({ players: [...players] }),
+    json<Wire['NewInRaketaResponse']>({ players: [...players], total }),
   );
 }
 
@@ -838,12 +1019,14 @@ export const SAME_LEVEL_PATH = '/api/v1/same-level';
 /** Same level's See all — the transport drops `?sport&after`, so one responder answers each page. */
 export const SAME_LEVEL_ALL_PATH = '/api/v1/same-level/all';
 
+/** Its total is the players served unless the suite says (#822). */
 export function stubSameLevel(
   transport: Transport,
   players: readonly Wire['SameLevelPlayerSchema'][] = [],
+  total: number = players.length,
 ) {
   transport.on('GET', SAME_LEVEL_PATH, () =>
-    json<Wire['SameLevelResponse']>({ players: [...players] }),
+    json<Wire['SameLevelResponse']>({ players: [...players], total }),
   );
 }
 
@@ -852,12 +1035,14 @@ export const SAME_VIBE_PATH = '/api/v1/same-vibe';
 /** Same vibe's See all — the transport drops `?sport&after`, so one responder answers each page. */
 export const SAME_VIBE_ALL_PATH = '/api/v1/same-vibe/all';
 
+/** Its total is the players served unless the suite says (#822). */
 export function stubSameVibe(
   transport: Transport,
   players: readonly Wire['SameVibePlayerSchema'][] = [],
+  total: number = players.length,
 ) {
   transport.on('GET', SAME_VIBE_PATH, () =>
-    json<Wire['SameVibeResponse']>({ players: [...players] }),
+    json<Wire['SameVibeResponse']>({ players: [...players], total }),
   );
 }
 
@@ -1024,6 +1209,11 @@ export const GATE_USER: Wire['MeResponse'] = {
  * **So is the Groups list** ([#512](https://github.com/Raketa02/Raketa/issues/512)): the Play tab
  * opens on Groups, so a suite that presses Play for any reason reads it.
  *
+ * **So is the feature-flag datafile**, and for the same reason: the signed-in app fetches it the
+ * moment it opens, whatever the suite is about (ADR-0206 §6). It is defaulted to **none**, which
+ * is every feature flag at its code default — the app as it ships. A suite about a feature flag
+ * calls `stubDatafile` again afterwards to serve one.
+ *
  * **So is Home's booked-games read** (#556): the bar's Home badge is its count, so the shell makes it
  * the moment the tabs are up. Defaulted to no games.
  *
@@ -1060,6 +1250,7 @@ export function stubGate(
   stubGames(transport);
   stubConversations(transport);
   stubSportsmanship(transport);
+  stubDatafile(transport);
   stubMyGroups(transport);
   stubHottestGroups(transport);
   stubNewInRaketa(transport);
@@ -1076,6 +1267,8 @@ export function stubGate(
   stubNotices(transport);
   // Opening the list behind the bell records the visit (#627).
   transport.on('POST', NOTICES_VISIT_PATH, () => noContent());
+  // Needs your answer going for good records its visit (#819).
+  transport.on('POST', NEEDS_YOUR_ANSWER_VISIT_PATH, () => noContent());
   stubBlockedPlayers(transport);
   stubFriends(transport);
 }
@@ -1185,6 +1378,9 @@ export function stubNotices(
 
 export const HOME_PATH = '/api/v1/home';
 
+/** Needs your answer went for good — its visit, naming the watermark of the read it showed (#815). */
+export const NEEDS_YOUR_ANSWER_VISIT_PATH = '/api/v1/players/me/needs-your-answer/visit';
+
 /** One booked game's details — `GET /bookings/{id}` (#556). */
 export const bookingPath = (bookingId: string) => `/api/v1/bookings/${bookingId}`;
 
@@ -1192,6 +1388,13 @@ export const bookingPath = (bookingId: string) => `/api/v1/bookings/${bookingId}
  * **Home's booked games** (#542, #556) — none by default, at a fixed read: the shell holds the read
  * all session for the bar's badge, so every suite that lands in the app makes it. A suite about
  * Home serves its own, and `test-support/home.ts` builds them.
+ *
+ * **Its *TO CONFIRM* rows are the payments to confirm'** unless the suite names them (#815, #819):
+ * the server serves *the same rows as `GET /players/me/payments-to-confirm`* on Home's read, so a
+ * suite that stubs that read — with `stubPaymentsToConfirm` or by hand — finds them in Needs your
+ * answer too, read at the moment Home is. A refused or broken read of them is none. **Nothing is
+ * new** (`needs_your_answer`) unless the suite says so, and the watermark is `null`: a suite about
+ * the envelope's badge and its visit serves both.
  */
 export function stubHome(transport: Transport, home: Partial<Wire['HomeResponse']> = {}) {
   transport.on('GET', HOME_PATH, () =>
@@ -1202,9 +1405,37 @@ export function stubHome(transport: Transport, home: Partial<Wire['HomeResponse'
       friend_requests: [],
       friends_games: [],
       level_asks: [],
+      payments_to_confirm: paymentsToConfirmServed(transport),
+      needs_your_answer: { new_count: 0, watermark: null },
       ...home,
     }),
   );
+}
+
+/**
+ * What `GET /players/me/payments-to-confirm` answers right now — none when it refuses, fails or
+ * never answers (`answerNow`). **Its responder runs once more for every Home read**, so a suite whose
+ * payments responder counts its calls or steps through answers, or answers asynchronously, serves
+ * Home's `payments_to_confirm` by name instead.
+ */
+export function paymentsToConfirmServed(
+  transport: Transport,
+): Wire['PaymentsToConfirmResponse']['payments'] {
+  let answer: ReturnType<Transport['answerNow']>;
+  try {
+    answer = transport.answerNow('GET', PAYMENTS_TO_CONFIRM_PATH);
+  } catch {
+    return [];
+  }
+  if (answer === undefined) return [];
+  if (answer instanceof Promise) {
+    // A failure or a socket that never answers: nothing served, and nothing left unhandled.
+    answer.catch(() => undefined);
+    return [];
+  }
+  if (!answer.ok) return [];
+  const served = servedBody(answer) as Wire['PaymentsToConfirmResponse'] | undefined;
+  return served?.payments ?? [];
 }
 
 export const PAYMENT_METHOD_PATH = '/api/v1/players/me/payment-methods/current';
@@ -1325,6 +1556,44 @@ export function runInProgress(
 export async function launchSignedIn(initialUrl = '/') {
   await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
   renderRouter(ONBOARDING_ROUTES, { initialUrl });
+}
+
+/** What a warmed launch hands back: the requests its warm-up sent before the tree existed. */
+export interface WarmedLaunch {
+  readonly early: readonly RecordedRequest[];
+}
+
+/**
+ * **A cold launch with Home warmed while the splash played** (#874; ADR-0209 §2, amended 2026-11-24)
+ * — the root layout's sequence from session restore on, against this harness's query client, before
+ * the tree is rendered: the session restored as the launch restores it (its check sent, so the
+ * account is cached), then **the very step the root layout starts**, the shell's `warmHome`.
+ *
+ * - **The warm-up hears the phone's reachability the suite says** — `reachable` unless it says
+ *   otherwise — while the session check is always sent: a phone known to be offline skips the check
+ *   too, and then there is no account to decide from, which would hide whether the warm-up's own rule
+ *   holds.
+ * - **It is awaited here**, which a launch never does: the harness mounts no splash, and every read
+ *   landing before the tree is what a normal connection does under one.
+ * - **`early` is every request the warm-up sent**, the account's own read excluded.
+ */
+export async function launchWarmed(
+  transport: Transport,
+  {
+    initialUrl = '/',
+    reachability = 'reachable',
+  }: { readonly initialUrl?: string; readonly reachability?: Reachability } = {},
+): Promise<WarmedLaunch> {
+  await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+  await restoreSession(
+    () => fetchCurrentUserAtLaunch(queryClient),
+    async () => 'reachable',
+  );
+  const from = transport.requests.length;
+  await warmHome(queryClient, async () => reachability);
+  const early = transport.requests.slice(from);
+  renderRouter(ONBOARDING_ROUTES, { initialUrl });
+  return { early };
 }
 
 /**

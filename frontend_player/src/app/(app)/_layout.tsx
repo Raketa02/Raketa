@@ -90,6 +90,7 @@ import { useCallback } from 'react';
 
 import { administratorHome, HandoverSheet, InvitationSheet } from '@/features/administrator/types';
 import { NAMING_STEP, PLAYER_PROFILE, START_PLAYING_STEP } from '@/features/auth/types';
+import { useFeatureDatafile } from '@/features/feature_flags/types';
 import { groupReturnRoute } from '@/features/groups/types';
 import {
   EntryUnavailableScreen,
@@ -103,6 +104,7 @@ import { SOCIAL_STEPS_ENTRY, useLocationRefresh } from '@/features/player_profil
 import { rankingsRoute } from '@/features/rankings/types';
 import { useRereadAfterALevel, useShellLanding } from '@/features/shell/types';
 import { useSessionStatus } from '@/shared/lib/auth';
+import { useSplashHold } from '@/shared/lib/bootstrap';
 
 export default function AppLayout() {
   const status = useSessionStatus();
@@ -143,9 +145,18 @@ export default function AppLayout() {
   // the one site that knows a player is signed in and past onboarding. The feature owns what
   // happens; this file owns the moment (ADR-0174 §6).
   useLocationRefresh(entry.kind === 'app');
+  // And the feature flags' datafile is read, for the same branch: only a player in the app can
+  // reach a gated screen, and this is the site that knows one is. From here on it is fetched again
+  // at every return to the foreground; nothing waits for it (ADR-0206 §6).
+  useFeatureDatafile(entry.kind === 'app');
+  // **The splash waits while the gate is still asking** (ADR-0209 §3): *pending* draws nothing, and
+  // a cold launch's drawn splash fading into it would be the blank frame the brief forbids. Any
+  // answer lets go — a destination, or either screen saying the gate could not be read. Only an
+  // authenticated launch asks; a signed-out one is redirected and holds nothing.
+  useSplashHold(status === 'authenticated' && entry.kind === 'pending');
 
-  // Can't happen in practice — `BootstrapGate` renders nothing until the sequence
-  // resolves, so no route tree exists while the status is still `bootstrapping`. It is
+  // Can't happen in practice — the launch gate mounts no route tree until the sequence
+  // resolves, so none exists while the status is still `bootstrapping`. It is
   // handled anyway because the alternative is falling through to the redirect, which
   // would turn any future change to the gate into a login-screen flash.
   if (status === 'bootstrapping') return null;
@@ -155,7 +166,8 @@ export default function AppLayout() {
   switch (entry.kind) {
     case 'pending':
       // Nothing, not a spinner: the same rule as bootstrap. A route tree rendered before
-      // the gate resolves is the authenticated-tree flash, one frame before a redirect.
+      // the gate resolves is the authenticated-tree flash, one frame before a redirect. On a
+      // cold launch the splash is still up over it, held by the line above.
       return null;
     case 'unavailable':
       return <EntryUnavailableScreen reason={entry.reason} onRetry={entry.retry} />;

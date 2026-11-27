@@ -3,13 +3,15 @@ home-rows mechanics §8, §9, §12, §20).
 
 **The players sharing her tags are already here.** She holds six
 (``catalog.HER_TAGS``), and the cohort's own draws meet them at every count from
-one to six — ``cohort-d-01`` holds all six, ``cohort-a-13`` and ``cohort-a-16``
-five, eight members four — while the ranking's crowd shares two and the New in
-Raketa joiners one. Her friends share two and three. So this layer writes **no
-player**, as Same competitive level's doesn't.
+one to six — ``cohort-a-01`` holds all six, ``cohort-a-15`` and ``cohort-d-07``
+five, five members four (the cohort's draw from all twenty-seven tags, #832) —
+while the ranking's crowd shares two and the New in Raketa joiners none. Her
+friends share one, three and four. So this layer writes **no player**, as Same
+competitive level's doesn't.
 
 **Her six tags are the catalog's**, committed with her profile on a fresh
-store. A store seeded before #795 committed her three, and a commit is
+store. A store seeded before #795 committed her three, one seeded before #832
+her old six, and a commit is
 idempotent, so this layer **changes her tags through the You tab's own use case**
 — which records nothing when they are already hers — before anything reads them.
 
@@ -20,6 +22,12 @@ cases, each pair read first so a second run asks nobody twice:
   their Home reads *5 things in common*;
 - :data:`ASKS_HER` — all six — **asks her from theirs**, so her Home's request
   card reads *6 things in common*, and the envelope stands first on her row.
+
+**A store seeded before #832 keeps the two requests that run made** — hers to
+``cohort-a-13`` and ``cohort-d-01``'s to her — beside these two, since the
+names moved with the redraw and nothing here takes a request back: her Home
+then reads two *Found you through your tags* cards, each counted today. A fresh
+store holds these two alone.
 
 **Her row is all fresh**: the cohort and the ranking's crowd hold far more than
 ten unconnected players sharing two tags with her or more, so her friends and
@@ -57,6 +65,7 @@ from app.modules.discovery.domain.same_vibe import (
     is_fresh,
     is_good_match,
 )
+from app.modules.discovery.domain.totals import capped
 from app.modules.friends.application.commands import AskCommand
 from app.modules.friends.domain.friendship import Where
 from app.modules.friends.domain.relation import FriendRelation, RequestOrigin
@@ -71,9 +80,9 @@ from app.seeds.money import THE_FAKE, SeedMoney
 from app.seeds.rooms import deliver_everything_told
 
 #: Who she asks from her row: five of her six tags.
-SHE_ASKS: Final = "cohort-a-13"
+SHE_ASKS: Final = "cohort-a-15"
 #: Who asks her from theirs: all six.
-ASKS_HER: Final = "cohort-d-01"
+ASKS_HER: Final = "cohort-a-01"
 #: Every count of shared tags her See all must hold — a player holds at most six.
 EVERY_COUNT: Final = range(1, len(HER_TAGS) + 1)
 
@@ -85,7 +94,8 @@ class SeededSameVibe:
     asked_her: UUID
     #: Whether this run asked either — a fresh store's run, held to both.
     created: bool
-    #: Whether this run gave her the six tags — a store seeded before #795.
+    #: Whether this run gave her the six tags — a store seeded before #795 or
+    #: before #832 re-picked three of them.
     retagged: bool
     #: Fresh good matches on her row when the screens were read (``None``
     #: before).
@@ -185,7 +195,8 @@ async def assert_same_vibe(
 
     async with session_factory() as session:
         her = await _id_of(session, THE_POPULATED_PLAYER.email)
-        row = await build_read_same_vibe(session, settings=settings).execute(her)
+        read = await build_read_same_vibe(session, settings=settings).execute(her)
+        row = read.cards
         everyone: list[SameVibeCard] = []
         page = await build_read_same_vibe_page(session, settings=settings).execute(
             her, sport=None, after=None
@@ -203,6 +214,10 @@ async def assert_same_vibe(
         raise RuntimeError(
             f"{len(everyone)} players in her Same vibe See all and {len(row)} "
             "on her row"
+        )
+    if read.total != capped(len(everyone)):
+        raise RuntimeError(
+            f"her Same vibe line counts {read.total} and See all lists {len(everyone)}"
         )
     if not {card.player_id for card in row} <= {card.player_id for card in everyone}:
         raise RuntimeError("her Same vibe row holds a player See all doesn't list")
@@ -231,7 +246,8 @@ async def assert_same_vibe(
                 )
     fresh = sum(_is_fresh(card) for card in row)
     return (
-        f"Same vibe: {len(row)} on her row ({fresh} fresh), {len(everyone)} in "
+        f"Same vibe: {len(row)} on her row of {read.total} ({fresh} fresh), "
+        f"{len(everyone)} in "
         f"See all — "
         + ", ".join(f"{counts[n]} sharing {n}" for n in reversed(EVERY_COUNT))
         + f" (pill: {', '.join(sport.value.title() for sport in page.sports)})"
@@ -284,7 +300,10 @@ def same_vibe_lines(seeded: SeededSameVibe) -> list[str]:
         "common, her Home reads the line",
     ]
     if seeded.retagged:
-        lines.append("  (her tags were three, from a store seeded before #795)")
+        lines.append(
+            "  (given them this run — a store seeded before #795 held her three, "
+            "one before #832 her old six)"
+        )
     if not seeded.created:
         lines.append("  (asked by an earlier run)")
     return lines

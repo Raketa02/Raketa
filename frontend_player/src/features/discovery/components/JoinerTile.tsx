@@ -9,16 +9,21 @@
  *
  * A tap anywhere but the button opens the record (`onOpen`). The tile's spoken name reads it in the
  * order drawn (`tileLabel`).
+ *
+ * **While See all's first page is read, a grid tile is one skeleton block** (`JOINER_TILE_SKELETON`,
+ * [#872](https://github.com/Raketa02/Raketa/issues/872)): everything on it is drawn over the
+ * photograph, so the whole tile is the one shape, at the grid's 9:8 and the tile's corner.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 
 import { RoundFriendButton } from '@/features/friends/types';
-import { PortraitTile, Tag, theme } from '@/shared/ui';
+import { PortraitTile, SkeletonBlock, Tag, theme } from '@/shared/ui';
 
 import { FOUND_AMONG_NEW_PLAYERS, joinedAgo, type Joiner } from '../domain/joiner';
 
 import { DISCOVERY_COPY, joinedLine, sportLevelLine, tileLabel } from './discoveryCopy';
+import type { SeeAllSkeletonTile } from './SeeAllScreen';
 
 export interface JoinerTileProps {
   readonly joiner: Joiner;
@@ -74,7 +79,19 @@ export function JoinerTile({ joiner, width, layout, onOpen }: JoinerTileProps) {
   );
 }
 
+/** **A grid tile while See all's first page is read** (#872): one block, the photograph's. */
+export const JOINER_TILE_SKELETON: SeeAllSkeletonTile = {
+  height: (width) => width * theme.size.portraitTile.gridAspect,
+  Tile: JoinerTileSkeleton,
+};
+
+function JoinerTileSkeleton() {
+  return <SkeletonBlock style={s.skeleton} />;
+}
+
 const s = StyleSheet.create({
+  // The whole tile, at `PortraitTile`'s corner.
+  skeleton: { flex: 1, borderRadius: theme.radius.cardDark },
   // Over the wash, as on a dark card — every label with the on-media shadow (7.31).
   name: { ...theme.type.h2, color: theme.color.surface, ...theme.shadow.textOnMedia },
   sportsOnePerLine: { gap: 0 },

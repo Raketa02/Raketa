@@ -9,8 +9,8 @@
  * - **Body**: the same tiles in two columns, most in common first, friends where they fall, **20 to a
  *   page, the next read as the grid nears its end**. A sport keeps only who holds a level in it, and
  *   one that leaves nobody says so in place of the grid.
- * - **Every state** is the people rows' See all's (`SeeAllScreen`): reading, failed, offline, a later
- *   page refused, and the pull.
+ * - **Every state** is the people rows' See all's (`SeeAllScreen`): reading (the grid's tiles as
+ *   skeletons, filling the screen — #872), failed, offline, a later page refused, and the pull.
  *
  * Every tile opens the same vibe sheet and its round button acts, as on Home's row; **every friend
  * write reaches every people list** (`LISTS_PEOPLE`): this grid reads again, and the row under the
@@ -25,7 +25,7 @@ import { usePersonSheet } from '../hooks/usePersonSheet';
 import { useSameVibePage } from '../hooks/useSameVibe';
 
 import { DISCOVERY_COPY, SAME_VIBE_PILL_WORDS, nobodySharesYourTagsIn } from './discoveryCopy';
-import { SameVibeTile } from './SameVibeTile';
+import { SAME_VIBE_TILE_SKELETON, SameVibeTile } from './SameVibeTile';
 import { SeeAllScreen } from './SeeAllScreen';
 import { VibeSheet } from './VibeSheet';
 
@@ -55,8 +55,8 @@ export function SameVibeScreen() {
           onOpen={() => vibing.show(player)}
         />
       )}
+      skeleton={SAME_VIBE_TILE_SKELETON}
       emptyLine={choice === 'all' ? COPY.nobodyAtAll : nobodySharesYourTagsIn(choice)}
-      readingLabel={COPY.reading}
       testID="same-vibe-grid"
       overlayUp={vibing.open}
       overlays={<VibeSheet sheet={vibing} />}

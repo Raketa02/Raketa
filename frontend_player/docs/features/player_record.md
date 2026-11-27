@@ -505,3 +505,12 @@ wire has no `distance_km`, so a record opened from a Home row writes no identity
 row reads _6 things in common_ alone, never _· In your area · 0,6 km_. The reader's own area is known
 (their own record's `area_code`), but no form of the line writes _In your area_ without the kilometres.
 #795's contract says the sheet reads the distance off the record: a backend ask, for the product owner.
+
+**The record shows up to 8 tags** ([#837](https://github.com/Raketa02/Raketa/issues/837),
+[ADR-0207](../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+§7; the player record spec's 2026-11-22 note). A player picks 2 to 8 of 27 now, so
+`SOCIAL_TAG_ROW_CAP` — the row's layout ceiling, read from the profile step's own — went from 6 to 8,
+and `recordTagRow` draws all eight; a ninth, which no profile can hold, would still reach the reader
+as a shorter row. A served tag this build has no words for is dropped by the mapper (`toSocialTagId`), as before. `tagRow.test.ts` holds
+the eight and the cap; `youSocialEdits.test.tsx` opens your own record on all eight after a save.
+**Not seen on a device**: eight tags on the sheet under _Full record_.

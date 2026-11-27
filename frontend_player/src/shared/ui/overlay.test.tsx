@@ -10,6 +10,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 import { AccessibilityInfo } from 'react-native';
+import { useReducedMotion as reducedMotionAtStart } from 'react-native-reanimated';
 
 import {
   ReducedMotionProvider,
@@ -19,6 +20,20 @@ import {
   useReducedMotion,
   useScreenReader,
 } from './overlay';
+
+/**
+ * **The OS's answer as the process started** — Reanimated's, which the native side hands the
+ * JavaScript runtime as it installs, so it is there before the first render. Under jest there is no
+ * native side and it answers `false`; this replaces only that one read, real everything else, so a
+ * test can be a phone that started with reduced motion on. The far side of a native module, as
+ * `jest.setup.js` mocks the others.
+ */
+jest.mock('react-native-reanimated', () => ({
+  ...jest.requireActual('react-native-reanimated'),
+  useReducedMotion: jest.fn(() => false),
+}));
+
+const atStart = jest.mocked(reducedMotionAtStart);
 
 /**
  * Reduced motion is read once, at the root, and handed down — so a hook that reads it is
@@ -67,6 +82,7 @@ let spoken: jest.SpyInstance<
 
 beforeEach(() => {
   jest.restoreAllMocks();
+  atStart.mockReturnValue(false);
   spoken = jest
     .spyOn(AccessibilityInfo, 'announceForAccessibilityWithOptions')
     .mockImplementation(() => undefined);
@@ -136,6 +152,34 @@ describe('reduced motion, read once for the whole tree', () => {
     await act(async () => undefined);
 
     expect(result.current).toBe(true);
+  });
+
+  /**
+   * **Never a provisional `false`** (ADR-0209 §2). The asynchronous read lands after the first
+   * frame, and the launch's splash decides its variant once, before it — so the provider's first
+   * answer has to be the OS's already, from the one source that knows before anything renders.
+   */
+  it('answers what the OS said as the process started on its very first render', () => {
+    atStart.mockReturnValue(true);
+    // The asynchronous read never lands in this test: the answer cannot have come from it.
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockReturnValue(new Promise(() => {}));
+
+    const answers: boolean[] = [];
+    renderHook(() => answers.push(useReducedMotion()), { wrapper: underTheProvider });
+
+    expect(answers[0]).toBe(true);
+  });
+
+  it('follows the OS from there, when the player changes it while the app is open', async () => {
+    atStart.mockReturnValue(true);
+    const os = fakeAccessibility({ reduceMotion: true });
+
+    const { result } = renderHook(() => useReducedMotion(), { wrapper: underTheProvider });
+    await act(async () => undefined);
+    expect(result.current).toBe(true);
+
+    os.change('reduceMotionChanged', false);
+    expect(result.current).toBe(false);
   });
 
   it('is off outside a provider, which is what the app looked like before anybody asked', async () => {

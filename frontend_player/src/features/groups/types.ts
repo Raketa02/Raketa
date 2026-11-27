@@ -61,20 +61,43 @@ export { groupReturnRoute } from './components/groupRoutes';
  * places it; whether it is drawn is this feature's rule.
  */
 export { HomeLevelCard } from './components/HomeLevelCard';
+/** **Whether the card's reads have finished** (#871) — what the shell's reveal waits on for it. */
+export { useLevelCardFinished } from './hooks/useHomeAsksForALevel';
 /**
- * **Home's HOTTEST GROUPS** ([#800](https://github.com/Raketa02/Raketa/issues/800); ADR-0204 §3; the
- * Home rows screens §3): the row the shell draws just below *Your games*, the re-read Home's pull
- * makes of it, and whether *Your games* says the groupless line (`GROUPS_COPY.hottest.groupless`).
+ * **Home's Groups heating up** ([#800](https://github.com/Raketa02/Raketa/issues/800), was HOTTEST
+ * GROUPS; [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §3, ADR-0205 §5; the Home
+ * rows screens §3): the first of FOR YOU's lines, which the shell folds just below *Your games* —
+ * `undefined` while hidden — the re-read Home's pull makes of it, and whether the reader is in no
+ * group: *Your games* then says the groupless line (`GROUPS_COPY.hottest.groupless`), and the line
+ * starts open.
  */
-export { HottestGroupsRow } from './components/HottestGroupsRow';
+export { useHottestGroupsLine } from './components/HottestGroupsLine';
+/** **The Groups heating up page** (#823; ADR-0205 §7) — its line's *All groups ›* pushes it over Home. */
+export { HottestGroupsScreen } from './components/HottestGroupsScreen';
 export { rereadHomeGroups } from './hooks/useHottestGroups';
 export { useInNoGroup } from './hooks/useGroups';
+/**
+ * **Whether the line's read and the groups' have finished** (#871) — what the shell's reveal waits
+ * on: Groups heating up for FOR YOU, and your groups for *Your games*' line.
+ */
+export { useHottestGroupsFinished } from './hooks/useHottestGroups';
+export { useInNoGroupFinished } from './hooks/useGroups';
+/**
+ * **Home's two group reads, set out before Home is drawn** (#874) — the shell's warm-up during the
+ * splash: Groups heating up and your groups, under the hooks' own reads.
+ */
+export { prefetchHomeGroups } from './hooks/useHottestGroups';
 /** The reads behind it — what a notice opening Home on its card marks stale (#731). */
 export { groupKeys } from './hooks/groupKeys';
 /**
  * **The sport the deck last showed** (#775) — Rankings opens on it when Home's trophy names no sport.
  */
 export { useDeckSport } from './hooks/useGroupSport';
+/**
+ * **The same sport off the cache, and its two reads set out early** (#874) — `rankings`' Top 10
+ * opening sport, worked out within the shell's warm-up before Home is drawn.
+ */
+export { deckSportIn, prefetchDeckSport } from './hooks/useGroupSport';
 
 /**
  * **The home-club search, for a Location area** ([#733](https://github.com/Raketa02/Raketa/issues/733),

@@ -2,9 +2,12 @@
  * The platform module: everything this app knows about the device it is running on.
  *
  * App lifecycle and connectivity are *wirings* — called once by the bootstrap sequence,
- * after which nothing consults them again. The four ports below are the other kind: an
- * interface a feature depends on, with one implementation that talks to the device and one
- * fake that a test drives (`src/test-support/platform.ts`).
+ * after which nothing consults them again but through Query's managers. Connectivity keeps one
+ * reading beside its wiring: `readReachability`, what the online manager believes once it has its
+ * first answer, which the launch reads before its session check and skips the check on when the
+ * phone knows it is offline (ADR-0209 §4). The ports below are the other kind: an interface a
+ * feature depends on, with one implementation that talks to the device and one fake that a test
+ * drives (`src/test-support/platform.ts`).
  *
  * `useHardwareBack` is a third kind and small enough to say so here: a **hook over a device
  * gesture**, with no port under it because `BackHandler` is React Native's own and not an
@@ -55,9 +58,23 @@
  * read before any screen exists — by a bootstrap step the root layout supplies — so it is a value
  * handed to its caller rather than a provider's.
  *
- * `appBuild` is the one plain *reading*: which platform and which version of the app this is,
- * the two device facts a feature flag's rules may target (ADR-0180 §8). Nothing to decide and
- * nothing a test would drive, so no port.
+ * **The tenth is the system bars** (#857): the status bar and Android's navigation bar, painted the
+ * drawn splash's edge colour while it is up and given back as its fade starts (ADR-0209). The
+ * navigation bar is native, and *painted until the fade, not after* is a rule a fake can follow. The
+ * platforms differ, so the port is two files: `systemBars.ts` for an iPhone and
+ * `systemBars.android.ts`, the only importer of `expo-navigation-bar`. Its one caller is the launch
+ * gate, which is handed it as it is handed the launch window, so it has no provider either.
+ *
+ * **The eleventh is the soft keyboard** (#882, ADR-0210 §9): whether it is up, and a way to follow
+ * it. It joined `keyboard.ts` — the keyboard's module already, the avoidance value and the dismissal —
+ * rather than a second module, so that file is the only importer of React Native's `Keyboard`, the
+ * share sheet's kind of fence, and the app's one listener for its show and hide. Both shells read it
+ * through `useKeyboardShrinksTheWindow`, to stand the tab bar down while an Android window is shrunk
+ * for it; a suite raises and drops `fakeKeyboard()` through `KeyboardProvider`.
+ *
+ * `appBuild` is the one plain *reading* of what the device is: which platform and which version
+ * of the app this is, the two device facts a feature flag's rules may target (ADR-0206 §8).
+ * Nothing to decide and nothing a test would drive, so no port.
  *
  * `permissionStateOf` is deliberately *not* re-exported. Reading a native response is the
  * ports' own work, and a caller with a use for it is a caller that got hold of a native
@@ -68,9 +85,27 @@ export { useAppInBackground, useOnForeground, wireFocusManager } from './appStat
 export { useHardwareBack } from './hardwareBack';
 export { useOnReturn } from './screenReturn';
 export { openAppSettings } from './appSettings';
+export { appBuild } from './appBuild';
 export { useCopyAndSay, type CopyWords } from './copyAndSay';
-export { KEYBOARD_AVOIDANCE, dismissKeyboard, windowResizesForKeyboard } from './keyboard';
-export { useIsOnline, wireOnlineManager } from './networkState';
+export {
+  KEYBOARD_AVOIDANCE,
+  deviceKeyboard,
+  dismissKeyboard,
+  windowResizesForKeyboard,
+  type KeyboardPort,
+} from './keyboard';
+export {
+  KeyboardProvider,
+  useKeyboardShrinksTheWindow,
+  type KeyboardProviderProps,
+} from './KeyboardProvider';
+export {
+  REACHABILITY_ANSWER_WITHIN_MS,
+  readReachability,
+  useIsOnline,
+  wireOnlineManager,
+  type Reachability,
+} from './networkState';
 
 export { ensurePermission, type AskablePermission, type PermissionState } from './permission';
 
@@ -124,3 +159,4 @@ export {
 export { PaymentsProvider, usePayments, type PaymentsProviderProps } from './PaymentsProvider';
 export { devicePush, type PushNotice, type PushPort } from './push';
 export { PushProvider, usePush, type PushProviderProps } from './PushProvider';
+export { deviceSystemBars, type SystemBarsPort } from './systemBars';

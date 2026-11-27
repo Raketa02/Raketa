@@ -278,6 +278,50 @@ export function openingSport(asked: Sport | undefined, reads: OpeningReads): Spo
   return reads.deck ?? FIRST_SPORT;
 }
 
+/**
+ * **The three reads the pill and the opening sport are answered from, as each stands** — the ratings,
+ * the deck's sport and the trophy — whether a hook observes them or the cache is asked (#874).
+ */
+export interface OpeningReadsNow {
+  /** The sports the reader is rated in — `undefined` while the ratings are read. */
+  readonly rated: readonly Sport[] | undefined;
+  /** The ratings read was refused. */
+  readonly ratingsRefused: boolean;
+  /** The ratings read is held for a connection. */
+  readonly ratingsPaused: boolean;
+  /** The deck's sport (`OpeningReads.deck`). */
+  readonly deck: Sport | null | undefined;
+  /** The reader's ranking off Home's read — `null` for none, `undefined` while Home's read is out. */
+  readonly trophy: { readonly sport: Sport } | null | undefined;
+}
+
+/** **The pill's sports and the sport a ranking opens on** — before anything is picked. */
+export interface Opening {
+  /** All four, rated first — `undefined` while the ratings are read. */
+  readonly sports: readonly Sport[] | undefined;
+  /** `openingSport`'s answer. */
+  readonly opening: Sport | undefined;
+}
+
+/**
+ * **The pill and the opening sport, over the three reads as they stand** — the Rankings page's and
+ * Home's Top 10's (`useOpeningSport`), and the launch's warm-up's off the cache (#874), one rule for
+ * all. **A ratings read refused, or held for a connection with nothing read yet, is no level
+ * anywhere**: the pill in the app's order, and an unread deck taken as none, so the page opens —
+ * waiting on it would shimmer for as long as the phone is offline (#870).
+ */
+export function openingOf(asked: Sport | undefined, reads: OpeningReadsNow): Opening {
+  const unrated = reads.ratingsRefused || (reads.rated === undefined && reads.ratingsPaused);
+  const rated = unrated ? [] : reads.rated;
+  return {
+    sports: rated === undefined ? undefined : pillSports(rated),
+    opening: openingSport(asked, {
+      trophy: reads.trophy === undefined ? undefined : (reads.trophy?.sport ?? null),
+      deck: unrated && reads.deck === undefined ? null : reads.deck,
+    }),
+  };
+}
+
 /** **Three rows on their steps** — first in the middle, the tallest; second left; third right. */
 export interface Podium {
   readonly first: RankedRow;

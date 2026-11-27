@@ -20,9 +20,17 @@ export interface CardTagProps {
   readonly tone: CardTagTone;
   /** A round dot before the words — a game's details draw the stage's (*Filling*) this way. */
   readonly dot?: string;
+  /**
+   * The words' `maxFontSizeMultiplier`, where the tag stands in a fixed box — a tile's foot caps it
+   * with the rest of its words (`footMaxScale`, #865). Absent, it grows with the OS text size.
+   */
+  readonly maxScale?: number;
 }
 
-export function CardTag({ label, tone, dot }: CardTagProps) {
+/** A tag's padding about its words — `gameTileFoot.test` counts it in a tile's foot. */
+export const CARD_TAG = { padX: theme.space.xs, padY: theme.space.xxs } as const;
+
+export function CardTag({ label, tone, dot, maxScale }: CardTagProps) {
   return (
     <View style={[s.tag, BED[tone]]}>
       {dot === undefined ? null : (
@@ -32,7 +40,11 @@ export function CardTag({ label, tone, dot }: CardTagProps) {
           importantForAccessibility="no"
         />
       )}
-      <Text style={[s.label, WORDS[tone]]} numberOfLines={1}>
+      <Text
+        style={[s.label, WORDS[tone]]}
+        numberOfLines={1}
+        {...(maxScale === undefined ? {} : { maxFontSizeMultiplier: maxScale })}
+      >
         {label}
       </Text>
     </View>
@@ -44,8 +56,8 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.xxs,
-    paddingVertical: theme.space.xxs,
-    paddingHorizontal: theme.space.xs,
+    paddingVertical: CARD_TAG.padY,
+    paddingHorizontal: CARD_TAG.padX,
     borderRadius: theme.radius.tag,
     alignSelf: 'flex-start',
   },

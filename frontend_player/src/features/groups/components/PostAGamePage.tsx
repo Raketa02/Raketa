@@ -8,21 +8,26 @@
  * group's declared sports), **each with how many members are rated in it** (the group's roster,
  * *Padel 10*); the sport the page is on; and the kind its switch stands on (`gameIntent.store`).
  *
- * **It turns the page under it to Fill in as it opens** (`groupTab.store`): A5's *back → Fill in*
- * holds for every way back — the chevron, the hardware back, the swipe — and after a post *You're In*
- * is where the player lands, whether they came from Fill in's button or from *Nothing picked right
- * now* on Games.
+ * **It leaves the page under it alone** (#848, PRD #844; #847 turned it to You’re in as it opened).
+ * The tab the page stands on as this opens is the **origin** (`groupTab.store`, Games when the page
+ * has not moved off its opening tab): every way back — the chevron, the hardware back, the swipe —
+ * returns to the page as it was, on that tab, and the chevron names it (*Back to Games*, *Back to
+ * You’re in*). **A post lands on You’re in**, from You’re in's button or *Nothing picked right now*
+ * on Games, and so does a join from a cell's sheet: only then is the page turned, a moment before
+ * it is uncovered, so the player sees the game they made. With no page under it — opened by a link —
+ * the page is opened instead, on Games for a back-out and on You’re in for a landing.
  *
  * **Rated in none of the group's sports** (an official group's, #519), there is nothing to post:
  * *Get rated in padel to post here*, with the passport's *Add a sport* for each (Q80) — whose pass
- * returns to the group, on Fill in (#729). **Rated in nothing, in a player group**, it is the door
- * where play begins instead (#730, ADR-0200 §2): every way of playing asks the same thing, and the
- * pass it begins returns to Fill in too. While the group or the phone is still being read, the
- * header alone; a refused read says why with the retry.
+ * returns to the group, on **You’re in**, where the button lives and a post lands, whichever tab this
+ * was opened from (#729, #848). **Rated in nothing, in a player group**, it is the door where play
+ * begins instead (#730, ADR-0200 §2): every way of playing asks the same thing, and the pass it begins
+ * returns to You’re in too. While the group or the phone is still being read, the header alone; a
+ * refused read says why with the retry.
  */
 
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -31,6 +36,7 @@ import { POSTING_COPY, PostAGameScreen, type PostingSport } from '@/features/pro
 import { codeMessage } from '@/shared/errors';
 import { ScreenHeader, theme } from '@/shared/ui';
 
+import { OPENING_TAB } from '../domain/groupPage';
 import { useGroup } from '../hooks/useGroups';
 import { useGroupSport } from '../hooks/useGroupSport';
 import { useGameIntent } from '../store/gameIntent.store';
@@ -39,7 +45,7 @@ import { useGroupTab } from '../store/groupTab.store';
 import { AddSportCard } from './AddSportCard';
 import { groupRoute } from './groupRoutes';
 import { GROUPS_COPY } from './groupsCopy';
-import { rateToPostHeadline } from './groupsPresentation';
+import { postAGameBackLabel, rateToPostHeadline } from './groupsPresentation';
 import { ReadFailure } from './ReadFailure';
 
 export function PostAGamePage({ groupId }: { readonly groupId: string }) {
@@ -48,14 +54,20 @@ export function PostAGamePage({ groupId }: { readonly groupId: string }) {
   const { sports, sport, toAdd, needsALevel } = useGroupSport(group?.declaredSports);
   const chosen = useGameIntent((state) => state.intent);
 
-  // The page under this one goes to Fill in now, unseen, so every way back arrives there.
-  useEffect(() => {
-    useGroupTab.getState().show(groupId, 'fillIn');
-  }, [groupId]);
+  // The tab the page stood on as this opened — read once: a landing turns the page under it.
+  const [origin] = useState(() => useGroupTab.getState().tabs[groupId] ?? OPENING_TAB);
+  const backLabel = postAGameBackLabel(origin);
 
+  // Back to the page as it was — on the origin, which nothing here has touched.
   const leave = () => {
     if (router.canGoBack()) router.back();
     else router.replace(groupRoute(groupId));
+  };
+
+  // A post, or a join from a sheet: the page turns to You’re in, unseen under this, and is uncovered.
+  const land = () => {
+    useGroupTab.getState().show(groupId, 'youreIn');
+    leave();
   };
 
   if (group !== undefined && sports !== undefined && sport !== undefined && toAdd.length === 0) {
@@ -69,7 +81,9 @@ export function PostAGamePage({ groupId }: { readonly groupId: string }) {
         sports={rated}
         openingSport={sport}
         chosen={chosen}
+        backLabel={backLabel}
         onLeave={leave}
+        onLanded={land}
       />
     );
   }
@@ -78,7 +92,7 @@ export function PostAGamePage({ groupId }: { readonly groupId: string }) {
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <ScreenHeader title={POSTING_COPY.title} onBack={leave} backLabel={POSTING_COPY.back} />
+      <ScreenHeader title={POSTING_COPY.title} onBack={leave} backLabel={backLabel} />
       <View style={s.body}>
         {group === undefined ? (
           read.error === null ? (
@@ -96,15 +110,15 @@ export function PostAGamePage({ groupId }: { readonly groupId: string }) {
         ) : sports === undefined ? (
           <ActivityIndicator accessibilityLabel={POSTING_COPY.opening} color={theme.color.muted} />
         ) : needsALevel ? (
-          // A player group, rated in nothing: the door, returning to Fill in for the card's reason.
-          <LevelDoor from={fromAGroup(groupId, 'fillIn')} />
+          // A player group, rated in nothing: the door, returning to You’re in for the card's reason.
+          <LevelDoor from={fromAGroup(groupId, 'youreIn')} />
         ) : (
-          // A pass begun here returns to the group on Fill in — where this screen put the page
-          // under it, and where every way back from it lands (#729).
+          // A pass begun here returns to the group on You’re in — where the button lives and a post
+          // lands — never to the origin a back-out returns to (#729, #848).
           <AddSportCard
             sports={unrated}
             groupId={groupId}
-            tab="fillIn"
+            tab="youreIn"
             headline={rateToPostHeadline(unrated)}
           />
         )}

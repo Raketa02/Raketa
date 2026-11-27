@@ -123,11 +123,27 @@
  * list as an exception on that one control — never spoken, and not a seventh coral meaning for
  * another button to reach for. Both are here rather than in a feature's copy of this look, which is
  * `README.md`'s whole rule.
+ *
+ * **A busy button says it is working: a spinner before its word, at its full fill**
+ * ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-11-21;
+ * [`decisions.md`](../../../../docs/specs/busy-indicator/decisions.md) §2). It used to be the
+ * disabled row's 40% over a word that did not move, and a player watching *Signing in…* read a
+ * frozen screen — and *on its way* and *you may not* were one drawing, told apart by the word
+ * alone. Now the fill stays whole, the press stays blocked, and React Native's own
+ * `ActivityIndicator` — the app's loading mark everywhere else — turns before the word in the
+ * label's ink, so it adds no colour. **The 40% dim is disabled's alone**, and a button told it is
+ * both busy and disabled is busy: something is on its way. The spinner **takes the place of `lead`
+ * and `dot`**, one glyph before the word, and **`marks` step aside** while it turns, because they
+ * describe the idle state the busy word has replaced. Hidden from a listener: the word is the name.
+ * **It spins under reduced motion**, the second named exception after the calculating screen's
+ * indicator — it is progress, not decoration, and a still one is the frozen screen again for
+ * exactly the players who asked for less motion.
  */
 
 import Feather from '@expo/vector-icons/Feather';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Pressable,
   StyleSheet,
@@ -205,7 +221,10 @@ export interface ButtonProps {
   /** A 6pt `coral` dot before the label, never spoken — the stage's invitation button's alone. */
   readonly dot?: boolean;
   readonly disabled?: boolean;
-  /** Blocks presses and swaps the label. A busy button is not a disabled button. */
+  /**
+   * Blocks presses, swaps the label and draws a spinner before it — at the full fill, because a
+   * busy button is not a disabled button. Wins over `disabled`. See the module note.
+   */
   readonly busy?: boolean;
   readonly busyLabel?: string;
   /**
@@ -259,8 +278,8 @@ export function Button({
       accessibilityRole={role}
       accessibilityLabel={accessibilityLabel ?? shown}
       accessibilityHint={accessibilityHint}
-      // Disabled and busy reach a screen reader as state. The 40% fill below is the
-      // sighted half of the same fact, never the whole of it.
+      // Disabled and busy reach a screen reader as state. The 40% fill below is the sighted
+      // half of *disabled*, and the spinner the sighted half of *busy* — never the whole of it.
       accessibilityState={{ disabled: blocked, busy, selected }}
       disabled={blocked}
       onPress={onPress}
@@ -272,8 +291,9 @@ export function Button({
         FILL[variant],
         gloss !== undefined ? s.glossed : undefined,
         pressed && !blocked ? PRESSED[variant] : undefined,
-        // Never on `settled`: the fill is the fact, and the words say why it is shut.
-        blocked && variant !== 'settled' ? s.blocked : undefined,
+        // Disabled's alone: a busy button keeps its fill and turns its spinner instead. Never
+        // on `settled` either: the fill is the fact, and the words say why it is shut.
+        disabled && !busy && variant !== 'settled' ? s.blocked : undefined,
         style,
       ]}
     >
@@ -291,7 +311,19 @@ export function Button({
         />
       )}
       <View style={[s.labelBox, gloss !== undefined ? s.labelBoxGlossed : undefined]}>
-        {marks.length === 0 && !dot && lead === undefined ? (
+        {busy ? (
+          // The one glyph before the word while something is on its way: the idle state's
+          // `lead`, `dot` and `marks` step aside, and the busy word says what is happening.
+          <View style={s.busy}>
+            <ActivityIndicator
+              size="small"
+              color={LABEL[variant].color}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            />
+            {words}
+          </View>
+        ) : marks.length === 0 && !dot && lead === undefined ? (
           words
         ) : (
           <View style={s.marked}>
@@ -392,6 +424,9 @@ const s = StyleSheet.create({
   labelBox: { paddingVertical: theme.space.xs },
   // The label and its marks on one line, the marks a hair apart — a label's own word gap.
   marked: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs },
+  // The spinner and the busy word: a word's gap, as the dot keeps from the label — a turning
+  // mark a hair from the first letter would read as part of it.
+  busy: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
   // The smallest round mark in the app, at its one size; coral is 3,89 on white, past a mark's 3:1.
   // A word's gap further from the label than a mark after it, as the mock draws it.
   dot: {
@@ -407,6 +442,7 @@ const s = StyleSheet.create({
   glossed: { alignItems: 'stretch' },
   labelBoxGlossed: { gap: theme.space.xxs },
   gloss: { ...theme.type.tiny },
+  // Disabled's dim, and only disabled's: a busy button is drawn whole (the module note).
   blocked: { opacity: 0.4 },
 });
 

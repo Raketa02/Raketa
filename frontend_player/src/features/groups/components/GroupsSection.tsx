@@ -2,8 +2,9 @@
  * **Play › Groups** — the groups the player belongs to, newest joined first, and the two ways to
  * another: **+ New** and **Join** (play 1, 38; stories 1, 5–8).
  *
- * Drawn under Play's segment, which is the tab's and the shell's; this is the page the *Groups*
- * segment shows. It scrolls on its own, below the pinned segment.
+ * Drawn under Play's head, which is the tab's and the shell's: the *Groups* title while the
+ * `explore` feature flag is off, the *Groups* segment while it is on (#826). It scrolls on its own,
+ * below the pinned head, and is the same page under either.
  *
  * **Every state has its drawing.** Nothing while the first read is on its way — the list is local
  * and quick, and a spinner that flashed for a frame would be the only thing on screen that moved.
@@ -20,7 +21,7 @@
 import { router } from 'expo-router';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, theme } from '@/shared/ui';
+import { Button, Card, theme, useTabBarReach } from '@/shared/ui';
 
 import { useGroupsList, useMyGroupsReread } from '../hooks/useGroups';
 import { usePull } from '../hooks/usePull';
@@ -33,13 +34,15 @@ import { ReadFailure } from './ReadFailure';
 const COPY = GROUPS_COPY.list;
 
 export function GroupsSection() {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const groups = useGroupsList();
   const { refreshing, pull } = usePull(useMyGroupsReread());
 
   return (
     <ScrollView
       testID="groups-list"
-      contentContainerStyle={s.content}
+      contentContainerStyle={[s.content, { paddingBottom: reach + theme.space.lg }]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -84,7 +87,6 @@ export function GroupsSection() {
 const s = StyleSheet.create({
   content: {
     paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
   actions: {

@@ -134,6 +134,25 @@ const installReferrerImport = {
     'from src/test-support/platform.ts in a test. See #756.',
 };
 
+const navigationBarImport = {
+  group: ['expo-navigation-bar'],
+  message:
+    'Only src/shared/lib/platform/systemBars.android.ts may import expo-navigation-bar. The ' +
+    'navigation bar is native and a write replaces what it shows, so one file reads the ' +
+    "system's own look before painting and gives exactly that back — use the SystemBarsPort " +
+    'from @/shared/lib/platform, and fakeSystemBars() from src/test-support/platform.ts in a ' +
+    'test. See #857.',
+};
+
+const featurevisorImport = {
+  group: ['@featurevisor/*'],
+  message:
+    'Only src/features/feature_flags/api/featurevisor.ts may import the Featurevisor SDK. A gate ' +
+    'asks useFeatureOnMount from @/features/feature_flags/types; one module holding the SDK is ' +
+    'what keeps its instance, its major and what a silent datafile means in one place — and ' +
+    'the flags repo pins its CLI major to this one. See docs/adr/0206 §5, §10.',
+};
+
 const observabilityVendorImports = {
   group: ['@sentry/*', 'posthog-*', '@amplitude/*', 'mixpanel-*'],
   message:
@@ -155,11 +174,12 @@ const featureImportsFromShared = {
 };
 
 const asyncStoragePath = {
-  // Tokens belong in the OS keychain, not in JS-readable storage. The one exemption is a file,
-  // not a directory: it holds the choices a player made — see its block below.
+  // Tokens belong in the OS keychain, not in JS-readable storage. The two exemptions are files,
+  // not directories: one holds a public datafile, the other the choices a player made — see
+  // their blocks below.
   name: '@react-native-async-storage/async-storage',
   message:
-    'AsyncStorage is unencrypted: never store credentials in it — use expo-secure-store through src/shared/lib/auth (docs/adr/0008). Its only importer is src/shared/lib/preferences/phonePreferences.ts, which keeps the per-account choices ADR-0188 lists (docs/adr/0188); a second need joins that allow-list by decision, not by import.',
+    'AsyncStorage is unencrypted: never store credentials in it — use expo-secure-store through src/shared/lib/auth (docs/adr/0008). Its only importers are src/features/feature_flags/api/datafileCache.ts, which keeps the public feature-flag datafile (docs/adr/0206 §6), and src/shared/lib/preferences/phonePreferences.ts, which keeps the per-account choices ADR-0188 lists (docs/adr/0188); a third need joins that allow-list by decision, not by import.',
 };
 
 /**
@@ -177,6 +197,22 @@ const shareImportPath = {
     'from src/test-support/platform.ts in a test. See #513.',
 };
 
+/**
+ * React Native's own keyboard — the share sheet's shape, one **name** out of `react-native`. Its
+ * show and hide are the OS's and no suite can bring a keyboard up, so the app has one listener for
+ * them, which a fake replaces (ADR-0210 §9, #882).
+ */
+const keyboardImportPath = {
+  name: 'react-native',
+  importNames: ['Keyboard'],
+  message:
+    'Only src/shared/lib/platform/keyboard.ts may import Keyboard from react-native. It is the ' +
+    "app's one listener for the keyboard's show and hide, and the keyboard is the OS's, so a suite " +
+    'brings it up through a fake — use useKeyboardShrinksTheWindow or dismissKeyboard from ' +
+    '@/shared/lib/platform, and fakeKeyboard() from src/test-support/platform.ts in a test. See ' +
+    '#882 and docs/adr/0210 §9.',
+};
+
 /** Applies everywhere under src/, including api/ and mappers/. */
 const CORE_PATTERNS = [
   crossAppImports,
@@ -190,6 +226,8 @@ const CORE_PATTERNS = [
   stripeImport,
   pushImport,
   installReferrerImport,
+  navigationBarImport,
+  featurevisorImport,
   observabilityVendorImports,
 ];
 
@@ -216,11 +254,19 @@ const PURE_PATHS = [
 ];
 
 /**
- * The two path bans every block carries unless it is the one file exempt from one of them. The
+ * The three path bans every block carries unless it is the one file exempt from one of them. The
  * pure layers carry `PURE_PATHS` instead, which bans `react-native` whole and so the share sheet
- * with it.
+ * and the keyboard with it.
  */
-const DEFAULT_PATHS = [asyncStoragePath, shareImportPath];
+const DEFAULT_PATHS = [asyncStoragePath, shareImportPath, keyboardImportPath];
+
+/**
+ * That set minus the one ban a sanctioned owner is exempt from — a subtraction, never a re-listing,
+ * for `sharedPatternsExcept`'s reason below: the three exempt files used to list the paths they
+ * kept, so the keyboard's ban would have reached every file but them (#882).
+ */
+const defaultPathsExcept = (...exemptions) =>
+  DEFAULT_PATHS.filter((path) => !exemptions.includes(path));
 
 const restrict = (patterns, paths = DEFAULT_PATHS) => ['error', { patterns, paths }];
 
@@ -312,6 +358,10 @@ const SHARED_PATTERNS = [...CORE_PATTERNS, generatedImports, featureImportsFromS
 const sharedPatternsExcept = (...exemptions) =>
   SHARED_PATTERNS.filter((pattern) => !exemptions.includes(pattern));
 
+/** The same subtraction over a feature's wire layer, whose baseline is `CORE_PATTERNS`. */
+const corePatternsExcept = (...exemptions) =>
+  CORE_PATTERNS.filter((pattern) => !exemptions.includes(pattern));
+
 export default [
   ...expoConfig,
   {
@@ -357,6 +407,16 @@ export default [
   {
     files: ['src/shared/**'],
     rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS) },
+  },
+
+  // --- a shared module's domain/ is pure as a feature's is, and still shared ----
+  // After the block above, which would otherwise replace it: both sets of bans, so the splash's
+  // geometry (`shared/lib/bootstrap/domain/`) imports neither React nor a device nor a feature.
+  {
+    files: ['src/shared/lib/*/domain/**'],
+    rules: {
+      'no-restricted-imports': restrict([...PURE_PATTERNS, featureImportsFromShared], PURE_PATHS),
+    },
   },
 
   // --- the sanctioned exceptions ----------------------------------------------
@@ -425,17 +485,51 @@ export default [
     rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(installReferrerImport)) },
   },
   {
+    // The system bars on Android — the navigation bar's one importer, and one file wide like the
+    // other native ports: the port's iPhone file, `systemBars.ts`, may not reach for it (#857).
+    files: ['src/shared/lib/platform/systemBars.android.ts'],
+    rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(navigationBarImport)) },
+  },
+  {
     // The share sheet — one verb, one file, the clipboard's exemption with the path ban
     // subtracted rather than a pattern: `Share` is one name out of `react-native` (#513).
     files: ['src/shared/lib/platform/share.ts'],
-    rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS, [asyncStoragePath]) },
+    rules: {
+      'no-restricted-imports': restrict(SHARED_PATTERNS, defaultPathsExcept(shareImportPath)),
+    },
   },
   {
-    // The phone-preferences store — the one module that may import AsyncStorage (ADR-0188 §1),
-    // one file wide like the native ports. It sits under `shared/`, so its baseline is
-    // `SHARED_PATTERNS`, and only the path ban is subtracted.
+    // The keyboard — the share sheet's exemption, for the one name `Keyboard` (ADR-0210 §9, #882):
+    // its show and hide, and its dismissal, are read and asked here and nowhere else.
+    files: ['src/shared/lib/platform/keyboard.ts'],
+    rules: {
+      'no-restricted-imports': restrict(SHARED_PATTERNS, defaultPathsExcept(keyboardImportPath)),
+    },
+  },
+  {
+    // The feature flags' saved datafile — one of the two modules that may import AsyncStorage
+    // (ADR-0206 §6). The path ban is subtracted and nothing else: this file is a feature's api/
+    // layer, so its baseline is `CORE_PATTERNS`, and every one of those still applies.
+    files: ['src/features/feature_flags/api/datafileCache.ts'],
+    rules: {
+      'no-restricted-imports': restrict(CORE_PATTERNS, defaultPathsExcept(asyncStoragePath)),
+    },
+  },
+  {
+    // The phone-preferences store — the other module that may import AsyncStorage (ADR-0188
+    // §1), one file wide for the datafile cache's reason. It sits under `shared/`, so its
+    // baseline is `SHARED_PATTERNS`, and only the path ban is subtracted.
     files: ['src/shared/lib/preferences/phonePreferences.ts'],
-    rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS, [shareImportPath]) },
+    rules: {
+      'no-restricted-imports': restrict(SHARED_PATTERNS, defaultPathsExcept(asyncStoragePath)),
+    },
+  },
+  {
+    // The one module that wraps the Featurevisor SDK (ADR-0206 §5) — one file wide, like the
+    // native ports: the cache beside it may not evaluate a feature flag, and this may not read
+    // storage.
+    files: ['src/features/feature_flags/api/featurevisor.ts'],
+    rules: { 'no-restricted-imports': restrict(corePatternsExcept(featurevisorImport)) },
   },
   {
     // The single place fetch is configured.
@@ -496,7 +590,8 @@ export default [
     // the configuration's too: what `jest.config.js` maps reanimated's mock to.
     //
     // `afterEach` for the one hook the setup file registers for every suite: emptying the
-    // device storage a suite's walk left a player's choices in (ADR-0188).
+    // device storage a suite's walk left a player's choices, or a datafile, in (ADR-0188,
+    // ADR-0206 §6).
     files: ['jest.setup.js', 'src/test-support/reanimatedActual.js'],
     languageOptions: { globals: { jest: 'readonly', afterEach: 'readonly' } },
   },

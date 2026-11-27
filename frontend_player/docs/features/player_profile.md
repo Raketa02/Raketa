@@ -224,7 +224,7 @@ the step's _an upload outlives the screen_, kept. **The verdict has three states
 `UploadedPhoto.review` is optional: `allowed`, `flagged`, or absent for _nobody looked_
 (ADR-0138), off both the upload (`null`) and the read (omitted); the row's live line says
 _profile photo on court_ only of a photo the check passed, and the flagged notice warns only of a
-flag. **Tags** is the picker under _On your card · Pick 2 to 6_ with the step's question as the
+flag. **Tags** is the picker under _On your card · Pick 2 to 8_ (_2 to 6_ until #837) with the step's question as the
 title, a draft until _Save_ — shut under the floor in the step's own words with the verb changed
 (`socialTagsSaveLabel`, _Pick 1 more tag to save_), shut while the draft is the selection held
 **by membership** (`sameSelection`, because the profile holds tags in the vocabulary's order
@@ -240,7 +240,11 @@ cache holds the trimmed line sent (the same trim the server keeps) or none. **Th
 invalidate the player's own record**: the header card draws the face, the intro and the tags
 off `GET /players/me/record`, another feature's read of the same facts, and a tab that read the
 old line after _Save_ would be the one screen the edit was made on saying it did not land —
-invalidated through `playerRecordKeys`, never patched. The live lines are `photosLine`,
+invalidated through `playerRecordKeys`, never patched. **A tag save also marks every deck and
+every game's details stale** (#840; ADR-0207 §2): a For-fun card's Social vibe and the details'
+rows are worked out from everybody's tags on every read and stored nowhere, so they move with the
+edit — `proposalKeys.decks()` and `proposalKeys.proposals()`, never patched (`proposals.md`, the
+Social vibe card). The live lines are `photosLine`,
 `tagsLine` (against the **served** ceiling, so the row reads the options too) and `introLine`.
 **Not seen on a device**: the row drawn from signed addresses, the sheet over the tab's chrome,
 the write failure pinned under the row, and the intro's action bar over the keyboard.
@@ -497,3 +501,21 @@ Rankings' hidden card went with the hidden card ([`rankings.md`](rankings.md)). 
 describes #778 and is superseded by this one. `showMeToNewPeople.test.tsx` walks it through the
 router harness. **Not seen on a device**: the longer line wrapping under the title at the narrowest
 width.
+
+**The picker offers 27 tags and takes up to 8** ([#837](https://github.com/Raketa02/Raketa/issues/837),
+[ADR-0207](../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+§7; the words §27, §27.1). The backend appended eight tags, each at the end of its group, and moved
+the bounds from 2–6 to 2–8 (#829). **The picker needed no code for either**: it draws the groups and
+tags it is served in the served order, and the floor, the ceiling and every sentence quoting them —
+_Pick 2 to 8_, _8 tags is the most_, _8 of 8_ on the row — read the served bounds. What this build had
+to grow is the words: the eight ids join `shared/vocabulary/socialTags.ts` and their labels and emoji
+`socialTagPresentation.ts` (☕ _Stays for a coffee_ … 🧳 _New in town_), and the mapper's typed
+`toSocialTagId` is the wire-vocabulary check that stopped compiling until they did. **A code this
+build has no words for is skipped, never a crash**, in the picker (this mapper), the record
+(`player_record`'s) and Same vibe (`discovery`'s), each through a membership test; the server's count
+of things in common stands. The record's row cap, `SOCIAL_TAG_ROW_CAP`, went from 6 to 8 with it
+([`player_record.md`](player_record.md)). **No nudge** (ADR-0207 Q21): the new tags simply appear.
+`socialTagsStep.test.tsx` and `youSocialEdits.test.tsx` walk the 27 and the cap of 8 through the
+router harness — Ola adding ☕ and 🧳 to her six, a ninth refused, and her record showing all eight.
+**Not seen on a device**: 27 chips wrapping in three groups, the 🍽️ glyph (a variation-selector
+emoji) and the row of eight on the record.

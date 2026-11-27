@@ -32,6 +32,23 @@ export const proposalKeys = {
    * so the deck can tell which cards have an answer on its way (`useAnswersOnTheirWay`).
    */
   answers: () => [...proposalKeys.all, 'answer'] as const,
+  /**
+   * **A mutation key**: the fill's booked yes, sent when its ten seconds are up — under `answers`, so
+   * the deck still sees it as an answer on its way, and its own, so the screen it was said on can
+   * keep saying _Booking…_ until it lands (`useBookingsOnTheirWay`).
+   */
+  bookingYeses: () => [...proposalKeys.answers(), 'booking'] as const,
+  /**
+   * **A mutation key**: finding, after an intent answer on a group's Games (#741) — so the group
+   * page can tell its games are being found (`useGamesMenu`) and hold the Games tab's menu still
+   * until the deck lands (#862).
+   */
+  finding: (groupId: string) => [...proposalKeys.all, 'finding', groupId] as const,
+  /**
+   * **A mutation key**: Needs your answer's visit (#819), so the envelope's badge can tell which
+   * watermarks this phone has sent (`useAnswersWaiting`).
+   */
+  needsYourAnswerVisit: () => [...proposalKeys.all, 'needs-your-answer-visit'] as const,
   /** `GET /players/me/live-yeses` — every yes on a game still filling, across groups. */
   liveYeses: () => [...proposalKeys.all, 'live-yeses'] as const,
   /** `GET /players/me/payments-to-confirm` — the reader's refused shares, waiting for them (#555). */

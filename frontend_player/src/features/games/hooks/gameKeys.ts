@@ -26,6 +26,11 @@ export const gameKeys = {
   all: ['games'] as const,
   /** Every game you were on the court of. Not keyed by sport: one list and not several. */
   list: () => [...gameKeys.all, 'list'] as const,
+  /**
+   * **Every game's pairing** — the root a tag save marks stale, since a For-fun court's Social vibe
+   * is worked out from everybody's tags on every read (#841, ADR-0207 §2).
+   */
+  pairings: () => [...gameKeys.all, 'pairing'] as const,
   /** One game's pairing, computed for the reader. The id is the whole of what changes the answer. */
-  pairing: (gameId: string) => [...gameKeys.all, 'pairing', gameId] as const,
+  pairing: (gameId: string) => [...gameKeys.pairings(), gameId] as const,
 };

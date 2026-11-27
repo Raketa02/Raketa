@@ -11,7 +11,10 @@
  * - **Around the reader**: the *You · 212th* button's page, the reader in the middle, and from there
  *   the page above or below as the list nears either end. It is read only once the button is
  *   pressed, and **drawn only once it has landed** — until then the list stays where it was, so a jump
- *   never blanks the page. Each press reads it afresh, from the reader's place as it stands.
+ *   never blanks the page, and the button says *Finding you…* (#869). Each jump reads it afresh, from
+ *   the reader's place as it stands. **A press while the button is busy is never taken**, so a second
+ *   press no longer restarts the read; once the reader's own drag has ended the busy, a press reads
+ *   afresh again.
  *
  * The card and the podium are always the main read's: around the reader the page still knows the
  * reader's place, and draws them above the rows once the window reaches the top of the list. What it
@@ -106,7 +109,8 @@ export function useGeneral(sport: Sport): RankingRead {
   });
 
   const jumpToMe = () => {
-    // Afresh every time: the reader's place moves whenever a result settles anywhere in Raketa.
+    // Afresh every jump: the reader's place moves whenever a result settles anywhere in Raketa. A
+    // press while one is out reaches here only after the reader's drag — the busy button takes none.
     void queryClient.resetQueries({ queryKey: rankingKeys.generalAroundMe(sport), exact: true });
     setJumped(true);
   };

@@ -929,6 +929,44 @@ async def test_the_tags_are_replaced_whole_and_come_back_in_the_vocabularys_orde
     assert await stream_length(session_factory, player_id) == before + 1
 
 
+#: Eight, the most a player may hold (ADR-0207 §7), in the vocabulary's order.
+EIGHT_TAGS = [
+    "STAYS_FOR_A_COFFEE",
+    "KEEPS_IN_TOUCH",
+    "PLAYS_TO_WIN",
+    "HAPPY_TO_SHARE_TIPS",
+    "BRINGS_THE_ENERGY",
+    "HERE_TO_IMPROVE",
+    "OPEN_TO_MEET_SOMEONE",
+    "NEW_IN_TOWN",
+]
+
+
+async def test_eight_tags_land_and_a_ninth_is_refused(client):
+    """Ola, new in town, fills the picker to its ceiling from the You tab. A
+    ninth is refused under the commit's code, and the eight stand."""
+
+    _, headers = await a_player(client)
+
+    eight = await client.put(
+        TAGS_URL, json={"social_tags": EIGHT_TAGS}, headers=headers
+    )
+    nine = await client.put(
+        TAGS_URL,
+        json={"social_tags": [*EIGHT_TAGS, "SHARES_A_LIFT"]},
+        headers=headers,
+    )
+
+    assert eight.status_code == 200, eight.text
+    assert eight.json()["social_tags"] == EIGHT_TAGS
+    assert (nine.status_code, nine.json()["code"]) == (
+        400,
+        "social_tag_selection_out_of_bounds",
+    )
+    read = (await client.get(PROFILE_URL, headers=headers)).json()
+    assert read["social_tags"] == EIGHT_TAGS
+
+
 async def test_the_same_selection_twice_appends_no_event(client, session_factory):
     player_id, headers = await a_player(client)
     selection = {"social_tags": ["HERE_TO_IMPROVE", "PLAYS_TO_WIN"]}

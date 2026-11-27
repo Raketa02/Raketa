@@ -36,7 +36,7 @@ const color = {
   // --- Surfaces and structure ---
   paper: '#F4F2ED', // app background — warm off-white, never pure white
   paper2: '#EDEAE3', // recessed: the situation header, the popover close
-  paper3: '#E2DED3', // the club card's tray — 1.21 on paper, where paper2 is 1.07 (#529)
+  paper3: '#E2DED3', // the club card's tray — 1.20 on paper, where paper2 is 1.07 (#529)
   surface: '#FFFFFF', // cards, sheets, popovers, raised controls
 
   ink: '#101B20', // body text — 15.65 on paper, 17.50 on surface
@@ -49,6 +49,36 @@ const color = {
 
   line: '#E5E1D8', // BOUNDS a thing: card borders, chip borders
   line2: '#F0EDE6', // a FOLD inside one thing: hairlines, tag backgrounds, tracks
+
+  // --- Loading: a shape standing where a screen's content will be ---
+  /** THE SKELETON'S SHAPE (PRD #867, #868; 1.5, 15.2, Part 16 2026-11-24): a block, a line or a
+   *  circle drawn where a screen's content will be while its first read is out. **`paper3`'s value
+   *  under a name of its own**, because the meaning is new and the value is not (15.2: no new
+   *  colour). Computed from the hex values (WCAG 2.1): 1.20 on `paper` and 1.34 on `surface`, the
+   *  two grounds a skeleton is drawn on, so it reads as a shape on both. **Refused** (the loading
+   *  shimmer log's §2.2, Q23): `line`, the nearest value at 1.17 and 1.30, because it BOUNDS a
+   *  thing; `paper2` (1.07 on paper) and `line2` (1.05), too faint on paper. 1.4.11's 3:1 is not
+   *  asked of it: it is hidden from a listener and carries nothing a player needs to read. */
+  skeleton: '#E2DED3',
+  /** THE SKELETON'S SHEEN (PRD #867, #868; Q23): the band's peak, **`paper`'s value**. The band's
+   *  gradient runs `skeleton` → this → `skeleton`, so at its brightest a shape lifts to the ground it
+   *  stands on, and no opacity number is needed. On `surface` the peak is still 1.12 off the white,
+   *  so a shape on a card never vanishes into it. */
+  skeletonSheen: '#F4F2ED',
+
+  // --- The tab bar: the one glass surface (1.1's exception, 10.2, ADR-0210 §2) ---
+  /** THE DOCK'S GLASS (#883): white at .88, over a blur wherever the platform draws the glass
+   *  (`theme.glass`), so the page passing under the dock shows as a soft wash. **88, not the
+   *  brief's two-thirds**: idle words must hold 4.5:1 over the darkest ground that passes under
+   *  the dock most often, Home's game card (`night`), and at .88 `tabIdle` reads **4.53** there and
+   *  4.90 over paper (WCAG 2.1 from the hex values, ADR-0210 §2). It falls a hair short over `ink`
+   *  (4.49) and black (4.44), which the blur's averaging is expected to close — #885 looks. Where
+   *  the dock draws no glass, its fill is `surface`. */
+  glass: 'rgba(255,255,255,0.88)',
+  /** AN IDLE TAB'S ICON AND LABEL (#883): `ink` at .62, **not `muted`** — an alpha ink darkens
+   *  with the ground under the glass, and a fixed `muted` doesn't (2.77 on two-thirds glass over
+   *  `night`). 4.90 over paper, 4.53 over `night`, through 88% glass. */
+  tabIdle: 'rgba(16,27,32,0.62)',
 
   // --- Accent: the only attention colour in the app ---
   coral: '#E8482B', // a MARK, not a text bed. ink on it 4.50 · white 3.89 (X)
@@ -197,6 +227,21 @@ const color = {
   yesGroundCentre: '#203C48',
   yesGroundEdge: '#14252C',
 
+  /** THE DRAWN SPLASH'S GROUND — the app's second dark surface, beside *It's a game!*, and the
+   *  splash's alone ([ADR-0209](../../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md),
+   *  docs/design-system.md Part 16 2026-11-23). The centre and the edge of the radial glow every
+   *  cold open fades out of (`shared/lib/bootstrap/DrawnSplash.tsx`): centred horizontally and 42 %
+   *  down, `splashGroundEdge` from three quarters of the way to the edges and beyond.
+   *
+   *  The product owner's brief to the byte, NOT `night` (`#0A3441`) and NOT the yes screen's pair:
+   *  a second dark surface argues for its own record, as `yesGround*`'s note asks. **The edge is
+   *  also the OS launch window's colour** (`app.config.ts`, the splash-screen plugin), so the
+   *  window and the splash read as one field from the tap. Hue 191–192°, `night`'s family (194°).
+   *  What sits on them is the lockup's (#855): white and `volt`, computed in
+   *  `splashGround.test.ts`. Nothing else is drawn on them, and no other surface uses them. */
+  splashGroundCentre: '#134652',
+  splashGroundEdge: '#0B2B33',
+
   /** THE PORTRAIT TILE'S WASH — what was the deck card's, and the one card that wears a wash
    *  ([#801](https://github.com/Raketa02/Raketa/issues/801); home rows 17–19; docs/design-system.md
    *  7.31, Part 16 2026-11-14). The deck card it was fenced to (ADR-0169 §7, Part 16 2026-09-15) left
@@ -307,6 +352,50 @@ const color = {
   /** THE COUNTDOWN UNDER AN HOUR — coral's hue (9°), lifted to carry *45 min* on the ribbon at
    *  4,74, where `coral` there is 2,99. A mark would take `coral`; these are words. */
   gameCoral: '#F08975',
+
+  /** THE SOCIAL VIBE'S TWO LOWER BANDS ON THE CARD (#838; ADR-0207 §8–§9, docs/design-system.md
+   *  7.38, Part 16 2026-11-22). The vibe's four bands are one hue family and never the forecast's
+   *  green / amber / red: *Great* and *Good vibe* are `volt`, *Some common ground* this dimmed volt,
+   *  *Fresh mix* this grey — each the bar's fill and the figure's colour at once, as `volt` is. No
+   *  mock draws them: they are DERIVED. The dimmed volt is `volt` at 0,6 over the card's ground
+   *  half-way down, 4,6° off volt's hue; the grey is `night`'s family (198°) at a luminance a
+   *  shade under the dimmed volt's, so *Fresh mix* never reads brighter than *Some common ground*. What they carry,
+   *  computed half-way down: the figure 5,31 and 5,05 (past AA, where `gameGreen` is large text
+   *  only); `ink` — *Social vibe* inside the fill — 6,06 and 5,77 on them; against the track
+   *  (`onDarkTag` over the ground) 3,43 and 3,26, a mark's 3:1. Derived in gameGround.test.ts. The
+   *  paper card's inks are #840's, below. Drawn by `SocialVibeRow` on the game card's ground — and,
+   *  as the band's FILL alone, by `SocialVibeCard`'s bar on paper (ADR-0207 §8: one fill per band,
+   *  whatever the ground), where they stand 2,47 and 2,60 off its `line2` track and volt 1,07: a
+   *  shade beside the track, never the only signal, since the % and its word are printed above. */
+  gameVoltDim: '#8BA140',
+  gameGrey: '#8A969B',
+
+  /** THE SOCIAL VIBE CARD'S PAPER PAINT (#840; ADR-0207 §8–§9, docs/design-system.md 7.39,
+   *  Part 16 2026-11-23) — the card a For-fun game's details open on, on `surface`. ADR-0207 §9's
+   *  named exceptions, drawn by `SocialVibeCard` — and the three figure inks by a For-fun fit's %
+   *  on Post a game's sheet, also on `surface` (#842, `SOCIAL_VIBE_CARD_FIGURE`), nowhere else.
+   *
+   *  `voltPale` — A SHARED ROW'S BAND, MEASURED off for fun 7 to the pixel. Against 1.2's *volt has
+   *  no soft and needs none*: the mock's grid reads across a pale volt band, so the band is one,
+   *  and it stays a bed for words and marks only — `ink` 16,82 on it, `oliveInk` dots 5,78.
+   *
+   *  `oliveInk` — THE OLIVE ON PAPER: the grid's dots and the big % in the two upper bands. It IS
+   *  `gameCellDim`'s value, as ADR-0207 §9.2 names it — the overlap grid's olive, now an ink on
+   *  paper (6,01 on `surface`); `socialVibeInks.test.ts` holds the two equal. The mock's own olive
+   *  is a shade off (#5E7010), and the ADR's word stands.
+   *
+   *  `oliveInkDim` — *Some common ground*'s %: olive's hue lifted to a lighter step that still
+   *  carries the figure past AA (4,91). DERIVED, since no mock draws the band.
+   *
+   *  `vibeGrey` — A ROW ONLY YOU HAVE, and *Fresh mix*'s %: the mock's row grey (#7C8B8D, 3,54 — not
+   *  a text colour) at its own hue, darkened to the first step past AA (4,58), `muted`'s own history.
+   *  A shade lighter than `oliveInkDim`, so *Fresh mix* never reads stronger than *Some common
+   *  ground*, as `gameGrey` sits under `gameVoltDim` on dark. The row's dot is `line`, the mock's
+   *  value to within a unit. Derived in socialVibeInks.test.ts. */
+  voltPale: '#F9FDE2',
+  oliveInk: '#546A36',
+  oliveInkDim: '#617843',
+  vibeGrey: '#6A787A',
 
   /** THE POSTING GRID'S TWO MIDDLE GREENS (#558; the Games & Fill in screens A5.2, A10;
    *  docs/design-system.md 7.28, Part 16 2026-10-02). The grid's ramp runs `paper2` (nobody who
@@ -573,6 +662,18 @@ const type = {
    *  rows 25.3 draws them. Drawn as SVG text — no line box — so it carries no `lineHeight`. ONE USE:
    *  a second surface that wants a figure this size reopens the Top 10 row in Part 16. */
   numeral: { fontFamily: font.sans[800], fontSize: 108, letterSpacing: -16 },
+  /** THE SPLASH'S WORDMARK — *Rakieta*, white, over the drawn splash's ground, and nothing else's
+   *  ([ADR-0209](../../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)
+   *  §5; [#855](https://github.com/Raketa02/Raketa/issues/855); 3.3, Part 16 2026-11-23). The
+   *  product owner's brief to the point: Archivo at its heaviest loaded weight, 42, tracked −4 %
+   *  (−1,68). A fixed size on every phone that ignores the OS text size, because a logo is a logo.
+   *  **Not a text role**: its seven letters are placed one by one from Archivo 800's own advances
+   *  and kerning (`shared/lib/bootstrap/domain/splashGeometry.ts`, pinned against the font by
+   *  `splashWordmark.test.ts`), so the TRACKING IS THE GEOMETRY'S to apply between letters and is
+   *  never set on a letter's text, and it has no `lineHeight`: each letter stands in the face's own
+   *  line box, whose midline is the screen's. ONE USE: a second surface that wants a word this size
+   *  reopens the splash's row in Part 16. */
+  splashWord: { fontFamily: font.sans[800], fontSize: 42, letterSpacing: -1.68 },
   /** THE DECK'S TWO STAMPS — *LET'S PLAY* and *NOT TODAY*, outlined words rotated over the card
    *  under the thumb, invisible at rest (ADR-0169 §3, §7). The heaviest weight the app loads at
    *  22, TRACKED WIDE rather than tight — +0,05em, 1,1 — because a rubber stamp is set spaced
@@ -689,14 +790,16 @@ const radius = {
   cardDark: 15,
   card: 13,
   popover: 13,
+  /** The tab's menu (9.5, #861) — the popover's 13, named for its role: an anchored card that picks
+   *  rather than explains, and changing one must not change the other. */
+  tabMenu: 13,
   bubble: 13,
   toast: 12,
-  /** The ⚡Play disc. **There is no avatar rule here to be measured against** — see `avatar`
-   *  below. The disc is not a face and 11 is the prototype's measured value, kept
-   *  (docs/design-system.md 10.2).
-   *  The active state's RING is this grown by `size.tabBar.ringGap + ringStroke` on every
-   *  side, which is arithmetic the bar does rather than a second radius token. */
-  fab: 11,
+  /** The tab bar's dock (10.2, #883) — 22 on all four corners, beside the sheet's 22 on its top
+   *  two: the dock is the bottom chrome's other floating slab, and the brief's own corner. Its inner
+   *  rim is this less the 1pt hairline, which is arithmetic the bar does rather than a second
+   *  token. It took the retired ⚡Play disc's `fab` (11), which only the bar drew. */
+  dock: 22,
   /** The guide's hole (9.4) — the window cut in its dim around one figure. A button's 10, named
    *  for its role: a hole is not a control, and changing one must not change the other. */
   spotlight: 10,
@@ -735,6 +838,10 @@ const radius = {
   rangeSquare: 9,
   timeSquare: 8,
   balanceBar: 8,
+  /** The Social vibe row's bar — 7.38 (#838). MEASURED: mock 1's corner turns over 4–5 pixels of a
+   *  21-pixel bar, mock 2's over 6–7 of 28, so 4 at 18. A soft corner, not the balance bar's near
+   *  pill: the mocks draw a filled gauge, and its fill's square end is the value. */
+  socialVibe: 4,
   fit: 7,
   /** The record block's run-of-form square — 7.13. Eight points wants a soft corner, not a
    *  rounded one: five of these in a row are a *run*, and at `tag`'s 6 they read as five
@@ -760,6 +867,13 @@ const SPORT_DOT = 6;
 /** How far a finger travels across before a swipe row — and the deck — claims the touch. See `swipeRow`. */
 const SWIPE_INTENT = 12;
 
+/**
+ * An italic's slant, in degrees, where the app draws one — no italic face is loaded, so a word or a
+ * mark that the mocks set in italics leans by a skew instead. One angle, so two italics never
+ * disagree: Top 10's mark and count (`topTen.lean`) and the Social vibe's name (`socialVibe.lean`).
+ */
+const ITALIC_LEAN = -12;
+
 const size = {
   btn: 34, // 32 tertiary-in-card · 34 default · 40 screen action · 42 result primary
   btnSm: 32,
@@ -775,14 +889,39 @@ const size = {
    *  in words too — the door carries no number — and the label is the kind's name, which the live
    *  segment beside it prints whole. */
   segDoorOpacity: 0.8,
+  /** **An option that owns a menu** (6.3 as amended 2026-11-24, #861; PRD #859): the group page's
+   *  Friends tab, and Games' since #862. Selected, with its menu offered, it draws a Feather chevron
+   *  `chevron` across, `inset` in from its right edge and `gap` clear of the label — and **widens by
+   *  exactly that room**, `gap + chevron + inset` (21): its flex basis is the room where every other
+   *  option's is nought, so the label keeps the same share of the track as every other tab's and the
+   *  chevron is added beside it. Measured with Archivo against the four labels: at 320pt the shares
+   *  are 63,5 against *You’re in*'s 44,3 (`groupTabsFit.test.ts`). 12 is a step under the tab
+   *  bar's 16 icon — the label here is 10,5 where the bar's is 12 — and on the 3pt grid. */
+  segMenu: { chevron: 12, gap: space.xxs, inset: space.xs },
   /** A segment's count — the tab bar's badge (`tabBar.badge`) at the segment's size (#529),
-   *  `CornerBadge`: a group page's Games and Fill in, and the group's tile on its page and on Info,
-   *  counting the requests waiting on an Owner (Q125). **16, and it is
+   *  `CornerBadge`: a group page's Games, Fill in and You’re in (#847) — on Fill in and You’re in
+   *  what is new since the player last looked, never on the tab shown (#849) — and the group's
+   *  tile on its page and on Info, counting the requests waiting on an Owner (Q125). **16, and it is
    *  `num.tiny`'s own line box**, the digit role one step under the tab bar's `num.xs` — the
    *  segment's label is 10,5 where the tab bar's is 12, so the mark comes down with it rather
    *  than standing a size above the word it sits on. The fill, the white digit, the pill and the
    *  missing cap are the tab bar badge's; only the size is the segment's. */
   segmentBadge: 16,
+  /** **The tab's menu** (9.5, #861; PRD #859; tab menu mocks 3, 4 as illustrations) — a white card
+   *  hanging `hang` under the tab that opens it, as wide as its lines. A line is at least `minTouch`
+   *  tall (6.5), padded `padX` across, with `gap` between its marks; the card is padded `padY` above
+   *  and below its lines. **The selected mark is a `tick`-across `coralInk` circle** with
+   *  `Tick`'s drawn white tick in it (Archivo has no ✓) — 18 holds the 12 tick with 3 clear on every
+   *  side — and the line not selected keeps that space empty, so the words line up. `drop` is how
+   *  far it falls into place as it opens (`motion.tabMenu`). */
+  tabMenu: {
+    hang: space.xs,
+    padX: space.md,
+    padY: space.xxs,
+    gap: space.sm,
+    tick: 18,
+    drop: space.xs,
+  },
   tag: 19,
   /** The fit pill — 7.10. **26, which is the height every call site drew.** The prototype's
    *  class defaulted to 23 and was overridden inline at all five sites; UI §G1 records that
@@ -956,6 +1095,20 @@ const size = {
    *  the component that draws it, and this one's mapping-and-clamp lives in `BalanceBar.tsx`
    *  the same way. What is here is geometry. */
   balanceBar: { sm: 16, md: 18, lg: 24 },
+  /** The Social vibe row — 7.38 (#838; ADR-0207 §9.4, for fun 1–2). MEASURED off the two mocks,
+   *  with the figure at `num.xl` as the unit: in mock 1 its digits stand 18 pixels and the bar 21,
+   *  which at `num.xl`'s 15,4pt figures is 18 — the forecast bar's `md`, so the card's rows stand
+   *  where they stood. `inset` is where *Social vibe* starts inside the bar: 14 pixels of mock 2's
+   *  28-pixel bar, so 9 (`space.sm`). `lean` is the slant the name takes as an italic would — no
+   *  italic Archivo is loaded, so it is drawn, as Top 10's mark and count lean, at the one angle the
+   *  app draws an italic at (`ITALIC_LEAN`). */
+  socialVibe: { bar: 18, inset: space.sm, lean: ITALIC_LEAN },
+  /** The Social vibe card — 7.39 (#840; ADR-0207 §6, for fun 7, which leads over 5 and 6).
+   *  MEASURED off mock 7 and checked against mock 5, whose phone gives the scale (the card is the
+   *  content width, 449 pixels for 360): the bar 21 (33 and 28 pixels), a face 24 (39 and 33), a
+   *  column 36 (54 and 45 pixels apart), a row 24 (39) and a dot 12 (18). The bar is the card's
+   *  own, thicker than the row's 18 because the % above it is bigger. */
+  socialVibeCard: { bar: 21, face: 24, column: 36, row: 24, dot: 12 },
   /** The switch — 6.12. The track and the knob are UI §G1's measured 40 x 23 and 18, and the
    *  inset is the arithmetic between them rather than a fourth number. The ROW is the touch
    *  surface, exactly as 6.11's is: a 23pt track is well under the 44pt minimum, and a
@@ -993,14 +1146,14 @@ const size = {
    *  - `shieldTop` — how far below the card's top the shield (`monogram.shield`) starts, so it
    *    overlaps the band and the body; `shieldRing` its white ring, and `shieldFoot` the share of
    *    its side that rounds its two lower corners — a shield's, where a tile rounds all four;
-   *  - `heatBar` — the bar's height; `tagMark` the drawn ▲ in the HOTTEST pill. */
+   *  - `tagMark` — the drawn ▲ in the HOTTEST pill. The heat bar's `heatBar` (6) retired with the
+   *    bar (#821). */
   hottest: {
     band: 39,
     stripe: 9,
     shieldTop: 15,
     shieldRing: 3,
     shieldFoot: 0.4,
-    heatBar: 6,
     tagMark: 6,
   },
   /** THE PROFILE SWITCHER'S CHIP (club 7, #518; slimmed 2026-10-01) — a face at `monogram.chip`
@@ -1091,6 +1244,17 @@ const size = {
    *  than stops; `tilt` is the most a card turns under the thumb, reached at twice the commit
    *  distance and measured off the two swipe mocks. */
   deckSwipe: { commit: 95, intent: SWIPE_INTENT, flight: 480, tilt: 12 },
+  /** THE SHEET'S SWIPE DOWN — 9.1 as amended by [#816](https://github.com/Raketa02/Raketa/issues/816),
+   *  the third gesture in the app, on a sheet that asks for it (`closesOnSwipe`), read on its head.
+   *
+   *  `intent` is the swipe row's number, READ FROM THERE for the deck's reason: the same finger
+   *  deciding between a tap on the close and a drag. `close` is how far the sheet is pulled before a
+   *  release closes it: about a third of a short sheet, so a nudge springs back. `fling` is the
+   *  speed down that closes it however short the pull, in points per millisecond, `PanResponder`'s
+   *  own `vy`: a flick, not a drift. `flingWindow` is how recently, in milliseconds, the finger must
+   *  have moved for that speed to count — `vy` is the last move's and never decays, so a finger that
+   *  stopped and held lifts with a speed it no longer has. Six frames at 60 Hz. */
+  sheetSwipe: { intent: SWIPE_INTENT, close: 96, fling: 0.5, flingWindow: 100 },
   /** THE DECK'S THREE ROUND BUTTONS — ✕, i, the ball — measured off the mock at 1×: 54, 42 and
    *  66. Circles rather than 6.1's 10pt rectangle, through `Button`'s `pill` shape (4.2 as
    *  amended: the third user, fenced to this row); the i is under 6.5's 44 and takes `hit.btn`.
@@ -1104,9 +1268,38 @@ const size = {
    *  so the disc's proportion is still the mock's; not a new number. */
   deckAnswer: { pass: 54, record: 42, accept: 66, ball: 26 },
   /** A group's Games card (#553, the screens A2.3), measured off mocks 2–10 at 1x. `ribbon` is
-   *  the band's height; `tileMin` the least a tile shrinks to on a short phone, where the tiles
-   *  give the card's other parts the height they need; `detailsTile` the width:height of a tile on
-   *  a game's details, where nothing competes for it — all three on the 3pt grid. The grid's cells
+   *  the band's height.
+   *
+   *  **A tile has one shape per court** (#864; the tab menu log §6.2, 7.22, Part 16 2026-11-24),
+   *  width over height, and the deck's tiles never stretch to fill the card (`deckCardGeometry`).
+   *  The shapes are **evidence, not a mock** — mock 3's ~1.6 is not used:
+   *  - `doublesTile` **1.75**, padel and badminton — the details' own ratio, now named for both
+   *    screens. On the user's A32 (384 × 853 dp, read over adb) a deck tile was 160.5 × 84.3 (1.90),
+   *    which left 32pt of face above the 52pt name strip; at 1.75 it is 160.5 × 92 there, 163.5 × 93
+   *    on a 390 iPhone, 174.5 × 100 on a 412 × 915, and it fills its column on every phone but a 360
+   *    Android (143 × 82, height-bound). 1.81 (the widest that fits from 360 up, the least face) and
+   *    1.5 (11pt short of its column on a 390 iPhone) were refused.
+   *  - `singlesTile` **3:4**, tennis and squash — the photo's own crop (`PROFILE_PHOTO_ASPECT`, and
+   *    the 3:4 photo tile, `photoTile`), so on Android the whole photo shows: 160.5 × 214 on the
+   *    A32. 1.75 would have left singles ~92pt strips with most of the card empty.
+   *  A game's details keep `doublesTile` for both court shapes (out of #859's scope).
+   *
+   *  **A tile is a fixed box, so its foot's words are capped, and its floor is what they need**
+   *  (#865; the tab menu log §6.4, §6.5; 7.22, Part 16 2026-11-24):
+   *  - `footMaxScale` **1.3** is the tile foot's `maxFontSizeMultiplier` — the name, the IN and
+   *    FRIEND tags, the level line and *paid*, *You complete it*, and the open seat's words — DERIVED
+   *    by `gameTileFoot.test.ts` from Archivo's and IBM Plex Mono's real advance widths against the
+   *    tile at its smallest drawn size, `tileNarrowest`: the largest step at which *2,71 · paid*
+   *    still fits across it and a rescue's open seat still fits down it (both stop at 1.3), and a
+   *    bound, not a freeze. *You complete it* fills that tile at 1.0 and its box cuts it above, as it
+   *    does the name.
+   *  - `tileNarrowest` **128.5** is that tile's width, and the floor: the narrowest phone's column
+   *    ((320 − 2 × 15 − 2 × 12 − 9) / 2), 73.4 tall on doubles and 171.3 on singles. Where a short
+   *    card shrinks its boxes in proportion the tiles stop here (`deckCardGeometry`), and where even
+   *    that does not fit the deck scrolls. It replaced `tileMin` (54), a height fixed beside the
+   *    tile's content and already short of a rescue's open seat (61).
+   *
+   *  The grid's cells
    *  are `cell` tall and `cellGap` apart — **4, off the grid on purpose**: 6.8's hour cells' own
    *  gap (`availability.gap`), so the week is drawn with one rhythm on both surfaces — and the
    *  game's own cell is ringed `ring` wide and grows `ringOut` (`space.xxs`) past its slot on every
@@ -1114,8 +1307,10 @@ const size = {
    *  `courtStroke`, a stroke like `onCourtTick`'s, dashed on a free vote and solid on a booking. */
   gameCard: {
     ribbon: 30,
-    tileMin: 54,
-    detailsTile: 1.75,
+    doublesTile: 1.75,
+    singlesTile: 3 / 4,
+    footMaxScale: 1.3,
+    tileNarrowest: 128.5,
     cell: 9,
     cellGap: 4,
     ring: 2,
@@ -1391,35 +1586,48 @@ const size = {
    *  below it, and the glyph is a step under `tabIcon` because it sits inside a fill. */
   rowLead: 28,
   rowLeadGlyph: 15,
-  /** The ⚡Play disc — 28 until the bar was built, unreferenced by anything, and off the
-   *  3pt grid at both values. **30**, which is what #227 drew and measured. */
-  fab: 30,
-  /** The tab bar — 10.2. The bar's own geometry is 10.2's and is read from `space`:
-   *  paddingTop `xs`, paddingBottom `md` + the bottom inset, an icon at `tabIcon`, and the
-   *  smallest step on the grid between the icon and its label. What is here is the four
-   *  values the grid and 10.2 do not between them supply.
+  /** The tab bar — 10.2: **the dock**, a rounded slab floating over the screen's foot, in equal
+   *  columns, an Ionicons icon over a `tag` label in each, and the selection marker under the lit
+   *  one ([ADR-0210](../../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md)
+   *  §2, §5, #883). The ⚡Play disc, its ring and their sizes (`fab` 30, `bolt` 15, `ringGap` and
+   *  `ringStroke` 2) retired with it (§6).
    *
-   *  `ringGap` and `ringStroke` are the ACTIVE state, kept as the two numbers 10.2 states
-   *  rather than pre-added into a 38pt ring: the ring is `size.fab` grown by both on every
-   *  side and its radius is `radius.fab` grown by both, and the bar does that arithmetic —
-   *  the same reason the level bar keeps 7.5's y coordinates as coordinates. The ring is
-   *  ABSOLUTELY positioned, so the 4pt it adds above the disc comes out of the bar's
-   *  existing 6pt top padding and the bar's height does not change between screens.
+   *  **54 tall at every text size and in every state.** The column's content is centred in it, and
+   *  the cap below is what keeps that content inside the marker: 18 + 3 + `tag`'s 12pt line at 1.6
+   *  is **40.2** inside 42, where a 20pt icon would be 42.2. The bar's **reach**, the room it
+   *  takes at the bottom, is the lift + 54 (`tabBarReach.ts`): 66 on the A32, 88 on a notched
+   *  iPhone.
    *
    *  `labelMaxScale` is the only Dynamic Type mechanism this surface has: Part 13 names the
    *  tab bar as the fixed-height exception AND permits `allowFontScaling={false}` only
    *  inside the level bar, which leaves a bounded multiplier and nothing else. It was
    *  **derived** over five columns — 1.7 over *Around*, 1.6 over *Players* (ADR-0169 §1) — and
    *  the bar is three since the old loop's two columns left it (#576): at a third of the screen
-   *  every word fits at more than twice this, so the width no longer decides it and it stays
-   *  where the five left it, bounding the bar's height. `tabBarLabelCap.test.ts` measures the
-   *  three shipped labels against the real Archivo 700 advances in the narrowest phone's column,
-   *  so a fourth tab or a longer word goes red rather than truncating on somebody's phone. */
+   *  every word fits at more than twice this, so the width no longer decides it. It stays where
+   *  the five left it, and it now holds the label inside the 42pt marker. `tabBarLabelCap.test.ts`
+   *  measures the icon and the three shipped labels against the real Archivo 700 advances, inside
+   *  the marker and inside the narrowest phone's column, so a fourth tab or a longer word goes red
+   *  rather than truncating on somebody's phone. */
   tabBar: {
-    /** ADR-0135: Feather `zap`, inside the disc, smaller than the 16pt box the flanks use. */
-    bolt: 15,
-    ringGap: 2,
-    ringStroke: 2,
+    /** The dock's height — the brief's 54, on the grid. */
+    height: 54,
+    /** Its distance from either side of the screen — the gutter's step below 15, so the page shows
+     *  either side of it. */
+    sideInset: space.md,
+    /** **The least** it is lifted off the bottom: the dock stands the larger of this and the bottom
+     *  inset above the phone's foot, so it rests on a notched iPhone's safe-area line and stands 12
+     *  clear of three edges on an Android phone with no inset. The brief's 10 is off the grid; 12
+     *  equals the side inset. */
+    lift: space.md,
+    /** THE SELECTION MARKER (#883, ADR-0210 §4): an opaque `coralSoft` capsule at `radius.pill`,
+     *  centred in the lit column, under its icon and label. 75 rather than the brief's 76, which is
+     *  off the grid. On the narrowest phone a column is (320 − 24) ÷ 3 = 98.7 wide, so the marker
+     *  keeps the 97.5 its stretch peaks at (`motion.tabMarker`, #884) inside it. */
+    marker: { width: 75, height: 42 },
+    /** The icon's box — Ionicons at 18, the largest that keeps icon + 3 + the capped label inside
+     *  the marker (above). 16, `tabIcon`, is the fallback if 18 looks crowded on the phone (#885);
+     *  everywhere else in the app a 16pt Feather glyph stays `tabIcon`. */
+    icon: 18,
     labelMaxScale: 1.6,
     /** Home's badge — 10.2, and the one badge the bar carries.
      *
@@ -1431,17 +1639,16 @@ const size = {
      *  cap: a two-digit count spreads it into a lozenge at `radius.pill` and the digits stay
      *  tabular, so 1 -> 2 does not reflow the column.
      *
-     *  `badgeRise` is how far it stands above the 16pt icon box, and it is **not a new number**:
-     *  it is the 4 the active ring already takes out of the bar's own 6pt top padding, leaving
-     *  the same 2pt of clearance to the hairline. The bar's height never changes — a bar that
-     *  grew on arriving somewhere would move the four things that did not change in order to
-     *  announce the one that did.
+     *  `badgeRise` is how far it stands above the icon box — 16pt on the bell and the envelope,
+     *  `tabBar.icon`'s 18 on the bar. It was the 4 the ⚡Play disc's ring took out of the old
+     *  bar's 6pt top padding; the ring retired (#883) and **the 4 stays as the badge's own
+     *  number**. Out of the layout, so the dock is 54 whatever the count: its top is 6.5 inside
+     *  the dock's top edge at 1× and 2.9 at the cap.
      *
      *  Everything else is borrowed rather than invented: `coralInk` fill and a white mark at
-     *  5,89, which is 6.1 `primary`'s treatment and the correction the Play disc one column
-     *  away already took once; the horizontal padding and the overlap over the icon are
-     *  `space.xxs`. **No device has drawn this**, and `tabBadgeFit.test.ts` is what holds the
-     *  arithmetic that a device would otherwise have to. */
+     *  5,89, which is 6.1 `primary`'s treatment; the horizontal padding and the overlap over the
+     *  icon are `space.xxs`. `tabBadgeFit.test.ts` holds the arithmetic a device would otherwise
+     *  have to. */
     badge: 18,
     badgeRise: 4,
   },
@@ -1472,6 +1679,26 @@ const size = {
    *  There is a second rail and it has no ratio, because its card is the content width
    *  whole. What carries the affordance there is 7.18's dots. */
   railCardRatio: 0.74,
+  /** THE REQUEST CARD in Needs your answer — a friend request, and the ask for a level drawn as
+   *  one ([#816](https://github.com/Raketa02/Raketa/issues/816); home refactor 2; ADR-0205 §9.3):
+   *  the peeking rail's card, WIDER, so the face, two lines of title, the chip and two buttons fit
+   *  without the squeeze 0,74 gave them. MEASURED off home refactor 2: the tile is 450 of the
+   *  content's 540 pixels, 0,833. A RATIO, for `railCardRatio`'s reason; the next card's edge is
+   *  still the affordance, at 0,17 of the content less the gap. */
+  requestCardRatio: 0.83,
+  /** **THE LINE CARD** — a peeking rail's card in an open FOR YOU line: Groups heating up's, Players
+   *  at your level's and Players with your vibe's (Part 16 2026-11-26). WIDER than the page's 0,74,
+   *  so the card on screen is a little bigger and the next one shows a little less: on a 411pt
+   *  phone the card is 290 of the line's 349 and the next one's edge 65, where 0,74 left 258 and 97.
+   *  **The request card's share by choice, not by rule** — its own token, so neither card moves
+   *  when the other does. A RATIO, for `railCardRatio`'s reason.
+   *
+   *  **The card keeps its shape**: its height is its drawing's, never its width's, so it grows by
+   *  `lineCardRatio / railCardRatio` through its own gaps — every vertical gap ×1,6, onto the 3pt
+   *  grid, as near the exact shape as the grid comes (within half a step, 1,5pt). Each card owns its
+   *  two sets of gaps (`HottestGroupCard`, `SameLevelCard`, `SameVibeTile`); See all and the Groups
+   *  heating up page keep the page's. */
+  lineCardRatio: 0.83,
   /** THE PHOTO CAROUSEL's card — all of a player's photos, sideways, on the record
    *  ([#799](https://github.com/Raketa02/Raketa/issues/799)) and the vibe sheet (home rows 23, #803),
    *  over Part 8's Strip (Part 16 2026-11-14). A card's share of the content width, for
@@ -1480,13 +1707,34 @@ const size = {
    *  edge is the affordance. Its height is the photo panel's 4:5, read off `PHOTO_PANEL` — one owner
    *  of the shape. */
   photoCarouselRatio: 0.5,
+  /** **FOR YOU's folding line** ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205
+   *  §5, §9.5; home refactor 3–13). A white card, `radius.card`, its 1pt border `line` closed and
+   *  `ink` open. `pad` is the card's inset, the title's and the open content's — the gutter's 15,
+   *  which is what the mocks measure (23 of the phone's 1,5 pixels to the point): a rail inside it
+   *  starts its first tile there and bleeds to the card's inner edge, so a tile's share is of the
+   *  card's content, not the page's. The header's `h2` line and `space.md` above and below it are
+   *  `minTouch` exactly, the closed line's height in home refactor 4.
+   *
+   *  `count` is THE COUNT PILL's least height (#822; 7.37; home refactor 3, 4, 7): **16, and it is
+   *  `num.tiny`'s own line box**, the figure's role — the corner badge's borrowing (`segmentBadge`),
+   *  for 15.3's reason. MEASURED off home refactor 4 at the mocks' 1,5 pixels to the point: the pill
+   *  20–22 pixels tall, about 14pt, and the digits' ink 12 pixels, `tiny`'s 11pt; 16 is the figure's
+   *  box and the nearest the grid allows without clipping it. A least height, not a fixed one, so a
+   *  larger OS text size grows the pill with its figure. Its width is the figures and `space.xs` each
+   *  side — a lozenge at `radius.pill` even for one digit (the mock's *6* is 31 pixels wide, its *14*
+   *  40). */
+  foldingLine: { pad: space.lg, border: 1, count: 16 },
   /** THE PORTRAIT TILE (#801; home rows 17–19; 7.31) — a face edge to edge with its words over the
-   *  wash. `railRatio` is a tile's share of the content width on a Home row, for `railCardRatio`'s
-   *  reason — a ratio, never a point value: home rows 17 draws two whole and the third cut at two
-   *  thirds (0,355 × 360 = 128pt, the third showing 84). `railAspect` and `gridAspect` are its height
-   *  over its width — 11:8 standing on a row, 9:8 in See all's two columns (home rows 19), MEASURED
-   *  off the mocks at 1× (384 × 528 and 266 × 297 pixels). */
-  portraitTile: { railRatio: 0.355, railAspect: 1.375, gridAspect: 1.125 },
+   *  wash. **`railRatio` is its width on a Home row: 0,70 of the line's content** (2026-11-26). It
+   *  was 0,355 until 2026-11-24, home rows 17's two whole and the third cut, words too narrow to
+   *  read; then the peeking card's 0,74. When the lines either side widened to `lineCardRatio`, a
+   *  portrait at 0,83 stood 399 tall on a 411pt phone — a poster — so it stepped down instead, a
+   *  little under its old width: one tile whole and the next peeking (244 × 336 there, 111 of the
+   *  next). Its own ratio again, apart from the cards around it.
+   *  `railAspect` and `gridAspect` are its height over its width — 11:8 standing on a row, 9:8 in See
+   *  all's two columns (home rows 19), MEASURED off the mocks at 1× (384 × 528 and 266 × 297
+   *  pixels). */
+  portraitTile: { railRatio: 0.7, railAspect: 1.375, gridAspect: 1.125 },
   /** THE ROUND FRIEND BUTTON (#801; home rows 8, 10.3, 17, 18–18.3; 7.32) — MEASURED off the tiles at
    *  1× (72 pixels on a 384-pixel tile): a 24pt circle centred in its own 44pt press (`minTouch`) —
    *  a box, not a hitSlop, because a touch never lands past its parent on Android and a tile clips.
@@ -1499,7 +1747,8 @@ const size = {
    *  its YOU 3 above. `onDarkBand` is a band's `tint` over the card's ground — #344B5A, #31514E and
    *  #534541 measured, each its tint at 0,26–0,31 — where the light bar takes 7.5's `inactiveOpacity`.
    *  `nameMinScale` is how far a band's name may shrink to stay on one line under its band on a Home
-   *  row's card, where _ESTABLISHED_ has 30 % of 0,74 × content less the padding. */
+   *  row's card, where _ESTABLISHED_ has 30 % of the card less the padding — 0,74 of the content
+   *  when it was measured, `lineCardRatio` since 2026-11-26, so it shrinks less now, never more. */
   comparisonBar: {
     trackHeight: 8,
     markWidth: 6,
@@ -1521,8 +1770,10 @@ const size = {
   /** TOP 10'S CARD ([#805](https://github.com/Raketa02/Raketa/issues/805); home rows 2, 25–27; 7.36)
    *  — MEASURED off home rows 2 at 1,5 to the point and 25–26 at 3:
    *
-   *  - `railRatio` — a card's share of the content width, for `railCardRatio`'s reason: 104pt of 360
-   *    in both mocks, narrower than New in Raketa's tile, because the numeral stands beside each one.
+   *  - `railRatio` — a card's share of the content width, for `railCardRatio`'s reason, narrower than
+   *    New in Raketa's tile because the numeral stands beside each one. 0,29 (104pt of 360 in both
+   *    mocks) until 2026-11-26, then 0,31 — a little bigger, its 1,48 kept: 108 × 160 on a 411pt
+   *    phone, two items whole and 34 of the third; past 0,31 the third's edge is gone on a 360pt one.
    *  - `aspect` — its height over its width: 154 over 104.
    *  - `overlap` — how much of the numeral's box the card covers, from the right: home rows 26 shows
    *    32pt of the *1*'s ink and 25 39pt of the *2*'s, which at `type.numeral` leaves 24 under the card.
@@ -1536,14 +1787,14 @@ const size = {
    *    the baseline, and the deepest under it (the *9*'s tail). The numeral's box is worked out from
    *    them, so they change with the role's face or not at all. */
   topTen: {
-    railRatio: 0.29,
+    railRatio: 0.31,
     aspect: 1.48,
     overlap: 24,
     ring: 2.5,
     outline: 1.5,
     edge: 0.75,
     chipMark: 8,
-    lean: -12,
+    lean: ITALIC_LEAN,
     figure: { advance: 0.625, top: 0.699, foot: 0.012 },
   },
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
@@ -1639,13 +1890,6 @@ const hit = {
   peopleRow: { top: 3, bottom: 3 },
   /** Home's trophy pill (#775): 30 tall, lifted to 44. */
   trophy: { top: 7, bottom: 7 },
-  /** A Home row's link — *See all ›*, Top 10's *Rankings ›* (#798; 6.5). Its 16pt line overhangs
-   *  the heading's 12 by 2 each way, `space.lg` under the row above and `space.sm` over its own
-   *  rail — so 13 above and 7 below are the whole of both gaps, and it stops at the rail, whose
-   *  cards keep their own targets: 36 tall, under 44 on purpose. Sideways it reaches the screen
-   *  edge on the right, and 3 on the left, as a chip's slop does (`chip`): of the `space.sm`
-   *  between a control and the link, the two take 3 each and leave 3 between their targets. */
-  rowLink: { top: 13, bottom: 7, left: 3, right: 15 },
   /** *2 sports ›* on the Same level card's footer (#802; 7.34): a 16pt line in the footer's 44pt
    *  row, beside the round friend button's own 44 box — 14 above and below reach exactly the row's
    *  edges, so no touch lands past its parent on Android; 6 sideways keeps clear of the gap's words. */
@@ -1657,12 +1901,13 @@ const hit = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Elevation — six shadows in the whole system, five for things that genuinely float and one
-// for the club results of the two group searches, plus one TEXT shadow, which is a different mechanism and not
-// an elevation at all.
+// Elevation — seven shadows in the whole system, five for things that genuinely float, one
+// for the club results of the two group searches and one for FOR YOU's open line, plus one TEXT
+// shadow, which is a different mechanism and not an elevation at all.
 // CARDS NEVER HAVE ONE: depth on paper comes from the surface change and the 1pt border.
 // The deck card is here because it is not a card, not because the rule bent; the club result
-// is the one amendment to the rule, and it is named rather than absorbed (4.3, Part 16).
+// and the open line are the two amendments to the rule, each named rather than absorbed (4.3,
+// Part 16).
 //
 // RN cannot express CSS spread, so these are calibrated approximations: the blur halves,
 // the offset shrinks toward the negative spread, and the opacity comes down with it.
@@ -1702,28 +1947,21 @@ const shadow = {
     shadowRadius: 20,
     elevation: 8,
   },
-  /** THE ⚡PLAY DISC — the fifth, and the only one that is a colour rather than a dimming.
-   *
-   *  From the prototype's `0 6px 14px -6px rgba(232,72,43,.7)`, and CALIBRATED rather than
-   *  copied: that rule carries a -6px spread against a 14px blur, so 6 of the 14 never
-   *  reach the paper and RN has no way to say so.
-   *
-   *    blur 14   -> radius 7    the halving the other four do
-   *    offset 6  -> 3           the spread eats the drop: 6 x (1 - 6/14) = 3,4
-   *    opacity .7 -> .40        and the same fraction of the ink: .7 x (1 - 6/14)
-   *
-   *  `coral` rather than a bespoke dark hex, because the tint is the whole point — the disc
-   *  is the one thing in the bottom chrome that floats, and it floats in its own colour.
-   *  ON ANDROID IT DOES NOT: `elevation` draws the platform's black shadow and RN exposes
-   *  no way to tint it, so the disc is raised on both platforms and glows on one. 6 seats it
-   *  below the deck card, which is right — the bar is chrome and every overlay passes over
-   *  it. */
-  fab: {
-    shadowColor: color.coral,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 7,
-    elevation: 6,
+  /** THE TAB BAR'S DOCK — the fifth (10.2, #883, ADR-0210 §6), in the slot the ⚡Play disc's
+   *  coral-tinted `fab` left when the disc retired, so the inventory stays at seven and none of
+   *  them is tinted any more. **The deck card's values**, the faintest of the shadows for things
+   *  that float over the page — the dock is lifted off the page, not a card on it. `elevation`
+   *  the deck card's 8: on Android's opaque dock it draws as it is (the A32 spike's T3, #880).
+   *  **Where the dock draws the glass — always on the iPhone — it is shadowed by `glass.shadow`
+   *  instead**, the same values as `boxShadow`, which is drawn outside the box only: a translucent
+   *  fill would show `elevation` through it, and gives iOS's shadow props no opaque fill to work an
+   *  outline from, so they would be drawn from the dock's pixels in an off-screen pass. */
+  dock: {
+    shadowColor: '#0B2B33',
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
   },
   /** THE CLUB RESULT — the sixth, and the only card-shaped surface that casts one: one drawing
    *  (`ClubCard`), in New group's home-club search and in Join a group's.
@@ -1732,12 +1970,28 @@ const shadow = {
    *  one club ended: on paper, a 1pt border between two white cards nine points apart is not
    *  enough to read a club and its groups as one object. It is the faintest and the tightest
    *  of the six — the result sits on the page it lifts from, it is not over anything — and its
-   *  `elevation` is the lowest, below the ⚡Play disc, because the bar passes over it. */
+   *  `elevation` is the lowest, below the dock's, because the bar passes over it. */
   clubResult: {
     shadowColor: '#0B2B33',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
+    elevation: 3,
+  },
+  /** THE OPEN LINE — the seventh, and the second card that casts one: FOR YOU's line while it is
+   *  open ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5, §9.1; home refactor
+   *  5, 6, 8, 10, 12), beside its `ink` border and its chevron turned down. A closed line casts
+   *  none, as any card.
+   *
+   *  The mocks lift the one open line off the page so it is unmistakable among four closed ones.
+   *  Soft: the club result's colour, a wider blur at the same faint opacity, and a lower drop — the
+   *  line is over nothing, it only stands forward — so it reads as a halo round the border rather
+   *  than a card floating. `elevation` the club result's 3: the bar passes over both. */
+  openLine: {
+    shadowColor: '#0B2B33',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     elevation: 3,
   },
   /** TEXT ON GENERATED MEDIA — a textShadow, not an elevation, and the only one in the app.
@@ -1755,12 +2009,17 @@ const shadow = {
 
 // ---------------------------------------------------------------------------
 // Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, one settle, one
-// unfold, one disclose, and the yes screen's entrance, which is the first and the fade composed.
+// unfold, one disclose, the yes screen's entrance, which is the first and the fade composed, one
+// sweep, the skeleton's band looping while a screen has nothing to draw yet (2026-11-24), and one
+// spring, the tab bar's selection marker travelling to the lit tab (`tabMarker`, 2026-11-25).
 // Nothing else moves.
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
 //
-// Every one of these is skipped when AccessibilityInfo.isReduceMotionEnabled is true.
+// Every one of these is skipped when AccessibilityInfo.isReduceMotionEnabled is true — but
+// `kindSwap`, which crossfades there instead (its own note), and `skeleton`, which sweeps there
+// unchanged, as the calculating screen's indicator and the busy spinner turn there unchanged:
+// design-system Part 13's three exceptions, the two indicators having no token here (its own note).
 // ---------------------------------------------------------------------------
 
 /** The two durations the yes screen's entrance is composed from — see `motion.yesEntrance`. */
@@ -1795,9 +2054,60 @@ const motion = {
    * reduced motion gets the weaker of the two signals.
    */
   typing: 1200,
+  /**
+   * **The skeleton's sweep** (PRD #867, #868; 1.5, Part 13, Part 16 2026-11-24): one band of light,
+   * `color.skeletonSheen` between two `color.skeleton`s, crossing every shape on a screen at once
+   * while that screen has nothing to draw yet. It runs left to right across the screen's width once
+   * every `sweep` milliseconds, at constant speed, with no pause, for as long as the shapes stand;
+   * the band is tilted `tilt` degrees. `transform` alone, on the UI thread. A loop, argued in
+   * Part 16 against 1.5.
+   *
+   * **Both numbers are Facebook Shimmer's Android defaults, read from its source** (`Shimmer.java`:
+   * `animationDuration = 1000L`, no repeat delay, `RESTART`, `INFINITE`, `LEFT_TO_RIGHT`,
+   * `tilt = 20f`), the loading shimmer log's Q24. It refused the iOS library's 230 pt/s with its
+   * 0,4 s pause, and any number picked without a source.
+   *
+   * **It sweeps under reduced motion** (`ReduceMotion.Never`, without which Reanimated cuts the
+   * timing): the third named exception, beside the calculating screen's indicator and the busy
+   * spinner, for their reason (Q2). A still loading screen reads as frozen, and this is progress,
+   * not decoration.
+   */
+  skeleton: { sweep: 1000, tilt: 20 },
   rise: RISE,
   sheet: 260,
   popover: 130,
+  /**
+   * **The tab's menu** folding out of its tab and back (9.5, #861; PRD #859's *about 150ms*): the
+   * card fades in from `size.tabMenu.drop` above its place, and the chevron on the tab turns over —
+   * opacity and transform only, on the native driver. The selected tab's widening rides the same
+   * beat as a layout transition. All of it is skipped under reduced motion, where the menu is simply
+   * open or shut.
+   */
+  tabMenu: 150,
+  /**
+   * **The Games deck swapped to its other kind in place** (#863; PRD #859's *about 200ms* and *about
+   * 250ms*, *about 24pt*): picked from the tab's menu, the stack goes `rise` down and fades out over
+   * `out`, then the other kind's stack comes up from `rise` below into the same place and fades in
+   * over `in` — the cards alone, opacity and transform on the native driver, `easeDecel`, the stage
+   * never scaled. The buttons under it fade over the same beats where one side has none. **Under
+   * reduced motion it is a crossfade, not skipped**: nothing travels, and the two fades run — a cut
+   * from one kind's cards to the other's would not say the deck changed.
+   */
+  kindSwap: { out: 200, in: 250, rise: 24 },
+  /**
+   * **The tab bar's selection marker travelling** to the newly lit tab (10.2, ADR-0210 §8,
+   * [#884](https://github.com/Raketa02/Raketa/issues/884); the brief's *"460 ms, spring easing … colour
+   * in 300 ms, starting 140 ms after the slide"*). **The app's first spring**: `slide` long at
+   * `dampingRatio`, so it starts fast, overshoots by 2.8 % of its trip and settles; every trip takes
+   * `slide`, so the far jump moves faster. It stretches like a bubble with its own motion — wide and
+   * flat as it speeds up, narrow and tall as it brakes — and the new tab's selected layer fades in over
+   * `colourIn`, `colourInAfter` into the slide, on `easeDecel`; the tab left goes idle at once.
+   * `tabMarkerMotion.ts` holds the spring and the stretch; per frame only `transform` and `opacity`
+   * move, on the UI thread. **It never moves on the dock's first draw**, nor when the dock comes back,
+   * nor on a press of the lit tab. Skipped under reduced motion, where the marker is simply placed
+   * under the new tab and the colours switch at once.
+   */
+  tabMarker: { slide: 460, dampingRatio: 0.75, colourIn: 300, colourInAfter: 140 },
   /**
    * The swipe row's card coming to rest once the finger lifts (6.15) — to revealed or to closed,
    * never in between. Short enough to read as the card *landing* rather than travelling, since the
@@ -1829,6 +2139,21 @@ const motion = {
    * reduced motion, where the fold is simply open or shut.
    */
   disclose: 280,
+  /**
+   * **FOR YOU's line unfolding** ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205
+   * §5; the brief's *about a quarter of a second, fast at the start and settling at the end*): the
+   * fold's height runs to the content's measured height in one layout transition, the lines below
+   * sliding down on the same beat, while the content fades in from a `space.md` above its place and
+   * the chevron turns down — `disclose`'s mechanics, `easeDecel`, on the UI thread.
+   */
+  lineUnfold: 250,
+  /**
+   * **And folding back**, *over a slightly shorter moment* (the brief): the content fades and the
+   * lines below slide up, and only then is the content let go — a closed line draws nothing. A
+   * switch runs this first and `lineUnfold` after it, never both at once. Both are skipped under
+   * Reduce motion (ADR-0205 §8), where a line is simply open or shut.
+   */
+  lineFold: 200,
   /**
    * The radar's flight — a tap on a face carries the view to them, centred, at the 3 km stop
    * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
@@ -1959,6 +2284,32 @@ const motion = {
 const layer = { sheet: 20, toast: 40, popover: 60 } as const;
 
 // ---------------------------------------------------------------------------
+// The glass — where the tab bar's dock draws `color.glass` over a blur, and how strong the blur
+// is (10.2, ADR-0210 §7). The one glass surface in the app (1.1), so one switch for it.
+// ---------------------------------------------------------------------------
+
+const glass = {
+  /** **Whether Android draws the glass — no** (the A32 spike, #880, ADR-0210 §7 amended
+   *  2026-11-25). `expo-blur`'s Android blur redraws everything behind the dock on the UI thread
+   *  whenever anything under it or on it changes, and it added frames over 16.7 ms to a scroll and
+   *  to the marker's slide on the A32, against a pass mark of none. So Android's dock is opaque
+   *  `surface` with the same shape, rim, hairline, shadow and marker. The iPhone draws the glass
+   *  always. Turning this on is a new measurement, not a taste call. */
+  android: false,
+  /** The blur's strength, `expo-blur`'s `intensity` (1–100): **100**, the brief's *strong blur*.
+   *  Picked over Home's dark card and its white rows on the A32 at the product owner's call, who had
+   *  no iPhone at hand; it has not been seen on an iPhone (#885). */
+  blur: 100,
+  /** `shadow.dock` as React Native's `boxShadow`, for a dock that draws the glass — the iPhone's,
+   *  and Android's if `android` is ever turned on. Drawn outside the box only, so nothing shows
+   *  through the translucent fill (the spike's T3, on Android). On the iPhone it also spares the
+   *  dock a shadow worked out from its pixels: iOS's shadow props on a view with no opaque fill take
+   *  an off-screen pass whenever the page moves under the blur, which can stop the blur drawing. The
+   *  iPhone has not drawn it yet (#885). */
+  shadow: [{ offsetX: 0, offsetY: 7, blurRadius: 20, color: 'rgba(11,43,51,0.12)' }],
+} as const;
+
+// ---------------------------------------------------------------------------
 
 export const theme = {
   color,
@@ -1975,6 +2326,7 @@ export const theme = {
   shadow,
   motion,
   layer,
+  glass,
 } as const;
 
 export type Theme = typeof theme;

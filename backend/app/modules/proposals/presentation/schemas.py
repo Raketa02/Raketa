@@ -20,10 +20,11 @@ from collections.abc import Collection, Mapping, Sequence
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field
 
 from app.engines.matchfit.core import ReliabilityBand, SearchMode
-from app.kernel import Instant, Sport, instant
+from app.kernel import Instant, Sport, instant, invariant
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.booking_details import BookingDetails
 from app.modules.proposals.application.friends_card import (
@@ -45,6 +46,7 @@ from app.modules.proposals.application.posting import (
     Posted,
     PostingSlot,
     PostingWeek,
+    SlotFit,
 )
 from app.modules.proposals.application.rescues import FillIn
 from app.modules.proposals.domain.deck import (
@@ -56,12 +58,14 @@ from app.modules.proposals.domain.deck import (
     Sides,
 )
 from app.modules.proposals.domain.details import ProposalStatus, ReaderAction
+from app.modules.proposals.domain.vibe import TableVibe
 from app.modules.proposals.domain.friends_card import CourtForFriends
 from app.modules.proposals.domain.games_and_money import (
     GAMES_PER_WEEK,
     MOST_ILL_PAY_CHOICES_GROSZE,
     GamesAndMoney,
 )
+from app.modules.proposals.domain.needs_your_answer import WhatIsNew
 from app.modules.proposals.domain.overlap import (
     DayRange,
     Overlap,
@@ -87,6 +91,7 @@ from app.modules.proposals.domain.ports import (
     HomeLevelAsk,
     HomeRanking,
     PaymentRefusal,
+    Stakes,
 )
 from app.modules.proposals.domain.proposal import TimeTo
 from app.modules.proposals.domain.post import LevelRange, Who
@@ -421,6 +426,19 @@ class DeckForecastSchema(BaseModel):
     )
 
 
+class DeckVibeSchema(BaseModel):
+    """How much the people on **this** For-fun card share (`docs/adr/0207` §2):
+    on average, each Social tag at the table is carried by `pct` percent of the
+    other players. Worked out from everybody's tags now, on every read."""
+
+    pct: int = Field(
+        description=(
+            "A whole percent, 0–100, rounded half up. The bar fills to it; the "
+            "app words it in its own bands."
+        )
+    )
+
+
 class OverlapCellSchema(BaseModel):
     day: int = Field(description="ISO weekday, Monday 1.")
     range: DayRange = Field(
@@ -551,8 +569,20 @@ class DeckCardSchema(BaseModel):
     sides: DeckSidesSchema
     forecast: DeckForecastSchema | None = Field(
         description=(
-            "`null` where it cannot be read: somebody on the card holds no rating "
-            "in the sport, or nobody faces the reader yet."
+            "How even a **competitive** card's game is forecast. **Always `null` "
+            "on a `FOR_FUN` card**, which says its `vibe` instead "
+            "(`docs/adr/0207` §5) — its sides are still the evenest. Also "
+            "`null` where it cannot be read: somebody on the card holds no "
+            "rating in the sport, or nobody faces the reader yet."
+        )
+    )
+    vibe: DeckVibeSchema | None = Field(
+        description=(
+            "A **`FOR_FUN`** card's Social vibe, its table everybody named on "
+            "the reader's version — the people In, the reader and the names "
+            "dealt, never an empty seat — and on a `SEAT_OPEN` card the reader "
+            "with the players on the game. **Always `null` on a `COMPETITIVE` "
+            "card**, and where nobody at the table holds a tag (#830)."
         )
     )
     overlap: DeckOverlapSchema
@@ -586,6 +616,7 @@ class DeckCardSchema(BaseModel):
                 card.sides, reader=reader, people=people, in_=card.in_, paid=card.paid
             ),
             forecast=_forecast(card.forecast),
+            vibe=_vibe(card.vibe),
             overlap=_overlap(card.overlap),
         )
 
@@ -635,6 +666,10 @@ def _forecast(forecast: CardForecast | None) -> DeckForecastSchema | None:
     if forecast is None:
         return None
     return DeckForecastSchema(pct=forecast.pct, provisional=forecast.provisional)
+
+
+def _vibe(pct: int | None) -> DeckVibeSchema | None:
+    return None if pct is None else DeckVibeSchema(pct=pct)
 
 
 def _overlap(overlap: Overlap) -> DeckOverlapSchema:
@@ -708,7 +743,20 @@ class GroupDeckResponse(BaseModel):
     games_badge: int = Field(
         description=(
             "The tab's badge: cards where somebody is already In with the reader, "
-            "across the segments."
+            "across the segments. **Kept for older installed apps**: the app "
+            "counts `in_card_ids`, and this is always their number."
+        )
+    )
+    in_card_ids: list[UUID] = Field(
+        description=(
+            "**What the app counts for the Games badge** (#846; `docs/adr/0208`): "
+            "the cards with somebody already In with the reader, **across every "
+            "segment shown — the one not asked for too** — each by its "
+            "`proposal_id`, the id the card carries when its segment is the one "
+            "dealt. A `SEAT_OPEN` card is never among them: a rescue's players "
+            "have paid, and are not In. Empty when nobody is In; as many as "
+            "`games_badge`. Competitive first, each segment in the order dealt, "
+            "so the list is the same whichever segment is read."
         )
     )
     games_per_week: int
@@ -722,10 +770,14 @@ class GroupDeckResponse(BaseModel):
         description=(
             "This segment's cards in the order dealt. **A card owed to the "
             "reader comes first** — the new game a club's cancel owed them, "
-            "soonest first among two, with no mark (#673). Then seats open after "
-            "the reader's yes (fewest first), then seat open › challenge › pick, "
-            "then the soonest deadline, then the best forecast; the same people "
-            "only at their best hour."
+            "soonest first among two, with no mark (#673). **Competitive**: then "
+            "seats open after the reader's yes (fewest first), then seat open › "
+            "challenge › pick, then the soonest deadline, then the best "
+            "forecast. **For fun** (`docs/adr/0207` §4): then the `SEAT_OPEN` "
+            "cards by vibe, then every other card by the vibe it shows (highest "
+            "first), then seats open after the reader's yes, then challenge › "
+            "pick, then the soonest deadline. In both, the same people only at "
+            "their best hour."
         )
     )
 
@@ -740,6 +792,7 @@ class GroupDeckResponse(BaseModel):
                 for segment in deck.segments
             ],
             games_badge=deck.games_badge,
+            in_card_ids=list(deck.in_card_ids),
             games_per_week=deck.games_per_week,
             capped_weeks=[
                 CappedWeekSchema(starts_on=week.starts_on, booked=week.booked)
@@ -1519,6 +1572,15 @@ class HomeFriendRequestGroupSchema(BaseModel):
     name: str
 
 
+class HomeFriendRequestLevelSchema(BaseModel):
+    """One sport on a request's sport-levels line — *● Padel 3,40*."""
+
+    sport: Sport
+    level: float = Field(
+        description="Their published Level in it, as RacketSkill published it."
+    )
+
+
 class HomeFriendRequestSchema(BaseModel):
     """One card in *FRIEND REQUESTS* — *Inés wants to be your friend · With you
     in Kazimierz crew · Padel 3,40 · ✦ 98*, **Not now** and **Accept**."""
@@ -1614,6 +1676,14 @@ class HomeFriendRequestSchema(BaseModel):
             "other card."
         ),
     )
+    levels: list[HomeFriendRequestLevelSchema] = Field(
+        description=(
+            "**Every sport they hold a published Level in**, in the app's sport "
+            "order, each with that Level — the tile's sport-levels line, *● Padel "
+            "3,40 · ● Tennis 2,90* (docs/adr/0205 §2). **Empty** when they hold "
+            "none, and the line is left out. `level` is the entry for `sport`."
+        )
+    )
 
     @classmethod
     def of(cls, request: HomeFriendRequest) -> "HomeFriendRequestSchema":
@@ -1639,6 +1709,10 @@ class HomeFriendRequestSchema(BaseModel):
             reliability_band=request.reliability_band,
             percent_even=request.percent_even,
             in_common=request.in_common,
+            levels=[
+                HomeFriendRequestLevelSchema(sport=one.sport, level=one.level)
+                for one in request.levels
+            ],
         )
 
 
@@ -1731,6 +1805,59 @@ class HomeRankingSchema(BaseModel):
         )
 
 
+class HomeNeedsYourAnswerSchema(BaseModel):
+    """**The envelope's badge** (#815; `docs/adr/0205` §3): what is new in
+    *Needs your answer* since you last closed it, kept on the server so every
+    phone agrees — and the watermark to send back when you close it."""
+
+    new_count: int = Field(
+        description=(
+            "How many of the items waiting on you **arrived since you last "
+            "closed Needs your answer** (`POST /players/me/needs-your-answer/"
+            "visit`), on any phone — every one of them before your first close. "
+            "Counted over the four sections: each payment to confirm "
+            "(`payments_to_confirm`) by when it came to need confirming, each "
+            "friends game invitation by when your seat was "
+            "invited into, each friend request by when it was asked, and **each "
+            "friend on an ask for a level by their own ask** — so a second "
+            "friend asking on a card already there is new. **A change of state "
+            "is never new**: a payment going from *Fix your card* to *Confirm* "
+            "counts as it did. An answered item leaves the count with its "
+            "section. Draw *99+* above 99. Never `needing_you`, never the bell's "
+            "number."
+        )
+    )
+    watermark: datetime | None = Field(
+        description=(
+            "**This read's watermark**: the newest arrival among everything "
+            "counted above, seen or not, to the millisecond. Send it back as the "
+            "visit's `watermark` when the sheet drawn from this read closes — "
+            "draw all four sections from this read (`payments_to_confirm` "
+            "included), or a row read elsewhere may be covered without being "
+            "shown. `null` while nothing waits."
+        )
+    )
+
+    @classmethod
+    def of(cls, new: WhatIsNew) -> "HomeNeedsYourAnswerSchema":
+        return cls(new_count=new.count, watermark=new.watermark)
+
+
+class NeedsYourAnswerVisitRequest(BaseModel):
+    """Closing *Needs your answer* (#815): the watermark of the read the sheet
+    showed."""
+
+    watermark: AwareDatetime | None = Field(
+        description=(
+            "`GET /home`'s `needs_your_answer.watermark` from the read the sheet "
+            "was last drawn from, as it was served — never the phone's clock, "
+            "never the moment of the close. Compared to the millisecond, so a "
+            "date that kept only milliseconds is the same watermark. `null`, a "
+            "read with nothing waiting, records nothing."
+        )
+    )
+
+
 class HomeResponse(BaseModel):
     """**Home**: the reader's games from the moment they fill, and the friend
     requests, friends game invitations and asks for a level waiting on them."""
@@ -1801,12 +1928,34 @@ class HomeResponse(BaseModel):
             "and still opens Rankings."
         ),
     )
+    payments_to_confirm: list[PaymentToConfirmSchema] = Field(
+        description=(
+            "*TO CONFIRM · n*, first in *Needs your answer* (#815; "
+            "`docs/adr/0205` §1, §3): every payment you have to confirm, soonest "
+            "game first — **the same rows as `GET /players/me/payments-to-"
+            "confirm`**, read at this read's instant. They are the payments "
+            "`needing_you` counts and `needs_your_answer` covers, so a sheet "
+            "drawn from this read alone shows exactly what its watermark says "
+            "it showed."
+        )
+    )
+    needs_your_answer: HomeNeedsYourAnswerSchema = Field(
+        description=(
+            "The envelope's badge, left of the bell (#815; `docs/adr/0205` §2, "
+            "§3): what is new in *Needs your answer*, and the watermark of this "
+            "read."
+        )
+    )
 
     @classmethod
     def from_home(cls, home: Home, *, reader: UUID) -> "HomeResponse":
         return cls(
             read_at=home.read_at,
             needing_you=home.needing_you,
+            payments_to_confirm=PaymentsToConfirmResponse.from_owed(
+                home.payments_to_confirm
+            ).payments,
+            needs_your_answer=HomeNeedsYourAnswerSchema.of(home.needs_your_answer),
             friend_requests=[
                 HomeFriendRequestSchema.of(request) for request in home.friend_requests
             ],
@@ -2144,9 +2293,122 @@ def _your_payment(details: ProposalDetails) -> YourPaymentSchema | None:
     )
 
 
+class DetailsForecastSchema(DeckForecastSchema):
+    """How even the game drawn is forecast, **with the two side strengths it
+    was read from** — a competitive game's full forecast (`docs/adr/0207` §6):
+    each side's level, the gap and the bar's % — the figures a booked game's
+    pairing prints as `forecast` and `split`, for the same people standing the
+    same way. **One computation**: while a seat is empty the % is `provisional`,
+    read as if the missing player matched their partner, and so are the side
+    strengths beside it."""
+
+    your_side: float = Field(
+        description=(
+            "Your side's strength, on the scale Levels are read on — the "
+            "engine's, never the mean of the people on it."
+        )
+    )
+    their_side: float = Field(description="The other side's strength.")
+    gap: float = Field(
+        description=(
+            "`your_side − their_side`, **signed and served**, so nobody "
+            "subtracts two rounded figures the engine subtracted unrounded."
+        )
+    )
+
+
+class DetailsAtStakeSchema(BaseModel):
+    """What a **counted** result on this game would do to your Level — *If you
+    win +0,08 · If you lose −0,07* — priced by the very function a booked
+    game's pairing prices its `at_stake` with, on the sides drawn here, so it
+    is the pair that applies once the game is booked (`docs/adr/0207` §6)."""
+
+    win_delta: float = Field(description="Above nought, never nought.")
+    loss_delta: float = Field(description="Below nought, never nought.")
+
+
+class DetailsVibeRowSchema(BaseModel):
+    """One row of the Social vibe card's grid: one of **your** tags, and who
+    at the table carries it."""
+
+    tag: SocialTag = Field(
+        description=(
+            "A tag's code — the app owns its emoji and label, and skips a code "
+            "it doesn't know."
+        )
+    )
+    carried_by: list[UUID] = Field(
+        description=(
+            "Everybody on your version who carries it — **you first**, then "
+            "the others in the tiles' order (`sides.yours`, then "
+            "`sides.theirs`). Never empty: you carry every row. Only you: the "
+            "row is yours alone."
+        )
+    )
+
+
+class DetailsVibeSchema(BaseModel):
+    """A For-fun game's **Social vibe card** (`docs/adr/0207` §6): how much the
+    whole table shares, and who shares yours. Worked out from everybody's tags
+    now, on every read, and stored nowhere."""
+
+    pct: int = Field(
+        description=(
+            "The card's own number, counting everyone's tags — the % swiped on "
+            "is the % looked at. 0–100, rounded half up."
+        )
+    )
+    rows: list[DetailsVibeRowSchema] = Field(
+        description=(
+            "One per tag **you** hold, in the vocabulary's order — 💘 "
+            "`OPEN_TO_MEET_SOMEONE` too, drawn like any other row though it "
+            "never counts in `pct`. None of the others' tags you don't hold."
+        )
+    )
+
+
+def _details_forecast(forecast: CardForecast | None) -> DetailsForecastSchema | None:
+    if forecast is None:
+        return None
+    levels = invariant(
+        forecast.levels,
+        "a forecast the engine read always carries the strengths it read",
+    )
+    return DetailsForecastSchema(
+        pct=forecast.pct,
+        provisional=forecast.provisional,
+        your_side=levels.yours,
+        their_side=levels.theirs,
+        gap=levels.gap,
+    )
+
+
+def _details_at_stake(stakes: Stakes | None) -> DetailsAtStakeSchema | None:
+    if stakes is None:
+        return None
+    return DetailsAtStakeSchema(
+        win_delta=stakes.win_delta, loss_delta=stakes.loss_delta
+    )
+
+
+def _details_vibe(vibe: TableVibe | None) -> DetailsVibeSchema | None:
+    if vibe is None:
+        return None
+    return DetailsVibeSchema(
+        pct=vibe.pct,
+        rows=[
+            DetailsVibeRowSchema(tag=row.tag, carried_by=list(row.carried_by))
+            for row in vibe.rows
+        ],
+    )
+
+
 class ProposalDetailsResponse(BaseModel):
     """A game still filling, as the reader opens it — the deck's card turned
-    into a screen."""
+    into a screen. **What it says about the game follows the kind**
+    (`docs/adr/0207` §5, §6): a competitive game `forecast` and `at_stake`,
+    with `vibe` `null`; a For-fun game `vibe`, with `forecast` and `at_stake`
+    `null`."""
 
     proposal_id: UUID
     pool_id: UUID
@@ -2234,9 +2496,32 @@ class ProposalDetailsResponse(BaseModel):
             "everybody In — the client draws the open seats empty."
         )
     )
-    forecast: DeckForecastSchema | None = Field(
+    forecast: DetailsForecastSchema | None = Field(
         description=(
-            "How even the game drawn is forecast — `null` where it cannot be read."
+            "How even a **competitive** game drawn is forecast, with each "
+            "side's level and the signed gap. **Always `null` on For fun** "
+            "(`docs/adr/0207` §5), whose sides it still arranged; `null` too "
+            "where it cannot be read — somebody on it holds no level in the "
+            "sport."
+        )
+    )
+    at_stake: DetailsAtStakeSchema | None = Field(
+        description=(
+            "What a counted result would do to **your** Level, on `sides` — "
+            "**two values or none**, as on a booked game. `null` on For fun; "
+            "while a seat is open (the court that will play isn't known yet); "
+            "once the game is no longer yours to play — you said no, no longer "
+            "fit, wait on a paused yes, or it ended; once it is booked, whose "
+            "stakes are `GET /games/{game_id}/pairing`'s; and where there is "
+            "nothing to price: you hold no level in the sport, or nobody "
+            "across the net does."
+        )
+    )
+    vibe: DetailsVibeSchema | None = Field(
+        description=(
+            "A **For-fun** game's Social vibe and the grid's rows. `null` on "
+            "Competitive, and where the card draws none: fewer than two "
+            "people named, or nobody at the table holding a tag that counts."
         )
     )
     overlap: DeckOverlapSchema
@@ -2277,7 +2562,9 @@ class ProposalDetailsResponse(BaseModel):
                 people=details.people,
                 in_=details.view.in_,
             ),
-            forecast=_forecast(details.forecast),
+            forecast=_details_forecast(details.forecast),
+            at_stake=_details_at_stake(details.at_stake),
+            vibe=_details_vibe(details.vibe),
             overlap=_overlap(details.overlap),
         )
 
@@ -2374,14 +2661,21 @@ class FillInResponse(BaseModel):
     read_at: datetime = Field(
         description="The instant every row and deadline here was read against."
     )
-    badge: int = Field(description="The tab's badge: the Seats to fill rows.")
+    badge: int = Field(
+        description=(
+            "The tab's badge: the Seats to fill rows. **Kept for older installed "
+            "apps**: the app counts the rows, `seats_to_fill` (`docs/adr/0208`), "
+            "and this is always their number."
+        )
+    )
     seats_to_fill: list[SeatToFillSchema] = Field(
         description=(
             "Every rescue in the group the reader fits — the pair rule, the "
             "kind their intent wants, free for the hour in their week, no game "
             "of theirs then, within their Games & money — **soonest first**, "
             "before or after the cut-off. Never a game still filling: that is "
-            "the deck's. *You're In* is `GET /players/me/live-yeses`."
+            "the deck's. The reader's own live yeses are the group page's "
+            "*You're in* tab, read from `GET /players/me/live-yeses`."
         )
     )
 
@@ -2544,7 +2838,9 @@ class PostingGridResponse(BaseModel):
 
 
 class SlotFitSchema(BaseModel):
-    """One of the poster's best fits free then — *2,75 · 93*."""
+    """One of the poster's best fits free then — *2,75 · 93*, the second
+    figure being the kind's own number: how even, or on a For-fun post how
+    much the two of them share."""
 
     player_id: UUID
     nickname: str | None = Field(
@@ -2564,8 +2860,18 @@ class SlotFitSchema(BaseModel):
     )
     forecast: DeckForecastSchema | None = Field(
         description=(
-            "How even a game of the poster and them is forecast — `null` where "
-            "it cannot be read."
+            "How even a game of the poster and them is forecast. **Always "
+            "`null` on a `FOR_FUN` post**, which says its `vibe` instead "
+            "(`docs/adr/0207` §5). Also `null` where it cannot be read."
+        )
+    )
+    vibe: DeckVibeSchema | None = Field(
+        description=(
+            "On a **`FOR_FUN`** post, the Social vibe of **the poster and "
+            "them**, worked out from the two's tags now — and the fits are "
+            "ranked by it, highest first, a tie falling to the forecast and "
+            "then the pool's order (#834). **Always `null` on a `COMPETITIVE` "
+            "post**, and where neither holds a tag."
         )
     )
 
@@ -2628,7 +2934,11 @@ class PostingSlotResponse(BaseModel):
     open_seats: int
     cell: PostingCellSchema = Field(description="The headline's cell.")
     fits: list[SlotFitSchema] = Field(
-        description="The best fits free at the cell's best hour, best fit first."
+        description=(
+            "The best fits free at the cell's best hour, best fit first: the "
+            "most even game, or on a `FOR_FUN` post the highest `vibe`, a tie "
+            "falling to the most even."
+        )
     )
     free_courts: list[FreeCourtSchema] = Field(
         description="**Home club first**, then by hour. Tapping one picks it."
@@ -2650,16 +2960,17 @@ class PostingSlotResponse(BaseModel):
         reader = read.poster.player_id
         people = slot.people
 
-        def fit_of(player_id: UUID, forecast: CardForecast | None) -> SlotFitSchema:
-            person = people.get(player_id)
+        def fit_of(fit: SlotFit) -> SlotFitSchema:
+            person = people.get(fit.player_id)
             return SlotFitSchema(
-                player_id=player_id,
+                player_id=fit.player_id,
                 nickname=None if person is None else person.nickname,
                 photo_id=None if person is None else person.photo_id,
                 photo_url=None if person is None else person.photo_url,
                 level=None if person is None else person.level,
                 friend=person is not None and person.friend,
-                forecast=_forecast(forecast),
+                forecast=_forecast(fit.forecast),
+                vibe=_vibe(fit.vibe),
             )
 
         return cls(
@@ -2673,7 +2984,7 @@ class PostingSlotResponse(BaseModel):
             level_range=LevelRangeSchema.of(read.posted_for.levels),
             open_seats=read.open_seats,
             cell=PostingCellSchema.of(slot.cell),
-            fits=[fit_of(fit.player_id, fit.forecast) for fit in slot.fits],
+            fits=[fit_of(fit) for fit in slot.fits],
             free_courts=[
                 FreeCourtSchema(
                     club=BookedClubSchema(
@@ -2852,7 +3163,21 @@ class FriendsCardResponse(BaseModel):
         )
     )
     forecast: DeckForecastSchema | None = Field(
-        description="*87% · Very even* for these sides; `null` where it cannot be read."
+        description=(
+            "*87% · Very even* for these sides. **Always `null` when `kind` is "
+            "`FOR_FUN`**, which says its `vibe` instead (`docs/adr/0207` §5) — "
+            "its sides are still the evenest. Also `null` where it cannot be "
+            "read."
+        )
+    )
+    vibe: DeckVibeSchema | None = Field(
+        description=(
+            "When `kind` is **`FOR_FUN`**, the Social vibe of the line-up — "
+            "the reader and every friend seated, however they stand, so a swap "
+            "never moves it; worked out from everybody's tags now (#834). "
+            "Flipping the kind switch flips the card's number. **Always `null` "
+            "on `COMPETITIVE`**, and where nobody seated holds a tag."
+        )
     )
     court: FriendsCourtSchema | None = Field(
         description=(
@@ -2889,6 +3214,7 @@ class FriendsCardResponse(BaseModel):
                 yours=list(card.sides.yours), theirs=list(card.sides.theirs)
             ),
             forecast=_forecast(card.forecast),
+            vibe=_vibe(card.vibe),
             court=None
             if card.court is None
             else FriendsCourtSchema.from_row(card.court, club_names=names),

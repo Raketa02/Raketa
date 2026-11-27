@@ -7,7 +7,15 @@
   fence still admits this one module. — **A fourth per-account value added 2026-11-07 by
   [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** §5: *the Rankings view last looked
   at*, General or Friends, which Home's trophy reads too. It is keyed by the account and emptied at
-  sign-out, as the three are, in the same store.
+  sign-out, as the three are, in the same store. — **§2 and §5 amended 2026-11-23 by
+  [ADR-0208](0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)**
+  (PRD [#844](https://github.com/Raketa02/Raketa/issues/844)), with a fifth per-account value: *the
+  rows of a group page's tabs a player has seen*, per group, sport and tab (and kind, on Games),
+  only the ids a tab still counts. It is keyed by the account and emptied at sign-out, as the three
+  are, and an unreadable value means *nothing seen*. §5's *which tab a group page was on* still
+  isn't kept: ADR-0208 remembers rows, not the tab. **For that value alone, ADR-0208 narrows §4**:
+  it isn't read before the first screen; no badge is drawn until it is, and a badge arriving moves
+  nothing.
 - **Date:** 2026-09-25
 - **Reverses the player app's practice that nothing but credentials and the flag datafile is kept on
   the device**, for **exactly three values**. Nothing else is reversed.
@@ -28,6 +36,8 @@
   [#518](https://github.com/Raketa02/Raketa/issues/518) (the last profile).
 
 > **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The flags' datafile cache, the first module this record's allow-list admitted, went with the feature flags (#576), so the allow-list is one module again: the phone-preferences store.
+
+> **Note — the feature flags return (2026-11-21, [#826](https://github.com/Raketa02/Raketa/issues/826)).** The AsyncStorage allow-list is **two modules again**: the feature flags' saved datafile (`features/feature_flags/api/datafileCache.ts`) is back beside the phone-preferences store, by [ADR-0206](0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §12. The datafile is public and names no player, and it is not a per-account value, so sign-out does not empty it; this record's three choices are untouched.
 
 ## Context
 

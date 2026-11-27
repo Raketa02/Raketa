@@ -3,8 +3,14 @@
  * left it on ([#512](https://github.com/Raketa02/Raketa/issues/512),
  * [ADR-0188](../../../../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)).
  *
- * The real route tree and the real shell, with only the socket faked. *A relaunch* is the process ending and a new one starting: the Query cache and the session go,
- * and what is saved on the device — the keychain, and the phone's preferences — stays.
+ * The real route tree and the real shell, with only the socket faked. *A relaunch* is the process
+ * ending and a new one starting: the Query cache and the session go, and what is saved on the
+ * device — the keychain, the phone's preferences and the last good datafile — stays.
+ *
+ * **Every walk runs with `explore` served on** ([#826](https://github.com/Raketa02/Raketa/issues/826)):
+ * the switcher is drawn only on an explicit on, and off is the gate's suite
+ * (`theExploreGate.test.tsx`). `launchWithExplore` serves it and waits on it before Play is pressed,
+ * because Play reads the feature flag once, when it mounts.
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
@@ -15,7 +21,7 @@ import { savePhonePreference } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import {
   GATE_USER,
-  launchSignedIn,
+  launchWithExplore,
   stubGate,
   stubProfileOptions,
   stubProfileSurface,
@@ -64,7 +70,7 @@ async function relaunch() {
   screen.unmount();
   queryClient.clear();
   resetSessionStatus();
-  await launchSignedIn();
+  await launchWithExplore(transport);
 }
 
 async function pressPlay() {
@@ -87,7 +93,7 @@ async function expectExplore() {
 
 describe('Play’s segments', () => {
   it('opens on Groups', async () => {
-    await launchSignedIn();
+    await launchWithExplore(transport);
 
     await pressPlay();
 
@@ -96,7 +102,7 @@ describe('Play’s segments', () => {
   });
 
   it('draws Explore as a blank page, and goes back to Groups', async () => {
-    await launchSignedIn();
+    await launchWithExplore(transport);
     await pressPlay();
     await expectGroups();
 
@@ -108,7 +114,7 @@ describe('Play’s segments', () => {
   });
 
   it('comes back on the segment the player left, after the app is closed', async () => {
-    await launchSignedIn();
+    await launchWithExplore(transport);
     await pressPlay();
     fireEvent.press(await segment(PLAY_COPY.segment.explore, false));
     await expectExplore();
@@ -120,7 +126,7 @@ describe('Play’s segments', () => {
   });
 
   it('comes back on it when the player leaves the tab and returns', async () => {
-    await launchSignedIn();
+    await launchWithExplore(transport);
     await pressPlay();
     fireEvent.press(await segment(PLAY_COPY.segment.explore, false));
     await expectExplore();
@@ -138,14 +144,14 @@ describe('what the phone remembers, and for whom', () => {
     await savePhonePreference(GATE_USER.id, 'playSegment', 'explore');
     stubAPlayer({ id: BORIS });
 
-    await launchSignedIn();
+    await launchWithExplore(transport);
     await pressPlay();
 
     await expectGroups();
   });
 
   it('forgets the segment when the player signs out', async () => {
-    await launchSignedIn();
+    await launchWithExplore(transport);
     await pressPlay();
     fireEvent.press(await segment(PLAY_COPY.segment.explore, false));
     await expectExplore();
@@ -154,7 +160,7 @@ describe('what the phone remembers, and for whom', () => {
     await endSession('requested');
     queryClient.clear();
     resetSessionStatus();
-    await launchSignedIn();
+    await launchWithExplore(transport);
     await pressPlay();
 
     await expectGroups();
@@ -164,7 +170,7 @@ describe('what the phone remembers, and for whom', () => {
   it('opens on Groups when what was saved is not a segment', async () => {
     await savePhonePreference(GATE_USER.id, 'playSegment', 'find-a-game');
 
-    await launchSignedIn();
+    await launchWithExplore(transport);
     await pressPlay();
 
     await expectGroups();

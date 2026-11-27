@@ -43,6 +43,18 @@ from app.modules.discovery.domain.rest import OnScreenRow
 from app.modules.discovery.domain.same_vibe import VibeKey, VibePlayer
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class Alike:
+    """A page of ``PlayerDirectory.alike``."""
+
+    players: tuple[VibePlayer, ...]
+    #: With ``counting``, everybody the read lists without its limit —
+    #: strictly behind its ``after``, in its ``sport``; so with neither,
+    #: everybody sharing a tag (#812). ``None`` when nobody asked.
+    listed: int | None
+
+
 @runtime_checkable
 class PlayerDirectory(Protocol):
     """The directory: one entry per account, and one row per tag.
@@ -73,6 +85,13 @@ class PlayerDirectory(Protocol):
         way). At most ``limit``, when one is given."""
         ...
 
+    async def how_many_joined(
+        self, *, after: Instant, leaving_out: Collection[UUID], up_to: int
+    ) -> int:
+        """How many ``who_joined`` would list — **counted no further than
+        ``up_to``**, in one statement that stops there (#812)."""
+        ...
+
     async def which_may_be_listed(
         self, players: Collection[UUID], *, leaving_out: Collection[UUID]
     ) -> frozenset[UUID]:
@@ -86,6 +105,15 @@ class PlayerDirectory(Protocol):
         directory has no entry for (#795)."""
         ...
 
+    async def tags_of_each(
+        self, players: Collection[UUID]
+    ) -> Mapping[UUID, frozenset[str]]:
+        """``tags_of`` for many at once, **in one statement** — what a For-fun
+        table's Social vibe is read from (``docs/adr/0207`` §11, #830).
+        Everybody asked is answered, with none for an account the directory
+        has no entry for."""
+        ...
+
     async def alike(
         self,
         mine: frozenset[str],
@@ -94,13 +122,16 @@ class PlayerDirectory(Protocol):
         sport: Sport | None,
         after: VibeKey | None,
         limit: int,
-    ) -> tuple[VibePlayer, ...]:
+        counting: bool = False,
+    ) -> Alike:
         """Everybody who may be on a people row — as ``who_joined`` reads it —
         sharing **at least one** of ``mine``, **most in common first** (more
         shared, then fewer of theirs not shared, then the player id), strictly
-        behind ``after`` when one is given, at most ``limit`` (#795). With
-        ``sport``, only those holding a level in it. Each card's shared tags in
-        the vocabulary's order."""
+        behind ``after`` when one is given, at most ``limit`` — one or more —
+        (#795). With ``sport``, only those holding a level in it. Each card's
+        shared tags in the vocabulary's order. **With ``counting``, how many
+        the read lists without its ``limit`` too, counted in the same pass**
+        (#812)."""
         ...
 
     async def sports_alike(
@@ -260,6 +291,14 @@ class PlayerLevels(Protocol):
     ) -> tuple[Sport, ...]:
         """Which of these sports at least one player who may be on a people row
         holds a level in, in the sports' own order."""
+        ...
+
+    async def how_many_hold(
+        self, sports: Collection[Sport], *, leaving_out: Collection[UUID], up_to: int
+    ) -> int:
+        """How many players who may be on a people row hold a level in at
+        least one of these sports — **each once**, however many — counted no
+        further than ``up_to``, in one statement that stops there (#812)."""
         ...
 
     async def least_doubt(self, sports: Collection[Sport]) -> Mapping[Sport, float]:

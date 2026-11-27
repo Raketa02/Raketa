@@ -100,9 +100,11 @@ from app.modules.proposals.domain.ports import (
     GamesAndMoneyRepository,
     GameToCharge,
     HoldingTimes,
+    PlayedWith,
     PlayerBookings,
     PlayerFit,
     PlayersInPlay,
+    PlayersTags,
     Pools,
     ProposalRepository,
     RefundReason,
@@ -122,6 +124,7 @@ from app.modules.proposals.domain.rescues import (
     offered_to,
     rescue_deadline,
     rescuable,
+    room_for_best_fits,
     sides_for,
 )
 
@@ -169,6 +172,8 @@ class RescueOffers:
         players: PlayersInPlay,
         fit: PlayerFit,
         forecasts: BalanceForecasts,
+        tags: PlayersTags,
+        played_with: PlayedWith,
     ) -> None:
         self._pools = pools
         self._bookings = bookings
@@ -178,6 +183,8 @@ class RescueOffers:
         self._players = players
         self._fit = fit
         self._forecasts = forecasts
+        self._tags = tags
+        self._played_with = played_with
 
     async def in_pool(
         self, pool_id: UUID, *, sport: Sport, now: Instant
@@ -266,16 +273,47 @@ class RescueOffers:
         }
 
     async def best_fits(
-        self, game: BookedGame, offered: Sequence[UUID], *, sport: Sport
+        self,
+        game: BookedGame,
+        offered: Sequence[UUID],
+        *,
+        sport: Sport,
+        now: Instant,
     ) -> BestFits:
-        """Of the members offered, the ones the deck deals the seat to."""
+        """Of the members offered, the ones the deck deals the seat to — by
+        the game's kind's rule. **A For-fun game's are its best company**
+        (``docs/adr/0207`` §1): the tags now of the people still on it and of
+        everybody offered, who of them already knows whom, and their Levels
+        — read only for a For-fun game offered to more than it is dealt to,
+        since otherwise everybody offered is a best fit."""
 
         options = [sides_for(game, player) for player in offered]
         forecasts = (
             await self._forecasts.forecasts(options, sport=sport) if options else []
         )
+        if game.kind is not SearchMode.FOR_FUN or len(offered) <= room_for_best_fits(
+            game
+        ):
+            players = best_fits(game, offered, forecasts)
+        else:
+            table = sorted({*game.players, *offered}, key=str)
+            in_play = await self._players.of(table, sport=sport)
+            players = best_fits(
+                game,
+                offered,
+                forecasts,
+                tags=await self._tags.tags_of(table),
+                known=await self._played_with.known_pairs(
+                    game.players, among=table, now=now
+                ),
+                levels={
+                    player: reading.level.mu
+                    for player, reading in in_play.items()
+                    if reading.level is not None
+                },
+            )
         return BestFits(
-            players=best_fits(game, offered, forecasts),
+            players=players,
             forecasts=dict(zip(offered, forecasts, strict=True)),
         )
 
@@ -363,6 +401,7 @@ class RescueOffers:
                 game,
                 [p for p in offered[game.booking_id] if p not in game.said_no],
                 sport=sport,
+                now=now,
             )
             if reader in fits.players:
                 dealt.append(

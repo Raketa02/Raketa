@@ -4,7 +4,13 @@
  * and chip is the server's.
  */
 
-import { topTenAsk, topTenFace, type TopTen, type TopTenPlayer } from './topTen';
+import {
+  topTenAsk,
+  topTenFace,
+  topTenReadFinished,
+  type TopTen,
+  type TopTenPlayer,
+} from './topTen';
 
 const ines: TopTenPlayer = {
   place: 1,
@@ -56,5 +62,21 @@ describe('what the row draws', () => {
       kind: 'nobody',
       sport: 'badminton',
     });
+  });
+});
+
+// #871: what Home's reveal waits on for Top 10.
+describe('whether Top 10’s read has finished, for Home', () => {
+  const T = true;
+  const F = false;
+
+  it.each<[string, boolean, boolean, boolean, boolean]>([
+    ['asked, and still out', T, F, F, F],
+    ['asked, and finished', T, T, F, T],
+    ['asked, still out, though a read behind it failed earlier', T, F, T, F],
+    ['not asked yet, waiting for its sport', F, F, F, F],
+    ['not asked yet, behind a read that failed with nothing read', F, F, T, T],
+  ])('%s', (_case, asked, askedFinished, behindAFailure, finished) => {
+    expect(topTenReadFinished({ asked, askedFinished, behindAFailure })).toBe(finished);
   });
 });

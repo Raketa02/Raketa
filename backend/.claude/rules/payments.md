@@ -254,3 +254,17 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   carried the booking. The fake pays out only when asked, dating the arrival two days off
   its `clock` (a laptop's and the seed's fakes have the wall clock; a test sets
   `payments.clock`).
+- **A payment to confirm arrives once, when it first comes to need confirming** (#815;
+  ADR-0205 §3; `proposals.md`). *Needs your answer* counts a *To confirm* row new by that
+  instant (`Owed.refused_at`), never by its state:
+  - a refused share at the fill, by its first `TimeToPayGiven` with a payment to confirm
+    (`Paying.refused_at`). A payer refused again keeps it, as they keep their time. A refusal
+    for terms or a method has nothing to confirm, so a bank's refusal after one arrives at its
+    own time. The seat reopened when the time runs out keeps it too (`Reopened.refused_at`);
+  - a seat reopened with no time given, by its `SeatReopened`;
+  - a refused holding on a booked game, by its first `CardToFix` (`RefusedHolding.refused_at`);
+  - a seat kept for a refused rescuer, by its first `SeatKept` (`KeptSeat.refused_at`), through
+    a refusal again and its running out.
+
+  So *Fix your card* turning into *Confirm* is not new. Each is an event's `occurred_at`, folded,
+  and nothing about the money moved.

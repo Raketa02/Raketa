@@ -150,8 +150,11 @@ waiting on the network, a pick written to the cache and then the phone, never a 
 **The filter unfolds on the UI thread and folds at once** (play 41–42; design-system 7.21). The
 pill is a chip; tapped, a white bar with the popover's shadow grows leftwards over the group's
 name from where the pill stood, the current sport dark at its right end, the others sliding out
-one by one — one Reanimated shared value over `motion.unfold`, read by the bar's width and each
-sport's opacity and slide, never a scale. It is the second surface on Reanimated after the radar
+one by one — one Reanimated shared value over `motion.unfold`, read by transforms and opacity
+only, never a scale and never the bar's width: the bar is laid out once at the pill's width and its
+far half slides out from under the current sport, because a width animated frame by frame went
+through Reanimated 3.16's shadow-tree commit and held still while React committed (2026-11-24,
+`SportPill`'s note). It is the second surface on Reanimated after the radar
 and the first with no gesture. The bar is drawn over the header's measured box, above a backdrop
 across the page, so **a tap on another sport picks it, and a tap on the current one, anywhere else,
 or Android's back folds it and changes nothing.** The shell's tab bar is outside the page and
@@ -177,8 +180,8 @@ _Shows this group for another sport you play_ and _+ Another sport_ are this pag
 offer behind _+ Another sport_. Nothing changed on screen: the group page's router suites are
 unchanged, and the bar's own suite moved with it.
 
-**Three tabs, and the page always opens on Games** (story 59; ADR-0188 §5 keeps which tab nowhere;
-Q125). Games, Fill in and Friends are each drawn for the filter's sport; Info is the group's own
+**Four tabs since #847, and the page always opens on Games** (story 59; ADR-0188 §5 keeps which tab
+nowhere; Q125). Games, Fill in, You’re in and Friends are each drawn for the filter's sport; Info is the group's own
 screen, opened from the header (below). **Every starting
 tab has one dark card whose remedy is the link** (`LinkCard`): a headline, what the app is waiting
 for, and **Share the link** (volt) beside **Copy link** (`onDark`). Share hands the phone's own
@@ -197,19 +200,39 @@ waiting line**, because what the app would wait for is not people. The row of se
 to a listener, play's court summary — _Padel, 1 of 4 seats filled._ — and _3 of 4_ is drawn in
 mono, as every count is (design-system 1.4).
 
-**Fill in counts members, not players of the sport** (stories 66–67). _No games yet — it's just
-you_ while the reader is the only member, _No games yet_ once anybody has joined: a posted game is
-seen by everybody who arrives with the link. **+ Post a game** is the primary button over the page's
-bottom corner — drawn disabled until posting shipped, and since #558 the door to _Post a game_
-(below).
+**The starting card counts members, not players of the sport** (stories 66–67; Fill in's card until
+#847, You’re in's since). _No games yet — it's just you_ while the reader is the only member, _No
+games yet_ once anybody has joined: a posted game is seen by everybody who arrives with the link.
+**+ Post a game** is the primary button over the page's bottom corner, on You’re in (Fill in until
+#847) — drawn disabled until posting shipped, and since #558 the door to _Post a game_ (below).
 
 **Friends is the court a game with friends is built on** (stories 68–70; since
 [#757](https://github.com/Raketa02/Raketa/issues/757), the friends screens §7.1–§7.2, friends 7–8).
 **Competitive · For fun sets this game's kind, and nothing else's** (ADR-0202; the friends README's
 defaults): it is `friendsGame.store`'s, no longer `gameIntent.store`'s, so turning it never moves the
-Games deck's switch or the Play intent. It keeps its position while the app is open, in memory only
-(ADR-0188 §5) — one value for the app, since it is the kind of the game being built — and, like the
-app's other process stores, a sign-out does not reset it.
+Games deck's kind or the Play intent, and the deck's kind never moves it. It keeps its position while
+the app is open, in memory only (ADR-0188 §5) — one value for the app, since it is the kind of the
+game being built — and, like the app's other process stores, a sign-out does not reset it.
+
+**The kind is picked in the Friends tab's menu, and the court sits right under the tabs**
+([#861](https://github.com/Raketa02/Raketa/issues/861), PRD #859; the friends screens §7.1, tab menu
+mocks 2 and 4 as illustrations). The _Competitive | For fun_ row above the court is gone, and the
+court keeps its size. **Whenever the court is drawn** — not on the _add a sport_ card, not on the
+level door — the selected Friends tab draws a chevron, widens for it, and is spoken _Friends,
+Competitive_ with its expanded state; **a press on it opens the menu** (`shared/ui`'s `TabMenu`, 9.5),
+hanging from the tab by its right edge: _Competitive_ then _For fun_, the current kind ticked, **no
+counts and no door** — a game with friends is one game's kind, so a Competitive-only player picks For
+fun here freely. **Picking the other kind** folds the menu away and turns the court into that kind's
+game, and with every seat filled the card asks again for it, as it did; the kind it already is just
+closes the menu. **The menu's open state is the page's own** (`GroupScreen`), drawn as the page's
+last layer, never on the modal stage: a press on the tab again, a line, anywhere else on the page —
+which does nothing else, the body taking no touch under it — Android back, a pushed screen, the
+bottom bar and a sport change all close it, and another tab is one tap. **A pick asks the court**
+through a handle (`FriendsTabHandle`), because a kind changed keeps the sides the court shows and
+only the court knows what it shows. Walked in `friendsGame.test.tsx` through `test-support/tabMenu.ts`
+(_open a tab's menu, then pick a kind_), with the chevron's absent states in `officialGroups.test.tsx`
+and `theDoorWherePlayBegins.test.tsx`. **Not seen on a device** — the chevron, the widened tab and the
+menu over the court are asked for a look (#866).
 
 **The court is the app's court, spoken in the seat's sentences.** `Court` at `court.build` with
 `shared/ui`'s `SeatFace` and `SeatCaption` — Play's until #574, and drawn by Fill in and a booked
@@ -293,7 +316,8 @@ been seen on a device** — the unfold's pace, and whether four sports fit the b
 are asked for a look.
 
 **The header opens Info** (Q125, the product owner's ruling of 2026-11-02, [#721](https://github.com/Raketa02/Raketa/issues/721)).
-Info was a fourth tab; the page now carries only the three tabs drawn for a sport, and Info — about
+Info was a fourth tab; the page now carries only the tabs drawn for a sport (three then, four since
+#847), and Info — about
 the group, not one of its sports — opens from the group's own header, as WhatsApp, Telegram and
 iMessage open a group's info. **The tile, the name with the official mark and _N members · Home
 club_ are one button** (`GroupHeader` over `ScreenHeader`'s `onPress`), spoken by the group's name
@@ -303,7 +327,7 @@ and they are the deeper responders, which leaves the tile a direct child of the 
 filter's `cover` measures it. **While the filter's bar is open it covers the tile**, over a backdrop
 across the page, so a tap there is the bar's. Info is **pushed over the page** at
 `/play/group/[groupId]/info`, so the page stays mounted under it with its tab in `groupTab.store`:
-**back from Info is the tab the player left** — Fill in after _Post a game_, the deck at a notice's
+**back from Info is the tab the player left** — the tab _Post a game_ was opened from after backing out of it, You’re in after a post (#848), the deck at a notice's
 card. Members and Edit group are pushed over Info now, so back from each is Info. **Not seen on a
 device**: the row's pressed look, and the badge on the 36pt tile and beside the open bar, are asked
 for a look.
@@ -321,7 +345,7 @@ filter's sport, because nothing on it is drawn for one.
 
 **The Owner's count of waiting requests is on the tile's corner** ([#529](https://github.com/Raketa02/Raketa/issues/529)
 D6; the Info tab's until Q125). It is the badge the tab carried — the Chats badge at the segment's
-size, `CornerBadge` (lifted out of `Segment`, which draws it over Games and Fill in), `size.segmentBadge`
+size, `CornerBadge` (lifted out of `Segment`, which draws it over Games, Fill in and You’re in), `size.segmentBadge`
 — over the tile's top-right corner, on the page from every tab and on Info's header, and **spoken
 with the header** (_Kazimierz crew, 8 members · Centrum Ruchu, 2 requests waiting_), so an Owner on
 Games knows somebody is asking. It reads the Owner's requests under the same key as _Want to join_,
@@ -336,7 +360,7 @@ re-reads what the page asked for as it opened, one more read of the group and th
 tap, because what another phone changed meanwhile has to be on it without a pull; coming back from
 Members or Edit group is `useOnReturn`. **The page no longer re-reads on a return**: only Info did,
 and Info is its own screen now; what Info's writes change they write into the group's read, which the
-page draws too. Games and Fill in pull (below); Friends keeps none.
+page draws too. Games, Fill in and You’re in pull (below); Friends keeps none.
 
 **The members row is the server's faces and the phone's arithmetic** (`domain/groupInfo.ts`'
 `membersRow`). The group's read serves up to five faces of everybody but the reader in Members' order
@@ -526,7 +550,7 @@ handed the group's `declaredSports` (absent on a player group), so the filter li
 reader is rated in **among them** and opens on one of them whatever was picked elsewhere; opening is
 not picking, so the phone keeps what the player last picked. **A member rated in none of them**
 gets `AddSportCard` — _This group plays padel_ / _Add padel to your Skill passport to see its games._
-— on all three tabs, and in place of Members' list, with no pill and no _+ Post a game_. **The header
+— on all four tabs, and in place of Members' list, with no pill and no _+ Post a game_. **The header
 still opens Info**, because the way out is not a sport's: a member who cannot play a group's sports
 must still be able to leave it. Each of its buttons, one per sport the group plays, is the
 Skill passport's _Add a sport_ for that sport (`useAddASport`), so the questionnaire is onboarding's
@@ -535,7 +559,7 @@ declared list this build can name none of — an older build after a sport is ad
 none (`toGroup`), so the page reads the group as a player group's rather than drawing nothing.
 
 **Calls made here, open for the product owner** (design-system Part 16 has the card's): the whole
-name on the approver line; Info's _the administrator approves joins_; the card on the three tabs
+name on the approver line; Info's _the administrator approves joins_; the card on every tab
 rather than in place of the tab bar, and on Members; a button per sport, with the sports joined
 _padel and squash_ / _padel or squash_; the pass ending on the passport; and Join over a request
 left before the account ran the group. **Nothing here has been seen on a device.**
@@ -553,60 +577,184 @@ and then went with the old loop ([#576](https://github.com/Raketa02/Raketa/issue
 here changed either time: Play opens on Groups, and no flag decides it any more.
 
 **Games is the deck** ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A1–A2).
-`GamesTab` hands `proposals`' `GamesDeck` the kind the page's switch stands on — the game-intent
-store, which Friends' switch shares, so one choice is one choice on both tabs — and the starting card
+`GamesTab` hands `proposals`' `GamesDeck` the kind the Games tab's menu stands on (below; the
+switch's until #862) — the game-intent store, which Friends' kind no longer shares since #757 (it is
+the Friends tab's menu's since #861) — each line picked in that menu, and the starting card
 to draw while the segment deals nothing. **The starting card is unchanged** (_Just you so far_, _3 of
 4_, _Nothing picked right now_), and _Nothing picked right now_ gains a third door under the link's
-two, _Post a game_ — Fill in's own `PostAGame`, in `LinkCard`'s `foot`, open since #558. **The tab bar counts Games** — the cards somebody is already In on with you, off
+two, _Post a game_ — the floating button's own `PostAGame` (You’re in's since #847), in `LinkCard`'s `foot`, open since #558. **The tab bar counts Games** — the cards somebody is already In on with you, off
 the same deck read the tab draws (`useGamesBadge`), in the requests count's mark and spoken _Games, 4 with
-somebody In_; and Fill in counts its _Seats to fill_ (below). **Games lays itself out**:
-the deck fills the page between its switch and its three buttons, so `GroupScreen` draws it outside
+somebody In_; Fill in counts its rescues, and You’re in its rows (below). **Games lays itself out**:
+the deck fills the page between the tabs and its three buttons, so `GroupScreen` draws it outside
 the page's scroller, and the deck scrolls itself in the states that are not a deck. Every suite that
 opens a group's page stubs the deck (`test-support/groupDeck`'s quiet deck); the tab's own walk is
 `groupGames.test.tsx`. The record of the deck itself is [`proposals.md`](proposals.md).
 
-**Fill in is `proposals`' board** ([#557](https://github.com/Raketa02/Raketa/issues/557), the screens
-A1, A3; mocks 11–14). `GroupScreen` draws `FillInBoard` as the tab — _Seats to fill_, the rescues the
-reader is offered, then _You're In_, their own yeses on this group's games still filling — and hands
-it the starting card above (`FillInTab`) for a tab with no row in either, as `GamesTab` hands the deck
-its own. **The tab bar counts Fill in** — the _Seats to fill_ rows, the board read's own `badge`
-(`useFillInBadge`), spoken _Fill in, 1 seat to fill_ — read for the page's sport whichever tab is
-open, so `stubGroupDeck` now serves an empty Fill in too and every suite that opens a page gets it.
-**+ Post a game** floats over the page's corner on Fill in; the board leaves room under its last row
-for it. The tab's walk is `groupFillIn.test.tsx`; the board's record is [`proposals.md`](proposals.md).
+**The deck's kind is picked in the Games tab's menu, and the cap line sits right under the tabs**
+([#862](https://github.com/Raketa02/Raketa/issues/862), PRD #859; the screens A1, A2.1; tab menu
+mocks 1 and 3 as illustrations). The deck's _Competitive · N / For fun · N_ row is gone: the weekly
+cap's line and the offline note stand directly under the tabs, and the deck takes the height. **The
+chevron's rule is the switch's**: the selected Games tab draws one where there is a sport to play —
+no _add a sport_ card, no level door — and a deck read of this group and sport has come back with its
+kinds, **of either kind** (`proposals`' `useGamesMenu`, off `kindMenu`). So none while the first read
+is on its way, after it failed, or while the first-time question is up; and it stays while a newly
+picked kind is read, drawn off the other kind's read, which carries the same pair of counts. **It
+costs no request**: both kinds' reads are watched, never fetched — the badge's read and the deck's are
+the ones that go out. The tab is spoken _Games, Competitive_, and **a press opens the menu** hung by
+the tab's left edge: _Competitive_ then _For fun_, the deck's kind ticked, each live kind ending in
+today's count (`kindMenuLines`, `switchSides`' numbers), the kind the intent doesn't want a door —
+dimmed, no number, no tick — whose line closes the menu and opens the deck's `KindDoor` over the deck.
+**While an intent answer or its finding is out the tab is still**: the chevron stays drawn so the bar
+doesn't jump, and a press opens nothing — read off the two mutations' own state
+(`usePlayIntentOnItsWay`, `proposalKeys.finding`), never a store's copy. **A pick goes to the deck**
+through a handle (`GamesDeckHandle`), because the panel and its write are the deck's: a door opens
+its panel; a live kind is chosen in `gameIntent.store` and drawn at once from a cached read, under the
+deck's spinner from an uncached one and over its `ReadFailed` from a failed one, the menu working
+throughout — a door drawn off the other kind's read opens over them too; the kind it stands on
+changes nothing but a panel left open, which it shuts. **A press on the tab while the panel is open opens
+the menu over it, and a live kind picked there closes the panel** — the switch's own rule, which the
+grilling had left open (the screens A2.1). **A notice moving the deck's kind closes a menu left open**
+(the arrival's effect). To read its sport above the body, **the page holds the filter's state itself**
+(`useGroupSport` handed to `SportFilterFrame`), as Members' Administrator view does. Walked in
+`groupGames.test.tsx` (every chevron state, the lines, the three loads, a notice),
+`groupGamesDoor.test.tsx` (the door from the menu, its three answers, the still tab) and
+`groupBadges.test.tsx` (opening the menu sees nothing) through `test-support/tabMenu.ts`, with the
+absent states in `officialGroups.test.tsx` and `theDoorWherePlayBegins.test.tsx`. **Not seen on a
+device** — the Games chevron, its menu over the deck and the cap line under the tabs are asked for a
+look (#866).
 
-**Games and Fill in re-read on a pull** (2026-10-12, asked by the product owner). Until then only Info
+**Fill in is `proposals`' board** ([#557](https://github.com/Raketa02/Raketa/issues/557), the screens
+A1, A3; mocks 11–14). Until #847 split it, `GroupScreen` drew one board as the tab — _Seats to fill_,
+the rescues the reader is offered, then _You’re in_, their own yeses on this group's games still
+filling, each under a heading — and handed it the starting card above for a tab with no row in
+either, as `GamesTab` hands the deck its own. **The tab bar counts Fill in** — the rescues, the board
+read's own `badge` until #849 (`useFillInBadge`, below), spoken _Fill in, 1 seat to fill_ — read for the page's sport
+whichever tab is open, so `stubGroupDeck` now serves an empty Fill in too and every suite that opens a
+page gets it. The tab's walk is `groupFillIn.test.tsx`; the board's record is
+[`proposals.md`](proposals.md).
+
+**You’re in is a tab of its own** ([#847](https://github.com/Raketa02/Raketa/issues/847), PRD #844;
+the screens A1, A3; split mocks 1–3). **Four tabs, Games · Fill in · You’re in · Friends**, and the
+two lists that shared Fill in get one each: `GROUP_TABS` gains `youreIn` after `fillIn`, so the tab
+store, the route params and an onboarding pass's origin take it, and a tab this build does not know
+is still dropped (`parseGroupRouteParams`). The label is _You’re in_, lower-case _i_ and the curly
+apostrophe, like _Fill in_. **Fill in draws `FillInBoard`** — the rescues alone, no heading — and says
+_No seats to fill right now_ with none, **never the starting card**, which tells you to post from a
+tab that no longer has the button (split Q3b). **You’re in draws `YoureInBoard`** — the reader's live
+yeses in this group and sport, no heading — and is handed the starting card (`YoureInTab`, which was
+`FillInTab`): it draws it **only once both the rescue read and the live-yeses read have said there is
+nothing**, never as a first frame, and otherwise _You haven’t said yes to a game here yet_. Each
+tab's read is its own — its spinner, its offline note, its refusal with the retry — so one failing
+never touches the other's rows. **+ Post a game floats over You’re in, and only there** (split
+override 1: mock 1 draws it on Fill in), over the level door too, and not while an official group's
+_add a sport_ card stands in the tab; You’re in's rows leave room for it, Fill in's no longer do.
+**The tab bar counts You’re in** — a plain count of its rows until #849 (below), as Games and Fill in
+counted, spoken _You’re in, 3 games_ (`useYoureInBadge`) — so **the live-yeses read starts as the page opens**,
+from the tab bar, rather than when the tab is drawn: the read the tab makes anyway, made earlier, and
+it holds up neither the page nor a tab switch. #847 had _Post a game_ turn the page to You’re in as it
+opened, an interim #848 replaced (below). Walked in
+`groupFillIn.test.tsx` and `groupYoureIn.test.tsx`. **Not seen on a device**: four tabs with badges on
+a 320pt phone and at a large text size, which the split's log estimates at about 69pt a tab against
+about 55pt for _You’re in_, are asked for a look.
+
+**Fill in's and You’re in's badges count what the player hasn't seen**
+([#849](https://github.com/Raketa02/Raketa/issues/849),
+[ADR-0208](../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md);
+PRD #844; split Q2b, Q10–Q12). Until then a badge never cleared: _Fill in 2_ came back on every
+visit until those games were gone. Now **a tab's rows are seen while it is on screen** — the page
+in view, nothing pushed over it, no record sheet and nothing of the fill's up — **and the tab on
+screen draws no badge**
+(split override 2, overriding mocks 1 and 2): `TabsWithCounts` skips the selected tab. A visit
+clears a badge, a row that only changed keeps its id and stays seen, and only a new one brings the
+badge back; spoken _Fill in, 2 new seats to fill_ and _You’re in, 3 new games_ (`fillInTabLabel`,
+`youreInTabLabel`). The rule, the ids, the marking and the phone's memory are `proposals`'
+(`proposals.md`); what is this feature's is the tab bar and **whether the page is in view**, which
+the route file reads (`useScreenInView`, the navigator's focus — read there and handed in, as the
+hook's own rule asks) and `GroupScreen` hands each board as `inView`. **Remembered on the phone**,
+per account, across a relaunch and Android killing the app, and forgotten at sign-out; the first run
+shows today's counts until each tab is visited. **Games was untouched** — its plain count stood, on
+the selected tab too — until #850 gave it the deck's ids (below). Walked in `groupBadges.test.tsx`.
+**Not seen on a device**: a badge clearing on a visit and staying cleared after the app is killed
+are asked for a look (the split's §17).
+
+**The Games badge counts the cards with somebody In that the player hasn't seen, across both
+kinds** ([#850](https://github.com/Raketa02/Raketa/issues/850), ADR-0208; PRD #844, split Q2b, Q10).
+Until then it was the server's `games_badge`, which never cleared and was drawn on the selected tab
+too. Now it is the deck read's ids (`in_card_ids`, #846, across both kinds) minus the ids seen, read
+off the deck the tab already draws — **no extra request, and nothing reads the other kind's deck**;
+`games_badge` stays on the wire and is not read. **Seen per kind**: while Games is on screen the deck
+marks every card of the kind it is on, not only the top one, so the other kind's cards stay new
+until the deck moves there — Marta, on Competitive, opens Games and leaves with _Games 1_ still there
+for Kuba's For-fun yes, and it goes once she has switched to For fun (in the Games tab's menu since
+#862, whose opening sees nothing). A notice that opens the deck at a card leaves its kind seen, like
+any visit, because the deck moves there first. **The tab
+on screen draws no badge**, now on Games too: `TabsWithCounts` skips the selected tab for all three
+(split override 2), so the other kind's new cards show only once the player leaves Games — ADR-0208's
+ruling. Spoken _Games, 4 new with somebody In_ (`gamesTabLabel`). This feature's part is the tab bar
+and handing `inView` to `GamesTab`, which hands it to the deck — **false while a notice's kind is
+still on its way to the deck** (`arrived`): the page moves the deck's kind in an effect that runs
+after the deck's, and on a page whose reads are cached the deck would otherwise mark the kind it
+stood on for one frame (the code review's catch). The marking is `proposals.md`'s.
+Walked in `groupBadges.test.tsx` (the other kind's card, a visit on one kind, a kind picked, a changed
+card, an older read of the other kind, a card this build cannot draw, a relaunch, sign-out, a
+notice's card on a cold and a warm cache, and the details, a record and _It's a game!_ over the
+deck). **Not seen on a device.**
+
+**Games and Fill in re-read on a pull** (2026-10-12, asked by the product owner; You’re in too since
+#847, the same control re-reading everything whichever tab is pulled). Until then only Info
 pulled, and a game posted, a seat offered or a card filled on another phone reached the two tabs only
 on a refocus or an answer's re-read. **One control and one spinner for the page** (`usePull`, the
 Shell's drawing), re-reading on Games and Fill in the group — the header's count and the starting
 cards' roster — and every read `proposals`
-draws the two tabs from (`useRereadGroupGames`: the decks, Fill in, _You're In_'s yeses and their
-games), of which only those on screen go out at once. **Fill in's control is the page's scroller's**;
+draws the two tabs from (`useRereadGroupGames`: the decks, Fill in, _You’re in_'s yeses and their
+games), of which only those on screen go out at once. **Fill in's and You’re in's control is the page's scroller's**;
 **Games' is handed to the deck**, which lays itself out and puts it on whichever scroller it is in —
 the stage's among them (`proposals.md`). Friends keeps none — it was not asked for. Walked in
-`groupGames.test.tsx` and `groupFillIn.test.tsx` (_pulling Games_, _pulling Fill in_). **Not seen on
+`groupGames.test.tsx`, `groupFillIn.test.tsx` and `groupYoureIn.test.tsx` (_pulling Games_, _pulling Fill in_, _pulling You’re in_). **Not seen on
 a device** — the deck's pull shares the page with the card's drag, and only a thumb can say they keep
 out of each other's way.
 
 **_Post a game_ is `proposals`' screen over the page** ([#558](https://github.com/Raketa02/Raketa/issues/558),
-the screens A5). Both doors — Fill in's floating button and _Nothing picked right now_'s third — push
+the screens A5). Both doors — the floating button (Fill in's then, You’re in's since #847) and _Nothing picked right now_'s third — push
 `/play/group/[groupId]/post`, whose route mounts `PostAGamePage`: it hands the screen the page's own
 sport filter (`useGroupSport`), each sport's rated count off the group's roster, the page's sport and
-the switch's kind; a reader rated in none of an official group's sports gets `AddSportCard` with _Get
+the deck's kind; a reader rated in none of an official group's sports gets `AddSportCard` with _Get
 rated in padel to post here_ (Q80). **Which tab the page is on is now a store** (`groupTab.store`)
-rather than its state: _Post a game_ turns the page to Fill in **as it opens**, unseen under it, so
-the chevron, the hardware back and the swipe all land on _You're In_, as A5 asks whichever door was
-used. The page forgets its entry — and the post's draft (`forgetPostDraft`) — when it goes, so it
+rather than its state, because _Post a game_ reads it and moves it from over the page. Until #848 it
+turned the page to Fill in **as it opened** (You’re in from #847), so every way back landed on the
+yeses. The page forgets its entry — and the post's draft (`forgetPostDraft`) — when it goes, so it
 still always opens on Games (story 51, ADR-0188 §5). The record of the screen is
 [`proposals.md`](proposals.md); its walk `proposals/components/postAGame.test.tsx`.
+
+**_Post a game_ backs out to the tab it came from, and a post lands on You’re in**
+([#848](https://github.com/Raketa02/Raketa/issues/848), PRD #844; the screens A5). **Opening it no
+longer turns the page.** `PostAGamePage` reads the page's tab once, as it opens — the store's entry,
+or Games while the page has not moved off its opening tab — and that is the **origin**: the chevron,
+the hardware back and the swipe all uncover the page as it was, on that tab, and back from Info after
+it is that tab too. **The chevron names it**, _Back to You’re in_ or _Back to Games_
+(`postAGameBackLabel`, the tab's own word, so the two cannot disagree); it replaced _Back to You’re
+in_ for every door. The screen draws the chevron and nothing else, so the name is what a listener
+hears — no mock draws the control, and the header's look is unchanged. **A post lands on You’re in**,
+from either door, with the new game on the tab and _Posted — N of your best fits have it._ over it;
+**so does a join from a cell's sheet** — a post's yes is on the tab, and a rescue's _It's a game!_
+rises over the page with the page left on You’re in under it. Landing is the only thing that moves
+the page: the store is set to You’re in, unseen, a moment before the screen goes. With no page under
+it (opened by a link), a back-out opens the page on Games and a landing on You’re in. **Calls made
+here**: a post that settles after the player has already backed out toasts and leaves the page on
+the tab they backed out to — neither popping the page nor turning it under them; and an origin of
+Fill in or Friends, which no door opens from today, is named and returned to like any tab. **A pass
+begun from its level door or _add a sport_ card returns to You’re in**, whichever tab it was opened
+from — where the button lives and a post lands. Walked in `postAGame.test.tsx` (both doors, each way
+back, each landing) and the onboarding suites (the pass's return, opened over Games).
 
 **A group's page opens at a card when a notice says so** ([#559](https://github.com/Raketa02/Raketa/issues/559);
 the screens A9: _the deck opens with the card on top_). The route reads an **arrival** beside the
 group's id — the card's sport, kind and id, all three or none (`parseGroupRouteParams`), spelled by
 `groupDeckRoute`, which `notifications` pushes. The page stands on the card's sport until the player
 picks another (`useGroupSport`'s `opening`, `openingSport`'s `wanted`) — **opening is not picking**, so
-the phone's last sport is untouched — turns to Games, moves the switch to the card's kind
-(`gameIntent.store`, one value for the app), and hands the card to the deck as `onTop`. An arrival
+the phone's last sport is untouched — turns to Games, moves the deck to the card's kind
+(`gameIntent.store`, one value for the app), shutting a Games menu left open (#862), and hands the
+card to the deck as `onTop`. An arrival
 this build cannot read opens the page as it always opens: the group's id alone is a page.
 
 **Members' score tag is the served band, on every row** ([#660](https://github.com/Raketa02/Raketa/issues/660),
@@ -641,10 +789,10 @@ group and the tab to come back to, and the page reads the tab and the sport off 
 **A player group's reader rated in nothing meets the level door**
 ([#730](https://github.com/Raketa02/Raketa/issues/730), ADR-0200 §2, §4, §6). `needsALevel(rated,
 declared)` — a player group, rated in no sport — rides on `useGroupSport` and is handed to
-`SportFilterPage`'s children as a third argument; where it holds, Games, Fill in and Friends draw
+`SportFilterPage`'s children as a third argument; where it holds, Games, Fill in, You’re in (#847) and Friends draw
 onboarding's `LevelDoor` in place of their content, Members draws it in place of the list she is
 on nobody's copy of, and _Post a game_ draws it in place of _Get rated in … to post here_, each
-returning to the tab #729's card returns to. **_+ Post a game_ still floats over Fill in's door**
+returning to the tab #729's card returns to. **_+ Post a game_ still floats over the door** — Fill in's until #847, You’re in's since —
 (the screens A3), and opens _Post a game_'s. **The sport pill is drawn only once there is a rating to list**,
 and lists only rated sports — which `filterSports` already made true; the door makes it visible.
 An official group keeps `AddSportCard`. The words and the reads are onboarding's
@@ -672,7 +820,11 @@ never a wall. **A friend's ask for a level stands in its place** ([#765](https:/
 Q129): the rule is `homeAsksForALevel(groups, rated, askedForALevel)` now, over `proposals`'
 `useHomeLevelAsks` too — nothing while Home's ASKED FOR A LEVEL holds a card or Home has yet to
 answer, and the card again once the row is empty; a Home read refused or offline holds none. `groupKeys` is exported for the notice that opens Home on it, which marks the groups
-list stale with the ratings.
+list stale with the ratings. **#816 dropped that hand-off** (ADR-0205 §4, Q13): a friend's ask waits
+in Needs your answer, behind the header's envelope, and is never drawn in the card's place, so the
+rule is `homeAsksForALevel(groups, rated)` again and the hook reads no Home. The card shows above
+_Your games_ whenever she is in a group and rated in nothing, whether or not someone asked. The walk is
+`friends`' `levelAsks.test.tsx` (_Get your level on Home_).
 **Calls made here**: _+ Another sport_ is the bar's farthest pill rather than a chip of its own
 beside the pill (no mock draws it); Members' chip carries it too; the pill's hint for an unfold onto
 it alone is _Offers another sport to rate_. **Not seen on a device**: the pill and the bar with
@@ -742,3 +894,182 @@ call); the chip's spoken names (_Ogrody 33 Club: Asked_) and the withdraw sheet'
 _Keep the request_, neither in §31; _Withdraw request_ is the outlined
 `secondary` button, since the system has no destructive-outline one. **Not seen on a device**: the
 card, the band's stripes, the shield, the heat bar, both sheets — against home rows 3–6 and 21.
+
+**HOTTEST GROUPS is FOR YOU's first line, _Groups heating up_** ([#820](https://github.com/Raketa02/Raketa/issues/820);
+ADR-0205 §5; home refactor 5). `HottestGroupsRow` became `useHottestGroupsLine`, which hands the shell
+the line's title (`GROUPS_COPY.hottest.line`), its cards on the peeking rail — now settling on their
+edges — and the group sheet, or `undefined` while the read is empty, out or failed. **No footer**
+until the Groups heating up page has one to open (#823). The cards, the chips, both sheets and every
+write are unchanged (the slimmer card is #821's). **A reader in no group** finds the line open from
+the start — the shell's call, from `useInNoGroup` — and reads _Join a group to get games — see Groups
+heating up, just below._ (`hottest.groupless`). Walked in `hottestGroups.test.tsx`: the line first
+under FOR YOU, closed; open onto the cards with no footer; hidden empty or failed; closed and gone
+when it empties while open, back closed; and the groupless line with the line open, kept open by a
+join from it.
+
+**The slimmer card** ([#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5, Q22; home
+refactor 5.1). Open in Groups heating up, a card is the striped band, the tag, the shield, the name,
+**_N games this week_ on the left and _N players_ on the right** (`Figure`'s `end`, held against the
+card's edge), the faces and the chip. **Gone: the heat bar, _+N this month_ and the sport line**, dots
+and names — and with them `heatFill`, `size.hottest.heatBar` and the copy's `thisMonth`. The heat still
+orders the groups and picks the tags on the server, and the read still serves `heatShare`; nothing
+draws it. **The card is spoken as drawn**: `hottestCardLabel` no longer says _3 new this month_.
+**The group sheet is unchanged** and keeps the sports with their dots and _players · new this month_
+with the green _+3_ — `Growth` moved into `HottestGroupSheet`, its only user now. The card is shorter by
+the sport line and the bar; its spacing is otherwise today's, a look to make on the device rather than
+a number read off 5.1. Walked in `hottestGroups.test.tsx`: the two figures, left and right, the spoken
+name, nothing removed drawn on any card, and the sheet's every detail. **Not seen on a device** — a look
+is owed against home refactor 5.1: the figures' places, the card's height without the bar, the faces
+and chip at its foot.
+
+**Groups heating up counts the groups to look through** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+ADR-0205 §6; the mechanics §5.10; home refactor 3, 4). The read keeps the server's **`total`** beside
+its six cards — `HottestRow` (`toHottestRow`), every group of 3 or more players, the reader's own
+included, counted up to 100 — and the line hands it to the shell as its `count`, drawn _99+_ past 99.
+**`withRelation` now moves a card on the row and leaves the total**: a join, an ask or a withdraw draws
+the card at once, and the re-read every such write asks for brings the server's new figure — never a
+guess. **A refused join, ask or withdraw now reads the row again** when it had moved a card: the
+guess cancels any read in flight — a pull's, a return's — and without a new read the row's cards and
+its count would stand as they were before it. No footer still, so no _See all N_ here. Walked in
+`hottestGroups.test.tsx` (the count moving with a join's re-read, and not before it lands; a refusal
+reading the row again), `hottest.test.ts` and the mapper test.
+
+**The Groups heating up page** ([#823](https://github.com/Raketa02/Raketa/issues/823); ADR-0205 §7;
+the Home rows screens §3.6, the mechanics §5.10; the words §31.14). **The line's footer reads _All
+groups ›_** (`FoldingLineFooter`, spoken _All groups heating up_), which pushes `HottestGroupsScreen`
+over Home at **`/hottest-groups`** (`HOTTEST_GROUPS_ROUTE`) — the one groups screen not under Play, so
+the shell lists it in `PUSHED_SCREENS` and inside Home's tab, as it does the people See all screens.
+**It reads `GET /hottest-groups/all?after`** (`useHottestGroupsPage`, an infinite query keyed
+`groupKeys.hottestAll()`, `LISTS_PEOPLE` like the row, since its faces are friends first): every group
+of 3 or more, the reader's own included, in the row's order, 20 to a page by the server's cursor
+(`HottestPage`, `toHottestPage`), the next read as the list nears its end. **A group a later page reads
+again is drawn once** (`joinHottestPages`): heat is worked out on every read, so one that cooled
+behind a cursor comes back. **The row and the page are two keys under one root** —
+`groupKeys.hottest()` is now `['groups', 'hottest', 'row']`, `hottestAll()` its sibling, and
+`hottestReads()` both — so a relation write cancels and re-reads the two at once, while a return to
+Home still re-reads the row alone and never a page left behind. **An end is owed until a page behind it
+draws something new**: the list says it reached its end only when it has grown since, so
+`useHottestGroupsPage` remembers an end it was asked for and asks again once the reads settle, when the
+page never landed — a write cancels the page on its way, and its re-read reads only the pages drawn —
+when a re-read was in flight, or when the page brought back only groups the list already holds
+(rankings' `owedEnd`, widened). **The frame is the people See all screens'** — the header, the states,
+the pull, the later page's failure under the list — written again here without the sport pill, since
+the page has no filter and `SeeAllScreen` and `useSeeAllPages` are `discovery`'s, keyed by player.
+With rankings' General that makes three paged lists of the same shape: a shared frame and paging hook
+are owed, to a ticket of their own, and `discovery`'s does not yet ask again for an owed end. **The
+cards are the line's `HottestGroupCard`** at the content's whole width, and **the taps are the line's**:
+the group sheet, the withdraw sheet and the chips moved out of `HottestGroupsLine` into
+`useHottestTaps`, which both draw. **A read that drops the sheet's card closes the sheet for good**, so
+a later read bringing it back opens nothing (`usePersonSheet`'s rule; until now the line's sheet came
+back by itself). **One write, both reads** (`useGroupWrites`): a join, an ask or a withdraw guesses the
+card's relation on Home's row and on every page read, wherever it was tapped — **each copy by its own
+policy**, since the two are separate reads — both reads cancelled first, as the row's was; it lands the
+answer on both, and reads both again with the Groups list and Home; a refusal puts each back where it
+stood. Leaving a group re-reads the page too. **Left as they were**: a write re-reads every page drawn,
+one after another, as See all's friend writes do; and an edit or an approval re-reads neither the row
+nor the page, as before.
+**Calls made here**: the link's spoken name; _No groups heating up right now_ for a list read empty, met
+only when every group fell under 3 since the line was read; the page draws no count. Walked in
+`hottestGroupsPage.test.tsx`: the footer opening the page, the Home tab lit and no pill; the served
+order with the line's six first; _You're in_ on the reader's own groups, past the six too; the card at
+the content's width; 20 to a page, never twice, nothing past the last; a next page a write cancelled,
+and one that brought nothing new, each read on; reading, a first and a later page refused, an empty
+list; the sheet from a card, and closed for good when a read drops it; _Join_ and _Ask to join_ on the
+page drawn at once on Home's line; a page-only card's join; a refusal; _Asked_; _You're in_; and back
+to Home with the line still open. **Not seen on a device** — a look is owed: the page's header, the full-width card, the
+gaps and the pull.
+
+**Games stays mounted while another tab is on, and the page reads its tabs ahead of the group**
+(2026-11-24, a performance diagnosis on the A32). **Back to Games from any tab took ~0,4 s in a release
+build and ~0,6 s in a debug one before anything moved**: the tab was unmounted on the way out, so the
+way back drew the deck's three cards from nothing, and its remount read the deck again and drew them a
+second time. The deck now stays mounted out of sight (`display: none`), sees nothing while it is
+(`inView` is the page's and the tab's), and **reads again on its return if its read has gone stale** —
+what the remount's own read used to bring (`GamesDeck`'s `onScreen`). The way back is ~0,1 s. **A first
+open waited on a round trip it did not need**: the tabs are drawn once the group has been read, so the
+deck, Fill in and the live yeses set out only then; while the group is on its way the page now asks for
+them, and for the saved payment method a yes on the deck asks about, beside it
+(`useReadGroupGamesAhead`, Query's prefetch — nothing still fresh is asked again). A first open's deck
+landed ~1,4 s sooner. Walked in the router suites; `groupGames.test.tsx`'s failed reads now refuse
+until the retry or the pull, since the read ahead meets the refusal first.
+
+**Groups heating up shimmers while its first page is read** (2026-11-24,
+[#872](https://github.com/Raketa02/Raketa/issues/872); PRD #867, the loading shimmer log §10; design
+system 5.6). The spinner is gone. Under the real header, **the line's card stands as its skeleton at
+the content's whole width, `sm` apart, as many as fill the screen** (`HottestGroupsScreen`'s
+`HottestGroupsSkeleton`), on one `SkeletonGround`; the first page comes in on `Reveal`'s cross-fade once
+its read finishes. See all's rules hold (`discovery.md`): the failure and the offline note take the
+skeleton's place; the skeleton stays through Query's retries and stands again on _Try again_ or the
+connection back; an empty first page says its line; a pull and a later page never show it. **The card
+is 5.1's white card drawn as itself** (`HottestGroupCardSkeleton`), at the height its drawing gives it
+(`hottestCardHeight`, its words' lines grown with the phone's text size), with the shapes every card
+has: the band edge to edge, the shield over it in the card's white ring, the name, and both figures
+over their words, set at the widths of _14 games this week_ and _11 players_. **Calls made here**: the tag (only the hottest few have one), the faces (as many
+as the server sends) and the chip (its words are the reader's relation) are not drawn, and the foot
+keeps their room; the spinner's spoken name went with the spinner. Walked in
+`hottestGroupsPage.test.tsx`: the skeleton at the card's size filling the window, then the list; the
+empty line; the retries, the failure and _Try again_; the offline note and the connection back; and a
+pull. **Not seen on a device**: a look is owed at the card's shimmer and the fade onto the list.
+
+**A group's page shimmers until it is built, then reveals together** (2026-11-25,
+[#875](https://github.com/Raketa02/Raketa/issues/875); PRD #867, the loading shimmer log §10; design
+system 5.6). It opened blank — a back arrow over nothing while the group was read, and nothing at all
+offline. **Two parts, top-down** (`groupPageParts`): **the header and the tab bar**, which wait for
+the group's read and the sport, and **the body of the tab on screen**, which waits for that tab's
+first read (`proposals`' `useGroupTabRead`: the deck the tab draws, Fill in's rescues, or You’re
+in's yeses — and with none here Fill in's too, since the starting card waits for it). While they
+wait, on one `SkeletonGround`: **a monogram circle and a name bar** beside the real, pressable way
+back (`GroupHeader`'s `shimmering`, no pill), **the tab bar's shape** under them
+(`GroupPageSkeleton`), and the tab's own skeleton — **one deck-card block filling the stage** on
+Games, **rows** on Fill in and You’re in (`DeckSkeleton`, `BoardSkeleton`). They come in on one
+cross-fade once both parts have finished; **from 2.5 s after the page mounts the header and the tabs
+come first and the body keeps its skeleton** (`useRevealParts`). **Switching to a tab with nothing
+read shimmers only its body**: the scroller's `Reveal` is keyed by the tab, and a part once shown
+stays shown. **The offline gaps are closed by the shared rule**: the group's read held for a
+connection draws the amber note in the body, under the header's way back, and the deck's first read
+held offline draws it where a spinner turned for ever (`proposals.md`). A part revealed with a
+failure or the note shimmers again when its read sets out once more. **Unchanged**: _Finding …
+games for you…_, the Friends card's _Building_, the kind door, the first-time question and the tab
+menu. The kind swap's spinner became the same deck-card block in the stack's place (#876,
+`proposals.md`).
+
+**Calls made here**: **the group's read retrying after one failure keeps the page shimmering**
+(`groupReadStage`) — the shared rule counts such a read finished so it cannot hold the rest of a
+screen, but every part here draws from this one, so revealing it would show a back arrow over
+nothing; a refusal or a hold is what ends it. **So does the ratings read** the sport is answered
+from (`useGroupSport`'s `answered`): retrying, it keeps the page shimmering rather than revealing a
+header with no pill over an empty body. **Friends waits on no read** — its court draws its own
+_Building_ — and nor do the add-a-sport card and the level door, so they come in with the header.
+**_+ Post a game_ comes in with the header and the tab bar**, never over a page still shimmering.
+**What lies over the deck reveals Games**: from the ceiling the tab bar is in and its menu works, so a
+door picked while the deck's first read is out opens its panel — and finding after it — over the
+deck's own block, the tab revealed for it (`gamesRead`, the deck's `onCovered`), never under the
+tab's skeleton, unseen.
+**The header is not cross-faded**: its tile, name and pill take the skeleton's place as the tab bar
+and the body fade in, as Home's numbers come with their part, because the way back must stay the
+real one, pressable and spoken, throughout. **Each `Reveal` keeps its place in the tree from the first
+frame** — Games', which is the body on Games until the group is read and the filter has said, and
+the scroller's, keyed by the tab — so the fade carries the skeleton standing then into what replaces
+it; an official group's add-a-sport card, which replaces Games' place, comes in without the fade.
+Out of sight behind another tab, Games draws no skeleton. The skeletons stand at the phone's text
+size; the tab bar's grows with `fontScale` from the segment's 25. Walked in `groupGames.test.tsx`
+(the shapes and the way back; together, though the deck lands first; the header and the tabs from
+the ceiling; the deck's block kept while the sport is read after the group, and through the ratings'
+retry; both offline notes and the connection back), `groupGamesDoor.test.tsx` (a door opened over
+the deck's block at the ceiling), `groupFillIn.test.tsx`
+(a switch shimmering only the rows), the boards' suites, `joinGroup.test.tsx` (a group joined a
+moment ago, opened from the list) and `groupPage.test.ts` (the parts' rule). **Not seen on a
+device** — a look is owed (the phone walk, #877): the shapes' sizes against the page, the fade, and
+the header's tile and name taking the circle's and the bar's place.
+
+**Groups heating up's card stands a little bigger on Home** (2026-11-26; design-system 7.7, 7.30,
+Part 16). On the line it is `lineCardRatio` (0,83) of the line's content, where it was 0,74 — 290 of
+349 on a 411pt phone, the next card's edge 65 where it was 97 — as Players at your level's and Players
+with your vibe's are (`discovery.md`). **It keeps its shape**: its height is its drawing's, so every
+vertical gap grows by the width's factor (×1,6) onto the 3pt grid — 9·6·3·9·12 to 15·9·6·15·18 from the
+shield to the foot (188 → 212), within half a grid step of growing as much as the width did. The band,
+the shield, the words, the faces, the chip and the sides' inset are their own size. **The page keeps
+its own** (`layout`: `'row'` on the line, `'page'` on the Groups heating up page), and so does its
+skeleton (`hottestCardHeight`, the page's by default). Walked in `hottestGroups.test.tsx` (the line's
+gaps, the height grown by the width's factor) and `hottestGroupsPage.test.tsx` (the page's gaps).
+**Not seen on a device** — a look is owed on the A32.

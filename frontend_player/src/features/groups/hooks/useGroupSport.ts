@@ -28,15 +28,21 @@
  * nothing waits for and nothing retries.
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 
-import { useReaderId } from '@/features/auth/types';
-import { useSkillRatings } from '@/features/onboarding/types';
+import { currentUserQuery, useReaderId } from '@/features/auth/types';
+import {
+  onboardingKeys,
+  prefetchSkillRatings,
+  useSkillRatings,
+  type SkillRating,
+} from '@/features/onboarding/types';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import {
+  deckSport,
   filterSports,
   needsALevel,
   openingSport,
@@ -67,17 +73,40 @@ export interface GroupSport {
    * to offer, and while either read is out.
    */
   readonly toOffer: readonly Sport[];
+  /**
+   * **Whether the filter has said** (#875) — both reads in, or the ratings read ended with nothing to
+   * say: refused, or held for a connection — never while it retries. What the group page's header
+   * waits on.
+   */
+  readonly answered: boolean;
   readonly choose: (sport: Sport) => void;
 }
 
 /** **A filter with nothing to say yet** — no sports, no sport, nothing to add, offer or ask. */
-const UNREAD: Omit<GroupSport, 'choose'> = {
+const UNREAD: Omit<GroupSport, 'choose' | 'answered'> = {
   sports: undefined,
   sport: undefined,
   toAdd: [],
   needsALevel: false,
   toOffer: [],
 };
+
+/**
+ * **The sport last picked, off the phone** — one definition for every reader of it: local, never
+ * waiting on the network, once per account per session and kept for good (the module note).
+ */
+function lastSportRead(account: string) {
+  return queryOptions({
+    queryKey: phonePreferenceKeys.one(account, 'lastSport'),
+    queryFn: () => readLastSport(account),
+    networkMode: 'always',
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
 
 /**
  * `declared` is an official group's declared sports; `undefined` for a player group, or none yet
@@ -89,17 +118,7 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
   const account = useReaderId();
   const ratings = useSkillRatings();
 
-  const saved = useQuery({
-    queryKey: phonePreferenceKeys.one(account ?? '', 'lastSport'),
-    queryFn: () => readLastSport(account ?? ''),
-    enabled: account !== undefined,
-    networkMode: 'always',
-    staleTime: Infinity,
-    gcTime: Infinity,
-    retry: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
+  const saved = useQuery({ ...lastSportRead(account ?? ''), enabled: account !== undefined });
 
   // A phone that cannot tell whose choice to read is a store that cannot be read, and that gives
   // the default (ADR-0188 §4) — a pick is held in memory for as long as the page is up, kept nowhere.
@@ -125,7 +144,10 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
 
   // `null` is a phone that answered *nothing saved*; `undefined` is one still being read.
   if (rated === undefined || (account !== undefined && picked === undefined)) {
-    return { ...UNREAD, choose };
+    // The ratings refused or held for a connection: nothing more is coming. Not while they retry
+    // after one failure — the page keeps shimmering through the backoff, as for the group's read.
+    const ended = rated === undefined && (ratings.isError || ratings.isPaused);
+    return { ...UNREAD, answered: ended, choose };
   }
 
   return {
@@ -134,6 +156,7 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
     toAdd: sportsToAdd(rated, declared),
     needsALevel: needsALevel(rated, declared),
     toOffer: sportsToOffer(rated, declared),
+    answered: true,
     choose,
   };
 }
@@ -146,8 +169,45 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
  * whose deck shows no sport; `undefined` while either read is out.
  */
 export function useDeckSport(): Sport | null | undefined {
-  const { sports, sport } = useGroupSport();
-  return sports === undefined ? undefined : (sport ?? null);
+  const account = useReaderId();
+  const ratings = useSkillRatings();
+  const saved = useQuery({ ...lastSportRead(account ?? ''), enabled: account !== undefined });
+  // A phone that cannot tell whose choice to read has nothing saved for it, as the filter reads it.
+  return deckSport(
+    ratings.data?.map((rating) => rating.sport),
+    account === undefined ? null : saved.data,
+  );
+}
+
+/**
+ * **The deck's sport, off the cache** (#874) — `useDeckSport`'s answer where no hook can ask: the
+ * launch's warm-up, which works out Top 10's opening sport before Home is drawn.
+ */
+export function deckSportIn(client: QueryClient): Sport | null | undefined {
+  const account = readerIn(client);
+  const ratings = client.getQueryData<readonly SkillRating[]>(onboardingKeys.ratings());
+  return deckSport(
+    ratings?.map((rating) => rating.sport),
+    account === undefined ? null : client.getQueryData(lastSportRead(account).queryKey),
+  );
+}
+
+/**
+ * **The two reads the deck's sport is answered from, set out before Home is drawn** (#874) — the
+ * ratings and the sport last picked, under the hook's own definitions, so Top 10's opening sport is
+ * known within the launch's warm-up and the filter finds both read.
+ */
+export function prefetchDeckSport(client: QueryClient): Promise<unknown> {
+  const account = readerIn(client);
+  return Promise.all([
+    prefetchSkillRatings(client),
+    account === undefined ? undefined : client.prefetchQuery(lastSportRead(account)),
+  ]);
+}
+
+/** Whose phone memory this is — the cached player, as `useReaderId` reads it. */
+function readerIn(client: QueryClient): string | undefined {
+  return client.getQueryData(currentUserQuery().queryKey)?.id;
 }
 
 /**
@@ -161,8 +221,8 @@ export function useDeckSport(): Sport | null | undefined {
 export function useDeclaredSport(declared: readonly Sport[] | undefined): GroupSport {
   const [picked, setPicked] = useState<Sport>();
 
-  if (declared === undefined) return { ...UNREAD, choose: setPicked };
+  if (declared === undefined) return { ...UNREAD, answered: false, choose: setPicked };
 
   const sport = picked !== undefined && declared.includes(picked) ? picked : declared[0];
-  return { ...UNREAD, sports: declared, sport, choose: setPicked };
+  return { ...UNREAD, sports: declared, sport, answered: true, choose: setPicked };
 }

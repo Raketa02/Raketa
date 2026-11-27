@@ -27,10 +27,11 @@ import { StyleSheet, Text, type TextStyle, type ViewStyle } from 'react-native';
 
 import { HapticsProvider } from '@/shared/lib/platform';
 import { ReducedMotionProvider, theme } from '@/shared/ui';
+import { FRAME_MS } from '@/test-support/animationFrames';
 import { fakeHaptics } from '@/test-support/platform';
 import { dragTo, release, swipe } from '@/test-support/swipe';
 
-import { DeckStage, type DeckExit, type DragVerdict, type StampWords } from './DeckStage';
+import { DeckStage, SEEN, type DeckExit, type DragVerdict, type StampWords } from './DeckStage';
 import { STACK } from './deckStageGeometry';
 
 /**
@@ -56,6 +57,8 @@ interface StageOver {
   /** The people on the stage, the top card first. */
   readonly cards?: readonly string[];
   readonly stamps?: Readonly<Record<DeckExit, StampWords>>;
+  /** The cards stand in place from their first frame — a swapped deck's stack (#863). */
+  readonly standing?: boolean;
 }
 
 /** Every mount of a face, in order — so a card promoted in place can be told from one redrawn. */
@@ -80,6 +83,7 @@ function drawStage({
   collapsed = false,
   cards = ['Marek Z.'],
   stamps = PLAYERS_STAMPS,
+  standing = false,
 }: StageOver = {}) {
   const haptics = fakeHaptics();
   const tree = (over: Partial<StageOver>) => (
@@ -91,6 +95,7 @@ function drawStage({
           onAnswer={onAnswer}
           cards={(over.cards ?? cards).map((name) => ({ key: name, card: <Face name={name} /> }))}
           stamps={stamps}
+          standing={'standing' in over ? over.standing : standing}
         />
       </HapticsProvider>
     </ReducedMotionProvider>
@@ -257,8 +262,8 @@ describe('the card behind becoming the top card', () => {
 
     rerender({ leaving: undefined, cards: ['Ana K.'] });
 
-    // Deepest first is the paint order, so Ana mounted before Marek — and only the once.
-    expect(mounted).toEqual(['Ana K.', 'Marek Z.']);
+    // The top card is drawn at once and the card behind it a frame later — and each only the once.
+    expect(mounted).toEqual(['Marek Z.', 'Ana K.']);
     expect(screen.getByLabelText('Ana K.')).toBeTruthy();
     expect(screen.queryByLabelText('Marek Z.', HIDDEN_TOO)).toBeNull();
   });
@@ -318,6 +323,35 @@ describe('the card behind becoming the top card', () => {
     swipe(card('Ana K.'), -commit);
 
     expect(onAnswer).toHaveBeenCalledWith('no');
+  });
+});
+
+/**
+ * #863: a deck swapped to its other kind brings its stack in as one, by the deck's own rise — so the
+ * cards it hands in stand in place from their first frame, and the stage's arrival, which scales a
+ * card, is not run for them. Once the swap is over, a card coming forward arrives as ever.
+ */
+describe('a stack handed in standing', () => {
+  it('stands its top card in place, whole, from the first frame', () => {
+    drawStage({ cards: ['Marek Z.'], standing: true });
+
+    expect(standingOf('Marek Z.')).toEqual({ translateY: 0, scale: 1 });
+    expect(opacityOf('Marek Z.')).toBe(1);
+  });
+
+  it('lets the next card arrive as ever once it is no longer standing', () => {
+    const { rerender } = drawStage({
+      cards: ['Marek Z.', 'Ana K.'],
+      leaving: 'yes',
+      standing: true,
+    });
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+
+    rerender({ leaving: undefined, cards: ['Ana K.'], standing: false });
+
+    expect(standingOf('Ana K.')).toEqual({ translateY: STACK.step, scale: 1 - STACK.shrink });
+    act(() => jest.advanceTimersByTime(theme.motion.rise + 50));
+    expect(standingOf('Ana K.')).toEqual({ translateY: 0, scale: 1 });
   });
 });
 
@@ -443,14 +477,79 @@ describe('the haptic', () => {
 describe('the cards behind', () => {
   it('draws the real cards it is handed, behind the top one', () => {
     drawStage({ cards: ['Marek Z.', 'Ana K.', 'Ola W.'] });
+    act(() => jest.advanceTimersByTime(FRAME_MS));
 
     expect(screen.getByText('Ana K.', HIDDEN_TOO)).toBeTruthy();
     expect(screen.getByText('Ola W.', HIDDEN_TOO)).toBeTruthy();
   });
 
+  /**
+   * The first frame a page or a tab waits on carries one card, not three: a card is some two
+   * hundred elements, and the ones behind are drawn on the next frame.
+   */
+  it('draws the top card at once, and the cards behind it a frame later', () => {
+    drawStage({ cards: ['Marek Z.', 'Ana K.', 'Ola W.'] });
+
+    expect(screen.getByLabelText('Marek Z.')).toBeTruthy();
+    expect(screen.queryByText('Ana K.', HIDDEN_TOO)).toBeNull();
+    expect(screen.queryByText('Ola W.', HIDDEN_TOO)).toBeNull();
+
+    act(() => jest.advanceTimersByTime(FRAME_MS));
+    // The two behind come in together on the next frame, deepest first — the paint order.
+    expect(mounted).toEqual(['Marek Z.', 'Ola W.', 'Ana K.']);
+  });
+
+  /**
+   * A card past the three is held drawn and unseen — where the third card stands before its
+   * arrival — once the top card has arrived, never in the commit that drew the top card.
+   */
+  it('holds one card more drawn and unseen, once the top card has arrived', () => {
+    drawStage({ cards: ['Marek Z.', 'Ana K.', 'Ola W.', 'Pia N.'] });
+    act(() => jest.advanceTimersByTime(FRAME_MS));
+    expect(screen.queryByText('Pia N.', HIDDEN_TOO)).toBeNull();
+
+    act(() => jest.advanceTimersByTime(theme.motion.rise + 100));
+    expect(screen.getByText('Pia N.', HIDDEN_TOO)).toBeTruthy();
+    expect(opacityOf('Pia N.')).toBe(0);
+    expect(standingOf('Pia N.')).toEqual({
+      translateY: SEEN * STACK.step,
+      scale: 1 - SEEN * STACK.shrink,
+    });
+  });
+
+  /**
+   * The commit after a flight frees the stage for the next swipe, and draws no card: the three
+   * coming forward were drawn already, the reserve among them, and the card after them is drawn
+   * once the new top card has arrived.
+   */
+  it('draws no card in the commit that frees the stage, and the next one once it has arrived', () => {
+    const { rerender } = drawStage({
+      cards: ['Marek Z.', 'Ana K.', 'Ola W.', 'Pia N.'],
+      leaving: 'yes',
+    });
+    // A frame for the two behind, then the arrival for the reserve: an effect a frame starts only
+    // runs once that advance is over.
+    act(() => jest.advanceTimersByTime(FRAME_MS));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT + theme.motion.rise));
+    expect(mounted).toHaveLength(4);
+    mounted = [];
+
+    rerender({ leaving: undefined, cards: ['Ana K.', 'Ola W.', 'Pia N.', 'Quin R.'] });
+    expect(mounted).toEqual([]);
+    // The reserve comes forward as the third card, from where the third card stands before its
+    // arrival, and brightens with it.
+    expect(opacityOf('Pia N.')).toBeCloseTo(1 - SEEN * STACK.fade);
+
+    act(() => jest.advanceTimersByTime(theme.motion.rise + 100));
+    expect(mounted).toEqual(['Quin R.']);
+    expect(opacityOf('Pia N.')).toBeCloseTo(1 - 2 * STACK.fade);
+    expect(opacityOf('Quin R.')).toBe(0);
+  });
+
   /** The top card is the one element; a listener does not hear the queue. */
   it('hides them from assistive technology', () => {
     drawStage({ cards: ['Marek Z.', 'Ana K.'] });
+    act(() => jest.advanceTimersByTime(FRAME_MS));
 
     expect(screen.queryByText('Ana K.')).toBeNull();
     let behind = screen.getByText('Ana K.', HIDDEN_TOO).parent;
@@ -464,6 +563,7 @@ describe('the cards behind', () => {
   /** #553, Q90: the two peeking cards fade as well as shrink — 0,7 and 0,4, the top card whole. */
   it('draws each card behind fainter than the one in front of it', () => {
     drawStage({ cards: ['Marek Z.', 'Ana K.', 'Ola W.'], collapsed: true });
+    act(() => jest.advanceTimersByTime(FRAME_MS));
 
     expect(opacityOf('Marek Z.')).toBe(1);
     expect(opacityOf('Ana K.')).toBeCloseTo(1 - STACK.fade);

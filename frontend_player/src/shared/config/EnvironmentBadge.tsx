@@ -3,7 +3,7 @@
  * all, in production.
  *
  * It lives beside `appIdentity.ts` rather than in `shared/ui/`, the same way
- * `BootstrapGate` lives beside the sequence it gates: `shared/ui/` holds design-system
+ * `LaunchGate` lives beside the sequence it runs: `shared/ui/` holds design-system
  * primitives, and a component that knows what an environment is is not one. It *draws*
  * with a primitive — `Tag`, the status pill — so there is no second implementation of a
  * pill in the app.

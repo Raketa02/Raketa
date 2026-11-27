@@ -1263,11 +1263,13 @@ export interface paths {
         };
         /**
          * The game's pairing
-         * @description **The game screen's forecast, split, stakes and Levels, computed when you ask.** Nothing here is stored on the game, and nothing on `GET /games` changes: a seat there still carries a name and nothing else.
+         * @description **The game screen's forecast, split, stakes, Levels and — on For fun — Social vibe, computed when you ask.** Nothing here is stored on the game, and nothing on `GET /games` changes: a seat there still carries a name and nothing else.
          *
          *     **Read in your direction.** `split.gap` is your side's strength minus theirs, and `at_stake` is what a counted result would do to *your* Level — the rating engine's own rule read forward, side against side, so it is the pair the result will deliver.
          *
-         *     **Three blocks, each omitted on its own ground.** `forecast` and `split` are omitted together when the pairing cannot be computed — somebody on the court holds no rating in the sport, or a seat could not be priced — and there is deliberately no reason beside the absence. `at_stake` is omitted on a friendly, where a counted result is meaningless rather than unavailable, and where the rule has nothing to move or nothing to price against — you hold no rating in the sport, or nobody across the net does. `seats` names the Level of everybody the platform holds one for.
+         *     **Each block is omitted on its own ground.** `forecast` and `split` are omitted together when the pairing cannot be computed — somebody on the court holds no rating in the sport, or a seat could not be priced — and there is deliberately no reason beside the absence. `at_stake` is omitted on a friendly, where a counted result is meaningless rather than unavailable, and where the rule has nothing to move or nothing to price against — you hold no rating in the sport, or nobody across the net does. `seats` names the Level of everybody the platform holds one for.
+         *
+         *     **A For-fun game carries its Social vibe** (`vibe`, #835): the court's number — the one its card and its details showed — and a row for each of your tags, naming who on the court carries it, worked out from everybody's tags now. Omitted on a competitive game, while a seat is open, and where nobody holds a tag that counts. The forecast is still sent on a For-fun game, for the apps already on phones; draw the vibe in its place.
          *
          *     **Only while the game is awaiting an entry.** After *we played* — or after the entry window closed on silence — the route refuses, because a pairing is a claim about a game that has not happened.
          */
@@ -1814,9 +1816,29 @@ export interface paths {
         };
         /**
          * Home's Hottest groups
-         * @description Up to **six** of the groups with the most going on, **whether the caller is in them or not** — every group with 3 or more players, player and official alike, the caller's own included — by **heat**: 2 × games this week + 3 × new this month + players, counted up to 20. One **HOTTEST**, any number of **GROWING**, in the row's order. Each card carries everything its group sheet shows, and the caller's relation to it. Worked out on every read; nothing is recorded. **The group page stays members-only**: a non-member still meets `group_not_found` there.
+         * @description Up to **six** of the groups with the most going on, **whether the caller is in them or not** — every group with 3 or more players, player and official alike, the caller's own included — by **heat**: 2 × games this week + 3 × new this month + players, counted up to 20. One **HOTTEST**, any number of **GROWING**, in the row's order. Each card carries everything its group sheet shows, and the caller's relation to it, and `total` counts every group with 3 or more players, up to 100. Worked out on every read; nothing is recorded. **The group page stays members-only**: a non-member still meets `group_not_found` there.
          */
         get: operations["hottest_groups_api_v1_hottest_groups_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hottest-groups/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Groups heating up: every Hottest group, page by page
+         * @description **Every group with 3 or more players**, player and official alike, **the caller's own included**, in Hottest groups' own order — HOTTEST, then GROWING by heat, then untagged by heat; ties to more games this week, then the group id — **20 to a page** by cursor. The first page's first six are the row's groups, in its places, with its tags. Each card is the row's card, read whole for the page's 20. The first page carries `total`, the row's. **Heat is worked out on every read**: a group whose heat moves between two pages may shift, read again or missed. No filter.
+         */
+        get: operations["hottest_groups_page_api_v1_hottest_groups_all_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2438,7 +2460,7 @@ export interface paths {
         };
         /**
          * A game still filling
-         * @description The game details of a proposal, for anybody dealt it — a card's **i**, a You're In row, a payment to confirm: who is In (the **IN** tags), the sides and their forecast, the club and its distance **with no court number** (one is given at booking), the share and the book-by, the overlap grid, and **what the reader may do now** (`actions`). A reader still deciding sees their own card as the deck deals it; a reader In sees everybody In. Answered for a game that has ended too, with nothing to do; a `FILLED` game's booking has the same id. Nothing is recorded.
+         * @description The game details of a proposal, for anybody dealt it — a card's **i**, a You're In row, a payment to confirm: who is In (the **IN** tags), the sides, **the kind's own card** — a competitive game's forecast with each side's level and the gap, and what is at stake for you (`at_stake`, the booked game's own pair); a For-fun game's Social vibe and your tags' rows (`vibe`) — the club and its distance **with no court number** (one is given at booking), the share and the book-by, the overlap grid, and **what the reader may do now** (`actions`). A reader still deciding sees their own card as the deck deals it; a reader In sees everybody In. Answered for a game that has ended too, with nothing to do; a `FILLED` game's booking has the same id. Nothing is recorded.
          */
         get: operations["read_proposal_details_api_v1_proposals__proposal_id__get"];
         put?: never;
@@ -2533,6 +2555,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/players/me/needs-your-answer/visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * I closed Needs your answer
+         * @description What the phone sends **whenever Needs your answer goes away for good** — ✕, a swipe down, a tap outside it, the last answer, or a screen it hands over to; not when it steps aside for another sheet, since it comes back (#815; `docs/adr/0205` §3). **`watermark` is the one `GET /home` served** with the read the sheet was last drawn from, never the moment of the close: something that reached the server after that read stays new.
+         */
+        post: operations["close_needs_your_answer_api_v1_players_me_needs_your_answer_visit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pools/{pool_id}/deck": {
         parameters: {
             query?: never;
@@ -2542,7 +2584,7 @@ export interface paths {
         };
         /**
          * A group's deck
-         * @description The **Games** tab for one sport and segment: the cards dealt to the reader in this group — the pool is filed under the group's id — each as **the reader's own version**, with its sides, forecast and overlap computed now. **Never dealt**: a card the reader said no to, one they are In on (it is in *You're In*), a kind their Play intent does not want, a share above their *most I'll pay*, a week at their games per week, an hour they already have a game at, a club no longer selling, and a card with somebody In they may not share a court with. Around the deck: a count per segment, the Games badge and the capped weeks. Nothing is recorded.
+         * @description The **Games** tab for one sport and segment: the cards dealt to the reader in this group — the pool is filed under the group's id — each as **the reader's own version**, with its sides, forecast and overlap computed now. **Never dealt**: a card the reader said no to, one they are In on (it is on the group page's *You're in* tab), a kind their Play intent does not want, a share above their *most I'll pay*, a week at their games per week, an hour they already have a game at, a club no longer selling, and a card with somebody In they may not share a court with. Around the deck: a count per segment, the Games badge and the ids of the cards it counts — both segments' — and the capped weeks. Nothing is recorded.
          */
         get: operations["read_group_deck_api_v1_pools__pool_id__deck_get"];
         put?: never;
@@ -4269,8 +4311,10 @@ export interface components {
              */
             no_free_cancellation: boolean;
             sides: components["schemas"]["DeckSidesSchema"];
-            /** @description `null` where it cannot be read: somebody on the card holds no rating in the sport, or nobody faces the reader yet. */
+            /** @description How even a **competitive** card's game is forecast. **Always `null` on a `FOR_FUN` card**, which says its `vibe` instead (`docs/adr/0207` §5) — its sides are still the evenest. Also `null` where it cannot be read: somebody on the card holds no rating in the sport, or nobody faces the reader yet. */
             forecast: components["schemas"]["DeckForecastSchema"] | null;
+            /** @description A **`FOR_FUN`** card's Social vibe, its table everybody named on the reader's version — the people In, the reader and the names dealt, never an empty seat — and on a `SEAT_OPEN` card the reader with the players on the game. **Always `null` on a `COMPETITIVE` card**, and where nobody at the table holds a tag (#830). */
+            vibe: components["schemas"]["DeckVibeSchema"] | null;
             overlap: components["schemas"]["DeckOverlapSchema"];
         };
         /**
@@ -4414,6 +4458,19 @@ export interface components {
             friend: boolean;
         };
         /**
+         * DeckVibeSchema
+         * @description How much the people on **this** For-fun card share (`docs/adr/0207` §2):
+         *     on average, each Social tag at the table is carried by `pct` percent of the
+         *     other players. Worked out from everybody's tags now, on every read.
+         */
+        DeckVibeSchema: {
+            /**
+             * Pct
+             * @description A whole percent, 0–100, rounded half up. The bar fills to it; the app words it in its own bands.
+             */
+            pct: number;
+        };
+        /**
          * DeclarePlayIntentRequest
          * @description What kind of game this player wants in one sport, and where they said so.
          *
@@ -4433,6 +4490,91 @@ export interface components {
         DepartureResponse: {
             /** @description `BEFORE_THE_CUT_OFF` — nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` — the seat stays paid and is offered to others until the start; refunded, less exactly the fee kept on the payment, when somebody takes it — emailed that figure now, or none while the fee is not yet known (#641). `WHILE_WAITING_FOR_A_PAYMENT` — on a game `WAITING_FOR_A_PAYMENT` (#625): nobody had paid, the yes is withdrawn, the leaver's hold is let go, and the payer's time runs on — the game is `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn. */
             left: components["schemas"]["Leaving"];
+        };
+        /**
+         * DetailsAtStakeSchema
+         * @description What a **counted** result on this game would do to your Level — *If you
+         *     win +0,08 · If you lose −0,07* — priced by the very function a booked
+         *     game's pairing prices its `at_stake` with, on the sides drawn here, so it
+         *     is the pair that applies once the game is booked (`docs/adr/0207` §6).
+         */
+        DetailsAtStakeSchema: {
+            /**
+             * Win Delta
+             * @description Above nought, never nought.
+             */
+            win_delta: number;
+            /**
+             * Loss Delta
+             * @description Below nought, never nought.
+             */
+            loss_delta: number;
+        };
+        /**
+         * DetailsForecastSchema
+         * @description How even the game drawn is forecast, **with the two side strengths it
+         *     was read from** — a competitive game's full forecast (`docs/adr/0207` §6):
+         *     each side's level, the gap and the bar's % — the figures a booked game's
+         *     pairing prints as `forecast` and `split`, for the same people standing the
+         *     same way. **One computation**: while a seat is empty the % is `provisional`,
+         *     read as if the missing player matched their partner, and so are the side
+         *     strengths beside it.
+         */
+        DetailsForecastSchema: {
+            /** Pct */
+            pct: number;
+            /**
+             * Provisional
+             * @description A seat is empty and was read as matching its partner.
+             */
+            provisional: boolean;
+            /**
+             * Your Side
+             * @description Your side's strength, on the scale Levels are read on — the engine's, never the mean of the people on it.
+             */
+            your_side: number;
+            /**
+             * Their Side
+             * @description The other side's strength.
+             */
+            their_side: number;
+            /**
+             * Gap
+             * @description `your_side − their_side`, **signed and served**, so nobody subtracts two rounded figures the engine subtracted unrounded.
+             */
+            gap: number;
+        };
+        /**
+         * DetailsVibeRowSchema
+         * @description One row of the Social vibe card's grid: one of **your** tags, and who
+         *     at the table carries it.
+         */
+        DetailsVibeRowSchema: {
+            /** @description A tag's code — the app owns its emoji and label, and skips a code it doesn't know. */
+            tag: components["schemas"]["SocialTag"];
+            /**
+             * Carried By
+             * @description Everybody on your version who carries it — **you first**, then the others in the tiles' order (`sides.yours`, then `sides.theirs`). Never empty: you carry every row. Only you: the row is yours alone.
+             */
+            carried_by: string[];
+        };
+        /**
+         * DetailsVibeSchema
+         * @description A For-fun game's **Social vibe card** (`docs/adr/0207` §6): how much the
+         *     whole table shares, and who shares yours. Worked out from everybody's tags
+         *     now, on every read, and stored nowhere.
+         */
+        DetailsVibeSchema: {
+            /**
+             * Pct
+             * @description The card's own number, counting everyone's tags — the % swiped on is the % looked at. 0–100, rounded half up.
+             */
+            pct: number;
+            /**
+             * Rows
+             * @description One per tag **you** hold, in the vocabulary's order — 💘 `OPEN_TO_MEET_SOMEONE` too, drawn like any other row though it never counts in `pct`. None of the others' tags you don't hold.
+             */
+            rows: components["schemas"]["DetailsVibeRowSchema"][];
         };
         /**
          * Direction
@@ -4561,12 +4703,12 @@ export interface components {
             read_at: string;
             /**
              * Badge
-             * @description The tab's badge: the Seats to fill rows.
+             * @description The tab's badge: the Seats to fill rows. **Kept for older installed apps**: the app counts the rows, `seats_to_fill` (`docs/adr/0208`), and this is always their number.
              */
             badge: number;
             /**
              * Seats To Fill
-             * @description Every rescue in the group the reader fits — the pair rule, the kind their intent wants, free for the hour in their week, no game of theirs then, within their Games & money — **soonest first**, before or after the cut-off. Never a game still filling: that is the deck's. *You're In* is `GET /players/me/live-yeses`.
+             * @description Every rescue in the group the reader fits — the pair rule, the kind their intent wants, free for the hour in their week, no game of theirs then, within their Games & money — **soonest first**, before or after the cut-off. Never a game still filling: that is the deck's. The reader's own live yeses are the group page's *You're in* tab, read from `GET /players/me/live-yeses`.
              */
             seats_to_fill: components["schemas"]["SeatToFillSchema"][];
         };
@@ -4754,8 +4896,10 @@ export interface components {
             home_club: components["schemas"]["DeckClubSchema"];
             /** @description The evenest way the line-up can stand, or the sides sent (`partner_id`). */
             sides: components["schemas"]["FriendsCardSidesSchema"];
-            /** @description *87% · Very even* for these sides; `null` where it cannot be read. */
+            /** @description *87% · Very even* for these sides. **Always `null` when `kind` is `FOR_FUN`**, which says its `vibe` instead (`docs/adr/0207` §5) — its sides are still the evenest. Also `null` where it cannot be read. */
             forecast: components["schemas"]["DeckForecastSchema"] | null;
+            /** @description When `kind` is **`FOR_FUN`**, the Social vibe of the line-up — the reader and every friend seated, however they stand, so a swap never moves it; worked out from everybody's tags now (#834). Flipping the kind switch flips the card's number. **Always `null` on `COMPETITIVE`**, and where nobody seated holds a tag. */
+            vibe: components["schemas"]["DeckVibeSchema"] | null;
             /** @description The court picked (`court_id` and `starts_at`), or the one proposed: the soonest hour where the whole line-up is free, failing that the soonest where most of them are. `null` when no court is free in the next 14 days — the card's place says so, and *Pick a different court* is gone. */
             court: components["schemas"]["FriendsCourtSchema"] | null;
             /** @description The line-up's weeks, the court's hour ringed; `null` with no court, which draws no card. */
@@ -5110,16 +5254,22 @@ export interface components {
          *     refuses once it has. Nothing on `GET /games` changes: a seat there still
          *     carries a name and nothing else.
          *
-         *     **Three blocks, and each is omitted on its own ground.** `forecast` and
+         *     **Four blocks, and each is omitted on its own ground.** `forecast` and
          *     `split` go together — one computation — and are omitted when the pairing
          *     cannot be computed: somebody on the court holds no rating in the sport, or
          *     a seat could not be priced. There is no reason beside the absence; draw
          *     nothing and say nothing. `at_stake` is omitted on a friendly, where a
          *     counted result is *meaningless rather than unavailable*, and where the rule
          *     has nothing to move or nothing to price against — you hold no rating in
-         *     the sport, or nobody across the net does. `seats` names the Level of
+         *     the sport, or nobody across the net does. `vibe` is a For-fun game's alone
+         *     (#835): omitted on a competitive game, while a seat is open, and where
+         *     nobody on the court holds a tag that counts. `seats` names the Level of
          *     everybody the platform holds one for, and a court with an unrated member
          *     still names the rated ones.
+         *
+         *     **A For-fun game still carries its forecast**, for the apps already on
+         *     phones; an app that draws the vibe draws it in the forecast's place and
+         *     ignores the forecast (`docs/adr/0207` §12).
          */
         GamePairingResponse: {
             /**
@@ -5134,6 +5284,8 @@ export interface components {
             split?: components["schemas"]["GamePairingSplitSchema"];
             /** @description What a counted result would do to your Level. **Omitted on a friendly** — meaningless rather than unavailable — and omitted where you hold no rating in this sport, or nobody on the other side does. A side with one unrated seat is priced over the people on it who are rated, because that is what the result will do. Never a pair of zeros. */
             at_stake?: components["schemas"]["GamePairingAtStakeSchema"];
+            /** @description A For-fun game's Social vibe: the court's number and a row for each of your tags. **Omitted on a competitive game**, while a seat is open — the court that will play is not yet known — and where nobody on the court holds a tag that counts. Worked out from everybody's tags now, so a tag edit moves it on the next read. */
+            vibe?: components["schemas"]["GamePairingVibeSchema"];
             /**
              * Seats
              * @description One row per seat whose person holds a rating in this sport, in the court's own order. Somebody unrated is simply not here.
@@ -5191,6 +5343,42 @@ export interface components {
             their_side: number;
             /** Gap */
             gap: number;
+        };
+        /**
+         * GamePairingVibeRowSchema
+         * @description One row of the Social vibe card's grid: one of **your** tags, and who on
+         *     the court carries it.
+         *
+         *     Named for its surface rather than reusing the details' row: a second class
+         *     of that name would rename it in the contract (``docs/adr/0159``).
+         */
+        GamePairingVibeRowSchema: {
+            /** @description A tag's code — the app owns its emoji and label, and skips a code it doesn't know. */
+            tag: components["schemas"]["SocialTag"];
+            /**
+             * Carried By
+             * @description Everybody on the court who carries it, **in your direction**: you first, then the rest of your side, then the other side — each side in the order `GET /games` lists the game's seats in, which names everybody (`seats` here leaves out the unrated). Never empty: you carry every row. Only you: the row is yours alone.
+             */
+            carried_by: string[];
+        };
+        /**
+         * GamePairingVibeSchema
+         * @description A For-fun game's **Social vibe card** (`docs/adr/0207` §5, §6): how much
+         *     the whole court shares, and who shares yours. Worked out from everybody's
+         *     tags now, on every read, and stored nowhere — the number its card and its
+         *     details showed before it was booked.
+         */
+        GamePairingVibeSchema: {
+            /**
+             * Pct
+             * @description How much the whole court shares, counting everyone's tags — the card's own number. 0–100, rounded half up.
+             */
+            pct: number;
+            /**
+             * Rows
+             * @description One per tag **you** hold, in the vocabulary's order — 💘 `OPEN_TO_MEET_SOMEONE` too, drawn like any other row though it never counts in `pct`. None of the others' tags you don't hold.
+             */
+            rows: components["schemas"]["GamePairingVibeRowSchema"][];
         };
         /**
          * GameSchema
@@ -5453,9 +5641,14 @@ export interface components {
             segments: components["schemas"]["DeckSegmentSchema"][];
             /**
              * Games Badge
-             * @description The tab's badge: cards where somebody is already In with the reader, across the segments.
+             * @description The tab's badge: cards where somebody is already In with the reader, across the segments. **Kept for older installed apps**: the app counts `in_card_ids`, and this is always their number.
              */
             games_badge: number;
+            /**
+             * In Card Ids
+             * @description **What the app counts for the Games badge** (#846; `docs/adr/0208`): the cards with somebody already In with the reader, **across every segment shown — the one not asked for too** — each by its `proposal_id`, the id the card carries when its segment is the one dealt. A `SEAT_OPEN` card is never among them: a rescue's players have paid, and are not In. Empty when nobody is In; as many as `games_badge`. Competitive first, each segment in the order dealt, so the list is the same whichever segment is read.
+             */
+            in_card_ids: string[];
             /** Games Per Week */
             games_per_week: number;
             /**
@@ -5465,7 +5658,7 @@ export interface components {
             capped_weeks: components["schemas"]["CappedWeekSchema"][];
             /**
              * Cards
-             * @description This segment's cards in the order dealt. **A card owed to the reader comes first** — the new game a club's cancel owed them, soonest first among two, with no mark (#673). Then seats open after the reader's yes (fewest first), then seat open › challenge › pick, then the soonest deadline, then the best forecast; the same people only at their best hour.
+             * @description This segment's cards in the order dealt. **A card owed to the reader comes first** — the new game a club's cancel owed them, soonest first among two, with no mark (#673). **Competitive**: then seats open after the reader's yes (fewest first), then seat open › challenge › pick, then the soonest deadline, then the best forecast. **For fun** (`docs/adr/0207` §4): then the `SEAT_OPEN` cards by vibe, then every other card by the vibe it shows (highest first), then seats open after the reader's yes, then challenge › pick, then the soonest deadline. In both, the same people only at their best hour.
              */
             cards: components["schemas"]["DeckCardSchema"][];
         };
@@ -5799,6 +5992,18 @@ export interface components {
             name: string;
         };
         /**
+         * HomeFriendRequestLevelSchema
+         * @description One sport on a request's sport-levels line — *● Padel 3,40*.
+         */
+        HomeFriendRequestLevelSchema: {
+            sport: components["schemas"]["Sport"];
+            /**
+             * Level
+             * @description Their published Level in it, as RacketSkill published it.
+             */
+            level: number;
+        };
+        /**
          * HomeFriendRequestSchema
          * @description One card in *FRIEND REQUESTS* — *Inés wants to be your friend · With you
          *     in Kazimierz crew · Padel 3,40 · ✦ 98*, **Not now** and **Accept**.
@@ -5878,6 +6083,11 @@ export interface components {
              * @description With `from_same_vibe`: how many Social tags you two hold **today**, counted on this read — `0` once you share none. `null` on every other card.
              */
             in_common: number | null;
+            /**
+             * Levels
+             * @description **Every sport they hold a published Level in**, in the app's sport order, each with that Level — the tile's sport-levels line, *● Padel 3,40 · ● Tennis 2,90* (docs/adr/0205 §2). **Empty** when they hold none, and the line is left out. `level` is the entry for `sport`.
+             */
+            levels: components["schemas"]["HomeFriendRequestLevelSchema"][];
         };
         /**
          * HomeFriendsGameSchema
@@ -6044,6 +6254,24 @@ export interface components {
             photo_url: string | null;
         };
         /**
+         * HomeNeedsYourAnswerSchema
+         * @description **The envelope's badge** (#815; `docs/adr/0205` §3): what is new in
+         *     *Needs your answer* since you last closed it, kept on the server so every
+         *     phone agrees — and the watermark to send back when you close it.
+         */
+        HomeNeedsYourAnswerSchema: {
+            /**
+             * New Count
+             * @description How many of the items waiting on you **arrived since you last closed Needs your answer** (`POST /players/me/needs-your-answer/visit`), on any phone — every one of them before your first close. Counted over the four sections: each payment to confirm (`payments_to_confirm`) by when it came to need confirming, each friends game invitation by when your seat was invited into, each friend request by when it was asked, and **each friend on an ask for a level by their own ask** — so a second friend asking on a card already there is new. **A change of state is never new**: a payment going from *Fix your card* to *Confirm* counts as it did. An answered item leaves the count with its section. Draw *99+* above 99. Never `needing_you`, never the bell's number.
+             */
+            new_count: number;
+            /**
+             * Watermark
+             * @description **This read's watermark**: the newest arrival among everything counted above, seen or not, to the millisecond. Send it back as the visit's `watermark` when the sheet drawn from this read closes — draw all four sections from this read (`payments_to_confirm` included), or a row read elsewhere may be covered without being shown. `null` while nothing waits.
+             */
+            watermark: string | null;
+        };
+        /**
          * HomeRankingSchema
          * @description Home's trophy, **🏆 #7**, just left of the bell (#768, #771;
          *     `docs/adr/0203` §5). A tap opens Rankings on `sport`, in the view you last
@@ -6102,6 +6330,13 @@ export interface components {
             level_asks: components["schemas"]["HomeLevelAskSchema"][];
             /** @description The trophy left of the bell (#768): the sport of your latest result and your General place in it. **`null` when you have no result in any sport** — the trophy still shows, with no number, and still opens Rankings. */
             ranking?: components["schemas"]["HomeRankingSchema"] | null;
+            /**
+             * Payments To Confirm
+             * @description *TO CONFIRM · n*, first in *Needs your answer* (#815; `docs/adr/0205` §1, §3): every payment you have to confirm, soonest game first — **the same rows as `GET /players/me/payments-to-confirm`**, read at this read's instant. They are the payments `needing_you` counts and `needs_your_answer` covers, so a sheet drawn from this read alone shows exactly what its watermark says it showed.
+             */
+            payments_to_confirm: components["schemas"]["app__modules__proposals__presentation__schemas__PaymentToConfirmSchema"][];
+            /** @description The envelope's badge, left of the bell (#815; `docs/adr/0205` §2, §3): what is new in *Needs your answer*, and the watermark of this read. */
+            needs_your_answer: components["schemas"]["HomeNeedsYourAnswerSchema"];
         };
         /**
          * HomeStatus
@@ -6158,7 +6393,7 @@ export interface components {
             new_this_month: number;
             /**
              * Heat Share
-             * @description The heat bar, from 0 to 1: this card's heat over the **HOTTEST** card's, whose bar is full — or, with no HOTTEST, over the highest heat in the row, so no bar is more than full. Heat is 2 × games this week + 3 × new this month + players counted up to 20.
+             * @description The heat bar, from 0 to 1: this card's heat over the **HOTTEST** card's, whose bar is full — or, with no HOTTEST, over the highest heat in the row (on *Groups heating up*, on the whole list), so no bar is more than full. Heat is 2 × games this week + 3 × new this month + players counted up to 20. The app draws no bar since `docs/adr/0205`; heat still orders the cards and picks the tags.
              */
             heat_share: number;
             /** @description `HOTTEST` on exactly one card — the highest heat, and only if it had a game this week; `GROWING` on any other with **+4 or more** new this month **and** new making up at least a quarter of today's players; `null` on the rest. The row is in order already: HOTTEST, then GROWING by heat, then untagged by heat. */
@@ -6181,13 +6416,39 @@ export interface components {
              */
             is_administrator: boolean;
         };
+        /**
+         * HottestGroupsPageResponse
+         * @description A page of *Groups heating up* (#813; ``docs/adr/0205`` §7).
+         */
+        HottestGroupsPageResponse: {
+            /**
+             * Groups
+             * @description Up to 20 cards, **every group with 3 or more players** — the reader's own included, `relation` `MEMBER` — in the row's order: HOTTEST, then GROWING by heat, then untagged by heat; ties to more games this week, then the group id. The first page's first six are the row. **Heat is worked out on every read**, so a group whose heat moved since the page before may come again or be missed. Empty on the first page when there is no group of 3.
+             */
+            groups: components["schemas"]["HottestGroupSchema"][];
+            /**
+             * Next
+             * @description The cursor the next page is read `after`; `null` on the last page.
+             */
+            next: string | null;
+            /**
+             * Total
+             * @description How many groups there are to look through: **every group with 3 or more players**, the reader's own included — the whole list *Groups heating up* pages through — **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count. `0` with no group of 3. **On the first page only**: `null` on a page read `after` a cursor, where the first page's stands.
+             */
+            total: number | null;
+        };
         /** HottestGroupsResponse */
         HottestGroupsResponse: {
             /**
              * Groups
-             * @description **Up to six**, in the row's order — every group with **3 or more players** is a candidate, the reader's own included. Empty when there is none, and Home hides the row.
+             * @description **Up to six**, in the row's order — every group with **3 or more players** is a candidate, the reader's own included. Empty when there is none, and Home hides the row. **The same groups, places and tags as the first six** of `GET /hottest-groups/all`; only `heat_share` can differ, when there is no HOTTEST and six GROWING push a hotter untagged group off the row.
              */
             groups: components["schemas"]["HottestGroupSchema"][];
+            /**
+             * Total
+             * @description How many groups there are to look through: **every group with 3 or more players**, the reader's own included — the whole list *Groups heating up* pages through — **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count. `0` with no group of 3.
+             */
+            total: number;
         };
         /**
          * InProgressAssessmentResponse
@@ -6771,6 +7032,18 @@ export interface components {
              */
             nickname: string;
         };
+        /**
+         * NeedsYourAnswerVisitRequest
+         * @description Closing *Needs your answer* (#815): the watermark of the read the sheet
+         *     showed.
+         */
+        NeedsYourAnswerVisitRequest: {
+            /**
+             * Watermark
+             * @description `GET /home`'s `needs_your_answer.watermark` from the read the sheet was last drawn from, as it was served — never the phone's clock, never the moment of the close. Compared to the millisecond, so a date that kept only milliseconds is the same watermark. `null`, a read with nothing waiting, records nothing.
+             */
+            watermark: string | null;
+        };
         /** NewInRaketaPageResponse */
         NewInRaketaPageResponse: {
             /**
@@ -6840,6 +7113,11 @@ export interface components {
              * @description Up to 10: the 10 newest of the last 30 days, those you aren't connected with first (someone who asked you among them), then those you sent a request to, then your friends — newest first within each. **Empty hides the row.**
              */
             players: components["schemas"]["NewInRaketaPlayerSchema"][];
+            /**
+             * Total
+             * @description How many the row could show: everybody who joined in the last 30 days — each person once, under the row's own exclusions — **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count and *See all N ›*: who there is to explore, never how many are good matches. `0` with an empty row.
+             */
+            total: number;
         };
         /** NewInRaketaSportSchema */
         NewInRaketaSportSchema: {
@@ -8070,7 +8348,7 @@ export interface components {
             cell: components["schemas"]["PostingCellSchema"];
             /**
              * Fits
-             * @description The best fits free at the cell's best hour, best fit first.
+             * @description The best fits free at the cell's best hour, best fit first: the most even game, or on a `FOR_FUN` post the highest `vibe`, a tie falling to the most even.
              */
             fits: components["schemas"]["SlotFitSchema"][];
             /**
@@ -8141,7 +8419,10 @@ export interface components {
         /**
          * ProposalDetailsResponse
          * @description A game still filling, as the reader opens it — the deck's card turned
-         *     into a screen.
+         *     into a screen. **What it says about the game follows the kind**
+         *     (`docs/adr/0207` §5, §6): a competitive game `forecast` and `at_stake`,
+         *     with `vibe` `null`; a For-fun game `vibe`, with `forecast` and `at_stake`
+         *     `null`.
          */
         ProposalDetailsResponse: {
             /**
@@ -8222,8 +8503,12 @@ export interface components {
             time_to: components["schemas"]["TimeTo"] | null;
             /** @description Everybody drawn, the reader on their own side: for a reader still deciding, their own card as the deck deals it; for a reader In, everybody In — the client draws the open seats empty. */
             sides: components["schemas"]["DeckSidesSchema"];
-            /** @description How even the game drawn is forecast — `null` where it cannot be read. */
-            forecast: components["schemas"]["DeckForecastSchema"] | null;
+            /** @description How even a **competitive** game drawn is forecast, with each side's level and the signed gap. **Always `null` on For fun** (`docs/adr/0207` §5), whose sides it still arranged; `null` too where it cannot be read — somebody on it holds no level in the sport. */
+            forecast: components["schemas"]["DetailsForecastSchema"] | null;
+            /** @description What a counted result would do to **your** Level, on `sides` — **two values or none**, as on a booked game. `null` on For fun; while a seat is open (the court that will play isn't known yet); once the game is no longer yours to play — you said no, no longer fit, wait on a paused yes, or it ended; once it is booked, whose stakes are `GET /games/{game_id}/pairing`'s; and where there is nothing to price: you hold no level in the sport, or nobody across the net does. */
+            at_stake: components["schemas"]["DetailsAtStakeSchema"] | null;
+            /** @description A **For-fun** game's Social vibe and the grid's rows. `null` on Competitive, and where the card draws none: fewer than two people named, or nobody at the table holding a tag that counts. */
+            vibe: components["schemas"]["DetailsVibeSchema"] | null;
             overlap: components["schemas"]["DeckOverlapSchema"];
         };
         /**
@@ -8795,6 +9080,11 @@ export interface components {
              * @description Up to 10: **fresh** good matches first — 70% even or more, neither your friend nor somebody you asked — best % first; then the **gaps** at the right — your friends, those you asked and weaker matches — best % first. Worked out on every read, so a new fresh player takes the weakest gap's place. **Empty hides the row**: you hold no level anywhere, or nobody shares a sport with you.
              */
             players: components["schemas"]["SameLevelPlayerSchema"][];
+            /**
+             * Total
+             * @description How many the row could show: everybody holding a level in any sport you hold one in — each person once, under the row's own exclusions — **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count and *See all N ›*: who there is to explore, never how many are good matches. `0` with an empty row.
+             */
+            total: number;
         };
         /**
          * SameLevelSportSchema
@@ -8870,7 +9160,7 @@ export interface components {
             photo_url: string | null;
             /**
              * Vibe Percent
-             * @description The **vibe %**, 1 − ½ⁿ for n shared tags, rounded: 50, 75, 88, 94, 97, 98 for 1–6 — the white circle, *98%*. Every tag counts the same, and skill plays no part.
+             * @description The **vibe %**, 1 − ½ⁿ for n shared tags, rounded: 50, 75, 88, 94, 97, 98, 99, 100 for 1–8 — the white circle, *98%*. Every tag counts the same, and skill plays no part.
              */
             vibe_percent: number;
             /**
@@ -8893,6 +9183,11 @@ export interface components {
              * @description Up to 10: **fresh** good matches first — 2 shared tags or more, neither your friend nor somebody you asked; somebody who asked you counts — most in common first; then the **gaps** at the right — your friends, those you asked and 1-tag matches — in the same order. Worked out on every read, so a new fresh player takes the weakest gap's place. **Empty hides the row.**
              */
             players: components["schemas"]["SameVibePlayerSchema"][];
+            /**
+             * Total
+             * @description How many the row could show: everybody sharing at least one Social tag with you — each person once, under the row's own exclusions — **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count and *See all N ›*: who there is to explore, never how many are good matches. `0` with an empty row.
+             */
+            total: number;
         };
         /** SavedMethodSchema */
         SavedMethodSchema: {
@@ -9319,7 +9614,9 @@ export interface components {
         };
         /**
          * SlotFitSchema
-         * @description One of the poster's best fits free then — *2,75 · 93*.
+         * @description One of the poster's best fits free then — *2,75 · 93*, the second
+         *     figure being the kind's own number: how even, or on a For-fun post how
+         *     much the two of them share.
          */
         SlotFitSchema: {
             /**
@@ -9346,15 +9643,17 @@ export interface components {
              * @description **Your** friend — the *FRIEND* tag (`docs/adr/0202` §2); only your own friends ever carry it.
              */
             friend: boolean;
-            /** @description How even a game of the poster and them is forecast — `null` where it cannot be read. */
+            /** @description How even a game of the poster and them is forecast. **Always `null` on a `FOR_FUN` post**, which says its `vibe` instead (`docs/adr/0207` §5). Also `null` where it cannot be read. */
             forecast: components["schemas"]["DeckForecastSchema"] | null;
+            /** @description On a **`FOR_FUN`** post, the Social vibe of **the poster and them**, worked out from the two's tags now — and the fits are ranked by it, highest first, a tie falling to the forecast and then the pool's order (#834). **Always `null` on a `COMPETITIVE` post**, and where neither holds a tag. */
+            vibe: components["schemas"]["DeckVibeSchema"] | null;
         };
         /**
          * SocialTag
          * @description The closed set of tag ids. An id here is permanent.
          * @enum {string}
          */
-        SocialTag: "STAYS_FOR_A_DRINK" | "STRAIGHT_HOME_AFTER" | "TALKS_THROUGH_THE_MATCH" | "SETTLES_UP_ON_THE_SPOT" | "BOOKS_THE_NEXT_ONE" | "SHARES_A_LIFT" | "PLAYS_TO_WIN" | "LAUGHS_OFF_MISTAKES" | "ENCOURAGES_A_PARTNER" | "GENEROUS_ON_LINE_CALLS" | "QUIET_AND_FOCUSED" | "WARMS_UP_PROPERLY" | "HERE_TO_IMPROVE" | "HERE_TO_COMPETE" | "HERE_FOR_THE_EXERCISE" | "HERE_TO_MEET_PLAYERS" | "HERE_FOR_A_REGULAR_GAME" | "HERE_TO_GET_BACK_INTO_IT" | "OPEN_TO_MEET_SOMEONE";
+        SocialTag: "STAYS_FOR_A_DRINK" | "STRAIGHT_HOME_AFTER" | "TALKS_THROUGH_THE_MATCH" | "SETTLES_UP_ON_THE_SPOT" | "BOOKS_THE_NEXT_ONE" | "SHARES_A_LIFT" | "STAYS_FOR_A_COFFEE" | "UP_FOR_A_BITE_AFTER" | "KEEPS_IN_TOUCH" | "PLAYS_TO_WIN" | "LAUGHS_OFF_MISTAKES" | "ENCOURAGES_A_PARTNER" | "GENEROUS_ON_LINE_CALLS" | "QUIET_AND_FOCUSED" | "WARMS_UP_PROPERLY" | "HAPPY_TO_SWAP_PARTNERS" | "PATIENT_WITH_BEGINNERS" | "HAPPY_TO_SHARE_TIPS" | "BRINGS_THE_ENERGY" | "HERE_TO_IMPROVE" | "HERE_TO_COMPETE" | "HERE_FOR_THE_EXERCISE" | "HERE_TO_MEET_PLAYERS" | "HERE_FOR_A_REGULAR_GAME" | "HERE_TO_GET_BACK_INTO_IT" | "OPEN_TO_MEET_SOMEONE" | "NEW_IN_TOWN";
         /**
          * SocialTagGroup
          * @description The three groups, which are about the game and nothing else.
@@ -9388,8 +9687,8 @@ export interface components {
          * @description How many Social tags a selection must hold to be one.
          *
          *     The unit is in both field names: a bare ``minimum`` beside a list of
-         *     nineteen tags reads as a count of something, and which something is exactly
-         *     what a client would guess wrong.
+         *     twenty-seven tags reads as a count of something, and which something is
+         *     exactly what a client would guess wrong.
          */
         SocialTagSelectionBoundsResource: {
             /**
@@ -13756,6 +14055,47 @@ export interface operations {
             };
         };
     };
+    hottest_groups_page_api_v1_hottest_groups_all_get: {
+        parameters: {
+            query?: {
+                /** @description A `next` cursor: the 20 groups behind it. */
+                after?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HottestGroupsPageResponse"];
+                };
+            };
+            /** @description `not_a_hottest_groups_page` — a cursor this server never wrote. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_new_in_raketa_api_v1_new_in_raketa_get: {
         parameters: {
             query?: never;
@@ -15318,6 +15658,46 @@ export interface operations {
                 };
             };
             /** @description `games_per_week_out_of_range` — outside `details.least`–`details.most`. `most_ill_pay_not_offered` — not `null` and not one of `details.choices`. Nothing was saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_needs_your_answer_api_v1_players_me_needs_your_answer_visit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NeedsYourAnswerVisitRequest"];
+            };
+        };
+        responses: {
+            /** @description Closed: everything that arrived up to `watermark` is seen on every phone, and only what arrived after it counts in `GET /home`'s `needs_your_answer.new_count`. Also the answer when nothing moved — the same watermark again, an older one (another phone closed on a newer read), which never moves it back, or `null`. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `watermark_in_the_future` — later than the server's clock, so no read served it: send the watermark Home gave, never the phone's clock. Nothing was recorded. */
             400: {
                 headers: {
                     [name: string]: unknown;

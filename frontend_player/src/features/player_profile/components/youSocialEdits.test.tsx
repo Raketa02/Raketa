@@ -13,15 +13,24 @@
  * send is drawn green and saying *Saved* — and an ask under the floor is not.
  */
 
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
+import {
+  FULL_RECORD,
+  HOW_OTHERS_SEE_YOU_LINE,
+  HOW_OTHERS_SEE_YOU_TITLE,
+  OWN_RECORD_TITLE,
+} from '@/features/player_record/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { doorRowLabel, theme } from '@/shared/ui';
+import { socialTagLabel } from '@/shared/vocabulary/socialTagPresentation';
 import { fillOf } from '@/test-support/drawn';
 import {
   OWN_RECORD_PATH,
+  OWN_RECORD_SERVED,
   PROFILE_OPTIONS_SERVED,
+  PROFILE_SURFACE_PATH,
   PROFILE_SURFACE_SERVED,
   launchSignedIn,
   resetImagePicking,
@@ -55,7 +64,6 @@ import {
   flaggedNoticeTitle,
 } from './photoStepPresentation';
 import { stepCopy } from './socialStepPresentation';
-import { socialTagCeilingTitle } from './socialTagPresentation';
 import {
   INTRO_TITLE,
   NO_INTRO_LINE,
@@ -411,9 +419,9 @@ describe('Tags', () => {
       .filter((chip) => chip.props.accessibilityState?.selected === true)
       .map((chip) => String(chip.props.accessibilityLabel));
 
-  async function openTheTags() {
+  async function openTheTags(line: string = HELD_LINE) {
     await onYou();
-    fireEvent.press(row(TAGS_TITLE, HELD_LINE));
+    fireEvent.press(row(TAGS_TITLE, line));
     await screen.findByRole('header', { name: stepCopy('tags').title });
     await screen.findByLabelText('Plays to win');
   }
@@ -421,7 +429,7 @@ describe('Tags', () => {
   it('opens on the tags the profile holds, under the served bounds, with Saved shut', async () => {
     await openTheTags();
 
-    expect(screen.getByText('On your card · Pick 2 to 6')).toBeTruthy();
+    expect(screen.getByText('On your card · Pick 2 to 8')).toBeTruthy();
     expect(lit()).toEqual([
       'Stays for a drink',
       'Plays to win',
@@ -433,60 +441,81 @@ describe('Tags', () => {
     expect(screen.queryByLabelText('Continue')).toBeNull();
   });
 
-  it('refuses a seventh in the step’s words, writes nothing on a press, and the ids on Save — then draws the route’s order', async () => {
-    // The route answers in the vocabulary's order, whatever order the picker pressed them in.
-    transport.on('PUT', TAGS_PATH, () =>
-      json<Wire['SocialTagsResponse']>({
-        social_tags: [
-          'STAYS_FOR_A_DRINK',
-          'PLAYS_TO_WIN',
-          'LAUGHS_OFF_MISTAKES',
-          'WARMS_UP_PROPERLY',
-          'HERE_TO_IMPROVE',
-          'HERE_TO_COMPETE',
-        ],
-      }),
+  /**
+   * **Ola adds ☕ _Stays for a coffee_ and 🧳 _New in town_ to the six she had** (#837; ADR-0207
+   * §7): the picker takes eight and refuses a ninth in the step's words, the write carries the
+   * eight, and her record shows all eight.
+   */
+  it('saves eight — two of them new — refuses a ninth in the step’s words, writes nothing on a press, and the record shows all eight', async () => {
+    const SIX_HELD: Wire['SocialTag'][] = [
+      'BOOKS_THE_NEXT_ONE',
+      'PLAYS_TO_WIN',
+      'WARMS_UP_PROPERLY',
+      'HERE_TO_IMPROVE',
+      'HERE_TO_COMPETE',
+      'HERE_FOR_THE_EXERCISE',
+    ];
+    // The route answers in the vocabulary's order, whatever order the picker pressed them in —
+    // and the coffee sorts second, so a row drawn in press order would name *Plays to win* there.
+    const EIGHT_SAVED: Wire['SocialTag'][] = [
+      'BOOKS_THE_NEXT_ONE',
+      'STAYS_FOR_A_COFFEE',
+      'PLAYS_TO_WIN',
+      'WARMS_UP_PROPERLY',
+      'HERE_TO_IMPROVE',
+      'HERE_TO_COMPETE',
+      'HERE_FOR_THE_EXERCISE',
+      'NEW_IN_TOWN',
+    ];
+    let held = SIX_HELD;
+    transport.on('GET', PROFILE_SURFACE_PATH, () =>
+      json<Wire['PlayerProfileReadResponse']>({ ...PROFILE_SURFACE_SERVED, social_tags: held }),
     );
-    await openTheTags();
+    transport.on('GET', OWN_RECORD_PATH, () =>
+      json<Wire['PlayerRecordResponse']>({ ...OWN_RECORD_SERVED, social_tags: held }),
+    );
+    transport.on('PUT', TAGS_PATH, () => {
+      held = EIGHT_SAVED;
+      return json<Wire['SocialTagsResponse']>({ social_tags: EIGHT_SAVED });
+    });
+    await openTheTags(tagsLine(SIX_HELD, MAXIMUM_TAGS));
 
-    fireEvent.press(screen.getByLabelText('Here to compete'));
-    fireEvent.press(screen.getByLabelText('Laughs off mistakes'));
+    fireEvent.press(screen.getByLabelText('Stays for a coffee'));
+    fireEvent.press(screen.getByLabelText('New in town'));
+    expect(lit()).toHaveLength(MAXIMUM_TAGS);
     expect(screen.getByLabelText(SAVE).props.accessibilityState?.disabled).toBe(false);
     expect(fillOf(screen.getByLabelText(SAVE))).toBe(theme.color.coralInk);
     expect(puts(TAGS_PATH)).toHaveLength(0);
 
     fireEvent.press(screen.getByLabelText('Shares a lift'));
-    expect(await screen.findByText(socialTagCeilingTitle({ minimum: 2, maximum: 6 }))).toBeTruthy();
+    expect(await screen.findByText('8 tags is the most')).toBeTruthy();
     expect(lit()).not.toContain('Shares a lift');
+    expect(lit()).toHaveLength(MAXIMUM_TAGS);
 
     fireEvent.press(screen.getByLabelText(SAVE));
 
     await waitFor(() => expect(puts(TAGS_PATH)).toHaveLength(1));
     expect(puts(TAGS_PATH)[0]?.body).toEqual({
-      social_tags: [...HELD_TAGS, 'HERE_TO_COMPETE', 'LAUGHS_OFF_MISTAKES'],
+      social_tags: [...SIX_HELD, 'STAYS_FOR_A_COFFEE', 'NEW_IN_TOWN'],
     });
     expect(await screen.findByLabelText(SAVED)).toBeTruthy();
     expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
 
     fireEvent.press(screen.getByLabelText('Back'));
     expect(
-      await screen.findByLabelText(
-        doorRowLabel(
-          TAGS_TITLE,
-          tagsLine(
-            [
-              'STAYS_FOR_A_DRINK',
-              'PLAYS_TO_WIN',
-              'LAUGHS_OFF_MISTAKES',
-              'WARMS_UP_PROPERLY',
-              'HERE_TO_IMPROVE',
-              'HERE_TO_COMPETE',
-            ],
-            MAXIMUM_TAGS,
-          ),
-        ),
-      ),
+      await screen.findByLabelText(doorRowLabel(TAGS_TITLE, tagsLine(EIGHT_SAVED, MAXIMUM_TAGS))),
     ).toBeTruthy();
+
+    // Her record, as a stranger reads it: all eight, under *Full record*.
+    fireEvent.press(
+      screen.getByLabelText(doorRowLabel(HOW_OTHERS_SEE_YOU_TITLE, HOW_OTHERS_SEE_YOU_LINE)),
+    );
+    await screen.findByRole('header', { name: OWN_RECORD_TITLE });
+    fireEvent.press(await screen.findByRole('button', { name: FULL_RECORD }));
+    const tags = within(await screen.findByTestId('record-tags'));
+    for (const id of EIGHT_SAVED) {
+      expect(tags.getByText(socialTagLabel(id))).toBeTruthy();
+    }
   });
 
   it('shuts Save under the floor with the step’s own words', async () => {

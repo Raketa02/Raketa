@@ -3,7 +3,7 @@
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
  * §2).
  *
- * The eyebrow carries the served rule under the group's title — *On your card · Pick 2 to 6*
+ * The eyebrow carries the served rule under the group's title — *On your card · Pick 2 to 8*
  * — the title is the step's question, the three groups of chips and the press that obeys the
  * bounds are `SocialTagPicker`'s, and the ceiling note is pinned above the button as the
  * step pins it. The step's *Continue* is *Save*, shut under the floor with the step's own
@@ -82,7 +82,7 @@ export function TagsScreen() {
       action={
         standing === undefined || selection === undefined || bounds === undefined ? undefined : (
           <>
-            {/* Pinned above the button rather than left above nineteen chips, and announced
+            {/* Pinned above the button rather than left above twenty-seven chips, and announced
                 — the step's reason. */}
             {picker.refused ? (
               <Note variant="amber" accessibilityRole="alert" title={socialTagCeilingTitle(bounds)}>

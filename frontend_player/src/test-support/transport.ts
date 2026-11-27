@@ -43,15 +43,56 @@ export interface Transport {
   readonly requests: readonly RecordedRequest[];
   /** Requests for one route — the shape most assertions want. */
   readonly requestsTo: (method: string, path: string) => readonly RecordedRequest[];
+  /**
+   * **What a stubbed route answers right now, with nothing reaching the socket** — for a fake route
+   * the server builds out of another: Home's *TO CONFIRM* rows are the payments to confirm'
+   * (`stubHome`). Not recorded, so no suite counts it as a request; `undefined` for a route with no
+   * stub. **Called in step**, so a responder built on it answers as quickly as any other: a body
+   * awaited inside a responder costs it a turn, and a launch that runs every pending timer then
+   * times the request out. Read what `json` was handed with `servedBody`.
+   */
+  readonly answerNow: (method: string, path: string) => ReturnType<Responder> | undefined;
+  /**
+   * **Hold every request to a stubbed route on its way** (#872) until the walk ends them — a screen's
+   * first read held in flight across the navigation that opens it. **Every request, not the next one**,
+   * query strings included (a page's cursor, a sport), and **each deaf to the client's abort**
+   * (`deafToAborts`): the harness runs every pending timer on a navigation, the read's 15 s timeout
+   * among them, and a read timed out is one that failed and is asked again — not the read in flight a
+   * slow server leaves on a phone. **The route's own responder is the one it had when held** — a
+   * route held again is answered by the responder both holds stand in for — and ending the hold puts
+   * it back for every request after, unless the walk stubbed the route again meanwhile.
+   */
+  readonly hold: (method: string, path: string) => HeldRoute;
   readonly restore: () => void;
 }
 
+/** A route's requests held on their way — see `Transport.hold`. Call inside `act`. */
+export interface HeldRoute {
+  /** Answer every request held as the route's own responder answers it. */
+  readonly land: () => void;
+  /** Fail every request held as a lost connection does (`networkFailure`). */
+  readonly drop: () => void;
+}
+
+/** What each `json` response was built from — for `servedBody`. */
+const SERVED = new WeakMap<Response, unknown>();
+
 /** A JSON response, typed against whatever the caller says the route returns. */
 export function json<T>(body: T, status = 200): Response {
-  return new Response(JSON.stringify(body), {
+  const response = new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+  SERVED.set(response, body);
+  return response;
+}
+
+/**
+ * **What a `json` response was built from**, read at once rather than off its body — see
+ * `answerNow`. `undefined` for any other response.
+ */
+export function servedBody(response: Response): unknown {
+  return SERVED.get(response);
 }
 
 /** The backend's error envelope — the same shape on every failing route. */
@@ -125,6 +166,24 @@ export function networkFailure(): Responder {
   return () => Promise.reject(new TypeError('Network request failed'));
 }
 
+/** Responders that answer through the client's own abort — see `deafToAborts`. */
+const DEAF = new WeakSet<Responder>();
+
+/** A route's holding responder, and the route's own it stands in for — see `Transport.hold`. */
+const HOLDING = new WeakMap<Responder, Responder>();
+
+/**
+ * **A responder deaf to the client's abort** (#871) — for a read a walk holds on its way across a
+ * navigation. The harness runs every pending timer on a navigation, the client's 15 s timeout among
+ * them, so a held read would time out under it, which no phone does in the instant a screen opens.
+ * Deaf, the read stays on its way until the walk answers it. Query's own cancellation still ends it
+ * for Query, which stops waiting whatever the socket does.
+ */
+export function deafToAborts(responder: Responder): Responder {
+  DEAF.add(responder);
+  return responder;
+}
+
 /** A server that accepts the connection and never answers. Drives the timeout path. */
 export function neverResponds(): Responder {
   return () => new Promise<Response>(() => {});
@@ -186,7 +245,7 @@ export function installTransport(): Transport {
     if (signal?.aborted === true) throw abortError();
 
     const response = responder(recorded);
-    if (signal == null) return response;
+    if (signal == null || DEAF.has(responder)) return response;
 
     return Promise.race([
       Promise.resolve(response),
@@ -206,6 +265,48 @@ export function installTransport(): Transport {
     requestsTo(method, path) {
       const wanted = keyOf(method, path);
       return requests.filter((r) => keyOf(r.method, r.path) === wanted);
+    },
+    answerNow(method, path) {
+      const responder = routes.get(keyOf(method, path));
+      if (responder === undefined) return undefined;
+      return responder({ method, path, url: path, headers: {}, body: undefined });
+    },
+    hold(method, path) {
+      const key = keyOf(method, path);
+      const stubbed = routes.get(key);
+      if (stubbed === undefined) throw new Error(`No stub for ${key} to hold.`);
+      // Held already: this hold answers with the route's own, never the other hold's.
+      const answer = HOLDING.get(stubbed) ?? stubbed;
+      const waiting: {
+        readonly request: RecordedRequest;
+        readonly resolve: (response: Response | Promise<Response>) => void;
+        readonly reject: (failure: Error) => void;
+      }[] = [];
+      const holding = deafToAborts(
+        (request) =>
+          new Promise<Response>((resolve, reject) => {
+            waiting.push({ request, resolve, reject });
+          }),
+      );
+      HOLDING.set(holding, answer);
+      routes.set(key, holding);
+      // The route's own answer from now on — unless the walk stubbed it again while it was held.
+      const end = (each: (held: (typeof waiting)[number]) => void) => {
+        if (routes.get(key) === holding) routes.set(key, answer);
+        for (const held of waiting.splice(0)) each(held);
+      };
+      return {
+        land: () =>
+          end(({ request, resolve, reject }) => {
+            // One responder that throws fails its own request, never the rest held with it.
+            try {
+              resolve(answer(request));
+            } catch (failure) {
+              reject(failure instanceof Error ? failure : new Error(String(failure)));
+            }
+          }),
+        drop: () => end(({ reject }) => reject(new TypeError('Network request failed'))),
+      };
     },
     restore() {
       global.fetch = original;

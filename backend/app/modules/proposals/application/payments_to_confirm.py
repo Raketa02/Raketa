@@ -22,6 +22,7 @@ time while the seat is still free and a payment waits on their bank.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import NamedTuple, final
 from uuid import UUID
@@ -69,6 +70,10 @@ class Owed(NamedTuple):
     proposal: Proposal
     seat_charge_id: UUID
     reason: ReopenReason
+    #: **When it came to need confirming**: the share's first refusal, which
+    #: no change of state moves — *Fix your card* turning into *Confirm* is the
+    #: same arrival. What *Needs your answer* counts it new by (#815).
+    refused_at: Instant
     confirm_by: Instant | None
     time_to: TimeTo | None = None
 
@@ -101,18 +106,29 @@ class ReadPaymentsToConfirm:
             games=self._games,
             now=instant(self._clock.now()),
         )
-        names = await self._clubs.names_of({one.proposal.club_id for one in owed})
-        return tuple(
-            PaymentToConfirm(
-                proposal=one.proposal,
-                seat_charge_id=one.seat_charge_id,
-                reason=one.reason,
-                club_name=names.get(one.proposal.club_id),
-                confirm_by=one.confirm_by,
-                time_to=one.time_to,
-            )
-            for one in owed
+        return to_confirm(
+            owed,
+            names=await self._clubs.names_of({one.proposal.club_id for one in owed}),
         )
+
+
+def to_confirm(
+    owed: Sequence[Owed], *, names: Mapping[UUID, str]
+) -> tuple[PaymentToConfirm, ...]:
+    """The *To confirm* rows for these payments, each club named — this read's
+    and Home's alike (#815), so the two never differ."""
+
+    return tuple(
+        PaymentToConfirm(
+            proposal=one.proposal,
+            seat_charge_id=one.seat_charge_id,
+            reason=one.reason,
+            club_name=names.get(one.proposal.club_id),
+            confirm_by=one.confirm_by,
+            time_to=one.time_to,
+        )
+        for one in owed
+    )
 
 
 async def owed_by(
@@ -153,8 +169,9 @@ async def owed_by(
                 proposal,
                 kept.seat_charge_id,
                 kept.reason,
-                kept.until if running else None,
-                kept.time_to if running else None,
+                refused_at=kept.refused_at,
+                confirm_by=kept.until if running else None,
+                time_to=kept.time_to if running else None,
             )
         )
     for booking_id in await games.cards_to_fix_of(player_id):
@@ -171,8 +188,9 @@ async def owed_by(
                 proposal,
                 to_fix.seat_charge_id,
                 to_fix.reason,
-                to_fix.until,
-                TimeTo.FIX_THE_CARD,
+                refused_at=to_fix.refused_at,
+                confirm_by=to_fix.until,
+                time_to=TimeTo.FIX_THE_CARD,
             )
         )
     for proposal_id in await directory.paying_for(player_id):
@@ -193,8 +211,9 @@ async def owed_by(
                 proposal,
                 paying.payment_to_confirm,
                 paying.reason,
-                paying.until if running else None,
-                paying.time_to if running else None,
+                refused_at=paying.refused_at,
+                confirm_by=paying.until if running else None,
+                time_to=paying.time_to if running else None,
             )
         )
     for proposal_id in await directory.reopened_for(player_id, now=now):
@@ -204,5 +223,13 @@ async def owed_by(
         reopened = proposal.reopened.get(player_id)
         if reopened is None or reopened.payment_to_confirm is None:
             continue
-        owed.append(Owed(proposal, reopened.payment_to_confirm, reopened.reason, None))
+        owed.append(
+            Owed(
+                proposal,
+                reopened.payment_to_confirm,
+                reopened.reason,
+                refused_at=reopened.refused_at,
+                confirm_by=None,
+            )
+        )
     return sorted(owed, key=lambda one: (one.proposal.start, one.proposal.proposal_id))

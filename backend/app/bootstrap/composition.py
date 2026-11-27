@@ -198,11 +198,15 @@ from app.modules.proposals.domain.ports import (
     UndecidedCharges,
     ClubNames as ProposalClubNames,
     TagsInCommon as ProposalsTagsInCommon,
+    PlayersTags,
+    ReadersStakes,
+    PlayedWith,
     ClubTerms,
     CourtHours,
     CourtKinds,
     DeckPeople,
     GamesAndMoneyRepository,
+    NeedsYourAnswerVisits,
     PlayerFit,
     PlayersInPlay,
     WherePoolsPlay,
@@ -221,8 +225,14 @@ from app.modules.proposals.infrastructure.club_court_hours import (
 from app.modules.proposals.infrastructure.event_sourced_games_and_money_repository import (  # noqa: E501
     EventSourcedGamesAndMoneyRepository,
 )
+from app.modules.proposals.infrastructure.event_sourced_needs_your_answer_visits import (  # noqa: E501
+    EventSourcedNeedsYourAnswerVisits,
+)
 from app.modules.proposals.infrastructure.matcher_balance_forecasts import (
     MatcherBalanceForecasts,
+)
+from app.modules.proposals.infrastructure.matcher_readers_stakes import (
+    MatcherReadersStakes,
 )
 from app.modules.proposals.application.answers import (
     ConfirmPayment,
@@ -552,6 +562,12 @@ from app.modules.friends.infrastructure.sqlalchemy_level_ask_directory import (
 from app.modules.proposals.infrastructure.tags_in_common import (
     ProfileTagsInCommon,
 )
+from app.modules.proposals.infrastructure.directory_tags import (
+    DirectoryPlayersTags,
+)
+from app.modules.proposals.infrastructure.played_with import (
+    GamesAndFriendsPlayedWith,
+)
 from app.modules.proposals.infrastructure.friends import (
     FriendsLevelAsksOnHome,
     FriendsReaderRelations,
@@ -758,9 +774,12 @@ from app.modules.games.domain.ports import (
     GameHistoryQuery,
     GameRepository,
     OpponentVarietyQuery,
+    PlayedTogetherQuery,
     PlayerNames,
     ScoredGames,
+    TagsOnTheCourt,
 )
+from app.modules.games.infrastructure.directory_tags import DirectoryTagsOnTheCourt
 from app.modules.games.infrastructure.event_sourced_confirmed_results import (
     EventSourcedConfirmedResults,
 )
@@ -1768,6 +1787,17 @@ def build_games_and_money_repository(
     return EventSourcedGamesAndMoneyRepository(event_store=event_store, events=events)
 
 
+def build_needs_your_answer_visits(
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> NeedsYourAnswerVisits:
+    """When each player last closed *Needs your answer* (#815), one stream per
+    player under their own id — per unit of work, for the reason every
+    aggregate repository is."""
+    return EventSourcedNeedsYourAnswerVisits(event_store=event_store, events=events)
+
+
 def build_booked_games(session: AsyncSession) -> BookedGames:
     """The games a player has booked — what *games per week* and *one game per
     hour* count — off the bookings' own projection (#541)."""
@@ -1812,6 +1842,16 @@ def build_balance_forecasts(
         ),
         ruleset=build_ruleset(),
     )
+
+
+def build_readers_stakes(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReadersStakes:
+    """What a competitive game still filling puts at stake for its reader —
+    the booked game's own stakes function, over ``rating``'s result-update
+    rule (:func:`build_at_stake_query`), so the pair seen before a yes is the
+    pair that applies once booked (``docs/adr/0207`` §6, #833)."""
+    return MatcherReadersStakes(build_at_stake_query(session, runtime=runtime))
 
 
 def build_club_terms(
@@ -1925,6 +1965,7 @@ def build_read_group_deck(
         ),
         players=build_players_in_play(session, runtime=runtime, event_store=store),
         relations=build_reader_relations(session, runtime=runtime),
+        tags=build_players_tags(session),
         clock=clock,
     )
 
@@ -2006,6 +2047,8 @@ def build_propose_games(
         make=build_make_proposal(session, clock=clock, runtime=runtime),
         deal=build_deal_version(session, clock=clock, runtime=runtime),
         undecided=build_undecided_charges(session, runtime=runtime),
+        tags=build_players_tags(session),
+        played_with=build_played_with(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
         balance=build_ruleset().balance,
@@ -2623,6 +2666,8 @@ def build_rescue_offers(
         players=build_players_in_play(session, runtime=runtime, event_store=store),
         fit=build_player_fit(session, runtime=runtime, event_store=store),
         forecasts=build_balance_forecasts(session, runtime=runtime, event_store=store),
+        tags=build_players_tags(session),
+        played_with=build_played_with(session, runtime=runtime),
     )
 
 
@@ -2805,10 +2850,12 @@ def build_read_posting_slot(
     runtime: EventRuntime | None = None,
 ) -> ReadPostingSlot:
     """One cell's sheet: the fits free then, the free courts, and what is
-    already happening there (#546)."""
+    already happening there (#546) — a For-fun post's fits ranked by the
+    poster's Social vibe with each (#834)."""
     return ReadPostingSlot(
         posting=build_read_posting(session, booked=booked, runtime=runtime),
         forecasts=build_balance_forecasts(session, runtime=runtime),
+        tags=build_players_tags(session),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
         distances=build_club_distances(session, runtime=runtime),
@@ -2831,6 +2878,8 @@ def build_post_a_game(
         guards=build_proposal_guards(session, runtime=runtime),
         directory=build_proposal_directory(session),
         make=build_make_proposal(session, clock=clock, runtime=runtime),
+        tags=build_players_tags(session),
+        played_with=build_played_with(session, runtime=runtime),
         balance=build_ruleset().balance,
         clock=clock,
     )
@@ -2864,10 +2913,12 @@ def build_read_friends_card(
     runtime: EventRuntime | None = None,
 ) -> ReadFriendsCard:
     """The friends card (#750): the line-up's sides by the engine's own
-    forecast, its weeks' overlap and a court — a read, recording nothing."""
+    forecast, its weeks' overlap and a court — a read, recording nothing — and
+    on For fun the line-up's Social vibe off their tags (#834)."""
     return ReadFriendsCard(
         line_up=build_read_friends_line_up(session, booked=booked, runtime=runtime),
         forecasts=build_balance_forecasts(session, runtime=runtime),
+        tags=build_players_tags(session),
         clubs=build_proposal_club_names(session),
         terms=build_club_terms(session, runtime=runtime),
         clock=clock,
@@ -3318,6 +3369,10 @@ def build_read_home(
         ),
         ranking=build_ranking_on_home(session, clock=clock, orders=orders),
         friends_games=build_friends_game_bookings(session, runtime=runtime),
+        visits=build_needs_your_answer_visits(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
         clock=clock,
     )
 
@@ -3350,6 +3405,25 @@ def build_home_tags_in_common(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         )
+    )
+
+
+def build_players_tags(session: AsyncSession) -> PlayersTags:
+    """These players' Social tags now — a For-fun table's Social vibe — off
+    the player directory's copy of the profiles', in one statement
+    (``docs/adr/0207`` §11, #830)."""
+    return DirectoryPlayersTags(build_player_directory(session))
+
+
+def build_played_with(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> PlayedWith:
+    """Who already knows whom — played a game together, or friends — so a
+    For-fun table prefers new faces (``docs/adr/0207`` §3, #831): the games'
+    record and Friends' own reads, from each person's side."""
+    return GamesAndFriendsPlayedWith(
+        games=build_played_together_query(session, runtime=runtime),
+        friends=build_read_relations(session, runtime=runtime),
     )
 
 
@@ -3451,6 +3525,8 @@ def build_read_proposal_details(
         players=build_players_in_play(session, runtime=runtime),
         wanted=build_wanted_kinds(session, runtime=runtime),
         relations=build_reader_relations(session, runtime=runtime),
+        tags=build_players_tags(session),
+        stakes=build_readers_stakes(session, runtime=runtime),
         clock=clock,
     )
 
@@ -4768,6 +4844,14 @@ def build_game_court_pairing(
     )
 
 
+def build_tags_on_the_court(session: AsyncSession) -> TagsOnTheCourt:
+    """The Social tags of the people on a court now — a booked For-fun game's
+    Social vibe — off the player directory's copy of the profiles', in one
+    statement (``docs/adr/0207`` §11, #835): the copy a For-fun card's vibe is
+    read from too (:func:`build_players_tags`)."""
+    return DirectoryTagsOnTheCourt(build_player_directory(session))
+
+
 def build_game_clubs(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> GameClubs:
@@ -4873,6 +4957,17 @@ def build_opponent_variety_query(
     people. Typed narrowly here, it reaches only the surface that opens one
     person at a time.
     """
+    return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
+
+
+def build_played_together_query(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> PlayedTogetherQuery:
+    """*Which of these people have played a game together* — the pairs, over
+    the whole record, for a For-fun table's new faces (#831). The history read
+    once more, folded into pairs."""
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
 
 

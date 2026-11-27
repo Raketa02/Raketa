@@ -1,9 +1,11 @@
 /**
- * **NEW IN RAKETA on Home, its See all, and the round friend button** — walked through the real route
- * tree ([#801](https://github.com/Raketa02/Raketa/issues/801), PRD #789; ADR-0204 §5; the Home rows
+ * **New in Raketa on Home, its See all, and the round friend button** — FOR YOU's third line, walked
+ * through the real route tree ([#801](https://github.com/Raketa02/Raketa/issues/801), PRD #789;
+ * [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §5, ADR-0205 §5; the Home rows
  * screens §5, §8; the mechanics §7, §11–§13; the words §31.7, §31.9, §31.10).
  *
- * - **The row**: after Hottest groups, *See all ›* named; gone while empty or failed; the tiles' faces,
+ * - **The line**: after Groups heating up, closed; open, *See all ›* named at its foot; hidden while
+ *   empty or failed; the tiles' faces,
  *   *NEW*, sports with their levels — none without a level — and the Joined ladder.
  * - **The round button**: every state's mark and name; **+** asks at once and draws **…** before the
  *   answer; **…** opens *Request sent* · *Cancel request*; **✓** asks *Remove … as a friend?*; the
@@ -20,14 +22,23 @@
  * write is out.
  */
 
+import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { FlatList } from 'react-native';
+import { Dimensions, FlatList, StyleSheet } from 'react-native';
 
-import { FRIENDS_COPY, removeTitle, roundLabel } from '@/features/friends/types';
+import {
+  FRIENDS_COPY,
+  removeTitle,
+  roundLabel,
+  wantsToBeYourFriend,
+} from '@/features/friends/types';
+import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { theme } from '@/shared/ui';
 import { GROUPS_COPY } from '@/features/groups/types';
+import { isOpen, lineNamed, lineTitles, openLine } from '@/test-support/forYou';
 import {
   HOME_PATH,
   HOTTEST_GROUPS_PATH,
@@ -38,6 +49,7 @@ import {
   stubHome,
   stubHottestGroups,
 } from '@/test-support/onboardingRouter';
+import { openNeedsYourAnswer } from '@/test-support/needsYourAnswer';
 import { servedReliability } from '@/test-support/playerRecord';
 import {
   errorResponse,
@@ -47,6 +59,7 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { PLAYERS_BAR } from '@/test-support/tabBarReach';
 
 import { DISCOVERY_COPY, nobodyNewPlays } from './discoveryCopy';
 
@@ -149,7 +162,7 @@ function peopleServer(
 
   stubGate(transport, { hasPlayerProfile: true });
   transport.on('GET', NEW_IN_RAKETA_PATH, () =>
-    json<Wire['NewInRaketaResponse']>({ players: [...people] }),
+    json<Wire['NewInRaketaResponse']>({ players: [...people], total: people.length }),
   );
   transport.on('GET', NEW_IN_RAKETA_ALL_PATH, (request) => {
     const query = new URLSearchParams(request.path.split('?')[1] ?? '');
@@ -229,6 +242,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  onlineManager.setOnline(true);
   jest.useRealTimers();
   transport.restore();
   queryClient.clear();
@@ -249,34 +263,25 @@ const pullSeeAll = () =>
   screen.UNSAFE_getByType(FlatList).props.refreshControl.props.onRefresh() as Promise<void>;
 const toasts = () => useToastQueue.getState().queue.map((toast) => toast.message);
 
-/** The section headings Home draws, top to bottom. */
-const headings = () =>
-  screen
-    .getAllByRole('header')
-    .map((node) => node.props.children as string)
-    .filter((text) => typeof text === 'string');
-
 async function homeWithTheRow() {
   await launchSignedIn();
-  await screen.findByRole('header', { name: COPY.heading });
+  await openLine(COPY.line);
 }
 
-describe('the row on Home', () => {
-  it('stands right after Hottest groups, with See all named for what it opens', async () => {
+describe('the line on Home', () => {
+  it('stands right after Groups heating up, closed', async () => {
     peopleServer();
     stubHottestGroups(transport, [HOT_GROUP]);
-    await homeWithTheRow();
-    await screen.findByRole('header', { name: GROUPS_COPY.hottest.heading });
+    await launchSignedIn();
+    await screen.findByRole('button', { name: lineNamed(COPY.line) });
+    await screen.findByRole('button', { name: lineNamed(GROUPS_COPY.hottest.line) });
 
-    const order = headings();
-    const games = order.findIndex((text) => text.startsWith('Your games'));
-    expect(order.slice(games + 1, games + 3)).toEqual([GROUPS_COPY.hottest.heading, COPY.heading]);
-    expect(
-      within(screen.getByTestId('new-in-raketa')).getByRole('link', { name: COPY.seeAllLabel }),
-    ).toBeTruthy();
+    expect(lineTitles().slice(0, 2)).toEqual([GROUPS_COPY.hottest.line, COPY.line]);
+    expect(isOpen(COPY.line)).toBe(false);
+    expect(screen.queryAllByTestId(/^joiner-e0/)).toEqual([]);
   });
 
-  it('draws the tiles in the read’s order', async () => {
+  it('opens onto the tiles in the read’s order, See all named for what it opens at its foot', async () => {
     peopleServer();
     await homeWithTheRow();
 
@@ -284,15 +289,18 @@ describe('the row on Home', () => {
       .getAllByTestId(/^joiner-e0/)
       .map((node) => (node.props.testID as string).replace('joiner-', ''));
     expect(ids).toEqual(ROW.map((one) => one.player_id));
+    expect(
+      within(screen.getByTestId('new-in-raketa')).getByRole('link', { name: COPY.seeAllLabel }),
+    ).toBeTruthy();
   });
 
-  it('is gone with its heading while the read holds nobody', async () => {
+  it('is hidden while the read holds nobody', async () => {
     peopleServer([]);
     await launchSignedIn();
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -302,7 +310,7 @@ describe('the row on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 });
 
@@ -506,7 +514,10 @@ describe('the round friend button', () => {
 
     // Piotr's request is answered elsewhere: the read says nothing stands between them now…
     transport.on('GET', NEW_IN_RAKETA_PATH, () =>
-      json<Wire['NewInRaketaResponse']>({ players: [{ ...PIOTR, relation: 'NONE' }, BARTEK] }),
+      json<Wire['NewInRaketaResponse']>({
+        players: [{ ...PIOTR, relation: 'NONE' }, BARTEK],
+        total: 2,
+      }),
     );
     await act(() => queryClient.invalidateQueries({ queryKey: ['discovery'] }));
     expect(await round(PIOTR, 'NONE')).toBeTruthy();
@@ -514,7 +525,7 @@ describe('the round friend button', () => {
 
     // …and once it says sent again, the sheet stays shut until it is tapped.
     transport.on('GET', NEW_IN_RAKETA_PATH, () =>
-      json<Wire['NewInRaketaResponse']>({ players: [PIOTR, BARTEK] }),
+      json<Wire['NewInRaketaResponse']>({ players: [PIOTR, BARTEK], total: 2 }),
     );
     await act(() => queryClient.invalidateQueries({ queryKey: ['discovery'] }));
     expect(await round(PIOTR, 'SENT')).toBeTruthy();
@@ -522,8 +533,8 @@ describe('the round friend button', () => {
   });
 });
 
-describe('Home’s request card', () => {
-  it('reads Found you among new players, and accepting it turns the envelope to ✓', async () => {
+describe('a request from New in Raketa, in Needs your answer (#816)', () => {
+  it('says no found-by line, and accepting it there turns the envelope on the row to ✓', async () => {
     peopleServer();
     stubHome(transport, {
       friend_requests: [
@@ -545,12 +556,17 @@ describe('Home’s request card', () => {
           reliability_band: 'VERY_HIGH',
           percent_even: null,
           in_common: null,
+          levels: [],
         },
       ],
     });
     await homeWithTheRow();
 
-    expect(await screen.findByText(FRIENDS_COPY.home.newPlayers, { exact: false })).toBeTruthy();
+    await openNeedsYourAnswer();
+
+    // Where the request was found is still served, and no tile draws it (ADR-0205 §1).
+    expect(screen.getByText(wantsToBeYourFriend(MICHAL.nickname))).toBeTruthy();
+    expect(screen.queryByText('Found you among new players')).toBeNull();
     fireEvent.press(screen.getByRole('button', { name: `Accept ${MICHAL.nickname}` }));
 
     expect(await round(MICHAL, 'FRIEND')).toBeTruthy();
@@ -684,21 +700,189 @@ describe('See all', () => {
     await waitFor(() => expect(rowReads()).toBeGreaterThan(rows));
     expect(await round(BARTEK, 'SENT')).toBeTruthy();
   });
+});
 
-  it('says the failure, and Try again reads it again', async () => {
-    jest.useFakeTimers();
+// ---------------------------------------------------------------------------
+// See all's skeleton while its first page is read (#872, PRD #867)
+// ---------------------------------------------------------------------------
+
+/** See all's skeleton — hidden from a listener, so found by its id. */
+const skeleton = () => screen.queryByTestId('see-all-skeleton', HIDDEN);
+const skeletonTiles = () => screen.getAllByTestId('see-all-skeleton-tile', HIDDEN);
+/** Past the reveal's cross-fade, and a frame. */
+const pastTheFade = () => act(() => jest.advanceTimersByTime(theme.motion.fade + 16));
+const pageReads = () => transport.requestsTo('GET', NEW_IN_RAKETA_ALL_PATH);
+const bartek = () => screen.queryByTestId(`joiner-${BARTEK.player_id}`);
+
+describe('See all, while its first page is read (#872)', () => {
+  /** See all pressed on Home's row, its first page held on its way. */
+  async function openHeld() {
+    await homeWithTheRow();
+    const first = transport.hold('GET', NEW_IN_RAKETA_ALL_PATH);
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/new-in-raketa'));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    return first;
+  }
+
+  it('shimmers two columns of tiles at the tile’s 9:8 under the real header, then fades the page in', async () => {
+    peopleServer();
+    const first = await openHeld();
+
+    expect(skeleton()).not.toBeNull();
+    // The header is the real one throughout: back, the title, and the pill on All — at its final
+    // shape, offering every sport until the page says which.
+    expect(screen.getByRole('button', { name: COPY.back })).toBeTruthy();
+    expect(screen.getByText(COPY.title)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Sport: All' }));
+    expect(
+      within(screen.getByTestId('sport-bar'))
+        .getAllByRole('button')
+        .map((option) => option.props.accessibilityLabel as string),
+    ).toEqual(['Padel', 'Tennis', 'Squash', 'Badminton', 'All']);
+    fireEvent.press(within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'All' }));
+    expect(bartek()).toBeNull();
+    // Two to a line, each a column wide at the grid tile's own shape, as many lines as fill the
+    // window and none wholly past its foot.
+    const window = Dimensions.get('window');
+    const column = (window.width - 2 * theme.size.gutter - theme.space.sm) / 2;
+    const tall = column * theme.size.portraitTile.gridAspect;
+    const tiles = skeletonTiles();
+    for (const each of tiles) {
+      const { width, height } = StyleSheet.flatten(each.props.style);
+      expect(width).toBeCloseTo(column);
+      expect(height).toBeCloseTo(tall);
+    }
+    expect(tiles.length % 2).toBe(0);
+    const lines = tiles.length / 2;
+    // What shows above the floating bar — the strip under it is no room for a line (#881).
+    const shown = window.height - PLAYERS_BAR;
+    expect(lines * (tall + theme.space.sm)).toBeGreaterThanOrEqual(shown);
+    expect((lines - 1) * (tall + theme.space.sm)).toBeLessThan(shown);
+
+    await act(async () => first.land());
+
+    expect(await screen.findByTestId(`joiner-${BARTEK.player_id}`)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sport: All' })).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+    // Held in flight, never timed out and asked again.
+    expect(pageReads()).toHaveLength(1);
+  });
+
+  it('says the empty line in the grid’s place when the first page holds nobody — never a skeleton', async () => {
+    peopleServer();
+    await homeWithTheRow();
+    transport.on('GET', NEW_IN_RAKETA_ALL_PATH, () =>
+      json<Wire['NewInRaketaPageResponse']>({ players: [], next: null, sports: [] }),
+    );
+    const first = transport.hold('GET', NEW_IN_RAKETA_ALL_PATH);
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByText(COPY.nobodyAtAll)).toBeNull();
+
+    await act(async () => first.land());
+
+    expect(await screen.findByText(COPY.nobodyAtAll)).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+  });
+
+  it('stays through the automatic retries, gives way to the failure, and stands again on Try again', async () => {
     peopleServer();
     transport.on('GET', NEW_IN_RAKETA_ALL_PATH, () => errorResponse(503, 'service_unavailable'));
     await homeWithTheRow();
     fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/new-in-raketa'));
+    expect(skeleton()).not.toBeNull();
+
+    // Refused once and asked again: still on its way, so still the skeleton — never a blank page.
+    await act(() => jest.advanceTimersByTimeAsync(1_500));
+    expect(pageReads().length).toBeGreaterThanOrEqual(2);
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+
     // Through the automatic retries the error model allows.
     await act(() => jest.advanceTimersByTimeAsync(30_000));
-
     const again = await screen.findByRole('button', { name: 'Try again' });
     expect(screen.getByRole('alert')).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
 
+    // Try again: out once more with nothing to draw — the skeleton again, then the page.
     peopleServer();
+    const reread = transport.hold('GET', NEW_IN_RAKETA_ALL_PATH);
     fireEvent.press(again);
+    await act(() => jest.advanceTimersByTimeAsync(100));
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+
+    await act(async () => reread.land());
     expect(await screen.findByTestId(`joiner-${BARTEK.player_id}`)).toBeTruthy();
+  });
+
+  it('gives way to the amber note while the read waits for a connection, and stands again once back', async () => {
+    peopleServer();
+    const first = await openHeld();
+    expect(skeleton()).not.toBeNull();
+
+    // The connection goes while the read is out: it is lost, and once its backoff has run it waits
+    // for the connection to ask again.
+    act(() => onlineManager.setOnline(false));
+    await act(async () => first.drop());
+    await act(() => jest.advanceTimersByTimeAsync(1_500));
+
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    // The connection back sets the read out again with still nothing to draw: the skeleton.
+    const back = transport.hold('GET', NEW_IN_RAKETA_ALL_PATH);
+    act(() => onlineManager.setOnline(true));
+    await act(() => jest.advanceTimersByTimeAsync(100));
+    expect(skeleton()).not.toBeNull();
+    expect(screen.queryByText(offlineMessage('resumes'))).toBeNull();
+
+    await act(async () => back.land());
+    expect(await screen.findByTestId(`joiner-${BARTEK.player_id}`)).toBeTruthy();
+  });
+
+  it('shimmers for a sport not read yet, opens at once on one read already, and never on a pull', async () => {
+    peopleServer();
+    const first = await openHeld();
+    await act(async () => first.land());
+    await screen.findByTestId(`joiner-${BARTEK.player_id}`);
+    pastTheFade();
+
+    // Squash, never read: its first page has nothing to draw.
+    const squash = transport.hold('GET', NEW_IN_RAKETA_ALL_PATH);
+    fireEvent.press(screen.getByRole('button', { name: 'Sport: All' }));
+    fireEvent.press(
+      within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'Squash' }),
+    );
+    await waitFor(() => expect(pageReads().at(-1)!.path).toContain('sport=SQUASH'));
+    expect(skeleton()).not.toBeNull();
+    expect(bartek()).toBeNull();
+    await act(async () => squash.land());
+    expect(await screen.findByTestId(`joiner-${PIOTR.player_id}`)).toBeTruthy();
+    pastTheFade();
+
+    // All again, read a moment ago: drawn at once.
+    fireEvent.press(screen.getByRole('button', { name: 'Sport: Squash' }));
+    fireEvent.press(within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'All' }));
+    expect(skeleton()).toBeNull();
+    expect(bartek()).not.toBeNull();
+
+    // A pull reads every page again with the grid still drawn.
+    const pulled = transport.hold('GET', NEW_IN_RAKETA_ALL_PATH);
+    await act(async () => {
+      void pullSeeAll();
+    });
+    expect(skeleton()).toBeNull();
+    expect(bartek()).not.toBeNull();
+    await act(async () => pulled.land());
+    expect(bartek()).not.toBeNull();
+    expect(skeleton()).toBeNull();
   });
 });

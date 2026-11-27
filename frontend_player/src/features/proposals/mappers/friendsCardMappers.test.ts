@@ -30,6 +30,7 @@ function card(overrides: Partial<Wire['FriendsCardResponse']> = {}): Wire['Frien
     home_club: { id: 'ogrody', name: 'Ogrody 33' },
     sides: { yours: ['me', 'ewa'], theirs: ['magda', 'ania'] },
     forecast: { pct: 87, provisional: false },
+    vibe: null,
     court: ROW,
     overlap: OVERLAP,
     cut_off: '2026-11-06T09:00:00Z',
@@ -40,6 +41,7 @@ function card(overrides: Partial<Wire['FriendsCardResponse']> = {}): Wire['Frien
 describe('toFriendsCard', () => {
   it('reads the sides, the forecast, the court with its marker, the overlap and the cut-off', () => {
     expect(toFriendsCard(card())).toEqual({
+      kind: 'competitive',
       homeClub: { id: 'ogrody', name: 'Ogrody 33' },
       sides: { yours: ['me', 'ewa'], theirs: ['magda', 'ania'] },
       forecast: { pct: 87, provisional: false },
@@ -66,9 +68,26 @@ describe('toFriendsCard', () => {
     expect(
       toFriendsCard(card({ forecast: null, court: null, overlap: null, cut_off: null })),
     ).toEqual({
+      kind: 'competitive',
       homeClub: { id: 'ogrody', name: 'Ogrody 33' },
       sides: { yours: ['me', 'ewa'], theirs: ['magda', 'ania'] },
     });
+  });
+
+  // #842 (ADR-0207 §5): a For-fun card says its Social vibe, and the server sends no forecast.
+  it('reads a For-fun card’s kind and its Social vibe, with no forecast', () => {
+    const read = toFriendsCard(card({ kind: 'FOR_FUN', forecast: null, vibe: { pct: 67 } }));
+
+    expect(read.kind).toBe('forFun');
+    expect(read.vibe).toEqual({ pct: 67 });
+    expect(read).not.toHaveProperty('forecast');
+  });
+
+  it('reads no vibe where nobody seated holds a tag, or from an older server that sends none', () => {
+    expect(toFriendsCard(card({ kind: 'FOR_FUN', forecast: null }))).not.toHaveProperty('vibe');
+    const older = card({ kind: 'FOR_FUN', forecast: null }) as Partial<Wire['FriendsCardResponse']>;
+    delete older.vibe;
+    expect(toFriendsCard(older as Wire['FriendsCardResponse'])).not.toHaveProperty('vibe');
   });
 });
 

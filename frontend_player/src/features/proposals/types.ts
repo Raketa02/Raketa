@@ -5,37 +5,53 @@
  * ([#554](https://github.com/Raketa02/Raketa/issues/554); the screens A7.1, A7.3) — over the
  * backend's Proposals context (#538, #539).
  *
- * The group page draws `GamesDeck` as its Games tab and reads the tab's badge with `useGamesBadge`;
- * the details screen is mounted by its route file under `play/group/`, which checks its params
- * here first. The dependency points one way — `groups` reads `proposals`, never the reverse — so
- * the page hands in what only it knows: the kind its switch stands on, and the starting cards a
- * group with nothing dealt still draws.
+ * The group page draws `GamesDeck` as its Games tab, reads the tab's badge with `useGamesBadge`
+ * and draws the tab's menu off `useGamesMenu` in `kindMenuLines`' words (#862); the details screen
+ * is mounted by its route file under `play/group/`, which checks its params here first. The
+ * dependency points one way — `groups` reads `proposals`, never the reverse — so the page hands in
+ * what only it knows: the kind its menu stands on, a line picked in it (`GamesDeckHandle`), and the
+ * starting cards a group with nothing dealt still draws.
  *
  * The shell composes `GamesAndMoneyRow` into the You tab's ACCOUNT group, and a route file under
- * `you/` mounts its screen. `LiveYeses` is You › Payments' section, **handed to that screen by its
- * route file** rather than imported by `payments`: the deck will open the payment setup as a sheet
- * (A2.4), so the edge between the two features points from here to there.
+ * `you/` mounts its screen. `LiveYeses` and `PaymentsToConfirm` are You › Payments' sections,
+ * **handed to that screen by its route file** rather than imported by `payments`: the deck will open
+ * the payment setup as a sheet (A2.4), so the edge between the two features points from here to
+ * there.
  *
  * Since #556 it is Home's too: the booked games on the rail, a booked game's details, its chat and
  * its result — see the block below on Home.
  */
 
-export { GamesDeck, type GamesDeckProps } from './components/GamesDeck';
+export { GamesDeck, type GamesDeckHandle, type GamesDeckProps } from './components/GamesDeck';
+/** The Games tab's menu (#862): what it holds, and its lines' words. */
+export { useGamesMenu, type GamesMenu } from './hooks/useGroupDeck';
+export { kindMenuLines } from './components/deckPresentation';
 export { GameDetailsScreen, type GameDetailsScreenProps } from './components/GameDetailsScreen';
 export { GamesAndMoneyRow, type GamesAndMoneyRowProps } from './components/GamesAndMoneyRow';
 export { GamesAndMoneyScreen } from './components/GamesAndMoneyScreen';
 export { LiveYeses } from './components/LiveYeses';
 export { PaymentsToConfirm } from './components/PaymentsToConfirm';
 export { useGamesBadge } from './hooks/useGroupDeck';
-/** What the group page's pull re-reads on Games and on Fill in — the two tabs this feature draws. */
+/** What the group page's pull re-reads on Games, Fill in and You’re in — the tabs this feature draws. */
 export { useRereadGroupGames } from './hooks/useGroupDeck';
+export { useReadGroupGamesAhead } from './hooks/useGroupDeck';
 /**
- * **A group's Fill in tab** (#557) — *Seats to fill* and *You're In*, drawn by the group page as its
- * Fill in tab, with the badge its tab reads; the page hands in the starting card for a tab with no
- * rows, as it does the Games tab's.
+ * **A group's Fill in and You’re in tabs** (#557, split by #847) — the rescues, and the reader's own
+ * live yeses, each drawn by the group page as a tab of its own with the badge its tab reads. The page
+ * hands You’re in the starting card it draws once neither tab has a row, as it does the Games tab's.
  */
 export { FillInBoard, type FillInBoardProps } from './components/FillInBoard';
+export { YoureInBoard, type YoureInBoardProps } from './components/YoureInBoard';
 export { useFillInBadge } from './hooks/useFillIn';
+export { useYoureInBadge } from './hooks/useLiveYeses';
+/**
+ * **The group page's shimmer for the three tabs** (#875) — how far a tab's first read has come, for
+ * the page's reveal, and the skeleton each tab is revealed from: one deck-card block on Games, rows on
+ * Fill in and You’re in. The page draws them on its ground; the tabs draw them too while a read retries.
+ */
+export { useGroupTabRead, type GroupGamesTab } from './hooks/useGroupTabRead';
+export { DeckSkeleton } from './components/DeckSkeleton';
+export { BoardSkeleton } from './components/BoardSkeleton';
 export { FILL_IN_COPY } from './components/fillInCopy';
 export { parseGameDetailsParams } from './schemas/gameDetailsParams';
 export type { GameKind } from './domain/vocabulary';
@@ -75,6 +91,8 @@ export { POSTING_COPY } from './components/postingCopy';
  * first; the routes themselves are this feature's to spell.
  */
 export { HomeRail, type HomeRailProps } from './components/HomeRail';
+/** **The rail's skeleton** (#871) — what the shell's Home shimmers in its place until it reveals it. */
+export { YourGamesSkeleton } from './components/YourGamesSkeleton';
 export { useHomeBadge } from './hooks/useHome';
 export { BookedGameScreen, type BookedGameScreenProps } from './components/BookedGameScreen';
 export { BookedGameChat, type BookedGameChatProps } from './components/BookedGameChat';
@@ -118,7 +136,7 @@ export { LEAVE_THE_GAME } from './components/leaveSheetCopy';
  * screen, where each step at the court is acted on (#664); and the keys a tap re-reads, so the
  * screen it opens draws what the notice said rather than a read from before it, as `paymentKeys`
  * crosses for the fill. A notice arriving while the app is open re-reads Home's two reads
- * (`rereadHome`): the games, the bar's badge with them, and *TO CONFIRM* above them.
+ * (`rereadHome`): the games, the bar's badge with them, and *TO CONFIRM*, in Needs your answer.
  */
 export { bookedResultRoute, gameRoute, rescueRoute } from './components/proposalRoutes';
 export { proposalKeys } from './hooks/proposalKeys';
@@ -143,16 +161,51 @@ export { rereadHomeAfterALevel, useHomeLevelAsks } from './hooks/useHome';
  * `rankings` draws: the sport of the latest result and the places in it.
  */
 export { useHomeRanking } from './hooks/useHome';
+/**
+ * **Whether Home's one read has finished** (#871) — what the shell's reveal waits on for *YOUR GAMES*,
+ * the envelope and the trophy's place, and Top 10's opening sport behind them.
+ */
+export { useHomeReadFinished } from './hooks/useHome';
+/**
+ * **Home's read set out before Home is drawn, and the trophy's ranking off the cache** (#874) — the
+ * shell's warm-up during the splash, and `rankings`' Top 10 opening sport worked out within it.
+ */
+export { homeRankingIn, prefetchHome } from './hooks/useHome';
 export type { HomeRanking } from './domain/home';
 export type { HomeLevelAsk, HomeLevelAsker } from './domain/home';
 
 /**
- * **FRIENDS GAME · n** (#759; friends 12) — Home's row of friends game invitations, at the very top:
- * the shell composes it, handing in the bell's re-read, since answering takes the invitation's row
- * off the bell. The words cross for the suites that walk it.
+ * **Needs your answer's first two sections** (#817, ADR-0205 §1) — ***TO CONFIRM · n***, a tile per
+ * payment to confirm, and ***FRIENDS GAME · n***, one invitation at a time on the paging rail (#759;
+ * friends 12). They were Home's rows. The shell composes them in the sheet the header's envelope
+ * opens, handing the bell's re-read to the invitations, since answering takes one off the bell; and
+ * counts what waits in all four sections off Home's one read (`useAnswersWaiting`), the envelope's
+ * badge with them (#819). When the sheet goes for good the shell records the visit through
+ * `useNeedsYourAnswerVisit`, which names the watermark of the read the sheet showed, clears the badge
+ * and reads Home again. The words cross for the suites that walk them.
  */
-export { FriendsGamesRow, type FriendsGamesRowProps } from './components/FriendsGamesRow';
+export { ToConfirmSection } from './components/ToConfirmSection';
+export { FriendsGameSection, type FriendsGameSectionProps } from './components/FriendsGameSection';
+export {
+  useAnswersWaiting,
+  useNeedsYourAnswerVisit,
+  type AnswersWaiting,
+} from './hooks/useNeedsYourAnswer';
+export type { FriendsGamesWaiting } from './hooks/useHome';
 export { FRIENDS_GAME_COPY } from './components/friendsGameCopy';
+/**
+ * **The fill, carried into a sheet** (#817) — read outside it (`useSheetFill`), provided again
+ * inside it (`FillInASheet`), which also draws the fill's confirmation, setup and *It's a game!* over
+ * it: a sheet keeps the root's contexts only, and a sheet opened from a sheet is drawn inside it.
+ * `over` is what the fill has up, which Needs your answer steps aside under.
+ */
+export {
+  FillInASheet,
+  useSheetFill,
+  type FillInASheetProps,
+  type SheetFill,
+} from './components/FillInASheet';
+export type { FillOver } from './hooks/useFill';
 
 /**
  * **The friends card and *Find a court*** (#757; the friends screens §7.2–§7.3) — the card a

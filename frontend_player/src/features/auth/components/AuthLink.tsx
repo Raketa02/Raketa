@@ -15,10 +15,16 @@
  * **`quiet` is the stage's *Forgot password?*** ([#784](https://github.com/Raketa02/Raketa/issues/784)):
  * `muted` rather than `ink`, and at the end of its row rather than the middle — right-aligned under
  * the password box it is about, where the problem is. Still the same 44pt control.
+ *
+ * **`busy` is 6.1's busy on a link** ([`decisions.md`](../../../../../docs/specs/busy-indicator/decisions.md)
+ * §3.7): Start playing's *Sign out* swapped its word and still took a second press, so one sign-out
+ * could be asked twice. Busy, it takes no press, is announced busy, and turns `ActivityIndicator`
+ * before its words in their own ink — the button's drawing, at a link's size. The words stay the
+ * caller's: pass the busy one as `label`.
  */
 
 import { Link, type Href } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/shared/ui';
 
@@ -31,22 +37,35 @@ export type AuthLinkProps = Target & {
   readonly label: string;
   /** `muted`, and at the end of the row — the stage's *Forgot password?*. See the module note. */
   readonly quiet?: boolean;
+  /** Its act is on its way: no press, announced busy, a spinner before the words. See the module note. */
+  readonly busy?: boolean;
 };
 
 export function AuthLink(props: AuthLinkProps) {
-  const { lead, label, quiet = false } = props;
+  const { lead, label, quiet = false, busy = false } = props;
 
   const control = (
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={label}
+      accessibilityState={busy ? { busy: true, disabled: true } : undefined}
+      disabled={busy}
       onPress={'onPress' in props ? props.onPress : undefined}
       style={({ pressed }) => [
         s.target,
+        busy ? s.targetBusy : undefined,
         quiet ? s.targetQuiet : undefined,
-        pressed ? s.pressed : undefined,
+        pressed && !busy ? s.pressed : undefined,
       ]}
     >
+      {busy ? (
+        <ActivityIndicator
+          size="small"
+          color={quiet ? theme.color.muted : theme.color.ink}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      ) : null}
       <Text style={[s.link, quiet ? s.linkQuiet : undefined]}>{label}</Text>
     </Pressable>
   );
@@ -84,6 +103,8 @@ const s = StyleSheet.create({
   // 6.6's chip value. The two screens this piece came from drew `.6`, the one value that table
   // does not have, and a shared piece is where a stray number stops being one screen's.
   pressed: { opacity: 0.7 },
+  // The spinner and the words on one line, a word's gap apart — the button's busy row (6.1).
+  targetBusy: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
   targetQuiet: { paddingRight: 0 },
   link: { ...theme.type.rlValue, color: theme.color.ink },
   linkQuiet: { color: theme.color.muted },

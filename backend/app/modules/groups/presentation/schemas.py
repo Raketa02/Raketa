@@ -23,6 +23,8 @@ last, the public site's one shape, which **carries nobody in the group**
 
 from __future__ import annotations
 
+import base64
+import binascii
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -36,7 +38,11 @@ from app.modules.groups.application.club_groups import (
     ClubGroupRow,
     ClubGroupAdministrator,
 )
-from app.modules.groups.application.hottest_groups import HottestGroupCard
+from app.modules.groups.application.hottest_groups import (
+    HottestGroupCard,
+    HottestGroupsPage,
+    HottestGroupsRow,
+)
 from app.modules.groups.application.official_groups import (
     AdministeredClub,
     AdministeredGroupCard,
@@ -58,7 +64,13 @@ from app.modules.groups.application.views import (
     NamedClub,
     RequestCard,
 )
-from app.modules.groups.domain.hottest import HeatTag
+from app.modules.groups.domain.errors import NotAHottestGroupsPage
+from app.modules.groups.domain.hottest import (
+    COUNTED_UP_TO,
+    TAG_ORDER,
+    HeatPlace,
+    HeatTag,
+)
 from app.modules.groups.domain.join_search import ReadAs
 from app.modules.groups.domain.link import group_link
 from app.modules.groups.domain.monogram import MONOGRAM_COLOURS, Monogram
@@ -453,8 +465,10 @@ class HottestGroupSchema(GroupRowSchema):
         description=(
             "The heat bar, from 0 to 1: this card's heat over the **HOTTEST** "
             "card's, whose bar is full — or, with no HOTTEST, over the highest "
-            "heat in the row, so no bar is more than full. Heat is 2 × games "
-            "this week + 3 × new this month + players counted up to 20."
+            "heat in the row (on *Groups heating up*, on the whole list), so no "
+            "bar is more than full. Heat is 2 × games this week + 3 × new this "
+            "month + players counted up to 20. The app draws no bar since "
+            "`docs/adr/0205`; heat still orders the cards and picks the tags."
         ),
     )
     tag: HeatTag | None = Field(
@@ -515,14 +529,112 @@ class HottestGroupSchema(GroupRowSchema):
         )
 
 
+#: What the row's and the first page's ``total`` say.
+_A_TOTAL = (
+    "How many groups there are to look through: **every group with 3 or more "
+    "players**, the reader's own included — the whole list *Groups heating "
+    "up* pages through — **counted up to 100**: 100 reads *100 or more*, "
+    "drawn *99+*. The line's count. `0` with no group of 3."
+)
+
+
 class HottestGroupsResponse(BaseModel):
     groups: list[HottestGroupSchema] = Field(
         description=(
             "**Up to six**, in the row's order — every group with **3 or more "
             "players** is a candidate, the reader's own included. Empty when "
-            "there is none, and Home hides the row."
+            "there is none, and Home hides the row. **The same groups, places "
+            "and tags as the first six** of `GET /hottest-groups/all`; only "
+            "`heat_share` can differ, when there is no HOTTEST and six GROWING "
+            "push a hotter untagged group off the row."
         )
     )
+    total: int = Field(ge=0, le=COUNTED_UP_TO, description=_A_TOTAL)
+
+    @classmethod
+    def of(cls, row: HottestGroupsRow) -> "HottestGroupsResponse":
+        return cls(
+            groups=[HottestGroupSchema.from_view(card) for card in row.cards],
+            total=row.total,
+        )
+
+
+def hottest_cursor_of(place: HeatPlace) -> str:
+    """A card's place as a cursor — its tag's rank in ``TAG_ORDER``, its heat,
+    its games this week and its id, colon-separated, base64url — opaque to the
+    phone."""
+
+    written = (
+        f"{TAG_ORDER.index(place.tag)}:{place.heat}:{place.games_this_week}:"
+        f"{place.group_id.hex}"
+    )
+    return base64.urlsafe_b64encode(written.encode()).decode().rstrip("=")
+
+
+def hottest_place_of(cursor: str) -> HeatPlace:
+    """The place a cursor names — :class:`NotAHottestGroupsPage` for one this
+    server never wrote: **only a cursor that writes back to itself** is read,
+    so no other spelling of a number or an id is."""
+
+    try:
+        padded = cursor + "=" * (-len(cursor) % 4)
+        rank, heat, games, group = (
+            base64.urlsafe_b64decode(padded.encode()).decode().split(":")
+        )
+        if int(rank) < 0:
+            raise ValueError(f"no tag ranks {rank}")
+        place = HeatPlace(
+            tag=TAG_ORDER[int(rank)],
+            heat=int(heat),
+            games_this_week=int(games),
+            group_id=UUID(hex=group),
+        )
+    except (ValueError, IndexError, UnicodeDecodeError, binascii.Error) as error:
+        raise NotAHottestGroupsPage() from error
+    if (
+        place.heat < 0
+        or place.games_this_week < 0
+        or hottest_cursor_of(place) != cursor
+    ):
+        raise NotAHottestGroupsPage()
+    return place
+
+
+class HottestGroupsPageResponse(BaseModel):
+    """A page of *Groups heating up* (#813; ``docs/adr/0205`` §7)."""
+
+    groups: list[HottestGroupSchema] = Field(
+        description=(
+            "Up to 20 cards, **every group with 3 or more players** — the "
+            "reader's own included, `relation` `MEMBER` — in the row's order: "
+            "HOTTEST, then GROWING by heat, then untagged by heat; ties to more "
+            "games this week, then the group id. The first page's first six "
+            "are the row. **Heat is worked out on every read**, so a group "
+            "whose heat moved since the page before may come again or be "
+            "missed. Empty on the first page when there is no group of 3."
+        )
+    )
+    next: str | None = Field(
+        description=(
+            "The cursor the next page is read `after`; `null` on the last page."
+        )
+    )
+    total: int | None = Field(
+        ge=0,
+        le=COUNTED_UP_TO,
+        description=(
+            _A_TOTAL + " **On the first page only**: `null` on a page read "
+            "`after` a cursor, where the first page's stands."
+        ),
+    )
+
+    @classmethod
+    def of(cls, page: HottestGroupsPage) -> "HottestGroupsPageResponse":
+        return cls(
+            groups=[HottestGroupSchema.from_view(card) for card in page.cards],
+            next=None if page.next is None else hottest_cursor_of(page.next),
+            total=page.total,
+        )
 
 
 class GroupSportSchema(BaseModel):

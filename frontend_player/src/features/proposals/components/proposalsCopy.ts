@@ -96,7 +96,6 @@ export const PROPOSALS_COPY = {
     nextWeek: 'next week',
     ifItFills: 'if it fills',
     bookBy: 'book by',
-    forecast: 'Balance forecast',
     overlap: 'Who is free',
     /** The header's title when nobody else is on the card — said, not left blank. */
     onlyYou: 'Only you',

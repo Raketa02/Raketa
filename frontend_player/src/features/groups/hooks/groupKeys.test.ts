@@ -37,6 +37,21 @@ describe('the groups query keys', () => {
     expect(groupKeys.answers('a')).not.toEqual(groupKeys.answers('b'));
   });
 
+  // #823: a return to Home re-reads the row by its key, and must not read a page left behind.
+  it('keys Groups heating up’s pages apart from the row, and not under it', () => {
+    const row = groupKeys.hottest();
+
+    expect(groupKeys.hottestAll().slice(0, row.length)).not.toEqual(row);
+  });
+
+  // #823: a relation write cancels and reads again both, through one root.
+  it('puts the row and the pages under one root', () => {
+    const root = groupKeys.hottestReads();
+
+    expect(groupKeys.hottest().slice(0, root.length)).toEqual(root);
+    expect(groupKeys.hottestAll().slice(0, root.length)).toEqual(root);
+  });
+
   it('keys Members by the sport', () => {
     expect(groupKeys.members('a', 'padel')).not.toEqual(groupKeys.members('a', 'tennis'));
   });

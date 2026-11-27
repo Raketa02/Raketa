@@ -25,9 +25,13 @@ import type { GameOpens, NoticeKind } from './vocabulary';
  *
  * **An ask for a Level opens by its sport** (#758): *Level asked* the sport's questionnaire, through
  * the level pass; *Level got* the Friends tab picker of the group the ask was made from, in it.
+ *
+ * **A friend request and a friends game invitation open Needs your answer** (#817, ADR-0205 §1):
+ * Home with the sheet already up, where their cards wait now — `homeTargetOf`.
  */
 export type NoticeTarget =
   | { readonly opens: 'home' }
+  | { readonly opens: 'needsYourAnswer' }
   | { readonly opens: 'record'; readonly playerId: string }
   | { readonly opens: 'questionnaire'; readonly sport: Sport }
   | { readonly opens: 'picker'; readonly groupId: string; readonly sport: Sport }
@@ -84,6 +88,27 @@ export function targetOf(kind: NoticeKind, opens: GameOpens, facts: NoticeFacts)
         kind: facts.kind,
       };
   }
+}
+
+/**
+ * The notices whose card waits in **Needs your answer** (#817, ADR-0205 §1; Q25): they opened Home
+ * on the card when the card was on Home, and the card is behind the envelope now. *Level asked*
+ * opens its questionnaire, and *Confirm your payment* the game it is about, so neither is here.
+ */
+const ANSWERED_IN_THE_SHEET: ReadonlySet<NoticeKind> = new Set<NoticeKind>([
+  'FRIEND_REQUEST',
+  'FRIENDS_GAME_INVITATION',
+]);
+
+/**
+ * **Where a notice that opens Home opens** — Home with Needs your answer up for a notice whose card
+ * waits there; Home as it is for any other, *Get your level* among them, whose card is still Home's.
+ * A kind this build cannot name opens Home, as it did.
+ */
+export function homeTargetOf(kind: NoticeKind | undefined): NoticeTarget {
+  return kind !== undefined && ANSWERED_IN_THE_SHEET.has(kind)
+    ? { opens: 'needsYourAnswer' }
+    : { opens: 'home' };
 }
 
 export interface Notice {

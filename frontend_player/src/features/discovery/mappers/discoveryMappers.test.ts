@@ -3,10 +3,13 @@ import type { components } from '@/generated/schema';
 import {
   toJoiner,
   toJoinerPage,
+  toNewInRaketaRow,
   toSameLevelPage,
   toSameLevelPlayer,
+  toSameLevelRow,
   toSameVibePage,
   toSameVibePlayer,
+  toSameVibeRow,
 } from './discoveryMappers';
 
 type Wire = components['schemas'];
@@ -204,5 +207,41 @@ describe('toSameVibePage (#803)', () => {
 
   it('has no cursor on the last page', () => {
     expect(toSameVibePage({ players: [], next: null, sports: [] })).not.toHaveProperty('next');
+  });
+});
+
+/**
+ * **A people row on Home** (#822; ADR-0205 §6) — its cards, and how many the row could show: the
+ * line's count and *See all N ›*. The total is the pool, as served, never the cards' number.
+ */
+describe('a people row, with its total (#822)', () => {
+  it('reads New in Raketa’s cards and its total', () => {
+    expect(toNewInRaketaRow({ players: [BARTEK], total: 6 })).toEqual({
+      people: [toJoiner(BARTEK)],
+      total: 6,
+    });
+  });
+
+  it('reads Same competitive level’s cards and its total — the pool, not the cards drawn', () => {
+    const unnamed = {
+      ...ZOFIA,
+      player_id: 'p-unnamed',
+      shown: comparison('PICKLEBALL' as Wire['Sport']),
+    };
+    expect(toSameLevelRow({ players: [ZOFIA, unnamed], total: 100 })).toEqual({
+      people: [toSameLevelPlayer(ZOFIA)],
+      total: 100,
+    });
+  });
+
+  it('reads Same vibe’s cards and its total', () => {
+    expect(toSameVibeRow({ players: [KAROL], total: 14 })).toEqual({
+      people: [toSameVibePlayer(KAROL)],
+      total: 14,
+    });
+  });
+
+  it('reads an empty row as nobody, and nought', () => {
+    expect(toSameVibeRow({ players: [], total: 0 })).toEqual({ people: [], total: 0 });
   });
 });

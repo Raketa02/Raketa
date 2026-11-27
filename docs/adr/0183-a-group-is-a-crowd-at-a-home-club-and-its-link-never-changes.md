@@ -53,6 +53,8 @@
 
 > **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Find a game, the `find_a_game` flag and the flag system (ADR-0180) are gone (#576). Of §12, Play opening on **Groups | Explore** with Explore blank stands; the flag, its default, *turning it on restores Find a game* and *the backend guards nothing* do not. The header's amendments of ADR-0169 and ADR-0180, and the last *Harder* bullet, describe nothing that exists. The bar is Home · ⚡ Play · You (ADR-0189 §6).
 
+> **Note — the feature flags return (2026-11-21, [#826](https://github.com/Raketa02/Raketa/issues/826)).** §12's *Groups | Explore* now stands **only with the `explore` feature flag on** ([ADR-0206](0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §11). Off — its code default, and its value in every environment — Play is titled **Groups**, over the groups list, with no switcher, and Explore cannot be reached. The flag is `explore`, not `find_a_game`, and *the backend guards nothing* holds for it.
+
 ## Context
 
 **Racket players in a city already organise, and they don't do it here.** Each club has WhatsApp

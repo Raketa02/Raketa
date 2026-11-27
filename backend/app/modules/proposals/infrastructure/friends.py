@@ -10,7 +10,9 @@ requests on Home (``docs/adr/0202`` §1–§2), and the asks for a level on Home
 — so the card says *91% even* as the row did, and nothing when either no
 longer holds a level in the sport. **And a request from *Same vibe* counts
 today's tags in common** (#795), through ``TagsInCommon``: *6 things in
-common*, or none once they share none."""
+common*, or none once they share none. **Every request names the requester's
+Level in every sport they hold one in** (#814): Friends' card carries them,
+read for every requester in one batch."""
 
 from __future__ import annotations
 
@@ -32,6 +34,7 @@ from app.modules.proposals.domain.ports import (
     HomeFriendRequest,
     HomeLevelAsk,
     HomeLevelAsker,
+    HomeRequestLevel,
     TagsInCommon,
 )
 
@@ -96,6 +99,10 @@ class FriendsRequestsOnHome:
                 reliability_band=card.reliability.band,
                 percent_even=evens.get(card.requester_id),
                 in_common=in_common.get(card.requester_id),
+                levels=tuple(
+                    HomeRequestLevel(sport=one.sport, level=one.level)
+                    for one in card.levels
+                ),
             )
             for card in cards
         )
@@ -137,6 +144,7 @@ class FriendsLevelAsksOnHome:
                         nickname=asker.nickname,
                         photo_id=asker.photo_id,
                         photo_url=asker.photo_url,
+                        asked_at=asker.asked_at,
                     )
                     for asker in card.askers
                 ),

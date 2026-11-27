@@ -109,6 +109,29 @@ async def test_a_commit_returns_the_profile_it_created(client):
     ]
 
 
+#: Ola's eight, new in town (ADR-0207 §7) — the most a player may hold, and in
+#: the vocabulary's order, which is the order they come back in.
+EIGHT_TAGS = [
+    "STAYS_FOR_A_COFFEE",
+    "UP_FOR_A_BITE_AFTER",
+    "LAUGHS_OFF_MISTAKES",
+    "HAPPY_TO_SWAP_PARTNERS",
+    "PATIENT_WITH_BEGINNERS",
+    "BRINGS_THE_ENERGY",
+    "HERE_TO_MEET_PLAYERS",
+    "NEW_IN_TOWN",
+]
+
+
+async def test_a_commit_of_eight_tags_lands_with_all_eight(client):
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers, a_body(social_tag_ids=EIGHT_TAGS))
+
+    assert response.status_code == 201, response.text
+    assert response.json()["social_tag_ids"] == EIGHT_TAGS
+
+
 async def test_a_profile_commits_without_a_radius_or_a_suggestions_answer(client):
     """*How far will you travel* and *may we suggest games?* are no longer
     asked (#581): only the ranking read either answer, and it is gone. A
@@ -361,17 +384,7 @@ async def test_one_players_key_says_nothing_about_anothers(client):
             "social_tag_selection_out_of_bounds",
         ),
         (
-            {
-                "social_tag_ids": [
-                    "PLAYS_TO_WIN",
-                    "HERE_TO_IMPROVE",
-                    "QUIET_AND_FOCUSED",
-                    "HERE_TO_COMPETE",
-                    "STAYS_FOR_A_DRINK",
-                    "SHARES_A_LIFT",
-                    "WARMS_UP_PROPERLY",
-                ]
-            },
+            {"social_tag_ids": [*EIGHT_TAGS, "PLAYS_TO_WIN"]},
             400,
             "social_tag_selection_out_of_bounds",
         ),

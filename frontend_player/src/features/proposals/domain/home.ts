@@ -19,6 +19,7 @@ import type { ReliabilityBand } from '@/features/player_record/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckCard } from './deck';
+import type { PaymentToConfirm } from './fill';
 import {
   courtPrice,
   seatsCanRunOut,
@@ -170,6 +171,64 @@ export interface Home {
    * it because it rides on Home's read; `rankings` draws it.
    */
   readonly ranking?: HomeRanking;
+  /**
+   * **TO CONFIRM · n** — every payment the reader has to confirm, soonest game first (#815, #819):
+   * the same rows as their own read (`GET /players/me/payments-to-confirm`), at this read's instant.
+   * Needs your answer draws them from here, so the sheet shows exactly what `needsYourAnswer`'s
+   * watermark covers; You › Payments keeps their own read.
+   */
+  readonly paymentsToConfirm: readonly PaymentToConfirm[];
+  /** **The envelope's badge**, and the watermark the visit sends back (#819, ADR-0205 §3). */
+  readonly needsYourAnswer: NeedsYourAnswerNews;
+}
+
+/**
+ * **What is new in Needs your answer** (#815, #819; ADR-0205 §3) — kept on the server, so every
+ * phone agrees.
+ */
+export interface NeedsYourAnswerNews {
+  /**
+   * How many waiting items arrived since the sheet was last closed, on any phone: each payment to
+   * confirm, invitation and request by its own arrival, and each friend on an ask for a level by
+   * their own ask. A change of state is never new.
+   */
+  readonly newCount: number;
+  /**
+   * **This read's watermark**, the newest arrival among everything waiting, exactly as served —
+   * an instant the visit hands back untouched, never re-formatted and never the phone's clock.
+   * Absent while nothing waits.
+   */
+  readonly watermark?: string;
+}
+
+/**
+ * **The watermark a closing sheet names** (#819, ADR-0205 §3) — `held`, what was kept so far, moved
+ * on to `read`'s watermark whenever the sheet is `shown` on it: open, never covered by a record or a
+ * fill's sheet, under which a read lands unseen. Every item of a read the sheet is shown on is on
+ * screen, so everything up to its watermark is seen. A read with nothing waiting has no watermark
+ * and moves nothing, so the close after the last answer names the read that held it.
+ */
+export function watermarkShown(
+  held: string | undefined,
+  shown: boolean,
+  read: string | undefined,
+): string | undefined {
+  return shown && read !== undefined ? read : held;
+}
+
+/**
+ * **The envelope's badge, after this phone's visits** (#819) — `visits` are the watermarks of the
+ * visits this phone sent that are on their way or recorded. **A read whose watermark is no later
+ * than one of them holds nothing new**: everything in it arrived by then, and was seen. A read newer
+ * than all of them has something that arrived after, so the server's count stands — it is exact
+ * once a visit is recorded, and the re-read after the visit makes it so. Nothing is written into the
+ * read, so a read already on its way, or one that lands before the visit does, keeps the badge gone
+ * and drops nothing it carried. Instants are compared, never their spelling.
+ */
+export function newCountAfter(news: NeedsYourAnswerNews, visits: readonly string[]): number {
+  const newest = news.watermark === undefined ? Number.NaN : Date.parse(news.watermark);
+  if (Number.isNaN(newest)) return news.newCount;
+  return visits.some((visit) => Date.parse(visit) >= newest) ? 0 : news.newCount;
 }
 
 /**
@@ -240,6 +299,9 @@ export type RequestFoundBy =
  * absent where the wire says nothing: a request found by a link, the ranking or a Home row says where
  * in place of the group (`foundBy`); a request asked from a screen with no group names none, and
  * neither does one either of them has since left.
+ *
+ * Since #818 the tile in Needs your answer draws none of the where: it reads `levels` instead —
+ * *● Padel 3,40 · ● Tennis 2,90* (ADR-0205 §1). The where is still read, as the wire still serves it.
  */
 export interface HomeFriendRequest {
   readonly playerId: string;
@@ -259,6 +321,18 @@ export interface HomeFriendRequest {
   readonly playerScore: number;
   /** The band the server put it in — absent where this build cannot name the code. */
   readonly reliabilityBand?: ReliabilityBand;
+  /**
+   * **Every sport they hold a published Level in, with that Level** (#818; ADR-0205 §1, §10) — the
+   * tile's sport-levels line, in the order served, which is the app's sport order. Empty when they
+   * hold none, and the line is left out.
+   */
+  readonly levels: readonly HomeFriendRequestLevel[];
+}
+
+/** One sport on a request's sport-levels line — *● Padel 3,40*. */
+export interface HomeFriendRequestLevel {
+  readonly sport: Sport;
+  readonly level: number;
 }
 
 /**

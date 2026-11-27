@@ -518,17 +518,37 @@ describe('an official group’s page for a player rated in none of its sports', 
     expect(screen.queryByRole('button', { name: COPY.link.share })).toBeNull();
   });
 
-  it('shows the same card in place of Fill in and Friends, with no game to post', async () => {
+  it('shows the same card in place of Fill in, You’re in and Friends, with no game to post', async () => {
     await openPage();
     await screen.findByText(ADD_HEADLINE);
+    // No sport to play, so no Games menu either (#862): its name alone, no chevron, nothing opens.
+    expect(screen.getByRole('button', { name: 'Games', selected: true })).toBeTruthy();
+    expect(
+      screen.queryByTestId('segment-chevron-games', { includeHiddenElements: true }),
+    ).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Games', selected: true }));
+    expect(screen.queryByTestId('tab-menu', { includeHiddenElements: true })).toBeNull();
 
     await openTab(COPY.group.tabs.fillIn);
     expect(screen.getByText(ADD_HEADLINE)).toBeTruthy();
-    expect(screen.queryByText(COPY.fillIn.postAGameDrawn)).toBeNull();
+    expect(screen.queryByText(COPY.youreIn.postAGameDrawn)).toBeNull();
 
+    // + Post a game floats on You’re in alone, and not while the card stands in the tab (#847).
+    await openTab(COPY.group.tabs.youreIn);
+    expect(screen.getByText(ADD_HEADLINE)).toBeTruthy();
+    expect(screen.queryByText(COPY.youreIn.postAGameDrawn)).toBeNull();
+    expect(screen.queryByTestId('post-a-game-fab')).toBeNull();
+
+    // No court, so no menu (#861): the tab is its name alone, with no chevron, and a press on it
+    // again opens nothing.
     await openTab(COPY.group.tabs.friends);
     expect(screen.getByText(ADD_HEADLINE)).toBeTruthy();
-    expect(screen.queryByText(COPY.friends.competitive)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Friends', selected: true })).toBeTruthy();
+    expect(
+      screen.queryByTestId('segment-chevron-friends', { includeHiddenElements: true }),
+    ).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Friends', selected: true }));
+    expect(screen.queryByTestId('tab-menu', { includeHiddenElements: true })).toBeNull();
   });
 
   // Q125: the header still opens Info, and the way out is there — it is not a sport's.

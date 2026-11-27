@@ -66,9 +66,19 @@ describe('a group page a rating pass returns to', () => {
     });
   });
 
+  // #847: You’re in is a tab of its own, so a pass begun there returns there.
+  it('reads You’re in, the tab beside Fill in', () => {
+    expect(parseGroupRouteParams({ groupId: GROUP, tab: 'youreIn', sport: 'padel' })).toEqual({
+      groupId: GROUP,
+      returning: { tab: 'youreIn', sport: 'padel' },
+    });
+  });
+
   it.each([
     { tab: 'info' },
     { tab: 'FILL_IN', sport: 'padel' },
+    // Spelled as the screen says it, not as this build knows it.
+    { tab: 'You’re in' },
     { tab: 'games', sport: 'pickleball' },
     { sport: 'padel' },
   ])('opens the page as it always does for %p', (returning) => {
@@ -87,6 +97,10 @@ describe('a rating pass begun on a group’s tab', () => {
     expect(parseGroupPlace({ groupId: GROUP, tab: 'games' })).toEqual({
       groupId: GROUP,
       tab: 'games',
+    });
+    expect(parseGroupPlace({ groupId: GROUP, tab: 'youreIn' })).toEqual({
+      groupId: GROUP,
+      tab: 'youreIn',
     });
   });
 

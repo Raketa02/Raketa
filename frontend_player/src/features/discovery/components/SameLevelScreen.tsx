@@ -10,7 +10,8 @@
  *   page, the next read as the list nears its end**. On *All* each is in their evenest shared sport;
  *   **a sport re-compares everybody in it** — the server's read with the sport — and keeps only them.
  *   Every card keeps its *N sports ›*.
- * - **Every state**: reading (a spinner), failed (the recovery sentence and *Try again*), offline
+ * - **Every state**: reading (full-width skeleton cards filling the screen — #872), failed (the
+ *   recovery sentence and *Try again*), offline
  *   (resumes), a later page refused (said under the list, with its own *Try again*), a sport that
  *   leaves nobody, and the pull, which reads every page again.
  *
@@ -32,7 +33,7 @@ import { useSameLevelPage } from '../hooks/useSameLevel';
 import { ComparingSheet } from './ComparingSheet';
 import { DISCOVERY_COPY, SAME_LEVEL_PILL_WORDS, nobodyToCompareIn } from './discoveryCopy';
 import { RowRecord, type RecordOpened } from './RowRecord';
-import { SameLevelCard } from './SameLevelCard';
+import { SAME_LEVEL_CARD_SKELETON, SameLevelCard } from './SameLevelCard';
 import { SeeAllScreen } from './SeeAllScreen';
 
 export function SameLevelScreen() {
@@ -55,14 +56,15 @@ export function SameLevelScreen() {
         <SameLevelCard
           player={player}
           you={you}
+          layout="list"
           onOpen={() =>
             setReading({ playerId: player.playerId, foundIn: foundAtSameLevel(player.shown.sport) })
           }
           onCompare={() => comparing.show(player)}
         />
       )}
+      skeleton={SAME_LEVEL_CARD_SKELETON}
       emptyLine={choice === 'all' ? COPY.nobodyAtAll : nobodyToCompareIn(choice)}
-      readingLabel={COPY.reading}
       testID="same-level-list"
       overlayUp={reading !== undefined || comparing.open}
       overlays={

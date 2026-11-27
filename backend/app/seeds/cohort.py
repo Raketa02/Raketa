@@ -123,12 +123,19 @@ SPORTS: Final = (Sport.PADEL, Sport.TENNIS)
 IDS: Final = uuid5(NAMESPACE_URL, f"https://{SEED_EMAIL_DOMAIN}/cohort")
 
 #: The 112 hours of the week, in reading order — the cells a week is **held** in
-#: — and the served tags.
+#: — and the served tags a member is drawn from.
 CELLS: Final = tuple(
     f"{day}:{hour}"
     for day in range(1, DAYS_IN_THE_GRID + 1)
     for hour in HOURS_OF_THE_DAY
 )
+#: **All twenty-seven, ADR-0207 §7's eight included** (#832), and a close match
+#: fills up to the served ceiling of eight. Adding the eight redrew every
+#: member's tags — the population diff #832 reviewed — and the Same vibe layer
+#: names members by the overlaps this draw gives her (``app/seeds/same_vibe.py``).
+#:
+#: Through the enum and never as strings, for ``PROTAGONIST_TAGS``' reason, in
+#: the enum's order, so ``rng.sample`` draws the same for the same vocabulary.
 TAGS: Final = tuple(tag.value for tag in SocialTag)
 
 #: The three ranges a day's hours are grouped into — the Player profile's own
@@ -1255,12 +1262,13 @@ def _tags(handle: str, position: int, seed: int) -> tuple[str, ...]:
     rng = _rng(handle, "tags", seed)
     if _is_a_close_match(position):
         # Hers first and the rest of the draw into **what is left of the
-        # selection bound**, read off the profile's own value object. Taking
-        # three and then drawing the usual two-to-five on top reaches eight,
-        # which is not a number of tags a player may hold — and the commit
-        # refuses it half way through a run, with the questionnaire already
-        # written. The bound is asked rather than copied for the reason the tag
-        # ids are: one home, and a literal here drifts the day it moves.
+        # selection bound**, read off the profile's own value object. Three
+        # and the usual two-to-five on top fit the eight a player may hold
+        # today; under a lower ceiling they wouldn't, and the commit would
+        # refuse the member half way through a run, with the questionnaire
+        # already written. The bound is asked rather than copied for the reason
+        # the tag ids are: one home, and a literal here drifts the day it moves
+        # — as it did, from six to eight (#829, drawn since #832).
         room = SOCIAL_TAG_SELECTION_BOUNDS.maximum_tags - len(PROTAGONIST_TAGS)
         low, high = MEMBER_TAG_COUNT
         elsewhere = [tag for tag in TAGS if tag not in PROTAGONIST_TAGS]

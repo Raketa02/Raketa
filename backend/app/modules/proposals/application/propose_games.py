@@ -16,7 +16,10 @@ provider allows: the pool's members and clubs, the games filling in it, every
 hour its clubs sell, each member's Level and week (``PlayersInPlay``), Play
 intent (``WantedKinds``), Games & money, booked games (``BookedGames``) and
 live yeses, and the pair rule per kind (``PlayerFit``) over everybody the batch
-could put on a card together. The batch itself is arithmetic over those, and it
+could put on a card together — and, **only where a friendly could be dealt**,
+what For fun builds by (``docs/adr/0207`` §1, §3; #831): everybody's Social
+tags now (``PlayersTags``) and who already knows whom (``PlayedWith``), once
+for every sport. The batch itself is arithmetic over those, and it
 runs **off the event loop** — a large pool's walk over every four is CPU the
 requests being served beside it should not wait for.
 
@@ -43,7 +46,7 @@ No route makes a card itself; this one runs the proposer.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Sequence
+from collections.abc import Awaitable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import final
 from uuid import UUID
@@ -53,6 +56,7 @@ from app.application.ports import UnitOfWork
 from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.ruleset import BalanceRules
 from app.kernel import Clock, Instant, Sport, instant
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.proposals.application.commands import (
     DealThePoolNowCommand,
     DealVersionCommand,
@@ -70,7 +74,9 @@ from app.modules.proposals.domain.limits import (
 from app.modules.proposals.domain.pool import Pool
 from app.modules.proposals.domain.ports import (
     CourtHours,
+    PlayedWith,
     PlayerFit,
+    PlayersTags,
     Pools,
     ProposalDirectory,
     ProposalRepository,
@@ -141,10 +147,14 @@ class ProposeGames:
         make: MakeProposal,
         deal: DealVersion,
         undecided: UndecidedCharges,
+        tags: PlayersTags,
+        played_with: PlayedWith,
         uow: UnitOfWork,
         clock: Clock,
         balance: BalanceRules,
     ) -> None:
+        self._tags = tags
+        self._played_with = played_with
         self._undecided = undecided
         self._pools = pools
         self._where = where
@@ -212,24 +222,71 @@ class ProposeGames:
         if not sports:
             return done
         limits, booked = await self._members_in_play.limits_and_games(members, now=now)
+        in_sports = {
+            sport: await self._members_in_play.in_sport(
+                members, sport=sport, limits=limits, booked=booked
+            )
+            for sport in sports
+        }
+        company = await self._company(
+            [member for in_sport in in_sports.values() for member in in_sport],
+            [*filling, *owed],
+            now=now,
+        )
         for sport in sports:
             in_sport = [proposal for proposal in filling if proposal.sport is sport]
             batch = await self._batch(
                 sport,
-                members=await self._members_in_play.in_sport(
-                    members, sport=sport, limits=limits, booked=booked
-                ),
+                members=in_sports[sport],
                 clubs=clubs,
                 hours=[hour for hour in hours if hour.sport is sport],
                 held=[(club, at) for club, of, at in held if of is sport],
                 filling=in_sport,
                 owed=[proposal for proposal in owed if proposal.sport is sport],
+                company=company,
                 now=now,
             )
             done += await self._apply(pool, sport, batch, now)
         return done
 
     # ------------------------------------------------------------------ reads
+
+    async def _company(
+        self, members: Sequence[Member], games: Sequence[Proposal], *, now: Instant
+    ) -> _Company:
+        """What For fun builds by (``docs/adr/0207`` §1, §3): the tags now,
+        and who already knows whom, of **everybody a For-fun table could
+        hold** — a member whose intent wants For fun in some sport, and anybody
+        In or named on a For-fun game filling or owed — read once per pool for
+        every sport, since neither is a sport's, and not at all where no
+        friendly could be dealt. Nobody else is ever scored for a For-fun seat,
+        so a big group's members who want only competitive games cost nothing
+        here."""
+
+        everybody = sorted(
+            {
+                *(
+                    member.player_id
+                    for member in members
+                    if SearchMode.FOR_FUN in member.wants
+                ),
+                *(
+                    player
+                    for game in games
+                    if game.kind is SearchMode.FOR_FUN
+                    for player in _people_of(game)
+                ),
+            },
+            key=str,
+        )
+        if not everybody:
+            return _Company()
+        return _Company(
+            tags=await self._tags.tags_of(everybody),
+            known=await self._played_with.known_pairs(
+                everybody, among=everybody, now=now
+            ),
+        )
 
     async def _filling(self, pool: Pool, now: Instant) -> list[Proposal]:
         filling: list[Proposal] = []
@@ -260,6 +317,7 @@ class ProposeGames:
         held: Sequence[tuple[UUID, Instant]],
         filling: Sequence[Proposal],
         owed: Sequence[Proposal],
+        company: _Company,
         now: Instant,
     ) -> Batch:
         # Everybody a card could hold: the members, and whoever is still In or
@@ -271,10 +329,9 @@ class ProposeGames:
                 *(member.player_id for member in members),
                 *(
                     player
-                    for proposal in filling
-                    for player in (*proposal.yeses, *named_on(proposal))
+                    for proposal in (*filling, *owed)
+                    for player in _people_of(proposal)
                 ),
-                *(player for proposal in owed for player in proposal.owed_to),
             },
             key=str,
         )
@@ -295,6 +352,8 @@ class ProposeGames:
             owed=owed,
             balance=self._balance,
             now=now,
+            tags=company.tags,
+            known=company.known,
         )
 
     # ----------------------------------------------------------------- writes
@@ -412,6 +471,28 @@ class ProposeGames:
             )
         )
         return True
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class _Company:
+    """What only For fun builds by: each person's tags now, and every pair
+    who are no new faces to each other. Nothing, where no friendly could be
+    dealt."""
+
+    tags: Mapping[UUID, Collection[SocialTag]] = field(default_factory=dict)
+    known: frozenset[frozenset[UUID]] = frozenset()
+
+
+def _people_of(proposal: Proposal) -> tuple[UUID, ...]:
+    """Who a card could hold off this game: whoever is still In or named on it
+    while it fills — a leaver included, since their yes stands until the
+    delivery of their leaving withdraws it — or, on a game owed a new card,
+    the people it is owed to."""
+
+    if proposal.owes_a_new_card:
+        return proposal.owed_to
+    return (*proposal.yeses, *named_on(proposal))
 
 
 def _game_of(pool: Pool, sport: Sport, pick: Pick) -> UUID:

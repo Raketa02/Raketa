@@ -1,9 +1,11 @@
 /**
- * **SAME COMPETITIVE LEVEL PLAYERS on Home, the comparison sheet and See all** — walked through the
- * real route tree ([#802](https://github.com/Raketa02/Raketa/issues/802), PRD #789; ADR-0204 §4; the
- * Home rows screens §4; the mechanics §6, §11–§13; the words §31.5, §31.6, §31.10).
+ * **Players at your level on Home, the comparison sheet and See all** — FOR YOU's second line, walked
+ * through the real route tree ([#802](https://github.com/Raketa02/Raketa/issues/802), PRD #789;
+ * [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §4, ADR-0205 §5; the Home rows
+ * screens §4; the mechanics §6, §11–§13; the words §31.5, §31.6, §31.10).
  *
- * - **The row**: second of the five, *See all ›* named; gone without a level, or when its read fails.
+ * - **The line**: second of the five, closed; open, its cards and *See all ›* named at its foot; hidden
+ *   without a level, or when its read fails.
  * - **A card**: You and them, both levels, the % in the game cards' colours, *EVEN*, the sport; the gap
  *   in words; *N sports ›* only above one; the face opening the record, its requests found at the
  *   card's sport; the round button asking from the row.
@@ -19,15 +21,18 @@
  * after a write is the read again, never this client guessing.
  */
 
+import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { FlatList, StyleSheet, type TextStyle } from 'react-native';
+import { Dimensions, FlatList, StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
 
 import { FRIENDS_COPY, roundLabel } from '@/features/friends/types';
 import { GROUPS_COPY } from '@/features/groups/types';
+import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { theme } from '@/shared/ui';
+import { isOpen, lineNamed, lineTitles, openLine } from '@/test-support/forYou';
 import {
   SAME_LEVEL_ALL_PATH,
   SAME_LEVEL_PATH,
@@ -38,6 +43,7 @@ import {
   stubNewInRaketa,
   stubOwnRecord,
 } from '@/test-support/onboardingRouter';
+import { openNeedsYourAnswer } from '@/test-support/needsYourAnswer';
 import { servedReliability } from '@/test-support/playerRecord';
 import {
   errorResponse,
@@ -46,10 +52,15 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { PLAYERS_BAR } from '@/test-support/tabBarReach';
 
 import { DISCOVERY_COPY, nobodyToCompareIn } from './discoveryCopy';
+import { SAME_LEVEL_CARD_SKELETON, sameLevelCardHeight } from './SameLevelCard';
 
 const COPY = DISCOVERY_COPY.sameLevel;
+
+/** The words a card draws but hides from a listener — the separators, the bar's band names. */
+const HIDDEN = { includeHiddenElements: true } as const;
 
 const comparison = (
   sport: Wire['Sport'],
@@ -168,7 +179,7 @@ function levelServer(
   // The reader's own face, on the left of every card.
   stubOwnRecord(transport);
   transport.on('GET', SAME_LEVEL_PATH, () =>
-    json<Wire['SameLevelResponse']>({ players: [...people] }),
+    json<Wire['SameLevelResponse']>({ players: [...people], total: people.length }),
   );
   transport.on('GET', SAME_LEVEL_ALL_PATH, (request) => {
     const query = new URLSearchParams(request.path.split('?')[1] ?? '');
@@ -218,6 +229,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  onlineManager.setOnline(true);
   transport.restore();
   queryClient.clear();
   useToastQueue.setState({ queue: [] });
@@ -236,40 +248,31 @@ const sheet = () => within(screen.getByTestId('bottom-sheet'));
 const colourOf = (node: { readonly props: { readonly style?: unknown } }) =>
   (StyleSheet.flatten(node.props.style as TextStyle) ?? {}).color;
 
-/** The section headings Home draws, top to bottom. */
-const headings = () =>
-  screen
-    .getAllByRole('header')
-    .map((node) => node.props.children as string)
-    .filter((text) => typeof text === 'string');
-
 async function homeWithTheRow() {
   await launchSignedIn();
-  await screen.findByRole('header', { name: COPY.heading });
+  await openLine(COPY.line);
 }
 
-describe('the row on Home', () => {
-  it('stands second of the five — after Hottest groups, before New in Raketa — with See all named', async () => {
+describe('the line on Home', () => {
+  it('stands second of the five — after Groups heating up, before New in Raketa — closed', async () => {
     levelServer();
     stubHottestGroups(transport, [HOT_GROUP]);
     stubNewInRaketa(transport, [JOINER]);
-    await homeWithTheRow();
-    await screen.findByRole('header', { name: DISCOVERY_COPY.newInRaketa.heading });
-    await screen.findByRole('header', { name: GROUPS_COPY.hottest.heading });
+    await launchSignedIn();
+    await screen.findByRole('button', { name: lineNamed(DISCOVERY_COPY.newInRaketa.line) });
+    await screen.findByRole('button', { name: lineNamed(GROUPS_COPY.hottest.line) });
 
-    const order = headings();
-    const games = order.findIndex((text) => text.startsWith('Your games'));
-    expect(order.slice(games + 1, games + 4)).toEqual([
-      GROUPS_COPY.hottest.heading,
-      COPY.heading,
-      DISCOVERY_COPY.newInRaketa.heading,
+    expect(lineTitles().slice(0, 3)).toEqual([
+      GROUPS_COPY.hottest.line,
+      COPY.line,
+      DISCOVERY_COPY.newInRaketa.line,
     ]);
-    expect(
-      within(screen.getByTestId('same-level')).getByRole('link', { name: COPY.seeAllLabel }),
-    ).toBeTruthy();
+    expect(isOpen(COPY.line)).toBe(false);
+    expect(screen.queryAllByTestId(/^same-level-e0/)).toEqual([]);
   });
 
-  it('draws the cards in the read’s order', async () => {
+  /** ADR-0205 §5: *See all ›* at the bottom right of the open content, to the See all screen. */
+  it('opens onto the cards in the read’s order, See all named at its foot', async () => {
     levelServer();
     await homeWithTheRow();
 
@@ -277,15 +280,44 @@ describe('the row on Home', () => {
       .getAllByTestId(/^same-level-e0/)
       .map((node) => (node.props.testID as string).replace('same-level-', ''));
     expect(ids).toEqual(ROW.map((one) => one.player_id));
+    expect(
+      within(screen.getByTestId('same-level')).getByRole('link', { name: COPY.seeAllLabel }),
+    ).toBeTruthy();
   });
 
-  it('is gone with its heading while the read holds nobody — no level anywhere', async () => {
+  /**
+   * 2026-11-26: on the line the card is `lineCardRatio` of the line's content, a little wider than the
+   * page's 0,74 — the next one shows a little less — and keeps its shape: every vertical gap grows by
+   * the width's factor onto the 3pt grid, so it stands as much taller as wider, as near as the grid
+   * comes: within half a step.
+   */
+  it('draws each card at the line’s share, as much taller as it is wider, through its gaps', async () => {
+    levelServer();
+    await homeWithTheRow();
+
+    const { border, pad } = theme.size.foldingLine;
+    const content = Dimensions.get('window').width - 2 * theme.size.gutter - 2 * (border + pad);
+    const drawn = StyleSheet.flatten(
+      screen.getByTestId(`same-level-${ZOFIA.player_id}`).props.style as ViewStyle,
+    );
+    expect(drawn.width).toBeCloseTo(content * theme.size.lineCardRatio);
+    // 15 above and 6 under in See all: 24 and 9 on the line.
+    expect(drawn).toMatchObject({ paddingTop: theme.space.xxl, paddingBottom: theme.space.sm });
+
+    const grown = theme.size.lineCardRatio / theme.size.railCardRatio;
+    const list = sameLevelCardHeight(1, 'list');
+    expect(Math.abs(sameLevelCardHeight(1, 'row') - list * grown)).toBeLessThanOrEqual(
+      theme.space.xxs / 2,
+    );
+  });
+
+  it('is hidden while the read holds nobody — no level anywhere', async () => {
     levelServer([]);
     await launchSignedIn();
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -295,7 +327,7 @@ describe('the row on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 });
 
@@ -326,13 +358,22 @@ describe('a card', () => {
     expect(colourOf(card(MICHAL).getByText('54%'))).toBe(theme.color.gameRed);
   });
 
-  it('says the gap in words — below, above, or the same level', async () => {
+  /**
+   * ADR-0205 §5, Q22, home refactor 7 (#821): the card no longer says the gap in words — not drawn,
+   * and not spoken with the pairing. Everything else on it stays.
+   */
+  it('says no gap in words — neither below, above, nor the same level', async () => {
     levelServer();
     await homeWithTheRow();
 
-    expect(card(ZOFIA).getByText('0,02 below you')).toBeTruthy();
-    expect(card(KUBA).getByText('0,09 above you')).toBeTruthy();
-    expect(card(ANIA).getByText(COPY.sameLevel)).toBeTruthy();
+    for (const player of [ZOFIA, KUBA, ANIA]) {
+      expect(card(player).queryByText(/below you|above you/, HIDDEN)).toBeNull();
+      expect(card(player).queryByText(COPY.sameLevel, HIDDEN)).toBeNull();
+    }
+    // Zofia's footer is N sports › and the round button alone, with no separator before it.
+    expect(card(ZOFIA).getByText('2 sports')).toBeTruthy();
+    expect(card(ZOFIA).queryByText(/^ · $/, HIDDEN)).toBeNull();
+    expect(card(ZOFIA).getByLabelText('91% even in padel, You 2,71, zofia.b 2,69')).toBeTruthy();
   });
 
   it('offers N sports › only with more than one shared sport', async () => {
@@ -351,6 +392,22 @@ describe('a card', () => {
     const bar = card(KUBA).getByTestId('comparison-bar', { includeHiddenElements: true });
     expect(within(bar).getByText('YOU', { includeHiddenElements: true })).toBeTruthy();
     expect(within(bar).getByText('Developing', { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it('reads your face with Home, so opening the line asks the server nothing', async () => {
+    // A press that waits on a read is a line that opens late, and draws again when it lands
+    // (2026-11-21: on a Galaxy A32 the open fired `/players/me/record` every first time).
+    levelServer();
+    await launchSignedIn();
+    await screen.findByRole('button', { name: lineNamed(COPY.line), expanded: false });
+    await waitFor(() =>
+      expect(transport.requestsTo('GET', '/api/v1/players/me/record')).toHaveLength(1),
+    );
+    const before = transport.requests.length;
+
+    await openLine(COPY.line);
+
+    expect(transport.requests.slice(before).map((r) => `${r.method} ${r.path}`)).toEqual([]);
   });
 
   it('opens the record from the face, and a request asked there was found at the card’s sport', async () => {
@@ -450,7 +507,7 @@ describe('the comparison sheet, when its person leaves the row', () => {
     // Asking Kuba makes him a gap, and a fresh match behind him takes his place among the ten.
     transport.on('POST', REQUESTS_PATH, () => {
       transport.on('GET', SAME_LEVEL_PATH, () =>
-        json<Wire['SameLevelResponse']>({ players: [ZOFIA, ANIA, MICHAL] }),
+        json<Wire['SameLevelResponse']>({ players: [ZOFIA, ANIA, MICHAL], total: 3 }),
       );
       return json<Wire['RelationResponse']>({ relation: 'SENT' });
     });
@@ -469,7 +526,10 @@ describe('the comparison sheet, when its person leaves the row', () => {
 
     // A later read brings him back, as a gap: his sheet stays shut until it is tapped.
     transport.on('GET', SAME_LEVEL_PATH, () =>
-      json<Wire['SameLevelResponse']>({ players: [ZOFIA, { ...KUBA, relation: 'SENT' }] }),
+      json<Wire['SameLevelResponse']>({
+        players: [ZOFIA, { ...KUBA, relation: 'SENT' }],
+        total: 2,
+      }),
     );
     await act(() => queryClient.invalidateQueries({ queryKey: ['discovery'] }));
     expect(await round(KUBA, 'SENT')).toBeTruthy();
@@ -477,7 +537,9 @@ describe('the comparison sheet, when its person leaves the row', () => {
   });
 });
 
-describe('Home’s request card', () => {
+// The request waits in Needs your answer since #816, and its tile says no found-by line (ADR-0205 §1):
+// where it was found is still served, and drawn nowhere.
+describe('a request from Same competitive level, in Needs your answer', () => {
   const request = (
     over: Partial<Wire['HomeFriendRequestSchema']>,
   ): Wire['HomeFriendRequestSchema'] => ({
@@ -498,23 +560,19 @@ describe('Home’s request card', () => {
     reliability_band: 'VERY_HIGH',
     percent_even: 91,
     in_common: null,
+    levels: [],
     ...over,
   });
 
-  it('reads Your level in padel · 91% even — today’s %', async () => {
+  it('says no line of where it was found, today’s % even included', async () => {
     levelServer();
     stubHome(transport, { friend_requests: [request({})] });
     await homeWithTheRow();
+    await openNeedsYourAnswer();
 
-    expect(await screen.findByText(/^Your level in padel · 91% even/)).toBeTruthy();
-  });
-
-  it('falls back to Found you at your padel level once either holds no level there', async () => {
-    levelServer();
-    stubHome(transport, { friend_requests: [request({ percent_even: null, level: null })] });
-    await homeWithTheRow();
-
-    expect(await screen.findByText(/^Found you at your padel level/)).toBeTruthy();
+    expect(screen.getByTestId(`friend-request-${MICHAL.player_id}`)).toBeTruthy();
+    expect(screen.queryByText(/Your level in padel/)).toBeNull();
+    expect(screen.queryByText(/Found you at your padel level/)).toBeNull();
   });
 });
 
@@ -546,6 +604,12 @@ describe('See all', () => {
     expect(listed()).toEqual(ROW.map((one) => one.player_id));
     const list = within(screen.getByTestId('same-level-list'));
     expect(list.getAllByText('2 sports')).toHaveLength(2);
+    // The card's own gaps, not the line's grown ones (2026-11-26).
+    expect(
+      StyleSheet.flatten(
+        list.getByTestId(`same-level-${ZOFIA.player_id}`).props.style as ViewStyle,
+      ),
+    ).toMatchObject({ paddingTop: theme.space.lg, paddingBottom: theme.space.xs });
   });
 
   it('offers All and the sports served; a sport re-reads with it and re-compares everybody there', async () => {
@@ -560,9 +624,10 @@ describe('See all', () => {
 
     fireEvent.press(bar.getByRole('button', { name: 'Padel' }));
     await waitFor(() => expect(pageReads().at(-1)!.path).toContain('sport=PADEL'));
-    // Kuba is compared in padel now: 60%, amber, 0,49 above.
+    // Kuba is compared in padel now: 60%, at 3,20 — the card says no gap in words since #821.
     await waitFor(() => expect(card(KUBA).getByText('60%')).toBeTruthy());
-    expect(card(KUBA).getByText('0,49 above you')).toBeTruthy();
+    expect(card(KUBA).getByText('3,20')).toBeTruthy();
+    expect(card(KUBA).getByText('Padel')).toBeTruthy();
 
     fireEvent.press(screen.getByRole('button', { name: 'Sport: Padel' }));
     fireEvent.press(
@@ -604,5 +669,112 @@ describe('See all', () => {
 
     expect(await screen.findByText(nobodyToCompareIn('squash'))).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sport: Squash' })).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// See all's skeleton while its first page is read (#872, PRD #867)
+// ---------------------------------------------------------------------------
+
+describe('See all, while its first page is read (#872)', () => {
+  /** See all's skeleton — hidden from a listener, so found by its id. */
+  const skeleton = () => screen.queryByTestId('see-all-skeleton', HIDDEN);
+  /** Past the reveal's cross-fade, and a frame. */
+  const pastTheFade = () => act(() => jest.advanceTimersByTime(theme.motion.fade + 16));
+  const zofia = () => screen.queryByTestId(`same-level-${ZOFIA.player_id}`);
+
+  /** See all pressed on Home's row, its first page held on its way. */
+  async function openHeld() {
+    await homeWithTheRow();
+    const first = transport.hold('GET', SAME_LEVEL_ALL_PATH);
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/same-level'));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    return first;
+  }
+
+  it('shimmers full-width cards at the card’s own height under the real header, then fades the page in', async () => {
+    levelServer();
+    const first = await openHeld();
+
+    expect(skeleton()).not.toBeNull();
+    expect(screen.getByText(COPY.title)).toBeTruthy();
+    // The pill stands at its final shape, offering every sport until the page says which.
+    expect(screen.getByRole('button', { name: 'Sport: All' })).toBeTruthy();
+    expect(zofia()).toBeNull();
+    // One a line, at the content's whole width, as many lines as fill the window.
+    const window = Dimensions.get('window');
+    const content = window.width - 2 * theme.size.gutter;
+    const tall = SAME_LEVEL_CARD_SKELETON.height(content, window.fontScale);
+    const cards = screen.getAllByTestId('see-all-skeleton-tile', HIDDEN);
+    for (const each of cards) {
+      expect(StyleSheet.flatten(each.props.style)).toMatchObject({ width: content, height: tall });
+    }
+    // What shows above the floating bar — the strip under it is no room for a line (#881).
+    const shown = window.height - PLAYERS_BAR;
+    expect(cards.length * (tall + theme.space.sm)).toBeGreaterThanOrEqual(shown);
+    expect((cards.length - 1) * (tall + theme.space.sm)).toBeLessThan(shown);
+
+    await act(async () => first.land());
+
+    expect(await screen.findByTestId(`same-level-${ZOFIA.player_id}`)).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+    expect(pageReads()).toHaveLength(1);
+  });
+
+  it('says the empty line in the list’s place when the first page holds nobody — never a skeleton', async () => {
+    levelServer();
+    await homeWithTheRow();
+    transport.on('GET', SAME_LEVEL_ALL_PATH, () =>
+      json<Wire['SameLevelPageResponse']>({ players: [], next: null, sports: [] }),
+    );
+    const first = transport.hold('GET', SAME_LEVEL_ALL_PATH);
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    expect(skeleton()).not.toBeNull();
+
+    await act(async () => first.land());
+
+    expect(await screen.findByText(COPY.nobodyAtAll)).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+  });
+
+  it('gives way to the failure and its Try again once the retries are spent', async () => {
+    levelServer();
+    transport.on('GET', SAME_LEVEL_ALL_PATH, () => errorResponse(503, 'service_unavailable'));
+    await homeWithTheRow();
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/same-level'));
+    expect(skeleton()).not.toBeNull();
+
+    await act(() => jest.advanceTimersByTimeAsync(30_000));
+
+    const again = await screen.findByRole('button', { name: GROUPS_COPY.retry });
+    expect(screen.getByRole('alert')).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    levelServer();
+    fireEvent.press(again);
+    expect(await screen.findByTestId(`same-level-${ZOFIA.player_id}`)).toBeTruthy();
+  });
+
+  it('gives way to the amber note while the read waits for a connection', async () => {
+    levelServer();
+    const first = await openHeld();
+    expect(skeleton()).not.toBeNull();
+
+    act(() => onlineManager.setOnline(false));
+    await act(async () => first.drop());
+    await act(() => jest.advanceTimersByTimeAsync(1_500));
+
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    act(() => onlineManager.setOnline(true));
+    expect(await screen.findByTestId(`same-level-${ZOFIA.player_id}`)).toBeTruthy();
   });
 });

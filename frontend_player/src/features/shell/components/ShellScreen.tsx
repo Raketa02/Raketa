@@ -1,10 +1,10 @@
 /**
- * The arrangement every screen inside the five-tab shell wears, per design-system 10.1.
+ * The arrangement every screen inside the tab shell wears, per design-system 10.1.
  *
  * ```
- * TopSafeArea           the top inset, on the first frame
+ * TopSafeArea           the top inset, on the first frame — down to the phone's foot, or the reach
  *   ScreenHeader        pinned — it does not scroll away
- *   ScrollView          the page
+ *   ScrollView          the page, ending at reach + 15
  *   CTA                 conditional, and above the bar rather than in it
  * ```
  *
@@ -16,12 +16,22 @@
  * the product, and a title that scrolls off a ranked list is the case a pinned header earns
  * its 48pt on.
  *
- * **The CTA and the tab bar are flex siblings, never fixed elements** — and the bar is not
- * here. It is mounted once by `TabShell`, below the navigator, because a bar rendered per
- * screen is a bar that slides with the screen. What that leaves this component is the one
- * consequence 10.1 states: **the bottom inset is the bar's**, so the safe area taken here is
- * the top edge alone. Applied at both ends it is 34pt of nothing; applied at the wrong end
- * it is a CTA under the home indicator.
+ * **The bar is not here.** It is mounted once by `TabShell`, over the navigator, because a bar
+ * rendered per screen is a bar that slides with the screen — and it floats over the screen's foot
+ * and owns no layout (10.1, [ADR-0210](../../../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md)
+ * §3, [#881](https://github.com/Raketa02/Raketa/issues/881)). So the screen draws to the bottom of
+ * the phone, and **ends at the bar's reach** — its height and the bottom inset while it is drawn,
+ * nothing while it stands down:
+ *
+ * - **The page runs under the bar and ends with padding of reach + 15**, today's gap above the bar,
+ *   so its last row scrolls fully clear of it.
+ * - **A screen with a CTA ends its layout at the reach**: the CTA stays in flow, a flex sibling of
+ *   the page and never a fixed element, and sits above the bar; the page ends at the CTA, so nothing
+ *   scrolls between the CTA and the bar.
+ *
+ * The bottom inset is in the reach — the bar pads itself with it — so the safe area taken here is
+ * the top edge alone. Applied twice it is 34pt of nothing; applied at the wrong end it is a CTA under
+ * the home indicator.
  *
  * The CTA is *conditional* rather than always drawn: a screen with nothing to press has
  * nothing pinned, and the court screen populating it on one of three branches
@@ -30,16 +40,22 @@
  */
 
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { KEYBOARD_AVOIDANCE, useAppInBackground } from '@/shared/lib/platform';
 import {
   PageOnScreen,
+  PageReveal,
   ScreenHeader,
+  scrollToReveal,
   theme,
   TopSafeArea,
+  useReducedMotion,
+  useTabBarReach,
   useWatchedPage,
+  type Followed,
+  type Span,
   type WatchedPage,
 } from '@/shared/ui';
 
@@ -78,7 +94,10 @@ export interface ShellScreenProps {
    * taller than the page still scrolls — and every other screen is unchanged.
    */
   readonly fill?: boolean;
-  /** Pinned below the scroller and above the tab bar. Absent when there is nothing to press. */
+  /**
+   * Pinned below the scroller and above the tab bar — the screen ends at the bar's reach for it.
+   * Absent when there is nothing to press.
+   */
   readonly action?: ReactNode;
   /**
    * The way back, for a screen that has one — **forwarded, not designed.**
@@ -124,8 +143,10 @@ export interface ShellScreenProps {
    * level* and *Same vibe* rows report the cards that came at least half into view, and only the
    * page knows how far it is scrolled and how tall it shows. So the scroller's every move, and the
    * page leaving view and coming back — a screen pushed over it, another tab, the app in the
-   * background — are handed down as `shared/ui`'s `PageOnScreen`. Nothing drawn changes. Off
-   * everywhere else, where the scroller says nothing of where it is and the band stays empty.
+   * background — are handed down as `shared/ui`'s `PageOnScreen`. Nothing drawn changes. **Its
+   * folding lines may ask it to show them** once they unfold (`PageReveal`, #820), since only it
+   * knows where it is scrolled. Off everywhere else, where the scroller says nothing of where it is,
+   * the band stays empty and nothing asks to be shown.
    */
   readonly watchesOnScreen?: boolean;
   /**
@@ -164,6 +185,43 @@ export function ShellScreen({
 }: ShellScreenProps) {
   const watched = useWatchedPage();
   const scroller = useRef<ScrollView>(null);
+  // Where the screen ends (see the module note): the page at reach + 15, or — with a CTA — the
+  // layout at the reach, the CTA above the bar and the page ending at the CTA.
+  const reach = useTabBarReach();
+  const pins = action !== undefined;
+  /**
+   * **What of the page shows — its band above the bar** (#881). The page runs under the bar to the
+   * phone's foot, so its scroller measures the bar's reach taller than what is seen: a card under
+   * the bar is not on screen, and a line revealing itself brings its foot to the bar's top, as it did
+   * when the page ended there. A page with a CTA ends above the bar already.
+   */
+  const under = pins ? 0 : reach;
+  const shown = useMemo<Followed<Span>>(
+    () => ({
+      get: () => {
+        const band = watched.band.get();
+        return band === undefined
+          ? undefined
+          : { from: band.from, size: Math.max(0, band.size - under) };
+      },
+      follow: watched.band.follow,
+    }),
+    [watched, under],
+  );
+  const reduced = useReducedMotion();
+  /**
+   * **Shows a stretch of the page** — a folding line just unfolded (#820): scrolled just far enough,
+   * from where the page is scrolled and how tall it shows, which only a page that watches knows. At
+   * once under Reduce motion.
+   */
+  const reveal = useCallback(
+    (stretch: Span) => {
+      const band = shown.get();
+      const to = band === undefined ? undefined : scrollToReveal(stretch, band);
+      if (to !== undefined) scroller.current?.scrollTo({ y: to, animated: !reduced });
+    },
+    [shown, reduced],
+  );
   useEffect(
     () => startsOverWhen?.(() => scroller.current?.scrollTo({ y: 0, animated: false })),
     [startsOverWhen],
@@ -197,7 +255,11 @@ export function ShellScreen({
     <ScrollView
       ref={scroller}
       {...(watchesOnScreen ? watched.scroller : {})}
-      contentContainerStyle={[s.content, fill ? s.fill : undefined]}
+      contentContainerStyle={[
+        s.content,
+        fill ? s.fill : undefined,
+        { paddingBottom: (pins ? 0 : reach) + theme.space.lg },
+      ]}
       keyboardShouldPersistTaps={
         keepsKeyboardOnTap ? 'always' : avoidsKeyboard ? 'handled' : undefined
       }
@@ -213,13 +275,17 @@ export function ShellScreen({
         )
       }
     >
-      <PageOnScreen.Provider value={watched.band}>{children}</PageOnScreen.Provider>
+      <PageOnScreen.Provider value={shown}>
+        <PageReveal.Provider value={watchesOnScreen ? reveal : undefined}>
+          {children}
+        </PageReveal.Provider>
+      </PageOnScreen.Provider>
     </ScrollView>
   );
-  const pinned = action !== undefined ? <View style={s.action}>{action}</View> : null;
+  const pinned = pins ? <View style={s.action}>{action}</View> : null;
 
   return (
-    <TopSafeArea style={s.screen}>
+    <TopSafeArea style={[s.screen, pins ? { paddingBottom: reach } : undefined]}>
       {watchesOnScreen ? <FollowsTheScreen page={watched} /> : null}
       <ScreenHeader
         title={title}
@@ -270,9 +336,9 @@ function FollowsTheScreen({ page }: { readonly page: WatchedPage }) {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   body: { flex: 1 },
+  // The end padding is the reach's and the gap's, set where the reach is read.
   content: {
     paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
   fill: { flexGrow: 1 },

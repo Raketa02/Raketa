@@ -26,7 +26,10 @@ the club's list of them (users) — and, for rescues (#545), a pool's booked gam
 with a seat open and somebody taking one (bookings), and a refused payment
 waiting for its player (payments) — and, for posting (#546), each member's
 gender and preference (the Player profile) and the engine's level window around
-a poster (the matcher's pair rule).
+a poster (the matcher's pair rule) — and, for a For-fun table's Social vibe
+(#830), these players' tags (the player directory's copy of the profile's) —
+and, for building one (#831), who among them already knows whom (the games'
+record and Friends).
 """
 
 from __future__ import annotations
@@ -42,6 +45,7 @@ from app.engines.matchfit.scorable import LevelReading
 from app.kernel import Instant, Sport, invariant
 from app.modules.friends.domain.relation import FriendRelation
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.club_bookings import (
     BookedFrom,
@@ -51,6 +55,7 @@ from app.modules.proposals.domain.club_bookings import (
 )
 from app.modules.proposals.domain.deck import CardForecast, SellingTerms, Sides
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
+from app.modules.proposals.domain.needs_your_answer import NeedsYourAnswerVisit
 from app.modules.proposals.domain.home import (
     BookedGame,
     ClubCancelReason,
@@ -194,6 +199,19 @@ class GamesAndMoneyRepository(Protocol):
         ...
 
     async def save(self, settings: GamesAndMoney) -> None: ...
+
+
+@runtime_checkable
+class NeedsYourAnswerVisits(Protocol):
+    """When each player last closed *Needs your answer*, one stream per player
+    under their own id (#815)."""
+
+    async def load(self, player_id: UUID) -> NeedsYourAnswerVisit:
+        """**No watermark for a player who never closed it** — never
+        ``None``."""
+        ...
+
+    async def save(self, visit: NeedsYourAnswerVisit) -> None: ...
 
 
 @runtime_checkable
@@ -463,6 +481,16 @@ class ReaderRelations(Protocol):
 
 @final
 @dataclass(frozen=True, slots=True)
+class HomeRequestLevel:
+    """One sport on a friend request's sport-levels line — *● Padel 3,40* —
+    the requester's published Level in it (#814)."""
+
+    sport: Sport
+    level: float
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class HomeFriendRequest:
     """One card in Home's *FRIEND REQUESTS* (``docs/adr/0202`` §1): who asked,
     and where — *With you in Kazimierz crew · Padel 3,40 · ✦ 98*, *Invited
@@ -507,6 +535,51 @@ class HomeFriendRequest:
     #: **today** — ``0`` once they share none (*Found you through your tags*)
     #: — and ``None`` for any other.
     in_common: int | None = None
+    #: The requester's Level in **every** sport they hold one in, in the app's
+    #: sport order — the tile's sport-levels line, *● Padel 3,40 · ● Tennis
+    #: 2,90* (#814; ``docs/adr/0205`` §2). Empty when they hold none; the one in
+    #: ``sport`` is ``level``.
+    levels: tuple[HomeRequestLevel, ...] = ()
+
+
+@runtime_checkable
+class PlayersTags(Protocol):
+    """**These players' Social tags, as they hold them now** — what a For-fun
+    table's Social vibe is worked out from on every read, and stored nowhere
+    (``docs/adr/0207`` §2, §11; #830). One question for everybody a read
+    draws, never one per card or per person."""
+
+    async def tags_of(
+        self, players: Collection[UUID]
+    ) -> Mapping[UUID, frozenset[SocialTag]]:
+        """Everybody asked is answered: an empty set for a player who holds
+        none, or whose tags have not reached the directory yet. Every tag is
+        answered, the ones that don't count at a table included — removing
+        them is the vibe's own rule, beside the vocabulary."""
+        ...
+
+
+@runtime_checkable
+class PlayedWith(Protocol):
+    """**Who already knows whom** — every pair who are **no new faces** to each
+    other: they have played a game together — the games' own record, a court
+    played of either kind, the fact the result's *PLAYED WITH* card is drawn
+    from — or they are friends now (``docs/adr/0207`` §3, #831). Every other
+    pair is new faces, which a For-fun table prefers second, after its vibe.
+
+    **A builder's preference, and nothing else**: never a gate, never on the
+    wire, and it never moves a number a card prints. Asked only where For fun
+    is being built, and stored nowhere — a game played since, or a friendship
+    made, counts at the next build."""
+
+    async def known_pairs(
+        self, players: Collection[UUID], *, among: Collection[UUID], now: Instant
+    ) -> frozenset[frozenset[UUID]]:
+        """Every pair of one of ``players`` and one of ``among`` — two
+        different people — who have played a game by ``now`` together, or who
+        are friends now. A pool asks about everybody among everybody; a rescue
+        about the people still on the game among them and its candidates."""
+        ...
 
 
 @runtime_checkable
@@ -535,12 +608,14 @@ class FriendRequestsOnHome(Protocol):
 @dataclass(frozen=True, slots=True)
 class HomeLevelAsker:
     """One friend on a *ASKED FOR A LEVEL* card: their face, which opens their
-    record."""
+    record — and when they asked, **their own ask**: a second friend asking on
+    a card already there arrives in *Needs your answer* by it (#815)."""
 
     player_id: UUID
     nickname: str
     photo_id: UUID | None
     photo_url: str | None
+    asked_at: Instant
 
 
 @final
@@ -608,7 +683,48 @@ class BalanceForecasts(Protocol):
         self, options: Sequence[Sides], *, sport: Sport
     ) -> Sequence[CardForecast | None]:
         """One forecast per arrangement, in their order. ``None`` where somebody
-        on it holds no rating in the sport, or where a side is empty."""
+        on it holds no rating in the sport, or where a side is empty. **Each
+        forecast carries the two side strengths it was read from**
+        (``CardForecast.levels``, the arrangement's ``yours`` first): a
+        competitive game's details print them, and serve no forecast at all
+        without them (#833)."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Stakes:
+    """What a counted result would do to the reader's Level — *If you win
+    +0,08 · If you lose −0,07* — both signed, and **neither nought**: where
+    there is nothing to price there is no answer at all."""
+
+    win_delta: float
+    loss_delta: float
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.win_delta > 0 > self.loss_delta,
+            "a counted result that changes nothing or moves the wrong way: "
+            f"+{self.win_delta} / {self.loss_delta}",
+        )
+
+
+@runtime_checkable
+class ReadersStakes(Protocol):
+    """**What a competitive game puts at stake for the reader**, before they
+    answer it (``docs/adr/0207`` §6, #833) — priced by **the very function a
+    booked game's pairing prices its stakes with**, so the pair seen before a
+    yes is the pair that applies once the game is booked. A rule of ``rating``'s,
+    read forward; nothing here computes it."""
+
+    async def at_stake(
+        self, reader: UUID, *, sides: Sides, sport: Sport
+    ) -> Stakes | None:
+        """The pair for ``reader``, who stands on ``sides.yours``, the other
+        side across the net. ``None`` where the rule has nothing to move — the
+        reader holds no rating in the sport — or nothing to price against —
+        nobody across the net holds one — and where it could not be read: it
+        fails soft, costing the block and never the screen."""
         ...
 
 

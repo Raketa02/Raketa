@@ -1,13 +1,14 @@
 /**
- * **The kind of game you don't play is a door** — a group's Games switch draws both kinds always,
- * the one the intent doesn't want dimmed with no number, and its press opens a panel in place that
- * changes the intent for the page's sport ([#740](https://github.com/Raketa02/Raketa/issues/740),
+ * **The kind of game you don't play is a door** — a group's Games tab's menu draws both kinds always,
+ * the one the intent doesn't want dimmed with no number, and picking it shuts the menu and opens a
+ * panel in place that changes the intent for the page's sport (the menu since #862; the switch's
+ * before) ([#740](https://github.com/Raketa02/Raketa/issues/740),
  * ADR-0201 §2; the screens A1, A2.1; the words §28).
  *
  * The real route tree, with the socket faked at the platform edge as a small server: it holds the
  * player's intent per sport, answers `PUT /play-intents/{sport}` by changing that sport's alone,
  * and deals the deck off it — the segments the intent shows, each counting its cards, and the
- * cards of the kind asked for only where the intent shows it. So the switch a test reads after an
+ * cards of the kind asked for only where the intent shows it. So the menu a test reads after an
  * answer is the one the server's new intent draws.
  *
  * **A kind the intent has just gained has no cards until the group is dealt** — the server's
@@ -27,11 +28,12 @@
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { StyleSheet, type ViewStyle } from 'react-native';
 
+import { PROPOSALS_COPY } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { TIMEOUT_MS } from '@/shared/lib/http';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
-import { theme } from '@/shared/ui';
+import { REVEAL_CEILING, theme } from '@/shared/ui';
 import {
   dealPath,
   deckCard,
@@ -43,6 +45,15 @@ import {
   stubFillIn,
   youTile,
 } from '@/test-support/groupDeck';
+import {
+  menuLine,
+  menuSays,
+  menuTab,
+  openTabMenu,
+  pickKind,
+  shutTabMenu,
+} from '@/test-support/tabMenu';
+import { bottomOf, PLAYERS_BAR } from '@/test-support/tabBarReach';
 import {
   pressHardwareBack,
   stopWatchingHardwareBack,
@@ -72,6 +83,8 @@ import {
 import { useGameIntent } from '../store/gameIntent.store';
 
 const HIDDEN_TOO = { includeHiddenElements: true } as const;
+
+const COPY = PROPOSALS_COPY;
 
 type Kind = Wire['SearchMode'];
 type Intent = Wire['PlayIntentDeclarationResponse']['intent'];
@@ -143,6 +156,8 @@ let intents: Partial<Record<Wire['Sport'], Intent>>;
 let dealing: Record<Kind, number>;
 /** The padel kinds the group has been dealt in for the reader — what the deal fills. */
 let built: Set<Kind>;
+/** A padel kind whose deck reads never answer, or are refused — none unless a test says so. */
+let unread: { readonly kind: Kind; readonly how: 'held' | 'refused' } | undefined;
 
 beforeEach(() => {
   transport = installTransport();
@@ -157,6 +172,7 @@ beforeEach(() => {
   useToastQueue.setState({ queue: [] });
   intents = { TENNIS: 'FOR_FUN' };
   dealing = { COMPETITIVE: 7, FOR_FUN: 3 };
+  unread = undefined;
   watchHardwareBack();
 });
 
@@ -223,6 +239,11 @@ async function openGames(padel: Intent | undefined) {
   transport.on('GET', `/api/v1/groups/${GROUP.id}`, () => json(PAGE));
   transport.on('GET', deckPath(GROUP.id), (request) => {
     const { sport, kind } = askedOf(request);
+    if (sport === 'PADEL' && unread?.kind === kind) {
+      return unread.how === 'held'
+        ? new Promise<Response>(() => undefined)
+        : errorResponse(429, 'rate_limited');
+    }
     return json(dealt(sport, kind));
   });
   stubFillIn(transport, GROUP.id);
@@ -244,13 +265,58 @@ async function openGames(padel: Intent | undefined) {
 
 const PAGE_PATH = `/play/group/${GROUP.id}`;
 
-/** A live side of the switch, by its spoken name. */
-const live = (name: string, selected?: boolean) =>
-  screen.findByRole('button', { name, ...(selected === undefined ? {} : { selected }) });
+/**
+ * Once nothing is on its way — no answer, no finding — so the Games tab's menu opens again (#862):
+ * an answer and its finding hold it still. A line said to be selected waits for the tab to say its
+ * kind, which it does once the deck has landed there.
+ */
+async function settled(selectedKind?: string) {
+  if (selectedKind !== undefined) {
+    await screen.findByRole('button', { name: `Games, ${selectedKind}`, selected: true });
+  }
+  await waitFor(() => expect(screen.queryByText(/^Finding/)).toBeNull());
+  // The mutations' own state reaches the page on Query's next notify tick.
+  act(() => jest.advanceTimersByTime(0));
+}
 
-/** The door, by its spoken name. */
-const door = (kind: 'For fun' | 'Competitive') =>
-  screen.findByRole('button', { name: `${kind}, not a kind you play` });
+/** A live line of the Games tab's menu, by its spoken name — read, and the menu shut again. */
+async function live(name: string, selected?: boolean) {
+  await settled(selected === true ? name.split(',')[0] : undefined);
+  return menuSays('Games', name, selected);
+}
+
+/** The door, by its spoken name — a line of the Games tab's menu, read and put away. */
+async function door(kind: 'For fun' | 'Competitive') {
+  await settled();
+  return menuSays('Games', `${kind}, not a kind you play`, false);
+}
+
+/** **The door, opened from the menu** (#862): the menu shuts, and the panel opens over the deck. */
+const openTheDoor = (kind: 'For fun' | 'Competitive') => pickKind('Games', kind);
+
+/** Every door the Games tab's menu draws now — the menu opened to look, and shut again. */
+async function doorsInTheMenu(): Promise<string[]> {
+  const open = await openTabMenu('Games');
+  const doors = within(open)
+    .getAllByRole('button')
+    .map((line) => line.props.accessibilityLabel as string)
+    .filter((name) => name.endsWith('not a kind you play'));
+  await shutTabMenu('Games');
+  return doors;
+}
+
+/** Games' chevron, wherever it is drawn — a mark, never spoken. */
+const chevron = () => screen.queryByTestId('segment-chevron-games', HIDDEN_TOO);
+
+/**
+ * A press on the selected Games tab that opens nothing — the menu stays shut, to a finger and a
+ * listener alike (one folding away from the door's pick is still drawn, out of reach).
+ */
+async function tabOpensNothing() {
+  fireEvent.press(await menuTab('Games'));
+  expect(screen.queryByTestId('tab-menu')).toBeNull();
+  expect(await menuTab('Games', false)).toBeTruthy();
+}
 
 const declarations = (sport: Wire['Sport']) => transport.requestsTo('PUT', intentPath(sport));
 
@@ -325,44 +391,48 @@ const answer = (intent: 'Either suits me' | 'For fun' | 'Competitive') =>
     name: `${intent}, your usual at Padel`,
   });
 
-describe('the switch draws both kinds always', () => {
+describe('the Games tab’s menu draws both kinds always (#862)', () => {
   it('draws Ania’s kind live with its number, and For fun dimmed with none', async () => {
     await openGames('COMPETITIVE');
 
-    expect(await live('Competitive, 7 games', true)).toBeTruthy();
-    expect(screen.getByText('Competitive · 7')).toBeTruthy();
-    expect(await door('For fun')).toBeTruthy();
-    expect(screen.getByText('For fun')).toBeTruthy();
-    expect(screen.queryByText(/^For fun ·/)).toBeNull();
-    expect(StyleSheet.flatten(screen.getByText('For fun').props.style as ViewStyle).opacity).toBe(
-      theme.size.segDoorOpacity,
-    );
+    const open = await openTabMenu('Games');
+    const competitive = await menuLine('Competitive', true);
+    expect(competitive.props.accessibilityLabel).toBe('Competitive, 7 games');
+    expect(within(competitive).getByText('7', HIDDEN_TOO)).toBeTruthy();
+    // The door: the kind's words alone, dimmed, no number, no tick — and never disabled.
+    const forFun = await menuLine('For fun');
+    expect(forFun.props.accessibilityLabel).toBe('For fun, not a kind you play');
+    expect(forFun.props.accessibilityState).toEqual({ selected: false });
+    expect(within(forFun).queryByText(/[0-9]/, HIDDEN_TOO)).toBeNull();
+    expect(within(forFun).queryByTestId('tab-menu-tick', HIDDEN_TOO)).toBeNull();
+    expect(
+      StyleSheet.flatten(within(forFun).getByText('For fun').props.style as ViewStyle).opacity,
+    ).toBe(theme.size.segDoorOpacity);
+    expect(within(open).getAllByRole('button')).toHaveLength(2);
   });
 
   it('draws Kuba’s mirror: Competitive dimmed, For fun · 3 live', async () => {
     await openGames('FOR_FUN');
 
     expect(await live('For fun, 3 games', true)).toBeTruthy();
-    expect(screen.getByText('For fun · 3')).toBeTruthy();
     expect(await door('Competitive')).toBeTruthy();
-    expect(screen.queryByText(/^Competitive ·/)).toBeNull();
+    expect((await menuTab('Games')).props.accessibilityLabel).toBe('Games, For fun');
   });
 
   it('leaves Zofia’s Either suits me as it was: both live, no door', async () => {
     await openGames('NO_PREFERENCE');
 
     expect(await live('Competitive, 7 games', true)).toBeTruthy();
-    expect(screen.getByText('For fun · 3')).toBeTruthy();
-    expect(screen.queryByLabelText(/not a kind you play/)).toBeNull();
+    expect(await live('For fun, 3 games', false)).toBeTruthy();
+    expect(await doorsInTheMenu()).toEqual([]);
   });
 
-  it('still asks the first-time question, with no switch, for an undeclared sport', async () => {
+  it('still asks the first-time question, with no chevron, for an undeclared sport', async () => {
     await openGames(undefined);
 
     expect(await screen.findByText('Your usual game at Padel')).toBeTruthy();
-    expect(screen.queryByLabelText(/not a kind you play/)).toBeNull();
-    expect(screen.queryByText(/^Competitive ·/)).toBeNull();
-    expect(screen.queryByText(/^For fun ·/)).toBeNull();
+    expect(chevron()).toBeNull();
+    expect(screen.queryByLabelText(/not a kind you play/, HIDDEN_TOO)).toBeNull();
   });
 });
 
@@ -372,25 +442,61 @@ describe('the deck never opens on the dimmed kind', () => {
     await openGames('COMPETITIVE');
 
     expect(await screen.findByTestId(`game-card-${FIRST.COMPETITIVE.proposal_id}`)).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'Competitive, 7 games', selected: true }),
-    ).toBeTruthy();
+    expect(await live('Competitive, 7 games', true)).toBeTruthy();
     expect(screen.queryByTestId(`game-card-${FIRST.FOR_FUN.proposal_id}`, HIDDEN_TOO)).toBeNull();
   });
+
+  // The code review's catch (#862): the menu is drawn off the read of the kind the phone last stood
+  // on, which says the intent shows only Competitive, while the deck reads Competitive itself — and a
+  // door drawn there is a door that opens, over the deck's skeleton (#875) or its failure.
+  it.each([
+    ['on its way', 'held', () => screen.findAllByTestId('deck-skeleton', HIDDEN_TOO)],
+    ['refused', 'refused', () => screen.findByRole('button', { name: COPY.readAgain })],
+  ] as const)(
+    'opens the door from the menu while the deck’s own read is %s',
+    async (_state, how, deckSays) => {
+      useGameIntent.setState({ intent: 'forFun' });
+      unread = { kind: 'COMPETITIVE', how };
+      await openGames('COMPETITIVE');
+      // While the deck's own read is out the page shimmers, and the tab bar comes in at the ceiling
+      // (#875): the menu is reached from there.
+      act(() => jest.advanceTimersByTime(REVEAL_CEILING));
+      expect(await deckSays()).toBeTruthy();
+      expect(await door('For fun')).toBeTruthy();
+
+      await openTheDoor('For fun');
+
+      expect(
+        await screen.findByText(
+          'You play padel competitively, so Raketa only puts you in competitive games.',
+        ),
+      ).toBeTruthy();
+      expect(
+        screen.getByText('Keep your 7 competitive cards and get for-fun ones too.'),
+      ).toBeTruthy();
+      // The area runs under the floating bar to the phone's foot (#881); what covers it ends at the
+      // bar's reach, so the door's last button scrolls clear of the bar — the code review's catch.
+      const layer = screen.getByTestId('games-deck-over');
+      expect(within(layer).getByTestId('kind-door')).toBeTruthy();
+      expect(bottomOf(layer)).toBe(PLAYERS_BAR);
+      expect(useGameIntent.getState().intent).toBe('forFun');
+      fireEvent.press(screen.getByRole('button', { name: 'Keep competitive' }));
+      expect(panel()).toBeNull();
+      expect(await deckSays()).toBeTruthy();
+    },
+  );
 
   it('does not move the remembered position when the door is tapped', async () => {
     useGameIntent.setState({ intent: 'forFun' });
     await openGames('COMPETITIVE');
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     expect(await screen.findByTestId('kind-door')).toBeTruthy();
     expect(useGameIntent.getState().intent).toBe('forFun');
 
     fireEvent.press(screen.getByRole('button', { name: 'Keep competitive' }));
     expect(useGameIntent.getState().intent).toBe('forFun');
-    expect(
-      screen.getByRole('button', { name: 'Competitive, 7 games', selected: true }),
-    ).toBeTruthy();
+    expect(await live('Competitive, 7 games', true)).toBeTruthy();
   });
 });
 
@@ -399,7 +505,7 @@ describe('the panel', () => {
     await openGames('COMPETITIVE');
     await screen.findByTestId(`game-card-${FIRST.COMPETITIVE.proposal_id}`);
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
 
     expect(
       await screen.findByText(
@@ -426,21 +532,21 @@ describe('the panel', () => {
     expect(fill(answer('Either suits me'))).toBe(theme.color.coralInk);
     expect(fill(answer('For fun'))).toBe(theme.color.onDarkFill);
 
-    // An overlay inside the deck's area: no new route, the switch still drawn, and the cards
-    // still laid out under it rather than squeezed by it.
+    // An overlay inside the deck's area: no new route, the menu shut before it opened, the tab and
+    // its chevron still drawn, and the cards still laid out under it rather than squeezed by it.
     expect(screen).toHavePathname(PAGE_PATH);
+    expect(screen.queryByTestId('tab-menu')).toBeNull();
+    expect((await menuTab('Games')).props.accessibilityLabel).toBe('Games, Competitive');
+    expect(chevron()).toBeTruthy();
     expect(
       screen.getByTestId(`game-card-${FIRST.COMPETITIVE.proposal_id}`, HIDDEN_TOO),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'Competitive, 7 games', selected: true }),
     ).toBeTruthy();
   });
 
   it('is Kuba’s mirror for a for-fun player', async () => {
     await openGames('FOR_FUN');
 
-    fireEvent.press(await door('Competitive'));
+    await openTheDoor('Competitive');
 
     expect(
       await screen.findByText('You play padel for fun, so Raketa only puts you in for-fun games.'),
@@ -457,7 +563,7 @@ describe('the panel', () => {
     dealing.COMPETITIVE = 1;
     await openGames('COMPETITIVE');
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
 
     expect(
       await screen.findByText('Keep your 1 competitive card and get for-fun ones too.'),
@@ -470,7 +576,7 @@ describe('the panel', () => {
     await openGames('COMPETITIVE');
     expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
 
     expect(await screen.findByText('Get for-fun games as well as competitive ones.')).toBeTruthy();
     expect(
@@ -482,7 +588,7 @@ describe('the panel', () => {
   it('closes on Keep competitive and sends nothing', async () => {
     await openGames('COMPETITIVE');
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(await screen.findByRole('button', { name: 'Keep competitive' }));
 
     expect(panel()).toBeNull();
@@ -490,15 +596,19 @@ describe('the panel', () => {
     expect(screen.getByTestId(`game-card-${FIRST.COMPETITIVE.proposal_id}`)).toBeTruthy();
   });
 
-  it('closes on the live kind’s press, and on Android’s back, sending nothing', async () => {
+  // Left open by the grilling, decided by #862 as the switch had it: the tab still opens its menu
+  // over the panel, and the live kind picked there closes the panel — the kind it already is.
+  it('closes on the live kind picked in the menu, and on Android’s back, sending nothing', async () => {
     await openGames('COMPETITIVE');
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     await screen.findByTestId('kind-door');
-    fireEvent.press(screen.getByRole('button', { name: 'Competitive, 7 games' }));
+    await pickKind('Games', 'Competitive');
     expect(panel()).toBeNull();
+    expect(screen.queryByTestId('tab-menu')).toBeNull();
+    expect(useGameIntent.getState().intent).toBe('competitive');
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     await screen.findByTestId('kind-door');
     let claimed = false;
     act(() => {
@@ -514,7 +624,7 @@ describe('the panel', () => {
   it('closes on a change of sport, and is not there on coming back', async () => {
     await openGames('COMPETITIVE');
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     await screen.findByTestId('kind-door');
     await pickSport('Padel', 'Tennis');
     expect(await live('For fun, 2 games', true)).toBeTruthy();
@@ -530,13 +640,13 @@ describe('an answer', () => {
   it('Either suits me declares it for padel on the deck, and lands on For fun with both live', async () => {
     await openGames('COMPETITIVE');
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(answer('Either suits me'));
 
     expect(await live('For fun, 3 games', true)).toBeTruthy();
     expect(await screen.findByTestId(`game-card-${FIRST.FOR_FUN.proposal_id}`)).toBeTruthy();
-    expect(screen.getByText('Competitive · 7')).toBeTruthy();
-    expect(screen.queryByLabelText(/not a kind you play/)).toBeNull();
+    expect(await live('Competitive, 7 games', false)).toBeTruthy();
+    expect(await doorsInTheMenu()).toEqual([]);
     expect(panel()).toBeNull();
     expect(declarations('PADEL').map((request) => request.body)).toEqual([
       { intent: 'NO_PREFERENCE', surface: 'DECK' },
@@ -547,7 +657,7 @@ describe('an answer', () => {
   it('the kind tapped declares it alone, and the kind Ania played becomes the door', async () => {
     await openGames('COMPETITIVE');
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(answer('For fun'));
 
     expect(await live('For fun, 3 games', true)).toBeTruthy();
@@ -562,7 +672,7 @@ describe('an answer', () => {
     useGameIntent.setState({ intent: 'forFun' });
     await openGames('FOR_FUN');
 
-    fireEvent.press(await door('Competitive'));
+    await openTheDoor('Competitive');
     fireEvent.press(answer('Competitive'));
 
     expect(await live('Competitive, 7 games', true)).toBeTruthy();
@@ -576,7 +686,7 @@ describe('an answer', () => {
   it('changes padel only: tennis keeps its For fun', async () => {
     await openGames('COMPETITIVE');
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(answer('Either suits me'));
     expect(await live('For fun, 3 games', true)).toBeTruthy();
 
@@ -588,16 +698,18 @@ describe('an answer', () => {
     expect(intents.TENNIS).toBe('FOR_FUN');
   });
 
-  it('holds the switch while it is on its way, then lands on the kind tapped', async () => {
+  it('holds the menu while it is on its way — the chevron drawn, inert — then lands on the kind tapped', async () => {
     await openGames('COMPETITIVE');
     const release = holdTheDeclaration();
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(answer('For fun'));
     await waitFor(() => expect(declarations('PADEL')).toHaveLength(1));
+    act(() => jest.advanceTimersByTime(0));
 
-    // The live kind's press, which would close the panel at rest, moves nothing meanwhile.
-    fireEvent.press(screen.getByRole('button', { name: 'Competitive, 7 games' }));
+    // The chevron stays so the bar doesn't jump, and a press on the tab opens nothing meanwhile.
+    expect(chevron()).toBeTruthy();
+    await tabOpensNothing();
     expect(screen.getByTestId('kind-door')).toBeTruthy();
     expect(useGameIntent.getState().intent).toBe('competitive');
 
@@ -612,7 +724,7 @@ describe('an answer', () => {
     await openGames('COMPETITIVE');
     const release = holdTheDeclaration();
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(answer('Either suits me'));
     await waitFor(() => expect(declarations('PADEL')).toHaveLength(1));
     await pickSport('Padel', 'Tennis');
@@ -621,9 +733,9 @@ describe('an answer', () => {
     await act(async () => release());
     await pickSport('Tennis', 'Padel');
 
-    // Padel was read again for the answer, and the switch stands on the kind tapped.
+    // Padel was read again for the answer, and the deck stands on the kind tapped.
     expect(await live('For fun, 3 games', true)).toBeTruthy();
-    expect(screen.getByText('Competitive · 7')).toBeTruthy();
+    expect(await live('Competitive, 7 games', false)).toBeTruthy();
     expect(useGameIntent.getState().intent).toBe('forFun');
   });
 
@@ -631,13 +743,11 @@ describe('an answer', () => {
     await openGames('COMPETITIVE');
     transport.on('PUT', intentPath('PADEL'), () => errorResponse(500, 'internal_error'));
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(answer('For fun'));
 
     expect(await within(screen.getByTestId('kind-door')).findByRole('alert')).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'Competitive, 7 games', selected: true }),
-    ).toBeTruthy();
+    expect(await live('Competitive, 7 games', true)).toBeTruthy();
     expect(intents.PADEL).toBe('COMPETITIVE');
   });
 });
@@ -647,7 +757,7 @@ describe('finding, after the door’s answer', () => {
     await openGames('COMPETITIVE');
     const release = holdTheDeal();
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(answer('Either suits me'));
 
     expect(await findingSays('Finding for-fun games for you…')).toBeTruthy();
@@ -656,17 +766,26 @@ describe('finding, after the door’s answer', () => {
     expect(
       screen.getByTestId(`game-card-${FIRST.COMPETITIVE.proposal_id}`, HIDDEN_TOO),
     ).toBeTruthy();
+    // The chevron stays drawn while the games are found, and a press on the tab opens nothing.
+    act(() => jest.advanceTimersByTime(0));
+    expect(chevron()).toBeTruthy();
+    await tabOpensNothing();
 
     await act(async () => release());
 
     expect(await live('For fun, 3 games', true)).toBeTruthy();
     expect(await screen.findByTestId(`game-card-${FIRST.FOR_FUN.proposal_id}`)).toBeTruthy();
     expect(screen.queryByText('Finding for-fun games for you…')).toBeNull();
+    // Landed by finding, the kind is drawn directly: no stack went out, and none comes in (#863).
+    const stack = StyleSheet.flatten(
+      screen.getByTestId('games-deck-stack').props.style as ViewStyle,
+    );
+    expect([stack.opacity, stack.transform]).toEqual([1, [{ translateY: 0 }]]);
   });
 
   it('sends the answer, then the deal, then reads the deck — once', async () => {
     await openGames('COMPETITIVE');
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     const from = transport.requests.length;
 
     fireEvent.press(answer('For fun'));
@@ -690,7 +809,7 @@ describe('finding, after the door’s answer', () => {
     await openGames('COMPETITIVE');
     const release = holdTheDeal();
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(answer('Either suits me'));
     expect(await findingSays('Finding for-fun games for you…')).toBeTruthy();
     fireEvent.press(await screen.findByRole('button', { name: /^Fill in/ }));
@@ -707,7 +826,7 @@ describe('finding, after the door’s answer', () => {
     await openGames('COMPETITIVE');
     transport.on('POST', dealPath(GROUP.id), neverResponds());
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(answer('For fun'));
     expect(await findingSays('Finding for-fun games for you…')).toBeTruthy();
 
@@ -724,14 +843,12 @@ describe('finding, after the door’s answer', () => {
     transport.on('POST', dealPath(GROUP.id), networkFailure());
     transport.on('GET', deckPath(GROUP.id), networkFailure());
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(answer('For fun'));
 
-    // Finding ends, and the switch stays on the deck the phone has rather than one no read can reach.
+    // Finding ends, and the deck stays on the kind the phone has rather than one no read can reach.
     await waitFor(() => expect(screen.queryByText(/^Finding/)).toBeNull());
-    expect(
-      screen.getByRole('button', { name: 'Competitive, 7 games', selected: true }),
-    ).toBeTruthy();
+    expect(await live('Competitive, 7 games', true)).toBeTruthy();
     expect(screen.getByTestId(`game-card-${FIRST.COMPETITIVE.proposal_id}`)).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(useGameIntent.getState().intent).toBe('competitive');
@@ -741,7 +858,7 @@ describe('finding, after the door’s answer', () => {
     dealing.FOR_FUN = 0;
     await openGames('COMPETITIVE');
 
-    fireEvent.press(await door('For fun'));
+    await openTheDoor('For fun');
     fireEvent.press(answer('For fun'));
 
     expect(await live('For fun, 0 games', true)).toBeTruthy();
@@ -760,7 +877,7 @@ describe('finding, after the door’s answer', () => {
       await openGames('COMPETITIVE');
       transport.on('POST', dealPath(GROUP.id), responder);
 
-      fireEvent.press(await door('For fun'));
+      await openTheDoor('For fun');
       fireEvent.press(answer('For fun'));
 
       // Nothing was dealt, so the new kind has nothing yet — the deck's own empty card says so.
@@ -786,6 +903,8 @@ describe('finding, after the first-time question', () => {
 
     expect(await findingSays('Finding for-fun games for you…')).toBeTruthy();
     expect(screen.queryByText('Your usual game at Padel')).toBeNull();
+    // No chevron yet: it first appears with the deck the answer lands on.
+    expect(chevron()).toBeNull();
 
     await act(async () => release());
 
@@ -794,7 +913,7 @@ describe('finding, after the first-time question', () => {
     expect(await door('Competitive')).toBeTruthy();
   });
 
-  it('names no kind after Either suits me, and lands where the switch stood', async () => {
+  it('names no kind after Either suits me, and lands where the deck stood', async () => {
     await openGames(undefined);
     const release = holdTheDeal();
 
@@ -807,7 +926,7 @@ describe('finding, after the first-time question', () => {
     await act(async () => release());
 
     expect(await live('Competitive, 7 games', true)).toBeTruthy();
-    expect(screen.getByText('For fun · 3')).toBeTruthy();
+    expect(await live('For fun, 3 games', false)).toBeTruthy();
     expect(await screen.findByTestId(`game-card-${FIRST.COMPETITIVE.proposal_id}`)).toBeTruthy();
   });
 

@@ -5,7 +5,7 @@
  * heading and its *See all ›*, the tile's tag, sports and *Joined …*, and See all's title, pill and
  * empty line; Same competitive level ([#802](https://github.com/Raketa02/Raketa/issues/802); the
  * words [§31.5 and §31.6](../../../../../docs/specs/matchmaking/the-words.md#315-same-competitive-level--the-card)):
- * the card's pairing, *EVEN*, the bar's *YOU*, the gap, *N sports ›*, and the comparison sheet; and
+ * the card's pairing, *EVEN*, the bar's *YOU*, *N sports ›*, and the comparison sheet with its gap; and
  * Same vibe ([#803](https://github.com/Raketa02/Raketa/issues/803); the words
  * [§31.8](../../../../../docs/specs/matchmaking/the-words.md#318-same-vibe)): the tile's %, *+N more*,
  * the sheet's title and identity row. The round button's words are `friends'`, the bands' names
@@ -30,8 +30,9 @@
  *
  * - **See all's spoken name**, *See all players at your level*, for #801's reason below.
  * - ***N sports ›*'s spoken name**, *Compare with zofia.b in 2 sports* — it opens the comparison.
- * - **The pairing's spoken name**, *91% even in padel, You 2,71, zofia.b 2,69, 0,02 below you*, read
- *   in the order drawn; the bar's, *You 2,71 · zofia.b 2,69*, the sheet's own line.
+ * - **The pairing's spoken name**, *91% even in padel, You 2,71, zofia.b 2,69*, read in the order
+ *   drawn — with no gap since the card stopped drawing it (#821); the bar's, *You 2,71 · zofia.b
+ *   2,69*, the sheet's own line.
  * - **See all with nobody to compare**, *Nobody to compare in squash yet*, and with nobody at all,
  *   *Nobody to compare with right now* — §31 words neither: a sport the read offered can leave nobody
  *   by the time it is read.
@@ -57,13 +58,14 @@
  */
 
 import { sportInLine, sportLabel } from '@/features/onboarding/types';
+import { countFigure } from '@/shared/formatting/countFigure';
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
 import type { SportPillWords } from '@/shared/ui';
 import { socialTagName, thingsInCommon } from '@/shared/vocabulary/socialTagPresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { JoinedAgo, Joiner } from '../domain/joiner';
-import { levelGapOf, type LevelComparison, type LevelGap } from '../domain/sameLevel';
+import type { LevelComparison, LevelGap } from '../domain/sameLevel';
 import type { SameVibePlayer } from '../domain/sameVibe';
 import type { SeeAllSport } from '../domain/seeAll';
 
@@ -71,9 +73,8 @@ export const DISCOVERY_COPY = {
   /** Every See all pill's first choice. */
   all: 'All',
   newInRaketa: {
-    /** Drawn uppercase by the row frame: *NEW IN RAKETA* — never *Rakieta*. */
-    heading: 'New in Raketa',
-    seeAll: 'See all',
+    /** FOR YOU's line (#820) — its title, and what it is named: never *Rakieta*. */
+    line: 'New in Raketa',
     seeAllLabel: 'See all new players',
     /** The volt tag, top-left on every tile. */
     tag: 'NEW',
@@ -82,12 +83,10 @@ export const DISCOVERY_COPY = {
     back: 'Back to Home',
     pillHint: 'Shows new players in another sport',
     nobodyAtAll: 'Nobody new right now',
-    reading: 'Reading new players…',
   },
   sameLevel: {
-    /** Drawn uppercase by the row frame: *SAME COMPETITIVE LEVEL PLAYERS*. */
-    heading: 'Same competitive level players',
-    seeAll: 'See all',
+    /** FOR YOU's line (#820) — its title: the row was *SAME COMPETITIVE LEVEL PLAYERS*. */
+    line: 'Players at your level',
     seeAllLabel: 'See all players at your level',
     /** See all's title — bold, two lines where it wraps (home rows 12). */
     title: 'Same competitive level players',
@@ -98,27 +97,32 @@ export const DISCOVERY_COPY = {
     even: 'EVEN',
     /** The bar's tall mark. */
     youMark: 'YOU',
-    /** The gap when it rounds to 0,00. */
+    /** The gap when it rounds to 0,00 — the comparison sheet's, since the card says no gap (#821). */
     sameLevel: 'Same level',
-    /** Between the gap and *N sports ›* on the card's footer — §31's separator. */
-    between: ' · ',
     pillHint: 'Compares everybody in another sport',
     nobodyAtAll: 'Nobody to compare with right now',
-    reading: 'Reading players at your level…',
   },
   sameVibe: {
-    /** Drawn uppercase by the row frame: *SAME VIBE PLAYERS*. */
-    heading: 'Same vibe players',
-    seeAll: 'See all',
+    /** FOR YOU's line (#820) — its title: the row was *SAME VIBE PLAYERS*. */
+    line: 'Players with your vibe',
     seeAllLabel: 'See all same vibe players',
     /** See all's title. */
     title: 'Same vibe players',
     back: 'Back to Home',
     pillHint: 'Shows who shares your tags in another sport',
     nobodyAtAll: 'Nobody shares your tags right now',
-    reading: 'Reading same vibe players…',
   },
 } as const;
+
+/**
+ * *See all 14* — a people line's footer link, before its chevron (#822; ADR-0205 §5, §6): **the
+ * line's count**, the pill's figure, *99+* past 99. See all shows one sport at a time, and the figure
+ * is still the line's whole pool, as the mocks draw it. Spoken, the link keeps its name
+ * (*See all players at your level*): the line's own name has just said the count.
+ */
+export function seeAllWords(total: number): string {
+  return `See all ${countFigure(total)}`;
+}
 
 /** *Padel 2,35* — one sport on a tile, its dot drawn before it. */
 export function sportLevelLine(sport: Sport, level: number): string {
@@ -159,8 +163,9 @@ export function nobodyNewPlays(sport: Sport): string {
 }
 
 /**
- * **The gap in words** (§31.5) — *0,02 below you*, *0,09 above you*, *Same level*. A switch over the
- * kind, so a gap with no words fails to compile.
+ * **The gap in words** (§31.6) — *0,02 below you*, *0,09 above you*, *Same level* — on the comparison
+ * sheet's blocks; the card says none since #821. A switch over the kind, so a gap with no words fails
+ * to compile.
  */
 export function gapLine(gap: LevelGap): string {
   switch (gap.kind) {
@@ -203,13 +208,12 @@ export function evenTag(percentEven: number): string {
   return `${formatPercent(percentEven)} even`;
 }
 
-/** The pairing, spoken in the order drawn (a call) — see the module note. */
+/** The pairing, spoken in the order drawn (a call), with no gap (#821) — see the module note. */
 export function pairingLabel(comparison: LevelComparison, nickname: string): string {
   return [
     `${evenTag(comparison.percentEven)} in ${sportInLine(comparison.sport)}`,
     `You ${formatLevel(comparison.yourLevel)}`,
     `${nickname} ${formatLevel(comparison.theirLevel)}`,
-    gapLine(levelGapOf(comparison.levelGap)),
   ].join(', ');
 }
 

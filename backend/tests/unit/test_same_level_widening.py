@@ -45,6 +45,7 @@ class InMemoryLevels:
     def __init__(self, levels: list[CurrentLevel]) -> None:
         self._levels = levels
         self.windows_read = 0
+        self.counts_asked = 0
 
     async def save(self, level: CurrentLevel) -> None:
         raise NotImplementedError
@@ -91,6 +92,17 @@ class InMemoryLevels:
             )
             for player_id in sorted(found, key=lambda one: one.int)
         )
+
+    async def how_many_hold(
+        self, sports: Collection[Sport], *, leaving_out: Collection[UUID], up_to: int
+    ) -> int:
+        self.counts_asked += 1
+        holding = {
+            one.player_id
+            for one in self._levels
+            if one.sport in sports and one.player_id not in leaving_out
+        }
+        return min(len(holding), up_to)
 
     async def least_doubt(self, sports: Collection[Sport]) -> Mapping[Sport, float]:
         least: dict[Sport, float] = {}
@@ -270,10 +282,16 @@ async def test_the_row_is_the_brute_force_row(seed):
         faces=Faces(),
     )
 
-    cards = await read.execute(READER)
+    read_row = await read.execute(READER)
+    cards = read_row.cards
 
+    everybody = best_first_by_brute_force(levels, None)
+    # The total is everybody sharing a sport — what scoring the whole crowd
+    # would list, up to 100 — at the cost of one count at most.
+    assert read_row.total == min(len(everybody), 100)
+    assert store.counts_asked <= 1
     row = RowOfTen()
-    for player in best_first_by_brute_force(levels, None):
+    for player in everybody:
         if row.full:
             break
         row.take(
@@ -324,7 +342,11 @@ async def test_a_crowd_around_the_reader_is_read_in_its_nearest_windows():
         faces=Faces(),
     )
 
-    cards = await read.execute(READER)
+    read_row = await read.execute(READER)
 
-    assert len(cards) == 10
+    assert len(read_row.cards) == 10
     assert store.windows_read <= 4
+    # Fewer than a hundred were read in those windows: one count, not a
+    # window more.
+    assert read_row.total == 100
+    assert store.counts_asked == 1

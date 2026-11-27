@@ -6,12 +6,13 @@
 
 import { getNewInRaketa, getNewInRaketaPage, type Cancellable } from '../api/discoveryApi';
 import type { Joiner, JoinerPage } from '../domain/joiner';
+import type { PeopleRow } from '../domain/peopleRow';
 import type { SeeAllAsk } from '../domain/seeAll';
-import { toJoiner, toJoinerPage, toPageAsked } from '../mappers/discoveryMappers';
+import { toJoinerPage, toNewInRaketaRow, toPageAsked } from '../mappers/discoveryMappers';
 
-/** Home's row — up to 10, in the server's order. */
-export function readNewInRaketa(options: Cancellable = {}): Promise<readonly Joiner[]> {
-  return getNewInRaketa(options).then((answer) => answer.players.map(toJoiner));
+/** Home's row — up to 10, in the server's order, and how many it could show (#822). */
+export function readNewInRaketa(options: Cancellable = {}): Promise<PeopleRow<Joiner>> {
+  return getNewInRaketa(options).then(toNewInRaketaRow);
 }
 
 /** One page of See all — with a sport, only those holding a level in it. */

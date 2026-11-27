@@ -23,7 +23,7 @@ import type {
 } from '../domain/posting';
 import type { SeatToFill } from '../domain/fillIn';
 
-import { toChallenger, toClub, toKind, toPerson, toWireKind } from './deckMappers';
+import { toChallenger, toClub, toKind, toPerson, toVibe, toWireKind } from './deckMappers';
 import { toSeatToFill } from './fillInMappers';
 
 type Schemas = components['schemas'];
@@ -79,7 +79,9 @@ function toFit(wire: Schemas['SlotFitSchema']): SlotFit {
     ...(wire.nickname === null ? {} : { name: wire.nickname }),
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
     ...(wire.level === null ? {} : { level: wire.level }),
-    ...(wire.forecast === null ? {} : { forecastPct: wire.forecast.pct }),
+    ...(wire.forecast === null ? {} : { forecast: { pct: wire.forecast.pct } }),
+    // The deck's narrowing: none on a competitive post, and none from an older server's read.
+    ...toVibe(wire.vibe),
     ...(wire.friend ? { friend: true } : {}),
   };
 }
@@ -113,6 +115,7 @@ function toPost(wire: Schemas['PostStillFillingSchema']): PostStillFilling {
 
 export function toPostingSlot(wire: Schemas['PostingSlotResponse']): PostingSlot {
   return {
+    kind: toKind(wire.kind),
     day: wire.day,
     range: wire.range,
     readAt: wire.read_at,

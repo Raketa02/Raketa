@@ -9,8 +9,8 @@
  *
  * - **The last yes** sees *It's a game!* with *Waiting for one payment · until 10:30 · Nobody pays
  *   until it's in*; a refusal of his own is no screen, only his sheet, naming his time.
- * - **Home** reads *Waiting for one payment* to the others; the payer's card, *To confirm* row,
- *   details and sheet name the time.
+ * - **Home** reads *Waiting for one payment* to the others; the payer's card, *To confirm* tile —
+ *   in Needs your answer, behind Home's envelope, since #817 — details and sheet name the time.
  * - **Paying in time** shows the payer *It's a game!*, which they never saw; **out of time** the
  *   game is *Seat open* to the others and the payer's row loses its time.
  * - **Before the cut-off it is the time to fix the card** ([#643](https://github.com/Raketa02/Raketa/issues/643);
@@ -33,6 +33,7 @@ import { useToastQueue } from '@/shared/store/toast.store';
 import {
   ANIA,
   deckCard,
+  DETAILS_CARD,
   DECK_READ_AT,
   EWA,
   groupDeck,
@@ -58,6 +59,7 @@ import {
   NOTICES_PATH,
   PAYMENTS_TO_CONFIRM_PATH,
   launchSignedIn,
+  paymentsToConfirmServed,
   resetClipboard,
   resetHaptics,
   resetPayments,
@@ -71,6 +73,11 @@ import {
   stubPayments,
   stubShare,
 } from '@/test-support/onboardingRouter';
+import {
+  closeNeedsYourAnswer,
+  openNeedsYourAnswer,
+  sheetTitle,
+} from '@/test-support/needsYourAnswer';
 import { fakeClipboard, fakeHaptics, fakePayments, fakeShare } from '@/test-support/platform';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
@@ -476,8 +483,10 @@ describe('Home while one payment is awaited (Q111)', () => {
     const drawn = await card();
     expect(within(drawn).getByText(HOME.status.WAITING_FOR_A_PAYMENT)).toBeTruthy();
     expect(within(drawn).getByText('Confirm your payment by 10:30')).toBeTruthy();
+    await openNeedsYourAnswer();
     const row = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
     expect(within(row).getByText('Confirm your payment by 10:30')).toBeTruthy();
+    closeNeedsYourAnswer();
 
     fireEvent.press(screen.getByRole('button', { name: HOME.openGame }));
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
@@ -521,9 +530,11 @@ describe('Home while one payment is awaited (Q111)', () => {
     expect(await screen.findByText(PROPOSALS_COPY.game.status.WAITING_FOR_A_PAYMENT)).toBeTruthy();
     expect(screen.getByText('Padel')).toBeTruthy();
     expect(screen.getByLabelText('Your share, 32 zł, Confirm your payment by 10:30')).toBeTruthy();
-    expect(screen.getByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
+    // Both in the dark card's foot, under the share they act on (#836).
+    const gameCard = screen.getByTestId(DETAILS_CARD);
+    expect(within(gameCard).getByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
 
-    fireEvent.press(screen.getByRole('button', { name: FILL.confirm.title.PAY }));
+    fireEvent.press(within(gameCard).getByRole('button', { name: FILL.confirm.title.PAY }));
     expect(await screen.findByText('Confirm your payment by 10:30 to keep your seat')).toBeTruthy();
   });
 });
@@ -551,6 +562,7 @@ describe('before the cut-off, the time to fix the card (#643; Q113)', () => {
     const drawn = await card();
     expect(within(drawn).getByText(HOME.status.WAITING_FOR_A_PAYMENT)).toBeTruthy();
     expect(within(drawn).getByText('Fix your card by 10:30')).toBeTruthy();
+    await openNeedsYourAnswer();
     const row = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
     expect(within(row).getByText('Fix your card by 10:30')).toBeTruthy();
     expect(within(row).getByText('Nothing is paid now')).toBeTruthy();
@@ -559,6 +571,7 @@ describe('before the cut-off, the time to fix the card (#643; Q113)', () => {
       within(row).getByRole('button', { name: /^Fix your card for Padel · Saturday 16:00 at/ }),
     ).toBeTruthy();
     expect(screen.queryByText(/Confirm your payment/)).toBeNull();
+    closeNeedsYourAnswer();
 
     fireEvent.press(screen.getByRole('button', { name: HOME.openGame }));
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
@@ -587,6 +600,8 @@ describe('before the cut-off, the time to fix the card (#643; Q113)', () => {
     transport.on('GET', HOME_PATH, () =>
       json<Wire['HomeResponse']>({
         read_at: HOME_READ_AT,
+        payments_to_confirm: paymentsToConfirmServed(transport),
+        needs_your_answer: { new_count: 0, watermark: null },
         needing_you: 1,
         games: [],
         friends_games: [],
@@ -606,6 +621,7 @@ describe('before the cut-off, the time to fix the card (#643; Q113)', () => {
     );
     transport.on('GET', SEAT_CHARGE_PATH, () => json(seatCharge({ refusal: 'DECLINED' })));
     await onHome();
+    await openNeedsYourAnswer();
     const row = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
     expect(within(row).getByText('Fix your card by 10:30')).toBeTruthy();
 
@@ -662,6 +678,7 @@ describe('a card refused at the holding time (#639, #643; Q113)', () => {
     expect(within(other).getByText(HOME.status.BOOKED)).toBeTruthy();
     expect(within(other).getByText(/free to leave until/, HIDDEN_TOO)).toBeTruthy();
     expect(within(other).queryByText(/Fix your card/, HIDDEN_TOO)).toBeNull();
+    await openNeedsYourAnswer();
     const row = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
     expect(within(row).getByText('Fix your card by 10:30')).toBeTruthy();
     expect(within(row).getByText('Nothing is paid now')).toBeTruthy();
@@ -720,6 +737,8 @@ describe('paying in time (Q110)', () => {
     transport.on('GET', HOME_PATH, () =>
       json<Wire['HomeResponse']>({
         read_at: HOME_READ_AT,
+        payments_to_confirm: paymentsToConfirmServed(transport),
+        needs_your_answer: { new_count: 0, watermark: null },
         needing_you: paid ? 0 : 1,
         friends_games: [],
         level_asks: [],
@@ -748,6 +767,7 @@ describe('paying in time (Q110)', () => {
     stubBooking(transport, bookingDetails({ game_id: GAME_ID }));
     await onHome();
 
+    await openNeedsYourAnswer();
     const row = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
     fireEvent.press(within(row).getByRole('button', { name: /^Confirm your payment for Padel/ }));
     fireEvent.press(await screen.findByRole('button', { name: FILL.confirm.check }));
@@ -761,6 +781,8 @@ describe('paying in time (Q110)', () => {
 
     fireEvent.press(screen.getByRole('button', { name: FILL.itsAGame.later }));
     await waitFor(() => expect(screen.queryByTestId('its-a-game')).toBeNull());
+    // It's a game! closed Needs your answer for good (#817).
+    expect(sheetTitle()).toBeNull();
     expect(await within(await card()).findByText(HOME.status.BOOKED)).toBeTruthy();
     await waitFor(() => expect(screen.queryByTestId(`to-confirm-${SEAT_CHARGE}`)).toBeNull());
   });
@@ -772,6 +794,8 @@ describe('out of time (Q109, Q111)', () => {
     transport.on('GET', HOME_PATH, () =>
       json<Wire['HomeResponse']>({
         read_at: HOME_READ_AT,
+        payments_to_confirm: paymentsToConfirmServed(transport),
+        needs_your_answer: { new_count: 0, watermark: null },
         needing_you: 0,
         friends_games: [],
         level_asks: [],
@@ -813,6 +837,8 @@ describe('out of time (Q109, Q111)', () => {
     transport.on('GET', HOME_PATH, () =>
       json<Wire['HomeResponse']>({
         read_at: HOME_READ_AT,
+        payments_to_confirm: paymentsToConfirmServed(transport),
+        needs_your_answer: { new_count: 0, watermark: null },
         needing_you: 1,
         friends_games: [],
         level_asks: [],
@@ -842,6 +868,7 @@ describe('out of time (Q109, Q111)', () => {
     );
     stubGroupDeck(transport, CREW_ID, groupDeck());
     await onHome();
+    await openNeedsYourAnswer();
     const row = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
     expect(within(row).getByText('Confirm your payment by 10:30')).toBeTruthy();
 
@@ -853,13 +880,14 @@ describe('out of time (Q109, Q111)', () => {
     });
     await told(timeRanOut);
 
-    // The row stays, without a time, while the seat is still free to take back.
+    // The tile stays, without a time, while the seat is still free to take back.
     expect(
       await within(await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`)).findByText(
         FILL.toConfirm.open,
       ),
     ).toBeTruthy();
     expect(screen.queryByText('Confirm your payment by 10:30')).toBeNull();
+    closeNeedsYourAnswer();
 
     fireEvent.press(
       await screen.findByRole('button', { name: `${timeRanOut.title}. ${timeRanOut.body}` }),

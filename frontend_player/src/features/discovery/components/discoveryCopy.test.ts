@@ -8,6 +8,7 @@ import {
   levelsLine,
   nobodyNewPlays,
   pairingLabel,
+  seeAllWords,
   sportLevelLine,
   sportsCount,
   tileLabel,
@@ -84,10 +85,9 @@ describe('Same competitive level’s words (§31.5, §31.6)', () => {
     expect(evenTag(91)).toBe('91% even');
   });
 
-  it('speaks the pairing in the order drawn', () => {
-    expect(pairingLabel(PADEL, 'zofia.b')).toBe(
-      '91% even in padel, You 2,71, zofia.b 2,69, 0,02 below you',
-    );
+  /** The card no longer draws the gap (#821), so its pairing no longer says it. */
+  it('speaks the pairing in the order drawn, with no gap', () => {
+    expect(pairingLabel(PADEL, 'zofia.b')).toBe('91% even in padel, You 2,71, zofia.b 2,69');
   });
 });
 
@@ -116,5 +116,16 @@ describe('Same vibe’s words (§31.8)', () => {
 
   it('says a See all sport that leaves nobody (a call)', () => {
     expect(nobodySharesYourTagsIn('squash')).toBe('Nobody who shares your tags plays squash yet');
+  });
+});
+
+/** #822: a people line's footer carries its count — the pill's figure, *99+* included. */
+describe('See all N', () => {
+  it.each<[number, string]>([
+    [14, 'See all 14'],
+    [99, 'See all 99'],
+    [100, 'See all 99+'],
+  ])('%i: %s', (total, words) => {
+    expect(seeAllWords(total)).toBe(words);
   });
 });

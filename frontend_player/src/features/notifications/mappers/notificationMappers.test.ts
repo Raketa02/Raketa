@@ -234,6 +234,26 @@ describe('where a tap goes', () => {
     ).toEqual({ opens: 'home' });
   });
 
+  /**
+   * **A notice about one of Needs your answer's cards** (#817, ADR-0205 §1): a friend request and a
+   * friends game invitation open Home with the sheet up, where their cards wait now.
+   */
+  it.each(['FRIEND_REQUEST', 'FRIENDS_GAME_INVITATION'])(
+    'Needs your answer for %s, whose card waits there',
+    (kind) => {
+      expect(
+        toTarget({
+          kind,
+          opens: 'HOME',
+          gameId: null,
+          poolId: null,
+          sport: null,
+          gameKind: null,
+        }),
+      ).toEqual({ opens: 'needsYourAnswer' });
+    },
+  );
+
   it('Home whatever the notice, for one that says it opens Home — there is nothing to name', () => {
     expect(
       toTarget({
@@ -343,7 +363,7 @@ describe('where a tap goes', () => {
 });
 
 describe('a listed friend’s notice (#753)', () => {
-  it('a request opens Home, where its card is', () => {
+  it('a request opens Needs your answer, where its card waits (#817)', () => {
     expect(
       toNotice({
         ...NOTICE,
@@ -355,7 +375,7 @@ describe('a listed friend’s notice (#753)', () => {
         game_kind: null,
         player_id: 'p-ines',
       }).target,
-    ).toEqual({ opens: 'home' });
+    ).toEqual({ opens: 'needsYourAnswer' });
   });
 
   it('You’re friends opens the friend’s record', () => {

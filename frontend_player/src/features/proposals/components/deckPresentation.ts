@@ -16,9 +16,11 @@ import { codeMessage, type AppError } from '@/shared/errors';
 import { counted } from '@/shared/formatting/counted';
 import { handleStem } from '@/shared/formatting/playerName';
 import { formatLevel, formatPercent, formatZloty } from '@/shared/formatting/ratingFormat';
+import { sentenceList } from '@/shared/formatting/sentenceList';
 import { dayDate } from '@/shared/date/calendarDay';
 import { platformClock, platformDay } from '@/shared/date/platformZone';
 import { dayLabel, dayName } from '@/shared/vocabulary/availabilityPresentation';
+import type { TabMenuLine } from '@/shared/ui';
 import { balanceWord } from '@/shared/vocabulary/balancePresentation';
 import type { Weekday } from '@/shared/vocabulary/week';
 
@@ -32,6 +34,7 @@ import {
   type Overlap,
   type RescueGone,
   type Ribbon,
+  type SwitchSide,
   type WeekCap,
 } from '../domain/deck';
 import type { PaymentDue } from '../domain/details';
@@ -40,6 +43,7 @@ import type { Deadline, YourTime } from '../domain/home';
 import type { DayRange, GameKind, ProposalStatus } from '../domain/vocabulary';
 import { gameEndsAt, weekdayAt, type GameDay } from '../domain/when';
 
+import { doorSpoken } from './doorPresentation';
 import type { FactWords } from './GameFacts';
 import { HOME_GAME_COPY } from './homeCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
@@ -56,16 +60,36 @@ export const LINE_JOIN = DOT;
 const SIDE_JOIN = ' + ';
 
 // ---------------------------------------------------------------------------
-// The switch and the lines above the deck
+// The Games tab's menu and the lines above the deck
 // ---------------------------------------------------------------------------
 
-/** *Competitive · 7* — one side of the switch (mock 9). */
-export function segmentLabel(kind: GameKind, count: number): string {
-  return `${COPY.kind[kind]}${DOT}${count}`;
+/**
+ * **The Games tab's menu's lines** (#862, PRD #859; tab menu mock 3, an illustration) — where the
+ * switch's *Competitive · 7 / For fun · 1* stood: each live kind in its words, ending in **today's
+ * count** (`switchSides`' own, unchanged), and spoken *Competitive, 7 games*; the door in the kind's
+ * words alone, **with no number**, spoken as the door was (`doorSpoken`). Whether a line is the one
+ * selected is its state, never its words.
+ */
+export function kindMenuLines(sides: readonly SwitchSide[]): readonly TabMenuLine<GameKind>[] {
+  return sides.map((side) =>
+    side.door
+      ? {
+          key: side.kind,
+          label: COPY.kind[side.kind],
+          accessibilityLabel: doorSpoken(side.kind),
+          door: true,
+        }
+      : {
+          key: side.kind,
+          label: COPY.kind[side.kind],
+          count: `${side.count}`,
+          accessibilityLabel: segmentSpoken(side.kind, side.count),
+        },
+  );
 }
 
-/** *Competitive, 7 games* — the same segment, spoken. */
-export function segmentSpoken(kind: GameKind, count: number): string {
+/** *Competitive, 7 games* — a live kind's line, spoken. */
+function segmentSpoken(kind: GameKind, count: number): string {
   return `${COPY.kind[kind]}, ${counted(count, 'game', 'games')}`;
 }
 
@@ -188,16 +212,29 @@ export function sidesSpoken(top: DeckRow, bottom: DeckRow): string {
  * *Ania + Ewa* (the screens A2.3, Q70; the game screen's `barLabels` rule).
  */
 export function barLabels(rows: readonly [DeckRow, DeckRow]): readonly [string, string] {
-  const yours = rows.find((row) => row.yours);
-  const theirs = rows.find((row) => !row.yours);
-  const you = peopleIn(yours ?? { yours: true, seats: [] });
-  const ordered = [...you.filter((one) => one.isYou), ...you.filter((one) => !one.isYou)];
-  return [
-    ordered.map(stem).join(SIDE_JOIN),
-    peopleIn(theirs ?? { yours: false, seats: [] })
-      .map(stem)
-      .join(SIDE_JOIN),
-  ];
+  const [yours, theirs] = yoursThenTheirs(rows);
+  return [yours.map(stem).join(SIDE_JOIN), theirs.map(stem).join(SIDE_JOIN)];
+}
+
+/**
+ * **The forecast's two sides as a sentence names them** — yours then theirs, *You* first, every
+ * nickname whole over *and* — the split row's spoken name on a competitive game's details (#839).
+ * `barLabels` is the drawing and this is the register a listener gets; both are read off one split
+ * of the court, so they cannot disagree about who is where. An open seat is not said.
+ */
+export function forecastSides(rows: readonly [DeckRow, DeckRow]): readonly [string, string] {
+  const [yours, theirs] = yoursThenTheirs(rows);
+  const whole = (person: DeckPerson) => (person.isYou ? COPY.you : spoken(person));
+  return [sentenceList(yours.map(whole)), sentenceList(theirs.map(whole))];
+}
+
+/** The people on your row — you first — and on theirs, in the rows' own order. */
+function yoursThenTheirs(
+  rows: readonly [DeckRow, DeckRow],
+): readonly [readonly DeckPerson[], readonly DeckPerson[]] {
+  const yours = peopleIn(rows.find((row) => row.yours) ?? { yours: true, seats: [] });
+  const theirs = peopleIn(rows.find((row) => !row.yours) ?? { yours: false, seats: [] });
+  return [[...yours.filter((one) => one.isYou), ...yours.filter((one) => !one.isYou)], theirs];
 }
 
 /**

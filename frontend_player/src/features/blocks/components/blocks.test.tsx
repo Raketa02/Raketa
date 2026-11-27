@@ -50,6 +50,7 @@ import {
   BLOCKED_PLAYERS_PATH,
   GATE_USER,
   HOME_PATH,
+  LIVE_YESES_PATH,
   OWN_RECORD_SERVED,
   SPORTS_SERVED,
   launchSignedIn,
@@ -290,8 +291,9 @@ function seed(queryKey: readonly unknown[]) {
 }
 
 /**
- * What a block's withdrawal moves (ADR-0193 §4) and nothing on the deck observes: the live yeses,
- * a game still filling in detail, a booking in detail. Home is held by the shell, so it is counted.
+ * What a block's withdrawal moves (ADR-0193 §4): the live yeses, a game still filling in detail, a
+ * booking in detail. Home is held by the shell, so it is counted — and so are the live yeses where
+ * the group's page is open under the record, whose tab bar reads them for You’re in's badge (#847).
  */
 const WITHDRAWAL_READS = [
   proposalKeys.liveYeses(),
@@ -308,6 +310,7 @@ function seedTheList() {
 const invalidated = (queryKey: readonly unknown[]) =>
   queryClient.getQueryState(queryKey)?.isInvalidated;
 const homeReads = () => transport.requestsTo('GET', HOME_PATH).length;
+const liveYesesReads = () => transport.requestsTo('GET', LIVE_YESES_PATH).length;
 
 describe('Block, on the record', () => {
   it('ends the record with Block and the name, blocks through the confirm sheet, and closes the record', async () => {
@@ -319,6 +322,7 @@ describe('Block, on the record', () => {
     const deckBefore = deckReads();
     const fillInBefore = fillInReads();
     const homeBefore = homeReads();
+    const liveYesesBefore = liveYesesReads();
     fireEvent.press(row);
 
     // The sheet says what a block does, before it does it — and where Unblock is (#779).
@@ -352,7 +356,9 @@ describe('Block, on the record', () => {
     expect(invalidated(blockKeys.list())).toBe(true);
     // So will what the withdrawal moved — yeses taken back, a waiting game filling again.
     expect(homeReads()).toBeGreaterThan(homeBefore);
-    for (const key of WITHDRAWAL_READS) expect(invalidated(key)).toBe(true);
+    // The live yeses are read again at once: the page's tab bar observes them (#847).
+    await waitFor(() => expect(liveYesesReads()).toBeGreaterThan(liveYesesBefore));
+    for (const key of WITHDRAWAL_READS.slice(1)) expect(invalidated(key)).toBe(true);
   });
 
   it('changes nothing on Cancel', async () => {

@@ -3,6 +3,9 @@
  * shell, the real Home tab, and only `fetch` faked ([#556](https://github.com/Raketa02/Raketa/issues/556);
  * the screens A4.1, A4.4, A8; the mechanics §11.4, §14).
  *
+ * **A payment to confirm waits in Needs your answer** since #817: a tile per payment, first in the
+ * sheet the header's envelope opens, and Home's column still counts it.
+ *
  * The acceptance criteria are assertions here: a Home card says its status and its money line, is
  * *new* until opened, carries *Open game* and the chat's bubble — a door straight into the room,
  * whose Back is Home (Q100, #619); the details draw the top bar, the game card with *paid* tiles
@@ -14,7 +17,7 @@
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { RefreshControl } from 'react-native';
+import { Dimensions, RefreshControl, StyleSheet, type TextStyle } from 'react-native';
 import { router } from 'expo-router';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
@@ -22,7 +25,7 @@ import { BALANCE_FORECAST } from '@/features/games/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { forgetPhonePreferences } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
-import { PagerDots } from '@/shared/ui';
+import { PagerDots, theme } from '@/shared/ui';
 import {
   BARTEK,
   BOOKED_GAME,
@@ -44,6 +47,7 @@ import {
   unheldMoney,
 } from '@/test-support/home';
 import { yesPath } from '@/test-support/groupDeck';
+import { envelope, openNeedsYourAnswer, sheetTitle } from '@/test-support/needsYourAnswer';
 import {
   CONVERSATIONS_PATH,
   GAMES_PATH,
@@ -58,6 +62,7 @@ import {
   stubGames,
   stubGate,
   stubPairing,
+  stubPaymentMethod,
   stubPaymentsToConfirm,
 } from '@/test-support/onboardingRouter';
 import {
@@ -584,36 +589,199 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(screen.getByRole('tab', { name: 'Home' })).toBeTruthy();
   });
 
-  it('lists a payment to confirm above the rail, since Home’s count names it', async () => {
-    stubPaymentsToConfirm(transport, [
-      {
-        seat_charge_id: 'f1000000-0000-4000-8000-000000000001',
-        refusal: 'AUTHENTICATION_REQUIRED',
-        proposal_id: 'f1000000-0000-4000-8000-000000000002',
-        pool_id: 'f1000000-0000-4000-8000-000000000003',
-        sport: 'PADEL',
-        kind: 'COMPETITIVE',
-        starts_at: '2026-10-03T14:00:00Z',
-        club: { id: 'f1000000-0000-4000-8000-000000000004', name: 'Bonarka Arena' },
-        share_grosze: 3200,
-        book_by: '2026-10-02T11:00:00Z',
-        confirm_by: null,
-        time_to: null,
-      },
-    ]);
-    stubHomeGames(transport, [], { needing_you: 1 });
-    await launchSignedIn();
-
-    expect(await screen.findByRole('header', { name: FILL_COPY.toConfirm.title })).toBeTruthy();
-    expect(screen.getByText(FILL_COPY.toConfirm.open)).toBeTruthy();
-  });
-
   it('says a read that failed, rather than drawing no games', async () => {
     // A refusal the player can retry, and Query does not retry by itself.
     transport.on('GET', HOME_PATH, () => errorResponse(429, 'rate_limited'));
     await launchSignedIn();
 
     expect(await screen.findByRole('alert')).toBeTruthy();
+  });
+});
+
+/**
+ * **TO CONFIRM waits in Needs your answer** ([#817](https://github.com/Raketa02/Raketa/issues/817);
+ * ADR-0205 §1, §3): a tile per refused share, first in the sheet the header's envelope opens, where
+ * Home's one card of rows used to stand above the rail. Every read is at `HOME_READ_AT`, 10:00 in
+ * Warsaw; Bonarka Arena's Saturday 15:00, 32 zł, the time to pay ending at 14:40.
+ */
+describe('TO CONFIRM in Needs your answer (#817)', () => {
+  const CHARGE = 'f1000000-0000-4000-8000-000000000001';
+  const SECOND_CHARGE = 'f1000000-0000-4000-8000-000000000011';
+  const BY_14_40 = '2026-10-01T12:40:00Z';
+
+  function payment(
+    extra: Partial<
+      Wire['app__modules__proposals__presentation__schemas__PaymentToConfirmSchema']
+    > = {},
+  ): Wire['app__modules__proposals__presentation__schemas__PaymentToConfirmSchema'] {
+    return {
+      seat_charge_id: CHARGE,
+      refusal: 'AUTHENTICATION_REQUIRED',
+      proposal_id: 'f1000000-0000-4000-8000-000000000002',
+      pool_id: 'f1000000-0000-4000-8000-000000000003',
+      sport: 'PADEL',
+      kind: 'COMPETITIVE',
+      starts_at: '2026-10-03T13:00:00Z',
+      club: { id: 'f1000000-0000-4000-8000-000000000004', name: 'Bonarka Arena' },
+      share_grosze: 3200,
+      book_by: '2026-10-02T11:00:00Z',
+      confirm_by: BY_14_40,
+      time_to: 'PAY',
+      ...extra,
+    };
+  }
+
+  /**
+   * Signed in at Thursday's 10:00 — the time to pay is read against the phone's clock, which the
+   * harness fakes from the launch on — and the sheet opened on the envelope.
+   */
+  async function inTheSheet() {
+    await launchSignedIn();
+    jest.setSystemTime(Date.parse(HOME_READ_AT));
+    await openNeedsYourAnswer();
+  }
+
+  const tile = (charge = CHARGE) => within(screen.getByTestId(`to-confirm-${charge}`));
+  const colourOf = (node: { props: { style: unknown } }) =>
+    StyleSheet.flatten(node.props.style as TextStyle).color;
+
+  /** The width the rail hands a tile — read off the tile, which holds its words. */
+  function tileWidth(charge: string): unknown {
+    let node = screen.getByTestId(`to-confirm-${charge}`).parent;
+    while (node !== null && StyleSheet.flatten(node.props.style)?.width === undefined) {
+      node = node.parent;
+    }
+    return node === null ? undefined : StyleSheet.flatten(node.props.style)?.width;
+  }
+
+  it('waits behind the envelope, and is no longer on Home — Home’s column still counts it', async () => {
+    stubPaymentsToConfirm(transport, [payment()]);
+    stubHomeGames(transport, [], { needing_you: 1 });
+    await launchSignedIn();
+
+    // Home's tab badge counts what it counted: the payments to confirm among what needs you.
+    expect(await screen.findByLabelText('Home, 1 game waiting on you')).toBeTruthy();
+    await waitFor(() => expect(envelope()).not.toBeNull());
+    expect(screen.queryByTestId('to-confirm')).toBeNull();
+    expect(screen.queryByText(/^To confirm/)).toBeNull();
+
+    await openNeedsYourAnswer();
+
+    expect(screen.getByRole('header', { name: 'To confirm · 1' })).toBeTruthy();
+    expect(screen.getByTestId(`to-confirm-${CHARGE}`)).toBeTruthy();
+  });
+
+  it('draws the game, the club and the share, the time to pay in amber, and Confirm', async () => {
+    stubPaymentsToConfirm(transport, [payment()]);
+    stubHomeGames(transport, [], { needing_you: 1 });
+    await inTheSheet();
+
+    expect(tile().getByText('Padel · Saturday 15:00').props.numberOfLines).toBe(2);
+    expect(tile().getByText('Bonarka Arena · 32 zł')).toBeTruthy();
+    const time = tile().getByText('Confirm your payment by 14:40');
+    expect(colourOf(time)).toBe(theme.color.amber);
+    expect(screen.queryByText(FILL_COPY.toConfirm.nothingPaidNow)).toBeNull();
+    expect(
+      screen.getByRole('button', {
+        name: 'Confirm your payment for Padel · Saturday 15:00 at Bonarka Arena, 32 zł',
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText(FILL_COPY.toConfirm.action.PAY)).toBeTruthy();
+  });
+
+  it('says Fix your card by 14:40 and that nothing is paid now, with Fix — before the cut-off', async () => {
+    stubPaymentsToConfirm(transport, [payment({ time_to: 'FIX_THE_CARD' })]);
+    stubHomeGames(transport, [], { needing_you: 1 });
+    await inTheSheet();
+
+    expect(colourOf(tile().getByText('Fix your card by 14:40'))).toBe(theme.color.amber);
+    expect(tile().getByText(FILL_COPY.toConfirm.nothingPaidNow)).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: 'Fix your card for Padel · Saturday 15:00 at Bonarka Arena, 32 zł',
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Confirm your payment/)).toBeNull();
+  });
+
+  /** As the row did: the seat is open to others then, and still theirs to take back while free. */
+  it('takes the time off a tile at its deadline, and keeps the tile', async () => {
+    stubPaymentsToConfirm(transport, [payment()]);
+    stubHomeGames(transport, [], { needing_you: 1 });
+    await inTheSheet();
+    expect(tile().getByText('Confirm your payment by 14:40')).toBeTruthy();
+
+    act(() => jest.advanceTimersByTime(4 * HOUR + 41 * 60 * 1000));
+
+    expect(await tile().findByText(FILL_COPY.toConfirm.open)).toBeTruthy();
+    expect(screen.queryByText('Confirm your payment by 14:40')).toBeNull();
+    expect(screen.getByRole('button', { name: /^Confirm your payment for Padel/ })).toBeTruthy();
+  });
+
+  it('lays two payments on the peeking rail, a tile each, each button at its tile’s foot', async () => {
+    stubPaymentsToConfirm(transport, [
+      payment(),
+      payment({ seat_charge_id: SECOND_CHARGE, time_to: 'FIX_THE_CARD' }),
+    ]);
+    stubHomeGames(transport, [], { needing_you: 2 });
+    await launchSignedIn();
+    await openNeedsYourAnswer();
+
+    expect(screen.getByRole('header', { name: 'To confirm · 2' })).toBeTruthy();
+    const content = Dimensions.get('window').width - 2 * theme.size.gutter;
+    expect(tileWidth(CHARGE)).toBeCloseTo(content * theme.size.railCardRatio);
+    expect(tileWidth(SECOND_CHARGE)).toBeCloseTo(content * theme.size.railCardRatio);
+    expect(
+      screen.getAllByRole('button', { name: /^(Confirm your payment|Fix your card) for/ }),
+    ).toHaveLength(2);
+  });
+
+  /**
+   * ADR-0205 §3 and #819: the rows ride on Home's read, the one the visit's watermark covers, so a
+   * failed Home read counts nothing — whatever the payments' own read holds — and Home's usual
+   * re-reads retry.
+   */
+  it('draws no envelope while Home’s read fails, though the payments’ own read holds one', async () => {
+    stubPaymentsToConfirm(transport, [payment()]);
+    transport.on('GET', HOME_PATH, () => errorResponse(429, 'rate_limited'));
+    await launchSignedIn();
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(envelope()).toBeNull();
+    expect(screen.queryByTestId('to-confirm')).toBeNull();
+  });
+
+  /** Q24: the confirmation is a sheet opened from the sheet — over it, and back to it on close. */
+  it('opens the confirmation over the sheet, and closing it hands back to the sheet', async () => {
+    stubPaymentsToConfirm(transport, [payment()]);
+    stubHomeGames(transport, [], { needing_you: 1 });
+    await launchSignedIn();
+    await openNeedsYourAnswer();
+
+    fireEvent.press(screen.getByRole('button', { name: /^Confirm your payment for Padel/ }));
+
+    const close = await screen.findByRole('button', { name: FILL_COPY.confirm.close });
+    fireEvent.press(close);
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: FILL_COPY.confirm.close })).toBeNull(),
+    );
+    expect(sheetTitle()).not.toBeNull();
+    expect(screen.getByTestId(`to-confirm-${CHARGE}`)).toBeTruthy();
+  });
+
+  /** You › Payments keeps its card of rows (#555), unchanged. */
+  it('is still You › Payments’ card of rows', async () => {
+    stubPaymentMethod(transport, { brand: 'visa', last_four: '4312', wallet: null });
+    stubPaymentsToConfirm(transport, [payment()]);
+    stubHomeGames(transport, [], { needing_you: 1 });
+    await launchSignedIn();
+
+    act(() => router.push('/you/payments'));
+
+    expect(await screen.findByRole('header', { name: FILL_COPY.toConfirm.title })).toBeTruthy();
+    expect(screen.getByTestId(`to-confirm-${CHARGE}`)).toBeTruthy();
+    expect(screen.queryByRole('header', { name: 'To confirm · 1' })).toBeNull();
   });
 });
 

@@ -1,14 +1,25 @@
+import type { ReadStage } from '@/shared/lib/query-client';
+
 import type { GroupPerson, SportRoster } from './group';
 import {
+  bodyRead,
+  deckSport,
   faceIn,
   filterSports,
   gamesCard,
+  gamesRead,
+  groupPageParts,
+  groupReadStage,
   homeAsksForALevel,
+  levelCardReadsFinished,
   needsALevel,
   openingSport,
   rosterFor,
   sportsToAdd,
   sportsToOffer,
+  type GroupPageParts,
+  type GroupPageReads,
+  type GroupTab,
 } from './groupPage';
 
 describe('the sports a group page filters by', () => {
@@ -82,6 +93,27 @@ describe('the sport a group page opens on', () => {
 
   it('is none for a reader rated in none of an official group’s sports', () => {
     expect(openingSport(['tennis'], 'tennis', ['padel'])).toBeUndefined();
+  });
+});
+
+/** **The sport the deck last showed** — what Rankings and Top 10 open on past the trophy (#775, #874). */
+describe('the sport the deck last showed', () => {
+  it('is not known while the ratings or the phone are still being read', () => {
+    expect(deckSport(undefined, 'tennis')).toBeUndefined();
+    expect(deckSport(['tennis'], undefined)).toBeUndefined();
+  });
+
+  it('is the sport last picked while the reader is still rated in it', () => {
+    expect(deckSport(['padel', 'tennis'], 'tennis')).toBe('tennis');
+  });
+
+  it('is the first rated sport when nothing was saved, or the saved one is no longer rated', () => {
+    expect(deckSport(['tennis', 'padel'], null)).toBe('padel');
+    expect(deckSport(['tennis'], 'squash')).toBe('tennis');
+  });
+
+  it('is none for a reader rated in nothing', () => {
+    expect(deckSport([], 'padel')).toBeNull();
   });
 });
 
@@ -160,22 +192,19 @@ describe('the sports *+ Another sport* offers', () => {
 
 // #731, ADR-0200 §7: *Get your level — your groups can't deal you games until you have one.*
 describe('who Home asks for a level', () => {
+  // Whether a friend asked is no part of it (#816, ADR-0205 §4, Q13): the ask waits in Needs your
+  // answer, and is never drawn in the card's place.
   it('is a member of a group who holds no rating', () => {
-    expect(homeAsksForALevel(1, [], 0)).toBe(true);
-    expect(homeAsksForALevel(3, [], 0)).toBe(true);
+    expect(homeAsksForALevel(1, [])).toBe(true);
+    expect(homeAsksForALevel(3, [])).toBe(true);
   });
 
   it('is nobody in no group — there is nothing a level would unlock yet', () => {
-    expect(homeAsksForALevel(0, [], 0)).toBe(false);
+    expect(homeAsksForALevel(0, [])).toBe(false);
   });
 
   it('is nobody holding any rating, whatever the groups play', () => {
-    expect(homeAsksForALevel(2, ['squash'], 0)).toBe(false);
-  });
-
-  it('is nobody while a friend’s ask for a level stands in its place on Home (#765, Q129)', () => {
-    expect(homeAsksForALevel(1, [], 1)).toBe(false);
-    expect(homeAsksForALevel(1, [], 2)).toBe(false);
+    expect(homeAsksForALevel(2, ['squash'])).toBe(false);
   });
 });
 
@@ -231,5 +260,125 @@ describe('a sport’s roster, and a face in it', () => {
     expect(faceIn(padel, 'p2')).toEqual(person(2));
     expect(faceIn(padel, 'p9')).toBeUndefined();
     expect(faceIn(undefined, 'p1')).toBeUndefined();
+  });
+});
+
+// #871: what Home's reveal waits on for the card.
+describe('whether the level card’s reads have finished', () => {
+  const T = true;
+  const F = false;
+
+  it.each<[string, boolean, boolean | undefined, boolean, boolean]>([
+    ['the ratings still out', F, undefined, T, F],
+    ['a rated reader, whatever the groups do', T, F, F, T],
+    [
+      'the ratings holding nothing — refused, held or retrying: no card, nothing more',
+      T,
+      undefined,
+      F,
+      T,
+    ],
+    ['a reader rated in nothing, the groups still out', T, T, F, F],
+    ['a reader rated in nothing, the groups in', T, T, T, T],
+  ])('%s', (_case, ratingsFinished, ratedInNothing, groupsFinished, finished) => {
+    expect(levelCardReadsFinished({ ratingsFinished, ratedInNothing, groupsFinished })).toBe(
+      finished,
+    );
+  });
+});
+
+// #875: what the group page's reveal waits on — the header and the tab bar, then the tab's body.
+describe('the group page’s two parts', () => {
+  it.each<[string, GroupPageReads, GroupPageParts]>([
+    [
+      'the group on its way: nothing finished',
+      { group: 'reading', sportAnswered: true, body: 'landed' },
+      { finished: [false, false], landed: [false, false] },
+    ],
+    [
+      'the group read, the sport still to be read off the phone: the body waits with the header',
+      { group: 'landed', sportAnswered: false, body: 'landed' },
+      { finished: [false, false], landed: [false, false] },
+    ],
+    [
+      'the group and the sport in, the tab’s read on its way',
+      { group: 'landed', sportAnswered: true, body: 'reading' },
+      { finished: [true, false], landed: [true, false] },
+    ],
+    [
+      'everything in',
+      { group: 'landed', sportAnswered: true, body: 'landed' },
+      { finished: [true, true], landed: [true, true] },
+    ],
+    [
+      'the tab’s read refused, held for a connection or retrying: what it draws then is its own',
+      { group: 'landed', sportAnswered: true, body: 'ended' },
+      { finished: [true, true], landed: [true, false] },
+    ],
+    [
+      'the group refused or held: the header’s way back, and the failure or the note for the body',
+      { group: 'ended', sportAnswered: true, body: 'reading' },
+      { finished: [true, true], landed: [false, false] },
+    ],
+    [
+      'the group held, the sport still out: the body is the note, the header still waits',
+      { group: 'ended', sportAnswered: false, body: 'reading' },
+      { finished: [false, true], landed: [false, false] },
+    ],
+  ])('%s', (_case, reads, parts) => {
+    expect(groupPageParts(reads)).toEqual(parts);
+  });
+});
+
+describe('the group’s own read, as the page’s reveal reads it', () => {
+  it.each<[string, { landed: boolean; refused: boolean; held: boolean }, ReadStage]>([
+    [
+      'on its way — or retrying after a failure: every part draws from it',
+      { landed: false, refused: false, held: false },
+      'reading',
+    ],
+    ['refused: the failure and its retry', { landed: false, refused: true, held: false }, 'ended'],
+    [
+      'held for a connection: the offline note',
+      { landed: false, refused: false, held: true },
+      'ended',
+    ],
+    ['landed, whatever a re-read does', { landed: true, refused: true, held: false }, 'landed'],
+  ])('%s', (_case, read, stage) => {
+    expect(groupReadStage(read)).toBe(stage);
+  });
+});
+
+describe('what the body on screen waits on', () => {
+  it.each<[string, GroupTab, boolean, ReadStage]>([
+    ['Games, for its first deck read', 'games', true, 'reading'],
+    ['Fill in, for its rescues', 'fillIn', true, 'ended'],
+    ['You’re in, for its yeses', 'youreIn', true, 'landed'],
+  ])('%s', (_case, tab, drawsTheTab, stage) => {
+    expect(bodyRead(tab, drawsTheTab, stage)).toBe(stage);
+  });
+
+  it('waits on nothing for Friends, whose court reads its own', () => {
+    expect(bodyRead('friends', true, 'reading')).toBe('landed');
+  });
+
+  it('waits on nothing in place of a tab — the add-a-sport card, the level door', () => {
+    expect(bodyRead('games', false, 'reading')).toBe('landed');
+  });
+});
+
+describe('Games’ first read, with something over the deck', () => {
+  it.each<[string, ReadStage, boolean, ReadStage]>([
+    ['the deck on its way, nothing over it', 'reading', false, 'reading'],
+    [
+      'the deck on its way, the door’s panel or finding over it: that is drawn',
+      'reading',
+      true,
+      'ended',
+    ],
+    ['the deck read, whatever lies over it', 'landed', true, 'landed'],
+    ['the deck refused, whatever lies over it', 'ended', true, 'ended'],
+  ])('%s', (_case, deck, covered, stage) => {
+    expect(gamesRead(deck, covered)).toBe(stage);
   });
 });

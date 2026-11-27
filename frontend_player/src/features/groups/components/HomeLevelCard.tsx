@@ -11,8 +11,9 @@
  * start again. **Whether it is drawn is this feature's rule** (`useHomeAsksForALevel`): it knows the
  * groups, and it already reads the ratings for every group's chip. Nothing is drawn until that is
  * answered, and once she holds any rating — a pass from here, or from a group — it is gone: a
- * completion marks the ratings stale. **While a friend's ask for a level is on Home it is not drawn**
- * (#765): ASKED FOR A LEVEL, further down, stands in its place.
+ * completion marks the ratings stale. **It is drawn whether or not a friend asked her for a level**
+ * (#816, ADR-0205 §4): the ask waits in Needs your answer, behind the envelope, and #765's rule that
+ * drew it in this card's place went with Home's row.
  */
 
 import { FROM_HOME, LevelDoor } from '@/features/onboarding/types';

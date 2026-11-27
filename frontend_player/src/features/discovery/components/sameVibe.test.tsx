@@ -1,9 +1,11 @@
 /**
- * **SAME VIBE PLAYERS on Home, the vibe sheet and See all** — walked through the real route tree
- * ([#803](https://github.com/Raketa02/Raketa/issues/803), PRD #789; ADR-0204 §6; the Home rows screens
- * §6, §8; the mechanics §8, §11–§13; the words §31.8, §31.10).
+ * **Players with your vibe on Home, the vibe sheet and See all** — FOR YOU's fourth line, walked
+ * through the real route tree ([#803](https://github.com/Raketa02/Raketa/issues/803), PRD #789;
+ * [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §6, ADR-0205 §5; the Home rows
+ * screens §6, §8; the mechanics §8, §11–§13; the words §31.8, §31.10).
  *
- * - **The row**: fourth of the five, *See all ›* named; gone when the read holds nobody, or fails.
+ * - **The line**: fourth of the five, closed; open, its tiles and *See all ›* named at its foot; hidden
+ *   when the read holds nobody, or fails.
  * - **A tile**: the face, the nickname, the vibe %, *6 things in common*, the tint; the shared tags
  *   fitted to three lines with *+N more* — **measured**, so the suite lays the chips out as a screen
  *   would and reads what is drawn; the round button asking from the row.
@@ -18,16 +20,21 @@
  * relation, and See all keeps who holds a level in a sport it is asked for.
  */
 
+import { onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { FlatList } from 'react-native';
+import { Dimensions, FlatList, StyleSheet } from 'react-native';
 
 import { FRIENDS_COPY, roundLabel } from '@/features/friends/types';
 import { RECORD_UNAVAILABLE } from '@/features/player_record/types';
+import { GROUPS_COPY } from '@/features/groups/types';
+import { offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { theme } from '@/shared/ui';
 import { socialTagChip, socialTagLabel } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
+import { isOpen, lineNamed, lineTitles, openLine } from '@/test-support/forYou';
 import {
   SAME_VIBE_ALL_PATH,
   SAME_VIBE_PATH,
@@ -36,6 +43,7 @@ import {
   stubHome,
   stubNewInRaketa,
 } from '@/test-support/onboardingRouter';
+import { openNeedsYourAnswer } from '@/test-support/needsYourAnswer';
 import { servedReliability } from '@/test-support/playerRecord';
 import {
   errorResponse,
@@ -44,16 +52,29 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { PLAYERS_BAR } from '@/test-support/tabBarReach';
 
 import { rereadDiscovery } from '../hooks/useNewInRaketa';
 
 import { DISCOVERY_COPY, moreTags, nobodySharesYourTagsIn } from './discoveryCopy';
+import { SAME_VIBE_TILE_SKELETON, sameVibeTileHeight } from './SameVibeTile';
+import { SHARED_TAGS_ROOM, sharedTagsRoom } from './SharedTags';
 
 const COPY = DISCOVERY_COPY.sameVibe;
 const HIDDEN = { includeHiddenElements: true } as const;
 
 /** The vibe % the server sends for each count — 1 − ½ⁿ, rounded (the mechanics §8.2). */
-const VIBE: Readonly<Record<number, number>> = { 1: 50, 2: 75, 3: 88, 4: 94, 5: 97, 6: 98 };
+const VIBE: Readonly<Record<number, number>> = {
+  1: 50,
+  2: 75,
+  3: 88,
+  4: 94,
+  5: 97,
+  6: 98,
+  // A player holds up to eight since ADR-0207 §7, so two can share up to eight.
+  7: 99,
+  8: 100,
+};
 
 type Held = { readonly tags: readonly SocialTagId[]; readonly sports?: readonly Wire['Sport'][] };
 
@@ -136,7 +157,7 @@ function vibeServer(
 
   stubGate(transport, { hasPlayerProfile: true });
   transport.on('GET', SAME_VIBE_PATH, () =>
-    json<Wire['SameVibeResponse']>({ players: [...people] }),
+    json<Wire['SameVibeResponse']>({ players: [...people], total: people.length }),
   );
   transport.on('GET', SAME_VIBE_ALL_PATH, (request) => {
     const query = new URLSearchParams(request.path.split('?')[1] ?? '');
@@ -189,6 +210,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  onlineManager.setOnline(true);
   transport.restore();
   queryClient.clear();
   useToastQueue.setState({ queue: [] });
@@ -211,16 +233,9 @@ const asked = () => transport.requestsTo('POST', REQUESTS_PATH).map((request) =>
 const sheets = () => screen.queryAllByTestId('bottom-sheet');
 const vibeSheet = () => within(sheets()[0]!);
 
-/** The section headings Home draws, top to bottom. */
-const headings = () =>
-  screen
-    .getAllByRole('header')
-    .map((node) => node.props.children as string)
-    .filter((text) => typeof text === 'string');
-
 async function homeWithTheRow() {
   await launchSignedIn();
-  await screen.findByRole('header', { name: COPY.heading });
+  await openLine(COPY.line);
 }
 
 /** Opens the person's vibe sheet from their tile, and waits for the record it reads. */
@@ -253,35 +268,37 @@ function layOut(
   }
 }
 
-describe('the row on Home', () => {
-  it('stands fourth of the five — after New in Raketa — with See all named', async () => {
+describe('the line on Home', () => {
+  it('stands fourth of the five — after New in Raketa — closed', async () => {
     vibeServer();
     stubNewInRaketa(transport, [JOINER]);
-    await homeWithTheRow();
-    await screen.findByRole('header', { name: DISCOVERY_COPY.newInRaketa.heading });
+    await launchSignedIn();
+    await screen.findByRole('button', { name: lineNamed(COPY.line) });
+    await screen.findByRole('button', { name: lineNamed(DISCOVERY_COPY.newInRaketa.line) });
 
-    const order = headings();
-    const joiners = order.indexOf(DISCOVERY_COPY.newInRaketa.heading);
-    expect(order[joiners + 1]).toBe(COPY.heading);
+    const titles = lineTitles();
+    expect(titles[titles.indexOf(DISCOVERY_COPY.newInRaketa.line) + 1]).toBe(COPY.line);
+    expect(isOpen(COPY.line)).toBe(false);
+    expect(screen.queryAllByTestId(/^same-vibe-e0/)).toEqual([]);
+  });
+
+  it('opens onto the tiles in the read’s order, See all named at its foot', async () => {
+    vibeServer();
+    await homeWithTheRow();
+
+    expect(tileIds()).toEqual(ROW.map((one) => one.player_id));
     expect(
       within(screen.getByTestId('same-vibe')).getByRole('link', { name: COPY.seeAllLabel }),
     ).toBeTruthy();
   });
 
-  it('draws the tiles in the read’s order', async () => {
-    vibeServer();
-    await homeWithTheRow();
-
-    expect(tileIds()).toEqual(ROW.map((one) => one.player_id));
-  });
-
-  it('is gone with its heading while the read holds nobody', async () => {
+  it('is hidden while the read holds nobody', async () => {
     vibeServer([]);
     await launchSignedIn();
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -291,7 +308,7 @@ describe('the row on Home', () => {
 
     await waitFor(() => expect(rowReads()).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('header', { name: COPY.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(COPY.line) })).toBeNull();
   });
 });
 
@@ -307,6 +324,33 @@ describe('a tile', () => {
     expect(tile(KUBA).getByText('2 things in common')).toBeTruthy();
     expect(tile(ANIA).getByText('50%')).toBeTruthy();
     expect(tile(ANIA).getByText('1 thing in common')).toBeTruthy();
+  });
+
+  /**
+   * 2026-11-26: on the line the tile is `lineCardRatio` of the line's content, a little wider than the
+   * page's 0,74, and keeps its shape — every vertical gap grows by the width's factor onto the 3pt
+   * grid (12·9·6·6 to 21·15·9·9), so it stands as much taller as wider, as near as the grid comes:
+   * within half a step of the 182 it stood at 0,74. See all's grid keeps its own.
+   */
+  it('stands at the line’s share, as much taller as it is wider, through its gaps', async () => {
+    vibeServer();
+    await homeWithTheRow();
+
+    const { border, pad } = theme.size.foldingLine;
+    const content = Dimensions.get('window').width - 2 * theme.size.gutter - 2 * (border + pad);
+    const drawn = StyleSheet.flatten(
+      screen.getByTestId(`same-vibe-${KAROL.player_id}`).props.style,
+    );
+    expect(drawn.width).toBeCloseTo(content * theme.size.lineCardRatio);
+    // The chips' three lines 9 apart, not 6: their room is the grown one.
+    const room = StyleSheet.flatten(tile(KAROL).getByTestId('shared-tags').props.style);
+    expect(room.minHeight).toBe(sharedTagsRoom(theme.space.sm));
+    expect(sharedTagsRoom(theme.space.sm)).toBeGreaterThan(SHARED_TAGS_ROOM);
+
+    const grown = theme.size.lineCardRatio / theme.size.railCardRatio;
+    expect(Math.abs(sameVibeTileHeight(1, 'row') - 182 * grown)).toBeLessThanOrEqual(
+      theme.space.xxs / 2,
+    );
   });
 
   it('is washed in the poster’s hue, and speaks who, the %, the count and every tag shared', async () => {
@@ -385,7 +429,7 @@ describe('a tile', () => {
     const ZOSIA = vibe(4, 'zosia.p', ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'HERE_TO_IMPROVE']);
     transport.on('POST', REQUESTS_PATH, () => {
       transport.on('GET', SAME_VIBE_PATH, () =>
-        json<Wire['SameVibeResponse']>({ players: [ZOSIA, KAROL, ANIA] }),
+        json<Wire['SameVibeResponse']>({ players: [ZOSIA, KAROL, ANIA], total: 3 }),
       );
       return json<Wire['RelationResponse']>({ relation: 'SENT' });
     });
@@ -486,7 +530,7 @@ describe('the vibe sheet', () => {
     // Asking Kuba from his record makes him a gap, and a fresh match takes his place among the ten.
     transport.on('POST', REQUESTS_PATH, () => {
       transport.on('GET', SAME_VIBE_PATH, () =>
-        json<Wire['SameVibeResponse']>({ players: [KAROL, ANIA] }),
+        json<Wire['SameVibeResponse']>({ players: [KAROL, ANIA], total: 2 }),
       );
       return json<Wire['RelationResponse']>({ relation: 'SENT' });
     });
@@ -528,7 +572,9 @@ describe('the vibe sheet', () => {
   });
 });
 
-describe('Home’s request card', () => {
+// The request waits in Needs your answer since #816, and its tile says no found-by line (ADR-0205 §1):
+// where it was found is still served, and drawn nowhere.
+describe('a request from Same vibe, in Needs your answer', () => {
   const request = (
     over: Partial<Wire['HomeFriendRequestSchema']>,
   ): Wire['HomeFriendRequestSchema'] => ({
@@ -549,32 +595,93 @@ describe('Home’s request card', () => {
     reliability_band: 'VERY_HIGH',
     percent_even: null,
     in_common: 6,
+    levels: [],
     ...over,
   });
 
-  // The row holds Kuba alone, so no tile says the card's count.
-  it('reads 6 things in common — today’s count', async () => {
+  // The row holds Kuba alone, so no tile on it says Ania's count.
+  it('says no line of where it was found, today’s things in common included', async () => {
     vibeServer([KUBA]);
     stubHome(transport, { friend_requests: [request({})] });
     await homeWithTheRow();
+    await openNeedsYourAnswer();
 
-    expect(await screen.findByText(/^6 things in common/)).toBeTruthy();
+    // Kuba's tile on the row under the sheet says his own; the sheet says none.
+    const sheet = within(screen.getByTestId('bottom-sheet'));
+    expect(sheet.getByTestId(`friend-request-${ANIA.player_id}`)).toBeTruthy();
+    expect(sheet.queryByText(/things? in common/)).toBeNull();
+    expect(sheet.queryByText(/Found you through your tags/)).toBeNull();
   });
+});
 
-  it('reads 1 thing in common in the singular', async () => {
-    vibeServer([KUBA]);
-    stubHome(transport, { friend_requests: [request({ in_common: 1 })] });
+/**
+ * **Eight tags, and a tag this build has never heard of** (ADR-0207 §7, #837): a player holds up to
+ * eight, so two can share eight — *100%* — and the new tags draw like any other. A served code this
+ * build has no words for is skipped on the tile and on the sheet, never drawn blank and never a crash;
+ * the count stays the server's.
+ */
+describe('eight tags, and a code this build does not know', () => {
+  const EIGHT: readonly SocialTagId[] = [
+    'STAYS_FOR_A_DRINK',
+    'STAYS_FOR_A_COFFEE',
+    'KEEPS_IN_TOUCH',
+    'PLAYS_TO_WIN',
+    'PATIENT_WITH_BEGINNERS',
+    'BRINGS_THE_ENERGY',
+    'HERE_TO_IMPROVE',
+    'NEW_IN_TOWN',
+  ];
+  /** Ola — all eight in common: 100%. */
+  const OLA = vibe(4, 'ola.w', EIGHT);
+  /** Tomek — three in common, one of them minted after this build shipped. */
+  const TOMEK: Wire['SameVibePlayerSchema'] = {
+    ...vibe(5, 'tomek.r', ['STAYS_FOR_A_COFFEE', 'NEW_IN_TOWN']),
+    vibe_percent: VIBE[3]!,
+    in_common: 3,
+    shared_tags: ['STAYS_FOR_A_COFFEE', 'SINGS_IN_THE_CAR', 'NEW_IN_TOWN'],
+  };
+  /** Wide enough for every chip a tile is handed: five to a line. */
+  const ROOMY = { lineWidth: 400, chipWidth: 60, moreWidth: 40 };
+
+  it('reads 100% for eight in common, and draws all eight on the tile and the sheet', async () => {
+    vibeServer([OLA]);
     await homeWithTheRow();
 
-    expect(await screen.findByText(/^1 thing in common/)).toBeTruthy();
+    expect(tile(OLA).getByText('100%')).toBeTruthy();
+    expect(tile(OLA).getByText('8 things in common')).toBeTruthy();
+    layOut(OLA, ROOMY);
+    for (const id of EIGHT) {
+      expect(tile(OLA).getByText(socialTagLabel(id))).toBeTruthy();
+    }
+    expect(tile(OLA).queryByText(/more$/)).toBeNull();
+
+    await openSheet(OLA);
+    for (const id of EIGHT) {
+      expect(vibeSheet().getByText(socialTagChip({ id, shared: true }))).toBeTruthy();
+    }
   });
 
-  it('falls back to Found you through your tags once they share none', async () => {
-    vibeServer([KUBA]);
-    stubHome(transport, { friend_requests: [request({ in_common: 0 })] });
+  it('skips a code it has no words for on the tile and the sheet, and keeps the server’s count', async () => {
+    vibeServer([TOMEK]);
     await homeWithTheRow();
 
-    expect(await screen.findByText(/^Found you through your tags/)).toBeTruthy();
+    expect(tile(TOMEK).getByText('3 things in common')).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: 'tomek.r, 88%, 3 things in common: Stays for a coffee, New in town',
+      }),
+    ).toBeTruthy();
+    layOut(TOMEK, ROOMY);
+    expect(tile(TOMEK).getByText(socialTagLabel('STAYS_FOR_A_COFFEE'))).toBeTruthy();
+    expect(tile(TOMEK).getByText(socialTagLabel('NEW_IN_TOWN'))).toBeTruthy();
+    expect(tile(TOMEK).getAllByTestId(/^measure-tag-/, HIDDEN)).toHaveLength(2);
+
+    // The record behind the sheet serves the same three; the record drops the one it can't name.
+    await openSheet(TOMEK);
+    const tags = within(vibeSheet().getByTestId('record-tags'));
+    expect(tags.getByText(socialTagChip({ id: 'STAYS_FOR_A_COFFEE', shared: true }))).toBeTruthy();
+    expect(tags.getByText(socialTagChip({ id: 'NEW_IN_TOWN', shared: true }))).toBeTruthy();
+    expect(tags.queryByText(/SINGS|undefined/)).toBeNull();
   });
 });
 
@@ -660,5 +767,116 @@ describe('See all', () => {
 
     expect(await screen.findByText(nobodySharesYourTagsIn('padel'))).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sport: Padel' })).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// See all's skeleton while its first page is read (#872, PRD #867)
+// ---------------------------------------------------------------------------
+
+describe('See all, while its first page is read (#872)', () => {
+  /** See all's skeleton — hidden from a listener, so found by its id. */
+  const skeleton = () => screen.queryByTestId('see-all-skeleton', HIDDEN);
+  /** Past the reveal's cross-fade, and a frame. */
+  const pastTheFade = () => act(() => jest.advanceTimersByTime(theme.motion.fade + 16));
+  const karol = () => screen.queryByTestId(`same-vibe-${KAROL.player_id}`);
+
+  /** See all pressed on Home's row, its first page held on its way. */
+  async function openHeld() {
+    await homeWithTheRow();
+    const first = transport.hold('GET', SAME_VIBE_ALL_PATH);
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/same-vibe'));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    return first;
+  }
+
+  it('shimmers two columns of tiles at the grid tile’s height under the real header, then fades the page in', async () => {
+    vibeServer();
+    const first = await openHeld();
+
+    expect(skeleton()).not.toBeNull();
+    expect(screen.getByText(COPY.title)).toBeTruthy();
+    // The pill stands at its final shape, offering every sport until the page says which.
+    expect(screen.getByRole('button', { name: 'Sport: All' })).toBeTruthy();
+    expect(karol()).toBeNull();
+    // Two to a line, each a column wide, as many lines as fill the window.
+    const window = Dimensions.get('window');
+    const column = (window.width - 2 * theme.size.gutter - theme.space.sm) / 2;
+    const tall = SAME_VIBE_TILE_SKELETON.height(column, window.fontScale);
+    const tiles = screen.getAllByTestId('see-all-skeleton-tile', HIDDEN);
+    for (const each of tiles) {
+      const { width, height } = StyleSheet.flatten(each.props.style);
+      expect(width).toBeCloseTo(column);
+      expect(height).toBe(tall);
+    }
+    expect(tiles.length % 2).toBe(0);
+    const lines = tiles.length / 2;
+    // What shows above the floating bar — the strip under it is no room for a line (#881).
+    const shown = window.height - PLAYERS_BAR;
+    expect(lines * (tall + theme.space.sm)).toBeGreaterThanOrEqual(shown);
+    expect((lines - 1) * (tall + theme.space.sm)).toBeLessThan(shown);
+
+    await act(async () => first.land());
+
+    expect(await screen.findByTestId(`same-vibe-${KAROL.player_id}`)).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+    expect(pageReads()).toHaveLength(1);
+  });
+
+  it('says the empty line in the grid’s place when the first page holds nobody — never a skeleton', async () => {
+    vibeServer();
+    await homeWithTheRow();
+    transport.on('GET', SAME_VIBE_ALL_PATH, () =>
+      json<Wire['SameVibePageResponse']>({ players: [], next: null, sports: [] }),
+    );
+    const first = transport.hold('GET', SAME_VIBE_ALL_PATH);
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(pageReads()).toHaveLength(1));
+    expect(skeleton()).not.toBeNull();
+
+    await act(async () => first.land());
+
+    expect(await screen.findByText(COPY.nobodyAtAll)).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+  });
+
+  it('gives way to the failure and its Try again once the retries are spent', async () => {
+    vibeServer();
+    transport.on('GET', SAME_VIBE_ALL_PATH, () => errorResponse(503, 'service_unavailable'));
+    await homeWithTheRow();
+    fireEvent.press(screen.getByRole('link', { name: COPY.seeAllLabel }));
+    await waitFor(() => expect(screen).toHavePathname('/same-vibe'));
+    expect(skeleton()).not.toBeNull();
+
+    await act(() => jest.advanceTimersByTimeAsync(30_000));
+
+    const again = await screen.findByRole('button', { name: GROUPS_COPY.retry });
+    expect(screen.getByRole('alert')).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    vibeServer();
+    fireEvent.press(again);
+    expect(await screen.findByTestId(`same-vibe-${KAROL.player_id}`)).toBeTruthy();
+  });
+
+  it('gives way to the amber note while the read waits for a connection', async () => {
+    vibeServer();
+    const first = await openHeld();
+    expect(skeleton()).not.toBeNull();
+
+    act(() => onlineManager.setOnline(false));
+    await act(async () => first.drop());
+    await act(() => jest.advanceTimersByTimeAsync(1_500));
+
+    expect(await screen.findByText(offlineMessage('resumes'))).toBeTruthy();
+    pastTheFade();
+    expect(skeleton()).toBeNull();
+
+    act(() => onlineManager.setOnline(true));
+    expect(await screen.findByTestId(`same-vibe-${KAROL.player_id}`)).toBeTruthy();
   });
 });

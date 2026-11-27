@@ -31,6 +31,14 @@
  * centring is owed the top of the list asks for nothing** — a new list starts at its top, and would
  * otherwise read the page above before it reached the reader. The reader's own drag takes the list
  * back.
+ *
+ * **A jump that reads makes the button busy** ([#869](https://github.com/Raketa02/Raketa/issues/869)):
+ * *Finding you…* from the press until the reader's row is on screen — the button then goes, as it
+ * does — or the jump is refused, or the reader's own drag takes the list back, when the read still
+ * lands and swaps the list. A page landing with no row of the reader's ends it too: the server
+ * answers a reader no longer listed with the first page. A scroll is never busy. A busy button takes
+ * no press, so a second one reads nothing. **Try again is a jump of its own**, once per refusal: busy
+ * again, and owed its centring afresh.
  */
 
 import { useEffect, useRef, useState, type ReactElement } from 'react';
@@ -49,7 +57,7 @@ import { formatLevel } from '@/shared/formatting/ratingFormat';
 import { PlayerPhoto, RunOfForm, theme } from '@/shared/ui';
 
 import type { RankedRow } from '../domain/ranking';
-import type { Jump, ListWindow } from '../hooks/rankingRead';
+import type { Jump, ListWindow, PageFailure } from '../hooks/rankingRead';
 
 import { JUMP_ROOM, JumpToMe } from './JumpToMe';
 import { RankChip } from './RankChip';
@@ -107,16 +115,25 @@ export function RankingList({
   const list = useRef<FlatList<RankedRow>>(null);
   // Whether the reader's row is on screen — `undefined` until the list first says.
   const [seen, setSeen] = useState<boolean>();
+  // A jump that reads, on its way: from the press until the reader's row is on screen or their own
+  // drag takes the list back. A refusal draws the failure in the button's place, the busy button
+  // going with it, and Try again is a jump of its own.
+  const [finding, setFinding] = useState(false);
   // FlatList refuses a viewability callback that changes while it is mounted: one, for good.
-  const onViewable = useRef(({ viewableItems }: { viewableItems: ViewToken<RankedRow>[] }) =>
-    setSeen(viewableItems.some((token) => token.item.isYou)),
-  ).current;
+  const onViewable = useRef(({ viewableItems }: { viewableItems: ViewToken<RankedRow>[] }) => {
+    const mine = viewableItems.some((token) => token.item.isYou);
+    setSeen(mine);
+    if (mine) setFinding(false);
+  }).current;
 
   // A centring owed — kept until it lands, or until the reader's own drag takes the list back.
   const owed = useRef<{ readonly animated: boolean; frames: number }>();
   const missed = useRef(false);
   const headerLength = useRef(0);
   const meAt = rows.findIndex((row) => row.isYou);
+  // Landed with no row of the reader's — the server's first page, for a reader no longer listed — there
+  // is nothing left to find, and a busy button would take no press until a drag.
+  const busy = finding && !(window === 'aroundMe' && meAt < 0);
   const centre = () => {
     const want = owed.current;
     if (want === undefined || meAt < 0 || list.current === null) return;
@@ -132,11 +149,27 @@ export function RankingList({
     centre();
   });
 
+  /** The page around the reader read, a centring owed for when it lands, and the button busy till then. */
+  const find = (read: () => void) => {
+    owed.current = { animated: false, frames: 0 };
+    setFinding(true);
+    read();
+  };
   const press = () => {
     if (jump === undefined) return;
-    owed.current = { animated: meAt >= 0, frames: 0 };
-    if (meAt >= 0) centre();
-    else jump.toMe?.();
+    if (meAt >= 0) {
+      owed.current = { animated: true, frames: 0 };
+      centre();
+    } else if (jump.toMe !== undefined) find(jump.toMe);
+  };
+  // Try again is a jump of its own: a drag since the refusal took back the centring the press owed.
+  // Once per refusal — the failure stands until Query's next tick, and a second tap would restart it.
+  const retried = useRef<PageFailure['error']>();
+  const retry = () => {
+    const failure = jump?.failure;
+    if (failure === undefined || retried.current === failure.error) return;
+    retried.current = failure.error;
+    find(failure.retry);
   };
 
   return (
@@ -196,10 +229,13 @@ export function RankingList({
         onContentSizeChange={centre}
         onScrollBeginDrag={() => {
           owed.current = undefined;
+          setFinding(false);
         }}
       />
 
-      {jump === undefined ? null : <JumpToMe jump={jump} seen={seen} onPress={press} />}
+      {jump === undefined ? null : (
+        <JumpToMe jump={jump} seen={seen} finding={busy} onPress={press} onRetry={retry} />
+      )}
     </View>
   );
 }

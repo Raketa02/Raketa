@@ -39,8 +39,12 @@ paths:
 
 Model it as a **state**, never as `user === undefined`. The ordered sequence is: error
 reporting → validate config → wire focus/online managers → read SecureStore →
-restore/validate session → start reading the install referrer (never awaited) → hide splash →
-render a tree. Nothing renders a route tree before it resolves.
+restore/validate session → start warming Home (never awaited, #874) → start reading the
+install referrer (never awaited) → load fonts → render a tree. Nothing renders a route tree
+before it resolves. **It runs behind the drawn splash and nothing hides a splash at its end**
+(ADR-0209): the launch gate lets the OS launch window go on the drawn splash's first layout,
+mounts the tree underneath when the sequence resolves, and fades the splash once the first
+screen is ready.
 
 iOS Keychain data can survive a reinstall, so **a token existing is not proof a session
 exists** — bootstrap validates it.

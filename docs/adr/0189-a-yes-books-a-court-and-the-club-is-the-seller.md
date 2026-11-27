@@ -118,6 +118,10 @@ game, card, yes and post belongs to a pool, and the group is one kind of it.
   club's release time, or the start minus its minimum notice) and then disappears; nobody paid.
 - **Fill in offers only rescues**: open seats of *booked* games. Games still filling are offered
   only in decks; Fill in lists your own yeses on them, under *You're In*.
+  *(Noted 2026-11-23, [#844](https://github.com/Raketa02/Raketa/issues/844), decided and not yet
+  built: your own yeses become a tab of their own, **You’re in**, beside Fill in, and Fill in lists
+  only the rescues. A change of layout, specified in
+  [`docs/specs/games-and-fill-in/`](../specs/games-and-fill-in/); nothing here moves.)*
 
 > **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1.** The book-by is
 > always the club's release time: *the start minus its minimum notice* went with *Instant*, *On

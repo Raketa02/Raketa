@@ -3,7 +3,8 @@
 A delivered event with no handler is a delivery failure, so each is logged as
 every context's are. **A yes and a no are silent to people, not to the log**:
 the line carries the game and whose answer it was, and nothing a card shows. A
-player's Games & money is logged by whose it is, and never by what it says.
+player's Games & money is logged by whose it is, and never by what it says —
+and so is a visit to their Needs your answer (#815).
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from app.modules.proposals.domain.events import (
     CourtHourLost,
     FellBackToFilling,
     GamesAndMoneySet,
+    NeedsYourAnswerClosed,
     NoSaid,
     ProposalExpired,
     ProposalFilled,
@@ -96,6 +98,21 @@ class LogGamesAndMoneySet:
     async def __call__(self, event: GamesAndMoneySet, context: DeliveryContext) -> None:
         logger.info(
             "proposals.games_and_money.set",
+            extra={
+                "player_id": str(event.player_id),
+                "occurred_at": event.occurred_at.isoformat(),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogNeedsYourAnswerClosed:
+    async def __call__(
+        self, event: NeedsYourAnswerClosed, context: DeliveryContext
+    ) -> None:
+        logger.info(
+            "proposals.needs_your_answer.closed",
             extra={
                 "player_id": str(event.player_id),
                 "occurred_at": event.occurred_at.isoformat(),

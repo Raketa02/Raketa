@@ -64,7 +64,11 @@ from the code.
   proposed, corrected or countered at or after an instant — ids over the stream index, nothing
   folded — **because a correction re-dates its side's score** and may be made again while the
   other side has not answered, so a game long past its hour can still wait on somebody; Home
-  asks it about the games older than the hour it reads from.
+  asks it about the games older than the hour it reads from. Its sixth is
+  `PlayedTogetherQuery` (#831; ADR-0207 §3): which pairs of a set of people have been on one
+  court **played** by `now` — `Game.was_played_at`, either kind, the court as it stands — so a
+  For-fun table prefers new faces; pairs and nothing else cross, and the proposer's
+  `PlayedWith` adds the friendships.
 - **It has two inward ports, and the first is a single field wide**: `PlayerNames` puts a
   **nickname** on a seat and nothing else about the person in it
   ([ADR-0141](../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md); the
@@ -92,9 +96,50 @@ from the code.
   number for one court**, and a test says so. Three things are decided in the adapter and each
   is an absence rather than a number: a seat with no rating in the sport leaves the forecast
   **omitted, never provisional**; `at_stake` is omitted on a friendly and on a game is priced
-  **side against side** through `AtStakeQuery`'s court-shaped read; and the seats' Levels come
+  **side against side** through `AtStakeQuery`'s court-shaped read — by the matcher's
+  `at_stake_on_the_court`, **the one function a competitive game still filling prices its
+  details' stakes with too** (#833, `proposals.md`), so the pair seen before a yes is this one;
+  and the seats' Levels come
   from `rating`'s **published** read (`RatedPlayerQuery.published_for`). `GET /games` is
   untouched: a seat there still carries a name and nothing else.
+- **A For-fun game's pairing carries its Social vibe** (#835;
+  [ADR-0207](../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §5, §6, §12), so the booked game screen and the game at the court draw the Social vibe card
+  where *A friendly — nothing moves.* stood, and a For-fun game reads the same before and after
+  it is booked. On a `FRIENDLY` game (For fun is one; Competitive is `COUNTED`)
+  `GET /games/{game_id}/pairing` adds **`vibe {pct, rows[{tag, carried_by}]}`**, worked out by
+  `domain/vibe.py`'s `court_vibe_of` with **the Match Fit engine's own `social_vibe`** and the
+  Player profile's `counted` (💘 never counts) — the function a card, the details, the Friends
+  card and Post a game's fits are worked out with — over **the whole court**: `pct` is the
+  court's number, each row one of **the reader's** tags in the vocabulary's order
+  (`in_vocabulary_order`, 💘 included), `carried_by` **in the reader's direction** — the reader,
+  the rest of their side, then the other side, each side in the court's own order (as
+  `GET /games` lists the seats; the pairing's `seats` leaves out the unrated) — the order the
+  details name a card's carriers in (the reader, `sides.yours`, `sides.theirs`). It is declared
+  here, not borrowed from Proposals' grid (`proposals/domain/vibe.py`'s `table_vibe_of`):
+  neither context imports the other's domain, and `tests/api/test_the_vibe_on_the_booked_game.py`
+  reads the details before the last yes and the pairing after it for one four, equal. A call:
+  within a side the details follow the version's dealt order and the pairing the court's, so on
+  a row three or four carry the two could name a side's two in a different order. **The tags are one statement** through **`TagsOnTheCourt`**,
+  this context's own port (`held_by`), signed in `games/infrastructure/directory_tags.py` by
+  `DirectoryTagsOnTheCourt` over Discovery's published `PlayerDirectory.tags_of_each` — the copy
+  and the read Proposals' `PlayersTags` uses, so the card and the booked game read one tag set,
+  and a tag edit reads in after its delivery reaches the directory — with its row in
+  `game_demands.py`. **On the same occasions as the pairing, and no wider**
+  (`ReadGamePairing._vibe_of`): the refusals come first (`404 game_not_found`,
+  `409 pairing_is_history`); a competitive game asks no tags; and **a court with a seat open
+  draws no vibe**, on the ground it draws no forecast (ADR-0162 §3; ADR-0207 §5's *wherever the
+  forecast was shown, and no wider*) — `court_vibe_of` refuses one as an `invariant`. It is read
+  **beside** the pairing port, never from it, so an unrated seat costs the forecast and not the
+  vibe. **The tags are read before the Levels, and fail soft**: on Postgres a failed statement
+  aborts the request's transaction, so a Levels read the port swallows must not come first (a
+  Levels read that fails still sends the vibe), and a tags read that fails is logged and drawn
+  as no vibe — the port's own posture (ADR-0161 §4) — never a refused screen
+  (`tests/unit/test_the_pairing_read_s_vibe.py` models the aborted transaction).
+  Omitted, never `null`, like every block
+  here: on Competitive, with a seat open, and when nobody holds a counted tag. **The forecast
+  and the split are still sent on For fun** (ADR-0207 §12): the apps already on phones read
+  them, and the new app ignores them there.
 - **A booked game is a game with an hour** (#541, `bookings.md`). `GamePlanned.starts_at`
   carries the booked hour (nullable, defaulted: a row written before bookings is a game with no
   hour, and only such a row still measures its entry window from `PLAN_HORIZON`).

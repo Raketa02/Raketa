@@ -11,15 +11,19 @@
  * own rule, and a second table of seats here would be a second answer to it.
  */
 
+import type { ReadStage } from '@/shared/lib/query-client';
 import { SPORTS, type Sport } from '@/shared/vocabulary/sport';
 
 import type { Group, GroupPerson, SportRoster } from './group';
 
 /**
- * The group page's three tabs, each drawn for a sport (Q125: Info is the group's own screen, opened
- * from the header). It always opens on Games (ADR-0188 §5: which tab is not kept).
+ * The group page's four tabs, each drawn for a sport (Q125: Info is the group's own screen, opened
+ * from the header): **Games · Fill in · You’re in · Friends** — the rescues and the reader's own live
+ * yeses a tab each since #847 (PRD #844, split mock 3), where Fill in had stacked both. It always
+ * opens on Games (ADR-0188 §5: which tab is not kept). A route naming a tab not in this list is
+ * dropped, and the page opens as it always does (`groupRouteParams`).
  */
-export const GROUP_TABS = ['games', 'fillIn', 'friends'] as const;
+export const GROUP_TABS = ['games', 'fillIn', 'youreIn', 'friends'] as const;
 
 export type GroupTab = (typeof GROUP_TABS)[number];
 
@@ -70,6 +74,22 @@ export function openingSport(
   return (
     sports.find((sport) => sport === wanted) ?? sports.find((sport) => sport === saved) ?? sports[0]
   );
+}
+
+/**
+ * **The sport the deck last showed** (#775) — a player group's filter opening on the sport last
+ * picked while the reader is still rated in it, else the first they are rated in (`openingSport`):
+ * what Rankings and Home's Top 10 open on when the trophy names no sport. `null` for a reader rated in
+ * nothing, whose deck shows no sport; `undefined` while either read is out — the ratings, or the
+ * phone's saved sport, where `null` is a phone that answered *nothing saved*. The hook's answer and
+ * the launch's off the cache (#874) are this one.
+ */
+export function deckSport(
+  rated: readonly Sport[] | undefined,
+  saved: string | null | undefined,
+): Sport | null | undefined {
+  if (rated === undefined || saved === undefined) return undefined;
+  return openingSport(rated, saved ?? undefined) ?? null;
 }
 
 /**
@@ -126,18 +146,113 @@ export function sportsToOffer(
  * rating in any sport. For a player who never opens a group, it says why nothing is happening.
  * **Nobody in no group**: a level unlocks nothing there yet, and joining one is what Play is for.
  *
- * **Nor while a friend's ask for a level is on Home** (#765; the friends screens §6.4; Q129):
- * ASKED FOR A LEVEL stands in its place — it says why too, and names who wants to play — and the
- * card comes back once that row is empty and she is still rated in nothing.
- *
- * @param askedForALevel the cards Home's ASKED FOR A LEVEL holds.
+ * **Whether or not a friend asked her for a level** (#816, ADR-0205 §4, Q13). The ask waits in
+ * Needs your answer, behind the envelope, and is never drawn in this card's place: #765's hand-off,
+ * which left the card out while ASKED FOR A LEVEL was on Home, went with that row.
  */
-export function homeAsksForALevel(
-  groups: number,
-  rated: readonly Sport[],
-  askedForALevel: number,
-): boolean {
-  return groups > 0 && rated.length === 0 && askedForALevel === 0;
+export function homeAsksForALevel(groups: number, rated: readonly Sport[]): boolean {
+  return groups > 0 && rated.length === 0;
+}
+
+/**
+ * **Whether the reads Home's level card answers from have finished** (#871) — what Home's reveal
+ * waits on for the card: **the ratings first, and your groups only for a reader rated in nothing**,
+ * since a rated reader is asked nothing by it (`useHomeAsksForALevel`). `ratedInNothing` is
+ * `undefined` while the ratings hold nothing — refused, held, retrying — and then the card is not
+ * drawn, so it waits on nothing more.
+ */
+export function levelCardReadsFinished({
+  ratingsFinished,
+  ratedInNothing,
+  groupsFinished,
+}: {
+  readonly ratingsFinished: boolean;
+  readonly ratedInNothing: boolean | undefined;
+  readonly groupsFinished: boolean;
+}): boolean {
+  return ratingsFinished && (ratedInNothing !== true || groupsFinished);
+}
+
+/**
+ * **What the group page's two parts wait on** ([#875](https://github.com/Raketa02/Raketa/issues/875);
+ * PRD #867; the loading shimmer log §10) — the header and the tab bar first, then the body of the
+ * tab on screen, handed top-down to `shared/ui`'s `useRevealParts`.
+ *
+ * - `group` — **the group's own read**. Every part draws from it, so it is `ended` only once it is
+ *   refused or held for a connection, never while it retries: a page revealed through its backoff
+ *   would be a back arrow over nothing.
+ * - `sportAnswered` — whether the filter has said which sport the tabs are drawn for, or that none is
+ *   to be had. The phone's last pick is read before anything is drawn for a sport (ADR-0188 §4).
+ * - `body` — the first read of the body on screen (`bodyRead`).
+ */
+export interface GroupPageReads {
+  readonly group: ReadStage;
+  readonly sportAnswered: boolean;
+  readonly body: ReadStage;
+}
+
+/** Each part's flags, top-down — the header and the tab bar, then the body. */
+export interface GroupPageParts {
+  /** Whether each part's reads have finished — its content, its failure or its note is ready. */
+  readonly finished: readonly [boolean, boolean];
+  /** Whether each finished with its content — so a read set out again shimmers again. */
+  readonly landed: readonly [boolean, boolean];
+}
+
+/**
+ * **The header and the tab bar wait for the group and the sport; the body, for the tab's first
+ * read.** Without the group there is no tab to draw: the body is what the group's read ended with —
+ * its failure, or the offline note — and is ready once that read has ended.
+ */
+export function groupPageParts({ group, sportAnswered, body }: GroupPageReads): GroupPageParts {
+  const header = group !== 'reading' && sportAnswered;
+  const headerLanded = group === 'landed' && sportAnswered;
+  if (group !== 'landed') {
+    return { finished: [header, group === 'ended'], landed: [headerLanded, false] };
+  }
+  return {
+    finished: [header, sportAnswered && body !== 'reading'],
+    landed: [headerLanded, sportAnswered && body === 'landed'],
+  };
+}
+
+/**
+ * **The group's own read, as the page's reveal reads it** (#875) — `landed` once it holds the group;
+ * `ended` once it is refused or held for a connection, when the page says so; and otherwise
+ * `reading` — **a read that failed once and is retrying included**: every part draws from it, so
+ * through its backoff the page keeps shimmering rather than revealing a back arrow over nothing.
+ */
+export function groupReadStage({
+  landed,
+  refused,
+  held,
+}: {
+  readonly landed: boolean;
+  readonly refused: boolean;
+  readonly held: boolean;
+}): ReadStage {
+  if (landed) return 'landed';
+  return refused || held ? 'ended' : 'reading';
+}
+
+/**
+ * **What the body on screen waits on** (#875): Games', Fill in's and You’re in's first read
+ * (`tabRead`, the proposals feature's answer). **Friends waits on nothing** — its court draws its own
+ * *Building* — and nor does what stands in place of a tab (`drawsTheTab` false): the add-a-sport
+ * card, the level door.
+ */
+export function bodyRead(tab: GroupTab, drawsTheTab: boolean, tabRead: ReadStage): ReadStage {
+  return drawsTheTab && tab !== 'friends' ? tabRead : 'landed';
+}
+
+/**
+ * **Games' first read, as the page's reveal reads it** (#875) — the deck's read, unless **something
+ * lies over the deck's area** while it is out: the door's panel, picked from the menu once the tab
+ * bar is in, or finding after it. That is drawn, over the deck's own block, so the tab counts as
+ * finished — with nothing landed — for as long as it is up.
+ */
+export function gamesRead(deck: ReadStage, covered: boolean): ReadStage {
+  return covered && deck === 'reading' ? 'ended' : deck;
 }
 
 /** **One sport's roster** — `undefined` for a sport the group's read did not carry. */

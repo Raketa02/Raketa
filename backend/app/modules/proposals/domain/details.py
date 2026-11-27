@@ -18,6 +18,12 @@ refused, and its player's time to pay runs — their seat theirs alone. No club
 confirms a game (``docs/adr/0196`` §1), so nothing else leaves a full game
 filling (#669).
 
+**What the details say about the game follows its kind** (``docs/adr/0207``
+§5, §6, #833): a competitive game its full forecast and what is at stake for
+the reader — only while the game is still theirs to play, and once every seat is
+named — and a For-fun game its Social vibe and the reader's rows, and never a
+forecast.
+
 **The actions are what the routes would take.** *I'm in* and *Not this time*
 while the reader may answer and a seat is open; *Withdraw* when they are In;
 *Leave the game* in its place while a payment is awaited (the mechanics §13); a
@@ -39,7 +45,7 @@ from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, exhaustive
-from app.modules.proposals.domain.deck import ReadersView, anybody, view_of
+from app.modules.proposals.domain.deck import ReadersView, Sides, anybody, view_of
 from app.modules.proposals.domain.proposal import Proposal, ReopenReason, Standing
 
 
@@ -158,6 +164,24 @@ def details_view(
     # full, answered with a no, or with nobody else left on the reader's version.
     others = () if dealt is None else dealt.others
     return DetailsView(reader=reader, in_=proposal.yeses, others=others)
+
+
+def stakes_are_priced(
+    sides: Sides, *, seats_per_side: int, actions: Collection[ReaderAction]
+) -> bool:
+    """Whether what a counted result would do to the reader is priced on these
+    sides (``docs/adr/0207`` §6): **only on a game still theirs to play** —
+    still filling, and the reader In or free to answer or to confirm a
+    payment (``actions``) — **and only with every seat named**.
+
+    Nothing is at stake for a reader who said no, no longer fits, or waits on
+    a paused yes, nor on a game that is over: the court that plays, if any, is
+    not one they are on. A filled game's stakes are its booking's pairing's,
+    whose court can change after the fill. And a seat open is a court that is
+    not yet the one that will play, so nothing is priced on it, as on a booked
+    game (``docs/adr/0162`` §3)."""
+
+    return bool(actions) and len(sides.yours) == len(sides.theirs) == seats_per_side
 
 
 def actions_for(

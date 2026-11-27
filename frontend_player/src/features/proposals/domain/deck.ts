@@ -36,6 +36,12 @@ export interface DeckPerson {
   readonly name?: string;
   /** Omitted when they have no photograph: the tile draws their poster. */
   readonly photoUrl?: string;
+  /**
+   * **Which photograph** `photoUrl` draws — the permanent id beside a link minted for one response
+   * and short-lived, so two reads of one person carry two links to one photograph. Travels with the
+   * link (`drawnTheSame`).
+   */
+  readonly photoId?: string;
   /** Their published Level in the card's sport — omitted while unrated. */
   readonly level?: number;
   /** They said yes: the **IN** tag, the only tag a dealt card's tile carries (Q69). */
@@ -105,8 +111,17 @@ export interface DeckCard {
   readonly noFreeCancellation: boolean;
   /** The rows are the sides (Q70): the reader's, and the other. A side may be short of a seat. */
   readonly sides: { readonly yours: readonly DeckPerson[]; readonly theirs: readonly DeckPerson[] };
-  /** Omitted where the server could not read one — somebody unrated, or nobody facing you yet. */
+  /**
+   * Omitted where the server could not read one — somebody unrated, or nobody facing you yet. The
+   * server sends none on a For-fun card, and a card drawn there shows none (`headlineOf`).
+   */
   readonly forecast?: { readonly pct: number; readonly provisional: boolean };
+  /**
+   * **A For-fun card's Social vibe** (ADR-0207 §2): how much the people on your version share, a
+   * whole percent worked out from everybody's tags now. Omitted on a competitive card, and where
+   * nobody at the table holds a tag.
+   */
+  readonly vibe?: { readonly pct: number };
   readonly overlap: Overlap;
 }
 
@@ -127,8 +142,20 @@ export interface CappedWeek {
 export interface GroupDeck {
   /** Empty while the reader has declared no intent for the sport — the question replaces the deck. */
   readonly segments: readonly DeckSegment[];
-  /** Cards where somebody is already In with the reader, across the segments. */
-  readonly gamesBadge: number;
+  /**
+   * **What the Games badge counts** (#846, #850): the cards where somebody is already In with the
+   * reader, by id, **across every segment shown** — the kind not read too, which is how the badge
+   * counts both kinds off one read. Never a rescue's. The badge is the ones not yet seen (`seen.ts`).
+   */
+  readonly inCardIds: readonly string[];
+  /**
+   * **Every card this read dealt, by id** — the ones this build cannot draw too, which `cards`
+   * leaves out: what a look at Games marks seen (#850), the whole deck of the kind on screen and not
+   * only the card on top. A card with somebody In that this build cannot draw is counted all the
+   * same, and without this it could never be seen — a badge no visit clears (the code review's
+   * catch).
+   */
+  readonly dealtIds: readonly string[];
   readonly gamesPerWeek: number;
   readonly cappedWeeks: readonly CappedWeek[];
   /** In the order dealt. */
@@ -177,6 +204,53 @@ export function switchSides(segments: readonly DeckSegment[]): readonly SwitchSi
     const live = segments.find((segment) => segment.kind === kind);
     return live === undefined ? { kind, door: true } : { kind, door: false, count: live.count };
   });
+}
+
+/**
+ * **The Games tab's menu** (#862, PRD #859) — where the switch's two sides went: the kind the deck
+ * stands on, both kinds in the menu's order, and the line ticked.
+ */
+export interface KindMenu {
+  /** The kind the deck stands on — the one it reads, and the one the tab is spoken with. */
+  readonly kind: GameKind;
+  /** Both kinds, as `switchSides` draws them: live with their count, or the door. */
+  readonly sides: readonly SwitchSide[];
+  /** The kind the deck stands on while it is a live one — a door is never ticked. */
+  readonly ticked: GameKind | undefined;
+}
+
+/**
+ * **The menu, off the reads the page already holds** — the deck's read of the kind chosen, and the
+ * other kind's, either of which may not be in. **Both carry the same pair of counts**, so while the
+ * kind just picked is read — or after its read failed — the menu is drawn off the other kind's, and
+ * stays usable. The kind it stands on is the deck's own (`resolveKind` against the chosen kind's
+ * read), so the tick and the cards never disagree. **There is no menu** before either read has come
+ * back, nor while the first-time question is up: a read made with no intent carries no kinds, and
+ * the chosen kind's read says so even when the other kind's still holds some.
+ */
+export function kindMenu(
+  chosen: GameKind,
+  asked: readonly DeckSegment[] | undefined,
+  other: readonly DeckSegment[] | undefined,
+): KindMenu | undefined {
+  const segments = kindsHeld(asked, other);
+  if (segments === undefined || segments.length === 0) return undefined;
+  const kind = resolveKind(chosen, asked);
+  const sides = switchSides(segments);
+  const live = sides.some((side) => side.kind === kind && !side.door);
+  return { kind, sides, ticked: live ? kind : undefined };
+}
+
+/**
+ * **The kinds the reads held say the intent shows** — the chosen kind's read's, or the other kind's
+ * while that one is not in: the pair the menu draws, and so the pair the deck asks which kind is a
+ * door, even while its own read is on its way or failed — a door drawn is a door that opens.
+ */
+export function kindsHeld(
+  asked: readonly DeckSegment[] | undefined,
+  other: readonly DeckSegment[] | undefined,
+): readonly DeckSegment[] | undefined {
+  return asked ?? other;
 }
 
 /**
@@ -459,6 +533,39 @@ export function withOnTop(
 }
 
 // ---------------------------------------------------------------------------
+// The number a card leads with
+// ---------------------------------------------------------------------------
+
+/** The row under the vs line: Competitive's forecast, or For fun's Social vibe. */
+export type Headline =
+  | { readonly kind: 'forecast'; readonly pct: number }
+  | { readonly kind: 'vibe'; readonly pct: number };
+
+/**
+ * **Which number a card leads with** — the kind's own, and never the other's (ADR-0207 §5).
+ *
+ * A competitive card leads with its forecast; a For-fun card with its Social vibe. **A For-fun card
+ * draws no forecast even if one is sent**: the server stopped sending it there (#830), and an older
+ * read cached or a future slip must not put a verdict on a game played for company. A competitive
+ * card draws no vibe for the same reason the other way. `undefined` where the server sent the kind's
+ * number none — somebody unrated, nobody facing you yet, or nobody at the table holding a tag — and
+ * the row is not drawn.
+ *
+ * **One rule for every compact surface** (ADR-0207 §5): the deck card, the Friends card, and a fit
+ * on Post a game's sheet, whose kind is the post's (#842) — so it takes only the two numbers.
+ */
+export function headlineOf(card: {
+  readonly kind: GameKind;
+  readonly forecast?: { readonly pct: number };
+  readonly vibe?: { readonly pct: number };
+}): Headline | undefined {
+  if (card.kind === 'forFun') {
+    return card.vibe === undefined ? undefined : { kind: 'vibe', pct: card.vibe.pct };
+  }
+  return card.forecast === undefined ? undefined : { kind: 'forecast', pct: card.forecast.pct };
+}
+
+// ---------------------------------------------------------------------------
 // The forecast's fold
 // ---------------------------------------------------------------------------
 
@@ -521,9 +628,48 @@ export function weekCapOf(
 // ---------------------------------------------------------------------------
 
 /**
+ * **Two reads of one card draw the same** — every field equal, but for a photograph's link. A read
+ * mints a fresh short-lived link to every photograph it carries, so two reads of a card nobody
+ * touched differ in their links alone; a person whose photograph is the same one (`photoId`) is
+ * drawn the same whatever the link. A link that changed with no id to say it is the same photograph
+ * is a change. What the deck redraws after a read is what this says moved (`GameCard`).
+ */
+export function drawnTheSame(was: DeckCard, now: DeckCard): boolean {
+  return sameValue(was, now);
+}
+
+function sameValue(was: unknown, now: unknown): boolean {
+  if (was === now) return true;
+  if (typeof was !== 'object' || typeof now !== 'object' || was === null || now === null) {
+    return false;
+  }
+  if (Array.isArray(was) || Array.isArray(now)) {
+    return (
+      Array.isArray(was) &&
+      Array.isArray(now) &&
+      was.length === now.length &&
+      was.every((item, at) => sameValue(item, now[at]))
+    );
+  }
+  const a = was as Readonly<Record<string, unknown>>;
+  const b = now as Readonly<Record<string, unknown>>;
+  const fields = Object.keys(a);
+  if (fields.length !== Object.keys(b).length) return false;
+  const samePhotograph = a['photoId'] !== undefined && a['photoId'] === b['photoId'];
+  return fields.every(
+    (field) =>
+      field in b && ((field === 'photoUrl' && samePhotograph) || sameValue(a[field], b[field])),
+  );
+}
+
+/**
  * **The deck without one card** — the card an answer took off it, dropped from the read the moment
- * it has flown, with its segment's count and the badge following it. The next read is the server's
- * and settles both; this is what keeps the counts honest in between.
+ * it has flown, with its segment's count following it. The next read is the server's and settles
+ * both; this is what keeps the switch's count honest in between.
+ *
+ * **The badge's ids are left to the server** (#850): the card was on screen, so it is seen and
+ * counts for nothing, and a seen list cut back to an edit made before the server had the answer
+ * would forget it — new again if a refusal puts it back (the code review's catch).
  */
 export function withoutCard(deck: GroupDeck, proposalId: string): GroupDeck {
   const card = deck.cards.find((dealt) => dealt.proposalId === proposalId);
@@ -534,7 +680,6 @@ export function withoutCard(deck: GroupDeck, proposalId: string): GroupDeck {
     segments: deck.segments.map((segment) =>
       segment.kind === card.kind ? { ...segment, count: Math.max(0, segment.count - 1) } : segment,
     ),
-    gamesBadge: card.inCount > 0 ? Math.max(0, deck.gamesBadge - 1) : deck.gamesBadge,
   };
 }
 

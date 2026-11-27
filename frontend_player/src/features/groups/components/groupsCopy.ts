@@ -54,8 +54,16 @@ export const GROUPS_COPY = {
     refused: {
       group_not_found: 'This group isn’t one of yours.',
     },
-    /** The page's three tabs (Q125) — no counts: nothing claims news that does not exist. */
-    tabs: { games: 'Games', fillIn: 'Fill in', friends: 'Friends' },
+    /**
+     * The page's four tabs (Q125, #847) — no counts: nothing claims news that does not exist.
+     * *You’re in* takes a lower-case *i* and the curly apostrophe, like *Fill in* (split mock 3).
+     */
+    tabs: { games: 'Games', fillIn: 'Fill in', youreIn: 'You’re in', friends: 'Friends' },
+    /**
+     * **The kinds a tab's menu picks between** (#861, PRD #859), keyed by `GameIntent` — Friends'
+     * lines, and the kind its selected tab is spoken with: *Friends, Competitive*.
+     */
+    kinds: { competitive: 'Competitive', forFun: 'For fun' },
     /** The header is the door to Info (Q125): the tile, the name and the line under it. */
     openInfo: 'Opens Info',
   },
@@ -73,8 +81,11 @@ export const GROUPS_COPY = {
     justYou: 'Just you so far',
     nothingPicked: 'Nothing picked right now',
   },
-  /** The Fill in tab (play 45–47). */
-  fillIn: {
+  /**
+   * The group's starting card (play 45–47), on You’re in since #847 — Fill in's until then — and the
+   * floating *+ Post a game* over that tab.
+   */
+  youreIn: {
     alone: 'No games yet — it’s just you',
     others: 'No games yet',
     line: 'Post the first game and it is the first thing people see when they arrive with the link. Or send the link and let somebody else post.',
@@ -84,8 +95,6 @@ export const GROUPS_COPY = {
   },
   /** The Friends tab and the Friends screen (play 49–55). */
   friends: {
-    competitive: 'Competitive',
-    forFun: 'For fun',
     yourSide: 'Your side',
     theirSide: 'Their side',
     /** The reader's seat, drawn as its three letters over their Level. */
@@ -178,10 +187,24 @@ export const GROUPS_COPY = {
    * tags — ▲ and + — are drawn, never characters.
    */
   hottest: {
-    /** Drawn uppercase by the row frame: *HOTTEST GROUPS*, with no See all. */
-    heading: 'Hottest groups',
-    /** *Your games*, for a reader in no group, in place of *Play finds you one.* (§31.1). */
-    groupless: 'Join a group to get games — the hottest ones are just below.',
+    /** FOR YOU's line (#820) — its title, and what it is named: the row was *HOTTEST GROUPS*. */
+    line: 'Groups heating up',
+    /** The open line's footer link (#823), the frame drawing its chevron: *All groups ›*. */
+    allGroups: 'All groups',
+    /** Spoken — the page it opens, the drawn words first (a call: §31.1 writes no name for it). */
+    allGroupsLabel: 'All groups heating up',
+    /** The Groups heating up page (#823; §31.14). */
+    page: {
+      title: 'Groups heating up',
+      back: 'Back to Home',
+      /** A list read empty — no group of 3 is left (a call: the line hides then, so it is rarely met). */
+      nobody: 'No groups heating up right now',
+    },
+    /**
+     * *Your games*, for a reader in no group, in place of *Play finds you one.* (§31.1) — pointing at
+     * the line just below, which starts open for them (#820, Q38).
+     */
+    groupless: 'Join a group to get games — see Groups heating up, just below.',
     tag: { HOTTEST: 'HOTTEST', GROWING: 'GROWING' },
     /** The tags, spoken. */
     tagSpoken: { HOTTEST: 'hottest', GROWING: 'growing' },
@@ -189,7 +212,6 @@ export const GROUPS_COPY = {
     /** One reads *game this week* (§31.2, a call). */
     gameThisWeek: 'game this week',
     players: 'players',
-    thisMonth: 'this month',
     /** The chip (§31.2) and the sheet's button (§31.3), each by the reader's relation. */
     chip: { join: 'Join', ask: 'Ask to join', requested: 'Asked', in: 'You’re in' },
     openGroup: 'Open group',

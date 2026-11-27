@@ -7,6 +7,11 @@
   amendment of that day** (the mechanics Q129): while a friend's ask for a level is a card on Home,
   that card is drawn instead of *Get your level*, which comes back if the ask is set aside and the
   player is still rated in nothing. A dated note marks the passage.
+- **§7's Home card restored 2026-11-16 by
+  [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)**
+  §4 (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)): a friend's ask waits in *Needs your
+  answer*, the sheet behind Home's envelope, and is never drawn instead of *Get your level*. The card
+  shows whenever §7 says, asked or not. The same dated note marks it.
 - **One more door, 2026-11-07, from [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)**
   §5 (the mechanics Q130): the Rankings page offers ***Get your {sport} level*** in a sport the reader
   has no level in. It starts that sport's questionnaire, and the pass returns to Rankings, as every
@@ -193,7 +198,10 @@ made in the spec, not grilled.)*
   [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)'s
   amendment of that day, Q129: while a friend's ask for a level is a card on her Home, that card is
   drawn instead of this one, in its own row, and this one comes back if she sets the ask aside still
-  rated in nothing.)*
+  rated in nothing.)* *(Restored 2026-11-16 by
+  [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+  §4: the ask waits in *Needs your answer*, behind Home's envelope, and this card shows whenever the
+  sentence above says, whether or not anybody asked.)*
 - **The *Get your level* notice.** ***Get your level so your groups can deal you games.*** It goes
   **once per account, ever**, to an account that is a member of at least one group (player or
   official), whose first group join was at least 24 hours ago, and which holds no Skill rating. It

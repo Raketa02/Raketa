@@ -14,5 +14,6 @@ export {
   type PhoneFlag,
   type PhonePreference,
   type PhoneWideFlag,
+  type SeenRowsPreference,
 } from './phonePreferences';
 export { phonePreferenceKeys } from './phonePreferenceKeys';

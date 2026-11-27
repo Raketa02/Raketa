@@ -11,14 +11,18 @@
 export { RankingsScreen, type RankingsScreenProps } from './components/RankingsScreen';
 
 /** **The trophy left of Home's bell** — the shell places it. */
-export { RankingTrophy } from './components/RankingTrophy';
+export { RankingTrophy, type RankingTrophyProps } from './components/RankingTrophy';
 
 /**
- * **TOP 10, the last of Home's rows** (#805) — the shell places it under Same vibe, and reads it again
- * on Home's pull (`rereadTopTen`).
+ * **Top 10, the last of FOR YOU's lines** (#805, #820) — the shell folds it under Players with your
+ * vibe, `undefined` while hidden, and reads it again on Home's pull (`rereadTopTen`).
  */
-export { TopTenRow } from './components/TopTenRow';
+export { useTopTenLine } from './components/TopTenLine';
 export { rereadTopTen } from './hooks/useTopTen';
+/** **Whether Top 10's read has finished** (#871) — behind its opening sport — for the shell's reveal. */
+export { useTopTenFinished } from './hooks/useTopTen';
+/** **Top 10, set out before Home is drawn, its chain included** (#874) — the shell's warm-up. */
+export { prefetchTopTen } from './hooks/useTopTen';
 
 /**
  * **Where Rankings is** — for the trophy, and for the entry gate landing a pass that began on

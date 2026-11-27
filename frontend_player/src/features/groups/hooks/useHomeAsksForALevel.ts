@@ -11,32 +11,44 @@
  * `undefined` until both have answered, and on a failed read: the card is a nudge, never a wall,
  * and a Home that cannot say whether to nudge says nothing.
  *
- * **And a friend's ask for a level stands in its place** (#765, Q129): Home's own read says whether
- * ASKED FOR A LEVEL holds a card (`proposals`' `useHomeLevelAsks`), and until it has answered the
- * card is not drawn either — so the two are never drawn and then swapped. A Home read refused, or
- * waiting for a connection, holds none, and the card is free to say why nothing is happening.
+ * **Home's own read is no part of it** (#816, ADR-0205 §4): a friend's ask for a level waits in
+ * Needs your answer and never stands in the card's place, so the card no longer waits on whether
+ * one does.
  */
 
-import { useSkillRatings } from '@/features/onboarding/types';
-import { useHomeLevelAsks } from '@/features/proposals/types';
+import { onboardingKeys, useSkillRatings } from '@/features/onboarding/types';
+import { readHasFinished, useQueryCacheAnswer } from '@/shared/lib/query-client';
 
-import { homeAsksForALevel } from '../domain/groupPage';
+import { homeAsksForALevel, levelCardReadsFinished } from '../domain/groupPage';
 
+import { groupKeys } from './groupKeys';
 import { useMyGroups } from './useGroups';
 
 export function useHomeAsksForALevel(): boolean | undefined {
   const ratings = useSkillRatings();
   const ratedInNothing = ratings.data === undefined ? undefined : ratings.data.length === 0;
   const groups = useMyGroups({ enabled: ratedInNothing === true });
-  const asked = useHomeLevelAsks();
 
   if (ratedInNothing === false) return false;
-  if (ratedInNothing === undefined || groups.data === undefined || asked === undefined) {
-    return undefined;
-  }
+  if (ratedInNothing === undefined || groups.data === undefined) return undefined;
   return homeAsksForALevel(
     groups.data.length,
     (ratings.data ?? []).map((rating) => rating.sport),
-    asked.length,
   );
+}
+
+/**
+ * **Whether the reads the card answers from have finished** (#871) — `levelCardReadsFinished` over
+ * the ratings and your groups, each landed, refused, held for a connection, or failed once and
+ * retrying (`readHasFinished`). Read off the cache, so it draws again only as it turns.
+ */
+export function useLevelCardFinished(): boolean {
+  return useQueryCacheAnswer((client) => {
+    const ratings = client.getQueryState<readonly unknown[]>(onboardingKeys.ratings());
+    return levelCardReadsFinished({
+      ratingsFinished: readHasFinished(ratings),
+      ratedInNothing: ratings?.data === undefined ? undefined : ratings.data.length === 0,
+      groupsFinished: readHasFinished(client.getQueryState(groupKeys.mine())),
+    });
+  });
 }

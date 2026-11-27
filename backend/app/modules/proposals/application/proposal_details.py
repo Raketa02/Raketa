@@ -8,12 +8,19 @@ follows who is reading (``domain/details.py``); the sides are the evenest
 arrangement **the engine's own forecast** gives with the reader on their own
 side, exactly as the deck draws them; the overlap grid is the people drawn; WHERE
 is the club and its distance from the reader, never a court number, which is
-given at booking; the money row is the share and the book-by. The status says
+given at booking; the money row is the share and the book-by. **What it says
+about the game follows its kind** (``docs/adr/0207`` §5, §6, #833): a
+competitive game its forecast with each side's level and the gap, and **what is
+at stake for the reader** — the booked game's own stakes function over those
+sides, once every seat is named — and a For-fun game its **Social vibe**, the
+card's own number, with a row for each of the reader's tags naming who at the
+table carries it, and no forecast. The status says
 *filling*, or how it ended — a filled game's booking has its id — and the
 actions are what the reader may do now. **Waiting for one payment, it says until
 when** (#625, Q111), and to the payer that the payment is theirs.
 
-**A read, recorded nowhere**, against one instant, with one read per provider.
+**A read, recorded nowhere**, against one instant, with one read per provider
+— the tags only on For fun, the stakes only on a competitive game.
 
 **Refused with one code** — ``proposal_not_found`` — for a proposal that does
 not exist, one that is nothing to the reader, one in a pool they are no longer
@@ -30,7 +37,8 @@ from dataclasses import dataclass
 from typing import final
 from uuid import UUID
 
-from app.kernel import Clock, Instant, instant
+from app.engines.matchfit.core import SearchMode
+from app.kernel import Clock, Instant, exhaustive, instant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
 from app.modules.proposals.application.friends import with_the_readers_friends
 from app.modules.proposals.application.members import genders_on, wants_of
@@ -53,6 +61,7 @@ from app.modules.proposals.domain.details import (
     ReaderAction,
     actions_for,
     details_view,
+    stakes_are_priced,
     status_of_proposal,
 )
 from app.modules.proposals.domain.errors import ProposalNotFound
@@ -65,14 +74,18 @@ from app.modules.proposals.domain.ports import (
     CourtKinds,
     DeckPeople,
     ReaderRelations,
+    ReadersStakes,
     DeckPerson,
     PlayerFit,
     PlayersInPlay,
+    PlayersTags,
     Pools,
     ProposalRepository,
+    Stakes,
     WantedKinds,
 )
 from app.modules.proposals.domain.proposal import Paying, Proposal, Reopened, TimeTo
+from app.modules.proposals.domain.vibe import TableVibe, table_vibe_of
 
 
 @final
@@ -87,7 +100,16 @@ class ProposalDetails:
     actions: tuple[ReaderAction, ...]
     view: DetailsView
     sides: Sides
+    #: How even the game drawn is forecast, with each side's level — on a
+    #: competitive game; ``None`` on a For-fun one, whose sides it still
+    #: arranged, and where it cannot be read.
     forecast: CardForecast | None
+    #: What a counted result would do to the reader's Level, on those sides —
+    #: on a competitive game with every seat named; ``None`` otherwise.
+    at_stake: Stakes | None
+    #: The table's Social vibe and the reader's rows — on a For-fun game;
+    #: ``None`` on a competitive one, and where the card draws none.
+    vibe: TableVibe | None
     overlap: Overlap
     #: Why the reader's seat reopened, and the payment to confirm — ``None``
     #: unless the last yes reopened it.
@@ -129,9 +151,13 @@ class ReadProposalDetails:
         players: PlayersInPlay,
         wanted: WantedKinds,
         relations: ReaderRelations,
+        tags: PlayersTags,
+        stakes: ReadersStakes,
         clock: Clock,
     ) -> None:
         self._relations = relations
+        self._tags = tags
+        self._stakes = stakes
         self._players = players
         self._wanted = wanted
         self._pools = pools
@@ -191,6 +217,15 @@ class ReadProposalDetails:
         sides, forecast = evenest(
             options, await self._forecasts.forecasts(options, sport=proposal.sport)
         )
+        actions = actions_for(proposal, reader, now=now)
+        shown, at_stake, vibe = await self._what_it_says(
+            proposal,
+            reader,
+            view=view,
+            sides=sides,
+            forecast=forecast,
+            actions=actions,
+        )
         challenger = challenger_of(proposal)
         people = await with_the_readers_friends(
             await self._people.people(
@@ -221,10 +256,12 @@ class ReadProposalDetails:
             type=card_type(proposal),
             challenger_id=challenger,
             status=status,
-            actions=actions_for(proposal, reader, now=now),
+            actions=actions,
             view=view,
             sides=sides,
-            forecast=forecast,
+            forecast=shown,
+            at_stake=at_stake,
+            vibe=vibe,
             overlap=overlap_of(
                 [people[player].week for player in view.people],
                 start=proposal.start,
@@ -251,3 +288,43 @@ class ReadProposalDetails:
             distance_km=distances.get(proposal.club_id),
             people=people,
         )
+
+    async def _what_it_says(
+        self,
+        proposal: Proposal,
+        reader: UUID,
+        *,
+        view: DetailsView,
+        sides: Sides,
+        forecast: CardForecast | None,
+        actions: tuple[ReaderAction, ...],
+    ) -> tuple[CardForecast | None, Stakes | None, TableVibe | None]:
+        """The kind's own card (``docs/adr/0207`` §5, §6): **competitive**, the
+        forecast and what is at stake for the reader on these very sides,
+        asked only while the game is still theirs to play and every seat is
+        named (``stakes_are_priced``); **For fun**, the table's vibe and the
+        reader's rows, the columns in the tiles' order — and the forecast,
+        which arranged the sides, unsaid."""
+
+        match proposal.kind:
+            case SearchMode.COMPETITIVE:
+                priced = stakes_are_priced(
+                    sides, seats_per_side=proposal.seats_per_side, actions=actions
+                )
+                at_stake = (
+                    await self._stakes.at_stake(
+                        reader, sides=sides, sport=proposal.sport
+                    )
+                    if priced
+                    else None
+                )
+                return forecast, at_stake, None
+            case SearchMode.FOR_FUN:
+                tags = await self._tags.tags_of(view.people)
+                return (
+                    None,
+                    None,
+                    table_vibe_of(reader, (*sides.yours, *sides.theirs), tags),
+                )
+            case _:
+                exhaustive(proposal.kind)

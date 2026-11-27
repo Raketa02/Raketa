@@ -19,7 +19,7 @@ import { router } from 'expo-router';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ReadFailure, usePull } from '@/features/groups/types';
-import { Button, DarkCard, ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
+import { Button, DarkCard, ScreenHeader, theme, TopSafeArea, useTabBarReach } from '@/shared/ui';
 
 import { useAdministeredGroups, useAdministeredGroupsReread } from '../hooks/useOfficialGroups';
 
@@ -28,6 +28,8 @@ import { newOfficialGroupRoute } from './administratorRoutes';
 import { OfficialGroupCard } from './OfficialGroupCard';
 
 export function AdministratorGroupsScreen({ clubId }: { readonly clubId: string }) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const COPY = ADMINISTRATOR_COPY.groups;
   const read = useAdministeredGroups(clubId);
   const groups = read.data?.groups;
@@ -39,7 +41,10 @@ export function AdministratorGroupsScreen({ clubId }: { readonly clubId: string 
 
       <ScrollView
         testID="administered-groups"
-        contentContainerStyle={s.content}
+        contentContainerStyle={[
+          s.content,
+          { paddingBottom: reach + theme.size.btnLg + 2 * theme.size.gutter },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -68,7 +73,7 @@ export function AdministratorGroupsScreen({ clubId }: { readonly clubId: string 
         ))}
       </ScrollView>
 
-      <View style={s.newGroup}>
+      <View style={[s.newGroup, { bottom: reach + theme.size.gutter }]}>
         <Button
           label={COPY.newGroup}
           accessibilityLabel={COPY.newGroupLabel}
@@ -84,12 +89,12 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   content: {
     paddingHorizontal: theme.size.gutter,
-    // The last card scrolls clear of the button floating over the corner, a gutter above it.
-    paddingBottom: theme.size.btnLg + 2 * theme.size.gutter,
+    // The last card scrolls clear of the button floating over the corner, a gutter above it —
+    // the bar's reach under both, set where it is read.
     gap: theme.space.sm,
   },
   // Over the page's bottom corner, at the gutter — Fill in's *+ Post a game* (play 46).
-  newGroup: { position: 'absolute', right: theme.size.gutter, bottom: theme.size.gutter },
+  newGroup: { position: 'absolute', right: theme.size.gutter },
   empty: { alignItems: 'center', gap: theme.space.sm },
   // 3.3: `h2` titles a card — the dark card's headline, as the group page's link cards draw theirs.
   emptyTitle: { ...theme.type.h2, color: theme.color.surface, textAlign: 'center' },

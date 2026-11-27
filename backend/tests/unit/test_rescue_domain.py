@@ -12,11 +12,12 @@ deadline** is the cut-off while that is ahead, then the start.
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, instant
+from app.modules.player_profile.domain.social_tags import SocialTag as T
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.deck import CardForecast, CardType, CourtState
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
@@ -188,6 +189,88 @@ def test_the_best_fits_are_the_most_even_three_a_seat():
     assert best_fits(two_open, offered, forecasts) == frozenset(offered)
 
 
+def test_a_for_fun_rescue_s_best_fits_are_the_best_company_for_the_three_left():
+    """Read against the three left plus the candidate (``docs/adr/0207``
+    §1): the vibe, then new faces, then the forecast, then the level spread
+    — never the forecast first, as a competitive rescue's are."""
+
+    drink, laughs = T.STAYS_FOR_A_DRINK, T.LAUGHS_OFF_MISTAKES
+    jan, iza, lena = uuid4(), uuid4(), uuid4()
+    even = CardForecast(pct=95, provisional=False)
+    #: What each candidate's game with them in the seat is forecast at.
+    forecast = {
+        ZOSIA: CardForecast(pct=60, provisional=False),
+        MAREK: even,
+        ANIA: None,
+        PIOTR: even,
+        jan: even,
+        iza: even,
+        lena: CardForecast(pct=90, provisional=False),
+    }
+    tags = {
+        OLA: frozenset({drink, laughs}),
+        EWA: frozenset({drink, laughs}),
+        TOMEK: frozenset({drink, laughs}),
+        # Everything shared — 💘, which counts for nothing, aside.
+        ZOSIA: frozenset({drink, laughs, T.OPEN_TO_MEET_SOMEONE}),
+        ANIA: frozenset({drink, laughs}),
+        # Ola, Ewa and Tomek's tags carried by 4 of 7 others: 57%.
+        MAREK: frozenset({T.QUIET_AND_FOCUSED}),
+        # The drink alone: 86%.
+        PIOTR: frozenset({drink}),
+        jan: frozenset({drink}),
+        iza: frozenset({drink}),
+        lena: frozenset({drink}),
+    }
+    levels = {OLA: 3.0, EWA: 3.0, TOMEK: 3.0, ZOSIA: 3.0, MAREK: 3.0}
+    levels |= {ANIA: 3.0, PIOTR: 3.0, jan: 3.3, iza: 3.1, lena: 3.0}
+    # Piotr has played with Ola, or is her friend.
+    known = frozenset({frozenset({PIOTR, OLA})})
+
+    def left_out(*offered: UUID) -> set[UUID]:
+        """Of four offered for one seat — three fits — the one left out."""
+
+        fits = best_fits(
+            a_rescue(kind=SearchMode.FOR_FUN),
+            offered,
+            [forecast[player] for player in offered],
+            tags=tags,
+            known=known,
+            levels=levels,
+        )
+        return set(offered) - fits
+
+    # The vibe first: Marek's even game goes to a 60% one, and to one whose
+    # forecast can't be read.
+    assert left_out(ZOSIA, MAREK, ANIA, iza) == {MAREK}
+    # Then new faces: Piotr knows Ola, so Lena's less even game wins.
+    assert left_out(PIOTR, lena, jan, iza) == {PIOTR}
+    # Then the forecast.
+    assert left_out(lena, jan, iza, ZOSIA) == {lena}
+    # Then the level spread: Jan is further from the three than Iza.
+    assert left_out(jan, iza, ZOSIA, ANIA) == {jan}
+
+
+def test_a_competitive_rescue_s_best_fits_are_today_s_whatever_the_tags():
+    offered = (ZOSIA, MAREK, ANIA, PIOTR)
+    forecasts = (
+        CardForecast(pct=60, provisional=False),
+        CardForecast(pct=90, provisional=False),
+        None,
+        CardForecast(pct=75, provisional=False),
+    )
+    shared = frozenset({T.STAYS_FOR_A_DRINK})
+
+    assert best_fits(
+        a_rescue(),
+        offered,
+        forecasts,
+        tags={player: shared for player in (OLA, EWA, TOMEK, ANIA)},
+        known=frozenset({frozenset({MAREK, OLA})}),
+        levels={},
+    ) == frozenset({MAREK, PIOTR, ZOSIA})
+
+
 def test_a_rescue_card_is_a_seat_open_card_on_a_booked_court():
     rescue = a_rescue()
     sides = sides_for(rescue, ZOSIA)
@@ -198,9 +281,13 @@ def test_a_rescue_card_is_a_seat_open_card_on_a_booked_court():
         forecast=CardForecast(pct=80, provisional=False),
         overlap=overlap_of([EVERY_HOUR] * 4, start=START, zone=CLUB_ZONE),
         now=MONDAY,
+        tags={},
     )
 
     assert card.type is CardType.SEAT_OPEN
+    # A competitive rescue says how even its game would be, and no vibe.
+    assert card.forecast == CardForecast(pct=80, provisional=False)
+    assert card.vibe is None
     assert card.court is CourtState.BOOKED
     assert card.court_name == "Court 2"
     # Their shares are held until the cut-off, and paid once it took them
@@ -222,7 +309,36 @@ def test_a_rescue_card_after_the_cut_off_shows_everybody_on_it_paid():
         forecast=CardForecast(pct=80, provisional=False),
         overlap=overlap_of([EVERY_HOUR] * 4, start=START, zone=CLUB_ZONE),
         now=CUT_OFF,
+        tags={},
     )
 
     assert card.paid == (OLA, EWA, TOMEK)
     assert card.no_free_cancellation
+
+
+def test_a_for_fun_rescue_says_the_vibe_of_me_with_the_three_left_and_no_forecast():
+    """The table is the reader in the seat and the players still on the game —
+    never the leaver whose seat it was (``docs/adr/0207`` §2, §5)."""
+
+    rescue = a_rescue(kind=SearchMode.FOR_FUN)
+    drink, laughs = T.STAYS_FOR_A_DRINK, T.LAUGHS_OFF_MISTAKES
+
+    card = card_of_a_rescue(
+        rescue,
+        sides=sides_for(rescue, ZOSIA),
+        forecast=CardForecast(pct=80, provisional=False),
+        overlap=overlap_of([EVERY_HOUR] * 4, start=START, zone=CLUB_ZONE),
+        now=MONDAY,
+        tags={
+            ZOSIA: frozenset({drink, laughs}),
+            OLA: frozenset({drink, laughs}),
+            EWA: frozenset({drink, T.PLAYS_TO_WIN}),
+            TOMEK: frozenset({T.QUIET_AND_FOCUSED, T.PLAYS_TO_WIN}),
+            # Kuba left: everything he carries is off the table.
+            KUBA: frozenset({drink, laughs}),
+        },
+    )
+
+    # Zosia (⅔ + ⅓), Ola (⅔ + ⅓), Ewa (⅔ + ⅓), Tomek (0 + ⅓) of 8: 41.7%.
+    assert card.vibe == 42
+    assert card.forecast is None

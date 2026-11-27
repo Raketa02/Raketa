@@ -676,8 +676,8 @@ present-tense, saying what the tab **is** and pointing at the act:
 > score.`
 > `⚡ Play finds you one.`
 
-*(2026-11-14, ADR-0204 §1: a player in no group reads §31.1's `Join a group to get games — the
-hottest ones are just below.` in place of the second line.)*
+*(2026-11-14, ADR-0204 §1: a player in no group reads §31.1's groupless line in place of the second
+line — `Join a group to get games — see Groups heating up, just below.` since #820.)*
 
 **`PLACEHOLDER_COPY.now` dies with it**, and the test moves rather than being deleted.
 
@@ -971,7 +971,7 @@ new is the block's own frame. The players card's words went with the card
 | The forecast block's eyebrow | `BALANCE FORECAST` | stored as words, drawn uppercase |
 | Between the two strengths | `gap` | lower case — a unit rather than a heading |
 | Under the figure, counted | `A counted game — a confirmed score moves everybody’s level.` | `worthLine`'s fact in the forecast's register — *movement*, beside the number that says how even — and not that sentence again four cards apart |
-| Under the figure, friendly | `A friendly — nothing moves.` | the negative, kept: true whether or not anything reads it |
+| Under the figure, friendly | ~~`A friendly — nothing moves.`~~ | **retired 2026-11-23 by #841**: a For-fun game draws the Social vibe card in the block's place (§33.1), so no forecast is drawn for it to stand under |
 | Under the figure, unreadable kind | *nothing* | §3's drop — the figure stands and the clause goes |
 | The stake tiles | `If you win` · `If you lose` | *if*, because on a game the result has not happened |
 
@@ -979,6 +979,18 @@ new is the block's own frame. The players card's words went with the card
 pairing cannot be computed, and *there is deliberately no reason beside the absence* — the block is
 absent entirely, the tiles with it, and nothing on the screen says *unrated*, *unavailable* or
 anything else.
+
+> **Amended 2026-11-23** ([#839](https://github.com/Raketa02/Raketa/issues/839), ADR-0207 §6): **a
+> competitive game's details open on the same block**, before the yes — the same words, the counted
+> sentence on every game they draw it for, and the same four elements as §24.8. The block's words
+> moved with it below both features, to the player app's `shared/vocabulary/forecastPresentation.ts`
+> (the eyebrow, `gap`, the counted sentence, the two tiles, and §24.8's three spoken names);
+> `gamePresentation.ts` cites them and keeps the friendly's. Never drawn on For fun (ADR-0207 §5).
+>
+> **Amended 2026-11-23** ([#841](https://github.com/Raketa02/Raketa/issues/841)): **a booked For-fun
+> game draws the Social vibe card in the block's place** (§33.1), before its hour and at the court,
+> so the friendly's sentence is said nowhere and `gamePresentation.ts` keeps it no longer. A booked
+> competitive game is unchanged.
 
 ---
 
@@ -1014,6 +1026,12 @@ anything else.
 > **Amended 2026-11-07** by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §7:
 > *On your card* gains *Show me in General*, a switch. Its words are §30.8's, cited in the row marked
 > *(ADR-0203)*.
+>
+> **Amended 2026-11-22** by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+> §7 ([#837](https://github.com/Raketa02/Raketa/issues/837)): the vocabulary is **27 tags** and a
+> player picks **2 to 8**, in onboarding and on *Tags* alike. The picker's words quote the served
+> bounds, so they now read *Pick 2 to 8* and *8 tags is the most*; the eight new labels are §27.1.
+> The rows marked *(ADR-0207)* say the new words.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
@@ -1031,7 +1049,7 @@ anything else.
 | Live line, who you play with | `Matched with anyone` · `… women only` · `… men only` | **the preference only** — the gender is drawn on its own screen and nowhere else on the tab |
 | Live line, record | `Your player record, as a stranger reads it` | |
 | Live line, photos | `{n} of 3 · profile photo on court` · `{n} of 3 · profile photo not checked as on court` · `None — a court poster stands in` | |
-| Live line, tags | `{n} of 6 · {first}, {second}, +{rest}` | the names, not the emoji |
+| Live line, tags | `{n} of {max} · {first}, {second}, +{rest}` | the names, not the emoji; `{max}` is the served ceiling, *8 of 8* *(ADR-0207)* — `{n} of 6` until 2026-11-22 |
 | Live line, intro | `“{intro}”` · `None — say it in your own words` | the second quotes the step's title |
 | Live line, nickname | `{nickname}` | *(ADR-0199)* no `@` and no second line (§15); `{name} · @{nickname}` retired with the Name |
 | Passport, a card's status chip | `Initial estimate` · `Calibrating` · `Stable` | `ratingStatusLabel`, cited; drawn as a `Tag`, not a row — the result card's *Rating status* row stays under the bar as well |
@@ -1050,6 +1068,8 @@ anything else.
 | Where you play | `Your area is set` · `Your area updates each time you open Raketa; it is never finer than about a kilometre.` · `Use my location` · `Pick a club near where you play` | the permission states are the step's, cited; the middle line is static, the one written trace of the cold-start refresh, and was §26's until the radar went; *(ADR-0200)* the two ways are the location step's own, replacing `Read my area again` ([#733](https://github.com/Raketa02/Raketa/issues/733)) |
 | Who you play with | *the step's headings, labels, cost line and reach sentence* · `Save` · `Saved` | the scope sentences are not repeated |
 | Photos | *the step's, whole* | title `Your court photos`; eyebrow `On-court only — up to three`; no *Continue* |
+| Tags, the eyebrow | `On your card · Pick {min} to {max}` | *On your card · Pick 2 to 8* *(ADR-0207)*; onboarding's is `Setting up · Step 1 of 6 · Pick 2 to 8`; both quote the served bounds |
+| Tags, the ceiling | `{max} tags is the most` · `Nothing changed. Remove one you have already picked to make room for another.` | *8 tags is the most* *(ADR-0207)*, on a ninth press, pinned above the button; the step's, cited |
 | Tags, the button | `Save` · `Saved` · `Pick {n} more tag(s) to save` | the step's *to continue* becomes *to save* |
 | Intro, the buttons | `Save` · `Saved` · `Remove intro` | |
 | Nickname, the refusal | `That nickname is taken. Pick another.` | `authErrorMessage`'s, cited; the server's code |
@@ -1062,6 +1082,31 @@ step's. **What is dropped** is recorded in ADR-0179 §9 so nobody restores it as
 tab's placeholder line, the declaration section's heading and body, the week's promise note,
 the location's *why we ask*, the gender step's scope sentences, and every explanatory card of the
 first draft.
+
+### 27.1 The eight tags ADR-0207 added
+
+> Added 2026-11-22 by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+> §7 ([#837](https://github.com/Raketa02/Raketa/issues/837)). The nineteen that stood are
+> `shared/vocabulary/socialTagPresentation.ts`'s and are cited, never respelled; these eight are
+> written here because they are new. Each is **appended at the end of its group**, so the picker
+> serves them last there: After the match 9, On the court 10, Why you're here 8.
+
+| Group | Code | Chip | Spoken and in prose |
+| --- | --- | --- | --- |
+| After the match | `STAYS_FOR_A_COFFEE` | `☕ Stays for a coffee` | `Stays for a coffee` |
+| After the match | `UP_FOR_A_BITE_AFTER` | `🍽️ Up for a bite after` | `Up for a bite after` |
+| After the match | `KEEPS_IN_TOUCH` | `📲 Keeps in touch` | `Keeps in touch` |
+| On the court | `HAPPY_TO_SWAP_PARTNERS` | `🔄 Happy to swap partners` | `Happy to swap partners` |
+| On the court | `PATIENT_WITH_BEGINNERS` | `🤲 Patient with beginners` | `Patient with beginners` |
+| On the court | `HAPPY_TO_SHARE_TIPS` | `💡 Happy to share tips` | `Happy to share tips` |
+| On the court | `BRINGS_THE_ENERGY` | `🎶 Brings the energy` | `Brings the energy` |
+| Why you're here | `NEW_IN_TOWN` | `🧳 New in town` | `New in town` |
+
+**The emoji is the chip's and never the words'**, as for the nineteen: a listener hears the label
+alone, and a sentence naming a tag carries no glyph. **No two codes share a glyph.** **A code this
+build has no words for is skipped** wherever tags are drawn — the picker, the record, Same vibe's
+tiles and sheet — never a blank chip and never a crash; a count the server sent (*3 things in
+common*) stays the server's (§3).
 
 ## 28. The Games tab's door, and finding
 
@@ -1078,6 +1123,12 @@ costs.** It is written twice, once for each declared kind, and each line has a s
 form. `{sport}` is the sport's name inside a sentence, as in *Carry on with your padel questions*;
 `{n}` is the count of the player's own cards of their declared kind in this group, the one the
 switch shows.
+
+*(Noted 2026-11-24, [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet
+built: the switch becomes the Games tab's menu, and the door its dimmed line, with the same label,
+no number and the same press target as the live line. `{n}` is the live line's count. The menu's
+spoken names, the selected tab's *Games, Competitive* and each line's, are worded in copy modules by
+[#862](https://github.com/Raketa02/Raketa/issues/862); the door line keeps the door's.)*
 
 | Where | A competitive player taps *For fun* | A for-fun player taps *Competitive* | Note |
 | --- | --- | --- | --- |
@@ -1156,13 +1207,15 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Home, the row's title | `FRIEND REQUESTS · {n}` | `{n}` ≥ 1; at 0 the row and its title are gone |
-| The card, who | `{nickname} wants to be your friend` | |
-| The card, where (a group) | `With you in {group} · {Sport} {level} ·` and the reliability chip | the group the request was made in and its sport; the chip is the existing one (*✦ 98*) |
-| The card, where (a link) | `Invited you to Raketa` | in place of the group line |
-| The card, where (the ranking) | §30.8's `Found you in the {sport} ranking`, cited | in place of the group line, as a link's stands (ADR-0203 §9); a request from the ranking to a group-mate reads it too |
-| The card, buttons | `Not now` · `Accept` | |
-| Notice, a request | `{nickname} wants to be your friend` · body: the card's where-line | once per request |
+| Needs your answer, the section's title | `FRIEND REQUESTS · {n}` | `{n}` ≥ 1; at 0 the section and its title are gone. Home's row until 2026-11-17 ([§32](#32-needs-your-answer), #816) |
+| The card, who | `{nickname} wants to be your friend` | two lines at most on the tile |
+| The card, what they play | `{Sport} {level} · {Sport} {level}` | under who asks, since 2026-11-17 ([#818](https://github.com/Raketa02/Raketa/issues/818), ADR-0205 §1): every sport the sender holds a Level in, in the order served, each with its dot drawn before it: *● Padel 3,40 · ● Tennis 2,90*. Mono, a decimal comma. The `·` goes with the sport before it, so a wrapped line ends in one *(a call)*. Two lines at most; no line when they hold no Level |
+| The card, spoken | `{nickname} wants to be your friend, {Sport} {level}, {Sport} {level}` | the title and the levels as one name, every sport included *(a call)*: *ines.d wants to be your friend, Padel 3,40, Tennis 2,90*. The face, the chip and the buttons keep their own |
+| The card, where (a group) | `With you in {group} · {Sport} {level} ·` and the reliability chip | the group the request was made in and its sport; the chip is the existing one (*✦ 98*). **Retired on the tile 2026-11-17** (ADR-0205 §1, #816): the tile draws the chip alone, on its own line, and #818's *what they play* above it. The notice's body still says it |
+| The card, where (a link) | `Invited you to Raketa` | in place of the group line. **Retired on the tile 2026-11-17**, as the group line |
+| The card, where (the ranking) | §30.8's `Found you in the {sport} ranking`, cited | in place of the group line, as a link's stands (ADR-0203 §9); a request from the ranking to a group-mate reads it too. **Retired on the tile 2026-11-17**, as the group line; the notice keeps it |
+| The card, buttons | `Not now` · `Accept` | at the tile's foot |
+| Notice, a request | `{nickname} wants to be your friend` · body: the card's where-line | once per request; opens Home with Needs your answer up since 2026-11-17 (#817) |
 | Refused, the daily limit | ~~§30.8's limit sentence, cited~~ | **retired 2026-11-14** (ADR-0204 §2): there is no daily limit, and `daily_request_limit` leaves the contract |
 | Notice, accepted | `{nickname} said yes — you're friends` | to the requester |
 | Notice, crossed | `You and {nickname} are friends now` | to both, each naming the other *(a call: nobody said yes)* |
@@ -1192,7 +1245,7 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Home, the request | `{nickname} wants to be your friend` · `Invited you to Raketa` · `Not now` · `Accept` | the card of §29.2 |
+| Home, the request | `{nickname} wants to be your friend` · `Invited you to Raketa` · `Not now` · `Accept` | the card of §29.2. Since 2026-11-17 it waits in Needs your answer, without `Invited you to Raketa` (#816) |
 | The public page | `{nickname} invited you to play on Raketa` · the store buttons · `Open in Raketa` | the stores' own badges; the preview image carries the same sentence |
 | The public page, a replaced or unknown code | `Nothing at that link` | |
 
@@ -1213,14 +1266,14 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Home, the row's title | `ASKED FOR A LEVEL · {n}` | `{n}` ≥ 1 is the number of sports with a card; at 0 the row and its title are gone |
+| Needs your answer, the section's title | `ASKED FOR A LEVEL · {n}` | `{n}` ≥ 1 is the number of sports with a card; at 0 the section and its title are gone. Home's row until 2026-11-17 ([§32](#32-needs-your-answer), #816) |
 | The card, who — one asker | `{nickname} wants to play {sport} with you` | *tomek.k wants to play padel with you* |
 | … two askers | `{nickname} and {nickname} want to play {sport} with you` | *tomek.k and kuba.w want to play padel with you* |
 | … three or more | `{nickname}, {nickname} and {m} more want to play {sport} with you` | the two newest; `{m}` ≥ 1 counts the rest (*tomek.k, kuba.w and 2 more*); up to three faces are drawn |
-| The card, the line — one asker | `A few questions, and {nickname} can add you to a game.` | |
-| … two or more | `A few questions, and they can add you to a game.` | *they*, never a gender (ADR-0096) |
-| The card, the buttons | `Not now` · `Get your {sport} level` | outline · coral; the coral one starts the sport's questionnaire from Home, as the notice does |
-| The card, a questionnaire in that sport left halfway | `You're on question {n}.` · `Not now` · `Carry on` | the line and the coral button change; the title doesn't. `{n}` is the question the run is on |
+| The card, the line — one asker | `A few questions, and {nickname} can add you to a game.` | **retired 2026-11-17** (ADR-0205 §1, #816): the tile has no line under its title |
+| … two or more | `A few questions, and they can add you to a game.` | *they*, never a gender (ADR-0096). **Retired 2026-11-17**, as above |
+| The card, the buttons | `Not now` · `Get your {sport} level` | outline · coral; the coral one closes Needs your answer and starts the sport's questionnaire from Home, as the notice does |
+| The card, a questionnaire in that sport left halfway | `Not now` · `Carry on` | the coral button changes; the title doesn't. `You're on question {n}.` was the line and is **retired 2026-11-17** with it |
 | Not now, the toast | `You can get your {sport} level any time, from You › Skill passport.` | neutral, held long enough to read; the passport is where §27's `Rate {sport}` chip is. Nobody else is told |
 | A start that fails | the *level asked* notice's own toasts | cited, not respelled: `You have a {sport} level already.` for `sport_already_rated` (`notificationsCopy`) |
 
@@ -1228,7 +1281,7 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| The switch | `Competitive` · `For fun` | `playIntentPresentation`'s, cited; it sets this game's kind |
+| The switch | `Competitive` · `For fun` | `playIntentPresentation`'s, cited; it sets this game's kind. *Noted 2026-11-24 ([#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built): the same two words become the Friends tab's menu lines, with no counts; their spoken names, the kind alone, are worded by [#861](https://github.com/Raketa02/Raketa/issues/861).* |
 | The court | `THEIR SIDE` · `YOUR SIDE` · `{nickname} {level}` · `You {level}` · `+ Friends` | mock 7 |
 | The court, unfilled | `Seat {n} more friends` · `Seat 1 more friend` | at 0, the card |
 | The card | the deck card's words, without tiles: the *vs* line (`YOU + EWA VS MAGDA + ANIA`; singles `YOU VS ANIA`), the balance (`87%` · `Very even`), the overlap's grade, `Court available`, `{share} each`, `{when} · {club} · {court}` and the kind of court | the screens A2.3, cited |
@@ -1257,14 +1310,14 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Home, the row's title | `FRIENDS GAME · {n}` | `{n}` ≥ 1; at 0 the row and its title are gone |
+| Needs your answer, the section's title | `FRIENDS GAME · {n}` | `{n}` ≥ 1; at 0 the section and its title are gone. Home's row until 2026-11-17 ([§32](#32-needs-your-answer), #817) |
 | The card | `{nickname}'s game` · the clock · `{when} · {club} · {court} · {Sport} · {Kind}` | the clock is the deck ribbon's countdown, cited (`1 h 35`, `45 min`); `{Kind}` is `Competitive` or `For fun` |
 | The card, the faces | `{nickname}` under each, `You` under the reader | ✓ on those In; faded while waiting |
 | The card, Split | `Not this time` · `Accept and pay {share}` | |
 | The card, Whole court | `{nickname} paid the court` · `Not this time` · `Accept` | the sender's nickname |
 | Accept refused, a full week | `Your week is full: {n} games, the most you set in Games & money.` · `… 1 game, …` | *(a call)* |
 | Accept refused, a game at that hour | `You already have a game at {HH:MM}.` | *(a call)* |
-| Notice, the invitation | `{nickname} invited you to a game` · body: `{when} · {club} · {Sport} · {Kind}` | *(a call)*; opens Home on the card. A seat invitation into an empty seat says the same |
+| Notice, the invitation | `{nickname} invited you to a game` · body: `{when} · {club} · {Sport} · {Kind}` | *(a call)*; opens Home with Needs your answer up, on the card (since 2026-11-17, #817). A seat invitation into an empty seat says the same |
 | Notice, a seat taken | `Someone took that seat first.` · body: `{when} · {club}` | *(a call)*; `seat_just_taken`'s sense |
 | The last seat taken | *It's a game!*, cited | to all four |
 | Your games, the sender's game | `{k} of {m} friends in · waiting for {names}` · at `{k}` = 0, `Waiting for {names}` · `{k} of {m} friends in · 1 seat empty` · `… · {e} seats empty` | `{m}` is 3 in doubles, 1 in singles: `Waiting for Ania`, then the ordinary row once In |
@@ -1434,24 +1487,50 @@ the club the group plays at.
 
 ### 31.1 Home
 
+> **Amended by [#820](https://github.com/Raketa02/Raketa/issues/820)**
+> ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §5; home refactor 3–13): the five rows' headings became **FOR YOU**'s line titles, and their links
+> moved to the open line's footer. **Only the words on screen change**: *Hottest groups*, *Same
+> competitive level players* and *Same vibe players* stay the glossary's terms and the code's names.
+> Until #820 the rows read `HOTTEST GROUPS` (no See all), `SAME COMPETITIVE LEVEL PLAYERS` ·
+> `See all ›`, `NEW IN RAKETA` · `See all ›`, `SAME VIBE PLAYERS` · `See all ›` and `TOP 10` · the
+> sport pill · `Rankings ›`, and the groupless line `… — the hottest ones are just below.`
+>
+> **Amended by [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q19, Q37; home
+> refactor 12, 13): Top 10's footer reads the switcher on the left and `Open the rankings ›` on the
+> right, where it read the sport pill · `Rankings ›`.
+>
+> **Amended by [#822](https://github.com/Raketa02/Raketa/issues/822)** (ADR-0205 §5, §6, Q17, Q33,
+> Q34; home refactor 3, 4, 7): every line but Top 10 draws its count, `{n}`, and says it after its
+> title; the people lines' footers read `See all {n} ›`, where they read `See all ›`. `{n}` is the
+> line's total as served — how many there are to explore, never how many are a good match — and
+> `99+` past 99: the server counts up to 100.
+
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Hottest groups, the heading | `HOTTEST GROUPS` | no See all |
-| Same competitive level, the heading | `SAME COMPETITIVE LEVEL PLAYERS` · `See all ›` | |
-| New in Raketa, the heading | `NEW IN RAKETA` · `See all ›` | never *Rakieta* |
-| Same vibe, the heading | `SAME VIBE PLAYERS` · `See all ›` | |
-| Top 10, the heading | `TOP 10` · the sport pill · `Rankings ›` | the pill is the deck's control, cited |
-| *Your games*, a player in no group | `Join a group to get games — the hottest ones are just below.` | in place of §22.7's `⚡ Play finds you one.`; the first line stands |
+| The section, under *Your games* | `FOR YOU` | the eyebrow, drawn uppercase from *For you* |
+| Hottest groups, the line | `Groups heating up` · the count `{n}` · footer `All groups ›` | to the Groups heating up page ([§31.14](#3114-the-groups-heating-up-page)); spoken *All groups heating up* *(a call)* (#823) |
+| Same competitive level, the line | `Players at your level` · the count `{n}` · footer `See all {n} ›` | spoken *See all players at your level* |
+| New in Raketa, the line | `New in Raketa` · the count `{n}` · footer `See all {n} ›` | never *Rakieta*; spoken *See all new players* |
+| Same vibe, the line | `Players with your vibe` · the count `{n}` · footer `See all {n} ›` | spoken *See all same vibe players*, the screen it opens |
+| A line's count | `{n}`, or `99+` past 99 | in the grey pill between the title and the chevron, open or closed; the footer's `{n}` is the same figure, though See all shows one sport at a time; none on Top 10 |
+| Top 10, the line | `Top 10` · footer: the switcher `{Sport} ›` on the left · `Open the rankings ›` on the right | the switcher is the deck's control, cited, its chevron pointing the way it opens: right; the link spoken *Open the rankings in padel*; the closed line shows neither |
+| A line, spoken | `{title}, {n}`, expanded or collapsed | *Players at your level, 14, collapsed*; the count as drawn, `99+` included — there is no exact figure past 99 to say; Top 10 says `{title}` alone; the state is the platform's own word, and the pill is not read again |
+| *Your games*, a player in no group | `Join a group to get games — see Groups heating up, just below.` | in place of §22.7's `⚡ Play finds you one.`; the first line stands; Groups heating up starts open for them |
 
 ### 31.2 Hottest groups — the card
+
+> **Amended by [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home
+> refactor 5.1): the card no longer writes `+{n}` · `this month` beside the players, nor the sports'
+> names; the group sheet still says both (§31.3). The card is spoken as drawn: *Ogrody 33 Club,
+> hottest, 14 games this week, 11 players*.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
 | The tag, the hottest | `▲ HOTTEST` | on one card at most |
 | The tag, growing | `+ GROWING` | |
-| The first figure | `{n}` · `games this week` | *14 games this week*; `1 games this week` is never written: one reads `game this week` *(a call)* |
-| The second figure | `{n}` · `players` | *11 players* |
-| … grown | `+{n}` · `this month` | green, beside the players: *+3 this month* |
+| The first figure, on the left | `{n}` · `games this week` | *14 games this week*; `1 games this week` is never written: one reads `game this week` *(a call)* |
+| The second figure, on the right | `{n}` · `players` | *11 players* |
 | The chip | `Join` · `Ask to join` · `Asked` · `You're in` | *Anyone* · *People I approve* · a request waiting · a member |
 
 ### 31.3 The group sheet
@@ -1463,7 +1542,7 @@ the club the group plays at.
 | … who runs it | `run by {runner}` | *run by Ogrody 33*, *run by tomek.k* |
 | … where | `{club}` | *Ogrody 33* |
 | The first stat card | `{n}` · `games this week` | as §31.2 |
-| The second stat card | `{n}` · `players · new this month` | with the green `+{n}` |
+| The second stat card | `{n}` · `players · new this month` | with the green `+{n}`, *+3*, and none at nought — the card's until #821 |
 | The people row, friends | `{n} of your friends play here` | *7 of your friends play here* |
 | … one friend | `1 of your friends plays here` | |
 | … no friend | `{n} players` | *11 players* |
@@ -1477,6 +1556,11 @@ the club the group plays at.
 
 ### 31.5 Same competitive level — the card
 
+> **Amended by [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home
+> refactor 7): the card no longer says the gap in words — `{gap} below you`, `{gap} above you`,
+> `Same level` and the ` · ` before `{n} sports ›` are gone from it, drawn and spoken. They are the
+> comparison sheet's alone (§31.6). The pairing is spoken *91% even in padel, You 2,71, zofia.b 2,69*.
+
 | Where | Sentence | Note |
 | --- | --- | --- |
 | The reader's side | `You` · `{level}` | |
@@ -1485,9 +1569,6 @@ the club the group plays at.
 | The sport | `{Sport}` | with its dot |
 | The bar's mark | `YOU` | the reader's tall white mark |
 | The bands | `New` · `Developing` · `Established` · `Advanced` | the reader's own in bold |
-| The gap, below | `{gap} below you` | *0,02 below you* |
-| The gap, above | `{gap} above you` | *0,09 above you* |
-| The gap, none | `Same level` | when the gap rounds to 0,00 |
 | More sports | `{n} sports ›` | *2 sports ›*; only with more than one shared sport |
 
 ### 31.6 The comparison sheet
@@ -1496,7 +1577,9 @@ the club the group plays at.
 | --- | --- | --- |
 | The title | `You vs {nickname}` | *You vs zofia.b* |
 | A block's levels | `You {level} · {nickname} {level}` | *You 2,71 · zofia.b 2,69* |
-| A block's gap | §31.5's gap lines, cited | |
+| A block's gap, below | `{gap} below you` | *0,02 below you*; the card's until #821 |
+| A block's gap, above | `{gap} above you` | *0,09 above you* |
+| A block's gap, none | `Same level` | when the gap rounds to 0,00 |
 | A block's tag | `{pct} even` | *91% even*, in the light version of its colour |
 
 ### 31.7 New in Raketa
@@ -1516,7 +1599,7 @@ the club the group plays at.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| The tile, the % | `{pct}` | *98%*; one of 50%, 75%, 88%, 94%, 97%, 98% |
+| The tile, the % | `{pct}` | *98%*; one of 50%, 75%, 88%, 94%, 97%, 98%, 99%, 100% — the last two since a player holds up to 8 tags (ADR-0207 §7, 2026-11-22) |
 | The tile, in common | `{n} things in common` | *6 things in common* |
 | … one | `1 thing in common` | |
 | The tile, more tags | `+{n} more` | *+2 more*, dashed |
@@ -1540,7 +1623,9 @@ the club the group plays at.
 
 ### 31.10 Request lines
 
-On the receiver's request card and its notice, in place of the group line (§29.2):
+On the receiver's request card and its notice, in place of the group line (§29.2). **Since
+2026-11-17 the card in Needs your answer draws none of them** (ADR-0205 §1, #816); the notice keeps
+them, and the server still serves where a request was found:
 
 | Found in | Sentence | Falls back to |
 | --- | --- | --- |
@@ -1573,3 +1658,86 @@ On the receiver's request card and its notice, in place of the group line (§29.
 | `Show me in General` · `Players who don't know you can see your place, open your record and send you a request.` | §30.8, You | replaced by §31.12's switch (ADR-0204 §2) |
 | `Hidden from General` | §30.4, the place card | nobody is hidden from the ranking |
 | `You've sent 10 requests to new people today. Try again tomorrow.` | §30.8, §29.2 | the daily limit goes, with `daily_request_limit` |
+
+### 31.14 The Groups heating up page
+
+> Added by [#823](https://github.com/Raketa02/Raketa/issues/823) ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §7; the Home rows screens §3.6). No mock draws it. Its cards, chips and sheets keep §31.2–§31.4's
+> words, and its states those of the people See all screens.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The line's footer | `All groups ›` | the chevron drawn; spoken `All groups heating up` *(a call)*: the drawn words first, then the page they open |
+| The page's title | `Groups heating up` | the line's own title; no count on the page |
+| Its back | `Back to Home` | spoken, as on the See all screens |
+| Reading the first page | `Reading groups heating up…` | the spinner's spoken name |
+| An empty list | `No groups heating up right now` | *(a call)*: met only when every group has dropped under 3 since the line was read |
+| A page refused | the failure's own sentence · `Try again` | as on the group screens; the button only where trying again can help |
+
+## 32. Needs your answer
+
+> Added 2026-11-17 by [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §1–§2, PRD [#810](https://github.com/Raketa02/Raketa/issues/810). The sheet's words, and the
+> envelope that opens it. Each section under the title keeps its own words: FRIEND REQUESTS is
+> [§29.2](#292-friend-requests) and ASKED FOR A LEVEL [§29.5](#295-asking-for-a-level), moved off Home by
+> the player app's [#816](https://github.com/Raketa02/Raketa/issues/816). *TO CONFIRM* and FRIENDS GAME
+> joined them with [#817](https://github.com/Raketa02/Raketa/issues/817): FRIENDS GAME keeps
+> [§29.8](#298-the-invitation-and-the-senders-game)'s card whole, and *TO CONFIRM* the rows' words of
+> You › Payments (the Games and Fill in screens A7.3), a tile per payment. The envelope's count comes
+> with [#819](https://github.com/Raketa02/Raketa/issues/819). Rows marked *(a call)* were written in by
+> #816.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| Home's header, the envelope | `Needs your answer` · `Needs your answer, {n} new` | its spoken name; the mark is drawn. `, {n} new` while its badge shows, `{n}` exact above 99 (#819) |
+| Home's header, the envelope's badge | `{n}` · `99+` | the bell's count mark: what arrived since Needs your answer was last closed, `99+` above 99, nothing at 0; hidden from a listener, since the name says it (#819) |
+| The sheet's title | `Needs your answer` | |
+| The sheet's ✕ | `Close Needs your answer` | spoken *(a call)*: a close is never just *Close* |
+| The sections, in order | `TO CONFIRM · {n}` · `FRIENDS GAME · {n}` · `FRIEND REQUESTS · {n}` · `ASKED FOR A LEVEL · {n}` | each hidden at 0 |
+| TO CONFIRM, a tile | `{Sport} · {day} {HH:MM}` · `{club} · {share}` | the row's two lines, as You › Payments draws them: `Padel · Saturday 15:00` · `Bonarka Arena · 32 zł`; the title held to two lines |
+| TO CONFIRM, the time | `Confirm your payment by {HH:MM}` · `Fix your card by {HH:MM}` and under it `Nothing is paid now` | amber while it runs, written as Home writes a time; at the deadline it leaves the tile, which says `Your seat stays open until you confirm — or someone else takes it.` |
+| TO CONFIRM, the button | `Confirm` · `Fix` | at the tile's foot; spoken `Confirm your payment for {game} at {club}, {share}` · `Fix your card for …`, as the row's |
+| A link or a notice that pointed at a card here | — | opens Home with the sheet up: the friend link, a friend request's notice, a friends game invitation's. Home as it is when nothing waits by then |
+
+## 33. The Social vibe
+
+> Added 2026-11-22 by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+> §8, the player app's [#838](https://github.com/Raketa02/Raketa/issues/838). A For-fun game's
+> headline number, where the forecast is a competitive one's: how much everybody at the table shares
+> (the root [`CONTEXT.md`](../../../CONTEXT.md)'s **Social vibe**). The server sends only the %; the
+> words and their breaks are the app's, in `shared/vocabulary/socialVibePresentation.ts`, and can be
+> tuned there with no ruleset release. **It is not Same vibe's Vibe %** (§31.8), and the two are never
+> named alike.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The name | `Social vibe` | inside the bar, in italics (drawn: no italic face is loaded); never *Vibe %*, which is Same vibe's |
+| The figure | `{n}%` | §B16's one percentage shape, the server's whole percent |
+| The bands | `Great vibe` 70–100 · `Good vibe` 45–69 · `Some common ground` 20–44 · `Fresh mix` 0–19 | the lower band below a break; one ladder drives the word and the colour — volt, volt, a dimmed volt, grey — never the forecast's green / amber / red, because a vibe is not a verdict and *Fresh mix* is not a bad game |
+| The row, spoken | `Social vibe, {n} percent, {word}` · `Social vibe, 82 percent, Great vibe` | one element, an `image` (§20.2): the band's word is said, since the colour is never the only cue (§20) |
+| The deck card | the row in the forecast's place on a For-fun card, and no forecast | the Games and Fill in screens A2.3; a competitive card keeps its forecast and draws no vibe |
+| The deck card's vs line, spoken | `{side} against {side}` · `You and zofia.b against ania.k and ewa.m` | where no forecast is drawn — a For-fun card, or one the server could not forecast — the line is spoken, the top row first: the forecast's name said the sides, and the row's name does not, so a listener still hears who partners whom. Under a forecast it stays a drawing, so the sides are said once |
+| The Friends card | the row where the forecast's figure, word and bar stood, on For fun, and no forecast | added 2026-11-23 by #842; the friends screens §7.2. The line-up's vibe, so a swap never moves it; flipping the kind switch flips the number. Its vs line is spoken as the deck card's is, wherever no forecast is drawn |
+| Post a game's fit, drawn | `{level} · {n}%` · `2,69 · 83%` | added 2026-11-23 by #842; the Games and Fill in screens A5.3. On a For-fun post the second figure is the Social vibe of the poster and that player, the `%` in its band's ink on paper (the Social vibe card's olive, a dimmed olive, grey) and the Level `muted`; a competitive post keeps `{level} · {pct}` with no `%` (`2,75 · 93`) |
+| Post a game's fit, spoken | `{name}, level {level}, Social vibe, {n} percent, {word}` · `zofia.b, level 2,69, Social vibe, 83 percent, Great vibe` | added 2026-11-23 by #842: the row's own sentence after the Level, *friend* after the name as before; a competitive fit keeps `a {pct} % even game` |
+
+**Where it is drawn next, and what each ticket adds.** The Social vibe card on a For-fun game's
+details (#840) draws the % with its word printed beside it and the grid of tags; the booked game,
+before its hour and at the court, draws that card where the forecast's _A friendly — nothing
+moves._ stood, with the same words (#841, §25); the Friends card and Post a game's fits draw the % on
+For fun (#842, the rows above). Each cites this section's bands and adds its own sentences here.
+
+### 33.1 The Social vibe card
+
+> Added 2026-11-23 by the player app's [#840](https://github.com/Raketa02/Raketa/issues/840)
+> (ADR-0207 §6; for fun 7). A For-fun game's details open on it, where a competitive game's open on
+> the Balance forecast. The words are `shared/vocabulary/socialVibePresentation.ts`'s; the card is
+> `shared/ui`'s `SocialVibeCard`.
+
+| Where | Sentence | Note |
+| --- | --- | --- |
+| The eyebrow | `Social vibe` | uppercased by the style, a header |
+| The reading | `{n}%` beside `{word}` · spoken `Social vibe, {n} percent, {word}` | the deck card's number and §33's bands, said as the row says them, so the % swiped on is the % looked at |
+| A column | `You` · `{nickname}` · `?` | you first, then the others as the tiles stand; a nickname whole, cut by the column with an ellipsis; an account no longer named is a tile's `?`. Hidden from a listener: every row names its carriers |
+| A row | `{emoji} {label}` · `🍻 Stays for a drink` | one of **your** tags, in the vocabulary's order, the picker's label (§27); 💘 like any other |
+| A row, spoken | `{label}: you, {names}` · `Stays for a drink: you, kuba.w` · `Here for a regular game: you` | the label without its emoji, then everybody who carries it in the columns' order, each nickname whole; an account no longer named is `somebody`. One element a row; the grid has no taps |

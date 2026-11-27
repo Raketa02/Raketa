@@ -605,16 +605,20 @@ describe('who a sentence names, and who it deliberately does not', () => {
 describe('the court’s pairing, in words', () => {
   /**
    * The sentence under the percentage says what a confirmed score **does** — the counted game
-   * moves everybody, the friendly moves nobody — and is dropped, never guessed, for a kind this
-   * build cannot read. The check is the same one `worthLine`'s is: the two kinds say opposite
-   * things about movement, and neither reads as a failure.
+   * moves everybody — and is dropped, never guessed, for a kind this build cannot read.
    */
-  it('says a counted game moves everybody’s level and a friendly moves nothing', () => {
+  it('says a counted game moves everybody’s level', () => {
     expect(forecastSentence('COUNTED')).toMatch(/counted/i);
     expect(forecastSentence('COUNTED')).toMatch(/moves/);
-    expect(forecastSentence('FRIENDLY')).toMatch(/friendly/i);
-    expect(forecastSentence('FRIENDLY')).toMatch(/nothing moves/i);
     expect(forecastSentence(undefined)).toBeUndefined();
+  });
+
+  /**
+   * #841 (ADR-0207 §5): a For-fun game draws the Social vibe card where *A friendly — nothing
+   * moves.* stood, so the friendly has no forecast to say it under.
+   */
+  it('has no sentence for a friendly, which draws no forecast', () => {
+    expect(forecastSentence('FRIENDLY')).toBeUndefined();
   });
 
   /**

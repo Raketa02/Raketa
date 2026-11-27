@@ -3,8 +3,9 @@
  * every court it could take ([#757](https://github.com/Raketa02/Raketa/issues/757), over #750's
  * reads; the friends mechanics §7.4–§7.6, the screens §7.2–§7.3).
  *
- * Pure, and as little as the deck's: **the sides, the forecast, the overlap, the court proposed and
- * who is busy are the read's** (`ReadFriendsLineUp`, #750), and nothing here re-derives one. What
+ * Pure, and as little as the deck's: **the sides, the forecast or the Social vibe, the overlap, the
+ * court proposed and who is busy are the read's** (`ReadFriendsLineUp`, #750; the vibe #834), and
+ * nothing here re-derives one. Which of the two numbers is drawn is the deck's `headlineOf`. What
  * is decided here is only how they are drawn: which step of the tint a row wears, which day it is
  * listed under, which row is the card's own, and the people the deck's own drawing is handed.
  *
@@ -53,12 +54,22 @@ export interface FriendsCourt {
 
 /** **The friends card** — the deck's card without its tiles. */
 export interface FriendsCard {
+  /** The kind it was read for — which number it leads with (the deck's `headlineOf`). */
+  readonly kind: GameKind;
   /** The group's home club — the name in *… is full at 10:00*. */
   readonly homeClub: DeckCard['club'];
   /** The evenest sides, or the ones sent: ids, the reader first on `yours`. */
   readonly sides: { readonly yours: readonly string[]; readonly theirs: readonly string[] };
-  /** *87% · Very even* — absent where it could not be read. */
+  /**
+   * *87% · Very even* — absent where it could not be read. The server sends none on For fun, where
+   * the sides are still the evenest but the card says its Social vibe instead (ADR-0207 §5).
+   */
   readonly forecast?: { readonly pct: number; readonly provisional: boolean };
+  /**
+   * **The line-up's Social vibe, on For fun** (#834): everybody seated, however they stand, so a
+   * swap never moves it. Absent on a competitive card, and where nobody seated holds a tag.
+   */
+  readonly vibe?: { readonly pct: number };
   /** Absent: no court is free in the next 14 days — and then no overlap either. */
   readonly court?: FriendsCourt;
   readonly overlap?: Overlap;

@@ -53,7 +53,7 @@ function rereadAfterLeaving(client: QueryClient) {
 /**
  * **Withdraw on a full game gone back to filling** (#629; the mechanics Q106) — the way out a game
  * still filling has, `DELETE /proposals/{id}/yes` with the booking's id, which is the game's: free,
- * silent and never on the record, as on a *You're In* row. Pending and not retried, as every
+ * silent and never on the record, as on a *You’re in* row. Pending and not retried, as every
  * mutation here.
  *
  * **What it changes, re-read**: the group's decks and Fill in, the details of every game still

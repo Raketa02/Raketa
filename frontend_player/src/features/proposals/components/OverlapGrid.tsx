@@ -23,9 +23,17 @@
  * **The ring stands proud of its row**, as every mock draws it: the game's cell grows `ringOut`
  * past its slot on each side, over its neighbours, rather than pushing the row apart — a grid whose
  * rows moved with the game's hour would draw the same week two ways on two cards.
+ *
+ * **On a short deck card its cells shrink with the card's other boxes, and keep their shape**
+ * (#865; `deckCardGeometry`'s `scale`): each row of cells, the gaps between the cells, and the width
+ * of the cells and the day letters over them, all at one share, centred — the words at their size,
+ * and the grade across the grid's whole width, where no share can make it wrap. So the card measures
+ * the grid by its words alone (`onWordsLaidOut`): the grade over the day letters, which no share
+ * moves.
  */
 
-import { StyleSheet, Text, View } from 'react-native';
+import { memo } from 'react';
+import { StyleSheet, Text, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 
 import { theme } from '@/shared/ui';
 import { WEEKDAYS, type Weekday } from '@/shared/vocabulary/week';
@@ -43,34 +51,66 @@ export interface OverlapGridProps {
   readonly overlap: Overlap;
   /** The weekday the deck was read on — its letter is drawn white. */
   readonly today: Weekday | undefined;
+  /**
+   * The share of their size the cells, their gaps and the grid's width are drawn at — a short deck
+   * card's (`deckCardGeometry`). 1, at rest, unless said.
+   */
+  readonly scale?: number;
+  /** The grid's words were laid out — the deck's card measures them (`deckCardGeometry`). */
+  readonly onWordsLaidOut?: (event: LayoutChangeEvent) => void;
 }
 
-export function OverlapGrid({ overlap, today }: OverlapGridProps) {
+/**
+ * Drawn again only for another week, another day or another share — the deck's card resizes its
+ * gaps once it has measured itself (`deckCardGeometry`), and that moves the grid without drawing it
+ * again.
+ */
+export const OverlapGrid = memo(function OverlapGrid({
+  overlap,
+  today,
+  scale = 1,
+  onWordsLaidOut,
+}: OverlapGridProps) {
   const shadeOf = (day: Weekday, range: DayRange): OverlapShade =>
     overlap.cells.find((cell) => cell.day === day && cell.range === range)?.shade ?? 'DARK';
 
+  // At rest the grid's own styles; on a short card every box at the card's share — see the note.
+  // The cells and the day letters over them take the narrower width, centred, and the grade keeps
+  // the grid's whole width: a grade narrowed with the boxes could wrap, and its words would then
+  // change with the share they are measured to set.
+  const gap = { gap: GAP * scale };
+  const narrow: ViewStyle | undefined =
+    scale < 1 ? { width: `${scale * 100}%`, alignSelf: 'center' } : undefined;
+  const row = [s.days, gap, narrow, { height: CELL * scale }];
+
   return (
     <View
-      style={s.grid}
+      style={gap}
       accessible
       accessibilityRole="image"
       accessibilityLabel={overlapLabel(overlap)}
       testID="overlap-grid"
     >
-      <Text style={[s.grade, overlap.grade === 'SLIM' ? s.slim : s.good]}>
-        {COPY.grade[overlap.grade]}
-      </Text>
+      <View
+        style={s.words}
+        testID="overlap-words"
+        {...(onWordsLaidOut === undefined ? {} : { onLayout: onWordsLaidOut })}
+      >
+        <Text style={[s.grade, overlap.grade === 'SLIM' ? s.slim : s.good]}>
+          {COPY.grade[overlap.grade]}
+        </Text>
 
-      <View style={s.days}>
-        {WEEKDAYS.map((day) => (
-          <Text key={day} style={[s.letter, day === today ? s.today : undefined]}>
-            {COPY.dayLetters[day - 1]}
-          </Text>
-        ))}
+        <View style={[s.days, gap, narrow]}>
+          {WEEKDAYS.map((day) => (
+            <Text key={day} style={[s.letter, day === today ? s.today : undefined]}>
+              {COPY.dayLetters[day - 1]}
+            </Text>
+          ))}
+        </View>
       </View>
 
       {DAY_RANGES.map((range) => (
-        <View key={range} style={s.days}>
+        <View key={range} style={row} testID={`overlap-row-${range}`}>
           {WEEKDAYS.map((day) => {
             const game = overlap.game.day === day && overlap.game.range === range;
             return (
@@ -86,14 +126,15 @@ export function OverlapGrid({ overlap, today }: OverlapGridProps) {
       ))}
     </View>
   );
-}
+});
 
 const s = StyleSheet.create({
-  grid: { gap: GAP },
+  // The grade over the day letters: words, so their step stays at rest at any share.
+  words: { gap: GAP },
   grade: { ...theme.type.h2, textAlign: 'center', marginBottom: theme.space.xs },
   good: { color: theme.color.volt },
   slim: { color: theme.color.gameAmber },
-  days: { flexDirection: 'row', gap: GAP },
+  days: { flexDirection: 'row' },
   letter: {
     ...theme.type.flab,
     flex: 1,
@@ -101,7 +142,8 @@ const s = StyleSheet.create({
     color: theme.color.onDarkEyebrow,
   },
   today: { color: theme.color.surface },
-  slot: { flex: 1, height: CELL },
+  // As tall as its row, which is `cell` at the card's share.
+  slot: { flex: 1 },
   cell: { flex: 1, borderRadius: theme.radius.availabilityCell / 2 },
   // Proud of its slot on every side, over its neighbours — see the module note.
   ringed: {

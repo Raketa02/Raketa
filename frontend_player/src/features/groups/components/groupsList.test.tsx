@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import { RefreshControl, StyleSheet, type ViewStyle } from 'react-native';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
+import { PLAY_COPY } from '@/features/shell/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { MONOGRAM_HUES } from '@/shared/ui';
@@ -95,10 +96,16 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
+/**
+ * Land on the list: Play, as it ships — the groups under the *Groups* title, with `explore` at its
+ * code default, off (#826). The list is the same page under the switcher; the switcher is the
+ * shell's to walk.
+ */
 async function openGroups() {
   await launchSignedIn();
   fireEvent.press(await screen.findByLabelText('Play'));
   await waitFor(() => expect(screen).toHavePathname('/play'));
+  expect(await screen.findByRole('header', { name: PLAY_COPY.title })).toBeTruthy();
 }
 
 /**

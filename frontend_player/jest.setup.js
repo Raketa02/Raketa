@@ -104,14 +104,17 @@ jest.mock('expo-image-picker', () => ({
 }));
 
 // --- the device's own storage -------------------------------------------------
-// AsyncStorage is a native module with no JS fallback, and exactly one module reads it: the
-// phone's per-account preferences (`shared/lib/preferences`, ADR-0188). The library ships its own
-// in-memory mock of the whole surface, which is the far side of that module the way the keychain
+// AsyncStorage is a native module with no JS fallback, and exactly two modules read it: the
+// phone's per-account preferences (`shared/lib/preferences`, ADR-0188) and the feature flags'
+// saved datafile (`features/feature_flags/api/datafileCache.ts`, ADR-0206 §6). The library ships
+// its own in-memory mock of the whole surface, which is the far side of both the way the keychain
 // map above is the far side of `shared/lib/auth` — so it is used as it comes rather than restated.
 //
 // **Emptied after every test**, unlike the keychain, which every suite that signs in clears for
 // itself: a choice one suite's walk left on the phone — Play's segment, a game opened — would
-// otherwise be read back by the next suite's launch as that player's own.
+// otherwise be read back by the next suite's launch as that player's own, and a datafile one suite
+// saved would be read back as that phone's last good one — Explore switched on in a suite that
+// never mentioned a feature flag.
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );

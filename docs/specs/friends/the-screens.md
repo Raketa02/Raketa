@@ -11,6 +11,9 @@
 > [#789](https://github.com/Raketa02/Raketa/issues/789) (Q131, [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)) let anyone be asked, with no
 > daily limit, gave the request card three lines from Home's rows, and put a round friend button on
 > Home's people cards ([the home rows screens §8](../home-rows/the-screens.md#8-the-round-friend-button-and-its-sheets)).
+> On 2026-11-17, [#814](https://github.com/Raketa02/Raketa/issues/814) ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §2, §10) gave the request card **every sport the sender holds a level in**
+> ([§6.2](#62-friend-requests--n-friends-5)).
 >
 > **What it is:** how each Friends screen looks and behaves. The rules are in
 > [the-mechanics.md](the-mechanics.md); where the two disagree on a rule, the mechanics win, and on a
@@ -124,9 +127,36 @@ your friend.** Shown after a For fun game too.
 its title are there only while they hold a card. ASKED FOR A LEVEL is §6.4, after the sender's game,
 so that §6.3 keeps its number.
 
+*(Since 2026-11-17, [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+§1–§2, [#816](https://github.com/Raketa02/Raketa/issues/816); home refactor 1 and 2:)* **FRIEND
+REQUESTS and ASKED FOR A LEVEL are no longer on Home.** They wait in **Needs your answer**, the sheet
+the envelope opens. The envelope is an ink Feather `mail` mark in Home's header, named *Needs your
+answer*, left of the bell, with the trophy in the far-right corner, and it is there only while
+something waits. Without it, the bell and the trophy don't move. The sheet is the app's bottom sheet,
+titled *Needs your answer* with ✕. It is as tall as what it holds, up to the usual cap, and scrolls
+beyond that. It closes on ✕, a swipe down or the backdrop, and its title takes a screen reader's
+focus when it opens. In it, FRIEND REQUESTS comes before ASKED FOR A LEVEL. Each is a sideways peeking
+rail of wider tiles, hidden while empty. Tiles in a rail are as tall as the tallest, with their
+buttons at the bottom and their titles held to two lines, so the buttons sit level.
+- **An answered tile** leaves on the re-read, and an emptied section goes.
+- **The last answer** closes the sheet, and the envelope goes.
+- **A request arriving** while the sheet is open appears in it.
+- **A face** opens the record over the sheet, and the sheet is there when the record closes if
+  anything still waits.
+- ***Get your padel level*** closes the sheet for good and starts the questionnaire.
+
+*(Since 2026-11-17, [#817](https://github.com/Raketa02/Raketa/issues/817):)* **FRIENDS GAME is no
+longer on Home either.** It waits in Needs your answer after *TO CONFIRM* and before FRIEND REQUESTS,
+**one big tile at a time on the paging rail**, full width, snapping, with dots from two invitations.
+The card is unchanged. Its notice, and a friend request's, and the friend link open Home with the
+sheet already up — or Home as it is, when nothing waits by then. **Accept**'s card setup and the
+bank's confirmation open over the sheet and hand back to it when they close, if anything still
+waits; ***It's a game!*** closes the sheet for good.
+
 #### 6.1 FRIENDS GAME · n (friends 12)
 
-A horizontal row of invitation cards, each with a coral border:
+A horizontal row of invitation cards, each with a coral border *(an `ink` border as built, since
+§1.2's coral list is closed; one at a time in Needs your answer since #817)*:
 
 - **Top**: *Tomek's game* · a clock and the time left (*1 h 35*), coral under an hour.
 - **Faces**: the four, ✓ on those In, faded on those still to answer, *You* for the reader.
@@ -146,6 +176,39 @@ place of the group line, even from a group-mate. *(Since 2026-11-14, Q131:)* a r
 Home's rows reads its row's line in the same place — *Your level in padel · 91% even*, *Found you
 among new players*, *6 things in common*, or their fallbacks
 ([the words §31.10](../matchmaking/the-words.md#3110-request-lines)).
+
+*(Since 2026-11-17, ADR-0205 §2, #814:)* **the card names every sport the sender holds a published
+level in**, in the app's sport order, drawn as elsewhere: *● Padel 3,40 · ● Tennis 2,90*, mono
+numbers, at most two lines, and **no line at all** when they hold none. Each is the Level the card's
+own sport shows, read live, so a level the sender gets after asking is on the next read. On the
+tile in *Needs your answer* this line stands **in place of** the group line and every found-by line
+above, which go (ADR-0205 §2); the face, the title and the reliability chip stay. The server sends
+`levels` on each of `GET /home`'s `friend_requests`, beside the `sport` and `level` an older app
+still draws; the tile is the player app's
+([#818](https://github.com/Raketa02/Raketa/issues/818)).
+
+*(Since 2026-11-17, [#816](https://github.com/Raketa02/Raketa/issues/816), home refactor 2:)* **The
+tile in *Needs your answer*** is about 0,83 of the content width, measured off the mock, the next one
+peeking. A lone tile takes the content width. It reads the face, *Inés D. wants to be your friend* in
+two lines at most, and the reliability chip on its own line under the title. **Not now** and
+**Accept** sit at its foot. **The where-line and every found-by line are gone from it**: *With you in
+Kazimierz crew · Padel 3,40*, *Invited you to Raketa*, *Found you in the padel ranking* and the Home
+rows' three. ~~Until #818 lands, nothing stands in their place.~~ The sport-levels line does, since
+#818 (below).
+
+*(Since 2026-11-17, [#818](https://github.com/Raketa02/Raketa/issues/818):)* **The tile reads the
+face, *Inés D. wants to be your friend*, the sport-levels line under it, then the reliability chip.**
+- **Each sport** is its dot, its name and its Level — *● Padel 3,40* — in small grey mono, the numbers
+  tabular with a decimal comma, **in the order the server sends them**. A `·` stands between two
+  sports and goes with the one before it, so a line that wraps ends in one.
+- **It wraps a sport at a time, and takes two lines at most.** A sport that doesn't fit starts the
+  next line whole; what a third line would hold isn't drawn. Two lines are two lines at whatever text
+  size the phone is set to.
+- **No level, no line**: the title and the chip close up.
+- **The buttons stay level** across a rail of tiles with no line, one line or two: every tile stands as
+  tall as the tallest, its buttons at its foot.
+- **A screen reader** reads the title and the levels as one: *ines.d wants to be your friend, Padel
+  3,40, Tennis 2,90*, every sport included.
 
 #### 6.3 The sender's game, in Your games (designed, no mock)
 
@@ -178,11 +241,46 @@ number of sports. **It is a friend-request card** (friends 5) *(a call)*: faces,
   has a card, and is drawn again once the row is empty and she is still rated in nothing.
 - **Home's tab badge** doesn't count the row.
 
+*(Since 2026-11-17, ADR-0205 §1 and §4, [#816](https://github.com/Raketa02/Raketa/issues/816):)*
+**The section waits in *Needs your answer*, after FRIEND REQUESTS**, never on Home, on the same wider
+tile as a request (§6.2). It changes in three ways:
+- **There is no line under the title.** *A few questions, and they can add you to a game.* and
+  *You're on question 5.* are gone. The coral button still reads **Carry on** for a questionnaire left
+  halfway.
+- **Get your padel level** and **Carry on** close the sheet for good, then start the questionnaire,
+  since a screen can't stand behind a sheet. A start that fails shows the notice's toast over Home.
+- **The *Get your level* hand-off is dropped.** Home's dark *Get your level* card is drawn above *Your
+  games* whenever she is in a group and rated in nothing, **whether or not someone asked**. The ask
+  is never drawn in its place.
+
 ### 7. The group's Friends tab (friends 7–11)
 
 #### 7.1 The court
 
-- **The switch** above the court, **Competitive / For fun**, sets this game's kind only (friends 7).
+- **The Friends tab's menu**, **Competitive / For fun**, sets this game's kind only (2026-11-24,
+  [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built, by
+  [#861](https://github.com/Raketa02/Raketa/issues/861); [tab menu mocks 2 and
+  4](../tab-menu/README.md), illustrations). *Until it is built, the choice is a switch above the
+  court (friends 7).*
+  - **The chevron.** The selected Friends tab draws a small chevron at its right edge, pointing
+    down, **whenever the court is drawn**: not on the *Add a sport* card or the level door. The
+    selected tab widens to fit it, as on Games
+    ([the Games screens A1](../games-and-fill-in/the-screens.md#a1-where-things-live)).
+  - **The menu.** A tap on the selected Friends tab opens a small white menu hanging from the tab's
+    bottom edge, **aligned to its right edge** and kept inside the gutters, with the chevron
+    turned up. Two lines, **Competitive** then **For fun**, and a coral tick on this game's kind.
+    **No counts and no door**: there is nothing to count, and a game with friends is one game's
+    kind, never the intent, so a Competitive-only player picks For fun here freely (the tab menu
+    log's Q3).
+  - **Picking** the other kind turns the court being built into a game of that kind, and the card
+    under a full court asks again for it (§7.2). Picking the kind it already is just closes the
+    menu. A kind picked here never moves the Games deck, and one picked on Games never changes this
+    game.
+  - **Closing** is the Games menu's: the tab again, a tap anywhere else (which does nothing else),
+    another tab in one tap, Android back, a sport change, a pushed screen, or a notice opening the
+    deck, which puts the page on Games.
+
+  The court sits right under the tabs, at its own size.
 - **The court** (friends 7): *THEIR SIDE* above the net, *YOUR SIDE* below, faces with *nickname level*
   labels, a × on each seated friend. Empty seats draw a **+**; **+ Friends** sits under the court.
 - **Seating**: Done seats the picks in the evenest sides. **Tap one face, then another** to swap
@@ -197,6 +295,11 @@ number of sports. **It is a friend-request card** (friends 5) *(a call)*: faces,
   word, the balance bar with your side on the left, the overlap grid with its grade, and the court
   panel (*Court available*, the share in volt, *Sat 10:00 · Ogrody 33 · Court 3*, the kind of court,
   and *Ogrody 33 is full at 10:00* on another club's court).
+- **On For fun** (amended 2026-11-23, ADR-0207 §5, #834): the **Social vibe row** (ADR-0207 mock 2)
+  stands where the percentage, its word and the balance bar were, the card's `vibe.pct`: the four's
+  vibe, worded and coloured by the app's four bands. **No forecast is drawn.** Picking the other
+  kind (the tab's menu from #859; the switch until then) flips the number; the *vs* line, the
+  overlap and the court stay as they are.
 - **Buttons**: **Send game and pay 25 zł** (volt), **Pick a different court** (dark).
 - **The court and the card always name the same sides** ([README](README.md#overrides), note 3).
 - **Refused**: *These four can't all play together. Swap someone.* in the card's place; no buttons.

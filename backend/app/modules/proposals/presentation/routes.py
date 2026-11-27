@@ -56,6 +56,7 @@ from app.modules.proposals.presentation.dependencies import (
     AcceptAFriendsGameDep,
     DeclineAFriendsGameDep,
     CallOffAFriendsGameDep,
+    CloseNeedsYourAnswerDep,
     InviteIntoASeatDep,
     OpenASeatDep,
     SendAFriendsGameDep,
@@ -95,6 +96,7 @@ from app.modules.proposals.presentation.schemas import (
     FriendsCardResponse,
     FriendsCourtsResponse,
     GamesAndMoneyRequest,
+    NeedsYourAnswerVisitRequest,
     GamesAndMoneyResponse,
     GroupDeckResponse,
     HomeResponse,
@@ -328,12 +330,13 @@ async def read_payments_to_confirm(
         "reader in this group — the pool is filed under the group's id — each "
         "as **the reader's own version**, with its sides, forecast and overlap "
         "computed now. **Never dealt**: a card the reader said no to, one they are "
-        "In on (it is in *You're In*), a kind their Play intent does not want, a "
-        "share above their *most I'll pay*, a week at their games per week, an "
-        "hour they already have a game at, a club no longer selling, and a card "
-        "with somebody In they may not share a court with. Around the deck: a "
-        "count per segment, the Games badge and the capped weeks. Nothing is "
-        "recorded."
+        "In on (it is on the group page's *You're in* tab), a kind their Play "
+        "intent does not want, a share above their *most I'll pay*, a week at "
+        "their games per week, an hour they already have a game at, a club no "
+        "longer selling, and a card with somebody In they may not share a court "
+        "with. Around the deck: a count per segment, the Games badge and the ids "
+        "of the cards it counts — both segments' — and the capped weeks. Nothing "
+        "is recorded."
     ),
 )
 async def read_group_deck(
@@ -469,6 +472,51 @@ async def set_games_and_money(
     return GamesAndMoneyResponse.from_settings(saved)
 
 
+@players_router.post(
+    "/needs-your-answer/visit",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "description": (
+                "Closed: everything that arrived up to `watermark` is seen on "
+                "every phone, and only what arrived after it counts in "
+                "`GET /home`'s `needs_your_answer.new_count`. Also the answer "
+                "when nothing moved — the same watermark again, an older one "
+                "(another phone closed on a newer read), which never moves it "
+                "back, or `null`."
+            ),
+        },
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`watermark_in_the_future` — later than the server's clock, so "
+                "no read served it: send the watermark Home gave, never the "
+                "phone's clock. Nothing was recorded."
+            ),
+        },
+    },
+    summary="I closed Needs your answer",
+    description=(
+        "What the phone sends **whenever Needs your answer goes away for "
+        "good** — ✕, a swipe down, a tap outside it, the last answer, or a "
+        "screen it hands over to; not when it steps aside for another sheet, "
+        "since it comes back (#815; `docs/adr/0205` §3). **`watermark` is the "
+        "one `GET /home` served** with the read the sheet was last drawn from, "
+        "never the moment of the close: something that reached the server "
+        "after that read stays new."
+    ),
+)
+async def close_needs_your_answer(
+    body: NeedsYourAnswerVisitRequest,
+    user: CurrentUserDep,
+    close: CloseNeedsYourAnswerDep,
+) -> None:
+    await close.execute(
+        user.id,
+        watermark=None if body.watermark is None else instant(body.watermark),
+    )
+
+
 @seat_charges_router.post(
     "/{seat_charge_id}/confirmation",
     response_model=YesAnswerResponse,
@@ -556,9 +604,12 @@ async def confirm_payment(
     description=(
         "The game details of a proposal, for anybody dealt it — a card's **i**, "
         "a You're In row, a payment to confirm: who is In (the **IN** tags), the "
-        "sides and their forecast, the club and its distance **with no court "
-        "number** (one is given at booking), the share and the book-by, the "
-        "overlap grid, and **what the reader may do now** (`actions`). A reader "
+        "sides, **the kind's own card** — a competitive game's forecast with "
+        "each side's level and the gap, and what is at stake for you "
+        "(`at_stake`, the booked game's own pair); a For-fun game's Social vibe "
+        "and your tags' rows (`vibe`) — the club and its distance **with no "
+        "court number** (one is given at booking), the share and the book-by, "
+        "the overlap grid, and **what the reader may do now** (`actions`). A reader "
         "still deciding sees their own card as the deck deals it; a reader In "
         "sees everybody In. Answered for a game that has ended too, with nothing "
         "to do; a `FILLED` game's booking has the same id. Nothing is recorded."

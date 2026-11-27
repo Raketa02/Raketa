@@ -18,10 +18,10 @@ pnpm start                   # then press i (iOS sim) / a (Android emulator)
 ```
 
 The app boots to a placeholder screen. `src/app/_layout.tsx` composes the root providers
-and gates the splash screen on the **bootstrap sequence** — the ordered startup path in
+and runs the **bootstrap sequence** behind a drawn splash — the ordered startup path in
 [`docs/architecture.md` Part 3](docs/architecture.md#part-3--bootstrap-and-the-session-state-machine),
 implemented in `src/shared/lib/bootstrap/`. It validates config, then loads Archivo and
-IBM Plex Mono with `expo-font` and awaits them before the splash hides. Routing, sessions
+IBM Plex Mono with `expo-font` and awaits them before the tree mounts. Routing, sessions
 and features arrive in later slices; build them outward from the folder contract in
 [`src/features/_template/README.md`](src/features/_template/README.md). The design system
 is already locked — see below.
@@ -76,18 +76,22 @@ install it over USB and serve it from Metro on 8081. What has stopped them:
 
 ## Environment
 
-Copy `.env.example` → `.env.local`. `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_ENV` are both
-**required**: `src/shared/config/env.ts` validates them once at launch and the app stops on a
+Copy `.env.example` → `.env.local`. `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURES_URL` and
+`EXPO_PUBLIC_ENV` are all **required**: `src/shared/config/env.ts` validates them once at launch and the app stops on a
 startup screen naming whichever is missing or malformed, rather than failing later inside a
 feature. On a **physical device**, the API URL must be a LAN IP or tunnel — `localhost` on a
-phone means the phone. (`EXPO_PUBLIC_FEATURES_URL`, the feature-flag datafiles' host, left with
-the flags in #576; a `.env.local` that still sets it launches all the same.)
+phone means the phone. **`EXPO_PUBLIC_FEATURES_URL`** is the feature-flag datafiles' host (#826,
+ADR-0206): run `npm run serve` in the flags repo (`Raketa02/raketa-features`) and point it at
+`http://localhost:3040` — on a phone, `http://<your machine's LAN IP>:3040`. It is never waited
+on: with nothing served, every feature flag is at its code default, which is how the app ships
+(Play titled _Groups_, no Explore). To see Explore, set the flags repo's `local` rule for `explore`
+to `percentage: 100`, serve, and cold-start the app.
 
 `EXPO_PUBLIC_ENV` is one of `local`, `development`, `staging`, `production` — the same
 four names the backend uses. **Only `local` runs today**; the other three
 are validated but not provisioned. The environment decides the URL scheme, and that is
-validated too: the three deployed ones must be `https://` for the API URL, because it is
-reached from a phone over the internet. `local` takes either — a tunnel is how a physical device
+validated too: the three deployed ones must be `https://` for the API URL and the features URL,
+because each is reached from a phone over the internet. `local` takes either — a tunnel is how a physical device
 reaches a laptop, and every tunnel hands back `https://`. A laptop URL under a deployed
 name is a startup failure naming both variables. See [`../docs/environments.md`](../docs/environments.md).
 

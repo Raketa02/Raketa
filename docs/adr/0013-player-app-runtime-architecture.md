@@ -9,6 +9,8 @@
 
 > **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The feature flags were removed with the loop they hid (#576) — Featurevisor, its datafile fetch and cache, and the flag hooks — and ADR-0180 was deleted. Its supersession above has lapsed: *a feature-flag service* is back on the *Not adopted now* list, under that list's rule that a dependency arrives with the code that needs it.
 
+> **Note — the feature flags return (2026-11-21, [#826](https://github.com/Raketa02/Raketa/issues/826)).** The feature-flag service is adopted again, by [ADR-0206](0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md), which restates ADR-0180 without the tester mark: *a feature-flag service* leaves the *Not adopted now* list a second time. The SDK and its saved datafile arrived with the flag that needs them, `explore`, under this record's rule. The rest of the list stands.
+
 ## Context
 
 [ADR-0009](0009-feature-first-clean-architecture-frontends.md) settled *where code lives*

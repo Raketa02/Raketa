@@ -261,10 +261,12 @@ export interface HottestGroup {
   readonly club: ClubName;
   /** Games with court time in the last 7 days, none called off — *14 games this week*. */
   readonly gamesThisWeek: number;
-  /** Members who joined in the last 30 days and stayed — the green *+3 this month*, above nought. */
+  /**
+   * Members who joined in the last 30 days and stayed — the group sheet's green *+3*, above nought.
+   * The card drew it as *+3 this month* until #821. The read's `heat_share` is left on the wire: the
+   * heat bar it filled is drawn nowhere since #821.
+   */
   readonly newThisMonth: number;
-  /** The heat bar, 0 to 1: this card's heat over the HOTTEST card's, or the row's highest. */
-  readonly heatShare: number;
   readonly tag: HeatTag | null;
   /** Up to six members' faces — the sheet's six, the card's first four; never the reader's. */
   readonly faces: readonly GroupPerson[];
@@ -273,6 +275,29 @@ export interface HottestGroup {
   readonly relation: GroupRelation;
   /** Whether the reader runs this official group — their chip is *Join*, whatever the policy. */
   readonly isAdministrator: boolean;
+}
+
+/**
+ * **Home's Hottest groups, as read** — the six cards, and **how many groups there are to look
+ * through** ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6): every group with 3
+ * or more players, the reader's own included, counted up to 100 — the line's count. The server's
+ * figure, refreshed only by the next read.
+ */
+export interface HottestRow {
+  readonly groups: readonly HottestGroup[];
+  readonly total: number;
+}
+
+/**
+ * **One page of *Groups heating up*** ([#823](https://github.com/Raketa02/Raketa/issues/823);
+ * ADR-0205 §7; the Home rows mechanics §5.10) — up to 20 of the row's cards, every group with 3 or
+ * more players, the reader's own included, in the row's order, and the cursor behind them. The first
+ * page's total is the line's count, which the page does not draw, so it is not carried.
+ */
+export interface HottestPage {
+  readonly groups: readonly HottestGroup[];
+  /** Read the next page `after` this — absent on the last. */
+  readonly next?: string;
 }
 
 /** A group's name is 1–40 characters once trimmed (ADR-0183 §3). The field stops at 40. */

@@ -255,11 +255,11 @@
         "7:9"
       ],
       "tags": [
-        "GENEROUS_ON_LINE_CALLS",
-        "HERE_FOR_THE_EXERCISE",
+        "HERE_TO_GET_BACK_INTO_IT",
         "HERE_TO_IMPROVE",
+        "HERE_TO_MEET_PLAYERS",
         "STRAIGHT_HOME_AFTER",
-        "TALKS_THROUGH_THE_MATCH"
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -311,10 +311,12 @@
         "6:22"
       ],
       "tags": [
-        "ENCOURAGES_A_PARTNER",
+        "GENEROUS_ON_LINE_CALLS",
+        "HAPPY_TO_SHARE_TIPS",
+        "HAPPY_TO_SWAP_PARTNERS",
         "HERE_TO_IMPROVE",
-        "LAUGHS_OFF_MISTAKES",
         "PLAYS_TO_WIN",
+        "SHARES_A_LIFT",
         "STRAIGHT_HOME_AFTER",
         "WARMS_UP_PROPERLY"
       ],
@@ -358,10 +360,10 @@
         "7:10"
       ],
       "tags": [
-        "BOOKS_THE_NEXT_ONE",
+        "BRINGS_THE_ENERGY",
         "ENCOURAGES_A_PARTNER",
-        "HERE_FOR_THE_EXERCISE",
-        "PLAYS_TO_WIN",
+        "HERE_TO_IMPROVE",
+        "OPEN_TO_MEET_SOMEONE",
         "SETTLES_UP_ON_THE_SPOT",
         "WARMS_UP_PROPERLY"
       ],
@@ -420,10 +422,11 @@
         "6:15"
       ],
       "tags": [
-        "ENCOURAGES_A_PARTNER",
+        "HERE_TO_GET_BACK_INTO_IT",
         "HERE_TO_IMPROVE",
+        "LAUGHS_OFF_MISTAKES",
+        "PATIENT_WITH_BEGINNERS",
         "PLAYS_TO_WIN",
-        "QUIET_AND_FOCUSED",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -473,11 +476,12 @@
         "7:22"
       ],
       "tags": [
-        "HERE_TO_IMPROVE",
-        "PLAYS_TO_WIN",
-        "QUIET_AND_FOCUSED",
-        "SETTLES_UP_ON_THE_SPOT",
-        "STAYS_FOR_A_DRINK"
+        "HERE_FOR_A_REGULAR_GAME",
+        "HERE_TO_GET_BACK_INTO_IT",
+        "HERE_TO_MEET_PLAYERS",
+        "STAYS_FOR_A_COFFEE",
+        "STAYS_FOR_A_DRINK",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -570,8 +574,8 @@
         "7:21"
       ],
       "tags": [
-        "GENEROUS_ON_LINE_CALLS",
-        "LAUGHS_OFF_MISTAKES"
+        "HERE_TO_MEET_PLAYERS",
+        "UP_FOR_A_BITE_AFTER"
       ],
       "intents": [
         [
@@ -620,9 +624,9 @@
       ],
       "tags": [
         "ENCOURAGES_A_PARTNER",
-        "HERE_FOR_A_REGULAR_GAME",
-        "HERE_FOR_THE_EXERCISE",
-        "HERE_TO_GET_BACK_INTO_IT",
+        "HERE_TO_MEET_PLAYERS",
+        "KEEPS_IN_TOUCH",
+        "PATIENT_WITH_BEGINNERS",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -675,10 +679,11 @@
         "6:15"
       ],
       "tags": [
-        "BOOKS_THE_NEXT_ONE",
         "HERE_TO_IMPROVE",
-        "HERE_TO_MEET_PLAYERS",
+        "LAUGHS_OFF_MISTAKES",
         "PLAYS_TO_WIN",
+        "QUIET_AND_FOCUSED",
+        "STAYS_FOR_A_DRINK",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -718,9 +723,9 @@
         "6:11"
       ],
       "tags": [
-        "OPEN_TO_MEET_SOMEONE",
-        "PLAYS_TO_WIN",
-        "SHARES_A_LIFT"
+        "HERE_FOR_A_REGULAR_GAME",
+        "HERE_TO_MEET_PLAYERS",
+        "PLAYS_TO_WIN"
       ],
       "intents": [
         [
@@ -771,10 +776,11 @@
         "6:15"
       ],
       "tags": [
+        "HERE_FOR_A_REGULAR_GAME",
         "HERE_TO_IMPROVE",
+        "NEW_IN_TOWN",
         "PLAYS_TO_WIN",
         "SETTLES_UP_ON_THE_SPOT",
-        "SHARES_A_LIFT",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -827,11 +833,11 @@
         "7:20"
       ],
       "tags": [
-        "HERE_TO_IMPROVE",
-        "OPEN_TO_MEET_SOMEONE",
-        "SETTLES_UP_ON_THE_SPOT",
-        "SHARES_A_LIFT",
-        "WARMS_UP_PROPERLY"
+        "GENEROUS_ON_LINE_CALLS",
+        "HERE_TO_COMPETE",
+        "HERE_TO_GET_BACK_INTO_IT",
+        "PLAYS_TO_WIN",
+        "SHARES_A_LIFT"
       ],
       "intents": [
         [
@@ -876,11 +882,13 @@
         "7:20"
       ],
       "tags": [
-        "ENCOURAGES_A_PARTNER",
+        "HAPPY_TO_SHARE_TIPS",
+        "HERE_FOR_THE_EXERCISE",
+        "HERE_TO_GET_BACK_INTO_IT",
         "HERE_TO_IMPROVE",
-        "OPEN_TO_MEET_SOMEONE",
+        "HERE_TO_MEET_PLAYERS",
+        "LAUGHS_OFF_MISTAKES",
         "PLAYS_TO_WIN",
-        "QUIET_AND_FOCUSED",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -926,11 +934,12 @@
         "7:15"
       ],
       "tags": [
-        "HERE_FOR_THE_EXERCISE",
-        "HERE_TO_COMPETE",
-        "QUIET_AND_FOCUSED",
-        "SETTLES_UP_ON_THE_SPOT",
-        "WARMS_UP_PROPERLY"
+        "BRINGS_THE_ENERGY",
+        "HERE_FOR_A_REGULAR_GAME",
+        "HERE_TO_IMPROVE",
+        "LAUGHS_OFF_MISTAKES",
+        "OPEN_TO_MEET_SOMEONE",
+        "SETTLES_UP_ON_THE_SPOT"
       ],
       "intents": [
         [
@@ -985,11 +994,13 @@
         "6:15"
       ],
       "tags": [
-        "BOOKS_THE_NEXT_ONE",
-        "ENCOURAGES_A_PARTNER",
+        "HAPPY_TO_SHARE_TIPS",
         "HERE_TO_IMPROVE",
-        "LAUGHS_OFF_MISTAKES",
+        "KEEPS_IN_TOUCH",
+        "NEW_IN_TOWN",
         "PLAYS_TO_WIN",
+        "QUIET_AND_FOCUSED",
+        "UP_FOR_A_BITE_AFTER",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -1083,9 +1094,10 @@
         "7:22"
       ],
       "tags": [
-        "HERE_TO_COMPETE",
-        "LAUGHS_OFF_MISTAKES",
-        "WARMS_UP_PROPERLY"
+        "HERE_FOR_A_REGULAR_GAME",
+        "HERE_TO_IMPROVE",
+        "NEW_IN_TOWN",
+        "UP_FOR_A_BITE_AFTER"
       ],
       "intents": [
         [
@@ -1136,10 +1148,10 @@
         "6:20"
       ],
       "tags": [
-        "HERE_FOR_A_REGULAR_GAME",
+        "GENEROUS_ON_LINE_CALLS",
+        "HAPPY_TO_SWAP_PARTNERS",
         "HERE_TO_IMPROVE",
         "PLAYS_TO_WIN",
-        "SHARES_A_LIFT",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -1190,11 +1202,10 @@
       ],
       "tags": [
         "BOOKS_THE_NEXT_ONE",
-        "GENEROUS_ON_LINE_CALLS",
-        "LAUGHS_OFF_MISTAKES",
+        "ENCOURAGES_A_PARTNER",
+        "HERE_TO_MEET_PLAYERS",
         "PLAYS_TO_WIN",
-        "SETTLES_UP_ON_THE_SPOT",
-        "WARMS_UP_PROPERLY"
+        "UP_FOR_A_BITE_AFTER"
       ],
       "intents": [
         [
@@ -1251,11 +1262,13 @@
         "6:19"
       ],
       "tags": [
+        "ENCOURAGES_A_PARTNER",
+        "HERE_FOR_THE_EXERCISE",
         "HERE_TO_IMPROVE",
+        "NEW_IN_TOWN",
         "PLAYS_TO_WIN",
-        "QUIET_AND_FOCUSED",
         "SETTLES_UP_ON_THE_SPOT",
-        "SHARES_A_LIFT",
+        "TALKS_THROUGH_THE_MATCH",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -1298,11 +1311,11 @@
         "7:15"
       ],
       "tags": [
-        "HERE_TO_MEET_PLAYERS",
-        "PLAYS_TO_WIN",
-        "QUIET_AND_FOCUSED",
+        "ENCOURAGES_A_PARTNER",
+        "HERE_FOR_A_REGULAR_GAME",
+        "LAUGHS_OFF_MISTAKES",
+        "NEW_IN_TOWN",
         "SETTLES_UP_ON_THE_SPOT",
-        "STRAIGHT_HOME_AFTER",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -1353,9 +1366,9 @@
       ],
       "tags": [
         "BOOKS_THE_NEXT_ONE",
+        "GENEROUS_ON_LINE_CALLS",
         "HERE_TO_GET_BACK_INTO_IT",
-        "HERE_TO_IMPROVE",
-        "PLAYS_TO_WIN",
+        "STAYS_FOR_A_COFFEE",
         "STAYS_FOR_A_DRINK",
         "WARMS_UP_PROPERLY"
       ],
@@ -1419,8 +1432,8 @@
       ],
       "tags": [
         "HERE_TO_IMPROVE",
+        "HERE_TO_MEET_PLAYERS",
         "PLAYS_TO_WIN",
-        "QUIET_AND_FOCUSED",
         "STRAIGHT_HOME_AFTER",
         "WARMS_UP_PROPERLY"
       ],
@@ -1462,9 +1475,9 @@
       ],
       "tags": [
         "BOOKS_THE_NEXT_ONE",
-        "HERE_TO_COMPETE",
-        "TALKS_THROUGH_THE_MATCH",
-        "WARMS_UP_PROPERLY"
+        "OPEN_TO_MEET_SOMEONE",
+        "PLAYS_TO_WIN",
+        "QUIET_AND_FOCUSED"
       ],
       "intents": [
         [
@@ -1515,7 +1528,8 @@
         "7:16"
       ],
       "tags": [
-        "HERE_FOR_THE_EXERCISE",
+        "HERE_FOR_A_REGULAR_GAME",
+        "HERE_TO_COMPETE",
         "HERE_TO_IMPROVE",
         "PLAYS_TO_WIN",
         "SHARES_A_LIFT",
@@ -1562,9 +1576,9 @@
         "7:14"
       ],
       "tags": [
-        "HERE_TO_COMPETE",
         "HERE_TO_IMPROVE",
-        "OPEN_TO_MEET_SOMEONE",
+        "LAUGHS_OFF_MISTAKES",
+        "QUIET_AND_FOCUSED",
         "SETTLES_UP_ON_THE_SPOT",
         "SHARES_A_LIFT",
         "STAYS_FOR_A_DRINK"
@@ -1609,12 +1623,11 @@
         "6:15"
       ],
       "tags": [
-        "ENCOURAGES_A_PARTNER",
-        "HERE_FOR_THE_EXERCISE",
+        "HAPPY_TO_SWAP_PARTNERS",
         "HERE_TO_COMPETE",
-        "HERE_TO_IMPROVE",
-        "HERE_TO_MEET_PLAYERS",
-        "SHARES_A_LIFT"
+        "PATIENT_WITH_BEGINNERS",
+        "SHARES_A_LIFT",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -1676,9 +1689,10 @@
       ],
       "tags": [
         "HERE_TO_IMPROVE",
+        "OPEN_TO_MEET_SOMEONE",
         "PLAYS_TO_WIN",
-        "SETTLES_UP_ON_THE_SPOT",
         "SHARES_A_LIFT",
+        "UP_FOR_A_BITE_AFTER",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -1721,9 +1735,9 @@
         "6:15"
       ],
       "tags": [
-        "ENCOURAGES_A_PARTNER",
-        "PLAYS_TO_WIN",
-        "STAYS_FOR_A_DRINK"
+        "HERE_TO_COMPETE",
+        "KEEPS_IN_TOUCH",
+        "PLAYS_TO_WIN"
       ],
       "intents": [
         [
@@ -1780,9 +1794,11 @@
         "7:11"
       ],
       "tags": [
-        "HERE_FOR_THE_EXERCISE",
-        "HERE_TO_COMPETE",
+        "BRINGS_THE_ENERGY",
+        "ENCOURAGES_A_PARTNER",
+        "HAPPY_TO_SWAP_PARTNERS",
         "HERE_TO_IMPROVE",
+        "OPEN_TO_MEET_SOMEONE",
         "PLAYS_TO_WIN",
         "STAYS_FOR_A_DRINK",
         "WARMS_UP_PROPERLY"
@@ -1834,9 +1850,9 @@
         "4:14"
       ],
       "tags": [
-        "HERE_FOR_A_REGULAR_GAME",
-        "LAUGHS_OFF_MISTAKES",
+        "NEW_IN_TOWN",
         "SETTLES_UP_ON_THE_SPOT",
+        "UP_FOR_A_BITE_AFTER",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -1876,11 +1892,11 @@
         "6:11"
       ],
       "tags": [
-        "ENCOURAGES_A_PARTNER",
-        "HERE_FOR_THE_EXERCISE",
-        "HERE_TO_MEET_PLAYERS",
-        "PLAYS_TO_WIN",
-        "QUIET_AND_FOCUSED"
+        "HAPPY_TO_SWAP_PARTNERS",
+        "HERE_TO_IMPROVE",
+        "KEEPS_IN_TOUCH",
+        "OPEN_TO_MEET_SOMEONE",
+        "WARMS_UP_PROPERLY"
       ],
       "intents": [
         [
@@ -1941,11 +1957,13 @@
         "6:21"
       ],
       "tags": [
-        "BOOKS_THE_NEXT_ONE",
+        "HERE_TO_COMPETE",
         "HERE_TO_IMPROVE",
-        "LAUGHS_OFF_MISTAKES",
+        "KEEPS_IN_TOUCH",
         "PLAYS_TO_WIN",
-        "SETTLES_UP_ON_THE_SPOT",
+        "QUIET_AND_FOCUSED",
+        "STAYS_FOR_A_COFFEE",
+        "STRAIGHT_HOME_AFTER",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -1989,9 +2007,10 @@
         "6:15"
       ],
       "tags": [
-        "HERE_FOR_THE_EXERCISE",
-        "OPEN_TO_MEET_SOMEONE",
-        "PLAYS_TO_WIN",
+        "ENCOURAGES_A_PARTNER",
+        "HERE_TO_IMPROVE",
+        "HERE_TO_MEET_PLAYERS",
+        "STAYS_FOR_A_COFFEE",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -2050,11 +2069,13 @@
         "6:15"
       ],
       "tags": [
-        "HERE_FOR_A_REGULAR_GAME",
-        "HERE_TO_COMPETE",
+        "ENCOURAGES_A_PARTNER",
+        "GENEROUS_ON_LINE_CALLS",
         "HERE_TO_IMPROVE",
         "PLAYS_TO_WIN",
-        "STRAIGHT_HOME_AFTER",
+        "SETTLES_UP_ON_THE_SPOT",
+        "SHARES_A_LIFT",
+        "TALKS_THROUGH_THE_MATCH",
         "WARMS_UP_PROPERLY"
       ],
       "intents": [
@@ -2099,8 +2120,8 @@
       ],
       "tags": [
         "BOOKS_THE_NEXT_ONE",
+        "LAUGHS_OFF_MISTAKES",
         "PLAYS_TO_WIN",
-        "QUIET_AND_FOCUSED",
         "TALKS_THROUGH_THE_MATCH"
       ],
       "intents": [
@@ -2198,11 +2219,11 @@
         "7:19"
       ],
       "tags": [
-        "ENCOURAGES_A_PARTNER",
-        "PLAYS_TO_WIN",
+        "HERE_TO_IMPROVE",
+        "KEEPS_IN_TOUCH",
         "SHARES_A_LIFT",
-        "STRAIGHT_HOME_AFTER",
-        "TALKS_THROUGH_THE_MATCH"
+        "STAYS_FOR_A_COFFEE",
+        "STRAIGHT_HOME_AFTER"
       ],
       "intents": [
         [
@@ -2241,12 +2262,12 @@
         "6:20"
       ],
       "tags": [
+        "BRINGS_THE_ENERGY",
+        "HERE_TO_GET_BACK_INTO_IT",
         "HERE_TO_IMPROVE",
-        "QUIET_AND_FOCUSED",
+        "OPEN_TO_MEET_SOMEONE",
         "SETTLES_UP_ON_THE_SPOT",
-        "SHARES_A_LIFT",
-        "TALKS_THROUGH_THE_MATCH",
-        "WARMS_UP_PROPERLY"
+        "SHARES_A_LIFT"
       ],
       "intents": [
         [
@@ -2301,9 +2322,10 @@
         "6:15"
       ],
       "tags": [
-        "HERE_TO_GET_BACK_INTO_IT",
+        "BOOKS_THE_NEXT_ONE",
+        "HAPPY_TO_SHARE_TIPS",
+        "HAPPY_TO_SWAP_PARTNERS",
         "HERE_TO_IMPROVE",
-        "OPEN_TO_MEET_SOMEONE",
         "PLAYS_TO_WIN",
         "WARMS_UP_PROPERLY"
       ],
@@ -2349,9 +2371,9 @@
       ],
       "tags": [
         "BOOKS_THE_NEXT_ONE",
-        "HERE_TO_IMPROVE",
-        "OPEN_TO_MEET_SOMEONE",
-        "WARMS_UP_PROPERLY"
+        "BRINGS_THE_ENERGY",
+        "HERE_TO_GET_BACK_INTO_IT",
+        "HERE_TO_IMPROVE"
       ],
       "intents": [
         [
@@ -2400,10 +2422,10 @@
         "6:22"
       ],
       "tags": [
-        "GENEROUS_ON_LINE_CALLS",
-        "HERE_TO_MEET_PLAYERS",
-        "STRAIGHT_HOME_AFTER",
-        "WARMS_UP_PROPERLY"
+        "HAPPY_TO_SWAP_PARTNERS",
+        "HERE_FOR_THE_EXERCISE",
+        "HERE_TO_COMPETE",
+        "PLAYS_TO_WIN"
       ],
       "intents": [
         [
@@ -2458,7 +2480,7 @@
         "7:16"
       ],
       "tags": [
-        "BOOKS_THE_NEXT_ONE",
+        "HAPPY_TO_SHARE_TIPS",
         "HERE_TO_IMPROVE",
         "OPEN_TO_MEET_SOMEONE",
         "PLAYS_TO_WIN",
@@ -2504,9 +2526,9 @@
         "6:11"
       ],
       "tags": [
-        "GENEROUS_ON_LINE_CALLS",
-        "TALKS_THROUGH_THE_MATCH",
-        "WARMS_UP_PROPERLY"
+        "HERE_TO_IMPROVE",
+        "OPEN_TO_MEET_SOMEONE",
+        "TALKS_THROUGH_THE_MATCH"
       ],
       "intents": [
         [

@@ -69,7 +69,7 @@ const STEPS = [
   {
     path: '/tags',
     title: 'What kind of player are you?',
-    eyebrow: 'Setting up · Step 1 of 6 · Pick 2 to 6',
+    eyebrow: 'Setting up · Step 1 of 6 · Pick 2 to 8',
     back: undefined,
     forward: 'Continue',
   },

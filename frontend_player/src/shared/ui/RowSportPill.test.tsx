@@ -1,15 +1,17 @@
 /**
- * **The sport pill on a Home row** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home
- * rows screens §7.3; home rows 27) — the deck's pill (#774) on a row's heading line, beside the row's
- * link, and the bar it opens onto lying over the row. Top 10 draws it; its router suite walks the
- * picks end to end. `SportPill.test.tsx` holds the bar's unfold.
+ * **The sport pill on a Home line** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home
+ * rows screens §7.3; home rows 27) — the deck's pill (#774) in a folding line's footer since #820, at
+ * the footer's left with the line's link at its right, and the bar it opens onto lying over the
+ * footer, **opening rightwards** since [#821](https://github.com/Raketa02/Raketa/issues/821) (home
+ * refactor 12, 13). Top 10 draws it; its router suite walks the picks end to end.
+ * `SportPill.test.tsx` holds the bar's unfold.
  *
  * The navigator is real, because leaving the screen is one of the things that folds the bar.
  */
 
 import { Stack, router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
-import { StyleSheet, Text, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import {
   pressHardwareBack,
@@ -18,7 +20,7 @@ import {
 } from '@/test-support/hardwareBack';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { HomeRow } from './HomeRow';
+import { FoldingLineFooter } from './FoldingLine';
 import { RowSportPill } from './RowSportPill';
 import type { SportPillWords } from './SportPillFrame';
 import { theme } from './theme';
@@ -47,15 +49,14 @@ function Screen() {
   return (
     <RowSportPill sports={held.sports} sport={held.sport} onPick={onPick} words={WORDS}>
       {(pill, over) => (
-        <HomeRow
-          heading="Top 10"
-          control={pill}
-          over={over}
-          link={{ words: 'Rankings', label: 'Rankings', onPress: jest.fn() }}
-          testID="row"
-        >
+        <View testID="line">
           <Text>the cards</Text>
-        </HomeRow>
+          <FoldingLineFooter
+            control={pill}
+            over={over}
+            link={{ words: 'Open the rankings', label: 'Open the rankings', onPress: jest.fn() }}
+          />
+        </View>
       )}
     </RowSportPill>
   );
@@ -105,21 +106,29 @@ describe('the sport pill on a row', () => {
     await openRow({ sport: undefined });
 
     expect(screen.queryByRole('button', { name: /^Sport:/ })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Rankings' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Open the rankings' })).toBeTruthy();
   });
 
-  it('stands on the heading’s line, a button named in the row’s words', async () => {
+  it('stands in the footer, a button named in the row’s words', async () => {
     await openRow();
 
     expect(pill().props.accessibilityHint).toBe('Shows the row for another sport');
     expect(bar()).toBeNull();
   });
 
-  it('opens over the row onto the other sports, the current one last', async () => {
+  /** Home refactor 12, 13 and note 4: *Padel ›*, its chevron pointing the way it opens. */
+  it('reads Padel ›, pointing right, the way it opens', async () => {
+    await openRow();
+
+    expect(within(pill()).getByText('›', { includeHiddenElements: true })).toBeTruthy();
+    expect(within(pill()).queryByText('‹', { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('opens over the footer onto the other sports, the current one first', async () => {
     await openRow();
     unfold();
 
-    expect(barOptions()).toEqual(['Tennis', 'Squash', 'Badminton', 'Padel']);
+    expect(barOptions()).toEqual(['Padel', 'Tennis', 'Squash', 'Badminton']);
   });
 
   it('reports another sport picked, and folds', async () => {
@@ -144,7 +153,7 @@ describe('the sport pill on a row', () => {
     expect(bar()).toBeNull();
   });
 
-  it('folds and reports nothing on a tap anywhere else on the row', async () => {
+  it('folds and reports nothing on a tap anywhere else on the footer', async () => {
     await openRow();
     unfold();
 
@@ -180,11 +189,14 @@ describe('the sport pill on a row', () => {
     expect(bar()).toBeNull();
   });
 
-  /** Home rows 27: the current sport sits at the bar's right end, exactly where the pill stood. */
-  it('ends the bar where the pill ends, on the pill’s own line', async () => {
+  /**
+   * #821: the current sport sits at the bar's left end, exactly where the pill stood, and the bar
+   * runs rightwards from there across the footer — over the link — to the footer's right edge.
+   */
+  it('starts the bar where the pill starts, on the pill’s own line, running to the right', async () => {
     await openRow();
     fireEvent(screen.getByTestId('row-sport-pill'), 'layout', {
-      nativeEvent: { layout: { x: 200, y: 4, width: 90, height: 30 } },
+      nativeEvent: { layout: { x: 0, y: 7, width: 90, height: 30 } },
     });
     unfold();
 
@@ -193,12 +205,13 @@ describe('the sport pill on a row', () => {
     );
     expect(slot).toMatchObject({
       position: 'absolute',
-      left: 0,
-      top: 4,
+      left: -theme.size.groupPage.filterPad,
+      right: 0,
+      top: 7,
       height: 30,
-      width: 200 + 90 + theme.size.groupPage.filterPad,
-      alignItems: 'flex-end',
+      alignItems: 'flex-start',
       justifyContent: 'center',
     });
+    expect(slot.width).toBeUndefined();
   });
 });

@@ -1,13 +1,13 @@
 /**
- * **The Home row frame** — one heading, one link, one rail, for every row on Home
- * ([#798](https://github.com/Raketa02/Raketa/issues/798); the Home rows screens §2).
+ * **The Home row frame** — one heading and one rail, for every row in Needs your answer and *Your
+ * games*, and the rail FOR YOU's open lines draw on ([#798](https://github.com/Raketa02/Raketa/issues/798),
+ * [#820](https://github.com/Raketa02/Raketa/issues/820); the Home rows screens §2).
  *
- * The rows that sit on it — FRIENDS GAME, FRIEND REQUESTS, ASKED FOR A LEVEL, YOUR GAMES — keep their
- * own tests, which pass unchanged; they say what each row does, and the geometry the four rows used
- * to copy is held here, once: the heading, the bleed, the gap, both rails' widths and the paging
- * rail's snap and dots. And the three things no row today exercises: *See all ›* and its name, the
- * slot a row hands a control into, and a rail that is never remounted, so it keeps its scroll
- * position. That nothing moved on a device is a look, owed.
+ * The rows that sit on it keep their own tests; they say what each row does, and the geometry the rows
+ * used to copy is held here, once: the heading, the bleed, the gap, every rail's widths and the paging
+ * rail's snap and dots, a rail inside a folding line's bounds, and a rail that is never remounted, so
+ * it keeps its scroll position. *See all ›* and Top 10's pill left the heading for the line's footer
+ * (`FoldingLine.test.tsx`). That nothing moved on a device is a look, owed.
  */
 
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
@@ -15,7 +15,6 @@ import {
   Dimensions,
   ScrollView,
   StyleSheet,
-  Text,
   View,
   type TextStyle,
   type ViewStyle,
@@ -24,17 +23,14 @@ import {
 import {
   HomeRow,
   HomeRowRail,
+  RailBoundsContext,
+  RailDrawsAll,
   cardsDrawnFirst,
   type HomeRowProps,
   type HomeRowRailProps,
 } from './HomeRow';
 import { PageOnScreen, followable, type Span } from './onScreen';
 import { theme } from './theme';
-
-const SEE_ALL = {
-  words: 'See all',
-  label: 'See all same competitive level players',
-};
 
 /** Content width — the screen less the gutter each side (Part 4). */
 const content = () => Dimensions.get('window').width - 2 * theme.size.gutter;
@@ -45,14 +41,15 @@ function Row({
   heading = 'Friend requests · 2',
   ...rest
 }: { readonly count: number } & Partial<Omit<HomeRowProps, 'children'>> &
-  Pick<HomeRowRailProps<number>, 'geometry' | 'snap'>) {
-  const { geometry, snap, ...row } = rest;
+  Pick<HomeRowRailProps<number>, 'geometry' | 'snap' | 'dotsAlone'>) {
+  const { geometry, snap, dotsAlone, ...row } = rest;
   return (
     <HomeRow heading={heading} testID="row" {...row}>
       <HomeRowRail
         cards={Array.from({ length: count }, (_, at) => at)}
         {...(geometry === undefined ? {} : { geometry })}
         {...(snap === undefined ? {} : { snap })}
+        {...(dotsAlone === undefined ? {} : { dotsAlone })}
       >
         {(at, width) => <View key={at} testID={`card-${at}`} style={{ width }} />}
       </HomeRowRail>
@@ -86,85 +83,6 @@ describe('the Home row frame', () => {
         gap: theme.space.sm,
       });
     });
-  });
-
-  describe('See all', () => {
-    it('opens what the row says it opens, named by the row', () => {
-      const onPress = jest.fn();
-      render(<Row count={2} link={{ ...SEE_ALL, onPress }} />);
-
-      fireEvent.press(screen.getByRole('link', { name: SEE_ALL.label }));
-
-      expect(onPress).toHaveBeenCalledTimes(1);
-    });
-
-    /** The chevron is a direction rather than a word: drawn, and not spoken after the name. */
-    it('draws the words and a chevron, and speaks the name alone', () => {
-      render(<Row count={2} link={{ ...SEE_ALL, onPress: jest.fn() }} />);
-
-      expect(screen.getByText(SEE_ALL.words)).toBeTruthy();
-      const chevron = screen.getByText('›', { includeHiddenElements: true });
-      expect(chevron.props.accessibilityElementsHidden).toBe(true);
-      expect(chevron.props.importantForAccessibility).toBe('no');
-    });
-
-    /** Ink on paper, as the sign-in screen's link (6.6's 44pt reached by its slop — 6.5). */
-    it('is ink, and is reached past its words', () => {
-      render(<Row count={2} link={{ ...SEE_ALL, onPress: jest.fn() }} />);
-
-      const link = screen.getByRole('link', { name: SEE_ALL.label });
-      expect(link.props.hitSlop).toEqual(theme.hit.rowLink);
-      expect(
-        StyleSheet.flatten(screen.getByText(SEE_ALL.words).props.style as TextStyle),
-      ).toMatchObject({ ...theme.type.rlValue, color: theme.color.ink });
-    });
-
-    /**
-     * Its 16pt line overhangs the eyebrow's 12 rather than growing the heading's line, so a row with
-     * a link stands where a row without one does (home rows 1: the same spacing either way).
-     */
-    it('stands on the heading’s line without making it taller', () => {
-      render(<Row count={2} link={{ ...SEE_ALL, onPress: jest.fn() }} />);
-
-      const link = screen.getByRole('link', { name: SEE_ALL.label });
-      const drawn = flat(link.props.style);
-      expect(theme.type.rlValue.lineHeight + 2 * (drawn.marginVertical as number)).toBe(
-        theme.type.eyebrow.lineHeight,
-      );
-    });
-
-    it('is not there unless the row hands one in', () => {
-      render(<Row count={2} />);
-
-      expect(screen.queryByRole('link')).toBeNull();
-      expect(screen.queryByText('›', { includeHiddenElements: true })).toBeNull();
-    });
-  });
-
-  /** Top 10 hands in its sport pill here, beside *Rankings ›* (the screens §2). */
-  it('draws the control a row hands in, on the heading’s line', () => {
-    render(
-      <Row
-        count={2}
-        control={<Text>Padel</Text>}
-        link={{ words: 'Rankings', label: 'Rankings', onPress: jest.fn() }}
-      />,
-    );
-
-    expect(screen.getByText('Padel')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Rankings' })).toBeTruthy();
-  });
-
-  /** Top 10's open sport bar and its backdrop lie over the whole row (#805). */
-  it('lays what a row hands in over the whole row, last, so it stands on top', () => {
-    render(<Row count={2} over={<View testID="over" />} />);
-
-    // In the row, after the heading and every card of the rail.
-    const named = screen
-      .UNSAFE_getAllByType(View)
-      .map((node) => node.props.testID as string | undefined)
-      .filter((testID) => testID !== undefined);
-    expect(named).toEqual(['row', 'card-0', 'card-1', 'over']);
   });
 
   describe('the peeking rail', () => {
@@ -212,12 +130,49 @@ describe('the Home row frame', () => {
     });
   });
 
-  /** New in Raketa's portrait tiles (#801; home rows 17): narrow, several on screen, the last cut. */
+  /** Needs your answer's request and ask tiles (#816; home refactor 2): wider, the next one peeking. */
+  describe('the wide rail', () => {
+    it('draws each card at the request card’s share of the content width, so the next one peeks', () => {
+      render(<Row count={3} geometry="wide" />);
+
+      expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.requestCardRatio);
+      expect(widthOf('card-2')).toBeCloseTo(content() * theme.size.requestCardRatio);
+      expect(theme.size.requestCardRatio).toBeGreaterThan(theme.size.railCardRatio);
+    });
+
+    it('draws a lone card at the content width — there is nothing to peek at', () => {
+      render(<Row count={1} geometry="wide" />);
+
+      expect(widthOf('card-0')).toBe(content());
+    });
+
+    /** So a tile's buttons, held at its foot, sit level with the next tile's (Q3). */
+    it('stands every card as tall as the tallest', () => {
+      render(<Row count={2} geometry="wide" />);
+
+      expect(flat(rail().props.contentContainerStyle)).toMatchObject({ alignItems: 'stretch' });
+    });
+
+    it('scrolls freely and draws no dots', () => {
+      render(<Row count={3} geometry="wide" />);
+
+      expect(rail().props.snapToInterval).toBeUndefined();
+      expect(screen.queryByTestId('pager-dots', { includeHiddenElements: true })).toBeNull();
+    });
+  });
+
+  /**
+   * New in Raketa's portrait tiles (#801; home rows 17): since 2026-11-26 their own share, a little
+   * narrower than the line cards either side — one whole and the next peeking.
+   */
   describe('the tiles rail', () => {
-    it('draws each tile at its share of the content width — a lone one too', () => {
+    it('draws each tile at the portrait’s own share of the content width — a lone one too', () => {
       render(<Row count={3} geometry="tiles" />);
       expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.portraitTile.railRatio);
+      expect(widthOf('card-2')).toBeCloseTo(content() * theme.size.portraitTile.railRatio);
+      expect(theme.size.portraitTile.railRatio).toBeLessThan(theme.size.lineCardRatio);
 
+      // A portrait the width of the screen would be a poster: a lone tile keeps its width.
       screen.rerender(<Row count={1} geometry="tiles" />);
       expect(widthOf('card-0')).toBeCloseTo(content() * theme.size.portraitTile.railRatio);
     });
@@ -274,6 +229,75 @@ describe('the Home row frame', () => {
       });
       expect(current()).toBe(2);
     });
+
+    const dotsDrawn = () => screen.queryByTestId('pager-dots', { includeHiddenElements: true });
+
+    /** 7.18: a rail of one draws its one dot — the affordance before a second card arrives. */
+    it('draws one dot for a lone card', () => {
+      render(<Row count={1} geometry="paging" />);
+      expect(dotsDrawn()).not.toBeNull();
+    });
+
+    /** 7.18 as amended (#817, Q46): Needs your answer's FRIENDS GAME draws its dots from two. */
+    it('draws its dots from two for a row that asks so', () => {
+      render(<Row count={1} geometry="paging" dotsAlone={false} />);
+      expect(dotsDrawn()).toBeNull();
+
+      screen.rerender(<Row count={2} geometry="paging" dotsAlone={false} />);
+      expect(dotsDrawn()).not.toBeNull();
+    });
+  });
+
+  /**
+   * **Inside a folding line** (#820): a tile's share is of the line's content, the rail bleeds to the
+   * line's inner edge, and every rail settles on its tiles' edges (the brief). A peeking card takes
+   * the share the line says (2026-11-26).
+   */
+  describe('inside a folding line', () => {
+    const LINE = { content: 300, bleed: 15, snaps: true, cardRatio: 0.8 } as const;
+    const inLine = (geometry?: 'tiles' | 'numbered', itemWidth?: (card: number) => number) =>
+      render(
+        <RailBoundsContext.Provider value={LINE}>
+          <HomeRowRail
+            cards={[0, 1, 2]}
+            {...(geometry === undefined ? {} : { geometry })}
+            {...(itemWidth === undefined ? {} : { itemWidth })}
+          >
+            {(at, width) => <View key={at} testID={`card-${at}`} style={{ width }} />}
+          </HomeRowRail>
+        </RailBoundsContext.Provider>,
+      );
+
+    it('takes its shares of the line’s content, and bleeds to its inner edge', () => {
+      inLine();
+
+      expect(widthOf('card-0')).toBeCloseTo(300 * LINE.cardRatio);
+      expect(flat(rail().props.style)).toMatchObject({ marginHorizontal: -15 });
+      expect(flat(rail().props.contentContainerStyle)).toMatchObject({ paddingHorizontal: 15 });
+    });
+
+    it('snaps to its cards’ edges, a peeking rail and a tiles rail alike', () => {
+      inLine();
+      expect(rail().props.snapToInterval).toBeCloseTo(300 * LINE.cardRatio + 9);
+      expect(rail().props.decelerationRate).toBe('fast');
+
+      screen.rerender(
+        <RailBoundsContext.Provider value={LINE}>
+          <HomeRowRail cards={[0, 1, 2]} geometry="tiles">
+            {(at, width) => <View key={at} testID={`card-${at}`} style={{ width }} />}
+          </HomeRowRail>
+        </RailBoundsContext.Provider>,
+      );
+      expect(rail().props.snapToInterval).toBeCloseTo(300 * theme.size.portraitTile.railRatio + 9);
+    });
+
+    /** Top 10's numeral stands beside its card, so an item is wider than the width handed (#805). */
+    it('steps by an item’s width when the row says it is wider than its card', () => {
+      inLine('numbered', (card) => card + 40);
+
+      expect(widthOf('card-0')).toBeCloseTo(300 * theme.size.topTen.railRatio);
+      expect(rail().props.snapToInterval).toBeCloseTo(300 * theme.size.topTen.railRatio + 40 + 9);
+    });
   });
 
   /**
@@ -288,9 +312,7 @@ describe('the Home row frame', () => {
     screen.rerender(<Row count={3} heading="Friend requests · 3" />);
     expect(rail()).toBe(first);
 
-    screen.rerender(
-      <Row count={1} heading="Friend requests · 1" link={{ ...SEE_ALL, onPress: jest.fn() }} />,
-    );
+    screen.rerender(<Row count={1} heading="Friend requests · 1" />);
     expect(rail()).toBe(first);
   });
 });
@@ -427,5 +449,101 @@ describe('what a rail draws first', () => {
     for (let at = 0; at < 10; at += 1) {
       expect(widthOf(`card-${at}`)).toBeCloseTo(content() * theme.size.railCardRatio);
     }
+  });
+});
+
+/**
+ * **A rail draws a card again only when that card changes** (2026-11-21). A rail re-renders on its own
+ * account — its folding line opening and closing hands it a page and takes it away — and it used to
+ * draw every card anew each time: on a Galaxy A32, ten cards' posters, bars and friend buttons on
+ * every open and every close of a FOR YOU line.
+ */
+describe('what a rail draws again', () => {
+  const drawnTimes = new Map<number, number>();
+  function Card({ at, width }: { readonly at: number; readonly width: number }) {
+    drawnTimes.set(at, (drawnTimes.get(at) ?? 0) + 1);
+    return <View testID={`card-${at}`} style={{ width }} />;
+  }
+  const drawCard = (at: number, width: number) => <Card key={at} at={at} width={width} />;
+  const CARDS = [0, 1, 2];
+
+  beforeEach(() => drawnTimes.clear());
+
+  function railOn(page: ReturnType<typeof followable<Span>>, draw = drawCard) {
+    return (
+      <PageOnScreen.Provider value={page}>
+        <HomeRowRail cards={CARDS} onScreen={() => undefined}>
+          {draw}
+        </HomeRowRail>
+      </PageOnScreen.Provider>
+    );
+  }
+
+  it('draws no card again when the rail re-renders on its own account', () => {
+    render(railOn(followable<Span>()));
+    const before = CARDS.map((at) => drawnTimes.get(at));
+
+    // The page the rail is on comes and goes — its line opening, closing.
+    screen.rerender(railOn(followable<Span>()));
+    screen.rerender(railOn(followable<Span>()));
+
+    expect(CARDS.map((at) => drawnTimes.get(at))).toEqual(before);
+  });
+
+  it('draws every card again when the row draws them another way — nothing is left behind', () => {
+    const page = followable<Span>();
+    render(railOn(page));
+    const before = CARDS.map((at) => drawnTimes.get(at) ?? 0);
+
+    screen.rerender(railOn(page, (at, width) => <Card key={at} at={at} width={width} />));
+
+    expect(CARDS.map((at) => drawnTimes.get(at))).toEqual(before.map((times) => times + 1));
+  });
+
+  it('keeps each card where it was when the cards change order', () => {
+    const page = followable<Span>();
+    render(railOn(page));
+    const first = screen.getByTestId('card-2');
+
+    screen.rerender(
+      <PageOnScreen.Provider value={page}>
+        <HomeRowRail cards={[2, 0, 1]} onScreen={() => undefined}>
+          {drawCard}
+        </HomeRowRail>
+      </PageOnScreen.Provider>,
+    );
+
+    // Keyed by the row's own key, as before: the same card, not the one at its old place.
+    expect(screen.getByTestId('card-2')).toBe(first);
+  });
+});
+
+/**
+ * **In a folding line, the cards past the screen's edge wait for the unfold** (2026-11-21): drawn
+ * during it, they held the JavaScript thread through the whole motion on a Galaxy A32.
+ */
+describe('a rail in a folding line', () => {
+  const count = 10;
+  const screenWidth = () => Dimensions.get('window').width;
+  const peekingStep = () => content() * theme.size.railCardRatio + theme.space.sm;
+  const drawnCards = () => screen.queryAllByTestId(/^card-/).length;
+
+  function railIn({ unfolded }: { readonly unfolded: boolean }) {
+    return (
+      <RailDrawsAll.Provider value={unfolded}>
+        <HomeRowRail cards={Array.from({ length: count }, (_, at) => at)}>
+          {(at, width) => <View key={at} testID={`card-${at}`} style={{ width }} />}
+        </HomeRowRail>
+      </RailDrawsAll.Provider>
+    );
+  }
+
+  it('draws only what can be on screen while the line unfolds, then every card', () => {
+    const first = cardsDrawnFirst({ count, screen: screenWidth(), step: peekingStep() });
+    render(railIn({ unfolded: false }));
+    expect(drawnCards()).toBe(first);
+
+    screen.rerender(railIn({ unfolded: true }));
+    expect(drawnCards()).toBe(count);
   });
 });

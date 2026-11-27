@@ -32,12 +32,23 @@ way the people on my card can stand is forecast by the engine, and the highest
 forecast is drawn — a tie keeps the arrangement named first, so the answer is
 the same on every process. An empty seat is one of the positions.
 
-**The order is §8.2's four keys**: seats still open after my yes, fewest first;
-then a seat open, a challenge, a pick; then the soonest deadline; then the best
-fit for me — **read as the forecast of my own version**, the engine's number
-for how good this game is with me in it, highest first and a card with none
-last. Then the same people are dealt **only at their best hour** (§5.3): the
-first card in that order a set of people is on is the one they are on.
+**A card says its kind's own number** (``docs/adr/0207`` §5, #830): a
+competitive card how even its game is forecast — the forecast of my version —
+and a For-fun card its table's **Social vibe** (``domain/vibe.py``), never a
+forecast. The forecast still arranged a friendly's sides; it is only not said.
+
+**The competitive order is §8.2's four keys**: seats still open after my yes,
+fewest first; then a seat open, a challenge, a pick; then the soonest deadline;
+then the best fit for me — **read as the forecast of my own version**, the
+engine's number for how good this game is with me in it, highest first and a
+card with none last. **The For-fun order opens on the best company**
+(``docs/adr/0207`` §4): a rescue first, the rescues by their vibe; then every
+other card by **the vibe it shows** — the rounded number, so two cards that look
+alike tie — highest first and a card with none last; then the fewest seats open
+after my yes, a challenge before a pick, and the soonest deadline. In either,
+the cards owed to me come before everything, and then the same people are dealt
+**only at their best hour** (§5.3): the first card in that order a set of people
+is on is the one they are on.
 
 **A week at the player's cap deals nothing** (§6.6, Q73), counted Monday to
 Sunday on the club's clock; and neither does an hour they already have a game at
@@ -63,10 +74,12 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, exhaustive, hours, invariant, shifted
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, hour_start, local_day
 from app.modules.player_profile.domain.gender import Gender
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.player_profile.domain.weekly_hours import FIRST_HOUR, WeeklyHours
 from app.modules.proposals.domain.overlap import Overlap, overlap_of
 from app.modules.proposals.domain.post import Who, stand_together
 from app.modules.proposals.domain.proposal import Origin, Proposal, Standing
+from app.modules.proposals.domain.vibe import social_vibe_of
 
 #: How far ahead the engine deals, and so how far ahead a deck can hold a card
 #: (the mechanics §4.3).
@@ -280,12 +293,33 @@ class SellingTerms:
 
 @final
 @dataclass(frozen=True, slots=True)
+class SideLevels:
+    """The two side strengths a forecast was read from, **the reader's side
+    first** — the engine's, never a mean of the people on a side — and the
+    signed gap between them, which is what a competitive game's details print
+    beside the % (``docs/adr/0207`` §6, #833)."""
+
+    yours: float
+    theirs: float
+
+    @property
+    def gap(self) -> float:
+        """``yours − theirs``: below nought when the other side is stronger."""
+
+        return self.yours - self.theirs
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class CardForecast:
     """How even the engine forecasts a card's game, as a whole percent, and
-    whether a seat was assumed to match its partner to say so."""
+    whether a seat was assumed to match its partner to say so — and the two
+    side strengths it was read from, wherever the engine read it (``None``
+    from a reader that has no strengths to hand, as a test's)."""
 
     pct: int
     provisional: bool
+    levels: SideLevels | None = None
 
 
 def arrangements(
@@ -370,6 +404,8 @@ class DeckCard:
     #: Everybody In on the game, across every version.
     in_: tuple[UUID, ...]
     sides: Sides
+    #: How even the game is forecast — on a competitive card; ``None`` on a
+    #: For-fun one, whose sides it still arranged (``docs/adr/0207`` §5).
     forecast: CardForecast | None
     overlap: Overlap
     open_seats_after_your_yes: int
@@ -391,6 +427,11 @@ class DeckCard:
     #: their deck, until they answer it or it is gone. **Never said** — it
     #: carries no mark, for anybody.
     owed_to_you: bool = False
+    #: The table's Social vibe, as the whole percent the card shows — on a
+    #: For-fun card, worked out from everybody's tags now; ``None`` on a
+    #: competitive one, and where the table has nothing to measure
+    #: (``docs/adr/0207`` §2, §5).
+    vibe: int | None = None
 
     @property
     def court(self) -> CourtState:
@@ -405,6 +446,27 @@ class DeckCard:
         return frozenset((*self.sides.yours, *self.sides.theirs))
 
 
+def headline_of(
+    kind: SearchMode,
+    *,
+    table: Iterable[UUID],
+    forecast: CardForecast | None,
+    tags: Mapping[UUID, Collection[SocialTag]],
+) -> tuple[CardForecast | None, int | None]:
+    """What a card of this kind says about its game — its forecast and its
+    vibe, one of them ``None`` (``docs/adr/0207`` §5). **Competitive** says how
+    even the game is forecast; **For fun** says how much the people at the
+    ``table`` share, from ``tags``, and never a forecast."""
+
+    match kind:
+        case SearchMode.COMPETITIVE:
+            return forecast, None
+        case SearchMode.FOR_FUN:
+            return None, social_vibe_of(table, tags)
+        case _:
+            exhaustive(kind)
+
+
 def card_of(
     proposal: Proposal,
     view: ReadersView,
@@ -414,14 +476,20 @@ def card_of(
     weeks: Sequence[WeeklyHours],
     terms: SellingTerms,
     now: Instant,
+    tags: Mapping[UUID, Collection[SocialTag]],
     indoor: bool | None = None,
 ) -> DeckCard:
     """The card ``view`` is of, standing as ``sides`` — ``weeks`` being the
-    weeks of the people on it, whose overlap it draws on the club's clock, and
-    ``indoor`` the kind of court it promises, when that is certain (Q122). It
-    is owed to its reader when the reader is one of those it was dealt to
-    first after a club's cancel (#673)."""
+    weeks of the people on it, whose overlap it draws on the club's clock,
+    ``tags`` their Social tags now, which a For-fun card's vibe is read from
+    (the table is everybody on the version), and ``indoor`` the kind of court
+    it promises, when that is certain (Q122). It is owed to its reader when the
+    reader is one of those it was dealt to first after a club's cancel
+    (#673)."""
 
+    shown, vibe = headline_of(
+        proposal.kind, table=view.people, forecast=forecast, tags=tags
+    )
     return DeckCard(
         proposal_id=proposal.proposal_id,
         type=card_type(proposal),
@@ -433,7 +501,8 @@ def card_of(
         deadline=proposal.book_by,
         in_=view.in_,
         sides=sides,
-        forecast=forecast,
+        forecast=shown,
+        vibe=vibe,
         overlap=overlap_of(weeks, start=proposal.start, zone=CLUB_ZONE),
         open_seats_after_your_yes=proposal.open_seats - 1,
         version_count=len(proposal.versions),
@@ -445,7 +514,10 @@ def card_of(
     )
 
 
-def _order_key(card: DeckCard) -> tuple[int, int, Instant, int, str]:
+def _competitive_key(card: DeckCard) -> tuple[int, int, Instant, int, str]:
+    """§8.2: momentum, then seat open › challenge › pick, then the deadline,
+    then the best forecast."""
+
     # A card with no forecast after every card with one: a pct is at most 100.
     fit = -card.forecast.pct if card.forecast is not None else 1
     return (
@@ -457,18 +529,44 @@ def _order_key(card: DeckCard) -> tuple[int, int, Instant, int, str]:
     )
 
 
+def _for_fun_key(card: DeckCard) -> tuple[int, int, int, int, Instant, str]:
+    """``docs/adr/0207`` §4: a rescue, then the vibe the card shows, then
+    momentum, then challenge › pick, then the deadline. **Only a seat open on
+    a booked game is a rescue** — a full game gone back to filling is dealt as
+    the pick or challenge it was, and waits for its vibe."""
+
+    rescue = 0 if card.type is CardType.SEAT_OPEN else 1
+    # A card with no vibe after every card with one: a vibe is at least 0.
+    company = -card.vibe if card.vibe is not None else 1
+    return (
+        rescue,
+        company,
+        card.open_seats_after_your_yes,
+        _TYPE_RANK[card.type],
+        card.deadline,
+        str(card.proposal_id),
+    )
+
+
 def dealt_in_order(cards: Iterable[DeckCard]) -> tuple[DeckCard, ...]:
-    """One segment's cards in §8.2's order, the same people only at their best
-    hour — **one batch**, so call it per kind. **The cards owed to the reader
-    come first** (#673; Q123), soonest first, ahead of the usual order — and
-    so are the ones kept of the same people at two hours."""
+    """One segment's cards in its kind's order — §8.2's for Competitive, the
+    best company first for For fun (``docs/adr/0207`` §4) — the same people
+    only at their best hour. **One batch is one kind**, so call it per kind.
+    **The cards owed to the reader come first** (#673; Q123), soonest first,
+    ahead of the usual order — and so are the ones kept of the same people at
+    two hours."""
 
     every = list(cards)
+    kinds = {card.kind for card in every}
+    invariant(len(kinds) <= 1, f"one segment of cards of {len(kinds)} kinds")
+    order: Callable[[DeckCard], tuple[object, ...]] = (
+        _for_fun_key if kinds == {SearchMode.FOR_FUN} else _competitive_key
+    )
     owed = sorted(
         (card for card in every if card.owed_to_you),
-        key=lambda card: (card.start, _order_key(card)),
+        key=lambda card: (card.start, order(card)),
     )
-    usual = sorted((card for card in every if not card.owed_to_you), key=_order_key)
+    usual = sorted((card for card in every if not card.owed_to_you), key=order)
     seen: set[frozenset[UUID]] = set()
     dealt: list[DeckCard] = []
     for card in (*owed, *usual):

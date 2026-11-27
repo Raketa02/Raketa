@@ -103,7 +103,11 @@ from app.bootstrap.composition import (
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.engine import create_engine
 from app.kernel import Clock, Instant, Sport, exhaustive
+from app.modules.player_profile.application.change_social_tags import (
+    ChangeSocialTags,
+)
 from app.modules.player_profile.application.commands import (
+    ChangeSocialTagsCommand,
     CommitPlayerProfileCommand,
     DeclarePlayIntentCommand,
     PhoneReading,
@@ -262,6 +266,13 @@ from app.seeds.top_ten import (
     assert_the_top_ten,
     squash_pair_lines,
     write_the_squash_pair,
+)
+from app.seeds.for_fun import (
+    FOR_FUN_CROWD,
+    SeededForFun,
+    assert_the_for_fun_deck,
+    for_fun_lines,
+    write_the_for_fun_deck,
 )
 from app.seeds.full_hour import (
     SeededFullHour,
@@ -877,6 +888,9 @@ class SeededMember:
     #: reads which card to look at — what the card actually draws is asserted in
     #: ``app/seeds/screens.py`` off a real read.
     photograph: str | None = None
+    #: Whether this run gave them the tags their row draws — a store seeded
+    #: before the cohort's last redraw (#832).
+    retagged: bool = False
 
     @property
     def already_present(self) -> bool:
@@ -962,6 +976,10 @@ async def _seed_member(
         player_id,
         replace(_profile_of(member, uploaded), clear_the_week=clear_the_week),
     )
+    # A commit this run made holds the row's tags already.
+    retagged = not committed and await _ensure_the_drawn_tags(
+        session, use_cases, player_id, member, now
+    )
     return SeededMember(
         member=member,
         player_id=player_id,
@@ -969,7 +987,34 @@ async def _seed_member(
         committed_profile=committed,
         rated=rated,
         photograph=member.photograph,
+        retagged=retagged,
     )
+
+
+async def _ensure_the_drawn_tags(
+    session: AsyncSession,
+    use_cases: _UseCases,
+    player_id: UUID,
+    member: CohortMember,
+    now: Instant,
+) -> bool:
+    """**A store seeded before a redraw holds the old draw** (#832): the commit
+    is idempotent, so a member committed before the cohort drew from all
+    twenty-seven tags keeps what they were drawn then, and Same vibe's every
+    count stops meeting her six. So a member whose tags aren't the row's is
+    given them through *Edit tags*' own use case, at the run's instant — which
+    records nothing once they are — as Same vibe gives her hers. Whether this
+    run changed them."""
+
+    profile = await use_cases.profiles.load(player_id)
+    if profile is None or set(profile.social_tags.ids) == set(member.tags):
+        return False
+    await ChangeSocialTags(
+        profiles=use_cases.profiles,
+        uow=build_unit_of_work(session),
+        clock=FixedClock(at=now),
+    ).execute(ChangeSocialTagsCommand(player_id=player_id, social_tag_ids=member.tags))
+    return True
 
 
 async def _ensure_photograph(
@@ -1269,6 +1314,9 @@ class SeedReport:
     #: Top 10's squash pair, their group and their five games (#797). ``None``
     #: on the same callers.
     squash_pair: SeededSquashPair | None = None
+    #: Her For-fun deck's group and what the proposer dealt in it (#832).
+    #: ``None`` on the same callers.
+    for_fun: SeededForFun | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1364,6 +1412,17 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
                 photographs=False,
                 clear_the_week=True,
             )
+            # **Her For-fun deck's four, outside the cohort too** (#832): rated
+            # in tennis at her Level, one per Social vibe band, and their week
+            # kept — they are dealt, but only in her group (``for_fun.py``).
+            for_fun_players = await seed_the_cohort(
+                session,
+                cohort=FOR_FUN_CROWD,
+                clock=FixedClock(at=now),
+                settings=settings,
+                photos=photos,
+                photographs=False,
+            )
         # **The payment methods straight after the people**, each saved through
         # the setup a phone runs. Nothing below reads one yet and a saved card
         # changes nothing any other layer reads, so its place is free; it is
@@ -1373,7 +1432,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             now=now,
             cohort=[
                 (member.member.handle, member.player_id)
-                for member in (*members, *crowd, *squash_players)
+                for member in (*members, *crowd, *squash_players, *for_fun_players)
             ],
             money=money,
         )
@@ -1542,6 +1601,13 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
         # them** (#795): she asks one player from her row and another asks her
         # from theirs. Drained by the layer itself.
         same_vibe = await write_same_vibe(session_factory, now=now, money=money)
+        # **Her For-fun deck last** (#832): her group of four outside the cohort,
+        # dealt by the proposer after every layer that books her an hour, so
+        # nothing takes an hour off a card dealt there, and after her tags are
+        # the catalog's. Drained by the layer itself.
+        for_fun = await write_the_for_fun_deck(
+            session_factory, settings=settings, now=now, money=money
+        )
         # **After the rooms**: every screen below is read on the far side of the
         # delivery, as the API's own reads would find it.
         screens = (
@@ -1570,6 +1636,9 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
                 session_factory, settings=settings, now=now, seeded=new_in_raketa
             ),
             await assert_the_top_ten(session_factory, settings=settings, now=now),
+            await assert_the_for_fun_deck(
+                session_factory, settings=settings, now=now, seeded=for_fun
+            ),
         )
         same_level_screen, same_level = await assert_same_level(
             session_factory, settings=settings, seeded=same_level
@@ -1603,6 +1672,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             same_level=same_level,
             same_vibe=same_vibe,
             squash_pair=squash_pair,
+            for_fun=for_fun,
             photographs=photographs,
         )
     finally:
@@ -1722,6 +1792,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *same_vibe_lines(run_report.same_vibe)])
     if run_report.squash_pair is not None:
         lines.extend(["", *squash_pair_lines(run_report.squash_pair)])
+    if run_report.for_fun is not None:
+        lines.extend(["", *for_fun_lines(run_report.for_fun)])
     if run_report.opinions is not None:
         lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])
@@ -1838,6 +1910,12 @@ def _cohort_lines(members: Sequence[SeededMember]) -> list[str]:
     lines = [
         f"Cohort: {len(members)} member(s), {created} created this run.",
     ]
+    retagged = sum(1 for entry in members if entry.retagged)
+    if retagged:
+        lines.append(
+            f"  {retagged} given the tags the cohort draws now — a store seeded "
+            "before its last redraw (#832)"
+        )
     by_ring: dict[str, list[SeededMember]] = {}
     for entry in members:
         by_ring.setdefault(entry.member.ring, []).append(entry)

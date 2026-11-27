@@ -39,7 +39,7 @@ import {
 } from '../domain/group';
 import { adminTagged, type GroupExit, type GroupRunner } from '../domain/groupInfo';
 import type { GroupKind } from '../domain/vocabulary';
-import type { GamesCard } from '../domain/groupPage';
+import type { GameIntent, GamesCard, GroupTab } from '../domain/groupPage';
 import type { GroupAction } from '../domain/groupRules';
 import { isJoinTap } from '../domain/hottest';
 
@@ -154,16 +154,48 @@ export function groupCardLabel(group: {
 }
 
 /**
- * *Games, 4 with somebody In* — the group page's Games tab, spoken with its count: the cards where
- * somebody is already In with you (#553, the screens A1).
+ * *Games, 4 new with somebody In* — the group page's Games tab, spoken with its badge: the cards
+ * where somebody is already In with you, of either kind, that you haven't seen there yet (#553, the
+ * screens A1; *new* since #850, ADR-0208).
  */
 export function gamesTabLabel(cards: number): string {
-  return `${GROUPS_COPY.group.tabs.games}, ${cards} with somebody In`;
+  return `${GROUPS_COPY.group.tabs.games}, ${cards} new with somebody In`;
 }
 
-/** *Fill in, 1 seat to fill* — the Fill in tab, spoken with its count (#557). */
+/**
+ * *Fill in, 2 new seats to fill* — the Fill in tab, spoken with its badge: the rescues the reader
+ * hasn't seen there yet (#557; *new* since #849, ADR-0208).
+ */
 export function fillInTabLabel(seats: number): string {
-  return `${GROUPS_COPY.group.tabs.fillIn}, ${counted(seats, 'seat', 'seats')} to fill`;
+  return `${GROUPS_COPY.group.tabs.fillIn}, ${counted(seats, 'new seat', 'new seats')} to fill`;
+}
+
+/**
+ * *You’re in, 3 new games* — the You’re in tab, spoken with its badge: the reader's live yeses in
+ * this group and sport that they haven't seen there yet (#847; *new* since #849, ADR-0208).
+ */
+export function youreInTabLabel(yeses: number): string {
+  return `${GROUPS_COPY.group.tabs.youreIn}, ${counted(yeses, 'new game', 'new games')}`;
+}
+
+/** The kinds' words, held to `GameIntent`'s keys: a kind with no words fails to compile. */
+const KIND_WORDS: Readonly<Record<GameIntent, string>> = GROUPS_COPY.group.kinds;
+
+/**
+ * *Friends, Competitive* — the selected tab that offers its menu, spoken with the kind it holds
+ * (#861, PRD #859): nothing drawn names the kind while the menu is shut, so the name does. Its
+ * `expanded` says whether the menu is open.
+ */
+export function menuTabLabel(tab: GroupTab, kind: GameIntent): string {
+  return `${GROUPS_COPY.group.tabs[tab]}, ${KIND_WORDS[kind]}`;
+}
+
+/**
+ * *Back to Games* — *Post a game*'s chevron, naming the tab a back-out returns to: the one the page
+ * stood on when it opened (#848). The tab's own word, so the two can never disagree.
+ */
+export function postAGameBackLabel(origin: GroupTab): string {
+  return `Back to ${GROUPS_COPY.group.tabs[origin]}`;
 }
 
 /**
@@ -617,7 +649,7 @@ export function rateSportLabel(sport: Sport): string {
 
 const HOT = GROUPS_COPY.hottest;
 
-/** *Padel · Tennis · Squash · Badminton* — every name whole; the card cuts the line, the sheet wraps it. */
+/** *Padel · Tennis · Squash · Badminton* — every name whole, on the group sheet, which wraps it. */
 export function hottestSports(sports: readonly Sport[]): string {
   return sports.map(sportLabel).join(DOT);
 }
@@ -627,7 +659,7 @@ export function gamesThisWeekWords(count: number): string {
   return count === 1 ? HOT.gameThisWeek : HOT.gamesThisWeek;
 }
 
-/** The green growth beside the players — *+3* — and nothing at nought. */
+/** The sheet's green growth beside the players — *+3* — and nothing at nought. */
 export function grownBy(count: number): string | undefined {
   return count > 0 ? `+${count}` : undefined;
 }
@@ -668,17 +700,18 @@ export function hottestChipLabel(action: GroupAction, groupName: string): string
   return isJoinTap(action) ? `${word} ${groupName}` : `${groupName}: ${word}`;
 }
 
-/** The card, spoken: *Ogrody 33 Club, hottest, 14 games this week, 11 players, 3 new this month*. */
+/**
+ * The card, spoken as drawn: *Ogrody 33 Club, hottest, 14 games this week, 11 players*. No growth
+ * since the card dropped *+N this month* (#821); the group sheet says it.
+ */
 export function hottestCardLabel(
-  group: Pick<HottestGroup, 'name' | 'tag' | 'gamesThisWeek' | 'memberCount' | 'newThisMonth'>,
+  group: Pick<HottestGroup, 'name' | 'tag' | 'gamesThisWeek' | 'memberCount'>,
 ): string {
   const tag = group.tag === null ? [] : [HOT.tagSpoken[group.tag]];
-  const grown = group.newThisMonth > 0 ? [`${group.newThisMonth} new ${HOT.thisMonth}`] : [];
   return [
     group.name,
     ...tag,
     `${group.gamesThisWeek} ${gamesThisWeekWords(group.gamesThisWeek)}`,
     `${group.memberCount} ${HOT.players}`,
-    ...grown,
   ].join(', ');
 }

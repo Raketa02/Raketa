@@ -43,7 +43,15 @@ import {
 } from '@/features/groups/types';
 import { codeMessage } from '@/shared/errors';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
-import { behindOverlay, Button, Note, ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
+import {
+  behindOverlay,
+  Button,
+  Note,
+  ScreenHeader,
+  theme,
+  TopSafeArea,
+  useTabBarReach,
+} from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { OfficialGroup } from '../domain/officialGroup';
@@ -95,6 +103,8 @@ function SettingsForm({
   readonly clubId: string;
   readonly group: OfficialGroup;
 }) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const [name, setName] = useState(group.name);
   const [joinPolicy, setJoinPolicy] = useState(group.joinPolicy);
   const [whatsAppSize, setWhatsAppSize] = useState(String(group.whatsAppSize));
@@ -147,7 +157,10 @@ function SettingsForm({
 
   return (
     <KeyboardAvoidingView style={s.body} behavior={KEYBOARD_AVOIDANCE}>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[s.content, { paddingBottom: reach + theme.space.lg }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <GroupNameCard
           name={name}
           onName={edited(setName)}
@@ -212,7 +225,6 @@ const s = StyleSheet.create({
   body: { flex: 1 },
   content: {
     paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
 });

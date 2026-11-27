@@ -1,28 +1,34 @@
 /**
- * **A friend's ask for a level, on Home** — walked through the real route tree
- * ([#765](https://github.com/Raketa02/Raketa/issues/765), PRD #762; the friends screens §6.4; the
- * mechanics §5.1; the words §29.5; Q129).
+ * **A friend's ask for a level, in Needs your answer** — walked through the real route tree
+ * ([#816](https://github.com/Raketa02/Raketa/issues/816), ADR-0205 §1, §4; #765, PRD #762; the
+ * friends screens §6.4; the mechanics §5.1; the words §29.5).
  *
- * - **The row**: *ASKED FOR A LEVEL · n* after FRIEND REQUESTS and before Your games, a card per
- *   sport, drawn only while Home's read holds one — its title for one asker, two, and three or more.
- * - **The coral button**: *Get your padel level* starts the padel questionnaire from Home, and the
- *   pass comes back to Home with the card gone; with a run left halfway it reads *Carry on*.
- * - **Not now**: the set-aside, the toast, and Home and the bell read again.
- * - **A player rated in nothing**: the ask card instead of *Get your level*, and *Get your level*
- *   back once the row is empty.
+ * - **The section**: *ASKED FOR A LEVEL · n* behind the header's envelope, after FRIEND REQUESTS and
+ *   never on Home, a tile per sport, drawn only while Home's read holds one — its title for one
+ *   asker, two, and three or more, and **no line under it**.
+ * - **The coral button**: *Get your padel level* closes the sheet for good and starts the padel
+ *   questionnaire from Home, and the pass comes back to Home with the ask gone; with a run left
+ *   halfway it reads *Carry on*.
+ * - **Not now**: the set-aside, the toast, Home and the bell read again, and the sheet closing on
+ *   the last.
+ * - **Get your level on Home**: for a player in a group and rated in nothing, whether or not a
+ *   friend asked — the ask no longer stands in its place.
  *
  * **The routes are answered by a small fake of the server** (`askServer`): Not now takes the sport's
- * card off the next read of Home, and a completion rates the sport and takes its card too — so a card
+ * tile off the next read of Home, and a completion rates the sport and takes its tile too — so a tile
  * that leaves is Home re-read, never this client guessing.
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { Dimensions, StyleSheet } from 'react-native';
 
-import { RECORD_TITLE } from '@/features/player_record/types';
+import { RECORD_TITLE, recordCloseLabel } from '@/features/player_record/types';
 import { proposalKeys } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { theme } from '@/shared/ui';
+import { envelope, openNeedsYourAnswer, sheetTitle } from '@/test-support/needsYourAnswer';
 import {
   HOME_PATH,
   NOTICES_PATH,
@@ -49,13 +55,11 @@ import {
 import {
   FRIENDS_COPY,
   getYourLevelLabel,
-  levelAskLine,
   levelAsksHeading,
   notNowLevelAskLabel,
   requestsHeading,
   setAsideToast,
   wantToPlay,
-  youReOnQuestion,
 } from './friendsCopy';
 
 /** A walk — Home, the questionnaire and back — is longer than jest's five seconds. */
@@ -209,6 +213,8 @@ function askServer(
   const home = () =>
     json<Wire['HomeResponse']>({
       read_at: '2026-11-07T08:00:00Z',
+      payments_to_confirm: [],
+      needs_your_answer: { new_count: 0, watermark: null },
       needing_you: 0,
       games: [],
       friend_requests: [...friendRequests],
@@ -278,127 +284,161 @@ const bellReads = () => transport.requestsTo('GET', NOTICES_PATH).length;
 const toasts = () =>
   useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone, toast.hold]);
 
-/** The section headings Home draws, top to bottom. */
-const headings = () =>
-  screen
+/** The section headings the sheet draws under its title, top to bottom. */
+const sections = () =>
+  within(screen.getByTestId('bottom-sheet'))
     .getAllByRole('header')
-    .map((node) => node.props.children as string)
-    .filter((text) => typeof text === 'string');
+    .map((node) => node.props.children as unknown)
+    .filter((text): text is string => typeof text === 'string');
 
-describe('ASKED FOR A LEVEL on Home', () => {
-  it('draws a card for one asker, after FRIEND REQUESTS and before Your games', async () => {
-    askServer([padel(TOMEK)], {
-      friendRequests: [
-        {
-          player_id: KUBA.player_id,
-          nickname: KUBA.nickname,
-          photo_id: null,
-          photo_url: null,
-          asked_at: '2026-11-07T07:00:00Z',
-          by_link: false,
-          from_ranking: false,
-          from_new_players: false,
-          from_same_level: false,
-          from_same_vibe: false,
-          group: null,
-          sport: null,
-          level: null,
-          player_score: 96,
-          reliability_band: 'VERY_HIGH',
-          percent_even: null,
-          in_common: null,
-        },
-      ],
-    });
+/** The width the rail hands a sport's tile — read off the tile, which holds its `top`. */
+function tileWidth(sport: string): unknown {
+  let node = screen.getByTestId(`level-ask-${sport}`).parent;
+  while (node !== null && StyleSheet.flatten(node.props.style)?.width === undefined) {
+    node = node.parent;
+  }
+  return node === null ? undefined : StyleSheet.flatten(node.props.style)?.width;
+}
+
+const content = () => Dimensions.get('window').width - 2 * theme.size.gutter;
+
+/** The line under the title that #816 took away, in each of its forms. */
+const SUBTITLE = /A few questions|You're on question/;
+
+const KUBAS_REQUEST: Wire['HomeFriendRequestSchema'] = {
+  player_id: KUBA.player_id,
+  nickname: KUBA.nickname,
+  photo_id: null,
+  photo_url: null,
+  asked_at: '2026-11-07T07:00:00Z',
+  by_link: false,
+  from_ranking: false,
+  from_new_players: false,
+  from_same_level: false,
+  from_same_vibe: false,
+  group: null,
+  sport: null,
+  level: null,
+  player_score: 96,
+  reliability_band: 'VERY_HIGH',
+  percent_even: null,
+  in_common: null,
+  levels: [],
+};
+
+describe('ASKED FOR A LEVEL in Needs your answer', () => {
+  it('waits behind the envelope, after FRIEND REQUESTS, and is no longer on Home', async () => {
+    askServer([padel(TOMEK)], { friendRequests: [KUBAS_REQUEST] });
     await launchSignedIn();
 
-    expect(await screen.findByRole('header', { name: levelAsksHeading(1) })).toBeTruthy();
+    await waitFor(() => expect(envelope()).not.toBeNull());
+    expect(screen.queryByTestId('level-asks')).toBeNull();
+    expect(screen.queryByText('tomek.k wants to play padel with you')).toBeNull();
+
+    await openNeedsYourAnswer();
+
+    expect(sections()).toEqual([requestsHeading(1), levelAsksHeading(1)]);
+  });
+
+  it('draws a tile for one asker — the face and the title in two lines at most, and nothing under it', async () => {
+    askServer([padel(TOMEK)]);
+    await launchSignedIn();
+    await openNeedsYourAnswer();
+
     const one = card('padel');
-    expect(one.getByText(wantToPlay(['tomek.k'], 'padel'))).toBeTruthy();
-    expect(one.getByText('tomek.k wants to play padel with you')).toBeTruthy();
-    expect(one.getByText('A few questions, and tomek.k can add you to a game.')).toBeTruthy();
+    const title = one.getByText(wantToPlay(['tomek.k'], 'padel'));
+    expect(title.props.children).toBe('tomek.k wants to play padel with you');
+    expect(title.props.numberOfLines).toBe(2);
+    expect(screen.queryByText(SUBTITLE)).toBeNull();
     expect(screen.getByRole('button', { name: notNowLevelAskLabel('padel') })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Get your padel level' })).toBeTruthy();
     // No group is named, and only Tomek's face is drawn.
     expect(screen.queryByText(new RegExp(CREW.name))).toBeNull();
     expect(one.getAllByRole('button', { name: /^(tomek|kuba|ania|ewa)/ })).toHaveLength(1);
-
-    const order = headings().filter((text) =>
-      /^(Friend requests|Asked for a level|Your games)/.test(text),
-    );
-    expect(order[0]).toBe(requestsHeading(1));
-    expect(order[1]).toBe(levelAsksHeading(1));
-    expect(order[2]).toMatch(/^Your games/);
+    // Alone, it takes the content width.
+    expect(tileWidth('padel')).toBe(content());
   });
 
-  it('names two askers together and says they, with both faces', async () => {
+  it('names two askers together, with both faces', async () => {
     askServer([padel(TOMEK, KUBA)]);
     await launchSignedIn();
+    await openNeedsYourAnswer();
 
-    expect(await screen.findByText('tomek.k and kuba.w want to play padel with you')).toBeTruthy();
+    expect(screen.getByText('tomek.k and kuba.w want to play padel with you')).toBeTruthy();
     const two = card('padel');
-    expect(two.getByText('A few questions, and they can add you to a game.')).toBeTruthy();
     expect(two.getByRole('button', { name: TOMEK.nickname })).toBeTruthy();
     expect(two.getByRole('button', { name: KUBA.nickname })).toBeTruthy();
+    expect(screen.queryByText(SUBTITLE)).toBeNull();
   });
 
   it('names the two newest of three or more, counts the rest, and draws three faces', async () => {
     askServer([padel(TOMEK, KUBA, ANIA, EWA)]);
     await launchSignedIn();
+    await openNeedsYourAnswer();
 
-    expect(
-      await screen.findByText('tomek.k, kuba.w and 2 more want to play padel with you'),
-    ).toBeTruthy();
+    expect(screen.getByText('tomek.k, kuba.w and 2 more want to play padel with you')).toBeTruthy();
     const more = card('padel');
-    expect(more.getByText(levelAskLine(['tomek.k', 'kuba.w', 'ania.m']))).toBeTruthy();
     expect(more.getByRole('button', { name: ANIA.nickname })).toBeTruthy();
     expect(more.queryByRole('button', { name: EWA.nickname })).toBeNull();
   });
 
-  it('counts a card per sport in its title', async () => {
+  it('counts a tile per sport, each on the wider rail', async () => {
     askServer([padel(TOMEK), { sport: 'SQUASH', askers: [KUBA] }]);
     await launchSignedIn();
+    await openNeedsYourAnswer();
 
-    expect(await screen.findByRole('header', { name: levelAsksHeading(2) })).toBeTruthy();
+    expect(screen.getByRole('header', { name: levelAsksHeading(2) })).toBeTruthy();
     expect(card('squash').getByText('kuba.w wants to play squash with you')).toBeTruthy();
     expect(screen.getByRole('button', { name: getYourLevelLabel('squash') })).toBeTruthy();
+    expect(tileWidth('padel')).toBeCloseTo(content() * theme.size.requestCardRatio);
+    expect(tileWidth('squash')).toBeCloseTo(content() * theme.size.requestCardRatio);
   });
 
-  it('is not there while no friend’s ask waits', async () => {
+  it('is not there while no friend’s ask waits — no envelope, no section', async () => {
     askServer([]);
     await launchSignedIn();
 
     await waitFor(() => expect(homeReads()).toBeGreaterThan(0));
     expect(await screen.findByRole('header', { name: /^Your games/ })).toBeTruthy();
+    expect(envelope()).toBeNull();
     expect(screen.queryByTestId('level-asks')).toBeNull();
-    expect(screen.queryByText(/^Asked for a level/)).toBeNull();
   });
 
-  it('opens that friend’s record from a face', async () => {
+  it('opens that friend’s record over the sheet from a face, and the sheet is there when it closes', async () => {
     askServer([padel(TOMEK, KUBA)]);
     await launchSignedIn();
+    await openNeedsYourAnswer();
 
-    fireEvent.press(await screen.findByRole('button', { name: KUBA.nickname }));
+    fireEvent.press(screen.getByRole('button', { name: KUBA.nickname }));
 
     expect(await screen.findByText(RECORD_TITLE)).toBeTruthy();
     await waitFor(() => expect(transport.requestsTo('GET', recordPath(KUBA))).toHaveLength(1));
+
+    fireEvent.press(screen.getByRole('button', { name: recordCloseLabel(false) }));
+
+    await waitFor(() => expect(screen.queryByText(RECORD_TITLE)).toBeNull());
+    expect(sheetTitle()).not.toBeNull();
+    expect(screen.getByTestId('level-ask-padel')).toBeTruthy();
   });
 });
 
 describe('the coral button', () => {
   it(
-    'starts the padel questionnaire from Home, and the card is gone on the way back',
+    'closes the sheet for good, starts the padel questionnaire, and the ask is gone on the way back',
     async () => {
       const server = askServer([padel(TOMEK)]);
       // The questionnaire is a sibling of the app, so Home's read is unobserved while it is up, and
       // the harness runs every pending timer on a navigation — its collection among them. Held, as a
-      // walk shorter than its five minutes holds it on a phone: the card Home drew is still cached.
+      // walk shorter than its five minutes holds it on a phone: the tile Home drew is still cached.
       queryClient.setQueryDefaults(proposalKeys.home(), { gcTime: Infinity });
       await launchSignedIn();
       await waitFor(() => expect(bellReads()).toBeGreaterThan(0));
+      await openNeedsYourAnswer();
 
-      fireEvent.press(await screen.findByRole('button', { name: 'Get your padel level' }));
+      fireEvent.press(screen.getByRole('button', { name: 'Get your padel level' }));
 
+      // The sheet goes before anything navigates: a screen cannot stand behind a sheet.
+      await waitFor(() => expect(sheetTitle()).toBeNull());
       await waitFor(() => expect(screen).toHavePathname(`/question/${PADEL_RUN}`));
       expect(transport.requestsTo('POST', ASSESSMENTS_PATH).map((one) => one.body)).toEqual([
         { sport: 'PADEL' },
@@ -413,7 +453,7 @@ describe('the coral button', () => {
       });
       const bellBefore = bellReads();
       const homeBefore = homeReads();
-      // Home's read on the way back is held: only what the app itself drops can take the card.
+      // Home's read on the way back is held: only what the app itself drops can take the ask.
       let answerHome: () => void = () => undefined;
       const served = server.home();
       transport.on(
@@ -427,63 +467,68 @@ describe('the coral button', () => {
 
       await waitFor(() => expect(screen).toHavePathname('/'));
       expect(await screen.findByRole('header', { name: /^Your games/ })).toBeTruthy();
-      // Gone from the first frame back, though Home has not answered yet — dropped as the pass ended.
-      expect(screen.queryByTestId('level-asks')).toBeNull();
-      expect(screen.queryByText('tomek.k wants to play padel with you')).toBeNull();
+      // Gone from the first frame back, though Home has not answered yet — dropped as the pass
+      // ended: nothing waits, so no envelope, and no sheet reopens by itself.
+      expect(envelope()).toBeNull();
+      expect(sheetTitle()).toBeNull();
       // And Home and the bell are read again, and the read agrees.
       await waitFor(() => expect(homeReads()).toBeGreaterThan(homeBefore));
       await waitFor(() => expect(bellReads()).toBeGreaterThan(bellBefore));
       await act(async () => answerHome());
-      expect(screen.queryByTestId('level-asks')).toBeNull();
+      expect(envelope()).toBeNull();
     },
     WALK_TIMEOUT,
   );
 
-  it('reads Carry on, on the question she is on, with a padel questionnaire left halfway', async () => {
+  it('reads Carry on with a padel questionnaire left halfway, and says no question under the title', async () => {
     askServer([padel(TOMEK)], { leftHalfway: true });
     await launchSignedIn();
+    await openNeedsYourAnswer();
 
-    expect(await screen.findByText(youReOnQuestion(5))).toBeTruthy();
-    const halfway = card('padel');
-    // The title doesn't change; the line and the button do.
-    expect(halfway.getByText('tomek.k wants to play padel with you')).toBeTruthy();
-    expect(halfway.queryByText(levelAskLine(['tomek.k']))).toBeNull();
+    const carryOn = await screen.findByRole('button', { name: FRIENDS_COPY.levelAsks.carryOn });
+    // The title doesn't change, and nothing runs under it — not the question she is on either.
+    expect(card('padel').getByText('tomek.k wants to play padel with you')).toBeTruthy();
+    expect(screen.queryByText(SUBTITLE)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Get your padel level' })).toBeNull();
 
-    fireEvent.press(screen.getByRole('button', { name: FRIENDS_COPY.levelAsks.carryOn }));
+    fireEvent.press(carryOn);
 
-    // The start hands the run back, where it stands.
+    // The sheet goes, and the start hands the run back, where it stands.
     await waitFor(() => expect(screen).toHavePathname(`/question/${PADEL_RUN}`));
+    expect(sheetTitle()).toBeNull();
     expect(transport.requestsTo('POST', ASSESSMENTS_PATH)).toHaveLength(1);
   });
 
-  it('says the notice’s own sentence when she has the level already, and re-reads Home', async () => {
+  it('says the notice’s own sentence over Home when she has the level already, and re-reads Home', async () => {
     askServer([padel(TOMEK)]);
     transport.on('POST', ASSESSMENTS_PATH, () => errorResponse(409, 'sport_already_rated'));
     await launchSignedIn();
     await waitFor(() => expect(bellReads()).toBeGreaterThan(0));
     const homeBefore = homeReads();
     const bellBefore = bellReads();
+    await openNeedsYourAnswer();
 
-    fireEvent.press(await screen.findByRole('button', { name: 'Get your padel level' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Get your padel level' }));
 
     await waitFor(() =>
       expect(toasts()).toEqual([['You have a padel level already.', 'base', 'read']]),
     );
     expect(screen).toHavePathname('/');
+    expect(sheetTitle()).toBeNull();
     await waitFor(() => expect(homeReads()).toBeGreaterThan(homeBefore));
     await waitFor(() => expect(bellReads()).toBeGreaterThan(bellBefore));
   });
 });
 
 describe('Not now', () => {
-  it('sets the sport’s asks aside, says where the level still is, and re-reads Home and the bell', async () => {
+  it('sets the sport’s asks aside, says where the level still is, re-reads Home and the bell, and the sheet closes on the last', async () => {
     askServer([padel(TOMEK, KUBA)]);
     await launchSignedIn();
     await waitFor(() => expect(bellReads()).toBeGreaterThan(0));
     const bellBefore = bellReads();
+    await openNeedsYourAnswer();
 
-    fireEvent.press(await screen.findByRole('button', { name: notNowLevelAskLabel('padel') }));
+    fireEvent.press(screen.getByRole('button', { name: notNowLevelAskLabel('padel') }));
 
     await waitFor(() =>
       expect(transport.requestsTo('POST', setAsidePath('PADEL'))).toHaveLength(1),
@@ -493,10 +538,24 @@ describe('Not now', () => {
       'You can get your padel level any time, from You › Skill passport.',
     );
     await waitFor(() => expect(screen.queryByTestId('level-asks')).toBeNull());
-    expect(screen.queryByText(/^Asked for a level/)).toBeNull();
+    expect(sheetTitle()).toBeNull();
+    expect(envelope()).toBeNull();
     await waitFor(() => expect(bellReads()).toBeGreaterThan(bellBefore));
     // Nothing was started.
     expect(transport.requestsTo('POST', ASSESSMENTS_PATH)).toHaveLength(0);
+  });
+
+  it('takes one sport’s tile and leaves the other, the sheet still up', async () => {
+    askServer([padel(TOMEK), { sport: 'SQUASH', askers: [KUBA] }]);
+    await launchSignedIn();
+    await openNeedsYourAnswer();
+
+    fireEvent.press(screen.getByRole('button', { name: notNowLevelAskLabel('padel') }));
+
+    expect(await screen.findByRole('header', { name: levelAsksHeading(1) })).toBeTruthy();
+    expect(screen.queryByTestId('level-ask-padel')).toBeNull();
+    expect(screen.getByTestId('level-ask-squash')).toBeTruthy();
+    expect(sheetTitle()).not.toBeNull();
   });
 });
 
@@ -510,43 +569,53 @@ describe('Not now that lost a race', () => {
     await waitFor(() => expect(bellReads()).toBeGreaterThan(0));
     const homeBefore = homeReads();
     const bellBefore = bellReads();
+    await openNeedsYourAnswer();
 
-    fireEvent.press(await screen.findByRole('button', { name: notNowLevelAskLabel('padel') }));
+    fireEvent.press(screen.getByRole('button', { name: notNowLevelAskLabel('padel') }));
 
     await waitFor(() => expect(homeReads()).toBeGreaterThan(homeBefore));
     await waitFor(() => expect(bellReads()).toBeGreaterThan(bellBefore));
-    // The state moved: no toast, and nothing said on the card.
+    // The state moved: no toast, and nothing said on the tile.
     expect(toasts()).toEqual([]);
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
-describe('a player rated in nothing', () => {
-  it('sees the ask card in place of Get your level, and Get your level again once the row is empty', async () => {
+describe('Get your level on Home', () => {
+  /** Where on Home a text stands, top to bottom — the card's title, or Your games' heading. */
+  const homeOrder = () =>
+    screen
+      .getAllByText(/^(Get your level|Your games)/)
+      .map((node) => (String(node.props.children).startsWith(HOME_CARD) ? 'card' : 'games'));
+
+  it('shows above Your games for a player in a group rated in nothing, though a friend asked', async () => {
     askServer([padel(TOMEK)], { ratings: [] });
     await launchSignedIn();
 
-    expect(await screen.findByText('tomek.k wants to play padel with you')).toBeTruthy();
-    // Every read Get your level is drawn from has answered, and it is not drawn.
-    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/groups')).not.toEqual([]));
-    await act(async () => jest.advanceTimersByTime(1));
-    expect(screen.queryByText(HOME_CARD)).toBeNull();
-    expect(screen.queryByText(HOME_CARD_LINE)).toBeNull();
-
-    fireEvent.press(screen.getByRole('button', { name: notNowLevelAskLabel('padel') }));
-
     expect(await screen.findByText(HOME_CARD)).toBeTruthy();
     expect(screen.getByText(HOME_CARD_LINE)).toBeTruthy();
+    expect(homeOrder()).toEqual(['card', 'games']);
+    // The ask waits behind the envelope, never in the card's place.
+    expect(envelope()).not.toBeNull();
     expect(screen.queryByTestId('level-asks')).toBeNull();
   });
 
-  it('sees Get your level when Home’s read is refused — nothing is known to stand in its place', async () => {
+  it('shows for a player in a group rated in nothing whom nobody asked', async () => {
+    askServer([], { ratings: [] });
+    await launchSignedIn();
+
+    expect(await screen.findByText(HOME_CARD)).toBeTruthy();
+    expect(screen.getByText(HOME_CARD_LINE)).toBeTruthy();
+    expect(envelope()).toBeNull();
+  });
+
+  it('shows when Home’s read is refused', async () => {
     askServer([], { ratings: [] });
     transport.on('GET', HOME_PATH, () => errorResponse(404, 'not_found'));
     await launchSignedIn();
 
     expect(await screen.findByText(HOME_CARD)).toBeTruthy();
     expect(screen.getByText(HOME_CARD_LINE)).toBeTruthy();
-    expect(screen.queryByTestId('level-asks')).toBeNull();
+    expect(envelope()).toBeNull();
   });
 });

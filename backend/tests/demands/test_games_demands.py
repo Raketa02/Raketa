@@ -57,6 +57,7 @@ from app.modules.games.domain.ports import (
     GameOnTheRecord,
     OpponentVariety,
     OpponentVarietyQuery,
+    PlayedTogetherQuery,
     ScoredGames,
 )
 from app.modules.games.domain.results import Outcome, Score, SetScore
@@ -1550,3 +1551,83 @@ async def test_only_the_games_asked_about_are_named(implementation, session):
     await _saved(session, other)
 
     assert await port.scored_since([asked.id], since=_ago(days=1)) == {asked.id}
+
+
+# ---------------------------------------------------------------------------
+# PlayedTogetherQuery — who has shared a court that was played (#831)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(PlayedTogetherQuery))
+async def test_the_pairs_are_the_people_asked_about_on_one_court_played(
+    implementation, session
+):
+    """A counted game and a friendly alike — meeting is not evidence about a
+    Level — and only pairs of the people asked about: a stranger on the court
+    is nobody's pair here."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    ana, bo, cy, dee, eve, stranger = (new_uuid() for _ in range(6))
+
+    counted = _planned(line_up=_singles(ana, bo), at=_ago(days=3))
+    counted.state_result(by=ana, score=_score((6, 4)), occurred_at=_ago(days=2))
+    friendly = _planned(
+        line_up=_four(cy, dee, eve, stranger), at=_ago(days=3), kind=GameKind.FRIENDLY
+    )
+    friendly.state_result(by=cy, score=_score((6, 1)), occurred_at=_ago(days=2))
+    for game in (counted, friendly):
+        await _saved(session, game)
+    assert counted.was_played_at(now) and friendly.was_played_at(now)
+
+    pairs = await port.played_together_among([ana, bo, cy, dee, eve], now=now)
+
+    assert pairs == {
+        frozenset({ana, bo}),
+        frozenset({cy, dee}),
+        frozenset({cy, eve}),
+        frozenset({dee, eve}),
+    }
+    assert await port.played_together_among([ana], now=now) == frozenset()
+    assert await port.played_together_among([], now=now) == frozenset()
+
+
+@pytest.mark.parametrize("implementation", registered(PlayedTogetherQuery))
+async def test_a_court_that_was_never_played_puts_nobody_together(
+    implementation, session
+):
+    """Still ahead, called off, started short — and a leaver was never on the
+    court with the people who stayed."""
+
+    port = implementation.build(session)
+    now = instant(datetime.now(timezone.utc))
+    ana, bo, cy, dee = (new_uuid() for _ in range(4))
+
+    ahead = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=Sport.PADEL,
+        kind=GameKind.FRIENDLY,
+        window=None,
+        line_up=_singles(ana, bo),
+        occurred_at=_ago(days=1),
+        starts_at=instant(now + timedelta(days=2)),
+    )
+    called_off = _called_off(
+        line_up=_four(ana, bo, cy, dee), at=_ago(days=3), leaver=dee, caller=ana
+    )
+    left, stayed, leaver = await _a_game_somebody_left(session, at=_ago(days=30))
+    for game in (ahead, called_off):
+        await _saved(session, game)
+    assert not any(game.was_played_at(now) for game in (ahead, called_off, left))
+
+    assert await port.played_together_among([ana, bo, cy, dee], now=now) == frozenset()
+    assert await port.played_together_among([stayed, leaver], now=now) == frozenset()
+
+    # Played since: the read after it pairs the two.
+    ahead_played = _planned(line_up=_singles(ana, bo), at=_ago(days=3))
+    ahead_played.state_result(by=bo, score=_score((7, 5)), occurred_at=_ago(days=2))
+    await _saved(session, ahead_played)
+    assert await port.played_together_among([ana, bo, cy], now=now) == {
+        frozenset({ana, bo})
+    }

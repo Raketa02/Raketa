@@ -1,9 +1,10 @@
 import type { Wire } from '@/test-support/transport';
 
-import { KUBA, seatToFill } from '@/test-support/groupDeck';
+import { KUBA, ZOFIA, seatToFill } from '@/test-support/groupDeck';
 import {
   FEW,
   HOT,
+  forFunFit,
   freeCourt,
   postStillFilling,
   postingGrid,
@@ -95,7 +96,7 @@ describe('a cell’s sheet', () => {
       playerId: 'd0000000-0000-4000-8000-000000000001',
       name: 'karol.t',
       level: 2.75,
-      forecastPct: 93,
+      forecast: { pct: 93 },
     });
     expect(read.freeCourts[0]).toEqual({
       club: { id: 'b0000000-0000-4000-8000-000000000002', name: 'Ogrody 33' },
@@ -133,6 +134,33 @@ describe('a cell’s sheet', () => {
 
     expect(read.fits[0]).toEqual({ playerId: 'd0000000-0000-4000-8000-000000000001' });
     expect(read.posts[0]).not.toHaveProperty('challenger');
+  });
+
+  // #842 (ADR-0207 §5): on a For-fun post a fit carries the Social vibe of the poster and them.
+  it('reads a For-fun fit’s Social vibe, in the order served, and no forecast', () => {
+    const read = toPostingSlot(
+      postingSlot({ fits: [forFunFit(ZOFIA(), 83), forFunFit(KUBA(), 36)] }),
+    );
+
+    expect(read.fits.map((fit) => [fit.name, fit.vibe, fit.forecast])).toEqual([
+      ['zofia.b', { pct: 83 }, undefined],
+      ['kuba.w', { pct: 36 }, undefined],
+    ]);
+  });
+
+  it('reads the kind the sheet was read for — what its fits’ number follows', () => {
+    expect(toPostingSlot(postingSlot()).kind).toBe('competitive');
+    expect(toPostingSlot(postingSlot({ kind: 'FOR_FUN' })).kind).toBe('forFun');
+  });
+
+  it('reads no vibe from an older server that sends none', () => {
+    const wire = postingSlot();
+    const read = toPostingSlot({
+      ...wire,
+      fits: wire.fits.map(({ vibe: _vibe, ...fit }) => fit as Wire['SlotFitSchema']),
+    });
+
+    expect(read.fits[0]).not.toHaveProperty('vibe');
   });
 
   it('drops a rescue in a sport this build cannot name', () => {

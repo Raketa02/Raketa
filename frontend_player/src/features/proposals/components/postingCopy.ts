@@ -16,7 +16,6 @@ const PAYMENT_FIRST = 'A post needs a saved way to pay first — nothing is char
 
 export const POSTING_COPY = {
   title: 'Post a game',
-  back: 'Back to Fill in',
   sport: 'Sport',
   kind: 'Kind',
   who: 'Who',
@@ -123,7 +122,7 @@ export const POSTING_COPY = {
   refused: {
     payment_method_required: PAYMENT_FIRST,
     live_posts_exhausted:
-      'You already have 2 posts live — withdraw one in You’re In to post again.',
+      'You already have 2 posts live — withdraw one in You’re in to post again.',
     you_play_then: 'You already have a game at that hour.',
     nobody_fits_then: 'None of your best fits is free then any more — pick another hour.',
     court_hour_not_for_sale: 'That court isn’t for sale any more — pick another.',

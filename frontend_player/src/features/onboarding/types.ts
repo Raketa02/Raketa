@@ -90,6 +90,18 @@ export {
   type EntryDecision,
   type EntryUnavailable,
 } from './hooks/useEntryDecision';
+/**
+ * **The same decision, asked at launch before any screen exists** (#874) — the rule over the account
+ * (`entryDestinationOf`, which the gate's hook asks too) applied to what session restore cached, so
+ * Home's warm-up runs only for an account the gate will send to the tabs.
+ */
+export { entryDestinationAtLaunch } from './hooks/entryAtLaunch';
+
+/**
+ * **The ratings, set out before Home is drawn** (#874) — Home's warm-up during the splash, under the
+ * read `useSkillRatings` observes.
+ */
+export { prefetchSkillRatings } from './hooks/useSkillRatings';
 
 /**
  * A rating pass is over when the player is in the app. The gate is the one place that knows

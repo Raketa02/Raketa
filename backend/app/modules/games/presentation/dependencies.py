@@ -29,6 +29,7 @@ from app.bootstrap.composition import (
     build_game_directory,
     build_game_repository,
     build_player_names,
+    build_tags_on_the_court,
 )
 from app.modules.games.application.answer_result import AcceptResult, StateResult
 from app.modules.games.application.attendance import (
@@ -44,6 +45,7 @@ from app.modules.games.domain.ports import (
     GameClubs,
     GameRepository,
     PlayerNames,
+    TagsOnTheCourt,
 )
 
 
@@ -176,20 +178,29 @@ def get_court_pairing(db: DbSession) -> CourtPairing:
     return build_game_court_pairing(db)
 
 
+def get_tags_on_the_court(db: DbSession) -> TagsOnTheCourt:
+    """The court's Social tags now, for a For-fun game's vibe (#835) — over
+    the request's session, off the player directory's copy."""
+
+    return build_tags_on_the_court(db)
+
+
 def get_read_game_pairing(
     clock: ClockDep,
     games: GameRepositoryDep,
     pairings: Annotated[CourtPairing, Depends(get_court_pairing)],
+    tags: Annotated[TagsOnTheCourt, Depends(get_tags_on_the_court)],
 ) -> ReadGamePairing:
-    """The pairing read — the game of yours, the standing, and the port.
+    """The pairing read — the game of yours, the standing, and the ports.
 
     It holds the aggregate repository the acts hold, because *the game of
-    yours* is one question asked the same way by a read and by an act; and it
+    yours* is one question asked the same way by a read and by an act; it
     holds the pairing port, which is the expensive dependency this route
-    exists to pay for and which no other route in this context takes.
+    exists to pay for and which no other route in this context takes; and the
+    court's tags, asked only on a For-fun game (#835).
     """
 
-    return ReadGamePairing(games=games, pairings=pairings, clock=clock)
+    return ReadGamePairing(games=games, pairings=pairings, tags=tags, clock=clock)
 
 
 ReadGamePairingDep = Annotated[ReadGamePairing, Depends(get_read_game_pairing)]

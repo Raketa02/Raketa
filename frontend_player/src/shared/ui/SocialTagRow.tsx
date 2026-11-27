@@ -1,5 +1,5 @@
 /**
- * **The Social tag row** — up to six of what somebody published, with the ones the reader also
+ * **The Social tag row** — up to eight of what somebody published, with the ones the reader also
  * chose tinted, and one amber sentence where nothing is shared.
  *
  * Four answers arrive as a `SocialTagOverlap` and this component draws them; it decides nothing
@@ -106,7 +106,7 @@ export function SocialTagRow({ row, onDark = false }: SocialTagRowProps) {
 }
 
 const s = StyleSheet.create({
-  // It wraps, because six tags never fit on one line and the longest of them fills most of a
+  // It wraps, because eight tags never fit on one line and the longest of them fills most of a
   // card on its own — the same reason a card's own action row wraps.
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.xs },
 });

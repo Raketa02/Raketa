@@ -2,7 +2,7 @@
 one or ask to, withdraw a request you made, answer the requests waiting on
 yours, see who in it plays a sport, edit yours, leave one or delete yours — the
 two searches, for a home club and for a group to join — and Home's *Hottest
-groups*.
+groups*, with its page, *Groups heating up* (``/hottest-groups/all``, #813).
 
 Mounted on the player surface (``app/api/v1/player.py``). Every route takes a
 player's token. **The backend guards no flag** (``docs/adr/0183`` §12): these
@@ -50,6 +50,7 @@ from app.modules.groups.presentation.dependencies import (
     ReadGroupMembersDep,
     ReadJoinRequestsDep,
     ReadHottestGroupsDep,
+    ReadHottestGroupsPageDep,
     ReadMyGroupsDep,
     SearchGroupsToJoinDep,
     SearchHomeClubsDep,
@@ -64,13 +65,14 @@ from app.modules.groups.presentation.schemas import (
     GroupMembersResponse,
     GroupResponse,
     HomeClubPageResponse,
-    HottestGroupSchema,
+    HottestGroupsPageResponse,
     HottestGroupsResponse,
     JoinRequestSchema,
     JoinRequestsResponse,
     JoinSearchResponse,
     MyGroupSchema,
     MyGroupsResponse,
+    hottest_place_of,
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
 
@@ -543,15 +545,54 @@ async def join_search(
         "2 × games this week + 3 × new this month + players, counted up to "
         "20. One **HOTTEST**, any number of **GROWING**, in the row's order. "
         "Each card carries everything its group sheet shows, and the caller's "
-        "relation to it. Worked out on every read; nothing is recorded. **The "
-        "group page stays members-only**: a non-member still meets "
+        "relation to it, and `total` counts every group with 3 or more "
+        "players, up to 100. Worked out on every read; nothing is recorded. "
+        "**The group page stays members-only**: a non-member still meets "
         "`group_not_found` there."
     ),
 )
 async def hottest_groups(
     user: CurrentUserDep, read: ReadHottestGroupsDep
 ) -> HottestGroupsResponse:
-    cards = await read.execute(user.id)
-    return HottestGroupsResponse(
-        groups=[HottestGroupSchema.from_view(card) for card in cards]
+    return HottestGroupsResponse.of(await read.execute(user.id))
+
+
+@hottest_groups_router.get(
+    "/all",
+    response_model=HottestGroupsPageResponse,
+    response_model_exclude_unset=True,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`not_a_hottest_groups_page` — a cursor this server never wrote."
+            ),
+        },
+    },
+    summary="Groups heating up: every Hottest group, page by page",
+    description=(
+        "**Every group with 3 or more players**, player and official alike, "
+        "**the caller's own included**, in Hottest groups' own order — "
+        "HOTTEST, then GROWING by heat, then untagged by heat; ties to more "
+        "games this week, then the group id — **20 to a page** by cursor. The "
+        "first page's first six are the row's groups, in its places, with its "
+        "tags. Each card is the row's card, read "
+        "whole for the page's 20. The first page carries `total`, the row's. "
+        "**Heat is worked out on every read**: a group whose heat moves "
+        "between two pages may shift, read again or missed. No filter."
+    ),
+)
+async def hottest_groups_page(
+    user: CurrentUserDep,
+    read: ReadHottestGroupsPageDep,
+    after: str | None = Query(
+        default=None,
+        description="A `next` cursor: the 20 groups behind it.",
+    ),
+) -> HottestGroupsPageResponse:
+    return HottestGroupsPageResponse.of(
+        await read.execute(
+            user.id, after=None if after is None else hottest_place_of(after)
+        )
     )

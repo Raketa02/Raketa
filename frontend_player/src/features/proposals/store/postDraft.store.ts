@@ -1,9 +1,9 @@
 /**
  * ***Post a game*'s draft** — the four controls, the week shown and the pick, **kept while the player
- * stays in the group** (the screens A5: *back chevron → Fill in, the draft kept*).
+ * stays in the group** (the screens A5: *back chevron → You’re in, the draft kept*; Fill in until #847).
  *
  * A store rather than the screen's state because the screen is a route pushed over the group's page,
- * and *back* unmounts it: a player who backs out to Fill in to look at a row and opens *Post a game*
+ * and *back* unmounts it: a player who backs out to You’re in to look at a row and opens *Post a game*
  * again finds what they had chosen. **One draft, for one group**: a draft read for another group is
  * no draft at all (`draftFor`), and the group's page forgets it when it goes (`forgetPostDraft`) — so
  * leaving the group, by its back chevron or by the tab bar laying the stack down, starts the next

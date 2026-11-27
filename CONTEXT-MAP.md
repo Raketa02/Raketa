@@ -18,10 +18,13 @@ The two web apps are the newest, each built on its own scaffold:
   an invitation or a password reset opens when the app is not installed, and the app-link files.
   No sign-in, no session. *Scaffolded by [#525](https://github.com/Raketa02/Raketa/issues/525).*
 
-Nothing outside the monorepo is part of the topology. **`Raketa02/raketa-features`**, which held
-the feature flags as Featurevisor YAML, is no longer read by anything: the flags left with the
-Classic play loop they hid ([#569](https://github.com/Raketa02/Raketa/issues/569)), and archiving
-the repository is a human step.
+Outside the monorepo, **`Raketa02/raketa-features`** holds the feature flags as Featurevisor
+YAML, and **the player app reads it again** ([#826](https://github.com/Raketa02/Raketa/issues/826)). It
+is not an app and holds no domain code: its CI builds one datafile per environment, and the
+player app fetches its own over HTTP and decides each feature flag on the device
+([ADR-0206](docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)).
+Nothing checks the two repositories against each other; a key they spell differently is a
+feature at its code default. The backend reads nothing from it.
 
 ```
                           ┌──────────────────┐
@@ -82,7 +85,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **Discovery comes without a new app either**
 > ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md),
-> PRD [#789](https://github.com/Raketa02/Raketa/issues/789); decided, not yet built). Home gains five
+> PRD [#789](https://github.com/Raketa02/Raketa/issues/789); built). Home gains five
 > rows below *Your games*. The backend grows a **Discovery** context for the three people rows — *Same
 > competitive level*, *New in Raketa* and *Same vibe* — with three stored tables, the stated exceptions
 > to *derived, never stored*: a player directory fed by the profile's and the user's events, every
@@ -96,6 +99,66 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > a withdrawn request from its list; the public site doesn't change. The terms are in `CONTEXT.md`
 > under **Discovery**, **Groups**, **Rankings**, **Player profile**, **Player record**, **Blocks** and
 > **Friends**; the spec set is `docs/specs/home-rows/`.
+>
+> **The Home refactor comes without a new context**
+> ([ADR-0205](docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md),
+> PRD [#810](https://github.com/Raketa02/Raketa/issues/810); decided, not yet built). The four cards
+> that wait on the player move behind an envelope in Home's header, into **Needs your answer**, and
+> Home's five rows fold into FOR YOU's lines, with counts. **Proposals** keeps the envelope's *new*: a
+> visit per player, counted on `GET /home`. **Groups** gains a paged Groups heating up read, and the
+> four row reads, Groups' and Discovery's, a capped `total`. Every contract change is additive, and
+> only the backend and the player app change. The terms are in `CONTEXT.md` under **Proposals**
+> (*Home*, *Needs your answer*) and **Friends**; the brief, the decision log and the mocks are
+> `docs/specs/home-refactor/`.
+>
+> **For fun is built by shared social tags, without a new context**
+> ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md),
+> PRD [#827](https://github.com/Raketa02/Raketa/issues/827); decided, not yet built). **Proposals**
+> builds and ranks For-fun tables by their **Social vibe**, then new faces, with skill only a guard,
+> and opens the For-fun deck on the best company; competitive building is untouched. **Match Fit**
+> gains the Social vibe as one pure function, which Proposals and **Games** both call. The **Player
+> profile**'s vocabulary grows to 27 tags, held 2 to 8. No new table: Proposals and Games read
+> Discovery's tag rows through ports of their own. Only the backend and the player app change. The
+> terms are in `CONTEXT.md` under **Matchmaking** (*Social vibe*) and **Player profile** (*Social
+> tag*); the brief, the decision log and the mocks are `docs/specs/for-fun/`.
+>
+> **You’re in becomes its own tab, without a new context**
+> ([ADR-0208](docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md),
+> PRD [#844](https://github.com/Raketa02/Raketa/issues/844); decided, not yet built). A group page
+> has four tabs, Games · Fill in · You’re in · Friends: **Fill in** keeps the rescues, the player's
+> live yeses move to **You’re in**, and Post a game floats there. The badges count what the player
+> hasn't seen, and the phone remembers which rows were seen, per account (ADR-0208). The one
+> contract change is additive: **Proposals**' group deck read carries the ids of the cards with
+> somebody In. Only the backend and the player app change. The terms are in `CONTEXT.md` under
+> **Bookings** (*Fill in*, *You’re in*); the decision log and the mocks are
+> `docs/specs/fill-in-split/`, and the specs it amends are `docs/specs/games-and-fill-in/`.
+>
+> **The drawn splash touches no context**
+> ([ADR-0209](docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md),
+> PRD [#852](https://github.com/Raketa02/Raketa/issues/852); decided, not yet built). On every cold
+> open a volt ball bounces into the **Rakieta** wordmark, and startup runs behind it instead of
+> holding the native splash. A launch that already knows it has no internet doesn't send the launch
+> check. Only the player app changes: no backend change and no contract change. *Rakieta* is the
+> splash's drawn wordmark only; the launcher's name and every string stay **Raketa** (ADR-0187 §8,
+> amended).
+> The brief, the decision log and the mock are `docs/specs/splash-screen/`.
+>
+> **The tab menu touches no context** (PRD [#859](https://github.com/Raketa02/Raketa/issues/859);
+> decided, not yet built). A group page's *Competitive / For fun* switch leaves the page for a menu on
+> the selected **Games** or **Friends** tab, with today's counts and **Play intent**'s door on Games
+> and neither on Friends, and the deck card's player tiles take a fixed shape. It is a change of
+> layout with no new record: ADR-0201 §2 and the fill-in split's override 2 carry dated notes. Only
+> the player app changes: no backend change and no contract change. The brief, the decision log and
+> the mocks, which are illustrations only, are `docs/specs/tab-menu/`; the specs it amends are
+> `docs/specs/games-and-fill-in/` and `docs/specs/friends/`.
+>
+> **The tab bar dock touches no context**
+> ([ADR-0210](docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md), PRD
+> [#878](https://github.com/Raketa02/Raketa/issues/878); decided, not yet built). The player app's
+> tab bar floats over every main screen as a glass dock, Home · Play · You, and a coral **selection
+> marker** travels to the lit tab. What each tab opens doesn't change. Only the player app changes:
+> no backend change and no contract change. The brief, the decision log and the mocks, which lead
+> on design but give no number, are `docs/specs/tab-bar-dock/`.
 >
 > **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
 > radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
@@ -246,6 +309,18 @@ else lives one layer down. See
 │   ├── specs/friends/        ← friends, the friend link and friends games (ADR-0202)
 │   ├── specs/home-rows/      ← Home's five rows and who sees whom (ADR-0204): the mechanics,
 │   │                            the screens, the brief and its mocks
+│   ├── specs/home-refactor/  ← Needs your answer and FOR YOU (ADR-0205): the brief, the
+│   │                            decision log and the mocks, which lead on design
+│   ├── specs/for-fun/        ← For fun built by shared tags, the Social vibe (ADR-0207): the
+│   │                            brief, the decision log and the mocks, which lead on design
+│   ├── specs/fill-in-split/  ← Fill in and You’re in as two tabs, unseen badges (ADR-0208):
+│   │                            the decision log and the mocks, which lead on design
+│   ├── specs/splash-screen/  ← the drawn splash, startup behind it (ADR-0209): the brief, the
+│   │                            decision log and the mock, which lead on design
+│   ├── specs/tab-menu/       ← Competitive / For fun in the tab's menu, the deck tiles' shape
+│   │                            (PRD #859): the brief, the decision log and the mocks, illustrations only
+│   ├── specs/tab-bar-dock/   ← the tab bar as a floating glass dock and its selection marker
+│   │                            (ADR-0210): the brief, the decision log and the mocks, which lead on design
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)

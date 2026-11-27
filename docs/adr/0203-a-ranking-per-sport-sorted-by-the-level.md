@@ -3,7 +3,12 @@
 - **Status:** Accepted — **§3's *of N*, §7, §8's rows, §9 and §10's hidden flag amended 2026-11-14
   by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** §2 (Q131): *Show me to new people* replaces §7's switch and closes nothing in
   the ranking, blocks hide no row, requests need no ranking and have no limit, and *of N* counts
-  everyone; Home gains **Top 10** (ADR-0204 §8). Dated notes mark §3 and §7–§10.
+  everyone; Home gains **Top 10** (ADR-0204 §8). Dated notes mark §3 and §7–§10. — **§5's *the bell
+  keeps its corner* and §9's card line amended 2026-11-16 by
+  [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)**
+  §1–§2 (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)): the trophy takes the corner,
+  the bell sits left of it, and an envelope left of the bell; a request's card no longer reads *Found
+  you in the padel ranking*, which the notice still does. Dated notes mark §5 and §9.
 - **Date:** 2026-11-07
 - **Retires the documents' *nothing ranks players*.** The player-app source document's *"Not a
   ranking ladder. A rating exists to make matches balanced, not to be climbed."*
@@ -190,6 +195,10 @@ with the friends Raketa now has.
     sign-out.
   - **No number** when the reader has no place in that view and sport. The trophy still opens the
     page.
+
+  > **Amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §2.** **The trophy takes the corner.** The header
+  > reads envelope, bell, trophy, right-aligned, the envelope there only while something waits for
+  > the reader's answer. The trophy's sport, view, number and page are unchanged.
 - **The Rankings page:**
   - the title, with ***Competitive games only*** under it, and the deck's sport pill, offering all
     four sports with the reader's rated sports first;
@@ -288,6 +297,11 @@ behind you* (Q19).
 > group, game or friendship with the reader. The strand above folds into that rule; the limit, its
 > counts and `daily_request_limit` go. A request from the ranking still reads *Found you in the padel
 > ranking*, and Home's rows add three more origins.
+
+> **Amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §1.** **The card no longer reads it.** A friend
+> request waits in *Needs your answer*, and its tile shows the sender's level in every sport they hold
+> one in. The notice still reads *Found you in the padel ranking*, and the request still records the
+> ranking and its sport.
 
 ### 10. Where it lives: a stored projection, as a stated exception
 

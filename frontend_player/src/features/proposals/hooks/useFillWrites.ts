@@ -24,7 +24,12 @@
  * is called again before it settles, and the fill's host outlives every screen that asked it.
  */
 
-import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useMutationState,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 
 import { gameKeys } from '@/features/games/types';
 import { paymentKeys } from '@/features/payments/types';
@@ -52,15 +57,31 @@ export function useBookingYes(handlers: FillHandlers<BookAsk>) {
 
   return useMutation<YesAnswer | null, AppError, BookAsk>({
     ...NOW_OR_NOT,
-    mutationKey: proposalKeys.answers(),
+    mutationKey: proposalKeys.bookingYeses(),
     mutationFn: ({ card }) =>
       answerCard({ proposalId: card.proposalId, said: 'yes', rescue: isRescue(card) }),
     onSuccess: (answer, ask) => {
       if (answer !== null) latest.current.onAnswered(answer, ask);
     },
     onError: (error, ask) => latest.current.onRefused(error, ask),
-    onSettled: (_answer, _error, { dealtIn }) => reread(client, dealtIn.groupId, { yeses: true }),
+    onSettled: (_answer, _error, { dealtIn }) =>
+      reread(client, dealtIn.groupId, { yeses: 'start' }),
   });
+}
+
+/**
+ * **The cards whose booked yes is on its way** — sent at the end of its ten seconds and not yet
+ * answered (`docs/specs/busy-indicator/decisions.md` §3.3). The countdown's own `counting` ends at
+ * zero, when the send begins, so a button that read only that went back to _Pay 32 zł_ while the
+ * money was moving. Read off the mutation cache rather than the host's one mutation result, because
+ * a second booking can count and send while a slow first one is still out.
+ */
+export function useBookingsOnTheirWay(): ReadonlySet<string> {
+  const sending = useMutationState({
+    filters: { mutationKey: proposalKeys.bookingYeses(), status: 'pending' },
+    select: (mutation) => (mutation.state.variables as BookAsk | undefined)?.card.proposalId,
+  });
+  return new Set(sending.filter((proposalId) => proposalId !== undefined));
 }
 
 export function useConfirmPaymentYes(handlers: FillHandlers<ConfirmAsk>) {
@@ -74,7 +95,7 @@ export function useConfirmPaymentYes(handlers: FillHandlers<ConfirmAsk>) {
     onError: (error, ask) => latest.current.onRefused(error, ask),
     onSettled: (_answer, _error, { dealtIn }) =>
       Promise.all([
-        reread(client, dealtIn.groupId, { yeses: true }),
+        reread(client, dealtIn.groupId, { yeses: 'start' }),
         client.invalidateQueries({ queryKey: proposalKeys.paymentsToConfirm() }),
         // Home's badge counts every payment to confirm (#556).
         client.invalidateQueries({ queryKey: proposalKeys.home() }),

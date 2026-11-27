@@ -1,6 +1,8 @@
 /**
- * The tab bar, per design-system 10.2 — **Home · ⚡Play · You**, three equal columns with ⚡Play
- * raised at the centre.
+ * The tab bar, per design-system 10.2 — **the dock**: a rounded slab floating over the screen's
+ * foot, **Home · Play · You** in three equal columns, and the selection marker under the lit one
+ * ([ADR-0210](../../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md),
+ * [#883](https://github.com/Raketa02/Raketa/issues/883)).
  *
  * **The drawn object only.** It takes the active tab and a press handler and knows nothing
  * about routes, stacks or which screen is mounted; the shell that wires it is a separate
@@ -10,52 +12,82 @@
  *
  * ## The inventory is fixed, and it lives here
  *
- * Three tabs, three Feather glyphs, one family
- * ([ADR-0135](../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)).
- * It is the design system's list rather than the shell's: the ADR's words are *"the family
- * is fixed … a sixth glyph on a sixth surface is a fresh question that inherits the family and
- * nothing else, never a licence to sprinkle."* A caller that could pass its own tabs is a caller
- * that could add a fourth without argument — and it would silently break `labelMaxScale`, which
- * is held against exactly these three words in exactly this many columns.
+ * Three tabs, three Ionicons pairs, one family on the bar (ADR-0210 §5, which supersedes
+ * [ADR-0135](../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md) for the
+ * bar and keeps its argument): *"the family is fixed … a sixth glyph on a sixth surface is a fresh
+ * question that inherits the family and nothing else, never a licence to sprinkle."* A caller that
+ * could pass its own tabs is a caller that could add a fourth without argument — and it would
+ * silently break `labelMaxScale` and the marker's fit, which are held against exactly these three
+ * words in exactly this many columns.
  *
- * It was five, with the old loop's Players and Chats drawn behind a flag, until that loop was
- * removed ([#576](https://github.com/Raketa02/Raketa/issues/576)): the switch, Chats' badge and
- * the cap's derivation over five columns went with them. The cap kept the number five columns
- * gave it — at three, the width no longer decides it (`theme.size.tabBar`).
+ * ## The dock, and the glass
  *
- * ## Feather, and selection in tone alone
+ * 54 tall, 12 in from each side, lifted the larger of 12 and the bottom inset, at `radius.dock`
+ * (§2). **The bottom inset is the lift's**: the dock pads itself with nothing, so on a notched
+ * iPhone it rests on the safe-area line and on an Android phone with no inset it stands 12 clear of
+ * three edges. Its **reach**, the room it takes at the bottom, is the lift + 54; the shell says it
+ * (`tabBarReach.ts`) and every screen ends there.
  *
- * `ink` selected, `muted` resting — **3.25:1**, and a lightness difference rather than a hue
- * one, so it survives greyscale and a red-green deficiency. The glyph is the same glyph in
- * both states. Feather is a font with one weight and no filled counterparts, and that
- * limitation costs nothing here precisely because the tone channel is already sufficient: a
- * family with outline/filled pairs would put a second state channel on top of a working one,
- * which is the thing #227 already refused once in writing for the disc — *the ring carries
- * the state, not the shadow.*
+ * **The material is the theme's switch** (`theme.glass`, §7): the iPhone draws `color.glass` over
+ * `expo-blur` at the spike's strength, and Android draws the glass only where the switch says so —
+ * today it doesn't, because the A32 measured the blur costing frames, so its dock is opaque
+ * `surface`. Either way the dock is bounded by a 1pt `line` hairline, a 1pt `surface` rim runs
+ * inside it, and the deck card's shadow lifts it: `shadow.dock` on the opaque dock, and the same
+ * values as `boxShadow` (`glass.shadow`) on a dock that draws the glass. A translucent dock has no
+ * opaque fill to work a shadow's outline from, so iOS's shadow props would be drawn from its pixels —
+ * an off-screen pass whenever the page moves under the blur, which can stop the blur drawing — and
+ * Android's `elevation` would show through it. `boxShadow` is drawn outside the box only.
  *
- * Every name is typed against Feather's own `glyphMap`, so a glyph absent from
- * `@expo/vector-icons@14.0.4` is a compile error rather than a blank column nobody notices
- * at 16pt.
+ * ## Selection is a marker, a shape and a tone
  *
- * ## The bolt is a glyph, not a text character
+ * The lit tab's icon fills in and turns `coral`, its label turns `coralInk`, and both sit on **the
+ * selection marker**, an opaque `coralSoft` capsule (§4, §5). Idle tabs are outlines in `tabIdle`.
+ * All three channels are drawn from one value, **the marker's trip**, which follows `active` from
+ * the next frame, so they cannot disagree — the dock never shows two selected tabs. A channel
+ * added here reads the trip too, never `selected`: `selected` is the column's spoken state, and it
+ * turns at the press while the drawing turns with the slide. Play's bolt is filled in both states,
+ * because it is the brand's mark, so on Play the marker and the colour carry it alone.
  *
- * `U+26A1` carries `Emoji_Presentation=Yes`, so `<Text>⚡</Text>` requests *colour emoji* and
- * a `color` style has nothing to apply to — the one mark in the bar whose colour this app
- * would not control, on the disc whose whole argument is a **white** mark. Feather `zap` is a
- * font icon: `color` is a real prop, and white is white.
+ * **Layers, bottom to top: glass → marker → icons and labels → badge.** The marker is one layer
+ * of the dock's own rather than a part of a column: it is what travels between columns, a press
+ * dims the column and never the marker, and its stretch is a scale on a layer that holds no word
+ * or glyph, so nothing is ever deformed and iOS has nothing to rasterise blurred. It stands at the
+ * lit column's centre, worked out from the window's width as every other width in the app is — a
+ * measured one would leave the first frame without a marker.
  *
- * ## The disc is 6.1 `primary` in a squircle
+ * ## The marker travels
  *
- * Not a new colour treatment: `coralInk` fill, white mark, brightening to `coral` on press.
- * The prototype's white-on-`coral` was **3.89:1**, the exact pairing Rule C refuses outright.
- * Taking the button's variant means the press state arrives free and no colour is added.
+ * **When the lit tab changes, the marker slides to it** on `motion.tabMarker`'s 460 ms spring,
+ * stretching like a bubble as it speeds up and recoiling as it brakes, and the new tab colours in
+ * after it sets off (ADR-0210 §8, [#884](https://github.com/Raketa02/Raketa/issues/884)). The
+ * numbers are `tabMarkerMotion.ts`'s, pure; here they run on the UI thread off **one clock** that
+ * Reanimated moves from 0 to 460, so the travel, the stretch and the colour-in can never drift apart.
+ * Per frame only `transform` and `opacity` move.
  *
- * The active state is a 2pt `coral` ring set 2pt clear of the disc, and the gap is the bar's
- * own `surface`, so there is no collar to token and coral reads 3.89:1 on **both** edges of
- * the stroke — clearing 3:1 for a non-text indicator, which volt cleared on neither (1.25:1
- * against the bar, 2.86:1 against the disc; 2.2 as amended, measured rather than asserted).
- * **The ring is absolutely positioned**: a bar that grew 8pt on arriving in Play would move
- * the things that did not change in order to announce the one that did.
+ * - **It slides on every change of the lit tab after the dock's first draw** — a press, a landing,
+ *   a notice, a group opened from Home, and back. The bar cannot tell them apart, and has no need
+ *   to: the lit tab is the one value it is handed.
+ * - **It never slides on the dock's first draw**, which is also every time the dock comes back
+ *   after the chat or Android's keyboard: the shell draws it anew, and a new dock is placed. Nor on
+ *   a press of the lit tab, which changes nothing it is handed.
+ * - **A press mid-flight turns it from where it is, at the speed it has**: the new trip is worked
+ *   out on the UI thread in the same step that restarts the clock, so no frame falls between the
+ *   marker's place and the trip that starts from it.
+ * - **The colour-in is a cross-fade** of two stacked layers per column, idle and selected, so only
+ *   opacity moves: the new tab's selected layer comes in over 300 ms on `easeDecel`, 140 ms into
+ *   the slide, over its idle layer, which stays whole under it until it is whole — and the tab left
+ *   is idle at once.
+ * - **Reduce motion places the marker** under the new tab, and the colours switch at once — also the
+ *   moment it is turned on mid-slide.
+ *
+ * **The animated layers are memoised** and handed only shared values and fixed inventory, so a
+ * re-render of the dock — a count arriving, a press — never redraws them with their first pose.
+ *
+ * Every name is typed against Ionicons' own `glyphMap`, so a glyph absent from
+ * `@expo/vector-icons@14.0.4` is a compile error rather than a blank column nobody notices at
+ * 18pt. **The bolt is a glyph, not a text character**: `U+26A1` carries
+ * `Emoji_Presentation=Yes`, so `<Text>⚡</Text>` requests colour emoji and a `color` style has
+ * nothing to apply to.
  *
  * ## One badge, on Home, and on no other column
  *
@@ -64,6 +96,8 @@
  * you — a seat open, a result to enter or confirm, a no-show against you, a payment to confirm
  * ([#550](https://github.com/Raketa02/Raketa/issues/550), [#556](https://github.com/Raketa02/Raketa/issues/556))
  * — which is what makes it an obligation a player can discharge rather than a number that nags.
+ * It is a `coralInk` fill, *a thing to attend to*, kept apart from the marker's `coralSoft`,
+ * *where you are*, by fill.
  *
  * **It is a named prop and never a hook.** `shared/ui` importing a feature hook inverts the
  * dependency ([ADR-0009](../../../../docs/adr/0009-feature-first-clean-architecture-frontends.md))
@@ -83,62 +117,97 @@
  * *is* right now.
  */
 
-import Feather from '@expo/vector-icons/Feather';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { BlurView } from 'expo-blur';
 import { counted } from '@/shared/formatting/counted';
-import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo, useEffect, useRef } from 'react';
+import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, {
+  Easing,
+  ReduceMotion,
+  runOnUI,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CountBadge } from './CountBadge';
+import { useReducedMotion } from './overlay';
+import {
+  colourInAt,
+  MARKER_SLIDE,
+  markerAt,
+  markerPlacedAt,
+  markerTravelling,
+  type MarkerTrip,
+} from './tabMarkerMotion';
 import { theme } from './theme';
 
-/** A glyph name Feather actually ships. Not a `string`, and not behind a cast. */
-type FeatherGlyph = keyof typeof Feather.glyphMap;
+/** The marker's rest width, as a number a UI-thread worklet can hold without copying the theme. */
+const MARKER_WIDTH = theme.size.tabBar.marker.width;
+
+/** The colour-in's curve — the app's for a thing arriving. */
+const EASE = Easing.bezierFn(
+  theme.motion.easeDecel.x1,
+  theme.motion.easeDecel.y1,
+  theme.motion.easeDecel.x2,
+  theme.motion.easeDecel.y2,
+);
+
+/** A glyph name Ionicons actually ships. Not a `string`, and not behind a cast. */
+type IoniconsGlyph = keyof typeof Ionicons.glyphMap;
 
 export type TabBarKey = 'home' | 'play' | 'you';
 
 export interface TabBarTab<Key extends string = TabBarKey> {
   readonly key: Key;
   readonly label: string;
-  readonly glyph: FeatherGlyph;
+  /** The outline drawn while the tab is idle, and the filled glyph drawn while it is lit. */
+  readonly glyph: { readonly idle: IoniconsGlyph; readonly lit: IoniconsGlyph };
 }
 
 /**
  * The three, in order. **The first is Home**, today's Now renamed whole — key, label and screen,
  * the route staying `/` ([#550](https://github.com/Raketa02/Raketa/issues/550)): your games from
- * the moment they are booked. It always drew `home`, which beat the calendar and the clock
- * because it claims nothing that is not built, and now it is also the tab's name.
+ * the moment they are booked. **Play's bolt is `flash` in both states** (ADR-0210 §5): the brand's
+ * mark for a game being dealt, not a pictogram with an outline.
  *
- * `labelMaxScale` is held against these exact words. Adding a fourth, or a longer one, is a
- * change `tabBarLabelCap.test.ts` has to pass before it is a change to this list.
+ * `labelMaxScale` and the marker are held against these exact words. Adding a fourth, or a longer
+ * one, is a change `tabBarLabelCap.test.ts` has to pass before it is a change to this list.
  */
 export const TAB_BAR_TABS = [
-  { key: 'home', label: 'Home', glyph: 'home' },
-  { key: 'play', label: 'Play', glyph: 'zap' },
-  { key: 'you', label: 'You', glyph: 'user' },
+  { key: 'home', label: 'Home', glyph: { idle: 'home-outline', lit: 'home' } },
+  { key: 'play', label: 'Play', glyph: { idle: 'flash', lit: 'flash' } },
+  { key: 'you', label: 'You', glyph: { idle: 'person-outline', lit: 'person' } },
 ] as const satisfies readonly TabBarTab[];
 
+/** The dock's hairline, and the rim inside it — the 1pt every border in the app is. */
+const HAIRLINE = 1;
+
+/** **How far the dock stands off the phone's foot**: the larger of its least lift and the inset. */
+function dockLift(bottomInset: number): number {
+  return Math.max(theme.size.tabBar.lift, bottomInset);
+}
+
 /**
- * The bar's height at the default text size, **excluding** the bottom safe-area inset.
+ * **The room the dock takes at the bottom of the phone while it is drawn** — its lift and its 54,
+ * for either bar: the administrator's is the same dock with two columns. The shell says it
+ * (`useSaysTabBarReach`); nothing else works it out.
  *
- * Derived from the same tokens the stylesheet below lays the bar out from — the hairline, the
- * two paddings, the ⚡Play disc (which is the tallest thing in a column, not the 16pt icon
- * box) and the label — so it cannot drift from the bar it describes. It exists because
- * [9.2](../../../docs/design-system.md#92-toast) positions the toast *above the tab bar*, and
- * the alternative was the toast holding a copy of these five numbers.
- *
- * **The default size, and a floor rather than a promise.** `labelMaxScale` lets Dynamic Type
- * grow the labels, so a bar on a phone set large is taller than this; the toast clearing the
- * default is what 9.2 asks for, and a toast that measured the bar would be an overlay
- * depending on a screen having one.
+ * **A fixed figure, not a floor**: the dock is 54 at every text size, because the label's cap
+ * holds it inside the marker (10.2). 66 on the A32, 88 on a notched iPhone.
  */
-export const TAB_BAR_HEIGHT =
-  1 +
-  theme.space.xs +
-  theme.size.fab +
-  theme.space.xxs +
-  theme.type.tag.lineHeight +
-  theme.space.md;
+export function tabBarReachOver(bottomInset: number): number {
+  return dockLift(bottomInset) + theme.size.tabBar.height;
+}
+
+/** The bar's own frame — what a suite reads to see where it stands. Both bars carry it. */
+export const TAB_BAR_TEST_ID = 'tab-bar';
+
+/** The selection marker's drawing — what a suite reads to see which tab it stands under. */
+export const TAB_BAR_MARKER_TEST_ID = 'tab-bar-marker';
 
 export interface TabBarProps {
   /** Which of the three is showing. Play stays active for every screen inside Play. */
@@ -152,23 +221,6 @@ export interface TabBarProps {
    * has to decide about.
    */
   readonly gamesNeedingYou?: number;
-}
-
-/** What every column is: one of the three, whether it is the one you are on, and the report. */
-interface ColumnProps<Key extends string = TabBarKey> {
-  readonly tab: TabBarTab<Key>;
-  readonly selected: boolean;
-  readonly onPress: (key: Key) => void;
-}
-
-/**
- * A count, drawn on the column's glyph and spoken in its name.
- *
- * It is **not** on `ColumnProps`, because ⚡Play has no badge and never will: the inventory is
- * fixed at one, and a prop the raised column inherits and ignores is the first step to a second.
- */
-interface Badged {
-  readonly waiting?: number;
 }
 
 /**
@@ -189,49 +241,33 @@ function columnLabel(tab: TabBarTab<string>, waiting: number | undefined): strin
 }
 
 export function TabBar({ active, onPress, gamesNeedingYou }: TabBarProps) {
-  // The bar owns the bottom safe-area inset, and it owns it here rather than taking it as a
-  // prop: a CTA sitting above the bar must not apply it too, and an inset applied twice is
-  // 34pt of nothing on a notched device.
-  const insets = useSafeAreaInsets();
-
   return (
-    <View style={[s.bar, { paddingBottom: theme.space.md + insets.bottom }]}>
-      {TAB_BAR_TABS.map((tab) =>
-        tab.key === 'play' ? (
-          <PlayTab key={tab.key} tab={tab} selected={active === tab.key} onPress={onPress} />
-        ) : (
-          <FlankTab
-            key={tab.key}
-            tab={tab}
-            selected={active === tab.key}
-            onPress={onPress}
-            waiting={tab.key === 'home' ? gamesNeedingYou : undefined}
-          />
-        ),
-      )}
-    </View>
+    <Dock
+      tabs={TAB_BAR_TABS}
+      active={active}
+      onPress={onPress}
+      waiting={(key) => (key === 'home' ? gamesNeedingYou : undefined)}
+    />
   );
 }
 
 /**
- * **The administrator area's bar** — two columns, **Groups · You**, drawn in this bar's style
- * (club mock 17; [#516](https://github.com/Raketa02/Raketa/issues/516)).
+ * **The administrator area's bar** — two columns, **Groups · You**, the same dock with the same
+ * marker (club mock 17; [#516](https://github.com/Raketa02/Raketa/issues/516); ADR-0210 §3, Q16).
  *
  * **A second fixed inventory, not a caller's list.** ADR-0135's argument stands whole: a bar that
  * took its tabs from a caller could grow a fourth without argument. The administrator's side of the
  * account is a second surface with its own two places, so it gets its own inventory here, beside
- * the three — the family inherited (Feather, one weight, selection in tone alone), nothing else.
- * `users` is *Groups*: the crowds the administrator runs. `user` is *You* on both.
+ * the three — the family inherited (Ionicons, outline idle and filled lit), nothing else.
+ * `people` is *Groups*: the crowds the administrator runs. `person` is *You* on both.
  *
- * Two flank columns and no disc, so the bar is shorter than the player's by the disc's height; the
- * toast's clearance is the player's bar's, which clears this one too (9.2). No badge: *N waiting*
- * is on the group's card, where it can be answered.
+ * No badge: *N waiting* is on the group's card, where it can be answered.
  */
 export type AdministratorTabBarKey = 'groups' | 'you';
 
 export const ADMINISTRATOR_TAB_BAR_TABS = [
-  { key: 'groups', label: 'Groups', glyph: 'users' },
-  { key: 'you', label: 'You', glyph: 'user' },
+  { key: 'groups', label: 'Groups', glyph: { idle: 'people-outline', lit: 'people' } },
+  { key: 'you', label: 'You', glyph: { idle: 'person-outline', lit: 'person' } },
 ] as const satisfies readonly TabBarTab<AdministratorTabBarKey>[];
 
 export interface AdministratorTabBarProps {
@@ -241,117 +277,291 @@ export interface AdministratorTabBarProps {
 }
 
 export function AdministratorTabBar({ active, onPress }: AdministratorTabBarProps) {
-  // The bottom inset is the bar's, as it is on the player's (10.1).
-  const insets = useSafeAreaInsets();
+  return <Dock tabs={ADMINISTRATOR_TAB_BAR_TABS} active={active} onPress={onPress} />;
+}
+
+/** **Whether this phone's dock draws the glass** — always on an iPhone, on Android at the switch. */
+const drawsGlass = () => Platform.OS !== 'android' || theme.glass.android;
+
+/**
+ * **The dock both bars draw**: the material, the marker, and a column per tab. `waiting` is the
+ * count a column carries — Home's alone, which the player's bar hands it.
+ */
+function Dock<Key extends string>({
+  tabs,
+  active,
+  onPress,
+  waiting,
+}: {
+  readonly tabs: readonly TabBarTab<Key>[];
+  readonly active: Key;
+  readonly onPress: (key: Key) => void;
+  readonly waiting?: (key: Key) => number | undefined;
+}) {
+  const { bottom } = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const glass = drawsGlass();
+
+  // The columns divide what is inside the hairline equally, so the lit one's centre is worked out
+  // from the window rather than measured: a marker that waited on a layout would leave the dock's
+  // first frame with none (ADR-0210 §8: never without its marker, not even for a frame).
+  const column = (width - 2 * theme.size.tabBar.sideInset - 2 * HAIRLINE) / tabs.length;
+  const lit = Math.max(
+    0,
+    tabs.findIndex((tab) => tab.key === active),
+  );
+  const { trip, clock } = useMarkerTravel(lit);
+  const columnWidth = useSharedValue(column);
+  useEffect(() => {
+    columnWidth.value = column;
+  }, [column, columnWidth]);
 
   return (
-    <View style={[s.bar, { paddingBottom: theme.space.md + insets.bottom }]}>
-      {ADMINISTRATOR_TAB_BAR_TABS.map((tab) => (
-        <FlankTab key={tab.key} tab={tab} selected={active === tab.key} onPress={onPress} />
+    <View
+      testID={TAB_BAR_TEST_ID}
+      style={[
+        s.dock,
+        { bottom: dockLift(bottom) },
+        // A translucent dock gives neither platform's own shadow an opaque fill to draw from, and
+        // `boxShadow` is drawn outside the box only (the A32 spike's T3).
+        glass ? s.glassShadow : s.shadow,
+      ]}
+    >
+      {/* The glass: clipped to the inner corner, the blur under the 88% white. */}
+      <View pointerEvents="none" style={[s.material, glass ? null : s.opaque]}>
+        {glass ? (
+          <>
+            <BlurView
+              intensity={theme.glass.blur}
+              tint="light"
+              experimentalBlurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={s.glass} />
+          </>
+        ) : null}
+      </View>
+      <View pointerEvents="none" style={s.rim} />
+      <Marker trip={trip} clock={clock} column={columnWidth} />
+      {tabs.map((tab, index) => (
+        <Column
+          key={tab.key}
+          tab={tab}
+          index={index}
+          selected={tab.key === active}
+          onPress={onPress}
+          waiting={waiting?.(tab.key)}
+          trip={trip}
+          clock={clock}
+        />
       ))}
     </View>
   );
 }
 
-function FlankTab<Key extends string>({
-  tab,
-  selected,
-  onPress,
-  waiting,
-}: ColumnProps<Key> & Badged) {
-  const tone = selected ? theme.color.ink : theme.color.muted;
-
-  return (
-    <Column tab={tab} selected={selected} onPress={onPress} waiting={waiting} dimOnPress>
-      {/* The glyph gets a box of its own so the badge can be positioned against the icon
-          rather than against the column: a column is 64pt wide and the mark it belongs to
-          is 16. */}
-      <View style={s.glyphBox}>
-        <Glyph name={tab.glyph} size={theme.size.tabIcon} color={tone} />
-        {/* 1.2's sixth coral entry: a count of things only the player can clear. */}
-        {waiting === undefined ? null : <CountBadge figure={waiting} tone="attend" />}
-      </View>
-      <Label text={tab.label} color={tone} />
-    </Column>
-  );
+/** The marker's trip and the clock it runs on — what every animated layer of the dock reads. */
+interface Travel {
+  readonly trip: SharedValue<MarkerTrip>;
+  readonly clock: SharedValue<number>;
 }
 
-function PlayTab({ tab, selected, onPress }: ColumnProps) {
-  // The ring is `size.fab` grown by the gap and the stroke on every side, and its radius is
-  // `radius.fab` grown by the same — the arithmetic is here rather than in `theme.ts` so the
-  // two numbers 10.2 states stay the two numbers `theme.ts` holds.
-  const { ringGap, ringStroke } = theme.size.tabBar;
-  const ringSize = theme.size.fab + 2 * (ringGap + ringStroke);
-  const ringRadius = theme.radius.fab + ringGap + ringStroke;
+/**
+ * **The marker's travel to the lit column**: placed under it on the dock's first draw, and sent to
+ * it on every change after — from where it is, on the UI thread — or placed under it at once under
+ * Reduce motion. A press of the lit tab changes nothing here, so nothing moves.
+ */
+function useMarkerTravel(lit: number): Travel {
+  const reduced = useReducedMotion();
+  const trip = useSharedValue(markerPlacedAt(lit));
+  // At its end: a placed marker is at rest, and its tab wholly coloured in.
+  const clock = useSharedValue(MARKER_SLIDE);
+  const drawnFor = useRef(lit);
 
+  useEffect(() => {
+    const changed = drawnFor.current !== lit;
+    drawnFor.current = lit;
+    // Placed under Reduce motion — and the moment it is turned on, even mid-slide.
+    if (reduced) {
+      trip.value = markerPlacedAt(lit);
+      clock.value = MARKER_SLIDE;
+      return;
+    }
+    if (changed) runOnUI(setOff)(trip, clock, lit);
+  }, [lit, reduced, trip, clock]);
+
+  return { trip, clock };
+}
+
+/**
+ * **A new trip, set off on the UI thread**: worked out from the marker's place and speed at the
+ * clock's reading, and the clock restarted, in one step — so no frame is drawn between the two.
+ */
+function setOff(trip: SharedValue<MarkerTrip>, clock: SharedValue<number>, to: number) {
+  'worklet';
+  trip.value = markerTravelling(trip.value, clock.value, to);
+  clock.value = 0;
+  // The app has decided Reduce motion itself (above), so the clock is never cut by the system's.
+  clock.value = withTiming(MARKER_SLIDE, {
+    duration: MARKER_SLIDE,
+    easing: Easing.linear,
+    reduceMotion: ReduceMotion.Never,
+  });
+}
+
+/**
+ * **The selection marker** — the dock's own layer, moved by `transform` alone: translated to where
+ * its trip has it, and scaled about its centre by its stretch. Memoised on shared values, so a
+ * re-render of the dock never redraws it with its first pose.
+ */
+const Marker = memo(function Marker({
+  trip,
+  clock,
+  column,
+}: Travel & { readonly column: SharedValue<number> }) {
+  const drawn = useAnimatedStyle(() => {
+    const pose = markerAt(trip.value, clock.value);
+    return {
+      // Translate first, so the scale is about the marker's own centre.
+      transform: [
+        {
+          translateX: pose.at * column.value + (column.value - MARKER_WIDTH) / 2,
+        },
+        { scaleX: pose.wide },
+        { scaleY: pose.tall },
+      ],
+    };
+  });
   return (
-    <Column tab={tab} selected={selected} onPress={onPress}>
-      {({ pressed }) => (
-        <>
-          <View style={s.discBox}>
-            {selected ? (
-              <View
-                style={[s.ring, { width: ringSize, height: ringSize, borderRadius: ringRadius }]}
-              />
-            ) : null}
-            {/* The label's tone never changes on this column: the ring is the state, and a
-                second channel is free to disagree with the first. */}
-            <View style={[s.disc, pressed ? s.discPressed : null]}>
-              <Glyph name={tab.glyph} size={theme.size.tabBar.bolt} color={theme.color.surface} />
-            </View>
-          </View>
-          <Label text={tab.label} color={theme.color.ink} />
-        </>
-      )}
-    </Column>
+    <Animated.View testID={TAB_BAR_MARKER_TEST_ID} pointerEvents="none" style={[s.marker, drawn]} />
   );
+});
+
+/**
+ * **How much one of a column's two layers shows**: its selected layer coming in on `easeDecel` while
+ * the trip is to it, over its idle layer, which stays whole under it until it is whole and only then
+ * goes — two layers each half there would let the ground show through the word mid-fade. A column
+ * the trip is not to is idle.
+ */
+function useLayerShown(index: number, layer: 'idle' | 'lit', { trip, clock }: Travel) {
+  return useAnimatedStyle(() => {
+    const lit = trip.value.to === index ? EASE(colourInAt(clock.value)) : 0;
+    return { opacity: layer === 'lit' ? lit : lit < 1 ? 1 : 0 };
+  });
 }
 
 /**
  * One of the columns, and the whole of the touch target.
  *
- * The column reaches 44pt by its own geometry — the Play column is 30 + 3 + 12 = 45 inside
- * the bar's padding, and every column stretches to it — so there is no `hit` entry here.
- * That is the availability cell's situation rather than the chip's.
+ * The column reaches 44pt by its own geometry — the dock's 52 inside its hairline, and a third of
+ * the narrowest phone's dock across — so there is no `hit` entry here. Under a finger its icon,
+ * label and badge dim to 0.7 (6.6's answer for a surface with no second fill); the marker is the
+ * dock's, so it does not.
+ *
+ * **Its icon and its label are each two layers**, idle and selected, stacked and cross-faded by
+ * the dock's clock — the selected one over the idle one — so the colour-in moves opacity and
+ * nothing else. The badge stands over both.
  */
 function Column<Key extends string>({
   tab,
+  index,
   selected,
   onPress,
   waiting,
-  dimOnPress = false,
-  children,
-}: ColumnProps<Key> &
-  Badged & {
-    /** 6.6's answer for a surface with no second fill. The disc has one, so it does not dim. */
-    readonly dimOnPress?: boolean;
-    readonly children: ReactNode | ((state: { pressed: boolean }) => ReactNode);
-  }) {
+  trip,
+  clock,
+}: Travel & {
+  readonly tab: TabBarTab<Key>;
+  readonly index: number;
+  readonly selected: boolean;
+  readonly onPress: (key: Key) => void;
+  readonly waiting: number | undefined;
+}) {
   return (
     <Pressable
       accessible
       accessibilityRole="tab"
       accessibilityLabel={columnLabel(tab, waiting)}
-      // The visible tone is the sighted half of this fact and never the whole of it.
+      // The visible marker, shape and tone are the sighted half of this fact and never the whole.
       accessibilityState={{ selected }}
       onPress={() => onPress(tab.key)}
-      style={({ pressed }) => [s.column, dimOnPress && pressed ? s.columnPressed : null]}
+      style={({ pressed }) => [s.column, pressed ? s.columnPressed : null]}
     >
-      {children}
+      {/* The glyph gets a box of its own so the badge can be positioned against the icon rather
+          than against the column: a column is 98pt wide and the mark it belongs to is 18. */}
+      <View style={s.glyphBox}>
+        <GlyphLayers glyph={tab.glyph} index={index} trip={trip} clock={clock} />
+        {/* 1.2's sixth coral entry: a count of things only the player can clear. */}
+        {waiting === undefined ? null : (
+          <CountBadge figure={waiting} tone="attend" over={theme.size.tabBar.icon} />
+        )}
+      </View>
+      <LabelLayers text={tab.label} index={index} trip={trip} clock={clock} />
     </Pressable>
   );
 }
 
 /**
- * A mark, never a word. Hidden from the reader on every column: the visible label already
- * names the tab, and the bolt in particular is a private-use codepoint that a screen reader
- * would either spell or skip.
+ * **A column's two glyphs**: the outline in `tabIdle`, and over it the filled one in `coral`. Each
+ * fills the icon's box. Memoised on fixed inventory and shared values, like the marker.
  */
-function Glyph({ name, size, color }: { name: FeatherGlyph; size: number; color: string }) {
+const GlyphLayers = memo(function GlyphLayers({
+  glyph,
+  index,
+  trip,
+  clock,
+}: Travel & { readonly glyph: TabBarTab<string>['glyph']; readonly index: number }) {
+  const idle = useLayerShown(index, 'idle', { trip, clock });
+  const lit = useLayerShown(index, 'lit', { trip, clock });
   return (
-    <Feather
+    <>
+      <Animated.View style={[s.glyphLayer, idle]}>
+        <Glyph name={glyph.idle} color={theme.color.tabIdle} />
+      </Animated.View>
+      <Animated.View style={[s.glyphLayer, lit]}>
+        <Glyph name={glyph.lit} color={theme.color.coral} />
+      </Animated.View>
+    </>
+  );
+});
+
+/**
+ * **A column's two labels**: in `tabIdle`, and over it in `coralInk`. The selected copy is a
+ * drawing laid over the word, hidden from the reader — the column is named once, by its own label.
+ */
+const LabelLayers = memo(function LabelLayers({
+  text,
+  index,
+  trip,
+  clock,
+}: Travel & { readonly text: string; readonly index: number }) {
+  const idle = useLayerShown(index, 'idle', { trip, clock });
+  const lit = useLayerShown(index, 'lit', { trip, clock });
+  return (
+    <View>
+      <Animated.View style={idle}>
+        <Label text={text} color={theme.color.tabIdle} />
+      </Animated.View>
+      <Animated.View
+        style={[StyleSheet.absoluteFill, lit]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Label text={text} color={theme.color.coralInk} />
+      </Animated.View>
+    </View>
+  );
+});
+
+/**
+ * A mark, never a word. Hidden from the reader on every column: the visible label already names
+ * the tab, and the bolt in particular is a private-use codepoint that a screen reader would either
+ * spell or skip.
+ */
+function Glyph({ name, color }: { name: IoniconsGlyph; color: string }) {
+  return (
+    <Ionicons
       name={name}
-      size={size}
+      size={theme.size.tabBar.icon}
       color={color}
       accessibilityElementsHidden
       importantForAccessibility="no"
@@ -366,7 +576,7 @@ function Glyph({ name, size, color }: { name: FeatherGlyph; size: number; color:
  * Part 13 names this bar as the fixed-height exception **and** permits
  * `allowFontScaling={false}` only inside the level bar's drawn geometry, so a bounded
  * multiplier is the only mechanism left — see `theme.size.tabBar.labelMaxScale` for where its
- * number comes from.
+ * number comes from, and what it now holds inside the marker.
  */
 function Label({ text, color }: { text: string; color: string }) {
   return (
@@ -380,66 +590,79 @@ function Label({ text, color }: { text: string; color: string }) {
   );
 }
 
+const { tabBar } = theme.size;
+
 const s = StyleSheet.create({
-  // 10.2 — equal columns, paddingTop 6, paddingBottom 12 + the bottom inset.
-  bar: {
+  // 10.2 — **over the screen, at its foot** (10.1, ADR-0210 §3): the dock owns no layout, so every
+  // screen inside the tabs draws to the bottom of the phone and ends at its reach instead.
+  dock: {
+    position: 'absolute',
+    left: tabBar.sideInset,
+    right: tabBar.sideInset,
+    height: tabBar.height,
     flexDirection: 'row',
-    backgroundColor: theme.color.surface,
-    borderTopWidth: 1,
-    // `line` BOUNDS a thing, and the bar is bounded against the screen above it.
-    borderTopColor: theme.color.line,
-    paddingTop: theme.space.xs,
+    borderRadius: theme.radius.dock,
+    // `line` BOUNDS a thing, and the dock is a thing on the page.
+    borderWidth: HAIRLINE,
+    borderColor: theme.color.line,
   },
+  shadow: theme.shadow.dock,
+  glassShadow: { boxShadow: [...theme.glass.shadow] },
+
+  // The dock's ground, inside the hairline and clipped to its inner corner — a blur drawn past
+  // the corner would square it off.
+  material: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: theme.radius.dock - HAIRLINE,
+    overflow: 'hidden',
+  },
+  opaque: { backgroundColor: theme.color.surface },
+  glass: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.color.glass },
+  // The glass's bright edge, a 1pt `surface` line inside the hairline. On the opaque dock it is
+  // white on white, which is harmless.
+  rim: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: theme.radius.dock - HAIRLINE,
+    borderWidth: HAIRLINE,
+    borderColor: theme.color.surface,
+  },
+
+  // Over the glass and under the words. Centred top to bottom inside the hairline; across, the
+  // dock places it under the lit column.
+  marker: {
+    position: 'absolute',
+    left: 0,
+    top: (tabBar.height - 2 * HAIRLINE - tabBar.marker.height) / 2,
+    width: tabBar.marker.width,
+    height: tabBar.marker.height,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.color.coralSoft,
+  },
+
   column: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    // 10.2 sets the bar's paddings and the icon box and stops. The gap is the smallest step
-    // on the 3pt grid rather than a fourth number invented beside it.
+    justifyContent: 'center',
+    // The icon over its label, the smallest step on the 3pt grid between them.
     gap: theme.space.xxs,
   },
   columnPressed: { opacity: 0.7 },
 
-  // The icon's own box. `visible` for the disc's reason: Android clips a child drawn outside
-  // its parent, and a clipped badge is a count disappearing on one platform.
+  // The icon's own box. `visible` because Android clips a child drawn outside its parent, and a
+  // clipped badge is a count disappearing on one platform.
   glyphBox: {
-    width: theme.size.tabIcon,
-    height: theme.size.tabIcon,
+    width: tabBar.icon,
+    height: tabBar.icon,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'visible',
   },
-  discBox: {
-    width: theme.size.fab,
-    height: theme.size.fab,
+  // One of the icon's two layers, filling its box with the glyph centred in it.
+  glyphLayer: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    // The ring is 4pt larger than this box on every side, which is the whole point — the box
-    // is the LAYOUT and the ring is not in it. Declared rather than left to the default,
-    // because Android is where a child drawn outside its parent gets clipped, and a clipped
-    // ring is the active state disappearing on one platform with nothing to see in a test.
-    overflow: 'visible',
   },
-  // Absolute, and centred by the box rather than by an inset: entering Play must not change
-  // the bar's height. The 4pt it takes above the disc comes out of the bar's own 6pt top
-  // padding, leaving 2pt of clearance to the hairline.
-  ring: {
-    position: 'absolute',
-    borderWidth: theme.size.tabBar.ringStroke,
-    borderColor: theme.color.coral,
-  },
-  disc: {
-    width: theme.size.fab,
-    height: theme.size.fab,
-    borderRadius: theme.radius.fab,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // 6.1 `primary`: the disc is that button in a squircle, so white on `coralInk` rather
-    // than the prototype's white on `coral` at 3.89:1.
-    backgroundColor: theme.color.coralInk,
-    ...theme.shadow.fab,
-  },
-  discPressed: { backgroundColor: theme.color.coral },
 
   label: { ...theme.type.tag, textAlign: 'center' },
 });

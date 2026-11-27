@@ -51,7 +51,7 @@ other game — the cut-off, holding, rescues, leaving after the cut-off — are 
 | 4 | The **Add friends** sheet | The sheet, its groups card (*8 members · 2 to add*, a chevron) and the link card with **Copy** | The link's code (note 4); it gains a small **New link** |
 | 5 | A friend request card on Home | The row title *FRIEND REQUESTS · 1*, the card, *With you in Kazimierz crew · Padel 3,40 · ✦ 98*, **Not now** / **Accept** | Nothing |
 | 6 | The picker, full | Picked rows ticked, the rest greyed | Nothing |
-| 7 | The court, seated | The court with sides, faces, *nickname level* labels and each friend's ×; the **Competitive / For fun** switch above it | The tab bar's *Info* (note 2); which side each face sits on (note 3) |
+| 7 | The court, seated | The court with sides, faces, *nickname level* labels and each friend's × | The tab bar's *Info* (note 2); which side each face sits on (note 3); the **Competitive / For fun** switch above the court, which becomes the Friends tab's menu (note 9) |
 | 8 | The Friends tab, court and card | The court above the card, the card's layout, **Send game and pay 25 zł** (volt) and **Pick a different court** | The sides, where the court and the card disagree (note 3) |
 | 9 | The friends card | The deck card's parts without tiles: the *vs* line, the percentage, the balance bar, the overlap grid, the court panel with *Court available* and the share | *Overlap next week*: the label is the deck's own grade, *High / Good / Slim overlap* (note 6) |
 | 10 | *Find a court*, everybody free | The sheet, its day headings, the rows (*19:00 · Bonarka Arena · Court 2 · 32 zł each · Everybody free*), the brightest tint | The game header behind the sheet (note 3) |
@@ -67,8 +67,9 @@ from the mocks' own parts and the design system, and named there as designed, no
 
 ## Overrides
 
-Each is a ruling of the friends grilling, a call in PRD #743, or a rule from an earlier record. The
-mock is correct everywhere else.
+Each is a ruling of the friends grilling, a call in PRD #743, or a rule from an earlier record;
+note 9 is a later decision, PRD [#859](https://github.com/Raketa02/Raketa/issues/859), whose record
+is [`docs/specs/tab-menu/`](../tab-menu/README.md). The mock is correct everywhere else.
 
 | Note | Mock | What it draws | What is built |
 | --- | --- | --- | --- |
@@ -80,6 +81,7 @@ mock is correct everywhere else.
 | 6 | friends 9 | *Overlap next week* | The deck's grade, *High / Good / Slim overlap*, as mock 8 draws it (*Slim overlap*) and the deck card does (games and fill-in Q71) |
 | 7 | friends 12 | *Saturday 10:00 · Wisła Park · Court 3 · Padel* | The line names the kind too: *Saturday 10:00 · Ogrody 33 · Court 3 · Padel · Competitive* (Q15). With Whole court the button is **Accept** and a line reads *Tomek paid the court* (Q29) |
 | 8 | friends 8, 9 | **Send game and pay 25 zł** sends at once | It opens the **send sheet**, which asks how to pay and carries the order button with the maximum above it (call 8) |
+| 9 | friends 7 | The **Competitive / For fun** switch above the court, on screen all the time | **The Friends tab's menu** (2026-11-24, [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built): a chevron on the selected Friends tab, and a tap on it opens a menu aligned to the tab's right edge, Competitive then For fun, with a coral tick and **no counts and no door**. It still sets this game's kind only. The court sits right under the tabs, at its own size ([the screens §7.1](the-screens.md#71-the-court); the tab menu's [mocks 2 and 4](../tab-menu/README.md), illustrations) |
 
 ## Index
 

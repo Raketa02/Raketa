@@ -5,7 +5,7 @@
  * draws, and how a write's answer lands on the card it came from.
  */
 
-import type { GroupPerson, HottestGroup } from './group';
+import type { GroupPerson, HottestGroup, HottestPage, HottestRow } from './group';
 import { groupAction, type GroupAction } from './groupRules';
 import type { GroupRelation } from './vocabulary';
 
@@ -39,19 +39,33 @@ export function sheetFaces(group: HottestGroup): readonly GroupPerson[] {
 }
 
 /**
- * **How far the heat bar fills**, 0 to 1 — the served share, held inside the bar. The server never
- * sends more than full (§5.5), and a bar is never drawn past its own track whatever arrives.
+ * **The row, or a page of *Groups heating up*, with one card's relation moved** — what a join, an
+ * ask or a withdraw draws at once, on each (#823). The rest stands: the row's total and a page's
+ * cursor move with the next read, which every such write asks for (#822).
  */
-export function heatFill(share: number): number {
-  if (Number.isNaN(share)) return 0;
-  return Math.min(1, Math.max(0, share));
-}
-
-/** **The row with one card's relation moved** — what a join, an ask or a withdraw draws at once. */
-export function withRelation(
-  groups: readonly HottestGroup[],
+export function withRelation<Held extends HottestRow | HottestPage>(
+  held: Held,
   groupId: string,
   relation: GroupRelation,
-): readonly HottestGroup[] {
-  return groups.map((group) => (group.id === groupId ? { ...group, relation } : group));
+): Held {
+  return {
+    ...held,
+    groups: held.groups.map((group) => (group.id === groupId ? { ...group, relation } : group)),
+  };
+}
+
+/**
+ * ***Groups heating up*'s list** — the pages in the order read, **each group once**, where it was
+ * first drawn. Heat is worked out on every read (the mechanics §5.10), so a group that cooled behind
+ * a page's cursor is read again by the next, and a list keyed by group cannot draw it twice.
+ */
+export function joinHottestPages(pages: readonly HottestPage[]): readonly HottestGroup[] {
+  const seen = new Set<string>();
+  return pages.flatMap((page) =>
+    page.groups.filter((group) => {
+      if (seen.has(group.id)) return false;
+      seen.add(group.id);
+      return true;
+    }),
+  );
 }

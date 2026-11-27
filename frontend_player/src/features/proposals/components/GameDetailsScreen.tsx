@@ -1,11 +1,25 @@
 /**
- * **A game still filling, in detail** — what a card or its **i**, a *You're In* row and a live yes
+ * **A game still filling, in detail** — what a card or its **i**, a *You’re in* row and a live yes
  * open (the screens A4.2, Q75; details mocks 5–10 for the layout;
- * [#553](https://github.com/Raketa02/Raketa/issues/553), [#557](https://github.com/Raketa02/Raketa/issues/557)).
+ * [#553](https://github.com/Raketa02/Raketa/issues/553), [#557](https://github.com/Raketa02/Raketa/issues/557);
+ * the order is the For-fun mocks 3–6's since [#836](https://github.com/Raketa02/Raketa/issues/836)).
  *
  * ```
  * ‹  [faces]  karol.t, zofia.b, ania.k    — or *Only you*, alone on it
  *             Padel                                              the sport and kind: the tag is the state
+ * ┌ BALANCE FORECAST ───────────────────────────┐   the top card, read first — a competitive game's
+ * │ 2,65            gap −0,09             2,74 │   full forecast (`shared/ui`'s `ForecastBlock`,
+ * │ [ You + Zofia ▓▓▓▓▓░░░░░░░░ Ania + Ewa ]   │   #839; for fun 3): both sides and the gap, the
+ * │ 73%  Fairly even · A counted game — …      │   bar, the % and its word, the counted sentence,
+ * │ [ If you win +0,08 ] [ If you lose −0,07 ] │   and the stakes — two tiles or none. Never on
+ * └─────────────────────────────────────────────┘   For fun, which opens instead on
+ * ┌ SOCIAL VIBE ────────────────────────────────┐   the Social vibe card (`shared/ui`'s
+ * │ 67%  Good vibe                              │   `SocialVibeCard`, #840; for fun 7): the deck
+ * │ [████████████████░░░░░░░░]                  │   card's %, its word and the bar below, then
+ * │                  You  magda filip kuba      │   your tags' rows — a dot under each carrier,
+ * │ ▌🍻 Stays for a drink  ●             ●      │   You first, then the tiles' order; a row
+ * │  🔁 Here for a regular game ●               │   only you have in grey
+ * └─────────────────────────────────────────────┘
  * ┌ ● Filling · 1 of 4 in ─────────────────────┐   the dark card — the status, the tiles with IN,
  * │ [tile] [tile]  ── KAROL + YOU VS … ──       │   the vs line, and the court on an accent line:
  * │ [tile] [tile]                               │
@@ -13,17 +27,18 @@
  * │ ▎DAY    Saturday 3 Oct                      │
  * │ ▎TIME   16:00  until 17:00                  │
  * │ ▎YOUR SHARE  32 zł  if it fills · book by … │   — while one payment is awaited, on a line
- * └─────────────────────────────────────────────┘     under the share: Waiting for one payment ·
- *                                                     until 14:40 · Nobody pays until it's in
- * BALANCE FORECAST  [ You + Zofia │ Ania + Ewa ]  87% Very even
- * ┌ Slim overlap … the grid ────────────────────┐   once two are In: alone, who is free says nothing
- * [ I'm in ]  [ Not this time ]     — Pay 32 zł on the last seat; or [ Withdraw ], [ Leave the game ],
- *                                     [ Confirm your payment ]
+ * │                                             │     under the share: Waiting for one payment ·
+ * │ [ Not this time ] [        I'm in         ] │     until 14:40 · Nobody pays until it's in
+ * └─────────────────────────────────────────────┘   the foot: Pay 32 zł on the last seat; or
+ * ┌ Slim overlap … the grid ────────────────────┐   [ Withdraw ], [ Leave the game ], [ Confirm your
+ *                                                    payment ] · who is free once two are In
  * ```
  *
  * ## One read, and the server says what the reader may do
  *
- * **`GET /proposals/{id}`** (#542) is the whole of it: who is In, the sides and their forecast, the
+ * **`GET /proposals/{id}`** (#542) is the whole of it: who is In, the sides, the kind's own card — a
+ * competitive game's forecast with both side strengths, the gap and what is at stake, or a For-fun
+ * game's Social vibe with who at the table carries each of the reader's tags (#833) — the
  * club and its distance, the share and the book-by, the overlap, the status — *Filling · 2 of 4
  * in*, *Waiting for one payment* in amber, booked, or how it ended unfilled — and **`actions`, what
  * the reader may do now**, in the screen's order. *Waiting for one payment* (#625, #626; Q111)
@@ -61,39 +76,33 @@
 
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { offlineMessage, type AppError } from '@/shared/errors';
-import { formatDistanceKm, formatPercent } from '@/shared/formatting/ratingFormat';
+import { formatDistanceKm } from '@/shared/formatting/ratingFormat';
 import { showToast } from '@/shared/store/toast.store';
 import {
-  BALANCE_INK,
-  BalanceBar,
   behindOverlay,
   Button,
-  Card,
   courtSeatCount,
+  ForecastBlock,
   Note,
   ScreenHeader,
+  SocialVibeCard,
   theme,
+  useTabBarReach,
 } from '@/shared/ui';
-import { balanceLabel, balanceTone, balanceWord } from '@/shared/vocabulary/balancePresentation';
+import { COUNTED_GAME_SENTENCE } from '@/shared/vocabulary/forecastPresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import {
-  chargesAtOnce,
-  foldOf,
-  peopleOn,
-  refusalOutcome,
-  rowsOf,
-  type DeckPerson,
-} from '../domain/deck';
+import { chargesAtOnce, peopleOn, refusalOutcome, rowsOf, type DeckPerson } from '../domain/deck';
 import {
   completesTheGame,
   detailsCanRunOut,
   paymentDueOf,
+  topCardOf,
   yesOnDetails,
   type ProposalDetails,
 } from '../domain/details';
@@ -112,6 +121,7 @@ import {
   detailsDay,
   detailsShareWords,
   detailsStatus,
+  forecastSides,
   othersTitle,
   refusalMessage,
   shareWords,
@@ -188,6 +198,8 @@ function Details({
   readonly kind: GameKind;
   readonly receivedAt: number;
 }) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const { proposalId, actions } = details;
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
 
@@ -222,12 +234,15 @@ function Details({
   const withdraw = useWithdrawYes(groupId, refused);
   const leaveWaiting = useLeaveWhileWaiting(groupId, proposalId);
 
-  /** This game's yes is counting down behind *Undo*. */
-  const counting = fill.counting === proposalId;
+  /**
+   * This game's yes is booking: counting down behind *Undo*, and then on its way once the ten seconds
+   * are up — _Booking…_ through both, never _Pay_ again while the money moves (`decisions.md` §3.3).
+   */
+  const booking = fill.counting === proposalId || fill.sending(proposalId);
   /** Another booking counts, and this yes would move money too — one window at a time. */
-  const held = !counting && fill.held(yesOn);
-  /** An answer is on its way here — this game's yes counting down among them. */
-  const busy = answer.isPending || withdraw.isPending || counting;
+  const held = !booking && fill.held(yesOn);
+  /** An answer is on its way here — this game's yes booking among them. */
+  const busy = answer.isPending || withdraw.isPending || booking;
   const paused = answer.isPaused || withdraw.isPaused;
 
   /** The yes given: ten seconds behind *Undo* on the last seat, else sent at once. */
@@ -255,6 +270,13 @@ function Details({
   const at = useReadClock(details.readAt, receivedAt, detailsCanRunOut(details));
   const seats = courtSeatCount(sport);
   const { top, bottom } = rowsOf(details, seats / 2);
+  const topCard = topCardOf(details);
+
+  // What the card's foot draws — one of these, by the read's `actions`.
+  const answering = actions.includes('YES') || actions.includes('NO');
+  const withdrawing = actions.includes('WITHDRAW');
+  const leaving = actions.includes('LEAVE');
+  const confirming = actions.includes('CONFIRM_PAYMENT') ? details.yourPayment : undefined;
 
   return (
     <>
@@ -267,8 +289,26 @@ function Details({
           title={othersTitle(details) || COPY.game.onlyYou}
           subline={sportWords(sport, kind)}
         />
-        <ScrollView contentContainerStyle={s.body}>
-          <View style={s.game}>
+        <ScrollView
+          contentContainerStyle={[s.body, { paddingBottom: reach + theme.size.gutter }]}
+          testID="game-details"
+        >
+          {/* The top card, the kind's own: a competitive game's full forecast and what is at
+              stake (#839), or a For-fun game's Social vibe card with its grid (#840). */}
+          {topCard === undefined ? null : topCard.kind === 'vibe' ? (
+            <SocialVibeCard grid={topCard.grid} />
+          ) : (
+            <ForecastBlock
+              forecast={topCard.forecast}
+              split={topCard.forecast.split}
+              {...(topCard.atStake === undefined ? {} : { stake: topCard.atStake })}
+              labels={barLabels([top, bottom])}
+              names={forecastSides([top, bottom])}
+              sentence={COUNTED_GAME_SENTENCE}
+            />
+          )}
+
+          <View style={s.game} testID="game-details-card">
             <GameGround />
             <View accessible accessibilityRole="header">
               <CardTag
@@ -283,20 +323,77 @@ function Details({
               bottom={bottom}
               singles={seats === 2}
               completes={completesTheGame(details)}
-              fill={false}
               onPerson={setReading}
+              // The forecast's split row says who partners whom; the Social vibe card does not,
+              // nor does nothing at all — so there the vs line is spoken instead, said once.
+              speaksSides={topCard?.kind !== 'forecast'}
             />
 
             <Facts details={details} at={at} />
-          </View>
 
-          {details.forecast === undefined ? null : (
-            <Forecast
-              pct={details.forecast.pct}
-              fold={foldOf(details) ?? 0}
-              labels={barLabels([top, bottom])}
-            />
-          )}
+            {/* Held while offline, and sent when the connection returns. */}
+            {paused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+
+            {/* The card's foot: what the reader may do, right under the facts it answers. */}
+            {answering || withdrawing || leaving || confirming ? (
+              <View style={s.foot}>
+                {answering ? (
+                  // Side by side: Not this time on the left at its words' width, the yes the rest.
+                  <View style={s.answers}>
+                    {actions.includes('NO') ? (
+                      <Button
+                        label={COPY.no}
+                        variant="secondary"
+                        size="lg"
+                        busy={answer.isPending && answer.variables?.said === 'no'}
+                        disabled={busy && answer.variables?.said !== 'no'}
+                        onPress={sayNo}
+                        style={actions.includes('YES') ? s.beside : s.rest}
+                      />
+                    ) : null}
+                    {actions.includes('YES') ? (
+                      <Button
+                        label={yesButtonLabel(chargesAtOnce(yesOn), shareWords(details))}
+                        size="lg"
+                        busy={booking || (answer.isPending && answer.variables?.said === 'yes')}
+                        busyLabel={booking ? FILL_COPY.undo.booking : undefined}
+                        disabled={held || (busy && !booking && answer.variables?.said !== 'yes')}
+                        onPress={sayYes}
+                        style={s.rest}
+                      />
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {withdrawing ? (
+                  <Button
+                    label={COPY.game.withdraw}
+                    variant="secondary"
+                    size="lg"
+                    busy={withdraw.isPending}
+                    disabled={busy && !withdraw.isPending}
+                    onPress={() => withdraw.mutate(proposalId)}
+                  />
+                ) : null}
+
+                {leaving ? (
+                  <LeaveTheGame leaving={LEAVING_WHILE_WAITING} act={leaveWaiting} />
+                ) : null}
+
+                {confirming ? (
+                  <Button
+                    label={
+                      FILL_COPY.confirm.title[
+                        paymentWindowAt(confirming.confirmBy, confirming.timeTo, at)
+                      ]
+                    }
+                    size="lg"
+                    onPress={() => fill.confirm(confirming, yesOn)}
+                  />
+                ) : null}
+              </View>
+            ) : null}
+          </View>
 
           {/* Who is free means something once somebody else is In to be free with. */}
           {details.inCount < 2 ? null : (
@@ -305,63 +402,6 @@ function Details({
               <OverlapGrid overlap={details.overlap} today={weekdayAt(at)} />
             </View>
           )}
-
-          {/* Held while offline, and sent when the connection returns. */}
-          {paused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
-
-          {actions.includes('YES') || actions.includes('NO') ? (
-            <View style={s.answers}>
-              {actions.includes('YES') ? (
-                <Button
-                  label={yesButtonLabel(chargesAtOnce(yesOn), shareWords(details))}
-                  size="lg"
-                  busy={counting || (answer.isPending && answer.variables?.said === 'yes')}
-                  busyLabel={counting ? FILL_COPY.undo.booking : undefined}
-                  disabled={held || (busy && !counting && answer.variables?.said !== 'yes')}
-                  onPress={sayYes}
-                />
-              ) : null}
-              {actions.includes('NO') ? (
-                <Button
-                  label={COPY.no}
-                  variant="secondary"
-                  size="lg"
-                  busy={answer.isPending && answer.variables?.said === 'no'}
-                  disabled={busy && answer.variables?.said !== 'no'}
-                  onPress={sayNo}
-                />
-              ) : null}
-            </View>
-          ) : null}
-
-          {actions.includes('WITHDRAW') ? (
-            <Button
-              label={COPY.game.withdraw}
-              variant="secondary"
-              size="lg"
-              busy={withdraw.isPending}
-              disabled={busy && !withdraw.isPending}
-              onPress={() => withdraw.mutate(proposalId)}
-            />
-          ) : null}
-
-          {actions.includes('LEAVE') ? (
-            <LeaveTheGame leaving={LEAVING_WHILE_WAITING} act={leaveWaiting} />
-          ) : null}
-
-          {actions.includes('CONFIRM_PAYMENT') && details.yourPayment !== undefined ? (
-            <Button
-              label={
-                FILL_COPY.confirm.title[
-                  paymentWindowAt(details.yourPayment.confirmBy, details.yourPayment.timeTo, at)
-                ]
-              }
-              size="lg"
-              onPress={() => {
-                if (details.yourPayment !== undefined) fill.confirm(details.yourPayment, yesOn);
-              }}
-            />
-          ) : null}
         </ScrollView>
       </SafeAreaView>
 
@@ -409,37 +449,6 @@ function Facts({ details, at }: { readonly details: ProposalDetails; readonly at
   return <GameFacts facts={facts} accent={PROPOSAL_STATUS_INK[details.status]} />;
 }
 
-/** BALANCE FORECAST on paper — the bar, your side left, and the figure with its word (details 9). */
-function Forecast({
-  pct,
-  fold,
-  labels,
-}: {
-  readonly pct: number;
-  readonly fold: number;
-  readonly labels: readonly [string, string];
-}) {
-  const tone = balanceTone(pct);
-  return (
-    <Card style={s.forecast}>
-      <Text accessibilityRole="header" style={s.eyebrow}>
-        {COPY.game.forecast}
-      </Text>
-      <BalanceBar
-        advantage={fold}
-        tone={tone}
-        size="md"
-        labels={labels}
-        accessibilityLabel={balanceLabel(pct)}
-      />
-      <View style={s.reading} accessible accessibilityLabel={balanceLabel(pct)}>
-        <Text style={[s.figure, { color: BALANCE_INK[tone] }]}>{formatPercent(pct)}</Text>
-        <Text style={s.word}>{balanceWord(pct)}</Text>
-      </View>
-    </Card>
-  );
-}
-
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   body: { padding: theme.size.gutter, gap: theme.space.sm },
@@ -449,11 +458,14 @@ const s = StyleSheet.create({
     padding: theme.space.md,
     gap: theme.space.md,
   },
-  forecast: { gap: theme.space.sm },
-  eyebrow: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
-  reading: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
-  figure: { ...theme.num.xl, ...theme.tabular },
-  word: { ...theme.type.cardTitle, color: theme.color.ink },
   grid: { borderRadius: theme.radius.cardDark, overflow: 'hidden', padding: theme.space.md },
-  answers: { gap: theme.space.sm },
+  foot: { gap: theme.space.sm },
+  answers: { flexDirection: 'row', gap: theme.space.sm },
+  /**
+   * *Not this time* at its words' width, and the yes takes the rest — either alone takes the row.
+   * Both shrink, by their widths, where large type would make the two overflow: React Native's
+   * `flexShrink` is 0 by default, which would squeeze the yes alone.
+   */
+  beside: { flexShrink: 1 },
+  rest: { flexGrow: 1, flexShrink: 1 },
 });

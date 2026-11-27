@@ -55,7 +55,7 @@ from app.modules.games.domain.ports import (
     Pairing,
     SeatLevel,
 )
-from app.modules.matchmaking.application.outward_reads import read_demand
+from app.modules.matchmaking.application.at_stake import at_stake_on_the_court
 from app.modules.matchmaking.domain.balance import forecast_the_sides
 from app.modules.matchmaking.domain.ports import AtStakeQuery
 from app.modules.rating.domain.ports import RatedPlayerQuery, RatedSport
@@ -170,17 +170,16 @@ class GamesCourtPairing:
     ) -> LevelDeltas | None:
         """The rule read forward for this court, and it fails **soft** like every
         at-stake read: a Level store that cannot answer costs the block and never
-        the screen, which is the posture ``AtStakeQuery`` declared."""
+        the screen, which is the posture ``AtStakeQuery`` declared. **The one
+        function a game still filling prices its stakes with too** (#833), so
+        the pair seen before a yes is the pair printed here."""
 
-        at_stake = await read_demand(
-            AtStakeQuery,
-            lambda: self._at_stake.counted_game_deltas_on_court(
-                player_id=reader_id,
-                own_side=ours,
-                opposing_side=theirs,
-                sport=sport,
-            ),
-            stood_down=None,
+        at_stake = await at_stake_on_the_court(
+            self._at_stake,
+            player_id=reader_id,
+            own_side=ours,
+            opposing_side=theirs,
+            sport=sport,
         )
         if at_stake is None:
             return None

@@ -12,12 +12,14 @@
  */
 
 import { act, fireEvent, render as renderTree, screen } from '@testing-library/react-native';
+import type { ReactNode } from 'react';
 import { AccessibilityInfo, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { showToast, useToastQueue } from '@/shared/store/toast.store';
 
-import { TAB_BAR_HEIGHT } from './TabBar';
+import { SplashCoverProvider } from './overlay';
+import { useSaysTabBarReach } from './tabBarReach';
 import { theme } from './theme';
 import { ToastHost } from './Toast';
 
@@ -29,10 +31,28 @@ const METRICS: Metrics = {
   insets: { top: 47, left: 0, right: 0, bottom: 34 },
 };
 
-/** The host is mounted once at the root, so every case here renders exactly one of it. */
-function render(): void {
+/**
+ * The dock's full reach on this phone — its lift, which is the bottom inset where that is larger
+ * than 12, and its 54 (10.2) — worked out here from the theme rather than read back from the bar,
+ * so a reach that drifted from it goes red. 88 on this notched phone.
+ */
+const FULL_REACH =
+  Math.max(theme.size.tabBar.lift, METRICS.insets.bottom) + theme.size.tabBar.height;
+
+/** A shell, under the host as the tabs are: its bar drawn, or standing down as in the chat. */
+function Shell({ drawn, children }: { readonly drawn: boolean; readonly children?: ReactNode }) {
+  useSaysTabBarReach(drawn);
+  return <>{children}</>;
+}
+
+/**
+ * The host is mounted once at the root, so every case here renders exactly one of it — beside a
+ * shell when a case says the bar is drawn or standing down, and with none at all otherwise.
+ */
+function render(shell?: { readonly drawn: boolean }): void {
   renderTree(
     <SafeAreaProvider initialMetrics={METRICS}>
+      {shell === undefined ? null : <Shell drawn={shell.drawn} />}
       <ToastHost />
     </SafeAreaProvider>,
   );
@@ -111,6 +131,43 @@ describe('the queue', () => {
   });
 });
 
+/**
+ * **A message raised under the launch's drawn splash** (ADR-0209 §2): the host is in the tree the
+ * splash covers for the first seconds of a cold open, so a hold started there would run out unseen
+ * — a two-second toast raised at 0.4 s gone before the fade at 2.6 s. It waits, unsaid, until the
+ * splash is gone, and then has its whole time.
+ */
+describe('under the launch’s splash', () => {
+  function renderCovered(covered: boolean) {
+    return (
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <SplashCoverProvider covered={covered}>
+          <ToastHost />
+        </SplashCoverProvider>
+      </SafeAreaProvider>
+    );
+  }
+
+  it('says nothing and starts no hold until the splash has gone, then has its whole time', () => {
+    const view = renderTree(renderCovered(true));
+    act(() => showToast({ message: 'That link has already been used' }));
+
+    hold();
+    hold();
+    expect(drawn('That link has already been used')).toBeTruthy();
+    expect(announced).not.toHaveBeenCalled();
+
+    view.rerender(renderCovered(false));
+    expect(announced).toHaveBeenCalledTimes(1);
+
+    act(() => jest.advanceTimersByTime(theme.motion.hold.toast - 1));
+    expect(drawn('That link has already been used')).toBeTruthy();
+
+    act(() => jest.advanceTimersByTime(1));
+    expect(drawn('That link has already been used')).toBeNull();
+  });
+});
+
 describe('the announcement', () => {
   it('is queued, which is what keeps a toast from cutting a listener off mid-card', () => {
     render();
@@ -183,13 +240,21 @@ describe('the host', () => {
     expect(hostStyle()?.zIndex).toBe(theme.layer.toast);
   });
 
-  it('sits above the tab bar and the bottom inset, rather than over the app’s own chrome', () => {
-    render();
+  /**
+   * **9 above the bar's full reach, on every screen** (ADR-0210 §3) — the dock's lift and its 54, from
+   * the insets alone, whether the bar is drawn, standing down or absent. In the chat, where the bar
+   * stands down, that is what keeps the toast clear of the composer.
+   */
+  it.each([
+    ['the bar drawn', { drawn: true }],
+    ['the bar standing down, as in the chat', { drawn: false }],
+    ['no shell at all', undefined],
+  ] as const)('sits 9 above the bar’s full reach with %s', (_, shell) => {
+    render(shell);
     act(() => showToast({ message: 'Saved' }));
 
-    // The bar's height is derived where the bar is drawn; a copy of it here would be the
-    // two numbers `TAB_BAR_HEIGHT` exists to keep as one.
-    expect(hostStyle()?.bottom).toBe(TAB_BAR_HEIGHT + METRICS.insets.bottom + theme.space.sm);
+    expect(hostStyle()?.bottom).toBe(FULL_REACH + theme.space.sm);
+    expect(FULL_REACH).toBe(88);
   });
 
   /** Rule C: white on `mint` is 4,07:1, so the settled toast is `mintInk`. */

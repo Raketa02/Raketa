@@ -17,6 +17,11 @@
 > has *Show me to new people* off and shares no group, game or friendship with the reader, and it
 > carries **all of the subject's photos**, where §§ below plan for the first alone. It opens from any
 > face in Home's rows too ([the home rows mechanics §4.1](../home-rows/the-mechanics.md#41-records-q18-q27)).
+>
+> **Amended 2026-11-22** by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+> §7 ([#837](https://github.com/Raketa02/Raketa/issues/837)): a player holds **2 to 8** of **27**
+> tags, so **the record shows up to 8** — `SOCIAL_TAG_ROW_CAP` is 8, where §1.4 below says six. A
+> tag code the app has no words for is skipped, never drawn blank.
 
 **What replaces `SH.whyfit` when you tap a face on the forecast card, and everything the
 backend has to grow for it to be drawable.**
@@ -108,7 +113,8 @@ record sheet K-7 removed. The only new wire field is `confidence`.
 
 Section 4 needs **no backend work and no new component**. The one difference from the
 candidate card is that the record sheet shows *every* tag rather than the card's cap of six,
-which is a prop, not a rewrite (§6.4).
+which is a prop, not a rewrite (§6.4). *(Since ADR-0207 §7, 2026-11-22: every tag is up to eight,
+and the row's cap is eight.)*
 
 ---
 

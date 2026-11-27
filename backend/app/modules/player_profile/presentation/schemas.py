@@ -124,8 +124,8 @@ class SocialTagSelectionBoundsResource(BaseModel):
     """How many Social tags a selection must hold to be one.
 
     The unit is in both field names: a bare ``minimum`` beside a list of
-    nineteen tags reads as a count of something, and which something is exactly
-    what a client would guess wrong.
+    twenty-seven tags reads as a count of something, and which something is
+    exactly what a client would guess wrong.
     """
 
     minimum_tags: int = Field(

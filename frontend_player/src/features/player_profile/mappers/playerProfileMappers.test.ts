@@ -30,7 +30,7 @@ const SERVED: Wire['PlayerProfileOptionsResponse'] = {
     },
     { group: 'ON_THE_COURT', tags: [{ id: 'PLAYS_TO_WIN' }] },
   ],
-  social_tag_selection: { minimum_tags: 2, maximum_tags: 6 },
+  social_tag_selection: { minimum_tags: 2, maximum_tags: 8 },
 };
 
 describe('the served tag vocabulary', () => {
@@ -96,10 +96,10 @@ describe('the served tag vocabulary', () => {
 
 describe('the served selection bounds', () => {
   it('reads how many tags a profile must hold, in the app’s own words', () => {
-    // `minimum_tags` carries its unit because a bare `minimum` beside a list of eighteen
+    // `minimum_tags` carries its unit because a bare `minimum` beside a list of twenty-seven
     // reads as a count of something. Inside the app the type says which, so the field does
     // not have to.
-    expect(toProfileOptions(SERVED).socialTagSelection).toEqual({ minimum: 2, maximum: 6 });
+    expect(toProfileOptions(SERVED).socialTagSelection).toEqual({ minimum: 2, maximum: 8 });
   });
 });
 

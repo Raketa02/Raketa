@@ -40,6 +40,7 @@ import {
   type FakeShare,
 } from '@/test-support/platform';
 import { stubGroupDeck } from '@/test-support/groupDeck';
+import { menuTab, pickKind } from '@/test-support/tabMenu';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import { useFriendsGame } from '../store/friendsGame.store';
@@ -224,12 +225,13 @@ async function unfold(sport: string) {
   settleTheUnfold();
 }
 
-const tab = (name: string, selected?: boolean) =>
+const tab = (name: string | RegExp, selected?: boolean) =>
   screen.findByRole('button', { name, ...(selected === undefined ? {} : { selected }) });
 
 async function openTab(name: string) {
   fireEvent.press(await tab(name));
-  expect(await tab(name, true)).toBeTruthy();
+  // Selected, a tab with a menu says its kind after its name (#861): *Friends, Competitive*.
+  expect(await tab(new RegExp(`^${name}(,|$)`), true)).toBeTruthy();
 }
 
 const faces = () => screen.queryAllByTestId(/^games-face-/, { includeHiddenElements: true });
@@ -305,15 +307,20 @@ describe('the fast filter', () => {
         },
       );
       fireEvent.press(closed);
-      const bar = await screen.findByTestId('sport-bar');
-      fireEvent(within(bar).getByRole('button', { name: 'Padel' }), 'layout', {
-        nativeEvent: { layout: { x: 0, y: 0, width: 80, height: 27 } },
+      // The bar is laid out at the closed pill's width — an 80-point pill and the bar's inset — and
+      // the rest of the row beside it; open, its moving end has travelled the difference.
+      const closedWidth = 80 + 2 * theme.size.groupPage.filterPad;
+      fireEvent(await screen.findByTestId('sport-bar'), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 0, width: closedWidth, height: 45 } },
       });
       fireEvent(screen.getByTestId('sport-bar-row'), 'layout', {
-        nativeEvent: { layout: { x: 0, y: 0, width: rowWidth, height: 27 } },
+        nativeEvent: { layout: { x: 0, y: 0, width: rowWidth - 80, height: 27 } },
       });
       act(() => jest.advanceTimersByTime(theme.motion.unfold + 16));
-      return (getAnimatedStyle(screen.getByTestId('sport-bar')) as { width?: number }).width;
+      const end = getAnimatedStyle(screen.getByTestId('sport-bar-end')) as {
+        transform?: { translateX?: number }[];
+      };
+      return closedWidth + Math.abs(end.transform?.[0]?.translateX ?? 0);
     }
 
     // #529 E2: the tile's edge showed past the open bar's end.
@@ -408,13 +415,19 @@ describe('the fast filter', () => {
 });
 
 describe('the tab bar', () => {
-  // Q125: Info is the group's own screen, opened from the header — not a fourth tab.
-  it('is Games · Fill in · Friends, with no counts, and opens on Games', async () => {
+  // #847 (split mock 3): You’re in is a tab of its own. Q125: Info is the group's own screen, opened
+  // from the header — not a fifth tab.
+  it('is Games · Fill in · You’re in · Friends, with no counts, and opens on Games', async () => {
     await openGroup();
 
-    expect(await tab('Games', true)).toBeTruthy();
-    expect(await tab('Fill in', false)).toBeTruthy();
-    expect(await tab('Friends', false)).toBeTruthy();
+    // Selected, with its deck read, Games says the kind its menu holds (#862).
+    expect(await menuTab('Games')).toBeTruthy();
+    const names = screen
+      .getAllByRole('button', { name: /^(Games|Fill in|You’re in|Friends)(,|$)/ })
+      .map((one) => one.props.accessibilityLabel as string);
+    // In this order, and the label is lower-case *i* with the curly apostrophe.
+    expect(names).toEqual(['Games, Competitive', 'Fill in', 'You’re in', 'Friends']);
+    expect(await tab('You’re in', false)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^Info/ })).toBeNull();
   });
 });
@@ -490,7 +503,7 @@ describe('the header', () => {
     await waitFor(() => expect(screen).toHavePathname(INFO_PATH));
     await backFromInfo();
 
-    expect(await tab('Friends', true)).toBeTruthy();
+    expect(await tab('Friends, Competitive', true)).toBeTruthy();
   });
 });
 
@@ -591,11 +604,11 @@ describe('Games', () => {
   });
 });
 
-describe('Fill in', () => {
+describe('You’re in, with nothing on it or on Fill in (#847)', () => {
   it('is just you while nobody else has joined, with the link and the button to come', async () => {
     await openGroup();
 
-    await openTab('Fill in');
+    await openTab('You’re in');
 
     expect(await screen.findByText('No games yet — it’s just you')).toBeTruthy();
     expect(
@@ -607,14 +620,14 @@ describe('Fill in', () => {
     expect(screen.getByRole('button', { name: COPY.link.copy })).toBeTruthy();
     // Open since #558: the one coral door on the page.
     expect(
-      screen.getByRole('button', { name: COPY.fillIn.postAGame, disabled: false }),
+      screen.getByRole('button', { name: COPY.youreIn.postAGame, disabled: false }),
     ).toBeTruthy();
   });
 
   it('drops “just you” once others have joined', async () => {
     await openGroup(MY_RAKETA_GROUP, pageOf(MY_RAKETA_GROUP, { member_count: 3 }));
 
-    await openTab('Fill in');
+    await openTab('You’re in');
 
     expect(await screen.findByText('No games yet')).toBeTruthy();
     expect(screen.queryByText('No games yet — it’s just you')).toBeNull();
@@ -622,7 +635,7 @@ describe('Fill in', () => {
 
   it('shares the link from here too', async () => {
     await openGroup();
-    await openTab('Fill in');
+    await openTab('You’re in');
 
     fireEvent.press(await screen.findByRole('button', { name: COPY.link.share }));
 
@@ -633,21 +646,22 @@ describe('Fill in', () => {
 describe('Friends', () => {
   const emptySeats = () => screen.queryAllByRole('button', { name: /, empty$/ });
 
-  it('switches between Competitive and For fun, and keeps the switch while the app is open', async () => {
-    // The game's own kind (#757) — `friendsGame.test.tsx` holds it apart from the deck's.
+  it('picks Competitive or For fun in the tab’s menu, and keeps the kind while the app is open', async () => {
+    // The game's own kind (#757) — `friendsGame.test.tsx` holds it apart from the deck's, and walks
+    // the menu itself (#861).
     await openGroup();
     await openTab('Friends');
-    expect(await tab(COPY.friends.competitive, true)).toBeTruthy();
+    expect(await tab('Friends, Competitive', true)).toBeTruthy();
 
-    fireEvent.press(await tab(COPY.friends.forFun, false));
-    expect(await tab(COPY.friends.forFun, true)).toBeTruthy();
+    await pickKind('Friends', COPY.group.kinds.forFun);
+    expect(await tab('Friends, For fun', true)).toBeTruthy();
 
     fireEvent.press(screen.getByRole('button', { name: COPY.group.back }));
     await waitFor(() => expect(screen).toHavePathname('/play'));
     await enter(MY_RAKETA_GROUP);
     await openTab('Friends');
 
-    expect(await tab(COPY.friends.forFun, true)).toBeTruthy();
+    expect(await tab('Friends, For fun', true)).toBeTruthy();
   });
 
   it.each([
@@ -752,6 +766,6 @@ describe('Friends', () => {
 
     fireEvent.press(screen.getByRole('button', { name: 'Back' }));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}`));
-    expect(await tab('Friends', true)).toBeTruthy();
+    expect(await tab('Friends, Competitive', true)).toBeTruthy();
   });
 });

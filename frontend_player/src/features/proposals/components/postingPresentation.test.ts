@@ -157,18 +157,60 @@ describe('a cell’s sheet', () => {
   });
 
   it('lines a fit with their Level and forecast, and says them whole', () => {
-    const fit = { playerId: 'p', name: 'karol.t', level: 2.75, forecastPct: 93 };
-    expect(fitLine(fit)).toBe('2,75 · 93');
-    expect(fitLine({ playerId: 'p', level: 2.75 })).toBe('2,75');
-    expect(fitLine({ playerId: 'p' })).toBeUndefined();
-    expect(fitSpoken(fit)).toBe('karol.t, level 2,75, a 93 % even game');
+    const fit = { playerId: 'p', name: 'karol.t', level: 2.75, forecast: { pct: 93 } };
+    expect(fitLine(fit, 'competitive')).toEqual([{ text: '2,75' }, { text: '93' }]);
+    expect(fitLine({ playerId: 'p', level: 2.75 }, 'competitive')).toEqual([{ text: '2,75' }]);
+    expect(fitLine({ playerId: 'p' }, 'competitive')).toEqual([]);
+    expect(fitSpoken(fit, 'competitive')).toBe('karol.t, level 2,75, a 93 % even game');
   });
 
   // #753 (Q68, applying since Q128): a fit who is the reader's own friend says so.
   it('says friend after the name of the reader’s own friend', () => {
-    expect(fitSpoken({ playerId: 'p', name: 'karol.t', level: 2.75, friend: true })).toBe(
-      'karol.t, friend, level 2,75',
-    );
+    expect(
+      fitSpoken({ playerId: 'p', name: 'karol.t', level: 2.75, friend: true }, 'competitive'),
+    ).toBe('karol.t, friend, level 2,75');
+  });
+
+  // #842 (ADR-0207 §5): on a For-fun post the fit's number is the Social vibe of the two of you.
+  describe('on a For-fun post', () => {
+    const fit = (pct: number) => ({ playerId: 'p', name: 'zofia.b', level: 2.69, vibe: { pct } });
+
+    it('lines a fit with their Level and the Social vibe as a %, in its band', () => {
+      expect(fitLine(fit(83), 'forFun')).toEqual([{ text: '2,69' }, { text: '83%', vibe: 'volt' }]);
+      expect(fitLine(fit(60), 'forFun')[1]).toEqual({ text: '60%', vibe: 'volt' });
+      expect(fitLine(fit(36), 'forFun')[1]).toEqual({ text: '36%', vibe: 'dimVolt' });
+      expect(fitLine(fit(14), 'forFun')[1]).toEqual({ text: '14%', vibe: 'grey' });
+    });
+
+    it('says the Social vibe and its word after the Level', () => {
+      expect(fitSpoken(fit(83), 'forFun')).toBe(
+        'zofia.b, level 2,69, Social vibe, 83 percent, Great vibe',
+      );
+      expect(fitSpoken({ ...fit(36), friend: true }, 'forFun')).toBe(
+        'zofia.b, friend, level 2,69, Social vibe, 36 percent, Some common ground',
+      );
+    });
+
+    it('draws and says no forecast, even one a read sent — and no vibe on a competitive post', () => {
+      const both = { ...fit(83), forecast: { pct: 93 } };
+      expect(fitLine(both, 'forFun')).toEqual([{ text: '2,69' }, { text: '83%', vibe: 'volt' }]);
+      expect(fitSpoken(both, 'forFun')).not.toContain('even game');
+      expect(fitLine(both, 'competitive')).toEqual([{ text: '2,69' }, { text: '93' }]);
+      expect(fitSpoken(both, 'competitive')).not.toContain('Social vibe');
+    });
+
+    it('lines and says the figure the row would draw — whole, held to 0–100, banded as drawn', () => {
+      expect(fitLine(fit(69.6), 'forFun')[1]).toEqual({ text: '70%', vibe: 'volt' });
+      expect(fitSpoken(fit(69.6), 'forFun')).toContain('70 percent, Great vibe');
+      expect(fitLine(fit(130), 'forFun')[1]).toEqual({ text: '100%', vibe: 'volt' });
+    });
+
+    it('lines the Level alone where neither of you holds a tag', () => {
+      expect(fitLine({ playerId: 'p', level: 2.69 }, 'forFun')).toEqual([{ text: '2,69' }]);
+      expect(fitSpoken({ playerId: 'p', name: 'zofia.b', level: 2.69 }, 'forFun')).toBe(
+        'zofia.b, level 2,69',
+      );
+    });
   });
 
   it('lines a free court with its distance, share and book-by — its hour and count apart', () => {

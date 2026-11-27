@@ -7,17 +7,19 @@
  * about it, and three ways of saying there is nothing.
  */
 
-import { fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { stubGroupDeck } from '@/test-support/groupDeck';
 import {
   launchSignedIn,
   resetClipboard,
   stubClipboard,
   stubGate,
   stubMyGroups,
+  stubPaymentMethod,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
@@ -385,6 +387,69 @@ describe('joining', () => {
   });
 });
 
+/**
+ * **A group joined a moment ago has nothing read yet** (#875; PRD #867; the loading shimmer log §10):
+ * opened from the list, its page shimmers — a monogram circle and a name bar by the way back, the tab
+ * bar's shape, the deck's block — until the group has been read, then comes in whole.
+ */
+describe('opening the group just joined', () => {
+  const GROUP_PATH = `/api/v1/groups/${OPEN_PLAY.id}`;
+  const JOINED: Wire['MyGroupSchema'] = {
+    id: OPEN_PLAY.id,
+    kind: 'PLAYER',
+    name: OPEN_PLAY.name,
+    monogram: OPEN_PLAY.monogram,
+    sports: OPEN_PLAY.sports,
+    member_count: 8,
+    home_club: { id: OGRODY.id, name: OGRODY.name },
+  };
+  const PAGE: Wire['GroupResponse'] = {
+    ...JOINED,
+    link: LINK,
+    join_policy: 'ANYONE',
+    is_owner: false,
+    rated_by_sport: [{ sport: 'PADEL', rated_count: 1, first_rated: [] }],
+    member_faces: [],
+    administrator_nickname: null,
+    is_administrator: false,
+  };
+  const HIDDEN = { includeHiddenElements: true } as const;
+  /** The page's header, by what it opens — the list's card under the page is named by the group too. */
+  const header = () => screen.queryByHintText(GROUPS_COPY.group.openInfo);
+
+  it('shimmers its page while the group is read, then brings it in whole', async () => {
+    transport.on('POST', `/api/v1/groups/${OPEN_PLAY.id}/membership`, () =>
+      json<Wire['GroupAtClubSchema']>({ ...OPEN_PLAY, relation: 'MEMBER', member_count: 8 }),
+    );
+    transport.on('GET', GROUP_PATH, () => json(PAGE));
+    stubGroupDeck(transport, OPEN_PLAY.id);
+    stubPaymentMethod(transport);
+    await openJoin();
+    type('ogrody open play');
+    stubMyGroups(transport, [JOINED]);
+    fireEvent.press(await screen.findByRole('button', { name: 'Join Ogrody open play' }));
+    expect(await screen.findByText(GROUPS_COPY.action.in)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: COPY.back }));
+    await waitFor(() => expect(screen).toHavePathname('/play'));
+
+    const group = transport.hold('GET', GROUP_PATH);
+    fireEvent.press(await screen.findByRole('button', { name: /^Ogrody open play, 8 members/ }));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${OPEN_PLAY.id}`));
+
+    expect(screen.getByTestId('group-header-skeleton', HIDDEN)).toBeTruthy();
+    expect(screen.getByTestId('group-tabs-skeleton', HIDDEN)).toBeTruthy();
+    expect(screen.getAllByTestId('deck-skeleton', HIDDEN)).not.toHaveLength(0);
+    expect(header()).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Fill in/ })).toBeNull();
+
+    await act(async () => group.land());
+
+    expect(await screen.findByHintText(GROUPS_COPY.group.openInfo)).toBeTruthy();
+    expect(screen.queryByTestId('group-header-skeleton', HIDDEN)).toBeNull();
+    expect(screen.getByRole('button', { name: /^Fill in/ })).toBeTruthy();
+  });
+});
+
 describe('a relation that changed on another phone', () => {
   const waiting = { ...O3_CLUB, relation: 'REQUESTED' as const };
   const member = { ...O3_CLUB, relation: 'MEMBER' as const };
@@ -428,7 +493,8 @@ describe('going back to the Groups list', () => {
   };
 
   // #529: asked from here, let in by the Owner while still here — and back on Groups the list was
-  // the one read before, without the group, until a switch to Explore and back remounted it.
+  // the one read before, without the group, until something remounted it (a switch to Explore and
+  // back, while `explore` is on).
   it('re-reads it, so a group the reader was let into meanwhile is on it', async () => {
     stubMyGroups(transport, []);
     await openJoin();

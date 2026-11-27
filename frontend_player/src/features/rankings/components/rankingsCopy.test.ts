@@ -250,9 +250,10 @@ describe('the list', () => {
 });
 
 describe('Top 10 on Home (#805; §31.1, §31.11)', () => {
-  it('names Rankings › for what it opens: the rankings in the row’s sport', () => {
-    expect(TOP_TEN_COPY.rankings).toBe('Rankings');
-    expect(topTenRankingsLabel('squash')).toBe('Rankings in squash');
+  /** #821, ADR-0205 §5: *Open the rankings ›* replaces *Rankings ›*, its spoken name with it. */
+  it('names Open the rankings › for what it opens: the rankings in the row’s sport', () => {
+    expect(TOP_TEN_COPY.rankings).toBe('Open the rankings');
+    expect(topTenRankingsLabel('squash')).toBe('Open the rankings in squash');
   });
 
   it('speaks a card as its place, its name — You for the reader — its level and its move', () => {

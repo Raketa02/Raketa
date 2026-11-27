@@ -24,9 +24,11 @@
  * feature's, and this one has no business composing it.
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { gameKeys } from '@/features/games/types';
 import { playerRecordKeys } from '@/features/player_record/types';
+import { proposalKeys } from '@/features/proposals/types';
 import type { AppError } from '@/shared/errors';
 import type { PlayIntent } from '@/shared/vocabulary/playIntent';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
@@ -93,6 +95,7 @@ export function useDeclarePlayIntent() {
   const client = useQueryClient();
 
   return useMutation<Declared | undefined, AppError, PlayIntentDeclaration>({
+    mutationKey: playerProfileKeys.declaring(),
     mutationFn: (declaration) => declarePlayIntent(declaration),
     onSuccess: (declared) => {
       if (declared === undefined) {
@@ -113,10 +116,44 @@ export function useDeclarePlayIntent() {
 }
 
 /**
+ * **Whether a play intent for this sport is on its way** — a declaration from any screen, read off
+ * the mutation's own state rather than a copy of it (#862): the group page's Games tab holds its
+ * menu still while one is out, since its answer changes the kinds the deck shows. No sport, none.
+ */
+export function usePlayIntentOnItsWay(sport: Sport | undefined): boolean {
+  const declaring = useMutationState({
+    filters: { mutationKey: playerProfileKeys.declaring(), status: 'pending' },
+    select: (mutation) => sportDeclared(mutation.state.variables),
+  });
+  return sport !== undefined && declaring.includes(sport);
+}
+
+/** The sport a declaration on its way is for. */
+function sportDeclared(asked: unknown): Sport | undefined {
+  return typeof asked === 'object' && asked !== null && 'sport' in asked
+    ? (asked as PlayIntentDeclaration).sport
+    : undefined;
+}
+
+/**
  * Replace the profile's Social tags — the You tab's *Save* (ADR-0179 §2).
  *
  * The list written into the cache is the **route's**: the vocabulary's order, whatever order
  * the picker pressed them in, so the picker draws the selection as the profile holds it.
+ *
+ * **And every read that draws a Social vibe is stale** (ADR-0207 §2, #840): the vibe is worked out
+ * from everybody's tags on every read and stored nowhere, so a For-fun card's %, a game's details
+ * with your tags' rows — and the Fill in, posting and Friends reads under each group's deck root —
+ * and a booked For-fun game's pairing, with its court's vibe (#841), move with the edit.
+ * Invalidated, never patched: the number is the server's.
+ *
+ * **Marked stale, and not read again now** (`refetchType: 'none'`). The server reads everybody's
+ * tags from Discovery's directory, a copy the outbox writes after this save has answered — so a deck
+ * or details screen still mounted behind the You tab, read again this instant, could be answered
+ * from the old tags and hold that answer as fresh for the 30 s `staleTime`. Nothing on screen draws a
+ * vibe while the tags are being edited; the next screen that does mounts after the edit — a tab
+ * press replaces Play's stack — and `refetchOnMount` reads it then, once the copy has had the
+ * seconds it needs. That narrows the window to a player faster than the outbox; it does not close it.
  */
 export function useChangeSocialTags() {
   const client = useQueryClient();
@@ -128,6 +165,9 @@ export function useChangeSocialTags() {
         held === undefined ? held : { ...held, socialTagIds },
       );
       void client.invalidateQueries({ queryKey: playerRecordKeys.all });
+      void client.invalidateQueries({ queryKey: proposalKeys.decks(), refetchType: 'none' });
+      void client.invalidateQueries({ queryKey: proposalKeys.proposals(), refetchType: 'none' });
+      void client.invalidateQueries({ queryKey: gameKeys.pairings(), refetchType: 'none' });
     },
   });
 }

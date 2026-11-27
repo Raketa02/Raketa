@@ -2,8 +2,8 @@
  * **A friend link, opened on a phone** ([#756](https://github.com/Raketa02/Raketa/issues/756), PRD
  * #743; the friends mechanics §4.2–§4.3). Tomek sends his link, `rakieta.app/f/<code>`:
  *
- * - **Ania, signed in**, opens it and lands on Home with *tomek.k wants to be your friend · Invited
- *   you to Raketa* on top.
+ * - **Ania, signed in**, opens it and lands on Home with Needs your answer already up (#817), and
+ *   *tomek.k wants to be your friend* in it (#816) — or on Home as it is, when nothing waits.
  * - **Zofia, new**, opens it, signs up, goes through onboarding, and lands on the same Home.
  * - **Her own link, or a friend's**, moves nobody; **a dead link** is a toast, and so is one whose
  *   owner she blocked.
@@ -23,6 +23,8 @@ import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/sh
 import { savePhonePreference } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { NEEDS_YOUR_ANSWER_COPY } from '@/features/shell/types';
+import { envelope, sheetTitle } from '@/test-support/needsYourAnswer';
 import { walkANewAccountToFinish } from '@/test-support/newAccountWalk';
 import { CLUB, CLUB_ID, club, rating } from '@/test-support/officialGroupsServer';
 import {
@@ -83,6 +85,7 @@ const tomeksRequest: Wire['HomeFriendRequestSchema'] = {
   reliability_band: 'VERY_HIGH',
   percent_even: null,
   in_common: null,
+  levels: [],
 };
 
 /**
@@ -106,12 +109,16 @@ function serve(account: GateStub) {
 const openings = () => transport.requestsTo('POST', OPENING).length;
 const toasts = () => useToastQueue.getState().queue.map((toast) => toast.message);
 
-/** Home, with Tomek's request on top: *tomek.k wants to be your friend · Invited you to Raketa*. */
+/**
+ * Home, with Needs your answer already up and Tomek's request in it (#817, ADR-0205 §1): *tomek.k
+ * wants to be your friend*, and no *Invited you to Raketa* since #816. Nobody pressed the envelope.
+ */
 async function expectTomeksRequestOnHome() {
   await waitFor(() => expect(screen).toHavePathname('/'));
+  expect(await screen.findByRole('header', { name: NEEDS_YOUR_ANSWER_COPY.title })).toBeTruthy();
   const card = within(await screen.findByTestId(`friend-request-${TOMEK.id}`));
   expect(card.getByText(wantsToBeYourFriend(TOMEK.name))).toBeTruthy();
-  expect(card.getByText(FRIENDS_COPY.home.byLink)).toBeTruthy();
+  expect(screen.queryByText('Invited you to Raketa')).toBeNull();
 }
 
 /** Ania, signed in and on her You tab — anywhere but Home. */
@@ -142,7 +149,7 @@ afterEach(async () => {
 });
 
 describe('a friend link, on a phone that is signed in', () => {
-  it('opens it and lands on Home, the request on top', async () => {
+  it('opens it and lands on Home, Needs your answer up with the request in it', async () => {
     serve(ANIA);
     serveTheLink('ASKED_YOU');
     await onYou();
@@ -165,6 +172,38 @@ describe('a friend link, on a phone that is signed in', () => {
 
     await expectTomeksRequestOnHome();
     expect(openings()).toBe(1);
+  });
+
+  it('raises the sheet on Home too, where she already is', async () => {
+    serve(ANIA);
+    serveTheLink('ASKED_YOU');
+    await launchSignedIn();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+    expect(sheetTitle()).toBeNull();
+
+    openLink(LINK);
+
+    await expectTomeksRequestOnHome();
+  });
+
+  /**
+   * ADR-0205 §1, a call made while writing #811: a request her block on Tomek swallowed answers
+   * `ASKED_YOU` all the same, and Home holds nothing — so Home opens as it is, never an empty sheet.
+   */
+  it('lands on Home as it is when nothing waits — a request a block swallowed', async () => {
+    serve(ANIA);
+    transport.on('POST', OPENING, () =>
+      json<Wire['OpenedFriendLinkResponse']>({ relation: 'ASKED_YOU' }),
+    );
+    await onYou();
+
+    openLink(LINK);
+
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    await waitFor(() => expect(useHeldLinkStore.getState().link).toBeNull());
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+    expect(sheetTitle()).toBeNull();
+    expect(envelope()).toBeNull();
   });
 
   /** Her own link, or one of a friend's — or her own request crossing his: nothing to answer. */

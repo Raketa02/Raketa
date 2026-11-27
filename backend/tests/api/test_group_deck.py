@@ -712,7 +712,7 @@ async def test_the_segments_follow_my_intent_and_nobody_is_dealt_before_i_answer
     deck = await deck_of(client, ola, group, kind="FOR_FUN")
     assert deck["segments"] == [{"kind": "COMPETITIVE", "count": 1}]
     assert deck["cards"] == []
-    assert deck["games_badge"] == 0
+    assert counted(deck) == []
 
     # Either: both segments, and the badge counts across them.
     await players.declare_intent(client, ola["token"], intent="NO_PREFERENCE")
@@ -722,7 +722,7 @@ async def test_the_segments_follow_my_intent_and_nobody_is_dealt_before_i_answer
         {"kind": "FOR_FUN", "count": 1},
     ]
     assert [card["proposal_id"] for card in deck["cards"]] == [str(for_fun)]
-    assert deck["games_badge"] == 1
+    assert counted(deck) == [str(for_fun)]
     assert await dealt_ids(client, ola, group) == [str(competitive)]
 
 
@@ -745,6 +745,7 @@ async def test_a_player_who_has_declared_no_intent_is_dealt_nothing(
     assert deck["segments"] == []
     assert deck["cards"] == []
     assert deck["games_badge"] == 0
+    assert counted(deck) == []
 
 
 async def test_a_card_above_most_i_ll_pay_is_never_dealt(
@@ -1009,6 +1010,196 @@ async def test_a_yes_already_given_holds_its_seat_and_fills_whatever_the_intent_
 
 
 # --------------------------------------------------------------------------- #
+# The cards the badge counts, by id (#846)
+# --------------------------------------------------------------------------- #
+
+
+def counted(deck: dict) -> list[str]:
+    """The ids the deck sends of the cards its Games badge counts — held, on
+    every read, to be exactly as many as the badge says."""
+
+    ids = deck["in_card_ids"]
+    assert len(ids) == deck["games_badge"], deck
+    return ids
+
+
+@pytest.fixture
+async def both_kinds(client, session_factory, clock, club, crowd, group) -> dict:
+    """Ola shown both kinds, and four cards dealt to her — of each kind, one
+    with somebody In and one with nobody yet."""
+
+    ola, kuba, ewa, tomek, ania, marek, zofia, piotr = crowd
+    for player in crowd:
+        await players.declare_intent(client, player["token"], intent="NO_PREFERENCE")
+    cards = {
+        "competitive_in": await makes(
+            session_factory,
+            clock,
+            pool_id=group,
+            club_id=club,
+            versions=((ola, kuba, ewa, tomek),),
+        ),
+        "competitive_nobody": await makes(
+            session_factory,
+            clock,
+            pool_id=group,
+            club_id=club,
+            start=warsaw(11, 17),
+            versions=((ola, ania, marek, zofia),),
+        ),
+        "for_fun_in": await makes(
+            session_factory,
+            clock,
+            pool_id=group,
+            club_id=club,
+            start=warsaw(10, 19),
+            kind=SearchMode.FOR_FUN,
+            versions=((ola, kuba, ania, piotr),),
+        ),
+        "for_fun_nobody": await makes(
+            session_factory,
+            clock,
+            pool_id=group,
+            club_id=club,
+            start=warsaw(11, 19),
+            kind=SearchMode.FOR_FUN,
+            versions=((ola, ewa, marek, piotr),),
+        ),
+    }
+    assert (await says_yes(client, ewa, cards["competitive_in"])).status_code == 200
+    assert (await says_yes(client, piotr, cards["for_fun_in"])).status_code == 200
+    return {name: str(card) for name, card in cards.items()}
+
+
+async def test_a_card_with_somebody_in_of_the_kind_asked_for_is_sent_by_its_id(
+    client, crowd, group, both_kinds
+):
+    deck = await deck_of(client, crowd[0], group, kind="COMPETITIVE")
+
+    assert both_kinds["competitive_in"] in counted(deck)
+    # The id the card itself carries, so the phone can match the two.
+    [card] = [
+        card
+        for card in deck["cards"]
+        if card["proposal_id"] == both_kinds["competitive_in"]
+    ]
+    assert card["in_count"] == 1
+
+
+async def test_a_card_with_somebody_in_of_the_other_kind_is_sent_too(
+    client, crowd, group, both_kinds
+):
+    """Ola's switch stands on Competitive, and Piotr said yes on a For-fun
+    card: the read never sends that card, and sends its id."""
+
+    competitive = await deck_of(client, crowd[0], group, kind="COMPETITIVE")
+    for_fun = await deck_of(client, crowd[0], group, kind="FOR_FUN")
+
+    assert both_kinds["for_fun_in"] not in {
+        card["proposal_id"] for card in competitive["cards"]
+    }
+    assert both_kinds["for_fun_in"] in counted(competitive)
+    assert both_kinds["competitive_in"] in counted(for_fun)
+    # The For-fun card's id is the one its own segment deals it under.
+    assert both_kinds["for_fun_in"] in {
+        card["proposal_id"] for card in for_fun["cards"]
+    }
+
+
+async def test_a_card_with_nobody_in_is_not_sent(client, crowd, group, both_kinds):
+    for kind in ("COMPETITIVE", "FOR_FUN"):
+        ids = counted(await deck_of(client, crowd[0], group, kind=kind))
+
+        assert both_kinds["competitive_nobody"] not in ids
+        assert both_kinds["for_fun_nobody"] not in ids
+
+
+async def test_the_ids_are_in_the_switch_s_order_whichever_segment_is_read(
+    client, crowd, group, both_kinds
+):
+    """Competitive first, then For fun, each in the order dealt — one list for
+    either segment, so the contract and the phone's comparison are stable."""
+
+    competitive = counted(await deck_of(client, crowd[0], group, kind="COMPETITIVE"))
+    for_fun = counted(await deck_of(client, crowd[0], group, kind="FOR_FUN"))
+
+    expected = [both_kinds["competitive_in"], both_kinds["for_fun_in"]]
+    assert competitive == for_fun == expected
+
+
+async def test_a_kind_the_intent_does_not_show_sends_no_id(
+    client, crowd, group, both_kinds
+):
+    """Back to Competitive alone: the For-fun card is neither dealt nor counted."""
+
+    await players.declare_intent(client, crowd[0]["token"], intent="COMPETITIVE")
+
+    deck = await deck_of(client, crowd[0], group, kind="COMPETITIVE")
+
+    assert counted(deck) == [both_kinds["competitive_in"]]
+
+
+async def test_nobody_in_anywhere_sends_no_id(
+    client, session_factory, clock, club, crowd, group
+):
+    ola, kuba, ewa, tomek = crowd[:4]
+    await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        versions=((ola, kuba, ewa, tomek),),
+    )
+
+    deck = await deck_of(client, ola, group)
+
+    assert len(deck["cards"]) == 1
+    assert counted(deck) == []
+
+
+async def test_a_seat_open_card_is_never_sent(
+    client, session_factory, clock, club, crowd, group
+):
+    """A rescue's players have paid, and are not In — so the badge never
+    counts its card, and its id is never sent, beside a pick that is."""
+
+    ola, kuba, ewa, tomek, ania, marek, zofia, piotr = crowd
+    game = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        versions=((ola, kuba, ewa, tomek),),
+    )
+    for player in (ola, kuba, ewa):
+        assert (await says_yes(client, player, game)).status_code == 200
+    booked_by = await says_yes(client, tomek, game)
+    assert booked_by.status_code == 200, booked_by.text
+    booking = booked_by.json()["booked"]["booking_id"]
+    left = await client.post(
+        f"/api/v1/bookings/{booking}/departure", headers=kuba["headers"]
+    )
+    assert left.status_code == 200, left.text
+    pick = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        start=warsaw(11, 17),
+        versions=((zofia, ania, marek, piotr),),
+    )
+    assert (await says_yes(client, ania, pick)).status_code == 200
+
+    deck = await deck_of(client, zofia, group)
+
+    assert {card["type"]: card["proposal_id"] for card in deck["cards"]} == {
+        "SEAT_OPEN": booking,
+        "PICKED_FOR_YOU": str(pick),
+    }
+    assert counted(deck) == [str(pick)]
+
+
+# --------------------------------------------------------------------------- #
 # Who may read it
 # --------------------------------------------------------------------------- #
 
@@ -1041,6 +1232,7 @@ async def test_a_member_with_nothing_dealt_reads_an_empty_deck(
     assert deck["cards"] == []
     assert deck["segments"] == [{"kind": "COMPETITIVE", "count": 0}]
     assert deck["games_badge"] == 0
+    assert counted(deck) == []
 
 
 async def test_the_deck_asks_for_a_session(client, group):

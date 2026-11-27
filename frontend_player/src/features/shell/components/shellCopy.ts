@@ -12,6 +12,8 @@
  * states, which is the test each line has to pass and the test `shellCopy.test.ts` holds them to.
  */
 
+import { countFigure } from '@/shared/formatting/countFigure';
+
 /**
  * **The Home tab's own sentences** — its title, and what it says when it holds no games
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.7).
@@ -40,17 +42,59 @@ export const HOME_COPY = {
       'needs a score.',
     act: 'Play finds you one.',
   },
+  /** **FOR YOU** — the eyebrow over the five folding lines, drawn uppercase (#820, ADR-0205 §5). */
+  forYou: 'For you',
 } as const;
 
 /**
- * **The Play tab's own words** — the two segments it opens on
- * ([#512](https://github.com/Raketa02/Raketa/issues/512), play mocks 1 and 3).
+ * **Needs your answer** — the envelope on Home's header and the sheet it opens
+ * ([#816](https://github.com/Raketa02/Raketa/issues/816), ADR-0205 §1–§2; the words §32).
  *
- * The shell's rather than `groups`' because the segment is the *tab*: it names the two ways the
- * tab finds a player games, and each segment's page owns its own sentences under it. Explore draws
- * nothing yet, so it has nothing here but its name.
+ * The shell's because the header and the sheet are: each section under the title is its feature's,
+ * with its own heading. The envelope is named by what it opens, as the bell is; its count, *, 2
+ * new*, is #819's.
+ */
+export const NEEDS_YOUR_ANSWER_COPY = {
+  /** The sheet's title, and the envelope's spoken name. */
+  title: 'Needs your answer',
+  /** The sheet's ✕ — never just *Close* (`CloseControl`). */
+  close: 'Close Needs your answer',
+} as const;
+
+/**
+ * **The envelope's badge** (#819): what is new since Needs your answer was last closed, as the
+ * server counts it — the bell's count mark and the bell's rule, the figure up to 99, *99+* above it
+ * (every count's cap, `countFigure`; ADR-0205 §2), and nothing at nought.
+ */
+export function envelopeFigure(count: number): string | undefined {
+  return count <= 0 ? undefined : countFigure(count);
+}
+
+/**
+ * The envelope's name, with its badge: *Needs your answer, 2 new*. Exact above 99, as the bell's —
+ * the cap is the drawing's room, and a listener is not short of it.
+ */
+export function envelopeSpoken(count: number): string {
+  return count <= 0
+    ? NEEDS_YOUR_ANSWER_COPY.title
+    : `${NEEDS_YOUR_ANSWER_COPY.title}, ${count} new`;
+}
+
+/**
+ * **The Play tab's own words** — its title, and the two segments it opens on
+ * ([#512](https://github.com/Raketa02/Raketa/issues/512), play mocks 1 and 3;
+ * [#826](https://github.com/Raketa02/Raketa/issues/826)).
+ *
+ * The shell's rather than `groups`' because the title and the segment are the *tab*: they name
+ * the ways the tab finds a player games, and each segment's page owns its own sentences under it.
+ * Explore draws nothing yet, so it has nothing here but its name.
+ *
+ * **The title is drawn only while `explore` is off** — Play as it ships, the player's groups under
+ * one *Groups* title like every other screen's, as the Administrator's Groups tab is titled. With
+ * it on, the switcher is the head and there is no title.
  */
 export const PLAY_COPY = {
+  title: 'Groups',
   segment: {
     groups: 'Groups',
     explore: 'Explore',

@@ -1,7 +1,7 @@
 /**
  * Step one of onboarding's second part: **what kind of player are you?**
  *
- * Nineteen chips in three groups, of which a player picks between two and six. There is no
+ * Twenty-seven chips in three groups, of which a player picks between two and eight. There is no
  * free-text field anywhere on this screen and there is not going to be one: that is what
  * keeps the product's promise about what it asks (story 22), and it is the reason the
  * vocabulary is closed and served rather than typed.
@@ -9,7 +9,7 @@
  * **The screen says nothing above the chips.** The line under the title and the note about
  * what the tags are *for* were both cut: the three group headings already say what each set
  * is about, and a screen of options reads faster with nothing stacked on top of them. The
- * eyebrow still carries the rule — pick two to six — which is the one thing a player has to
+ * eyebrow still carries the rule — pick two to eight — which is the one thing a player has to
  * know before they start pressing.
  *
  * ## Nothing here decides anything, and the picker is not here either
@@ -80,8 +80,8 @@ export function SocialTagsStep() {
       action={
         standing === undefined || next === undefined ? null : (
           <>
-            {/* Pinned to the action bar rather than left above nineteen chips: a player who
-                pressed a seventh may be scrolled to the bottom of the third group, and a
+            {/* Pinned to the action bar rather than left above twenty-seven chips: a player who
+                pressed a ninth may be scrolled to the bottom of the third group, and a
                 refusal they have to scroll back up to find is a screen that did nothing.
                 `alert` announces it as well, for whoever is not looking at either. */}
             {picker.refused && bounds !== undefined ? (

@@ -59,7 +59,9 @@ the centre, drawn from one Feather family
 ([ADR-0135](../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)), which is
 why `@expo/vector-icons` is **declared** in `package.json` rather than inherited through
 `expo`: the app's primary navigation renders through it, and an SDK bump could move or drop
-it with no signal in this app's own manifest. Play's five arrivals join them — the **switch**
+it with no signal in this app's own manifest. (_Since [#883](https://github.com/Raketa02/Raketa/issues/883)
+the bar is the dock: three columns of Ionicons from the same declared package, and the selection
+marker under the lit one — [`shell.md`](shell.md), design-system 10.2._) Play's five arrivals join them — the **switch**
 (6.12), the **fit pill** (7.10), the **balance bar** (7.11), the **court** (7.12) and the
 availability grid's **diff variant** — plus Now's one, the **rail's dots** (7.18), which are what a
 paging rail has **instead** of a peek rather than decoration hanging off one: they track the
@@ -297,7 +299,8 @@ Part 16.
 **`shared/ui` has a second tab bar, the administrator area's** (`AdministratorTabBar`, club 17): **Groups
 · You**, a second fixed inventory beside the five, drawn from the same columns — Feather, one weight,
 selection in tone alone — with no disc and no badge. `TabBarTab` and the columns are generic over the
-key so the two inventories share one drawing. Recorded in design-system Part 16.
+key so the two inventories share one drawing. Recorded in design-system Part 16. (_Since #883 it is the
+player's dock with two columns — Ionicons `people` for Groups, and the same marker._)
 
 **The phone keeps its third and last value, and a sheet can put a mark over its title**
 ([#518](https://github.com/Raketa02/Raketa/issues/518)). `PhonePreference` gains `lastProfile` — the
@@ -438,7 +441,8 @@ they derived went with the code.
 card's value moved whole since that card is gone), a tag top-left that lets touches through, a control
 top-right beside the tile's own press, and the words over the wash; its width and aspect are the
 caller's (`size.portraitTile`). Top 10's portrait (#805) is to draw it too. **`HomeRowRail`'s `tiles`**
-draws each at 0,355 of the content width, a lone one too. **The sport pill is generic over its
+draws each at `portraitTile.railRatio` (0,70) of the content width, a lone one too — 0,355 until
+2026-11-24, the peeking card's 0,74 until 2026-11-26 (`discovery.md`). **The sport pill is generic over its
 choices** (`SportPillFrame<S>`, `SportPillWords<S>`) and may offer **`ALL_SPORTS`**, drawn with a
 two-toned dot; existing callers infer `Sport` and changed nothing. **`Button`** gained **`lead`**, a
 Feather plus or check before the words, never spoken, and **`settledSoft`**, mint's soft bed in its
@@ -464,3 +468,145 @@ leaves the bar open (a call: a backdrop over Home would need a layer above the p
 `numbered`** hands each card `size.topTen.railRatio` of the content width — the card's width; the
 numeral beside it is the row's own, so its items are wider than the width it hands. Each has its
 suite: `RowSportPill.test.tsx`, `HomeRow.test.tsx`; the row is walked in `rankings`' `topTen.test.tsx`.
+
+**`FoldingLine`, `FoldingLines` and `FoldingLineFooter` — FOR YOU's quiet lines**
+([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5, §8, §9; home refactor 3–13;
+design-system 7.37, 4.3, Part 16 2026-11-18). `FoldingLines` is the section — the eyebrow and the
+lines `space.sm` apart — and `FoldingLine` is one line: a white card, its header the title in `h2`
+and a turning chevron, **a button named by its title that says whether it is expanded**. **The page
+says which line is open** (`open`) and a press on the header is all the line reports (`onHeader`):
+closed, the header is the whole line; open, only the header closes it, because the content's taps
+are its own. **The content is drawn only while open**, and for the fold back — hidden from a
+listener, untouchable, and on no page (`PageOnScreen` withheld) while it folds — and **on the page
+only once it has unfolded** (`lineUnfold` after it opens), so a card fading in at no height is never
+counted as seen and a closed line never reports one. **Opening is one change to a fold's height** — nought, then the
+content's measured height — and a Reanimated layout transition moves the frames, the line's and those
+of every line below it (`FoldingLines` hands them one beat, `lineUnfold` or `lineFold`), while one
+shared value fades the content in and turns the chevron: `RecordDetails`' mechanics, for the reason
+`CLAUDE.md` gives. Under Reduce motion nothing moves. **As it unfolds it asks the page to show it**
+(`PageReveal`, `onScreen.ts`'s `scrollToReveal`), once per opening, and **only when it was pressed
+open** (`reveals`): the line a page opens by itself never scrolls the page. **The fold's top is
+measured inside the line's 1pt border**, since the fold stands in the clip within it. **A line let go
+draws its rail anew at its first card when it opens again** — `HomeRow`'s _never remounted_ holds
+while a line stays open. `FoldingLines` is `HomeRow`'s section holding lines, not a copy of it. **The open line has an `ink`
+border and `shadow.openLine`**, the seventh shadow. **`FoldingLineFooter`** is the open content's
+foot: a control, then a link 44 tall — the row frame's link, moved here and grown to the minimum —
+and a layer over the footer for Top 10's open bar (`RowSportPill` now hands its pill and bar to the
+footer). **`HomeRow` lost `control`, `link` and `over`**, which only the five rows used, and
+`hit.rowLink` went with them; **`HomeRowRail` reads `RailBounds`** from a line, so its shares are of
+the line's content and it bleeds to the line's inner edge and snaps, and takes **`itemWidth`** for
+Top 10, whose numeral stands beside its card. **Where a section stands on the page now composes**
+(`useTopOnPage`, `useTopWithin`): a rail in a line in FOR YOU is measured through each, as a device
+lays them out — a fold's section is its line's, which is why the line names it rather than reading
+the context it stands in. Suites: `FoldingLine.test.tsx`, `HomeRow.test.tsx`, `RowSportPill.test.tsx`,
+`onScreen.test.ts`; the lines are walked in the shell's `forYou.test.tsx` and each feature's own.
+
+**The sport pill opens either way, and the footer puts its control at the left**
+([#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5, Q19, Q37; home refactor 12, 13).
+`SportPill` and `SportBar` take **`opens`**, `left` by default — a page's header, the bar growing over
+what stands before the pill — or `right`: the pill's chevron points _›_, the bar's row is laid against
+its **left** edge with the current sport first, its chevron turned back to _‹_, and the others after
+it in the page's order, each sliding out from its left, nearest first. The same shared value, the same
+widths, mirrored; `SportPillFrame` is untouched. **`RowSportPill` opens rightwards**, its one caller
+being Top 10: its slot starts the bar's inset before the pill's left end and runs to the footer's right
+edge. **`FoldingLineFooter`'s link takes the room before it** (`marginLeft: 'auto'`), so a control
+stands at the footer's left and the link at its right, and a footer with a link alone is unchanged.
+Suites: `SportPill.test.tsx` (the direction), `RowSportPill.test.tsx` and `FoldingLine.test.tsx`.
+
+**A folding line carries its count** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+ADR-0205 §5, §6; home refactor 3, 4, 7; design-system 4.2, 7.37, Part 16 2026-11-18).
+`FoldingLineParts` and `FoldingLine` take an optional **`count`** — the row read's total, as served —
+drawn in **the count pill** between the title and the chevron, open or closed: `line2` under the
+figure in `num.tiny` `muted`, at least `size.foldingLine.count` (16, `num.tiny`'s line box) tall and
+growing with its figure under a larger OS text size, `space.xs` each side, `radius.pill` — a fenced
+pill, not a control. No count, no pill: Top 10 hands none. **`countFigure`** (`shared/formatting`)
+writes it — the figure up to 99, _99+_ past it, since the server counts up to 100 — and
+`discovery`'s _See all N_ uses the same function, so the pill and the footer cannot disagree; the
+bell's and the envelope's badges now cap through it too. **The line's name says it after the
+title** (`withCount`) — _Players at your level, 14_ — and the pill is hidden from a listener, as
+`CountBadge` is. It is not `CountBadge`: that mark floats over a glyph and says _new_. Suites: `countFigure.test.ts`, `FoldingLine.test.tsx` (the place, the look, the
+cap, open and closed, none without a count, the name); the counts are walked in the shell's
+`forYou.test.tsx`. Test support's `lineNamed` finds a line by its title whatever its count, and
+`lineNames` reads the whole names. **Not seen on a device**: the pill's size, fill and figure against
+home refactor 3, 4.
+
+**The third verb is back, and so are the second URL and `appBuild`** ([#826](https://github.com/Raketa02/Raketa/issues/826),
+[ADR-0206](../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)
+§4, §6, §8). The feature flags returned for Play's Explore, and the seams they used came back from
+`6d8d1388^` as they were. **`httpGetFromFeaturesHost`** reads the one document that is not the
+API's — the datafile, from `EXPO_PUBLIC_FEATURES_URL`, the developer's machine on the LAN today and
+a bucket later — through the same `sendOnce` every request uses, so the timeout, the correlation
+id, cancellation and the error model are the module's as always. It is a verb and not a `host`
+option on `httpRequest` because of the one thing it must not do: it is built unauthenticated, so no
+caller can send a bearer token to a host that has no use for it. It takes the `background` class.
+**`EXPO_PUBLIC_FEATURES_URL` is required again**, and `SCHEMED_URLS` names both URLs, so the scheme
+rule runs over each by the one loop and its guard cannot be written for one and forgotten for the
+other; `jest.config.js` gives the tests a second, test-only host, so a datafile request can never
+be mistaken for an API one. **`platform/appBuild.ts`** is the platform module's one plain
+_reading_ — `platform` (`ios` / `android`) and the app's own version — the two device facts a
+feature flag's rules may target, each absent rather than guessed when the build cannot say. The
+**AsyncStorage allow-list is two modules again**: the phone-preferences store and the feature
+flags' saved datafile (`features/feature_flags/api/datafileCache.ts`), and
+`scripts/test-import-boundaries.sh` asserts both, and the ban everywhere else.
+
+**The tenth port is the system bars** ([#857](https://github.com/Raketa02/Raketa/issues/857),
+[ADR-0209](../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md);
+decision log Q12). `SystemBarsPort` has **two acts**, `paint(ground)` and `restore()`, and one
+caller: the launch gate paints the bars as the splash starts and restores them as its fade starts,
+under both variants. It is handed in, as the launch window is, so it has no provider. **It is the
+first port split into platform files.** `systemBars.ts` is an iPhone's, light status-bar content
+alone. `systemBars.android.ts` is Android's and the one importer of `expo-navigation-bar` (4.0.9,
+installed with `npx expo install`), a lint ban that `pnpm test:boundaries` drives. The gate checks
+no platform.
+
+- **The status bar is painted on React Native's own stack**: one entry, pushed after the root
+  layout's dark bar and popped on restore. What is left is whatever the screens ask for, so a
+  restore is exactly today's look on any first screen, sign-in's light bar included. A screen
+  mounted under the splash pushes later and wins; today that is only sign-in's stage, whose bar is
+  light and, on Android, transparent over the splash's own edge. Android's paint leaves the bar's
+  translucency alone, so nothing under it moves.
+- **The navigation bar has no stack**, so each of Android's paints first reads what the bar shows:
+  the colour (`#rrggbb`, no alpha) and whether the buttons are light. Its restore writes that look
+  back. Every read and write waits for the one before, so a paint never reads the night a restore
+  is still undoing. It reads at every paint rather than once, because Android can recreate the
+  window under the same JavaScript. A look the phone will not read is never painted over.
+- **`fakeSystemBars()`** holds what the bars show (`painted`) and every change (`changes`), and
+  behaves as the device does: a second paint, or a restore with nothing painted, changes nothing.
+  Suites: `LaunchGate.test.tsx` (when: at the start, at the fade's start and not before, under both
+  variants, through a hold and a failed launch) and `systemBars.test.ts` (what each adapter writes,
+  over a stand-in for `expo-navigation-bar`).
+- **Not seen on a device.** It is a native change, so it needs a fresh build, and it needs a look on
+  the A32 (three-button navigation) and an iPhone.
+
+**The eleventh port is the soft keyboard** ([#882](https://github.com/Raketa02/Raketa/issues/882),
+[ADR-0210](../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §9).
+`KeyboardPort` has **two halves**, `isUp()` and `follow(onChange)`, which are
+`useSyncExternalStore`'s. It joined `keyboard.ts`, the keyboard's module already, rather than a second
+module. That file is now the only importer of React Native's `Keyboard`, a lint fence of one name like
+`Share`'s, which `pnpm test:boundaries` drives. It is also the app's one listener for the keyboard's
+show and hide.
+
+- **`deviceKeyboard`** follows `keyboardDidShow` and `keyboardDidHide` (Android sends no _will_
+  events) and reads `Keyboard.isVisible()`. React Native keeps that record with listeners it adds as
+  the module loads, so it already holds the new state when a follower is told. **Up means docked**:
+  Android reports a floating or split keyboard shown with no height, nothing shrinks for it, so it
+  is read as down (the code review's catch). `keyboard.test.ts` sends the native events through the
+  device emitter and holds both.
+- **`useKeyboardShrinksTheWindow`** (`KeyboardProvider.tsx`) is what both shells read: up, on a phone
+  whose window resizes for it (`windowResizesForKeyboard`, Android). Its snapshot is the whole answer,
+  so on an iPhone nothing redraws as the keyboard comes and goes.
+- **`fakeKeyboard()`** starts down; `raise()` and `drop()` tell every follower, and a raise while up
+  or a drop while down tells nobody. It knows nothing of which phone it is on: a suite says Android
+  with `Platform.OS`. The harness takes it through `stubKeyboard` and `resetKeyboard`.
+- **`BottomSheet.test.tsx`** spies on `Keyboard.dismiss` through `jest.requireActual`, as
+  `payments.test.ts` already did, because the fence reaches tests too.
+
+**A FOR YOU line's peeking card is a little wider than the page's** (2026-11-26; design-system 7.7,
+7.37, Part 16). **`RailBounds` carries `cardRatio`**, the share a peeking card takes of the bounds'
+content: the page's default is `railCardRatio` (0,74), and `FoldingLine` hands `lineCardRatio` (0,83),
+a token of its own though the request card's `requestCardRatio` is the same number by choice. So
+Groups heating up's, Players at your level's and Players with your vibe's cards are 290 of the line's
+349 on a 411pt phone, the next one's edge 65 (`discovery.md`, `groups.md`); To confirm's peeking rail,
+outside any line, keeps 0,74. The `tiles` rail reads `portraitTile.railRatio` (0,70) and the
+`numbered` rail `topTen.railRatio` (0,31, `rankings.md`), neither from the bounds. Walked in
+`HomeRow.test.tsx` and `FoldingLine.test.tsx`.

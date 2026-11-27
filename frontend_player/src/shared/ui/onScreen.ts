@@ -20,16 +20,25 @@
  * - **The page** (`ShellScreen`, for the one screen that asks — Home) says its band, and says
  *   **nothing is on screen** while it is not the screen in view: a pushed screen over it, another
  *   tab, the app in the background. A page that does not watch never says a band at all.
- * - **`HomeRow`** says where its section stands on the page — **from its own layout, which is its
- *   parent's coordinates**: a row on a page that watches stands directly in the page's column, as
- *   Home's do, or it is measured from whatever it is wrapped in.
+ * - **`HomeRow`, FOR YOU and a folding line** each say where they stand on the page — **from their own
+ *   layout, in their parent's coordinates, added to where the section around them stands**
+ *   (`useTopOnPage`): a rail in an open line is measured through FOR YOU, the line and its fold, and
+ *   a row standing directly in the page's column through nothing but itself (#820).
  * - **`HomeRowRail`** says where each card stands along it — the geometry is its own — and
  *   `useCardsOnScreen` says which are on screen to the row that asked (`onScreen`).
  *
  * It never imports a feature: what a row does with the cards it is told about is the row's.
  */
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type {
   LayoutChangeEvent,
   LayoutRectangle,
@@ -41,11 +50,22 @@ import type {
 export const ON_SCREEN_SHARE = 0.5;
 
 /**
- * How often a scroller says where it is while it moves — ten times a second. A card that crosses
- * the screen faster than that was not seen; the end of a drag and of a fling are said whatever the
- * rate, so where a scroll comes to rest is always read.
+ * How often a scroller says where it is while it moves — **every frame**: 16, under the 17 ms below
+ * which Android throttles nothing. The end of a drag and of a fling are said too, so where a scroll
+ * comes to rest is always read.
+ *
+ * **It was ten times a second, and on Android that stopped every press on Home** (2026-11-21). React
+ * Native 0.76's Android scroll view throttles *every* scroll event by this figure, the end of a fling
+ * included (`ReactScrollViewHelper.emitScrollEvent`), so a fling, a snap or an animated `scrollTo` —
+ * a FOR YOU line revealing itself — that came to rest within 100 ms of the last sample never said it
+ * had. React Native's `ScrollView`, having heard the momentum begin and never its end, took itself
+ * for still moving and **claimed every touch that started on it** (`_isAnimating`): no tile, face,
+ * friend button, pill or line header inside reached its press until a later scroll happened to end
+ * cleanly. A larger figure here is that bug again. Being on screen has no dwell time (the Home rows
+ * mechanics §9.2), so seeing every frame is the rule read more closely, and the reporter counts a
+ * card once a day however often it is told.
  */
-export const ON_SCREEN_SAMPLE_MS = 100;
+export const ON_SCREEN_SAMPLE_MS = 16;
 
 /** A stretch of one axis — where it starts, and how long it is. */
 export interface Span {
@@ -129,8 +149,77 @@ export function followable<T>(): Followable<T> {
  */
 export const PageOnScreen = createContext<Followed<Span> | undefined>(undefined);
 
-/** **Where a `HomeRow` section stands on its page** — the top of it, in the page's content. */
+/**
+ * **Where a section stands on its page** — the top of it, in the page's content: a `HomeRow`'s, FOR
+ * YOU's, a folding line's, and the open line's content, each the one around a rail.
+ */
 export const SectionOnPage = createContext<Followed<number> | undefined>(undefined);
+
+/** A view's top on its page, and the hand its layout feeds. */
+export interface TopOnPage {
+  /** What it provides as `SectionOnPage` to what it holds. */
+  readonly top: Followed<number>;
+  /** Its own layout's `y` — in its parent's coordinates, as a device reports it. */
+  readonly laidOut: (y: number) => void;
+}
+
+/**
+ * **Where a view stands on its page, from its own layout** (#820): its `y` in its parent added to where
+ * the section around it stands, or — with none — the page's column itself, its parent. So a rail in a
+ * line in FOR YOU is measured through each, as a device lays them out, and a `HomeRow` standing
+ * directly in the page's column is measured as it always was. Nothing until both are known.
+ */
+export function useTopOnPage(): TopOnPage {
+  return useTopWithin(useContext(SectionOnPage));
+}
+
+/**
+ * **Where a view stands on its page, inside a section named here** rather than the one its context
+ * provides — a view and one of its own children in one component, where the child's section is the
+ * view's (a folding line's fold, under the line).
+ */
+export function useTopWithin(around: Followed<number> | undefined): TopOnPage {
+  const [own] = useState(() => followable<number>());
+  const top = useMemo<Followed<number>>(
+    () =>
+      around === undefined
+        ? own
+        : {
+            get: () => {
+              const outer = around.get();
+              const y = own.get();
+              return outer === undefined || y === undefined ? undefined : outer + y;
+            },
+            follow: (listener) => {
+              const stops = [around.follow(listener), own.follow(listener)];
+              return () => {
+                for (const stop of stops) stop();
+              };
+            },
+          },
+    [around, own],
+  );
+  return { top, laidOut: own.set };
+}
+
+/**
+ * **Brings a stretch of the page into view** — the page's, for what opens on it: a folding line asks
+ * for its whole height once it has unfolded (#820; ADR-0205 §5: *the page eases down just enough*).
+ * No provider outside a page that watches, where nothing is asked.
+ */
+export const PageReveal = createContext<((stretch: Span) => void) | undefined>(undefined);
+
+/**
+ * **Where a page scrolls to show a stretch of it** — just far enough that its foot stands at the
+ * page's foot, or its head at the page's head when it is taller than the page shows; **nothing** when
+ * its foot is already in view, or the page would have to scroll back up to show it.
+ */
+export function scrollToReveal(stretch: Span, band: Span): number | undefined {
+  const foot = stretch.from + stretch.size;
+  if (foot <= band.from + band.size) return undefined;
+  const to = Math.min(stretch.from, foot - band.size);
+  return to > band.from ? to : undefined;
+}
 
 type ScrollEvent = NativeSyntheticEvent<NativeScrollEvent>;
 

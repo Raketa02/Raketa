@@ -15,7 +15,10 @@ the _You · 212th_ button; [#777](https://github.com/Raketa02/Raketa/issues/777)
 Friends_ switch, the view the phone remembers, and Friends; [#778](https://github.com/Raketa02/Raketa/issues/778)
 the _Show me in General_ switch on the hidden card, and the page following it; and
 [#779](https://github.com/Raketa02/Raketa/issues/779) _Add friend_ from a stranger's record, sent from
-the ranking.
+the ranking. [#869](https://github.com/Raketa02/Raketa/issues/869) made the jump button say _Finding
+you…_ while it reads (PRD [#867](https://github.com/Raketa02/Raketa/issues/867), the loading shimmer),
+and [#870](https://github.com/Raketa02/Raketa/issues/870) made the page shimmer until it lands — the
+first screen on the shared `Skeleton` and `Reveal`.
 
 **Every number is the server's, and this feature computes none of them.** The order, every place,
 _of N_, the chip, the gap, and how many wins close it are worked out by the backend — the win count
@@ -67,7 +70,30 @@ their own. Whose record is up is the screen's state, as on Members. **A step nam
 nickname, the reader's own too**, as §30.7 writes it; only a row reads _You_.
 
 **A pull reads the page again**, a refused read says why with _Try again_, and a read waiting for a
-connection says so; nothing but the pull is drawn under the header while the first read is out.
+connection says so, each where the skeleton stood.
+
+**Until the page has something to draw, it shimmers below the header** ([#870](https://github.com/Raketa02/Raketa/issues/870);
+the loading shimmer log §8, Q4–Q7; design system 5.6). **The header and the sport pill are the real
+ones throughout**, so the reader can change sport or go back while it loads. Below them, from the first
+frame: while the view or the sport is still unknown, a shape of the switch's own size and corner in
+the switch's place (the log's §12 call); then the real switch, and in the view's place **one fixed
+skeleton for both views and every sport** (`RankingsSkeleton`) — a block at the listed place card's
+height and the dark card's corner (the dark card drawn as a skeleton-tone block), three podium steps
+at their heights, and rows filling the screen on the list's own white card, each with the row's
+padding, the place column's room, the row face's circle, and bars for the name and the level. It
+never predicts the page's true shape. **It shows on landing, on a sport change and on a General ↔
+Friends change, only when that sport and view have nothing cached**: a sport or view read in the last
+few minutes opens at once, read again quietly behind it, as General and Friends always are on opening.
+**The page's one read decides it** (`Reveal`): the content is drawn underneath, hidden from sight and
+from a listener, and comes in on one 200 ms cross-fade when the read finishes — lands, is refused
+after its retries, or is held for a connection — so the failure or the amber note takes the skeleton's
+place as the page would. **Once the page is in, it never goes back** during that view's mount: **a
+pull never shows the skeleton**, the page staying under the pull's own spinner. A refusal or the
+note is not the page, though: when _Try again_ or the connection back sets the read out once more
+with still nothing to draw, the skeleton stands again, never a blank page. The sport and the view are
+reads too, under a reveal of their own: a page that comes cached fades in from the skeleton that
+stood while they were unknown, and one not read yet hands over to its own skeleton — the same shapes
+on the same band, since one `SkeletonGround` stands under the header for both.
 
 **_General | Friends_ is remembered per account on the phone** (#777; the screens §3; ADR-0203 §5,
 its value under ADR-0188), General the first time: `rankingView`, read and kept as the deck's last
@@ -123,12 +149,36 @@ they are listed — never hidden from General (the mechanics §10), never off th
 the list has first said what is on screen, so it never flashes up before. A row is on screen once half
 of it is. **A tap centres the reader's row**: where the list already draws it, a scroll and nothing
 read; further down than the list has read, the page around them, **drawn as a new list only once it
-has landed** — until then the list stays where it was. Each tap reads that page afresh. A row not yet
+has landed** — until then the list stays where it was. Each jump reads that page afresh. A row not yet
 laid out is scrolled to as nearly as the header and an average row put it, and centred once it has
 been, on the next few frames and whenever the content grows. **While a centring is owed the top of
 the list asks for nothing**: a new list starts at its top, and would otherwise read the page above
 before it reached the reader. The reader's own drag takes the list back. A jump refused says why where the button stood, with _Try
 again_.
+
+**The page ends at the tab bar's reach, and its rows do not pass under the bar**
+([#881](https://github.com/Raketa02/Raketa/issues/881), 2026-11-25; design-system §10.1). Every other
+tab screen now runs to the phone's foot under the floating bar and pads its end by the reach; this one
+ends its layout at the reach, as a screen with a pinned button does. **On screen** and **centred** are
+the list's own measure of its frame — FlatList's viewability, which shows the button, and
+`scrollToIndex`'s middle — and it takes no inset, so a list running under the bar would call a row
+hidden behind it seen and centre the reader's row half the bar too low. The list keeps its own end
+(15, or the room the button covers) and the button its gutter, both inside the frame.
+
+**While a jump reads the page around the reader, the button says so: _◌ Finding you…_**
+([#869](https://github.com/Raketa02/Raketa/issues/869); the loading-shimmer log §9). It is
+`Button`'s own `busy`: the spinner before the busy word at the dark fill, the busy word the button's
+spoken name, and the button sized to its words, so its width changes as they swap. **It is busy only on a
+jump that has to read** — a row the list has not drawn. A scroll is over before a spinner would
+turn, so it is never busy, and Friends, read whole, never is. **It starts at the press and ends at
+the first of three**: the reader's row on screen, when the button goes as it always has; the jump
+refused, when the failure with _Try again_ takes its place; or the reader's own drag, when the read
+still lands and swaps the list. A page landing with no row of the reader's ends it as well: the
+server answers a reader no longer listed with its first page, and a busy button left up would take
+no press until a drag. **A busy button takes no press**, so a second press reads nothing,
+where it used to reset the read and start it again. A sport changed during a jump is another view,
+so the busy goes with it. The state is the list's (`RankingList`), kept beside what it last said
+was on screen and the centring it owes.
 
 **Around the reader, the card and the podium wait at the top of the list**: they stand above the rows
 again once the pages above reach place 1. A pull there reads the main read and the window around the
@@ -177,6 +227,41 @@ Home card are [`friends.md`](friends.md)'s; a block closing the record is [`bloc
   draws no mock — with the hint _Shows your row in the list_;
 - (#776) a tap on _You · {n}th_ for a row the list already draws scrolls to it and reads nothing: the
   page around the reader is read only for a row further down;
+- (#869) **_Try again_ on a refused jump is a jump of its own**, once per refusal: busy again, and
+  owed its centring afresh. The log names only the press, but a plain button during the retry's read
+  would restart it on a press, which is what #869 ends, and a drag since the refusal had already
+  taken back the centring the press owed. The failure stands until Query's next tick, so a second tap
+  on it is ignored;
+- (#869) **for the product owner**: a jump made offline is busy until the connection is back — the
+  read waits for it and then lands — or until the reader drags. The log's list of ends has no
+  offline case, and nothing says _offline_ there; the page's amber note in the button's place is the
+  obvious answer, not built;
+- (#869) _Finding you…_ is the loading-shimmer log's word (§9, Q8), and §30.7 does not have it yet —
+  **owed to §30 from a root session**, as a row under _The jump button_;
+- (#870) **a read refused once and asked again keeps the skeleton** through Query's retries, and the
+  failure takes its place only once they are spent. The PRD counts _fails once and starts retrying_ as
+  finished, but that is the rule for a screen of several reads (#871), so one slow part never holds
+  the rest; here the page has one read, and revealing it would draw a blank page;
+- (#870) **_Try again_, or the connection back, stands the skeleton again** while the read is out with
+  still nothing drawn. The log's _once revealed, never back_ is read as the page's content: a refusal
+  or the amber note is not the page, and a blank page between them and the content is the frozen look
+  the PRD removes. It was a blank page before #870 too;
+- (#870) **a ratings read held for a connection, with nothing read yet, counts as refused** for the
+  opening sport (`useOpeningSport`), as a refused one did: offline with nothing cached and a trophy
+  that names no sport, the deck's sport waits on the ratings, and the page would otherwise shimmer for
+  as long as the phone is offline, where before #870 it stood blank. It opens on padel — or the deck's
+  last — and its own read says it is offline; Home's Top 10, which reads the same, opens the same way;
+- (#870) **the switch waits for the sport too**: it was drawn once the view was known, and the shape
+  in its place stands while the view _or_ the sport is unknown, as the ticket writes it — a moment the
+  switch could not be used for anything below it anyway;
+- (#870) the switch's shape takes the switch's own corner (`radius.seg`), not a pill's, so it is the
+  shape the switch replaces; the face is a circle, as the ticket writes it, where the real face is
+  `PlayerPhoto`'s rounded square;
+- (#870) the place card's block is the listed card with one gap line — every other card is shorter,
+  and the skeleton predicts none of them; the level's bar is four figures of `num.m` wide, IBM Plex
+  Mono's 600-unit advance; the name's fills its column, as a name may;
+- (#870) a pull made while the skeleton is up reaches the list underneath and reads the page again,
+  but its spinner is hidden with the list until the reveal;
 - (#776) around the reader, the card and the podium are drawn only once the window reaches the top,
   so the list never reads 3rd and then 187th;
 - (#777) the switch is the plain segmented control (6.3), as rankings 2 draws it — the track `line2`,
@@ -210,7 +295,11 @@ two views, the Friends cards with
 _Add friends_, the sheet over Rankings, and the whole page — the trophy beside the bell, the dark card's place and
 level, the podium's steps, the rows and the tint, the drawn marks, and the pill over the header —
 and #776's scrolling: a page landing at either end, the list holding still as a page lands above it,
-the jump landing centred, and the button over the list. The suites say what the list reports (the
+the jump landing centred, and the button over the list; and #869's _Finding you…_ on the dark
+button, with its width change as the words swap; and #870's skeleton — its shapes against the page
+they stand for, the band's tone, beat and tilt, and the cross-fade (owed to the phone walk,
+[#877](https://github.com/Raketa02/Raketa/issues/877); its frame cost on the A32 is
+[#873](https://github.com/Raketa02/Raketa/issues/873)'s). The suites say what the list reports (the
 rows on screen, an end reached), because a test renderer lays nothing out.
 
 **The ranking shows everybody, and the page has no switch** ([#799](https://github.com/Raketa02/Raketa/issues/799),
@@ -315,3 +404,51 @@ outline and hairline, _10_'s two figures touching, the baseline near the card's 
 the card's portrait and wash, the move's slant and colours on a pale photograph, the volt ring, the
 pill on the heading's line and the bar sliding over _TOP 10_ while _Rankings ›_ stays, and the row's
 spacing among the others.
+
+**Top 10 is FOR YOU's last line** ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205
+§5; home refactor 12, 13). `TopTenRow` became `useTopTenLine`, which hands the shell the line's title
+(`TOP_TEN_COPY.line`), the cards on the `numbered` rail — stepping and snapping by an item, the
+numeral beside the card (`itemWidth`) — or _Nobody ranked in squash yet_, and **a footer holding
+today's pill and _Rankings ›_**, unchanged until #821 turns the pill rightwards and renames the link;
+the bar slides over the footer rather than the heading. **The pick is held by the line**, which lives
+while Home does, so it outlives a close. **The line never empties under the pill on a pick** (`useTopTen`'s
+`lastDrawn`): while a pick's own read has nothing yet — refused, or the pick before it cancelled under a
+second pick and read again — the cards last drawn stay, since FOR YOU closes a line that stops being
+shown and an open Top 10 would close under the reader. `keepPreviousData` alone covered a read in
+flight, not a failure. **On a 360pt phone the open bar's leftmost sport is cut by the line's edge**:
+the bar still grows leftwards from the pill, about 268pt, and the footer leaves it some 253 inside the
+line, which clips where the row's heading let it run into the gutter. #821 turns it to open rightwards
+from the footer's left, where all four fit — **a look is owed** until then. Hidden, as before, while nobody is
+ranked in any sport. Walked in `topTen.test.tsx`, which now opens the line first and adds the pick
+kept across a close and a second pick, before the first lands, refused with the line kept open.
+
+**Top 10's footer: the switcher on the left, _Open the rankings ›_ on the right**
+([#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5, Q19, Q37; home refactor 12, 13,
+note 4). The pill stands first in the open line's footer and reads _● Padel ›_, its chevron pointing
+the way it opens — the mocks' _‹_ is overridden — and the link, `TOP_TEN_COPY.rankings`, reads _Open the
+rankings ›_, spoken _Open the rankings in padel_ (`topTenRankingsLabel`), going where _Rankings ›_ went:
+the Rankings page on the line's sport, in General. **The switcher opens to the right**, with the deck's
+own unfold: `RowSportPill` hands `SportPill` and `SportBar` `opens="right"`, so the current sport stands
+dark at the bar's left end where the pill stood, its chevron turned back to _‹_, and the others slide
+out after it in the app's order, nearest first. The bar's slot starts the bar's inset before the
+pill's left end and runs to the footer's right edge, **over the link**: the footer's backdrop takes a
+tap there and folds the bar, leaving Home where it is. **How far it fits, measured** in the Archivo
+the pill draws (`rowSportBarFit.test.ts`): the open bar is about 322pt, 304 of pills — not the ~268
+this record said under #805 and #820. From a 375pt phone up it opens inside the line, every sport in
+reach. On a 360pt phone — the product owner's A32 — its round end meets the line's inner edge, cut by
+under a point, and badminton's far ~6pt stand past the footer, where Android lands no touch. On a
+320pt phone it is cut by about 40pt, badminton half hidden: **a known limit, for the product owner**
+(a scrolling bar, or a narrower pill in the footer, would be the ways out). The leftward bar ending at
+the pill was cut on a 360pt phone too (#820). A pick still re-reads Top 10 alone, and the closed line
+shows neither part.
+Walked in `topTen.test.tsx` (the footer's order and words, the bar's direction and slot, the link's
+name and destination); the drawing's direction in `SportPill.test.tsx` and `RowSportPill.test.tsx`.
+**Not seen on a device** — a look is owed against home refactor 12, 13: the pill at the footer's left,
+the link at its right, and the bar sliding open to the right over the link.
+
+**Top 10's cards stand a little bigger** (2026-11-26; design-system 7.7, 7.36, Part 16).
+`size.topTen.railRatio` is 0,31 of the line's content, from 0,29, the card's 1,48 kept: 108 × 160 on a
+411pt phone, where it was 101 × 150, beside FOR YOU's other cards growing (`discovery.md`). Two items
+stand whole and 34 of the third shows; past 0,31 the third's edge would be gone on a 360pt phone, and
+with it the rail's affordance. The numeral stays `type.numeral`'s 108 and its 24 under the card.
+Walked in `HomeRow.test.tsx`. **Not seen on a device** — a look is owed on the A32.

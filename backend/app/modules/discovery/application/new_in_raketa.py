@@ -12,6 +12,10 @@ that don't play and accounts that are gone (``docs/adr/0204`` §10): the
 directory's ``joiners`` holds all but the reader and the blocks, which are
 handed to it.
 
+**The row's total** (#812; ``totals``) is everybody new: the row itself when it
+came back short of ten, and otherwise one count over the month, stopping at
+100.
+
 **See all reads every joiner's levels**, because its sport pill offers only
 sports at least one joiner holds a level in, and a sport keeps only the
 players rated in it: one read per joiner and sport, through the rating's
@@ -46,6 +50,7 @@ from app.modules.discovery.domain.ports import (
     LevelsHeld,
 )
 from app.modules.discovery.domain.relation import Relation
+from app.modules.discovery.domain.totals import COUNTED_UP_TO, capped
 
 
 @final
@@ -63,6 +68,14 @@ class JoinerCard:
     days_since_joined: int
     levels: tuple[SportLevel, ...]
     relation: Relation
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class NewInRaketaRow:
+    cards: tuple[JoinerCard, ...]
+    #: How many joiners the row could show, counted up to 100 (``totals``).
+    total: int
 
 
 @final
@@ -159,18 +172,31 @@ class ReadNewInRaketa:
         self._cards = _Cards(relations=relations, levels=levels, faces=faces)
         self._clock = clock
 
-    async def execute(self, reader: UUID) -> tuple[JoinerCard, ...]:
+    async def execute(self, reader: UUID) -> NewInRaketaRow:
         now = self._clock.now()
+        leaving_out = {reader, *await self._blocks.either_way(reader)}
         newest = await self._directory.who_joined(
-            after=new_since(now),
-            leaving_out={reader, *await self._blocks.either_way(reader)},
-            limit=ON_THE_ROW,
+            after=new_since(now), leaving_out=leaving_out, limit=ON_THE_ROW
         )
         relations = await self._cards.relations_of(
             reader, [one.player_id for one in newest]
         )
-        return await self._cards.of(
-            reader, on_the_row(newest, relations), now=now, relations=relations
+        # A row short of ten is everybody new: its total costs nothing. The
+        # count is a later statement, so it may see somebody leave whom the
+        # row shows: it never answers fewer than the row holds.
+        everybody = len(newest)
+        if everybody == ON_THE_ROW:
+            everybody = max(
+                everybody,
+                await self._directory.how_many_joined(
+                    after=new_since(now), leaving_out=leaving_out, up_to=COUNTED_UP_TO
+                ),
+            )
+        return NewInRaketaRow(
+            cards=await self._cards.of(
+                reader, on_the_row(newest, relations), now=now, relations=relations
+            ),
+            total=capped(everybody),
         )
 
 

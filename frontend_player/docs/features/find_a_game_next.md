@@ -32,3 +32,13 @@ flag; nothing about the screen changed.
 **No flag decides it any more** ([#576](https://github.com/Raketa02/Raketa/issues/576)). The old
 Find a game and the flag that could bring it back are gone, so Play › Explore is this screen
 always, still empty, until the rebuilt Find a game grows here.
+
+**Behind the `explore` feature flag, off** ([#826](https://github.com/Raketa02/Raketa/issues/826),
+[ADR-0206](../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)
+§11). The app ships with Groups only, so a blank Explore no longer sits one press away. Off — the
+code default and every environment's value — Play is the groups under a _Groups_ title with no
+segment, and this screen is never drawn: nothing reaches it. On, it is Play › Explore exactly as
+above. The gate is the shell's (`PlayScreen`, [`shell.md`](shell.md)); nothing about the screen
+changed, and `shell/components/theExploreGate.test.tsx` finds it by `FIND_A_GAME_NEXT_TEST_ID` when
+the feature flag is on. Explore is built behind the key and goes on with it; the key goes when it
+is on for everyone.

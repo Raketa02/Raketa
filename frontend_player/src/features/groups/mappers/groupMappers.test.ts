@@ -6,7 +6,8 @@ import {
   toGroup,
   toGroupMembers,
   toHomeClubSearch,
-  toHottestGroups,
+  toHottestPage,
+  toHottestRow,
   toJoinRequests,
   toJoinSearch,
   toMyGroups,
@@ -504,8 +505,14 @@ describe('Home’s Hottest groups', () => {
     is_administrator: false,
   };
 
+  /** #822: the line's count — every group of 3 or more, up to 100 — as served. */
+  it('keeps the total as served — the groups to look through, not the six', () => {
+    expect(toHottestRow({ groups: [OGRODY_HOT], total: 38 }).total).toBe(38);
+    expect(toHottestRow({ groups: [], total: 0 })).toEqual({ groups: [], total: 0 });
+  });
+
   it('keeps every figure the card and its sheet draw, in the order served', () => {
-    expect(toHottestGroups({ groups: [OGRODY_HOT] })).toEqual([
+    expect(toHottestRow({ groups: [OGRODY_HOT], total: 1 }).groups).toEqual([
       {
         id: OGRODY_HOT.id,
         kind: 'OFFICIAL',
@@ -518,7 +525,6 @@ describe('Home’s Hottest groups', () => {
         club: { id: OGRODY_HOT.club.id, name: 'Ogrody 33' },
         gamesThisWeek: 14,
         newThisMonth: 3,
-        heatShare: 1,
         tag: 'HOTTEST',
         faces: [
           {
@@ -535,10 +541,23 @@ describe('Home’s Hottest groups', () => {
     ]);
   });
 
+  /** #823: a page of Groups heating up — the row's cards, and the cursor behind them. */
+  it('reads a page of Groups heating up: its cards, and the cursor behind them', () => {
+    const page = toHottestPage({ groups: [OGRODY_HOT], next: 'cursor-20', total: 38 });
+    expect(page.groups).toEqual(toHottestRow({ groups: [OGRODY_HOT], total: 1 }).groups);
+    expect(page.next).toBe('cursor-20');
+  });
+
+  it('names no cursor on the last page', () => {
+    const last = toHottestPage({ groups: [OGRODY_HOT], next: null, total: null });
+    expect(last).not.toHaveProperty('next');
+  });
+
   it('carries no tag as none, and an Owner who can no longer be named as nobody', () => {
-    const [kazimierz] = toHottestGroups({
+    const [kazimierz] = toHottestRow({
       groups: [{ ...OGRODY_HOT, kind: 'PLAYER', tag: null, run_by: null }],
-    });
+      total: 1,
+    }).groups;
     expect(kazimierz?.tag).toBeNull();
     expect(kazimierz?.runBy).toBeNull();
   });

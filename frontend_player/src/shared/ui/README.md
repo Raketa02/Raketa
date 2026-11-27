@@ -56,9 +56,9 @@ design-system doc, in the same commit.
   `voltStroke`, which is `coralInk`'s relationship to `coral`: one meaning, a second value,
   because the base colour cannot carry the role. It is not a `*Line`, which in this palette is
   a soft's border, and volt has no soft.
-- **Cards never cast a shadow.** Five shadows exist; all are for things that float, and
-  the deck card is one of them because it is not a card. The fifth, the ⚡Play disc's, is
-  the only one that is a colour rather than a dimming — and only on iOS.
+- **Cards never cast a shadow.** Five shadows exist for things that float, and the deck card is
+  one of them because it is not a card; the tab bar's dock is another, on the deck card's values,
+  in the slot the retired ⚡Play disc's tinted shadow left (#883). None is a colour.
 - **Every number is mono and tabular.** That is the mechanism that stops a row reflowing
   when a level changes from 2,71 to 2,80.
 - **Every state carries a word or a shape**, never colour alone.
@@ -132,6 +132,65 @@ has one caller and stands here anyway**, against the fourth non-negotiable, beca
 moved out of a feature: it is a second holder of the one sport pill (`SportPill`, `SportBar`,
 `FoldAway`), whose parts are this folder's own and unexported, and written in `rankings` it would
 have to export them — making the pill's internals the surface instead. Import them from `@/shared/ui`.
+**Since [#820](https://github.com/Raketa02/Raketa/issues/820) the five rows are FOR YOU's folding
+lines** (7.37): `FoldingLines` (the section and its eyebrow), `FoldingLine` (a card whose header the
+page opens and closes, its content drawn only while open, one height change moved by a layout
+transition) and `FoldingLineFooter` (the open content's foot: a control at its left, a 44pt link at its
+right, a layer over it). Since [#821](https://github.com/Raketa02/Raketa/issues/821) Top 10's sport
+pill opens rightwards there (`opens`), the current sport at the bar's left end. Since
+[#822](https://github.com/Raketa02/Raketa/issues/822) a line takes a `count` — the read's total, drawn
+in the count pill, _99+_ past 99 (`shared/formatting`'s `countFigure`), and said after the title
+(`withCount`). `HomeRow`'s heading lost its
+control, link and `over`, which only those rows used — the pill now stands in the footer — and
+`HomeRowRail` takes its bounds from a line (`RailBounds`). A section's top on the page composes
+through what holds it (`useTopOnPage`), and a page that watches shows what a line unfolds
+(`PageReveal`). And by For fun's Social vibe ([#838](https://github.com/Raketa02/Raketa/issues/838)):
+`SocialVibeRow` (7.38) — the % beside a 0–100 bar filled to it, _Social vibe_ inside, coloured by
+`shared/vocabulary`'s `socialVibeBand`. **It came down ahead of its second caller**, as ADR-0207 §9.4
+decides: it is the deck card's row, the Friends card's (#842), and a part of the Social vibe
+card, which a booked game draws in `games` (#841) — so it is built where both features reach
+it rather than copied out of `proposals` later. And by a competitive game's details
+([#839](https://github.com/Raketa02/Raketa/issues/839)): **`ForecastBlock`** — _BALANCE FORECAST_,
+both side levels and the gap, 7.11's bar, the % and its word, the sentence, and **`StakeTiles`**
+(7.14 as amended: _If you win_ / _If you lose_, two or none) — moved here from `games`, unchanged,
+because the booked game (`games`' `GamePairingCard`) and the details (`proposals`) both draw it
+(ADR-0207 §6). Its words are `shared/vocabulary/forecastPresentation.ts`'. And by a For-fun game's
+details ([#840](https://github.com/Raketa02/Raketa/issues/840)): **`SocialVibeCard`** (7.39) —
+_SOCIAL VIBE_, the % and its word over a full-width bar, then the grid of your tags with a dot under
+each carrier, on paper in `voltPale` and the olive inks. It is handed a `SocialVibeGrid`
+(`shared/vocabulary/socialVibeGrid.ts`) and derives nothing, because the details (`proposals`) and
+the booked game (`games`' `GamePairingCard`, #841) each build one from their own read. And by the
+group page's Friends tab, where its _Competitive | For fun_ row went
+([#861](https://github.com/Raketa02/Raketa/issues/861), PRD #859): **`TabMenu`** (9.5) — a picker
+hanging from the tab that opens it, its lines' words, an optional muted count, a door, and the
+`coralInk` circle with `Tick` on the line selected; drawn in the page's own tree, never on the modal
+stage, with a catcher round the tab bar and `FoldAway`'s back and blur — with its place and its
+catcher's boxes in `tabMenuGeometry.ts`; and **`Segment`'s option that owns a menu** (6.3 as
+amended), its chevron, and the widths moving by a layout transition. **It came down ahead of its
+second caller**, as #861 decided: Games' tab draws the same menu since #862, with counts and a door.
+And by the loading shimmer ([#870](https://github.com/Raketa02/Raketa/issues/870), PRD #867; 5.6):
+**`Skeleton`** — `SkeletonBlock`, `SkeletonLine` (a text bar, a type role's size tall) and
+`SkeletonCircle`, rounded, in `color.skeleton`, each drawn on a **`SkeletonGround`**, the view a screen
+puts round everything that shimmers: it holds the one clock and the one moving style, and is what
+each shape measures its place against, so **one band of light crosses every shape at once** — a
+`react-native-svg` gradient, `motion.skeleton`'s sweep and tilt, `transform` only, sweeping under
+reduced motion, hidden from a listener. Its arithmetic is `skeletonSweep.ts`. And **`Reveal`**, a
+screen's content drawn under its skeleton, hidden, and brought in on one `fade` once its read has
+finished — a cut under reduced motion, decided at the first draw, never back once the content is
+in (a refusal or the offline note gives way to it again when the read sets out once more). **It came down ahead
+of its second caller**, as PRD #867 decides: Rankings is the first, and Home, See all and the group
+page follow (#871–#876). The layouts are the features'; the shapes and the band are this folder's.
+Home added ([#871](https://github.com/Raketa02/Raketa/issues/871)) **`useRevealParts`**, for a screen
+with several parts: `revealParts.ts`'s pure rule — together before the ceiling (`REVEAL_CEILING`,
+2.5 s from the mount), top-down from it, never a lower part before an upper one, never a part taken
+back — with the ceiling's one timer; **`Reveal`'s `sizedBy="skeleton"`**, a part of a scrolling
+column whose skeleton holds its place while its content is nothing yet; **`SkeletonWords`**, a bar as
+wide as a heading's own words; and the ground and the reveal passing on where they stand on the page
+(`SectionOnPage`), so a row inside them is measured through them. **A shape joins the clock once it
+has been laid out**, not as it mounts — it draws no band before then — and the ground draws itself
+again as it is laid out only while a shape stands: under jest, where nothing is laid out unless a
+suite says so, a skeleton runs no frame, which matters because the router harness runs minutes of
+frames on every navigation (a sweep left running had suites taking twenty minutes and more).
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with
@@ -246,7 +305,10 @@ meant an `AccessibilityInfo` listener per consumer, which was fine for two overl
 for the Play tab's always-mounted surfaces (a press transform, the fill's staggered seats).
 Outside a provider it reads `false`, which is what the app looked like before anybody asked for
 calm; a test that wants a tree in reduced motion passes `value` rather than mocking the OS,
-which is Part 13's own shape for a port's context.
+which is Part 13's own shape for a port's context. **Inside one, its first answer is already the
+OS's** — Reanimated's reading of the setting as the process started, there before anything
+renders — and the subscription follows the switch from then on: the launch's drawn splash decides
+its variant once, before its first frame, and must never take a provisional `false` (ADR-0209 §2).
 
 **Overlays.** `BottomSheet` and `Popover` are both real modals, and 9.1's and 7.6's "it is
 a real modal" is three separate obligations rather than one prop — read `overlay.tsx` and
@@ -370,11 +432,16 @@ for 6.13, and the placeholder button before that for `Button`.
 **The tab bar** (10.2) is the app's bottom chrome, and it is the drawn object only — it
 takes the active tab and a press handler and knows nothing about routes or stacks. **Its
 inventory of three is its own** — Home · ⚡Play · You — rather than a prop, because
-[ADR-0135](../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)
-fixes the family and the names, and because `theme.size.tabBar.labelMaxScale` is held against
-exactly those words in exactly three columns — a caller that could pass a fourth tab could break
-the fit without anything saying so. It drew five, with the old loop's Players and Chats behind a
-switch, until that loop was removed (#576). Feather from `@expo/vector-icons`,
-selection **in tone alone**, and the ⚡ is Feather `zap` rather than the character `⚡`,
-which carries `Emoji_Presentation=Yes` and would render in a colour this app does not choose.
-The bar owns the bottom safe-area inset; a CTA above it owns none.
+[ADR-0210](../../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §5
+fixes the family and the names, and because `theme.size.tabBar.labelMaxScale` and the selection
+marker are held against exactly those words in exactly three columns — a caller that could pass a
+fourth tab could break the fit without anything saying so. It drew five, with the old loop's
+Players and Chats behind a switch, until that loop was removed (#576). **It is the dock** (#883): a
+rounded slab floating over the screen's foot, glass on the iPhone and opaque `surface` on Android
+(`theme.glass`), Ionicons from `@expo/vector-icons` — outlined idle, filled lit, the bolt `flash`
+in both — with the lit tab's icon `coral` and label `coralInk` on the `coralSoft` selection marker, which
+**travels** to a newly lit tab on `motion.tabMarker`'s spring (#884) — its numbers pure in
+`tabMarkerMotion.ts`, run on the UI thread off one clock.
+The ⚡ is a glyph rather than the character `⚡`, which carries `Emoji_Presentation=Yes` and
+would render in a colour this app does not choose. The dock's lift owns the bottom safe-area inset;
+a CTA above it owns none.

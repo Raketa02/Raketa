@@ -72,7 +72,17 @@ function toPaymentToConfirm(wire: WireToConfirm): PaymentToConfirm | undefined {
 export function toPaymentsToConfirm(
   wire: Schemas['PaymentsToConfirmResponse'],
 ): readonly PaymentToConfirm[] {
-  return wire.payments
+  return toPaymentToConfirmRows(wire.payments);
+}
+
+/**
+ * **The rows themselves** — their own read's, and Home's *TO CONFIRM*, which serves the same rows
+ * (#815, #819): one reading for both, so the sheet and You › Payments never disagree on a payment.
+ */
+export function toPaymentToConfirmRows(
+  rows: readonly WireToConfirm[],
+): readonly PaymentToConfirm[] {
+  return rows
     .map(toPaymentToConfirm)
     .filter((payment): payment is PaymentToConfirm => payment !== undefined);
 }

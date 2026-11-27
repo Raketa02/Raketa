@@ -6,7 +6,10 @@ will this be* — and both read it through one function,
 forecast over the two sides' Levels and Uncertainties, the released ruleset's
 balance rules and the group σ as the matcher composes it. A side short of a seat
 is read **as if the missing player matched the one there**, which is what the
-engine's ``provisional`` means, and the card says so.
+engine's ``provisional`` means, and the card says so. **The two side strengths
+it was read from cross with it** (#833), the reader's side first — the figures
+a booked game's pairing prints as its split, which a competitive game's details
+print as each side's level and the gap.
 
 **Levels off rating's estimates, live** — the engine's currency, the one
 ``PlayerFit`` gates on beside it. Somebody not rated in the sport leaves the
@@ -22,7 +25,7 @@ from typing import final
 from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import Sport
 from app.modules.matchmaking.domain.balance import forecast_the_sides
-from app.modules.proposals.domain.deck import CardForecast, Sides
+from app.modules.proposals.domain.deck import CardForecast, SideLevels, Sides
 from app.modules.rating.domain.ports import RatedPlayerQuery
 
 
@@ -53,6 +56,12 @@ class MatcherBalanceForecasts:
             read.append(
                 None
                 if sides is None
-                else CardForecast(pct=sides[0].pct, provisional=sides[0].provisional)
+                else CardForecast(
+                    pct=sides[0].pct,
+                    provisional=sides[0].provisional,
+                    levels=SideLevels(
+                        yours=sides[1].your_side, theirs=sides[1].their_side
+                    ),
+                )
             )
         return read

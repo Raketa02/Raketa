@@ -9,24 +9,29 @@
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { RefreshControl } from 'react-native';
+import { Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { clearStoredTokens, getSessionStatus, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { theme } from '@/shared/ui';
 import {
   launchSignedIn,
   resetClipboard,
+  resetKeyboard,
   resetShare,
   stubClipboard,
   stubGate,
+  stubKeyboard,
   stubShare,
 } from '@/test-support/onboardingRouter';
 import {
   fakeClipboard,
+  fakeKeyboard,
   fakeShare,
   type FakeClipboard,
+  type FakeKeyboard,
   type FakeShare,
 } from '@/test-support/platform';
 import {
@@ -48,6 +53,19 @@ import {
   type GroupSetup,
 } from '@/test-support/officialGroupsServer';
 import { NEW_MEMBER_RELIABILITY } from '@/test-support/playerRecord';
+import {
+  ADMINISTRATORS_BAR,
+  barFloats,
+  bottomOf,
+  clearanceAbove,
+  endPadding,
+  floatOf,
+  markerAtRest,
+  markerCentre,
+  markerUnder,
+  pageOf,
+  slideFromNow,
+} from '@/test-support/tabBarReach';
 import {
   errorResponse,
   installTransport,
@@ -85,6 +103,7 @@ afterEach(async () => {
   transport.restore();
   resetShare();
   resetClipboard();
+  resetKeyboard();
   queryClient.clear();
   resetSessionStatus();
   await clearStoredTokens();
@@ -162,6 +181,23 @@ describe('the Groups tab', () => {
     expect(await screen.findByText(COPY.groups.emptyTitle)).toBeTruthy();
     expect(screen.getByText(COPY.groups.emptyLine)).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.groups.newGroupLabel })).toBeTruthy();
+  });
+
+  /**
+   * #881 (ADR-0210 §3): the area's bar floats over its screens as the player's does, and the area
+   * ends at its reach — the same dock's, with two columns (#883). *New group* stands a gutter above
+   * it, and the last card scrolls clear of the button as it did.
+   */
+  it('floats its bar over the list, New group a gutter above it and the last card clear of both', async () => {
+    await launchAsAdministrator([O3_CLUB_GROUP, OPEN_PLAY_GROUP]);
+
+    expect(barFloats()).toBe(true);
+    const newGroup = floatOf(screen.getByRole('button', { name: COPY.groups.newGroupLabel }));
+    expect(bottomOf(newGroup) - ADMINISTRATORS_BAR).toBe(theme.size.gutter);
+    const list = pageOf(await screen.findByText(O3_CLUB_GROUP.name));
+    expect(clearanceAbove(list as NonNullable<typeof list>, ADMINISTRATORS_BAR)).toBe(
+      theme.size.btnLg + 2 * theme.size.gutter,
+    );
   });
 });
 
@@ -404,6 +440,47 @@ async function openGroup(setup: GroupSetup, setups: readonly GroupSetup[] = [set
   expect(await screen.findByRole('header', { name: setup.name })).toBeTruthy();
   return server;
 }
+
+/**
+ * **On Android, the area's bar stands down while the keyboard is up**, as the player's does (ADR-0210
+ * §3 and §9, #882): the window shrinks for the keyboard, and a bar floating at its foot would ride up
+ * over the form's fields. Not rendered, its reach nothing, and back when the keyboard goes.
+ */
+describe('New official group, with the keyboard up on Android', () => {
+  let keyboard: FakeKeyboard;
+  let android: jest.ReplaceProperty<typeof Platform.OS>;
+  const tabs = () => screen.queryAllByRole('tab');
+  /** The end padding of the form's page, found from its name field. */
+  const formEnd = () => {
+    const page = pageOf(screen.getByLabelText('Name'));
+    return endPadding(page as NonNullable<typeof page>);
+  };
+
+  beforeEach(() => {
+    keyboard = fakeKeyboard();
+    stubKeyboard(keyboard);
+    android = jest.replaceProperty(Platform, 'OS', 'android');
+  });
+
+  afterEach(() => {
+    android.restore();
+  });
+
+  it('draws no tab while it is up, the form ending at its own 15, and both tabs once it goes', async () => {
+    await launchAsAdministrator();
+    await openNewGroup();
+    expect(tabs()).toHaveLength(2);
+    expect(formEnd()).toBe(ADMINISTRATORS_BAR + theme.space.lg);
+
+    act(() => keyboard.raise());
+    expect(tabs()).toHaveLength(0);
+    expect(formEnd()).toBe(theme.space.lg);
+
+    act(() => keyboard.drop());
+    expect(tabs()).toHaveLength(2);
+    expect(formEnd()).toBe(ADMINISTRATORS_BAR + theme.space.lg);
+  });
+});
 
 describe('an official group’s page', () => {
   // #529: a request left since the page was read waited for a return to it, thirty seconds on.
@@ -783,6 +860,47 @@ describe('removed, an account that also plays', () => {
 });
 
 describe('the two tabs', () => {
+  /**
+   * **The area draws the player's dock with two columns** (#883, ADR-0210 §3, Q16): the same frame,
+   * the same marker, Groups and You — and the marker under whichever is lit, **travelling there**
+   * the way the player's does (#884): mid-slide between the two a moment after a press, at rest
+   * under the new tab once it settles. Each slide starts on the frame after its navigation, whose
+   * own flush ran every pending timer.
+   */
+  it('draws the dock with its two tabs, and the marker travels to the lit one', async () => {
+    const slide = theme.motion.tabMarker.slide;
+    await launchAsAdministrator([O3_CLUB_GROUP]);
+
+    expect(barFloats()).toBe(true);
+    expect(screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual([
+      'Groups',
+      'You',
+    ]);
+    expect(markerUnder()).toBe('Groups');
+    expect(markerAtRest()).toBe(true);
+
+    fireEvent.press(screen.getByRole('tab', { name: 'You' }));
+    const there = slideFromNow();
+    await waitFor(() => expect(screen).toHavePathname(`/administrator/${CLUB_ID}/you`));
+    there(48);
+    expect(markerUnder()).toBeUndefined();
+    expect(markerCentre()).toBeGreaterThan(0.5);
+    expect(markerAtRest()).toBe(false);
+    there(48 + slide);
+    expect(markerUnder()).toBe('You');
+    expect(markerAtRest()).toBe(true);
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Groups' }));
+    const back = slideFromNow();
+    await waitFor(() => expect(screen).toHavePathname(`/administrator/${CLUB_ID}`));
+    back(48);
+    expect(markerUnder()).toBeUndefined();
+    expect(markerCentre()).toBeLessThan(1.5);
+    back(48 + slide);
+    expect(markerUnder()).toBe('Groups');
+    expect(markerAtRest()).toBe(true);
+  });
+
   it('opens You, with the way out, and comes back to Groups', async () => {
     await launchAsAdministrator([O3_CLUB_GROUP]);
 

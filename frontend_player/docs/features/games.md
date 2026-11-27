@@ -176,9 +176,10 @@ rather than drawn without its caveat. Under the figure the sentence says what a 
 **does**: _A counted game — a confirmed score moves everybody's level._ / _A friendly — nothing
 moves._ — `worthLine`'s fact in the forecast's register rather than that sentence again four cards
 apart — and the tiles are `If you win` / `If you lose`, **two or none**, the win tile tinted mint
-on the design's word (7.14 as amended, Part 16), drawn by a placer of this feature's own over the
-shared `StatBox` because Play's `StakeBoxes` names a mode a game has already answered and refuses a
-doubles court a game has already filled. **The players card is always drawn** — its rows are the
+on the design's word (7.14 as amended, Part 16), drawn by a placer of its own (`StakeTiles`, in
+`shared/ui` since #839) over the shared `StatBox` because Play's `StakeBoxes` names a mode a game
+has already answered and refuses a doubles court a game has already filled. **The players card is
+always drawn** — its rows are the
 court's seats and the Level under each is what the pairing adds — **your side first, you first**
 (`courtForReader`, the one re-ordering this feature makes), the whole handle with `(you)` after
 yours, the level row as §6.4 spells it plus `{n}% sure`, nothing under an unrated seat, **no chip
@@ -289,9 +290,39 @@ cannot disagree about a state; what crosses is the boolean, never the argument.
 **`GameForecast` — the forecast block alone** ([#556](https://github.com/Raketa02/Raketa/issues/556)).
 A booked game's details draw their own people, with _paid_ on each, so they take this feature's
 forecast without the players card: the same `usePairing` read of the Game the booking opened and the
-same `ForecastBlock`, absent on the same ground. And a booked game's result is told on `GameScreen`
+same `ForecastBlock`, absent on the same ground. **The block and its stake tiles are `shared/ui`'s
+since [#839](https://github.com/Raketa02/Raketa/issues/839)** — a competitive game's details open on
+them too, and ADR-0207 §6 moved them below both features — and so are their words (`BALANCE_FORECAST`,
+`GAP_WORD`, the
+counted sentence, `WIN_TILE` / `LOSE_TILE`, and the three spoken names), in
+`shared/vocabulary/forecastPresentation.ts`. This feature draws them unchanged: `gamePresentation`
+cites the words, kept the friendly's sentence (`forecastSentence`) until #841 retired it with the
+block on For fun (below), and hands the block its own read. And a booked game's result is told on `GameScreen`
 itself, composed by `proposals` with the score leading and the `card`, `court`, `plan` and `fill`
 slots empty — a booking is its own plan, and a seat open on one is a rescue (#557).
+
+**`GamePairingCard` — the pairing's card, the kind's own**
+([#841](https://github.com/Raketa02/Raketa/issues/841); ADR-0207 §5, §6, §12; the backend's #835).
+`GameForecast` was renamed for what it now draws: **a For-fun game's Social vibe card where _A
+friendly — nothing moves._ stood**, and a competitive game's forecast and stakes as before, so a
+For-fun game reads the same before and after it is booked. The pairing carries **`vibe`** on a
+`FRIENDLY` game — the court's number, and a row for each of the reader's tags naming who on the
+court carries it, in the reader's direction — and **the forecast too, for the apps already on
+phones**. Both cross the mapper; **the kind decides the card** (`pairingCardOf`, `domain/pairing.ts`),
+never which blocks arrived: `FRIENDLY` draws the vibe or nothing, the forecast ignored; any other kind
+draws the forecast or nothing, a vibe ignored; a kind this build cannot read keeps the forecast it
+drew before. A tag code this build can't name is left off its rows (ADR-0207 §7), as the details'
+mapper does. **The columns are handed in** (`columns`): `proposals` gives the people as its tiles
+stand, you first, with the faces the booking carries — this feature's seats hold neither that order
+nor a photograph — and the dots and the shared bands are this feature's, off the carriers. The card
+is `shared/ui`'s `SocialVibeCard`, the one a game still filling opens on (#840). **The friendly's
+sentence is retired** with the block it stood under: `forecastSentence` says the counted sentence or
+nothing. **Live**: `gameKeys.pairings()` roots every game's pairing, and a tag save marks it stale
+(`player_profile`'s `useChangeSocialTags`, beside the deck and the details), never re-read under the
+edit. **_The game at the court_ is the booked details at the game's hour**: the result screen
+_Who's here_ opens leaves its `court` slot empty, as it has since #576, so the card is drawn where
+the forecast was and no wider (ADR-0207 §5). Walked in `proposals`' `bookedForFunGame.test.tsx`;
+`forecastBlock.test.tsx` asserts a friendly draws no forecast, sentence or tile.
 
 **`STARTED_SHORT` — a booked game whose hour came with a seat open**
 ([#557](https://github.com/Raketa02/Raketa/issues/557); the backend's #544; the Games & Fill in
@@ -342,7 +373,7 @@ row's words and `courtForReader`), the dismissal (`dismissGame`, `useDismissGame
 `dropCardOfGame`), `awaitsYourAgreement` and `seatedOthers` went with the old loop's rail, cards and
 challenge screen they served, and so did this feature's edge into `player_record`. **`GameScreen`
 stays** — a booked game's result screen mounts it, on the score lead with its other slots empty —
-and so do `GameForecast` and the result writes. `result.test.tsx` and `forecastBlock.test.tsx` walk
+and so do `GameForecast` (`GamePairingCard` since #841) and the result writes. `result.test.tsx` and `forecastBlock.test.tsx` walk
 the booked routes now (`/booking/[id]/result` and the details), with the same assertions. **The
 plan lead, the `card`, `court`, `plan` and `fill` slots and `entryLead` are still on the screen**
 and nothing fills them: simplifying the screen to the one lead it now has is left for a ticket of

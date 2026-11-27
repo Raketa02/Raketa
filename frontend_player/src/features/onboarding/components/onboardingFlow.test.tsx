@@ -28,6 +28,7 @@ import {
   wireHttpCredentials,
 } from '@/shared/lib/auth';
 import { TIMEOUT_MS } from '@/shared/lib/http';
+import { readReachability, wireOnlineManager } from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
 import { fetchCurrentUserAtLaunch, refreshTokens, restoreSession } from '@/features/auth/types';
 import {
@@ -39,6 +40,7 @@ import {
   runInProgress,
   RUNS_IN_PROGRESS_PATH,
   SPORTS_SERVED,
+  splashHoldsStanding,
   stubGate as stubGateWith,
   stubLocation,
   stubProfileOptions,
@@ -98,6 +100,23 @@ const OPENING_STEP: Wire['AssessmentStepResponse'] = {
 /** The first profile step's eyebrow — where every launch owed the steps lands. */
 const STEP_ONE = /^Setting up · Step 1 of 6/;
 
+/** The phone's connectivity, faked in `jest.setup.js` as a working connection that never changes. */
+const native = jest.requireMock('expo-network') as { getNetworkStateAsync: jest.Mock };
+
+let unwireTheNetwork: (() => void) | undefined;
+
+/**
+ * **The bootstrap's wiring of the online manager**, as the launch meets it: the platform's first
+ * answer is `firstAnswer` — a working connection unless a case says otherwise — and the launch's
+ * reachability is what the manager then believes.
+ */
+function wireTheNetwork(
+  firstAnswer = { isConnected: true, isInternetReachable: true as boolean | null },
+) {
+  native.getNetworkStateAsync.mockResolvedValueOnce(firstAnswer);
+  unwireTheNetwork = wireOnlineManager();
+}
+
 let transport: Transport;
 
 const stubGate = (options?: Parameters<typeof stubGateWith>[1]) => stubGateWith(transport, options);
@@ -127,6 +146,8 @@ afterEach(() => {
   transport.restore();
   resetLocation();
   queryClient.clear();
+  unwireTheNetwork?.();
+  unwireTheNetwork = undefined;
   onlineManager.setOnline(true);
 });
 
@@ -234,6 +255,8 @@ describe('where a launch lands', () => {
 
     answerMe();
 
+    // Home, and then its sentence, which comes with Home's own read since #871.
+    expect(await screen.findByRole('header', { name: 'Home' })).toBeTruthy();
     expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
@@ -318,7 +341,8 @@ describe('where a launch lands', () => {
     transport.on('GET', ME_PATH, networkFailure());
     await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
     // The root layout's step, composed as it composes it.
-    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient));
+    wireTheNetwork();
+    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient), readReachability);
 
     stubGate();
     renderRouter(ONBOARDING_ROUTES, { initialUrl: '/' });
@@ -336,7 +360,8 @@ describe('where a launch lands', () => {
     stubGate();
     transport.on('GET', ME_PATH, networkFailure());
     await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
-    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient));
+    wireTheNetwork();
+    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient), readReachability);
     onlineManager.setOnline(false);
 
     stubGate();
@@ -344,6 +369,29 @@ describe('where a launch lands', () => {
 
     expect(screen.getByText("You're offline. This will load as soon as you're back.")).toBeTruthy();
     expect(screen.queryByText("We couldn't pick up where you left off")).toBeNull();
+
+    onlineManager.setOnline(true);
+
+    await waitFor(() => expect(screen).toHavePathname('/tags'));
+  });
+
+  it('says it is waiting when the launch already knew it was offline, and asked nothing', async () => {
+    // ADR-0209 §4. The phone's first answer is *no internet* — a captive portal — so the launch
+    // sends no check and leaves nothing in the cache. The gate's own read is what answers, and it
+    // pauses only because the online manager already agrees by the time it reads: the launch's
+    // answer is the manager's own belief, composed here as the root layout composes it.
+    stubGate();
+    wireTheNetwork({ isConnected: true, isInternetReachable: false });
+    await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+    await restoreSession(() => fetchCurrentUserAtLaunch(queryClient), readReachability);
+
+    renderRouter(ONBOARDING_ROUTES, { initialUrl: '/' });
+
+    expect(screen.getByText('Waiting for a connection')).toBeTruthy();
+    expect(screen.getByText("You're offline. This will load as soon as you're back.")).toBeTruthy();
+    expect(screen.queryByText("We couldn't pick up where you left off")).toBeNull();
+    expect(transport.requestsTo('GET', ME_PATH)).toEqual([]);
+    expect(splashHoldsStanding()).toBe(0);
 
     onlineManager.setOnline(true);
 
@@ -394,6 +442,67 @@ describe('where a launch lands', () => {
     onlineManager.setOnline(true);
 
     await waitFor(() => expect(screen).toHavePathname('/tags'));
+  });
+
+  /**
+   * **The entry gate holds the splash while it is still asking** (ADR-0209 §3). *Pending* draws
+   * nothing — the one blank state after startup — and the splash fading into it would be the blank
+   * frame the brief forbids. An answer lets go, whichever it is: a destination, or either of the two
+   * screens saying the gate could not be read.
+   */
+  describe('the splash', () => {
+    it('is held while the gate is still asking who this is, and let go when it answers', async () => {
+      stubGate();
+      let answerMe = () => {};
+      const held = new Promise<void>((resolve) => {
+        answerMe = resolve;
+      });
+      transport.on('GET', ME_PATH, async () => {
+        await held;
+        return json<Wire['MeResponse']>({ ...GATE_USER, has_player_profile: true });
+      });
+
+      await launchSignedIn();
+      await waitFor(() => expect(transport.requestsTo('GET', ME_PATH)).toHaveLength(1));
+
+      expect(splashHoldsStanding()).toBe(1);
+
+      answerMe();
+
+      expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
+      expect(splashHoldsStanding()).toBe(0);
+    });
+
+    it('is let go on the screen saying the gate could not be read', async () => {
+      stubGate();
+      transport.on('GET', ME_PATH, () => errorResponse(403, 'forbidden'));
+
+      await launchSignedIn();
+
+      expect(await screen.findByText("We couldn't pick up where you left off")).toBeTruthy();
+      expect(splashHoldsStanding()).toBe(0);
+    });
+
+    it('is let go on the screen saying it is waiting for a connection', async () => {
+      stubGate();
+      onlineManager.setOnline(false);
+
+      await launchSignedIn();
+
+      expect(
+        await screen.findByText("You're offline. This will load as soon as you're back."),
+      ).toBeTruthy();
+      expect(splashHoldsStanding()).toBe(0);
+    });
+
+    it('is never held for a signed-out launch, which asks the gate nothing', async () => {
+      setSessionStatus('unauthenticated');
+
+      renderRouter(ONBOARDING_ROUTES, { initialUrl: '/' });
+
+      await waitFor(() => expect(screen).toHavePathname('/sign-in'));
+      expect(splashHoldsStanding()).toBe(0);
+    });
   });
 
   it('claims nothing was tried, and offers no retry for a query that resumes itself', async () => {

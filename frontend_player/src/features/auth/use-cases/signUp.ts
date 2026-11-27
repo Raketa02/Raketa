@@ -31,7 +31,10 @@ import { signIn } from './signIn';
  * would be far worse than leaving a player to sign in with credentials that now work.
  * The error surfaces on the form, and the sign-in screen is one tap away.
  */
-export async function signUp(registration: Registration): Promise<void> {
+export async function signUp(
+  registration: Registration,
+  readAccount: () => Promise<unknown>,
+): Promise<void> {
   await register({
     email: registration.email,
     password1: registration.password,
@@ -42,5 +45,6 @@ export async function signUp(registration: Registration): Promise<void> {
     adult_attested: registration.adultAttested,
   });
 
-  await signIn({ email: registration.email, password: registration.password });
+  // `signIn`'s read, so the button says _Creating account…_ until the gate knows where to go.
+  await signIn({ email: registration.email, password: registration.password }, readAccount);
 }

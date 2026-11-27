@@ -72,12 +72,22 @@ export {
 } from './DarkCard';
 export { DoorRow, doorRowLabel, type DoorRowGlyph, type DoorRowProps } from './DoorRow';
 export { FIT_HIGH, FIT_SCALE, FitPill, type FitPillProps } from './FitPill';
+export {
+  FoldingLine,
+  FoldingLineFooter,
+  FoldingLines,
+  type FoldingLineFooterProps,
+  type FoldingLineLink,
+  type FoldingLineParts,
+  type FoldingLineProps,
+  type FoldingLinesProps,
+} from './FoldingLine';
+export { ForecastBlock, type ForecastBlockProps } from './ForecastBlock';
 export { Guide, type GuideProps, type GuideStep } from './Guide';
 export { Hairline, type HairlineProps, type HairlineVariant } from './Hairline';
 export {
   HomeRow,
   HomeRowRail,
-  type HomeRowLink,
   type HomeRowProps,
   type HomeRowRailGeometry,
   type HomeRowRailProps,
@@ -100,7 +110,15 @@ export {
   type OnCourtMarkProps,
 } from './OnCourtMark';
 export { Note, type NoteProps, type NoteVariant } from './Note';
-export { PageOnScreen, useWatchedPage, type WatchedPage } from './onScreen';
+export {
+  PageOnScreen,
+  PageReveal,
+  scrollToReveal,
+  useWatchedPage,
+  type Followed,
+  type Span,
+  type WatchedPage,
+} from './onScreen';
 export {
   PhotoAddTile,
   PhotoPosterTile,
@@ -130,6 +148,8 @@ export {
 export { InfoMark, Popover, type InfoMarkProps, type PopoverProps } from './Popover';
 export { QuestionNavigator, type QuestionNavigatorProps } from './QuestionNavigator';
 export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
+export { Reveal, useRevealParts, type PartsRevealed, type RevealProps } from './Reveal';
+export { REVEAL_CEILING } from './revealParts';
 export { Row, type RowProps, type RowVariant } from './Row';
 export { RowSportPill, type RowSportPillProps } from './RowSportPill';
 export { RUN_OF_FORM_FILL, RunOfForm, type RunOfFormProps } from './RunOfForm';
@@ -144,8 +164,28 @@ export {
   type SeatCaptionProps,
   type SeatFaceProps,
 } from './SeatFace';
-export { Segment, type SegmentOption, type SegmentProps } from './Segment';
+export { Segment, type SegmentMenu, type SegmentOption, type SegmentProps } from './Segment';
+export {
+  SkeletonBlock,
+  SkeletonCircle,
+  SkeletonGround,
+  SkeletonLine,
+  SkeletonWords,
+  type SkeletonBlockProps,
+  type SkeletonCircleProps,
+  type SkeletonGroundProps,
+  type SkeletonLineProps,
+  type SkeletonWordsProps,
+} from './Skeleton';
 export { SocialTagRow, type SocialTagRowProps } from './SocialTagRow';
+export {
+  SOCIAL_VIBE_CARD,
+  SOCIAL_VIBE_CARD_FIGURE,
+  SOCIAL_VIBE_CARD_FILL,
+  SocialVibeCard,
+  type SocialVibeCardProps,
+} from './SocialVibeCard';
+export { SOCIAL_VIBE_ON_DARK, SocialVibeRow, type SocialVibeRowProps } from './SocialVibeRow';
 export {
   ALL_SPORTS,
   SportPillFrame,
@@ -156,6 +196,7 @@ export {
 } from './SportPillFrame';
 export { Star, STAR_FILL, type StarProps } from './Star';
 export { StarRow, type StarNames, type StarRowProps } from './StarRow';
+export { StakeTiles, type StakeTilesProps } from './StakeTiles';
 export { StatBox, StatFigure, StatRow, type StatBoxProps, type StatBoxVariant } from './StatBox';
 export { Switch, type SwitchProps } from './Switch';
 export { SwipeRow, type RevealedControl, type SwipeRowProps } from './SwipeRow';
@@ -163,14 +204,28 @@ export {
   ADMINISTRATOR_TAB_BAR_TABS,
   AdministratorTabBar,
   TabBar,
-  TAB_BAR_HEIGHT,
+  TAB_BAR_MARKER_TEST_ID,
   TAB_BAR_TABS,
+  TAB_BAR_TEST_ID,
   type AdministratorTabBarKey,
   type AdministratorTabBarProps,
   type TabBarKey,
   type TabBarProps,
   type TabBarTab,
 } from './TabBar';
+export {
+  useFullTabBarReach,
+  useRoomAtTheBottom,
+  useSaysTabBarReach,
+  useTabBarReach,
+} from './tabBarReach';
+export {
+  TabMenu,
+  type MenuAlign,
+  type MenuFrame,
+  type TabMenuLine,
+  type TabMenuProps,
+} from './TabMenu';
 export { TAG_HEIGHT, Tag, type TagProps, type TagVariant } from './Tag';
 export { TextField, type TextFieldProps } from './TextField';
 export { TopSafeArea, type TopSafeAreaProps } from './TopSafeArea';
@@ -182,10 +237,12 @@ export { ModalStage, type ModalStageProps } from './ModalStage';
 export {
   OverlayHost,
   ReducedMotionProvider,
+  SplashCoverProvider,
   announce,
   behindOverlay,
   moveAccessibilityFocus,
   useCollapsedPresentation,
+  useCoveredBySplash,
   useLiveRegion,
   useOverlayLayers,
   useReducedMotion,
@@ -194,6 +251,7 @@ export {
   type FocusTarget,
   type OverlayLayers,
   type ReducedMotionProviderProps,
+  type SplashCoverProviderProps,
 } from './overlay';
 export {
   MONOGRAM_HUES,

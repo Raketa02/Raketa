@@ -20,6 +20,9 @@ os.environ.setdefault("LOG_LEVEL", "INFO")
 # fifth of a second; three API files took 170 s at twelve and 19 s at four.
 os.environ.setdefault("BCRYPT_ROUNDS", "4")
 
+import re
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timezone
 
 import pytest
@@ -95,6 +98,82 @@ async def db_engine():
         yield engine
     finally:
         await engine.dispose()
+
+
+class SentStatements(list[str]):
+    """The SQL statements sent while a ``Statements.counting`` block ran, in
+    the order they were sent — and, beside them, what each was bound to."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.parameters: list[object] = []
+
+    def naming(self, table: str) -> list[str]:
+        """The statements that name ``table`` — read, written or joined, under
+        its own name or an alias SQLAlchemy numbers (``discovery_players_1``)."""
+
+        named = re.compile(rf"\b{re.escape(table)}(?:_\d+)?\b")
+        return [statement for statement in self if named.search(statement)]
+
+    def binding(self, value: object) -> list[str]:
+        """The statements bound to ``value`` — for a table every context shares,
+        where the statement's text cannot tell one context's reads from
+        another's: ``sent.binding("skill_rating")`` is every read of a rating
+        stream (#814)."""
+
+        return [
+            statement
+            for statement, bound in zip(self, self.parameters, strict=True)
+            if _binds(bound, value)
+        ]
+
+
+def _binds(bound: object, value: object) -> bool:
+    if isinstance(bound, dict):
+        return value in bound.values()
+    if isinstance(bound, (list, tuple)):
+        return any(
+            _binds(one, value) if isinstance(one, (list, tuple, dict)) else one == value
+            for one in bound
+        )
+    return False
+
+
+class Statements:
+    """**Counts the SQL statements a request sends** (#812) — for a test that
+    holds a read to what it costs, since a statement too many passes every
+    other test.
+
+    It listens on the test's own engine (``before_cursor_execute``), so every
+    statement is heard whichever port, session or nested read sent it — and
+    only while ``counting``, so the drains and writes that set a test up are
+    not. A commit or a rollback is no statement.
+    """
+
+    def __init__(self, engine) -> None:
+        self._engine = engine.sync_engine
+
+    @contextmanager
+    def counting(self) -> Iterator[SentStatements]:
+        sent = SentStatements()
+
+        def heard(_connection, _cursor, statement, parameters, _context, _many):
+            sent.append(statement)
+            sent.parameters.append(parameters)
+
+        event.listen(self._engine, "before_cursor_execute", heard)
+        try:
+            yield sent
+        finally:
+            event.remove(self._engine, "before_cursor_execute", heard)
+
+
+@pytest.fixture
+def statements(db_engine) -> Statements:
+    """The statement counter: ``with statements.counting() as sent:`` around a
+    request, then ``len(sent)`` (or ``sent.naming(table)``)."""
+
+    return Statements(db_engine)
 
 
 @pytest_asyncio.fixture

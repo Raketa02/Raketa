@@ -7,7 +7,7 @@
  * Saturday evening                                         (×)
  * [5] 5 of your best fits free then
  * [2,75][2,69][2,68][2,60][2,80]                 → each one's record
- *  Karol  Zofia  Ania  Ewa   Kuba   2,75 · 93
+ *  Karol  Zofia  Ania  Ewa   Kuba   2,75 · 93     on a For-fun post 2,75 · 67%, best vibe first
  * FREE COURTS · HOME CLUB FIRST
  * ┌ 17:00  Ogrody 33 [4 free]                  27 zł each ┐   → picks it
  * │        2,4 km · 27 zł if it fills · book by Sat 15:00  │
@@ -30,18 +30,32 @@
  * first, so the payment setup or a confirmation never opens over it. **A post's last seat says *Pay
  * 32 zł*** (Q124), because the yes that takes it books the game (`yesOnPost`, `chargesAtOnce`).
  *
+ * **A fit's second figure is the kind's own number** (ADR-0207 §5, #842): how even a game with them
+ * is, or on a For-fun post the Social vibe of the poster and them — *2,75 · 67%*, the % in its
+ * band's ink on paper (`SOCIAL_VIBE_CARD_FIGURE`, the Social vibe card's figure), spoken with its
+ * word. The fits stand in the server's order, which on For fun is the highest vibe first.
+ *
  * The ticks after *any level* and *you are free* are drawn (Feather) — Archivo has no ✓ — and the
  * line is true of every row: the read lists only games the poster fits and is free for.
  */
 
 import Feather from '@expo/vector-icons/Feather';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
 import { offlineMessage } from '@/shared/errors';
 import { formatZloty } from '@/shared/formatting/ratingFormat';
-import { BottomSheet, Button, Note, PHOTO_PANEL, PhotoPanel, Tag, theme } from '@/shared/ui';
+import {
+  BottomSheet,
+  Button,
+  Note,
+  PHOTO_PANEL,
+  PhotoPanel,
+  SOCIAL_VIBE_CARD_FIGURE,
+  Tag,
+  theme,
+} from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { chargesAtOnce } from '../domain/deck';
@@ -59,6 +73,7 @@ import {
   type PostStillFilling,
   type SlotFit,
 } from '../domain/posting';
+import type { GameKind } from '../domain/vocabulary';
 import { usePostingSlot } from '../hooks/usePosting';
 
 import { LINE_JOIN, clubName, payLabel, paySpoken, yesButtonLabel } from './deckPresentation';
@@ -169,7 +184,14 @@ function SlotBody({
           testID="slot-fits"
         >
           {slot.fits.map((fit) => (
-            <FitCard key={fit.playerId} fit={fit} sport={ask.sport} onPress={() => onFit(fit)} />
+            <FitCard
+              key={fit.playerId}
+              fit={fit}
+              sport={ask.sport}
+              // The kind the sheet was read for: what is lined is what was read.
+              kind={slot.kind}
+              onPress={() => onFit(fit)}
+            />
           ))}
         </ScrollView>
       )}
@@ -272,21 +294,26 @@ function SlotBody({
   );
 }
 
-/** A fit: the photo panel with their Level, the name whole under it, and *2,75 · 93*. */
+/**
+ * A fit: the photo panel with their Level, the name whole under it, and *2,75 · 93* — or on a
+ * For-fun post *2,75 · 67%*, the % in its band's ink on paper (the Social vibe card's figure).
+ */
 function FitCard({
   fit,
   sport,
+  kind,
   onPress,
 }: {
   readonly fit: SlotFit;
   readonly sport: Sport;
+  readonly kind: GameKind;
   readonly onPress: () => void;
 }) {
-  const line = fitLine(fit);
+  const line = fitLine(fit, kind);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={fitSpoken(fit)}
+      accessibilityLabel={fitSpoken(fit, kind)}
       accessibilityHint={COPY.fitHint}
       onPress={onPress}
       style={({ pressed }) => [s.fit, pressed ? s.pressed : undefined]}
@@ -310,7 +337,20 @@ function FitCard({
           <Tag label={PROPOSALS_COPY.friendSpoken} variant="ok" />
         </View>
       ) : null}
-      {line === undefined ? null : <Text style={s.fitLine}>{line}</Text>}
+      {line.length === 0 ? null : (
+        <Text style={s.fitLine}>
+          {line.map((part, at) => (
+            <Fragment key={at}>
+              {at === 0 ? null : LINE_JOIN}
+              {part.vibe === undefined ? (
+                part.text
+              ) : (
+                <Text style={{ color: SOCIAL_VIBE_CARD_FIGURE[part.vibe] }}>{part.text}</Text>
+              )}
+            </Fragment>
+          ))}
+        </Text>
+      )}
     </Pressable>
   );
 }

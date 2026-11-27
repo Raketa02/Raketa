@@ -1,29 +1,36 @@
 /**
- * **HOTTEST GROUPS on Home** — walked through the real route tree
- * ([#800](https://github.com/Raketa02/Raketa/issues/800), PRD #789; ADR-0204 §3; the Home rows
- * screens §3; the mechanics §5; the words §31.1–§31.4).
+ * **Groups heating up on Home** — FOR YOU's first line, walked through the real route tree
+ * ([#800](https://github.com/Raketa02/Raketa/issues/800), PRD #789; [#820](https://github.com/Raketa02/Raketa/issues/820);
+ * ADR-0204 §3, ADR-0205 §5; the Home rows screens §3; the mechanics §5; the words §31.1–§31.4).
  *
- * - **The row**: just below *Your games*, its heading with no See all; gone while the read is empty.
+ * - **The line**: first under FOR YOU, just below *Your games*, closed; open, its cards and *All
+ *   groups ›* at the foot (#823 — the page is `hottestGroupsPage.test.tsx`);
+ *   hidden while the read is empty or failed, and closed and gone when it empties while open.
  * - **The card**: the tag, the figures, the growth, the faces, and the chip for each relation.
  * - **The chip's taps**: Join → *You're in* at once; Ask to join → *Asked*; Asked → the withdraw
  *   sheet; You're in → the group's page. A refusal puts the chip back and says why.
  * - **The group sheet**: its title and one button, the identity line, the two stat cards, the faces
  *   (not buttons) and the friends line.
  * - **Withdraw**: *Waiting for Ogrody 33 to answer* · **Withdraw request**, and the card asks again.
- * - **The groupless line** under *Your games*.
+ * - **A reader in no group**: the groupless line under *Your games*, and the line open from the start.
  *
  * **The routes are answered by a small fake of the server** (`hottestServer`): a join admits or asks
- * by the group's policy and a withdraw takes the request back, so what the row draws after a write is
- * the row read again, never this client guessing — the guess is only what the chip says before the
+ * by the group's policy and a withdraw takes the request back, so what the line draws after a write is
+ * the line read again, never this client guessing — the guess is only what the chip says before the
  * answer lands.
  */
 
+import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { RefreshControl } from 'react-native';
+import { RefreshControl, StyleSheet, type ViewStyle } from 'react-native';
 
+import { HOME_COPY } from '@/features/shell/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
+import { theme } from '@/shared/ui';
+import { footerParts, lineNamed, lineTitles, openLine } from '@/test-support/forYou';
+import { markerAtRest, markerCentre, markerUnder, slideFromNow } from '@/test-support/tabBarReach';
 import {
   HOME_PATH,
   HOTTEST_GROUPS_PATH,
@@ -43,7 +50,9 @@ import {
 } from '@/test-support/transport';
 
 import { GROUPS_COPY } from './groupsCopy';
-import { hottestCardLabel, hottestChipLabel } from './groupsPresentation';
+import { hottestChipLabel } from './groupsPresentation';
+import { hottestCardHeight } from './HottestGroupCard';
+import { SportDots } from './SportDots';
 
 const HOT = GROUPS_COPY.hottest;
 
@@ -143,11 +152,14 @@ let transport: Transport;
 /**
  * **The row's routes, faked** — a join admits an Anyone group (and grows it by one) and leaves a
  * request on a People I approve one; a withdraw takes the request back. `refuse` makes the next join
- * fail with that code.
+ * fail with that code. The row's total is the groups served, or what `total` says at each read (#822).
  */
 function hottestServer(
   initially: readonly Wire['HottestGroupSchema'][],
-  { mine = [KAZIMIERZ_MINE] }: { readonly mine?: readonly Wire['MyGroupSchema'][] } = {},
+  {
+    mine = [KAZIMIERZ_MINE],
+    total,
+  }: { readonly mine?: readonly Wire['MyGroupSchema'][]; readonly total?: () => number } = {},
 ) {
   let groups = [...initially];
   let refusal: string | undefined;
@@ -156,7 +168,10 @@ function hottestServer(
   stubGate(transport, { hasPlayerProfile: true });
   stubMyGroups(transport, mine);
   transport.on('GET', HOTTEST_GROUPS_PATH, () =>
-    json<Wire['HottestGroupsResponse']>({ groups: [...groups] }),
+    json<Wire['HottestGroupsResponse']>({
+      groups: [...groups],
+      total: total?.() ?? groups.length,
+    }),
   );
 
   for (const group of initially) {
@@ -231,6 +246,13 @@ const card = (group: Wire['HottestGroupSchema']) =>
 const chip = (group: Wire['HottestGroupSchema'], action: 'join' | 'ask' | 'requested' | 'in') =>
   screen.findByRole('button', { name: hottestChipLabel(action, group.name) });
 const reads = (path: string) => transport.requestsTo('GET', path).length;
+/** The card's two figures, left to right, by what they count. */
+const figureRow = (group: Wire['HottestGroupSchema']) =>
+  within(screen.getByTestId(`hottest-${group.id}`))
+    .getAllByTestId(/^hottest-(games|players)$/)
+    .map((node) => node.props.testID as string);
+const alignOf = (node: { readonly props: { readonly style?: unknown } }) =>
+  StyleSheet.flatten(node.props.style as ViewStyle).alignItems;
 const sheet = () => within(screen.getByTestId('bottom-sheet'));
 const toasts = () => useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone]);
 
@@ -241,26 +263,31 @@ const headings = () =>
     .map((node) => node.props.children as string)
     .filter((text) => typeof text === 'string');
 
-describe('the row on Home', () => {
-  it('stands just below Your games, with no See all', async () => {
+const line = () => screen.findByRole('button', { name: lineNamed(HOT.line) });
+
+describe('the line on Home', () => {
+  /** ADR-0205 §5: FOR YOU just below *Your games*, Groups heating up its first line, closed. */
+  it('stands first under FOR YOU, just below Your games, closed and drawing no card', async () => {
     hottestServer([OGRODY, KAZIMIERZ, PODGORZE]);
     await launchSignedIn();
 
-    expect(await screen.findByRole('header', { name: HOT.heading })).toBeTruthy();
+    expect((await line()).props.accessibilityState).toEqual({ expanded: false });
     const order = headings();
     const games = order.findIndex((text) => text.startsWith('Your games'));
     expect(games).toBeGreaterThanOrEqual(0);
-    expect(order[games + 1]).toBe(HOT.heading);
-    const row = within(screen.getByTestId('hottest-groups'));
-    expect(row.queryByRole('link')).toBeNull();
+    expect(order[games + 1]).toBe(HOME_COPY.forYou);
+    expect(lineTitles()[0]).toBe(HOT.line);
+    expect(screen.queryByTestId(`hottest-${OGRODY.id}`)).toBeNull();
   });
 
-  it('draws the cards in the read’s order', async () => {
+  /** #823: *All groups ›* at the foot, alone at its right end — the page is its own suite. */
+  it('opens onto the cards in the read’s order, All groups › at the foot', async () => {
     hottestServer([OGRODY, KAZIMIERZ, PODGORZE]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
-    await screen.findByRole('header', { name: HOT.heading });
-    const names = within(screen.getByTestId('hottest-groups'))
+    // In what the line holds: its header's name has a comma too, before its count (#822).
+    const names = within(screen.getByTestId('hottest-groups-content'))
       .getAllByRole('button', { name: /,/ })
       .map((node) => node.props.accessibilityLabel as string);
     expect(names.map((label) => label.split(',')[0])).toEqual([
@@ -268,15 +295,19 @@ describe('the row on Home', () => {
       KAZIMIERZ.name,
       PODGORZE.name,
     ]);
+    const footer = within(screen.getByTestId('hottest-groups')).getByTestId('folding-line-footer');
+    expect(footerParts(footer, () => 'something else')).toEqual(['link']);
+    const link = within(footer).getByRole('link', { name: HOT.allGroupsLabel });
+    expect(within(link).getByText(HOT.allGroups)).toBeTruthy();
   });
 
-  it('is gone with its heading while the read holds nothing', async () => {
+  it('is hidden while the read holds nothing', async () => {
     hottestServer([]);
     await launchSignedIn();
 
     await waitFor(() => expect(reads(HOTTEST_GROUPS_PATH)).toBeGreaterThan(0));
     await screen.findByText(/^Your games/);
-    expect(screen.queryByRole('header', { name: HOT.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(HOT.line) })).toBeNull();
   });
 
   it('is left out when its read fails, and the rest of Home stands', async () => {
@@ -286,62 +317,119 @@ describe('the row on Home', () => {
 
     await waitFor(() => expect(reads(HOTTEST_GROUPS_PATH)).toBeGreaterThan(0));
     expect(await screen.findByText(/^Your games/)).toBeTruthy();
-    expect(screen.queryByRole('header', { name: HOT.heading })).toBeNull();
+    expect(screen.queryByRole('button', { name: lineNamed(HOT.line) })).toBeNull();
+  });
+
+  /** Q21: a line that empties while open closes and goes — and comes back closed. */
+  it('closes and goes when it empties while open, and comes back closed', async () => {
+    hottestServer([OGRODY]);
+    await launchSignedIn();
+    await openLine(HOT.line);
+
+    stubHottestGroups(transport, []);
+    await act(async () => {
+      fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: lineNamed(HOT.line) })).toBeNull(),
+    );
+
+    stubHottestGroups(transport, [OGRODY]);
+    await act(async () => {
+      fireEvent(screen.UNSAFE_getByType(RefreshControl), 'refresh');
+    });
+    expect((await line()).props.accessibilityState).toEqual({ expanded: false });
   });
 });
 
 describe('the card', () => {
-  it('draws the tag, the figures, the growth and four faces', async () => {
+  /** Home refactor 5.1 (#821): the band, the tag, the shield, the name, two figures, faces, the chip. */
+  it('draws the tag, N games this week on the left, N players on the right, and four faces', async () => {
     hottestServer([OGRODY, KAZIMIERZ, PODGORZE]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
-    await screen.findByRole('header', { name: HOT.heading });
     const ogrody = within(screen.getByTestId(`hottest-${OGRODY.id}`));
     expect(ogrody.getByText(OGRODY.name)).toBeTruthy();
-    expect(ogrody.getByText('Padel · Tennis · Squash · Badminton')).toBeTruthy();
-    expect(ogrody.getByText('14')).toBeTruthy();
-    expect(ogrody.getByText('games this week')).toBeTruthy();
-    expect(ogrody.getByText('11')).toBeTruthy();
-    expect(ogrody.getByText('+3')).toBeTruthy();
+    // The shield's monogram, a picture of the group and hidden from a listener.
+    expect(ogrody.getByText(OGRODY.monogram.letters, HIDDEN)).toBeTruthy();
+    const games = within(ogrody.getByTestId('hottest-games'));
+    expect(games.getByText('14')).toBeTruthy();
+    expect(games.getByText('games this week')).toBeTruthy();
+    const players = within(ogrody.getByTestId('hottest-players'));
+    expect(players.getByText('11')).toBeTruthy();
+    expect(players.getByText('players')).toBeTruthy();
+    // Games on the left, the players held against the card's right edge.
+    expect(figureRow(OGRODY)).toEqual(['hottest-games', 'hottest-players']);
+    expect(alignOf(ogrody.getByTestId('hottest-players'))).toBe('flex-end');
     expect(screen.getByTestId('hottest-tag-HOTTEST', HIDDEN)).toBeTruthy();
     expect(screen.getByTestId('hottest-tag-GROWING', HIDDEN)).toBeTruthy();
     // Four of the six faces on the card; the sheet draws the six.
     expect(screen.getAllByTestId(new RegExp(`^hottest-face-${OGRODY.id}-`), HIDDEN)).toHaveLength(
       4,
     );
+    // Spoken as drawn: no growth, which the card no longer carries.
     expect(card(OGRODY).props.accessibilityLabel).toBe(
-      hottestCardLabel({
-        name: OGRODY.name,
-        tag: 'HOTTEST',
-        gamesThisWeek: 14,
-        memberCount: 11,
-        newThisMonth: 3,
-      }),
+      'Ogrody 33 Club, hottest, 14 games this week, 11 players',
     );
   });
 
-  it('writes one game in the singular, no growth at nought, and no tag on an untagged card', async () => {
+  /**
+   * 2026-11-26: on the line the card is `lineCardRatio` of the line's content, a little wider than the
+   * page's 0,74, and keeps its shape — every vertical gap grows by the width's factor onto the 3pt
+   * grid, so it stands as much taller as it stands wider, as near as the grid comes: within half a
+   * step. The page keeps its own.
+   */
+  it('stands as much taller on the line as it stands wider, through its gaps alone', async () => {
+    hottestServer([OGRODY, KAZIMIERZ, PODGORZE]);
+    await launchSignedIn();
+    await openLine(HOT.line);
+
+    const gapOf = (testID: string) =>
+      StyleSheet.flatten(
+        within(screen.getByTestId(`hottest-${OGRODY.id}`)).getByTestId(testID).props
+          .style as ViewStyle,
+      ).gap;
+    // A number over its words, 3 apart on the page: 6 on the line.
+    expect(gapOf('hottest-games')).toBe(theme.space.xs);
+
+    const grown = theme.size.lineCardRatio / theme.size.railCardRatio;
+    const page = hottestCardHeight(1, 'page');
+    expect(Math.abs(hottestCardHeight(1, 'row') - page * grown)).toBeLessThanOrEqual(
+      theme.space.xxs / 2,
+    );
+    expect(hottestCardHeight(1, 'row')).toBeGreaterThan(page);
+  });
+
+  /** ADR-0205 §5, Q22: the heat bar, *+N this month* and the sport line leave the card. */
+  it('draws no heat bar, no +N this month and no sport line — dots or names', async () => {
+    hottestServer([OGRODY, KAZIMIERZ]);
+    await launchSignedIn();
+    await openLine(HOT.line);
+
+    for (const group of [OGRODY, KAZIMIERZ]) {
+      const drawn = within(screen.getByTestId(`hottest-${group.id}`));
+      expect(drawn.queryByText(/^\+\d/, HIDDEN)).toBeNull();
+      expect(drawn.queryByText(/this month/, HIDDEN)).toBeNull();
+      expect(drawn.queryByText(/Padel|Tennis/, HIDDEN)).toBeNull();
+    }
+    expect(screen.UNSAFE_queryAllByType(SportDots)).toHaveLength(0);
+    expect(screen.queryByTestId('heat-bar', HIDDEN)).toBeNull();
+    expect(screen.queryByTestId('heat-fill', HIDDEN)).toBeNull();
+  });
+
+  it('writes one game in the singular, and no tag on an untagged card', async () => {
     hottestServer([PODGORZE]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     const podgorze = within(await screen.findByTestId(`hottest-${PODGORZE.id}`));
     expect(podgorze.getByText('game this week')).toBeTruthy();
-    expect(podgorze.queryByText(/this month/)).toBeNull();
     expect(screen.queryByTestId('hottest-tag-HOTTEST', HIDDEN)).toBeNull();
     expect(screen.queryByTestId('hottest-tag-GROWING', HIDDEN)).toBeNull();
     // A three-member group draws the faces it has.
     expect(screen.getAllByTestId(new RegExp(`^hottest-face-${PODGORZE.id}-`), HIDDEN)).toHaveLength(
       2,
-    );
-  });
-
-  it('fills the heat bar to the served share', async () => {
-    hottestServer([KAZIMIERZ]);
-    await launchSignedIn();
-
-    const fill = await screen.findByTestId('heat-fill', HIDDEN);
-    expect(fill.props.style).toEqual(
-      expect.arrayContaining([expect.objectContaining({ width: `${(44 / 48) * 100}%` })]),
     );
   });
 
@@ -359,6 +447,7 @@ describe('the card', () => {
       },
     ]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     expect(await chip(OGRODY, 'ask')).toBeTruthy();
     expect(await chip(KAZIMIERZ, 'in')).toBeTruthy();
@@ -372,6 +461,7 @@ describe('the card', () => {
   it('offers Join to the Administrator who runs a People I approve group', async () => {
     hottestServer([{ ...OGRODY, is_administrator: true }]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     expect(await chip(OGRODY, 'join')).toBeTruthy();
   });
@@ -381,7 +471,7 @@ describe('the chip', () => {
   it('Join makes the reader a member at once, and the row, the list and Home are read again', async () => {
     const server = hottestServer([OGRODY, PODGORZE]);
     await launchSignedIn();
-    await screen.findByRole('header', { name: HOT.heading });
+    await openLine(HOT.line);
     await waitFor(() => expect(reads(MY_GROUPS_PATH)).toBeGreaterThan(0));
     const before = {
       hottest: reads(HOTTEST_GROUPS_PATH),
@@ -407,9 +497,29 @@ describe('the chip', () => {
     expect(await chip(PODGORZE, 'in')).toBeTruthy();
   });
 
+  /** #822: the count is the server's — the join's re-read moves it, never the card's guess. */
+  it('moves the line’s count with the re-read a join asks for, and not before', async () => {
+    let pool = 12;
+    const server = hottestServer([OGRODY, PODGORZE], { total: () => pool });
+    await launchSignedIn();
+    await openLine(HOT.line);
+    const named = (count: number) => ({ name: `${HOT.line}, ${count}`, expanded: true });
+    expect(screen.getByRole('button', named(12))).toBeTruthy();
+    const release = server.holdJoins();
+    pool = 13;
+
+    fireEvent.press(await chip(PODGORZE, 'join'));
+
+    expect(await chip(PODGORZE, 'in')).toBeTruthy();
+    expect(screen.getByRole('button', named(12))).toBeTruthy();
+    await act(async () => release());
+    expect(await screen.findByRole('button', named(13))).toBeTruthy();
+  });
+
   it('Ask to join leaves a request at once: Asked', async () => {
     hottestServer([OGRODY]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await chip(OGRODY, 'ask'));
 
@@ -423,6 +533,7 @@ describe('the chip', () => {
     const server = hottestServer([PODGORZE]);
     server.refuseNextJoin('group_not_found');
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await chip(PODGORZE, 'join'));
 
@@ -431,9 +542,32 @@ describe('the chip', () => {
     expect(toasts()[0]?.[1]).toBe('bad');
   });
 
+  /**
+   * #822: the guess cancelled any read in flight — a pull's, a return's — so a refusal reads the row
+   * again, or its cards and its count would stand as they were before that read.
+   */
+  it('a refused join reads the row again, so a read the guess cancelled is not lost', async () => {
+    let pool = 12;
+    const server = hottestServer([PODGORZE], { total: () => pool });
+    server.refuseNextJoin('group_not_found');
+    await launchSignedIn();
+    await openLine(HOT.line);
+    const before = reads(HOTTEST_GROUPS_PATH);
+    pool = 13;
+
+    fireEvent.press(await chip(PODGORZE, 'join'));
+
+    await waitFor(() => expect(toasts()).toHaveLength(1));
+    await waitFor(() => expect(reads(HOTTEST_GROUPS_PATH)).toBeGreaterThan(before));
+    expect(
+      await screen.findByRole('button', { name: `${HOT.line}, 13`, expanded: true }),
+    ).toBeTruthy();
+  });
+
   it('Asked opens the withdraw sheet, and Withdraw request turns the card back to Ask to join', async () => {
     hottestServer([{ ...OGRODY, relation: 'REQUESTED' }]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await chip(OGRODY, 'requested'));
 
@@ -454,17 +588,56 @@ describe('the chip', () => {
   it('You’re in opens the group’s page', async () => {
     hottestServer([KAZIMIERZ]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await chip(KAZIMIERZ, 'in'));
 
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${KAZIMIERZ.id}`));
   });
+
+  /**
+   * **The group lives under Play** (`/play/group/{id}`), so opening it from Home lights Play, and the
+   * selection marker travels there — and back home with the page (ADR-0210 §8, #884). Each slide
+   * starts on the frame after its navigation, whose own flush ran every pending timer.
+   */
+  it('You’re in carries the selection marker from Home to Play, and back takes it home', async () => {
+    const slide = theme.motion.tabMarker.slide;
+    hottestServer([KAZIMIERZ]);
+    await launchSignedIn();
+    await openLine(HOT.line);
+    expect(markerUnder()).toBe('Home');
+
+    fireEvent.press(await chip(KAZIMIERZ, 'in'));
+    const there = slideFromNow();
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${KAZIMIERZ.id}`));
+    there(60);
+    expect(markerUnder()).toBeUndefined();
+    expect(markerCentre()).toBeGreaterThan(0.5);
+    there(60 + slide);
+    expect(markerUnder()).toBe('Play');
+    expect(markerAtRest()).toBe(true);
+
+    act(() => router.back());
+    const back = slideFromNow();
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    back(60);
+    expect(markerUnder()).toBeUndefined();
+    expect(markerCentre()).toBeLessThan(1.5);
+    back(60 + slide);
+    expect(markerUnder()).toBe('Home');
+    expect(markerAtRest()).toBe(true);
+  });
 });
 
 describe('the group sheet', () => {
-  it('opens on a tap on the card, with the group’s fields and its one button', async () => {
+  /**
+   * Unchanged by the card's slimming (#821, ADR-0205 §5): the sheet keeps the sports, dots and names,
+   * and *new this month* with its *+3*, which the card no longer draws.
+   */
+  it('opens on a tap on the card, with every one of the group’s fields and its one button', async () => {
     hottestServer([OGRODY, KAZIMIERZ]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${OGRODY.name},`) }));
 
@@ -473,6 +646,7 @@ describe('the group sheet', () => {
     expect(opened.getByRole('button', { name: hottestChipLabel('ask', OGRODY.name) })).toBeTruthy();
     expect(opened.getByText('Closed group · run by Ogrody 33 · Ogrody 33')).toBeTruthy();
     expect(opened.getByText('Padel · Tennis · Squash · Badminton')).toBeTruthy();
+    expect(opened.UNSAFE_getAllByType(SportDots)).toHaveLength(1);
     expect(opened.getByText('14')).toBeTruthy();
     expect(opened.getByText('games this week')).toBeTruthy();
     expect(opened.getByText('11')).toBeTruthy();
@@ -490,6 +664,7 @@ describe('the group sheet', () => {
   it('says one friend, or the players, and names a Player group’s Owner', async () => {
     hottestServer([KAZIMIERZ, PODGORZE]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${KAZIMIERZ.name},`) }));
     expect(await sheet().findByText('1 of your friends plays here')).toBeTruthy();
@@ -505,6 +680,7 @@ describe('the group sheet', () => {
   it('Join on the sheet makes the reader a member, and the button opens the group', async () => {
     hottestServer([PODGORZE]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${PODGORZE.name},`) }));
     fireEvent.press(
@@ -521,6 +697,7 @@ describe('the group sheet', () => {
   it('Asked on the sheet turns it into the withdraw sheet', async () => {
     hottestServer([{ ...OGRODY, relation: 'REQUESTED' }]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
     fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${OGRODY.name},`) }));
     fireEvent.press(
@@ -534,25 +711,31 @@ describe('the group sheet', () => {
   });
 });
 
-describe('Your games for a reader in no group', () => {
-  it('points at the row below', async () => {
+describe('a reader in no group', () => {
+  /** Q38: joining a group is their next step, so the line just below says so and is open. */
+  it('reads the groupless line under Your games, and finds Groups heating up open', async () => {
     hottestServer([OGRODY], { mine: [] });
     await launchSignedIn();
 
     expect(await screen.findByText(HOT.groupless)).toBeTruthy();
     expect(screen.queryByText('Play finds you one.')).toBeNull();
+    expect(
+      await screen.findByRole('button', { name: lineNamed(HOT.line), expanded: true }),
+    ).toBeTruthy();
+    expect(screen.getByTestId(`hottest-${OGRODY.id}`)).toBeTruthy();
   });
 
-  it('keeps Play finds you one. for a member of a group', async () => {
+  it('keeps Play finds you one. for a member of a group, and every line closed', async () => {
     hottestServer([OGRODY]);
     await launchSignedIn();
 
     await waitFor(() => expect(reads(MY_GROUPS_PATH)).toBeGreaterThan(0));
     expect(await screen.findByText('Play finds you one.')).toBeTruthy();
     expect(screen.queryByText(HOT.groupless)).toBeNull();
+    expect((await line()).props.accessibilityState).toEqual({ expanded: false });
   });
 
-  it('turns to Play finds you one. once a join from the row makes them a member', async () => {
+  it('turns to Play finds you one. once a join from the line makes them a member — the line kept open', async () => {
     hottestServer([PODGORZE], { mine: [] });
     await launchSignedIn();
 
@@ -561,6 +744,24 @@ describe('Your games for a reader in no group', () => {
     fireEvent.press(await chip(PODGORZE, 'join'));
 
     expect(await screen.findByText('Play finds you one.')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: lineNamed(HOT.line) }).props.accessibilityState,
+    ).toEqual({
+      expanded: true,
+    });
+  });
+
+  it('closes it like any line, from its header', async () => {
+    hottestServer([OGRODY], { mine: [] });
+    await launchSignedIn();
+
+    fireEvent.press(
+      await screen.findByRole('button', { name: lineNamed(HOT.line), expanded: true }),
+    );
+
+    expect(
+      await screen.findByRole('button', { name: lineNamed(HOT.line), expanded: false }),
+    ).toBeTruthy();
   });
 });
 
@@ -568,8 +769,8 @@ describe('the pull', () => {
   it('reads the row again, and the groups the groupless line is drawn from', async () => {
     hottestServer([OGRODY]);
     await launchSignedIn();
+    await openLine(HOT.line);
 
-    await screen.findByRole('header', { name: HOT.heading });
     await waitFor(() => expect(reads(MY_GROUPS_PATH)).toBeGreaterThan(0));
     const before = reads(HOTTEST_GROUPS_PATH);
     const mine = reads(MY_GROUPS_PATH);

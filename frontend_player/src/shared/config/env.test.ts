@@ -3,8 +3,12 @@ import { ENVIRONMENTS, ConfigError, parseEnv, type AppEnvironment } from './env'
 /** The only environment that runs today. */
 const valid = {
   EXPO_PUBLIC_API_URL: 'http://localhost:8000',
+  EXPO_PUBLIC_FEATURES_URL: 'http://localhost:3040',
   EXPO_PUBLIC_ENV: 'local',
 } as const;
+
+/** Where a deployed environment's datafiles would be served — an https bucket, never a laptop. */
+const DEPLOYED_FEATURES_URL = 'https://features.raketa.example';
 
 /** The three deployed environments. None is provisioned — no domain is registered yet. */
 const DEPLOYED: readonly AppEnvironment[] = ['development', 'staging', 'production'];
@@ -15,6 +19,7 @@ function wellFormedFor(environment: AppEnvironment) {
     ? valid
     : {
         EXPO_PUBLIC_API_URL: 'https://api.raketa.example',
+        EXPO_PUBLIC_FEATURES_URL: DEPLOYED_FEATURES_URL,
         EXPO_PUBLIC_ENV: environment,
       };
 }
@@ -23,22 +28,10 @@ describe('parseEnv', () => {
   it('maps a valid environment onto the app config', () => {
     expect(parseEnv(valid)).toEqual({
       apiUrl: 'http://localhost:8000',
+      featuresUrl: 'http://localhost:3040',
       environment: 'local',
       linkDomain: null,
     });
-  });
-
-  /**
-   * The feature-flag datafile's host left with the flags (#576): nothing reads a flag, so a build
-   * asks for no features URL — and a `.env.local` that still carries one launches all the same.
-   */
-  it('asks for no features URL, and ignores one that is still set', () => {
-    // Held in a variable rather than written inline: an inline literal is refused by the compiler
-    // for the very key this asserts the app no longer reads, and a build's environment is not typed.
-    const leftOver = { ...valid, EXPO_PUBLIC_FEATURES_URL: 'http://localhost:3040' };
-
-    expect(parseEnv(valid)).not.toHaveProperty('featuresUrl');
-    expect(parseEnv(leftOver)).toEqual(parseEnv(valid));
   });
 
   it('rejects a missing API URL and names the variable', () => {
@@ -46,6 +39,22 @@ describe('parseEnv', () => {
 
     expect(() => parseEnv(rest)).toThrow(ConfigError);
     expect(() => parseEnv(rest)).toThrow(/EXPO_PUBLIC_API_URL/);
+  });
+
+  // The datafile's base. Required rather than optional, like the API URL beside it: a build
+  // with no flags host would run on code defaults for ever and nothing would say so — which is
+  // the one silent failure ADR-0206 names as the cost of two repositories agreeing.
+  it('rejects a missing features URL and names the variable', () => {
+    const { EXPO_PUBLIC_FEATURES_URL: _omitted, ...rest } = valid;
+
+    expect(() => parseEnv(rest)).toThrow(ConfigError);
+    expect(() => parseEnv(rest)).toThrow(/EXPO_PUBLIC_FEATURES_URL/);
+  });
+
+  it('rejects a features URL that is not a URL', () => {
+    expect(() => parseEnv({ ...valid, EXPO_PUBLIC_FEATURES_URL: 'nonsense' })).toThrow(
+      /EXPO_PUBLIC_FEATURES_URL/,
+    );
   });
 
   it('rejects an API URL that is not a URL', () => {
@@ -60,6 +69,7 @@ describe('parseEnv', () => {
     try {
       parseEnv({
         EXPO_PUBLIC_API_URL: secretish,
+        EXPO_PUBLIC_FEATURES_URL: secretish,
         EXPO_PUBLIC_ENV: 'kittens',
       });
       throw new Error('expected parseEnv to reject');
@@ -83,13 +93,15 @@ describe('the environment names', () => {
 
   it.each(ENVIRONMENTS)('accepts %s', (environment) => {
     const apiUrl = environment === 'local' ? 'http://localhost:8000' : 'https://api.raketa.example';
+    const featuresUrl = environment === 'local' ? 'http://localhost:3040' : DEPLOYED_FEATURES_URL;
 
     expect(
       parseEnv({
         EXPO_PUBLIC_API_URL: apiUrl,
+        EXPO_PUBLIC_FEATURES_URL: featuresUrl,
         EXPO_PUBLIC_ENV: environment,
       }),
-    ).toEqual({ apiUrl, environment, linkDomain: null });
+    ).toEqual({ apiUrl, featuresUrl, environment, linkDomain: null });
   });
 
   // `dev` and `prod` are the spellings the backend used to accept and no longer does;
@@ -138,6 +150,7 @@ describe('the per-environment URL scheme rule', () => {
   it('accepts an http:// LAN URL in local', () => {
     expect(parseEnv({ ...valid, EXPO_PUBLIC_API_URL: 'http://192.168.1.20:8000' })).toEqual({
       apiUrl: 'http://192.168.1.20:8000',
+      featuresUrl: 'http://localhost:3040',
       environment: 'local',
       linkDomain: null,
     });
@@ -151,6 +164,7 @@ describe('the per-environment URL scheme rule', () => {
       parseEnv({ ...valid, EXPO_PUBLIC_API_URL: 'https://sunny-otter.trycloudflare.example' }),
     ).toEqual({
       apiUrl: 'https://sunny-otter.trycloudflare.example',
+      featuresUrl: 'http://localhost:3040',
       environment: 'local',
       linkDomain: null,
     });
@@ -160,10 +174,12 @@ describe('the per-environment URL scheme rule', () => {
     expect(
       parseEnv({
         EXPO_PUBLIC_API_URL: 'https://api.raketa.example',
+        EXPO_PUBLIC_FEATURES_URL: DEPLOYED_FEATURES_URL,
         EXPO_PUBLIC_ENV: environment,
       }),
     ).toEqual({
       apiUrl: 'https://api.raketa.example',
+      featuresUrl: DEPLOYED_FEATURES_URL,
       environment,
       linkDomain: null,
     });
@@ -173,6 +189,7 @@ describe('the per-environment URL scheme rule', () => {
     expect(() =>
       parseEnv({
         EXPO_PUBLIC_API_URL: 'http://localhost:8000',
+        EXPO_PUBLIC_FEATURES_URL: DEPLOYED_FEATURES_URL,
         EXPO_PUBLIC_ENV: environment,
       }),
     ).toThrow(ConfigError);
@@ -180,10 +197,11 @@ describe('the per-environment URL scheme rule', () => {
 
   // The whole point of the rule today: a laptop URL under a deployed name is the mistake
   // that would otherwise ship a build pointing at nothing.
-  it('names the URL and the environment when the two disagree', () => {
+  it('names both variables when the scheme and the environment disagree', () => {
     try {
       parseEnv({
         EXPO_PUBLIC_API_URL: 'http://localhost:8000',
+        EXPO_PUBLIC_FEATURES_URL: DEPLOYED_FEATURES_URL,
         EXPO_PUBLIC_ENV: 'production',
       });
       throw new Error('expected parseEnv to reject');
@@ -201,6 +219,7 @@ describe('the per-environment URL scheme rule', () => {
     try {
       parseEnv({
         EXPO_PUBLIC_API_URL: secretish,
+        EXPO_PUBLIC_FEATURES_URL: DEPLOYED_FEATURES_URL,
         EXPO_PUBLIC_ENV: 'staging',
       });
       throw new Error('expected parseEnv to reject');
@@ -223,6 +242,45 @@ describe('the per-environment URL scheme rule', () => {
     expect(() =>
       parseEnv({ ...wellFormedFor(environment), EXPO_PUBLIC_API_URL: 'ftp://api.raketa.example' }),
     ).toThrow(/EXPO_PUBLIC_API_URL/);
+  });
+});
+
+/**
+ * **The datafile's URL obeys the same rule, and for the same reason**
+ * ([ADR-0206](../../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)
+ * §4). It is fetched from a phone over the internet exactly as the API is, and a datafile read in
+ * the clear is one somebody on the café Wi-Fi can rewrite — which turns a screen off, or on, for
+ * one player. Plain `http` is `local`'s alone: today that is the developer's machine on the LAN,
+ * served by the flags repo's own script.
+ */
+describe('the features URL', () => {
+  it('accepts a machine on the LAN over http:// in local', () => {
+    expect(
+      parseEnv({ ...valid, EXPO_PUBLIC_FEATURES_URL: 'http://192.168.0.204:3040' }).featuresUrl,
+    ).toBe('http://192.168.0.204:3040');
+  });
+
+  it.each(DEPLOYED)('rejects an http:// features URL in %s, naming both variables', (env) => {
+    try {
+      parseEnv({
+        EXPO_PUBLIC_API_URL: 'https://api.raketa.example',
+        EXPO_PUBLIC_FEATURES_URL: 'http://192.168.0.204:3040',
+        EXPO_PUBLIC_ENV: env,
+      });
+      throw new Error('expected parseEnv to reject');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConfigError);
+      expect((error as ConfigError).message).toMatch(/EXPO_PUBLIC_FEATURES_URL: must start with/);
+      expect((error as ConfigError).message).toMatch(/EXPO_PUBLIC_ENV/);
+      // The API URL is fine, and the refusal does not say otherwise.
+      expect((error as ConfigError).message).not.toMatch(/EXPO_PUBLIC_API_URL/);
+    }
+  });
+
+  it.each(ENVIRONMENTS)('rejects a host:port with no scheme in %s', (environment) => {
+    expect(() =>
+      parseEnv({ ...wellFormedFor(environment), EXPO_PUBLIC_FEATURES_URL: 'localhost:3040' }),
+    ).toThrow(/EXPO_PUBLIC_FEATURES_URL/);
   });
 });
 
@@ -274,11 +332,34 @@ describe('one complaint per typo', () => {
     expect(only).not.toContain('EXPO_PUBLIC_ENV');
   });
 
+  // The same guard, on the second URL: one rule written twice would be two guards, and the
+  // second is the one that gets forgotten.
+  it.each(ENVIRONMENTS)('reports a scheme-less features URL once in %s', (environment) => {
+    const found = complaints({
+      ...wellFormedFor(environment),
+      EXPO_PUBLIC_FEATURES_URL: 'localhost:3040',
+    });
+
+    expect(found).toHaveLength(1);
+    expect(found[0]).not.toContain('EXPO_PUBLIC_ENV');
+  });
+
   // The rule itself still fires — this guard suppresses a duplicate, never the refusal.
   it('still reports a genuine scheme mismatch, once', () => {
     expect(
       complaints({ ...wellFormedFor('staging'), EXPO_PUBLIC_API_URL: 'http://localhost:8000' }),
     ).toHaveLength(1);
+  });
+
+  // Two URLs in the clear under a deployed name are two mistakes, and each is named once.
+  it('reports each URL that breaks the scheme rule, once each', () => {
+    expect(
+      complaints({
+        EXPO_PUBLIC_API_URL: 'http://localhost:8000',
+        EXPO_PUBLIC_FEATURES_URL: 'http://localhost:3040',
+        EXPO_PUBLIC_ENV: 'staging',
+      }),
+    ).toHaveLength(2);
   });
 });
 

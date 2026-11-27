@@ -13,7 +13,7 @@ paths:
 
 # Friends
 
-Decisions that are load-bearing and not obvious from the code (#745, #748, #749, #764, #773, #791;
+Decisions that are load-bearing and not obvious from the code (#745, #748, #749, #764, #773, #791, #814;
 [ADR-0202](../../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
 §1–§2, §4 and its 2026-11-07 amendment, §8; [ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md)
 §9, both amended by [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
@@ -109,9 +109,20 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5; the rank
     `friend_requests`, newest first, each with the requester's face and nickname, `by_link`,
     the group it was asked from **while both are in it now** (read live, so a leaver's card
     names none), the sport, their Level in it and their reliability — open, not set aside, not
-    hidden. Not counted in `needing_you`;
+    hidden. Not counted in `needing_you`. **And `levels`** (#814; ADR-0205 §2, §10): the
+    requester's Level in **every** sport they hold one in, in the app's sport order (`Sport`
+    itself), empty when none — the sport-levels line on the tile in *Needs your answer*. Every
+    requester's sports are **one read** — `FriendLevels.levels_of`, over rating's
+    `ratings_of_each`, every pair's stream in one `DomainEventStore.load_streams` statement —
+    and the card's `level` is the entry for its `sport`, so the two never differ; read live,
+    so a level got after asking is on the next read. `sport` and `level` stay for older apps.
+    `tests/api/test_friend_request_levels.py` holds the order, none, a new level, and the
+    rating streams' statements the same for one request as for three, one batch among them;
   - **Home's asks for a level** — `LevelAsksOnHome` (`ReadLevelAsksOnHome`, #764, below):
-    `GET /home`'s `level_asks`, one card per sport;
+    `GET /home`'s `level_asks`, one card per sport. **Each asker carries their own ask's
+    `asked_at`** (`LevelAsker`, #815), and a request's arrival is its `asked_at`. These are what
+    *Needs your answer* counts new by (`proposals.md`): a second friend asking on a card already
+    there is new by their own ask;
   - **the bell** — Notifications' `Friendships` (`FriendsOfTheReader`, below);
   - **the Rankings' Friends view** (#771) — `ReadersFriends`
     (`rankings/infrastructure/friends_readers_friends.py`), over `ReadRelations.friends_of`:

@@ -1,7 +1,8 @@
 /**
  * **A group's header** — back, the group's tile, its name with the official mark, *N members ·
  * Home club* — drawn by its page and by Info (play 39, 40, 57; Q125). While the group is being
- * read it has only its way back.
+ * read it has only its way back — and on the page, beside it, **a monogram circle and a name bar
+ * shimmer** until the page reveals its header (`shimmering`, #875).
  *
  * **On the page it is the door to Info** (Q125): the tile, the name and the line under it are one
  * button (`ScreenHeader`'s `onPress`), and the back arrow and the sport pill keep their own taps.
@@ -24,6 +25,7 @@ import type { Group } from '../domain/group';
 import { useJoinRequests } from '../hooks/useGroups';
 
 import { GroupMonogram } from './GroupMonogram';
+import { GroupHeaderSkeleton } from './GroupPageSkeleton';
 import { GROUPS_COPY } from './groupsCopy';
 import { groupHeaderLabel, membersAtClub } from './groupsPresentation';
 import { OfficialMark } from './OfficialMark';
@@ -42,6 +44,12 @@ export interface GroupHeaderProps {
   readonly cover?: (node: ReactNode) => ReactNode;
   /** Opens Info — the page's header is its door; Info's own presses nothing. */
   readonly onOpen?: () => void;
+  /**
+   * **While the page's first reads are out** (#875): the way back, real and pressable, and the
+   * monogram's circle and the name's bar where the tile and the words will stand — no pill. The
+   * page's; it draws them on its ground and drops them as the header and the tab bar are revealed.
+   */
+  readonly shimmering?: boolean;
 }
 
 export function GroupHeader({
@@ -51,6 +59,7 @@ export function GroupHeader({
   pill,
   cover = uncovered,
   onOpen,
+  shimmering = false,
 }: GroupHeaderProps) {
   const isOwner = group?.isOwner === true;
   const requests = useJoinRequests(groupId, isOwner);
@@ -59,6 +68,7 @@ export function GroupHeader({
   const waiting = isOwner ? (requests.data?.length ?? 0) : 0;
 
   const back = { compact: true, onBack: () => router.back(), backLabel } as const;
+  if (shimmering) return <ScreenHeader {...back} lead={<GroupHeaderSkeleton />} />;
   if (group === undefined) return <ScreenHeader {...back} />;
 
   const label = groupHeaderLabel(group, waiting);

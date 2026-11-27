@@ -377,3 +377,21 @@ class GamesAndMoneySet:
     games_per_week: int
     most_ill_pay_grosze: int | None
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class NeedsYourAnswerClosed:
+    """A player closed **Needs your answer**, on any phone, having been shown
+    everything that arrived up to ``watermark`` — so the envelope's badge, what
+    arrived since, starts again from nought (#815; ``docs/adr/0205`` §3). The
+    only event on that stream, filed under the player's own id, as their Games
+    & money is.
+
+    ``watermark`` is **the newest arrival the sheet showed**, served by the read
+    it was drawn from — never the moment of the close, which is
+    ``occurred_at``: something that reached the server after that read stays
+    new. Recorded only when later than the last: it never moves back."""
+
+    player_id: UUID
+    watermark: datetime
+    occurred_at: datetime

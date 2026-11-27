@@ -1,6 +1,17 @@
 # ADR-0204 — Home shows who and what is around you, and any player may meet any other
 
-- **Status:** Accepted
+- **Status:** Accepted — **§1's order and its *the header and today's rows stay on top, unchanged*,
+  §3's card, §8's *Rankings ›* and §9's card line amended 2026-11-16 by
+  [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)**
+  (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)): the cards that wait on the player go
+  behind an envelope into *Needs your answer*, the header reads envelope, bell, trophy, and the five
+  rows fold into **FOR YOU**'s lines, with counts. Every rule of the rows stands. Dated notes mark §1,
+  §3, §8 and §9. — **§6's *tags … score nothing else* narrowed 2026-11-22 by
+  [ADR-0207](0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)**
+  (PRD [#827](https://github.com/Raketa02/Raketa/issues/827)): tags also build and rank For-fun
+  proposals and give each For-fun game a **Social vibe**, and still touch no competitive card,
+  forecast or level. A player holds 2 to 8 of 27 tags, so the vibe % gains 99 and 100. Every rule of
+  Same vibe stands. A dated note marks §6.
 - **Date:** 2026-11-14
 - **Amends [ADR-0159](0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)
   §3's admission and §4's gates** (§2):
@@ -183,6 +194,15 @@ alike, or who sits at the top of the ranking.
 - **A player in no group** reads under *Your games*: ***Join a group to get games — the hottest ones
   are just below.*** in place of *⚡ Play finds you one*.
 
+> **Amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §1, §2, §4 and §5.** **The header and today's rows don't stay
+> unchanged.** The header reads envelope, bell, trophy, with the trophy in the corner. FRIENDS GAME,
+> *To confirm*, FRIEND REQUESTS and ASKED FOR A LEVEL leave Home for *Needs your answer*, the sheet
+> the envelope opens. Home reads the header, *Get your level*, *Your games* and **FOR YOU**: the five
+> rows, in this order, folded into one-line headings with a count, one open at a time, and titled
+> *Groups heating up*, *Players at your level*, *New in Raketa*, *Players with your vibe* and *Top
+> 10* on screen. A line is hidden as a row is. The groupless line reads *Join a group to get games —
+> see Groups heating up, just below.*
+
 ### 2. Who sees whom
 
 - **Any player may open any player's record and send them a friend request** (Q18). **There is no
@@ -240,6 +260,11 @@ second or third group.
   with a green *+3 this month* when it grew, the heat bar, up to **4 member faces** (the reader's
   friends first, then the longest-standing members) and **the chip**: **Join** (Anyone), **Ask to
   join** (People I approve), **Asked** (a Join request waiting), **You're in** (a member).
+
+  > **Amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §5 and §7.** The card drops the heat bar, *+3 this
+  > month* and the sports: it reads *games this week* on the left and *players* on the right, then the
+  > faces and the chip. The group sheet keeps every detail. **All groups ›** opens a page of every
+  > group with 3 or more players, in this order, 20 at a time, the reader's own included.
 - **Join** makes the reader a member on the spot. **Ask to join** leaves a Join request. **Asked**
   opens a small sheet, *Waiting for Ogrody 33 to answer*, with **Withdraw request**. **You're in**
   opens the group page.
@@ -316,6 +341,15 @@ a ranking or a history.
 because nothing read a tag but the record. This row reads them to put people in an order, and no
 proposal, card, forecast or level reads one. *A tag is not an intent* still holds.
 
+> **Narrowed 2026-11-22 by [ADR-0207](0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md) §1, §2 and §7.** **Tags also build and rank For-fun
+> proposals**: among the fours that pass the gates, For fun prefers the highest **Social vibe**, then
+> new faces, with skill only a guard. Every For-fun game carries that Social vibe, a figure about the
+> whole table worked out live from everyone's current tags. 💘 *Open to meet someone* is never
+> counted there. Tags still touch **no competitive card, forecast or level**, and *a tag is not an
+> intent* stands. The vocabulary grows to 27 and a player holds **2 to 8**, so the vibe % above gains
+> **7 → 99%** and **8 → 100%**. Every other rule of this row stands, and its Vibe % and the Social
+> vibe are different measures, named apart.
+
 ### 7. Keeping the rows alive: fresh, gaps and rest
 
 *Same competitive level* and *Same vibe* each show 10, worked out again on every read (Q20, Q33,
@@ -354,6 +388,9 @@ Q34):
   reads *You*, with a volt numeral and a volt ring.
 - **A card opens the record**, *This record isn't available* across a block; **Rankings ›** opens the
   Rankings page on the row's sport.
+
+  > **Amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §5.** The link reads ***Open the rankings ›***, at the
+  > bottom right of the open line, and the sport pill sits at its bottom left, opening to the right.
 - **The trophy is always visible**, with no number while the reader has no place, and always opens
   the Rankings page (Q32, Q36). The page already says *Nobody ranked in padel yet* for an empty
   sport.
@@ -376,6 +413,11 @@ Q34):
   - from *Same vibe*: *6 things in common*, falling back to *Found you through your tags* when none
     is shared any more;
   - from *Top 10*: *Found you in the padel ranking*, the ranking's own line.
+
+  > **Amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §1.** The line is no longer drawn. A friend request
+  > waits in *Needs your answer*, and its tile shows the sender's level in every sport they hold one
+  > in. Where it was found is still recorded, and the line still served, for app versions already on
+  > phones.
 - **A group sheet's faces can't be tapped**, so no request is ever made from one (Q30).
 
 ### 10. Where it lives: a Discovery context, and three stored copies as stated exceptions

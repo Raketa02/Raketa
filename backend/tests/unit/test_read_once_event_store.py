@@ -56,6 +56,7 @@ class CountingStore:
         self.loads: list[tuple[str, UUID]] = []
         self.searches: list[tuple[str, tuple[tuple[str, str], ...]]] = []
         self.presences: list[tuple[str, frozenset[UUID]]] = []
+        self.batches: list[tuple[str, tuple[UUID, ...]]] = []
         self.hold: asyncio.Event | None = None
         self.fail_next = False
 
@@ -85,6 +86,16 @@ class CountingStore:
             self.fail_next = False
             raise RuntimeError("the store is down")
         return list(self.streams.get((aggregate_type, aggregate_id), []))
+
+    async def load_streams(
+        self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
+    ) -> Mapping[UUID, list[StoredDomainEvent]]:
+        self.batches.append((aggregate_type, tuple(aggregate_ids)))
+        return {
+            aggregate_id: list(stream)
+            for aggregate_id in aggregate_ids
+            if (stream := self.streams.get((aggregate_type, aggregate_id)))
+        }
 
     async def streams_present(
         self, *, aggregate_type: str, aggregate_ids: Collection[UUID]
@@ -278,3 +289,26 @@ async def test_which_streams_exist_is_asked_of_the_store_and_sees_an_append(
     assert first == {ALICE, BOB}
     assert second == frozenset()
     assert [kind for kind, _ in inner.presences] == [RATING, PROFILE]
+
+
+async def test_a_batch_of_loads_is_asked_of_the_store_and_sees_an_append(
+    inner: CountingStore,
+) -> None:
+    """A batch is one statement already (#814): handed to the store every time
+    and remembered nowhere, so an append through the wrapper is in the next
+    batch."""
+
+    once = ReadOnceEventStore(inner)
+    first = await once.load_streams(aggregate_type=RATING, aggregate_ids=[ALICE, BOB])
+    await once.append(
+        aggregate_type=RATING,
+        aggregate_id=BOB,
+        expected_version=0,
+        events=[Happened()],
+    )
+    second = await once.load_streams(aggregate_type=RATING, aggregate_ids=[ALICE, BOB])
+
+    assert set(first) == {ALICE}
+    assert set(second) == {ALICE, BOB}
+    assert inner.batches == [(RATING, (ALICE, BOB)), (RATING, (ALICE, BOB))]
+    assert inner.loads == []

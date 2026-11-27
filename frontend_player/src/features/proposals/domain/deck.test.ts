@@ -9,11 +9,14 @@ import {
   countdownOf,
   courtTagOf,
   doorPanel,
+  drawnTheSame,
   findingAfterTheDoor,
   findingAfterTheQuestion,
   foldOf,
+  headlineOf,
   intentAnswering,
   inAcrossVersions,
+  kindMenu,
   refusalOutcome,
   rescueGoneOf,
   resolveKind,
@@ -110,6 +113,72 @@ describe('the switch’s two sides (ADR-0201 §2)', () => {
 
   it('draws no switch while no intent is declared', () => {
     expect(switchSides([])).toEqual([]);
+  });
+});
+
+describe('the Games tab’s menu, off the reads already held (#862)', () => {
+  const ANIA = [{ kind: 'competitive', count: 7 }] as const;
+  const ZOFIA = [
+    { kind: 'competitive', count: 5 },
+    { kind: 'forFun', count: 1 },
+  ] as const;
+
+  it('is drawn off the read of the kind chosen: both kinds, the deck’s kind ticked', () => {
+    expect(kindMenu('competitive', ZOFIA, undefined)).toEqual({
+      kind: 'competitive',
+      ticked: 'competitive',
+      sides: [
+        { kind: 'competitive', door: false, count: 5 },
+        { kind: 'forFun', door: false, count: 1 },
+      ],
+    });
+  });
+
+  it('keeps the door a door: dimmed, with no count, and never the tick', () => {
+    expect(kindMenu('competitive', ANIA, undefined)).toEqual({
+      kind: 'competitive',
+      ticked: 'competitive',
+      sides: [
+        { kind: 'competitive', door: false, count: 7 },
+        { kind: 'forFun', door: true },
+      ],
+    });
+  });
+
+  it('stands on the kind the intent shows when the one chosen is the door, as the deck does', () => {
+    expect(kindMenu('forFun', ANIA, undefined)).toMatchObject({
+      kind: 'competitive',
+      ticked: 'competitive',
+    });
+  });
+
+  it('is drawn off the other kind’s read while the one picked is read — or failed', () => {
+    // Both reads carry the same pair of counts, so the menu stays while the deck reads.
+    expect(kindMenu('forFun', undefined, ZOFIA)).toEqual({
+      kind: 'forFun',
+      ticked: 'forFun',
+      sides: [
+        { kind: 'competitive', door: false, count: 5 },
+        { kind: 'forFun', door: false, count: 1 },
+      ],
+    });
+  });
+
+  it('ticks nothing while the deck stands on a kind the read held says is a door', () => {
+    expect(kindMenu('forFun', undefined, ANIA)).toMatchObject({
+      kind: 'forFun',
+      ticked: undefined,
+    });
+  });
+
+  it('is not there before a read of either kind has come back', () => {
+    expect(kindMenu('competitive', undefined, undefined)).toBeUndefined();
+  });
+
+  it('is not there while the first-time question is up, whatever the other kind held', () => {
+    expect(kindMenu('competitive', [], undefined)).toBeUndefined();
+    expect(kindMenu('competitive', [], ZOFIA)).toBeUndefined();
+    expect(kindMenu('competitive', undefined, [])).toBeUndefined();
   });
 });
 
@@ -348,6 +417,29 @@ describe('the forecast’s fold', () => {
   });
 });
 
+describe('the number a card leads with (ADR-0207 §5, #838)', () => {
+  it('is the forecast on a competitive card, and never a vibe', () => {
+    expect(headlineOf(card())).toEqual({ kind: 'forecast', pct: 87 });
+    expect(headlineOf(card({ vibe: { pct: 60 } }))).toEqual({ kind: 'forecast', pct: 87 });
+  });
+
+  it('is the Social vibe on a For-fun card, and never a forecast — even one sent', () => {
+    expect(headlineOf(card({ kind: 'forFun', vibe: { pct: 82 } }))).toEqual({
+      kind: 'vibe',
+      pct: 82,
+    });
+    expect(headlineOf(card({ kind: 'forFun', forecast: undefined, vibe: { pct: 35 } }))).toEqual({
+      kind: 'vibe',
+      pct: 35,
+    });
+  });
+
+  it('is nothing where the server sent its kind’s number none', () => {
+    expect(headlineOf(card({ forecast: undefined, vibe: { pct: 60 } }))).toBeUndefined();
+    expect(headlineOf(card({ kind: 'forFun' }))).toBeUndefined();
+  });
+});
+
 describe('the weekly cap', () => {
   const THIS = '2026-09-28';
   const NEXT = '2026-10-05';
@@ -385,13 +477,15 @@ describe('answering', () => {
       { kind: 'competitive', count: 2 },
       { kind: 'forFun', count: 1 },
     ],
-    gamesBadge: 1,
+    // The cards with somebody In, across both kinds (#846): 'a' here, and 'f' on For fun.
+    inCardIds: ['a', 'f'],
+    dealtIds: ['a', 'b'],
     gamesPerWeek: 2,
     cappedWeeks: [],
     cards: [card({ proposalId: 'a', inCount: 1 }), card({ proposalId: 'b' })],
   };
 
-  it('drops an answered card, with its segment’s count and the badge following it', () => {
+  it('drops an answered card, with its segment’s count following it', () => {
     const after = withoutCard(deck, 'a');
 
     expect(after.cards.map((dealt) => dealt.proposalId)).toEqual(['b']);
@@ -399,11 +493,15 @@ describe('answering', () => {
       { kind: 'competitive', count: 1 },
       { kind: 'forFun', count: 1 },
     ]);
-    expect(after.gamesBadge).toBe(0);
   });
 
-  it('leaves the badge where nobody else was In', () => {
-    expect(withoutCard(deck, 'b').gamesBadge).toBe(1);
+  // #850's review: a seen card is cut from the seen list only by the server's read, never by an
+  // answer it may yet refuse.
+  it('leaves the badge’s ids, and the dealt ids, to the server’s next read', () => {
+    const after = withoutCard(deck, 'a');
+
+    expect(after.inCardIds).toEqual(['a', 'f']);
+    expect(after.dealtIds).toEqual(['a', 'b']);
   });
 
   it('changes nothing for a card that is not on the deck', () => {
@@ -499,5 +597,53 @@ describe('why a rescue went, as the join says it (the bug report’s P1 on the r
         club_cancel_reason: 'WEATHER',
       }),
     ).toEqual({ reason: 'SHORT_AT_THE_CUT_OFF' });
+  });
+});
+
+describe('two reads of one card (the deck redraws only what changed)', () => {
+  const photo = (n: string) => ({ photoId: 'ph-1', photoUrl: `https://store.test/ph-1?sig=${n}` });
+
+  it('draw the same when every field is equal', () => {
+    expect(drawnTheSame(card(), card())).toBe(true);
+  });
+
+  it('draw the same when only a photograph’s link was minted again', () => {
+    const read = (n: string) =>
+      card({ sides: { yours: [YOU, person('Zofia', photo(n))], theirs: [person('Ania')] } });
+    expect(drawnTheSame(read('a'), read('b'))).toBe(true);
+  });
+
+  it('differ when the photograph itself changed', () => {
+    const read = (photoId: string) =>
+      card({
+        sides: {
+          yours: [YOU, person('Zofia', { photoId, photoUrl: `https://store.test/${photoId}` })],
+          theirs: [person('Ania')],
+        },
+      });
+    expect(drawnTheSame(read('ph-1'), read('ph-2'))).toBe(false);
+  });
+
+  it('differ when a link changed with no photograph to say it is the same one', () => {
+    const read = (url: string) =>
+      card({ sides: { yours: [YOU, person('Zofia', { photoUrl: url })], theirs: [] } });
+    expect(drawnTheSame(read('https://p/a'), read('https://p/b'))).toBe(false);
+  });
+
+  it('differ when anything else moved — somebody In, the count, a field gone', () => {
+    expect(drawnTheSame(card(), card({ inCount: 1 }))).toBe(false);
+    expect(
+      drawnTheSame(
+        card(),
+        card({
+          sides: {
+            yours: [YOU, person('Zofia', { isIn: true })],
+            theirs: [person('Ania'), person('Ewa')],
+          },
+        }),
+      ),
+    ).toBe(false);
+    const { forecast: _gone, ...withoutForecast } = card();
+    expect(drawnTheSame(card(), withoutForecast)).toBe(false);
   });
 });

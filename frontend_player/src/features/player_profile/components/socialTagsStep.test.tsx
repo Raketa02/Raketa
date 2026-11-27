@@ -58,12 +58,19 @@ const EVERY_TAG_IN_ORDER = [
   'Settles up on the spot',
   'Books the next one',
   'Shares a lift',
+  'Stays for a coffee',
+  'Up for a bite after',
+  'Keeps in touch',
   'Plays to win',
   'Laughs off mistakes',
   'Encourages a partner',
   'Generous on line calls',
   'Quiet and focused',
   'Warms up properly',
+  'Happy to swap partners',
+  'Patient with beginners',
+  'Happy to share tips',
+  'Brings the energy',
   'Here to improve',
   'Here to compete',
   'Here for the exercise',
@@ -71,10 +78,23 @@ const EVERY_TAG_IN_ORDER = [
   'Here for a regular game',
   'Here to get back into it',
   'Open to meet someone',
+  'New in town',
 ];
 
-/** Six presses that fill the served ceiling exactly. */
-const SIX = EVERY_TAG_IN_ORDER.slice(0, 6);
+/**
+ * Eight presses that fill the served ceiling exactly — six of the old tags, then two of the eight
+ * ADR-0207 §7 added. In render order, which is what `selectedLabels` reads.
+ */
+const EIGHT = [
+  'Stays for a drink',
+  'Straight home after',
+  'Talks through the match',
+  'Settles up on the spot',
+  'Books the next one',
+  'Shares a lift',
+  'Stays for a coffee',
+  'New in town',
+];
 
 let transport: Transport;
 
@@ -133,7 +153,7 @@ describe('the vocabulary the step offers', () => {
   it('renders every served tag under its heading, in the order it was served', async () => {
     await reachTheTagsStep();
 
-    // Story 15: nineteen options must not read as an undifferentiated wall.
+    // Story 15: twenty-seven options must not read as an undifferentiated wall.
     expect(screen.getByText('After the match')).toBeTruthy();
     expect(screen.getByText('On the court')).toBeTruthy();
     expect(screen.getByText("Why you're here")).toBeTruthy();
@@ -179,13 +199,46 @@ describe('the vocabulary the step offers', () => {
   });
 
   it('draws each chip with an emoji and announces it without one', async () => {
-    // The glyph is what lets a player find the chip they meant among nineteen. It is
+    // The glyph is what lets a player find the chip they meant among twenty-seven. It is
     // decoration: a screen reader announcing its name would be reading the layout aloud
     // rather than the choice, so the accessible name is the words alone.
     await reachTheTagsStep();
 
     expect(await screen.findByText('🏆 Plays to win')).toBeTruthy();
     expect(screen.getByLabelText('Plays to win')).toBeTruthy();
+  });
+
+  it('offers the eight new tags at the end of their groups, each with its emoji', async () => {
+    // ADR-0207 §7: appended, never re-sorted in — so each is last in its group as served.
+    await reachTheTagsStep();
+
+    for (const drawn of [
+      '☕ Stays for a coffee',
+      '🍽️ Up for a bite after',
+      '📲 Keeps in touch',
+      '🔄 Happy to swap partners',
+      '🤲 Patient with beginners',
+      '💡 Happy to share tips',
+      '🎶 Brings the energy',
+      '🧳 New in town',
+    ]) {
+      expect(screen.getByText(drawn)).toBeTruthy();
+    }
+    expect(chipLabels().at(-1)).toBe('New in town');
+  });
+
+  it('takes the new tags like any other, and the part holds them', async () => {
+    await reachTheTagsStep();
+    press('Stays for a coffee');
+    press('New in town');
+
+    fireEvent.press(await screen.findByLabelText('Continue'));
+    await waitFor(() => expect(screen).toHavePathname('/intro'));
+
+    expect(useProfileDraft.getState().draft?.socialTagIds).toEqual([
+      'STAYS_FOR_A_COFFEE',
+      'NEW_IN_TOWN',
+    ]);
   });
 });
 
@@ -199,7 +252,7 @@ describe('the floor', () => {
     // stopped, so the numbers are in the chrome and not only inside a disabled label.
     await reachTheTagsStep();
 
-    expect(screen.getByText('Setting up · Step 1 of 6 · Pick 2 to 6')).toBeTruthy();
+    expect(screen.getByText('Setting up · Step 1 of 6 · Pick 2 to 8')).toBeTruthy();
   });
 
   it('blocks continuing with nothing picked, and says how many are missing', async () => {
@@ -231,12 +284,12 @@ describe('the floor', () => {
 
   it('stays met from the floor all the way to the ceiling', async () => {
     // Between the two numbers there is nothing to say: the control reads the same at three
-    // as it does at six, and only the ceiling itself changes what a further press does.
+    // as it does at eight, and only the ceiling itself changes what a further press does.
     await reachTheTagsStep();
-    for (const label of SIX.slice(0, 3)) press(label);
+    for (const label of EIGHT.slice(0, 3)) press(label);
     expect(await screen.findByLabelText('Continue')).toBeTruthy();
 
-    for (const label of SIX.slice(3)) press(label);
+    for (const label of EIGHT.slice(3)) press(label);
 
     const control = await screen.findByLabelText('Continue');
     expect(control.props.accessibilityState?.disabled).toBe(false);
@@ -248,39 +301,41 @@ describe('the floor', () => {
 // ---------------------------------------------------------------------------
 
 describe('the ceiling', () => {
-  it('refuses a seventh tag, says so, and changes nothing', async () => {
+  it('refuses a ninth tag, says so, and changes nothing', async () => {
     // Story 20. Silently dropping the oldest would remove a choice the player made without
-    // telling them — so the refusal is out loud and the six they hold are untouched.
+    // telling them — so the refusal is out loud and the eight they hold are untouched.
     await reachTheTagsStep();
-    for (const label of SIX) press(label);
-    expect(selectedLabels()).toEqual(SIX);
+    for (const label of EIGHT) press(label);
+    expect(selectedLabels()).toEqual(EIGHT);
 
     press('Plays to win');
 
-    expect(await screen.findByText(/6 tags is the most/)).toBeTruthy();
-    expect(selectedLabels()).toEqual(SIX);
+    expect(await screen.findByText('8 tags is the most')).toBeTruthy();
+    expect(selectedLabels()).toEqual(EIGHT);
     expect(screen.getByLabelText('Plays to win').props.accessibilityState?.selected).toBe(false);
   });
 
   it('still lets a player at the ceiling remove one', async () => {
     // Story 21: the ceiling blocks adding and never blocks correcting.
     await reachTheTagsStep();
-    for (const label of SIX) press(label);
+    for (const label of EIGHT) press(label);
 
     press('Shares a lift');
 
-    await waitFor(() => expect(selectedLabels()).toEqual(SIX.slice(0, 5)));
+    await waitFor(() =>
+      expect(selectedLabels()).toEqual(EIGHT.filter((label) => label !== 'Shares a lift')),
+    );
   });
 
   it('takes the refusal back once there is room again', async () => {
     await reachTheTagsStep();
-    for (const label of SIX) press(label);
+    for (const label of EIGHT) press(label);
     press('Plays to win');
-    expect(await screen.findByText(/6 tags is the most/)).toBeTruthy();
+    expect(await screen.findByText('8 tags is the most')).toBeTruthy();
 
     press('Shares a lift');
 
-    await waitFor(() => expect(screen.queryByText(/6 tags is the most/)).toBeNull());
+    await waitFor(() => expect(screen.queryByText('8 tags is the most')).toBeNull());
   });
 });
 
@@ -295,8 +350,8 @@ describe('a selected tag', () => {
     await reachTheTagsStep();
 
     // `disabled: false` beside it since #365 gave 6.2 a disabled state, and `busy: false` since
-    // #366 gave it a busy one: this step draws neither — it refuses a seventh tag out loud rather
-    // than by greying twelve, and nothing here is written anywhere — and a chip that announced
+    // #366 gave it a busy one: this step draws neither — it refuses a ninth tag out loud rather
+    // than by greying nineteen, and nothing here is written anywhere — and a chip that announced
     // nothing about either would leave *not refused* indistinguishable from *no answer*, which is
     // `selected`'s own argument one property over.
     //

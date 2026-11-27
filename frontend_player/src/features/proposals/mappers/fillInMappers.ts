@@ -2,6 +2,7 @@
  * **A group's Fill in, off the wire** — `GET /pools/{id}/fill-in` (#545) read into the domain's
  * shape ([#557](https://github.com/Raketa02/Raketa/issues/557)). A row's players are a booked
  * court's seats (`toSeat`), and a row in a sport this build cannot name is dropped, as a card is.
+ * The wire's `badge` is not read (#849): the tab counts its standing rows, minus the ones seen.
  */
 
 import { toSport } from '@/features/onboarding/types';
@@ -36,7 +37,6 @@ export function toSeatToFill(wire: Schemas['SeatToFillSchema']): SeatToFill | un
 export function toFillIn(wire: Schemas['FillInResponse']): FillIn {
   return {
     readAt: wire.read_at,
-    badge: wire.badge,
     seatsToFill: wire.seats_to_fill
       .map(toSeatToFill)
       .filter((row): row is SeatToFill => row !== undefined),

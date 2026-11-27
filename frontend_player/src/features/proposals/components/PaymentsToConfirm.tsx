@@ -1,7 +1,8 @@
 /**
- * ***TO CONFIRM*** — the way back to a seat whose share was refused, on Home above the rail and on
- * You › Payments ([#555](https://github.com/Raketa02/Raketa/issues/555); the mechanics §12.2; the
- * screens A7.3; #541's `GET /players/me/payments-to-confirm`).
+ * ***TO CONFIRM*** — the way back to a seat whose share was refused, on You › Payments
+ * ([#555](https://github.com/Raketa02/Raketa/issues/555); the mechanics §12.2; the screens A7.3;
+ * #541's `GET /players/me/payments-to-confirm`). It was on Home above the rail too, until #817 moved
+ * Home's into Needs your answer as a tile per payment (`ToConfirmSection`); this card is unchanged.
  *
  * The player whose own yes filled a game is shown the confirmation the moment their share is
  * refused. **Everybody else's share is refused while they are elsewhere** — somebody else's yes
@@ -30,17 +31,13 @@ import { StyleSheet, Text, View } from 'react-native';
 import { offlineMessage } from '@/shared/errors';
 import { Button, Card, Note, theme } from '@/shared/ui';
 
-import { confirmationOf, type PaymentToConfirm } from '../domain/fill';
-import { deadlineAhead, paymentWindowAt } from '../domain/home';
-import { gameDayOf } from '../domain/when';
+import { confirmAskOf } from '../domain/fill';
 import { useFill } from '../hooks/useFill';
 import { useReadClock } from '../hooks/useHome';
 import { usePaymentsToConfirm } from '../hooks/useLiveYeses';
 
-import { clubName, LINE_JOIN, shareWords } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
-import { toConfirmLabel, toConfirmRowLine } from './fillPresentation';
-import { liveYesTitle } from './liveYesesPresentation';
+import { toConfirmWords } from './fillPresentation';
 import { ReadFailed } from './ReadFailed';
 
 const WORDS = FILL_COPY.toConfirm;
@@ -76,13 +73,6 @@ export function PaymentsToConfirm() {
 
   if (list.length === 0) return null;
 
-  const readAt = read.dataUpdatedAt;
-  const confirm = (payment: PaymentToConfirm) =>
-    fill.confirm({
-      dealtIn: { groupId: payment.groupId, sport: payment.sport, kind: payment.kind },
-      ...confirmationOf(payment),
-    });
-
   return (
     <View style={s.section}>
       <Text accessibilityRole="header" style={s.head}>
@@ -90,10 +80,8 @@ export function PaymentsToConfirm() {
       </Text>
       <Card style={s.rows}>
         {list.map((payment, at) => {
-          const day = gameDayOf(payment.startsAt, readAt);
-          const by = deadlineAhead(payment.confirmBy, now);
-          // Once the time is gone the row reads as the server's next read will: no window named.
-          const paymentWindow = paymentWindowAt(payment.confirmBy, payment.timeTo, now);
+          // The words Needs your answer's tile says too (`toConfirmWords`, #817).
+          const words = toConfirmWords(payment, read.dataUpdatedAt, now);
           return (
             <View
               key={payment.seatChargeId}
@@ -101,22 +89,16 @@ export function PaymentsToConfirm() {
               testID={`to-confirm-${payment.seatChargeId}`}
             >
               <View style={s.words}>
-                <Text style={s.title}>{liveYesTitle(payment, day)}</Text>
-                <Text
-                  style={s.club}
-                >{`${clubName(payment)}${LINE_JOIN}${shareWords(payment)}`}</Text>
-                <Text style={by === undefined ? s.line : s.timeToPay}>
-                  {toConfirmRowLine(by === undefined ? undefined : { by, window: paymentWindow })}
-                </Text>
-                {paymentWindow === 'FIX_THE_CARD' ? (
-                  <Text style={s.line}>{WORDS.nothingPaidNow}</Text>
-                ) : null}
+                <Text style={s.title}>{words.title}</Text>
+                <Text style={s.club}>{words.place}</Text>
+                <Text style={words.running ? s.timeToPay : s.line}>{words.time}</Text>
+                {words.nothingPaidNow ? <Text style={s.line}>{WORDS.nothingPaidNow}</Text> : null}
               </View>
               <Button
-                label={WORDS.action[paymentWindow]}
-                accessibilityLabel={toConfirmLabel(payment, day, paymentWindow)}
+                label={words.action}
+                accessibilityLabel={words.spoken}
                 size="sm"
-                onPress={() => confirm(payment)}
+                onPress={() => fill.confirm(confirmAskOf(payment))}
               />
             </View>
           );

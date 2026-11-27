@@ -125,8 +125,34 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   offer before any deadline, as `held` reads it — registered in `proposal_demands.py`), and
   `None` when they are mixed, since the first free court in the club's order is the one
   booked; a `SEAT_OPEN` card carries its booked court's kind. The details read it the same
-  way (`ProposalDetails.indoor`). A player sees it and never chooses by it. The order is
-  §8.2's four keys, the fourth read as **the forecast of the reader's version**; the same
+  way (`ProposalDetails.indoor`). A player sees it and never chooses by it. **A card says its
+  kind's own number** (#830; ADR-0207 §2, §5): a competitive card the forecast, a **For-fun
+  card its table's Social vibe and `forecast` `null`** — `DeckCard.vibe`, the wire's
+  `vibe {pct}`, `null` on Competitive — through `domain/deck.py`'s `headline_of`, which
+  both `card_of` and the rescue's `card_of_a_rescue` call. The forecast still chose the
+  friendly's sides; it is only not said. **The table** is `ReadersView.people` (In, the reader,
+  the names dealt — never an empty seat), and on a rescue the reader with the game's players
+  (never the leaver). **The vibe is worked out on every read from the tags now** —
+  `domain/vibe.py`'s `social_vibe_of`: the Player profile's `counted` drops 💘
+  (`UNCOUNTED_SOCIAL_TAGS`, beside the vocabulary), then the Match Fit engine's `social_vibe`;
+  `None` under two people or with nobody holding a tag, ordered last. **The cards' tags are one
+  question per deck read** — `PlayersTags` (`DirectoryPlayersTags`, over Discovery's own
+  `PlayerDirectory.tags_of_each`, one statement over `discovery_player_tags`), asked only for
+  the people on For-fun cards and not at all when none is dealt, row in `proposal_demands.py`;
+  a tag edit reads into the deck after its delivery reaches the directory, and makes the
+  editor's pools due for the next build (#832, below). **Seeded** in her For-fun tennis deck
+  (`app/seeds/for_fun.py`, `seeds.md`): a card in each of the app's four bands. **A For-fun rescue
+  offered to the reader, and to more members than it is dealt to, asks a second** (#831): its
+  best fits are the best company among everybody offered (the rescues bullet below).
+  `tests/api/test_the_for_fun_deck.py` holds the read at **91 statements** on its world, the
+  tags one of them — its rescue is offered to the reader alone, so nothing is ranked — and a
+  projection of everybody's tags is argued in an ADR, never added to fit (ADR-0207 §11). **Each segment is ordered by its kind** (`dealt_in_order`, one kind a batch,
+  an `invariant`): the **competitive** order is §8.2's four keys, unchanged, the fourth read as
+  **the forecast of the reader's version**; the **For-fun** order (ADR-0207 §4,
+  `_for_fun_key`) is a `SEAT_OPEN` card first — a rescue, by its vibe — then the vibe the card
+  shows (the rounded number, so look-alikes tie), then the seats open after the reader's yes,
+  then challenge › pick, then the deadline, a full game gone back to filling being the pick or
+  challenge it was. In both the same
   people only at their best hour, per segment — **after the cards owed to the reader**
   (#673; Q123): a card whose `owed_card_for` names the reader is `DeckCard.owed_to_you`
   and dealt first, soonest first among owed cards, ahead of the usual order and kept over
@@ -143,7 +169,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `proposals.games_and_money_set` / v1). Games per week and *one game per hour* read
   **`BookedGames`**, answered off the bookings (#541); API tests may override
   `get_booked_games`. A withdrawn yes is dealt again. The seed fails if her deck would be
-  empty (`assert_the_group_deck`, beside the screens battery). **Its filters are one
+  empty (`assert_the_group_deck`, beside the screens battery). **Around the deck, the Games
+  badge and the ids it counts** (#846;
+  [ADR-0208](../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)):
+  `games_badge` is the cards with somebody In with the reader **across every segment the
+  intent shows, the one not asked for too**, and `in_card_ids` is those cards by their
+  `proposal_id` — the id each carries when its segment is the one dealt — Competitive first,
+  each segment in its dealt order, so the list is the same whichever segment is read and its
+  length is always the badge. A `SEAT_OPEN` card is never among them: a rescue's players have
+  paid, and are not In. Both come off the segments the read already builds, so they add no
+  statement. The phone counts the ids it has not had on screen (ADR-0208), and
+  `games_badge` stays on the wire for older installed apps — as does Fill in's `badge`,
+  whose rows the app now counts itself. **Its filters are one
   method** (`ReadGroupDeck.deal_to`), and `shows` asks them of one card for one reader:
   Notifications' *You complete it* and challenges go only where the deck shows the card
   (#549), so a new filter added anywhere but `deal_to` is one an alert would not know.
@@ -182,10 +219,32 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`PoolClubs` — not *Reach*, which is the Radar's word), the court hours on sale and the
   hours still **held** in → the cards that **lost** their court hour, the **picks** and the
   **deals**. Tested at that seam (`tests/unit/test_the_proposer.py`) and over HTTP
-  (`tests/api/test_the_proposer.py`). Seven things are load-bearing. **Assembly, never a
+  (`tests/api/test_the_proposer.py`). Eight things are load-bearing. **Assembly, never a
   second scoring**: *most even* is the engine's own `forecast` over every way a set could
   stand; it is a rounded percent that saturates at `pct_max`, so a tie goes to the closest
-  Levels, then to join order. **Bounded**: past `CONSIDERED_AT_AN_HOUR` (12) members free
+  Levels, then to join order. **Two scoring rules, one per Mode** (#831;
+  [ADR-0207](../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+  §1, §3; `domain/scoring.py`'s `score_of`): **Competitive** is the above, exactly today's;
+  **For fun** ranks by the table's Social vibe **exact** (`vibe.py`'s `social_vibe_share_of`, a
+  `Fraction`, so two tables a card prints alike are told apart; `None` — nobody holds a counted
+  tag — under every 0%), then its **new faces** (`new_faces_among`: pairs not in `known`), then
+  the forecast, then the spread. The proposer asks `_score(kind, people)` wherever it ranks — a
+  pick and a lost or owed card's new one (`_best`, renamed from `_evenest`), the next best
+  fits (`_next_best`), widening and a post (`_new_versions`, `versions_of_a_post`) — so a
+  For-fun seat is never named by the forecast first, and the gates, the 12 considered, the
+  hours and the courts are untouched. 💘 builds nothing (`counted`). `propose` and
+  `versions_of_a_post` take `tags` (everybody's, 💘 included) and `known`, both defaulted, so a
+  caller that hands neither builds today's batch with every vibe `None` and every pair new.
+  `ProposeGames` reads them **once per pool for every sport, and only for whoever a For-fun
+  table could hold** (`_company`: a member whose intent wants For fun, and the people on a
+  For-fun game filling or owed — nobody at all where no friendly could be dealt) —
+  `PlayersTags` and **`PlayedWith`** (`GamesAndFriendsPlayedWith`, `infrastructure/played_with.py`:
+  Games' new `PlayedTogetherQuery` — a court played by `now`, `Game.was_played_at`, either kind —
+  and Friends' `ReadRelations.friends_among` **from each person's side**, one statement per
+  member, since Friends answers nothing about two other people; row in `proposal_demands.py`);
+  `PostAGame` reads them for a For-fun post, for the poster and the members dealing it could
+  name (`may_play` at its hour, `admitted`). Tested in `tests/unit/test_the_for_fun_proposer.py`
+  and `tests/api/test_the_for_fun_proposer.py`. **Bounded**: past `CONSIDERED_AT_AN_HOUR` (12) members free
   at once, the ones holding the fewest cards are considered — exact below it, and a big
   official group's cards spread; the walk is a bitmask clique walk ranked once per
   distinct pool, and runs off the event loop (`asyncio.to_thread`). **One card per court
@@ -245,8 +304,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   jobs — the sweep over every pool (`GroupDirectory.every`) and a short tick over the pools
   a delivered change made due (`DueForProposing`, fed per delivery run by
   `MarkDueForProposing`: a joining, a player's week, intent, first rating, Games & money or
-  reliability filter, a swipe, anything a club changes about what it sells — which is everywhere). The due set
-  is process memory and best effort; the sweep is the guarantee. **And at a member's
+  reliability filter, **Social tags** (#832; ADR-0207 §2 — whom a For-fun table seats beside
+  them; a card already dealt keeps every name, and only its vibe moves), a swipe, anything a
+  club changes about what it sells — which is everywhere). The due set
+  is process memory and best effort; the sweep is the guarantee. **The tags are the one
+  input read off a copy the same delivery writes** — Discovery's directory, in that
+  delivery's transaction — so a tick that takes the mark in the moment before the commit
+  builds from the tags as they were, and the sweep and every later build read the new ones
+  (`tests/api/test_the_for_fun_proposer.py` walks an edit: due, the next four built from it,
+  the card dealt before it keeping its names). **And at a member's
   request**, for one pool, from `POST /pools/{id}/deal` (#739, above) — the short tick still
   runs the pool the intent change made due, and deals nothing the route already dealt.
 - **Every face carries the reader's *friend* tag, and Home the friend requests** (#745;
@@ -267,7 +333,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `FriendsRequestsOnHome` through `TagsInCommon` — `ProfileTagsInCommon`
   (`infrastructure/tags_in_common.py`), over the Player profile, with its row in
   `proposal_demands.py` — `0` once none is shared, *Found you through your tags*, `null` on
-  every other card) — saying what stands in place of the group line. **And `level_asks`**
+  every other card) — saying what stands in place of the group line — and since #814 every
+  card's `levels` (`HomeRequestLevel`: the requester's Level in each sport they hold one in, the
+  app's sport order, Friends' one batch read; `friends.md`). **And `level_asks`**
   (#764; ADR-0202 §4's 2026-11-07 amendment): *ASKED FOR A LEVEL*, between the friend requests
   and the reader's games — one card per sport, the sport with the newest ask first, each naming
   its askers newest first (`HomeLevelAsk`, `HomeLevelAsker`: id, nickname, photo) and no group,
@@ -280,6 +348,76 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   friend is), the whole field `null` with no result anywhere — through `RankingOnHome`, signed
   in `proposals/infrastructure/rankings.py` over Rankings' `ReadHomeRanking`, with its row
   in `proposal_demands.py`.
+- **What's new in *Needs your answer* is Proposals', kept on the server and counted on Home's
+  read** (#815; [ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+  §3). `GET /home` adds `needs_your_answer`:
+  - `new_count` is the items waiting in the sheet's four sections whose **arrival** is past
+    the reader's last visit's watermark. Before any visit, every one of them counts.
+  - `watermark` is the newest arrival among them, seen or not, and `null` with nothing
+    waiting (`domain/needs_your_answer.py`'s `what_is_new`).
+  - `payments_to_confirm` is the *To confirm* rows, the same as
+    `GET /players/me/payments-to-confirm`'s (`to_confirm`, one builder for both, their clubs
+    named in the games' one question). A sheet drawn off this one read shows exactly what its
+    watermark covers. Drawn from the other read, a payment refused between the two reads could
+    be covered and never shown.
+
+  **Everything is compared to the millisecond** (`to_the_millisecond`): arrivals, the served
+  watermark and a visit's. A phone that turns the watermark into a JS date and back then sends
+  the same instant. At the store's microsecond it would send one just below the newest arrival,
+  which would be new for ever. Two arrivals inside one millisecond count as one.
+
+  **The arrivals:**
+  - a payment to confirm, by when it first came to need confirming (`Owed.refused_at`, folded
+    into `Paying`, `Reopened` and the booking's `RefusedHolding` and `KeptSeat`). A payer
+    refused first for terms or a method had nothing to confirm, so a bank's refusal after it
+    arrives then (`payments.md`);
+  - a friends game invitation, by when its seat was invited into
+    (`HomeInvitation.invited_at`, off the booking's `InvitedSeat.invited_at`);
+  - a friend request, by its `asked_at`;
+  - an ask for a level, **by each asker's own ask** (`HomeLevelAsker.asked_at`), so a second
+    friend asking on a card already there is new.
+
+  **A change of state never moves an arrival.** Each is folded off the event that first put the
+  item there and kept through what follows: a payer refused again, a time to pay or a kept seat
+  running out (*Fix your card* → *Confirm*), a holding refused again while its card is still to
+  fix. Every one is an event's `occurred_at`, so nothing stored changed. An answered item leaves
+  its list, and the count with it.
+
+  **The visit** is `POST /players/me/needs-your-answer/visit` with `{watermark}`
+  (`CloseNeedsYourAnswer`, `204`). It records `proposals.needs_your_answer_closed` v1
+  (`NeedsYourAnswerClosed`: `player_id`, `watermark`) on the player's own stream
+  (`NeedsYourAnswerVisit`, aggregate type `needs_your_answer_visit`, under the player's id, born
+  by being used):
+  - **only when later than the last visit's**, so it is idempotent and never moves back, and a
+    stale one still answers `204`;
+  - the watermark is **the phone's, never the request's moment**, so an item that reached the
+    server after the read stays new. One past the server's clock was served by no read, and is
+    `400 watermark_in_the_future`, recording nothing; one with no offset is `422`. `null`, a
+    read with nothing waiting, records nothing and answers `204`. **A call**: the check is
+    strict, with no allowance for clocks skewed between API processes. Only one process runs
+    today, and a refused close only leaves too much new;
+  - **two phones colliding on the stream**: the one that lost rolls back, reads the other's
+    visit and closes **once more**, so the newer of the two watermarks is kept whichever landed
+    first. A second collision in a row is let go, and that close stands;
+  - **no projection**: Home loads the one stream, one statement, as Games & money's reads do,
+    and **only when something waits**. It grows only when the watermark moves, which only a
+    newer arrival can make it do.
+
+  **Why it rides on Home's read** when the bell's `new_count` rides on the notices' own: the four
+  kinds are already Home's, gathered through this context's ports (three as lists, the payments
+  for `needing_you`), so comparing them with a watermark Proposals keeps asks no context anything
+  new. A read of its own would gather them a second time, and on Home the badge arrives with all
+  four of the lists it counts, the *To confirm* rows among them since this ticket (ADR-0205 §3
+  left serving them here to it). `GET /players/me/payments-to-confirm` stays for older apps and
+  You › Payments. `needing_you` and the bell's number are untouched. **The window left open**, as
+  the bell's:
+  an item whose arrival is older than the watermark but which reaches the read only after it
+  counts as seen though never shown. That is a transaction committing behind a later one, a
+  set-aside request brought back by its link (`friends.md`), or an ask back with a friendship
+  made again. Tested over HTTP in `tests/api/test_needs_your_answer.py` (requests, asks, the
+  visit's rules, two phones, the millisecond), `…_invitations.py` and `…_payments.py`, the visit
+  and the count in `tests/unit/test_needs_your_answer.py`, and a collision in
+  `tests/unit/test_close_needs_your_answer.py`.
 - **A friends game is sent, answered and called off here** (#751; ADR-0202 §5–§6;
   `application/friends_games.py`; see `bookings.md` and `payments.md`): `POST /pools/{id}/
   friends-games` (`SendAFriendsGame`, `FriendsGameSentResponse`: booked, or `your_payments`
@@ -323,7 +461,40 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   game still filling is *waiting for a payment*** (#625) — no club confirms a game — and says
   until when (`payment_due_by`). The `actions` are what the routes would take: `YES`/`NO`,
   `WITHDRAW`, `LEAVE` while a payment is awaited, `CONFIRM_PAYMENT` (with `your_payment`) for a refused share, nothing
-  once it is over or the answer is final (a no, `NO_LONGER_FITS`, a paused yes). **Home's
+  once it is over or the answer is final (a no, `NO_LONGER_FITS`, a paused yes). **What the
+  details say about the game follows the kind** (#833; ADR-0207 §5, §6; `_what_it_says`):
+  - **competitive** — `forecast` gains each side's strength and the signed gap
+    (`DetailsForecastSchema`: `your_side`, `their_side`, `gap`, off `CardForecast.levels`, the
+    engine's split `MatcherBalanceForecasts` now hands back with every forecast, the reader's side
+    first), and **`at_stake`** (`win_delta`, `loss_delta`) for the reader on the drawn sides —
+    the reader's version's evenest — through **`ReadersStakes`** (`MatcherReadersStakes`, row in
+    `proposal_demands.py`), which calls the matcher's `at_stake_on_the_court`: **the one
+    function a booked game's pairing prices its `at_stake` with** (`GamesCourtPairing._deltas`
+    calls it too), which hands the rule the court in one order — the player, partners sorted,
+    the other side sorted — so the two readings agree to the last digit. Asked only **while the
+    game is still the reader's to play** — any `actions` at all: In, free to answer, or a payment
+    to confirm — **and once every seat is named** (`stakes_are_priced`): a reader who said no, no
+    longer fits or waits on a paused yes, and a game over or booked (whose stakes are the booking
+    pairing's, its court free to change after the fill), read none, and a court with a seat open
+    is priced nothing (ADR-0162 §3) — calls made after #833's review; two values or none,
+    singles too; `vibe` `null`. On a provisional forecast the side strengths are as provisional
+    as the % (one computation). A call: the fill picks its
+    sides from the first In's arrangements and the details from the reader's, so on a forecast
+    **tie** the two could stand a different way round (and price differently) — as the deck's
+    sides already could;
+  - **For fun** — `forecast` and `at_stake` `null`, and **`vibe`** `{pct, rows[{tag,
+    carried_by}]}` (`domain/vibe.py`'s `table_vibe_of`): `pct` is the card's own
+    (`social_vibe_of` over the same table), each row one of **the reader's** tags in the
+    vocabulary's order (the Player profile's `in_vocabulary_order`, public since), 💘 included,
+    `carried_by` the reader first then whoever else carries it in the tiles' order; `null`
+    exactly when the card draws no vibe. The tags are one `PlayersTags` question, asked only for
+    a For-fun game.
+
+  Tested over HTTP in `tests/api/test_the_game_details_by_kind.py` (the rows, their order, the
+  carriers, 💘, the card's pct, a tag edit; the levels and gap; **filled, the pairing's stakes
+  and split equal**; singles; a seat open; a reader who said no; a filled game; neither kind's
+  fields on the other) and the pure rules
+  in `tests/unit/test_the_details_by_kind.py`. **Home's
   badge counts the payments to confirm** beside the cards that need the reader (`owed_by`,
   shared with the TO CONFIRM read).
   **Home's read is bounded** (#613): it sends only what Home draws — live games, games that
@@ -348,7 +519,17 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `SeatRefunds` (`SEAT_TAKEN`). **A refused rescuer keeps a seat** for thirty minutes (#640),
   over `BookedGameChanges.keep_the_seat`/`kept_seat_ran_out`/`keeps_past`/`kept_for` — see
   `bookings.md`. The Games badge still counts cards with somebody **In**: a
-  rescue's players have paid, and are not In.
+  rescue's players have paid, and are not In. **A For-fun rescue's best fits are its best
+  company** (#831; ADR-0207 §1): `domain/rescues.py`'s `best_fits` scores each candidate by
+  `scoring.py`'s For-fun rule over **the players still on the game plus the candidate** — the
+  vibe, the new faces, the forecast (an unread one under every read one), the spread of the
+  Levels that can be read — while a competitive rescue's are the forecast alone, as before.
+  `RescueOffers.best_fits` (now taking `now`) reads the tags, `PlayedWith` (the players on the
+  game among the table) and `PlayersInPlay`'s Levels **only for a For-fun game offered to more
+  members than it is dealt to** (`room_for_best_fits`, three per open seat; below it everybody
+  offered is a best fit and `best_fits` ranks nothing), and a For-fun ranking handed no company
+  is an `invariant`. `tests/api/test_the_for_fun_proposer.py` holds what it costs a deck read:
+  a second tags statement, and one Friends statement per player left on the game.
 - **A member posts a game; posting is their yes** (#546; the mechanics §9; the screens A5):
   `application/posting.py` over `domain/post.py` (*Who* and the Level range) and
   `domain/posting_grid.py` (the grid's and the sheet's rules). Six things are load-bearing.
@@ -362,7 +543,17 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   club, taking new cards, before its book-by — **and the court source's own, hour by hour**
   (`PoolClubs.offered`, #746): an official group's grid and sheet list another club only
   where its club is full then, each such row `FreeCourtSchema.home_club_full`, and a post
-  there at any other hour is `court_hour_not_for_sale`. **Who it is for is stored on it**
+  there at any other hour is `court_hour_not_for_sale`. **The sheet's fits say the kind's
+  own number for the poster and each** (#834; ADR-0207 §5; `ReadPostingSlot`, `SlotFit`):
+  a competitive post's the forecast of the two, most even first, `vibe` `null` — as before;
+  a **For-fun** post's `vibe`, `social_vibe_of` over the two through `headline_of`, and
+  `forecast` `null` — **ranked by it**, highest first, on the printed number (so
+  look-alikes tie, as in the deck's order), a tie falling to today's order: the most even
+  (the forecast still computed, only not said), then the pool's; an unread number last.
+  The tags are one `PlayersTags` question, for the poster and the fits free then, on For
+  fun only. It is the pair's vibe, never the table's a post would be dealt by — the post's
+  versions are still built as the best company of the whole table (`versions_of_a_post`).
+  **Who it is for is stored on it**
   (`ProposalMade.who`, `level_low`, `level_high`, defaulted for older streams, which read as
   *for anybody*): the range starts as **the engine's own window** around the poster —
   `PlayerFit.level_window`, the matcher's `level_tolerance` through the same
@@ -377,8 +568,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   would be one and leave such a name off (`view_of(may_stand=…)`), and **the sides — on the
   card, in the details and at the fill — stand a man and a woman each** (`standing_for`),
   genders read through `PlayersInPlay` only where a mixed post is on the table and never
-  said. **Dealing**: at posting, one version per full set of best fits free then, evenest
-  first, up to three, or one version with seats open (`versions_of_a_post`); after, every
+  said. **Dealing**: at posting, one version per full set of best fits free then, the best
+  first by the post's kind — the evenest, or on a For-fun post the best company, read by
+  `PostAGame` over `PlayersTags` and `PlayedWith` (#831) — up to three, or one version with
+  seats open (`versions_of_a_post`); after, every
   proposer batch keeps dealing it until its book-by with **no half-In condition** — a
   version naming fewer than its open seats takes whoever became a fit, a new full set is a
   new version while fewer than three, and a no's seat goes to next best fits of the gender
@@ -422,7 +615,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `arrangements` of the line-up in the order sent and `evenest` over `BalanceForecasts`,
   the first among equals — or the sides sent, named by **`partner_id`** (the friend
   beside the reader; doubles only, else `sides_not_of_the_line_up`), a call: the reader
-  always stands on their own side (Q70), so a partner names every way to stand. **The
+  always stands on their own side (Q70), so a partner names every way to stand. **The card
+  says its kind's own number** (#834; ADR-0207 §5), through the deck's `headline_of`:
+  **Competitive** the forecast of the sides drawn, `vibe` `null`; **For fun** `vibe` — the
+  Social vibe of **the line-up**, everybody seated, `social_vibe_of` over
+  `LineUp.everybody`, so a swap (`partner_id`) never moves it — and `forecast` `null`,
+  though the forecast still chose the evenest sides. The tags are one `PlayersTags`
+  question, asked only on For fun. **The
   courts are the court source's**, `PoolClubs.offered` over `CourtHours.on_sale` from now
   to now + the deck's 14 days, **one row per free court** — `CourtHourOnSale.free`, the
   courts named in the club's order (`CourtOnSale`, the first being the one a booking

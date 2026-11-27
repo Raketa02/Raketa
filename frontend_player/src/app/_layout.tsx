@@ -1,6 +1,6 @@
 /**
- * The root layout: the only place providers are composed, and the gate the bootstrap
- * sequence resolves behind.
+ * The root layout: the only place providers are composed, and the launch gate — the drawn
+ * splash every cold open starts on, with the bootstrap sequence running behind it (ADR-0209).
  *
  * docs/architecture.md Part 3 fixes the order — reporting wraps everything so it can see
  * failures, and auth sits above Query so a session change can reach the cache. Each
@@ -22,9 +22,11 @@ import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-c
 
 import { fetchCurrentUserAtLaunch, refreshTokens, restoreSession } from '@/features/auth/types';
 import { readTheInstallReferrerOnce } from '@/features/links/types';
+import { warmHome } from '@/features/shell/types';
 import { EnvironmentBadge } from '@/shared/config/EnvironmentBadge';
 import { wireHttpCredentials } from '@/shared/lib/auth';
-import { BootstrapGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
+import { LaunchGate, bootstrapApp, sharedBootstrapSteps } from '@/shared/lib/bootstrap';
+import { readReachability } from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
 import { OverlayHost, ReducedMotionProvider, ToastHost } from '@/shared/ui';
 
@@ -47,13 +49,31 @@ function wireCredentialsStep(): void {
  * launch: bootstrap already asked the server who this is, so the first screen should not
  * ask again. And a failure is the gate's first answer: a launch that could not reach the
  * server opens on a screen saying so, never on an empty one asking again.
+ *
+ * **The phone's reachability comes from the network-state module** (ADR-0209 §4): what the online
+ * manager believes once it has its first answer, which the use-case reads before the check and may
+ * not import. On a phone that already knows it is offline the check is not sent, and the manager
+ * agrees by then — so the gate's own read pauses and says it is waiting, rather than the launch
+ * waiting five seconds first.
  */
 async function restoreSessionStep(): Promise<void> {
-  await restoreSession(() => fetchCurrentUserAtLaunch(queryClient));
+  await restoreSession(() => fetchCurrentUserAtLaunch(queryClient), readReachability);
 }
 
 /**
- * The third: the link an Android install carried, read once on the first launch and held as if it
+ * The third: Home's reads, set out while the splash plays, so a cold open on a normal connection
+ * fades onto a Home that is already whole (#874; ADR-0209 §2, amended 2026-11-24). **Started, never
+ * awaited** — the splash waits on no read. The shell composes it, because Home is the shell's and
+ * its reads are its features'; it decides from the account session restore has just cached — only
+ * an account headed for the tabs is warmed — and reads the phone's reachability as the check did,
+ * skipping everything on a phone that already knows it is offline.
+ */
+function warmHomeStep(): void {
+  void warmHome(queryClient, readReachability);
+}
+
+/**
+ * The fourth: the link an Android install carried, read once on the first launch and held as if it
  * had been tapped (#756). Started, never awaited — the splash does not wait on Google Play.
  */
 function readInstallReferrerStep(): void {
@@ -67,6 +87,7 @@ export default function RootLayout() {
         ...sharedBootstrapSteps,
         wireCredentials: wireCredentialsStep,
         restoreSession: restoreSessionStep,
+        warmHome: warmHomeStep,
         readInstallReferrer: readInstallReferrerStep,
       }),
     [],
@@ -92,7 +113,14 @@ export default function RootLayout() {
            * named as the moment it becomes the context Part 13 describes.
            */}
           <ReducedMotionProvider>
-            <BootstrapGate run={run}>
+            {/*
+             * The launch gate (ADR-0209): it draws the splash first, runs the sequence behind it,
+             * mounts everything below underneath it, and fades it out — over the overlay host, the
+             * toasts and the badge, which is why they are all inside it. Inside the motion
+             * provider, whose first answer is already the OS's: the splash decides its variant
+             * once, from that.
+             */}
+            <LaunchGate run={run}>
               {/*
                * design-system 9.3's root-level overlay host: every modal stage on Android is a
                * layer here, above the route tree and the tab bar, and the app beneath is hidden
@@ -117,7 +145,7 @@ export default function RootLayout() {
                * queue: `shared/store/toast.store.ts`.
                */}
               <ToastHost />
-            </BootstrapGate>
+            </LaunchGate>
           </ReducedMotionProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

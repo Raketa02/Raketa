@@ -56,6 +56,7 @@ import type {
   HapticsPort,
   ImagePickingPort,
   InstallReferrerPort,
+  KeyboardPort,
   LiveStreamPort,
   LiveStreamStatus,
   LiveTyping,
@@ -65,6 +66,7 @@ import type {
   PickedImage,
   PushNotice,
   PushPort,
+  SystemBarsPort,
 } from '@/shared/lib/platform';
 
 /** The bits every port fake shares: what the state is, and what asking would make it. */
@@ -435,6 +437,44 @@ export function fakeInstallReferrer(referrer: string | null): FakeInstallReferre
 }
 
 /**
+ * **The phone's system bars, as a fake** (#857). It holds what the bars show now and every change
+ * they went through, so a suite can say *painted from the start, restored when the fade starts,
+ * not before*.
+ *
+ * It behaves as the device's port does: a second paint before a restore changes nothing, and so
+ * does a restore with nothing painted. Neither act throws.
+ */
+export interface FakeSystemBars extends SystemBarsPort {
+  /** The ground the bars are painted, or `null` while they show the app's own look. */
+  readonly painted: string | null;
+  /** Every change the bars went through, oldest first. */
+  readonly changes: readonly ('painted' | 'restored')[];
+}
+
+export function fakeSystemBars(): FakeSystemBars {
+  let painted: string | null = null;
+  const changes: ('painted' | 'restored')[] = [];
+  return {
+    get painted() {
+      return painted;
+    },
+    get changes() {
+      return changes;
+    },
+    paint: (ground) => {
+      if (painted !== null) return;
+      painted = ground;
+      changes.push('painted');
+    },
+    restore: () => {
+      if (painted === null) return;
+      painted = null;
+      changes.push('restored');
+    },
+  };
+}
+
+/**
  * **A share sheet that records what it was handed** — a group page's Share the link opens it, and
  * an official group's Share link. Every open is kept, in order, and settles at once as though the
  * person closed it: the device's port never rejects, and a dismissal is not something the page
@@ -453,6 +493,44 @@ export function fakeShare(): FakeShare {
       shared.push(message);
       return Promise.resolve();
     },
+  };
+}
+
+/**
+ * **A soft keyboard a suite raises and drops** (#882) — as a field taking the focus brings one up and
+ * the back button takes it down. It starts down, as it is when a screen opens, and tells whoever
+ * follows it of each change, as the device's port does on the keyboard's show and hide. Raising it
+ * while it is up, or dropping it while it is down, changes nothing and tells nobody.
+ *
+ * **It knows nothing of which phone it is on**: whether a keyboard that is up shrinks the window is
+ * the platform's (`windowResizesForKeyboard`), so a suite says Android with `Platform.OS`, as the
+ * phone would.
+ */
+export interface FakeKeyboard extends KeyboardPort {
+  /** The keyboard comes up. */
+  readonly raise: () => void;
+  /** The keyboard goes down. */
+  readonly drop: () => void;
+}
+
+export function fakeKeyboard(): FakeKeyboard {
+  let up = false;
+  const followers = new Set<() => void>();
+  const goes = (now: boolean) => {
+    if (up === now) return;
+    up = now;
+    for (const told of [...followers]) told();
+  };
+  return {
+    isUp: () => up,
+    follow: (onChange) => {
+      followers.add(onChange);
+      return () => {
+        followers.delete(onChange);
+      };
+    },
+    raise: () => goes(true),
+    drop: () => goes(false),
   };
 }
 

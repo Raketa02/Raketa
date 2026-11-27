@@ -233,6 +233,27 @@ def test_a_refused_holding_keeps_the_game_booked_while_its_card_is_fixed():
     assert booking.card_fixed(KUBA, at=HOLDING + timedelta(minutes=6)) is False
 
 
+def test_a_card_to_fix_arrives_when_its_holding_was_refused():
+    """What *Needs your answer* dates it by (#815) — and a holding refused
+    again while the card is still to fix is the same payment to confirm, so
+    it keeps the first refusal."""
+
+    booking = _a_card_to_fix()
+    assert booking.cards_to_fix[KUBA].refused_at == HOLDING
+
+    booking.card_to_fix(
+        KUBA,
+        until=FIX_BY,
+        seat_charge_id=CHARGE,
+        reason="AUTHENTICATION_REQUIRED",
+        at=HOLDING + timedelta(minutes=10),
+    )
+
+    assert booking.cards_to_fix[KUBA].refused_at == HOLDING
+    replayed = Booking.from_history([_confirmed_event(booking), *booking.pull_events()])
+    assert replayed.cards_to_fix[KUBA].refused_at == HOLDING
+
+
 def test_a_card_not_fixed_in_time_opens_the_seat_as_a_leave_before_the_cut_off():
     booking = _a_card_to_fix()
 

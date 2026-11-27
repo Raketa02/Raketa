@@ -17,7 +17,6 @@
 
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import {
-  Keyboard,
   KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
@@ -27,6 +26,7 @@ import {
 } from 'react-native';
 
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform/keyboard';
+import { claimsThePress, gestureSurfaceOf, pullDown } from '@/test-support/swipe';
 
 import { BottomSheet, SHEET_LIST } from './BottomSheet';
 import { theme } from './theme';
@@ -101,6 +101,9 @@ describe('a sheet with a field in it', () => {
   });
 
   it('dismisses the keyboard before it closes, so no field keeps focus into a closing window', () => {
+    // React Native's own `Keyboard`, which only the platform's keyboard module imports (#882) — read
+    // here as `payments.test.ts` reads it, to see the dismissal land before the close.
+    const { Keyboard } = jest.requireActual<typeof import('react-native')>('react-native');
     const order: string[] = [];
     jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => order.push('dismiss'));
     render(
@@ -144,6 +147,104 @@ describe('a sheet with the card field in it', () => {
     // `handled` blurs the focused field when a tap lands on the sheet's text or blank space — on
     // iOS a native blur of Stripe's card field closes the app.
     expect(body().props.keyboardShouldPersistTaps).toBe('always');
+  });
+});
+
+describe('a sheet that closes on a swipe down', () => {
+  // Needs your answer (#816): ✕, the backdrop, and a pull down on its head. The numbers are
+  // `sheetSwipeGeometry.test.ts`'; this is the sheet obeying them.
+  const { close: CLOSE } = theme.size.sheetSwipe;
+
+  function swipeable(onClose: () => void, closesOnSwipe = true) {
+    render(
+      <BottomSheet
+        visible
+        onClose={onClose}
+        title="Needs your answer"
+        closeLabel="Close Needs your answer"
+        closesOnSwipe={closesOnSwipe}
+      >
+        <Text>Friend requests</Text>
+      </BottomSheet>,
+    );
+  }
+
+  const title = () => screen.getByRole('header', { name: 'Needs your answer' });
+
+  it('closes when its head is pulled down the close distance', () => {
+    const onClose = jest.fn();
+    swipeable(onClose);
+
+    expect(pullDown(title(), CLOSE)).toBe(true);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on a flick down, however short', () => {
+    const onClose = jest.fn();
+    swipeable(onClose);
+
+    pullDown(title(), 20, { ms: 10 });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays open when a fast pull stops and holds before it lifts — no flick was made', () => {
+    const onClose = jest.fn();
+    swipeable(onClose);
+
+    pullDown(title(), 20, { ms: 10, held: theme.size.sheetSwipe.flingWindow + 50 });
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('can be pulled from the strip over the grab and the gutters beside the title', () => {
+    swipeable(() => undefined);
+
+    // The head reaches the sheet's edges and top: the sheet's own padding is inside it.
+    const head = flatten(gestureSurfaceOf(title())!.props.style);
+    expect(head).toMatchObject({
+      paddingTop: theme.space.sm,
+      marginHorizontal: -theme.size.gutter,
+      paddingHorizontal: theme.size.gutter,
+    });
+    expect(flatten(screen.getByTestId('bottom-sheet').props.style)?.paddingTop).toBeUndefined();
+  });
+
+  it('stays open on a nudge, and springs back', () => {
+    const onClose = jest.fn();
+    swipeable(onClose);
+
+    pullDown(title(), CLOSE / 3);
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText('Friend requests')).toBeTruthy();
+  });
+
+  it('leaves a tap on ✕ to the close control', () => {
+    const onClose = jest.fn();
+    swipeable(onClose);
+
+    expect(claimsThePress(title())).toBe(false);
+    fireEvent.press(screen.getByRole('button', { name: 'Close Needs your answer' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('is pulled by its head only, never by the body a rail scrolls in', () => {
+    swipeable(() => undefined);
+
+    const head = gestureSurfaceOf(title());
+    expect(head).toBeDefined();
+    expect(gestureSurfaceOf(screen.getByText('Friend requests'))).not.toBe(head);
+  });
+
+  it('has no swipe where the sheet does not ask for one', () => {
+    const onClose = jest.fn();
+    swipeable(onClose, false);
+
+    expect(pullDown(title(), CLOSE * 2)).toBe(false);
+    expect(onClose).not.toHaveBeenCalled();
   });
 });
 

@@ -9,9 +9,9 @@
  * - **Body**: the tiles in two columns, newest first, friends where they fall, **20 to a page, the next
  *   read as the grid nears its end**. A sport keeps only who holds a level in it, and one that leaves
  *   nobody says *Nobody new plays squash yet* in place of the grid.
- * - **Every state**: reading (a spinner where the grid will be), failed (the recovery sentence and *Try
- *   again*), offline (resumes), a later page refused (said under the grid, with its own *Try again*),
- *   and the pull, which reads every page again.
+ * - **Every state**: reading (the grid's tiles as skeleton blocks, filling the screen — #872), failed
+ *   (the recovery sentence and *Try again*), offline (resumes), a later page refused (said under the
+ *   grid, with its own *Try again*), and the pull, which reads every page again.
  *
  * A tile opens the record and its round button acts, as on Home's row; **every friend write reaches
  * every people list** (`LISTS_PEOPLE`): this grid reads again, and the row under the screen draws the
@@ -26,7 +26,7 @@ import type { SeeAllSport } from '../domain/seeAll';
 import { useNewInRaketaPage } from '../hooks/useNewInRaketa';
 
 import { DISCOVERY_COPY, NEW_IN_RAKETA_PILL_WORDS, nobodyNewPlays } from './discoveryCopy';
-import { JoinerTile } from './JoinerTile';
+import { JOINER_TILE_SKELETON, JoinerTile } from './JoinerTile';
 import { RowRecord, type RecordOpened } from './RowRecord';
 import { SeeAllScreen } from './SeeAllScreen';
 
@@ -56,8 +56,8 @@ export function NewInRaketaScreen() {
           onOpen={() => setReading({ playerId: joiner.playerId, foundIn: FOUND_AMONG_NEW_PLAYERS })}
         />
       )}
+      skeleton={JOINER_TILE_SKELETON}
       emptyLine={choice === 'all' ? COPY.nobodyAtAll : nobodyNewPlays(choice)}
-      readingLabel={COPY.reading}
       testID="new-in-raketa-grid"
       overlayUp={reading !== undefined}
       overlays={<RowRecord opened={reading} onClose={() => setReading(undefined)} />}

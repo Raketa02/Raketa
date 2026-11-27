@@ -7,7 +7,9 @@ post is dealt to those fits as a **Challenge**. Three steps share one reading:
   number the best fits free together with the poster at its best hour that has
   a free court, and what is around it (``domain/posting_grid.py``);
 - **a cell's sheet** (``ReadPostingSlot``) — the fits free then, best fit
-  first; the free courts in its range, home club first, each with its own
+  first, each with the post's kind's own number for the two of them — the
+  forecast, or on a For-fun post the Social vibe, which ranks them (#834);
+  the free courts in its range, home club first, each with its own
   count; and **already happening here**: rescues the poster fits first, then
   posts still filling they could join, either of which they can take instead
   of posting a second game (Q79, Q93);
@@ -35,7 +37,7 @@ that stopped selling between the sheet and the button refuses the post.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import TypeVar, final
@@ -61,6 +63,7 @@ from app.modules.proposals.domain.deck import (
     CardForecast,
     Sides,
     challenger_of,
+    headline_of,
     hour_taken,
     week_of,
 )
@@ -86,13 +89,16 @@ from app.modules.proposals.domain.ports import (
     DeckPeople,
     ReaderRelations,
     DeckPerson,
+    PlayedWith,
     PlayerFit,
+    PlayersTags,
     Pools,
     ProposalDirectory,
     ProposalRepository,
     WherePoolsPlay,
 )
 from app.modules.proposals.domain.post import LevelRange, PostedFor
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.player_profile.domain.weekly_hours import DAYS_IN_THE_GRID
 from app.modules.proposals.domain.posting_grid import (
     WEEKS,
@@ -111,6 +117,7 @@ from app.modules.proposals.domain.proposer import (
     Member,
     admitted,
     capped_weeks_of,
+    may_play,
     versions_of_a_post,
 )
 
@@ -328,11 +335,17 @@ class ReadPostingGrid:
 @final
 @dataclass(frozen=True, slots=True)
 class SlotFit:
-    """One of the poster's best fits free then, and how even a game of the two
-    of them is forecast — the sheet's *2,75 · 93*."""
+    """One of the poster's best fits free then, and the post's kind's own
+    number for the two of them — the sheet's *2,75 · 93* (``docs/adr/0207``
+    §5, #834): how even a game of the two is forecast, or on a For-fun post
+    how much the two share, one of them ``None``."""
 
     player_id: UUID
+    #: ``None`` on a For-fun post, and where it cannot be read.
     forecast: CardForecast | None
+    #: The Social vibe of the poster and them — ``None`` on a competitive post,
+    #: and where neither holds a counted tag.
+    vibe: int | None
 
 
 @final
@@ -373,6 +386,7 @@ class ReadPostingSlot:
         *,
         posting: ReadPosting,
         forecasts: BalanceForecasts,
+        tags: PlayersTags,
         people: DeckPeople,
         clubs: ClubNames,
         distances: ClubDistances,
@@ -382,6 +396,7 @@ class ReadPostingSlot:
         self._relations = relations
         self._posting = posting
         self._forecasts = forecasts
+        self._tags = tags
         self._people = people
         self._clubs = clubs
         self._distances = distances
@@ -397,19 +412,36 @@ class ReadPostingSlot:
             [Sides(yours=(poster,), theirs=(fit.player_id,)) for fit in free],
             sport=read.sport,
         )
+        # A For-fun post's fits say, and are ranked by, the vibe of the poster
+        # and each of them (`docs/adr/0207` §5, #834): one question for all.
+        tags: Mapping[UUID, Collection[SocialTag]] = (
+            await self._tags.tags_of([poster, *(fit.player_id for fit in free)])
+            if read.kind is SearchMode.FOR_FUN
+            else {}
+        )
         order = {member.player_id: index for index, member in enumerate(read.members)}
-        fits = tuple(
-            sorted(
-                (
-                    SlotFit(player_id=fit.player_id, forecast=forecast)
-                    for fit, forecast in zip(free, forecasts, strict=True)
-                ),
-                key=lambda fit: (
-                    -fit.forecast.pct if fit.forecast is not None else 1,
-                    order[fit.player_id],
-                ),
+        ranked: list[tuple[SlotFit, CardForecast | None]] = []
+        for fit, forecast in zip(free, forecasts, strict=True):
+            shown, vibe = headline_of(
+                read.kind,
+                table=(poster, fit.player_id),
+                forecast=forecast,
+                tags=tags,
+            )
+            ranked.append(
+                (SlotFit(player_id=fit.player_id, forecast=shown, vibe=vibe), forecast)
+            )
+        # The highest vibe first on For fun — every fit's is `None` on
+        # Competitive — then, as ever, the most even game, then the pool's
+        # order. The forecast still breaks a For-fun tie; it is only not said.
+        ranked.sort(
+            key=lambda row: (
+                _highest_first(row[0].vibe),
+                _highest_first(None if row[1] is None else row[1].pct),
+                order[row[0].player_id],
             )
         )
+        fits = tuple(fit for fit, _ in ranked)
         courts = read.grid.free_courts(day, range_)
         rescues = _in_the_cell(read.rescues, day, range_)
         posts = _in_the_cell(read.posts, day, range_)
@@ -463,6 +495,12 @@ class ReadPostingSlot:
         )
 
 
+def _highest_first(pct: int | None) -> int:
+    """A percent as a sort key, the highest first and an unread one last."""
+
+    return 1 if pct is None else -pct
+
+
 _Game = TypeVar("_Game", BookedGame, Proposal)
 
 
@@ -507,6 +545,8 @@ class PostAGame:
         guards: Guards,
         directory: ProposalDirectory,
         make: MakeProposal,
+        tags: PlayersTags,
+        played_with: PlayedWith,
         balance: BalanceRules,
         clock: Clock,
     ) -> None:
@@ -514,6 +554,8 @@ class PostAGame:
         self._guards = guards
         self._directory = directory
         self._make = make
+        self._tags = tags
+        self._played_with = played_with
         self._balance = balance
         self._clock = clock
 
@@ -538,6 +580,33 @@ class PostAGame:
             raise YouPlayThen()
         if not read.grid.fits_free_for(hour):
             raise NobodyFitsThen()
+        # A For-fun post goes to the poster's best company first
+        # (`docs/adr/0207` §1): the tags now, and who knows whom, of the poster
+        # and of the members dealing it could name — free for its hour,
+        # wanting the kind, within their Games & money, and whom it is for.
+        tags: Mapping[UUID, Collection[SocialTag]] = {}
+        known: frozenset[frozenset[UUID]] = frozenset()
+        if read.kind is SearchMode.FOR_FUN:
+            table = sorted(
+                (
+                    member.player_id
+                    for member in read.members
+                    if member.player_id == poster.player_id
+                    or (
+                        admitted(read.posted_for, member)
+                        and may_play(
+                            member,
+                            read.kind,
+                            start=hour.start,
+                            share_grosze=hour.share_grosze,
+                            capped=capped_weeks_of(member, now=now),
+                        )
+                    )
+                ),
+                key=str,
+            )
+            tags = await self._tags.tags_of(table)
+            known = await self._played_with.known_pairs(table, among=table, now=now)
         versions = await asyncio.to_thread(
             versions_of_a_post,
             sport=read.sport,
@@ -549,6 +618,8 @@ class PostAGame:
             posted_for=read.posted_for,
             balance=self._balance,
             now=now,
+            tags=tags,
+            known=known,
         )
         proposal_id = await self._make.execute(
             MakeProposalCommand(

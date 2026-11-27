@@ -11,10 +11,18 @@
  *
  * The stage owns nothing an overlay says or does: the scrim, the sheet, the close control are
  * the overlay's, drawn as its children, and a tap on the scrim is the overlay's own decision.
+ *
+ * **Held back under the launch's drawn splash** (ADR-0209 §2). A native window is presented over
+ * the whole app, splash and all, so a sheet the first screen opens at once — a club's invitation,
+ * a held link — would slide up over the splash and take taps the splash exists to swallow. While
+ * the splash covers the tree the window is not presented, and it is as the splash goes. Android's
+ * stage is a layer in the tree, under the splash with everything else, and needs no such rule.
  */
 
 import type { ReactNode } from 'react';
 import { Modal } from 'react-native';
+
+import { useCoveredBySplash } from './overlay';
 
 export interface ModalStageProps {
   readonly visible: boolean;
@@ -35,9 +43,11 @@ export interface ModalStageProps {
 }
 
 export function ModalStage({ visible, onRequestClose, animationType, children }: ModalStageProps) {
+  const covered = useCoveredBySplash();
+
   return (
     <Modal
-      visible={visible}
+      visible={visible && !covered}
       transparent
       onRequestClose={onRequestClose}
       animationType={animationType}

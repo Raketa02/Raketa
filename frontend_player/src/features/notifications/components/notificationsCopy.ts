@@ -12,6 +12,7 @@
  */
 
 import { dayDate } from '@/shared/date/calendarDay';
+import { countFigure } from '@/shared/formatting/countFigure';
 import { dayLabel } from '@/shared/vocabulary/availabilityPresentation';
 
 import type { ChoiceKey } from '../domain/choices';
@@ -165,13 +166,12 @@ export function noticeRowSpoken(
   return standsOut ? `${NOTIFICATIONS_COPY.list.new}. ${said}` : said;
 }
 
-/** The most the bell writes as figures; above it, *99+* (Q101). The server's count is exact. */
-const BELL_CEILING = 99;
-
-/** *3* · *99+* — the bell's number as drawn, and nothing at nought. */
+/**
+ * *3* · *99+* — the bell's number as drawn, and nothing at nought. The server's count is exact; above
+ * 99 the drawing writes *99+* (Q101), every count's cap (`countFigure`).
+ */
 export function bellFigure(count: number): string | undefined {
-  if (count <= 0) return undefined;
-  return count > BELL_CEILING ? `${BELL_CEILING}+` : String(count);
+  return count <= 0 ? undefined : countFigure(count);
 }
 
 /**

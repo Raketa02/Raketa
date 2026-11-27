@@ -13,7 +13,7 @@
 
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
-import { ScrollView } from 'react-native';
+import { Platform, ScrollView } from 'react-native';
 
 import { gameKeys } from '@/features/games/types';
 import { PAYMENTS_COPY } from '@/features/payments/types';
@@ -21,10 +21,11 @@ import { FILL_COPY, PROPOSALS_COPY } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
-import { doorRowLabel } from '@/shared/ui';
+import { doorRowLabel, theme } from '@/shared/ui';
 import {
   ANIA,
   deckCard,
+  DETAILS_CARD,
   DECK_READ_AT,
   EWA,
   groupDeck,
@@ -46,11 +47,13 @@ import {
   launchSignedIn,
   resetClipboard,
   resetHaptics,
+  resetKeyboard,
   resetPayments,
   resetShare,
   stubClipboard,
   stubGate,
   stubHaptics,
+  stubKeyboard,
   stubMyGroups,
   stubPaymentMethod,
   stubPayments,
@@ -63,14 +66,17 @@ import {
   TEST_CARDS,
   fakeClipboard,
   fakeHaptics,
+  fakeKeyboard,
   fakePayments,
   fakeShare,
   type FakePayments,
 } from '@/test-support/platform';
+import { bottomOf, PLAYERS_BAR } from '@/test-support/tabBarReach';
 import {
   errorResponse,
   installTransport,
   json,
+  neverResponds,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -206,6 +212,7 @@ afterEach(async () => {
   resetShare();
   resetClipboard();
   resetHaptics();
+  resetKeyboard();
   resetPayments();
   queryClient.clear();
   resetSessionStatus();
@@ -272,6 +279,38 @@ describe('a yes that moves money waits ten seconds behind Undo (§6.5)', () => {
     act(() => jest.advanceTimersByTime(5 * SECOND - PAST_THE_FLIGHT));
     await waitFor(() => expect(yeses(card)).toHaveLength(1));
     expect(screen.queryByTestId('undo-toast')).toBeNull();
+  });
+
+  // #881: the bar floats over the page, and the toast follows it — 9 above its reach. Standing down
+  // (the chat) it is 9 above the bottom inset, `useRoomAtTheBottom`'s; the harness cannot walk a
+  // countdown into the chat, since a navigation runs every pending timer and so the ten seconds.
+  it('stands 9 above the bar while it counts', async () => {
+    await openGames([bookItNow()]);
+
+    sayYes();
+
+    expect(bottomOf(screen.getByTestId('undo-toast-host'))).toBe(PLAYERS_BAR + theme.space.sm);
+  });
+
+  // #882 (ADR-0210 §9): on Android the bar stands down while the keyboard is up, and the countdown
+  // follows it down to 9 above the bottom inset — the harness's is nought — and back up after.
+  it('stands 9 above the inset while the keyboard stands the bar down on Android, and above the bar after', async () => {
+    const keyboard = fakeKeyboard();
+    stubKeyboard(keyboard);
+    const android = jest.replaceProperty(Platform, 'OS', 'android');
+    try {
+      await openGames([bookItNow()]);
+      sayYes();
+      const undo = () => bottomOf(screen.getByTestId('undo-toast-host'));
+
+      act(() => keyboard.raise());
+      expect(undo()).toBe(theme.space.sm);
+
+      act(() => keyboard.drop());
+      expect(undo()).toBe(PLAYERS_BAR + theme.space.sm);
+    } finally {
+      android.restore();
+    }
   });
 
   it('takes the yes back on Undo — nothing is ever sent, and the card is dealt again on top', async () => {
@@ -725,13 +764,16 @@ describe('Pay on a game’s details, where the yes takes the last seat (Q124)', 
       expect(screen).toHavePathname(`/play/group/${CREW.id}/game/${card.proposal_id}`),
     );
 
-    // The last seat's yes books the game and moves money, so it says Pay with the share.
+    // The last seat's yes books the game and moves money, so it says Pay with the share — in the
+    // dark card's foot, beside Not this time (#836).
     expect(await screen.findByText('Pay 32 zł')).toBeTruthy();
+    const gameCard = screen.getByTestId(DETAILS_CARD);
     expect(screen.queryByRole('button', { name: COPY.yes })).toBeNull();
-    fireEvent.press(screen.getByRole('button', { name: 'Pay 32 zł' }));
+    expect(within(gameCard).getByRole('button', { name: COPY.no })).toBeTruthy();
+    fireEvent.press(within(gameCard).getByRole('button', { name: 'Pay 32 zł' }));
 
     expect(screen.getByText('Booking in 10 s')).toBeTruthy();
-    expect(screen.getByRole('button', { name: FILL.undo.booking })).toBeTruthy();
+    expect(within(gameCard).getByRole('button', { name: FILL.undo.booking })).toBeTruthy();
     expect(yeses(card)).toHaveLength(0);
 
     act(() => jest.advanceTimersByTime(10 * SECOND));
@@ -752,6 +794,28 @@ describe('Pay on a game’s details, where the yes takes the last seat (Q124)', 
 
     await waitFor(() => expect(toasts()).toEqual([[COPY.refused.proposal_is_full, 'bad']]));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+  });
+
+  // `docs/specs/busy-indicator/decisions.md` §3.3: at zero the button went back to *Pay 32 zł* while
+  // the booking — money — was still on its way, a press that looked like it would send it again.
+  it('stays Booking… after the ten seconds, while the yes is on its way, and takes no press', async () => {
+    const card = bookItNow();
+    stubProposal(transport, card.proposal_id, proposalDetails(card));
+    await openGames([card]);
+    transport.on('POST', yesPath(card.proposal_id), neverResponds());
+    fireEvent.press(screen.getByRole('button', { name: COPY.details }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Pay 32 zł' }));
+
+    act(() => jest.advanceTimersByTime(10 * SECOND));
+    await waitFor(() => expect(yeses(card)).toHaveLength(1));
+
+    const sending = within(screen.getByTestId(DETAILS_CARD)).getByRole('button', {
+      name: FILL.undo.booking,
+    });
+    expect(sending.props.accessibilityState).toMatchObject({ busy: true });
+    expect(screen.queryByRole('button', { name: 'Pay 32 zł' })).toBeNull();
+    fireEvent.press(sending);
+    expect(yeses(card)).toHaveLength(1);
   });
 });
 

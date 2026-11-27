@@ -31,7 +31,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, ScreenHeader, TickBox, theme } from '@/shared/ui';
+import { Button, ScreenHeader, TickBox, theme, useRoomAtTheBottom } from '@/shared/ui';
 
 import { useAttestAdult, useSignOut } from '../hooks/useAuthActions';
 import {
@@ -62,6 +62,9 @@ export function StartPlayingScreen() {
   const [adultAttested, setAdultAttested] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const attest = useAttestAdult();
+  // *Continue* is pinned at the foot, which is the administrator's bar's reach when the You tab
+  // pushed this, and the home indicator's inset when the gate sent it here with no bar (10.1, #881).
+  const roomBelow = useRoomAtTheBottom();
 
   const submit = () => {
     const result = validate(adultAttestationSchema, { adultAttested });
@@ -78,7 +81,7 @@ export function StartPlayingScreen() {
     (signOut.error === null ? undefined : authErrorMessage(signOut.error));
 
   return (
-    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={[s.screen, { paddingBottom: roomBelow }]} edges={['top']}>
       <ScreenHeader
         eyebrow={START_PLAYING_EYEBROW}
         title={START_PLAYING_TITLE}
@@ -110,6 +113,7 @@ export function StartPlayingScreen() {
         {pushed ? null : (
           <AuthLink
             label={signOut.isPending ? SIGN_OUT.busyLabel : SIGN_OUT.label}
+            busy={signOut.isPending}
             onPress={() => signOut.mutate()}
           />
         )}

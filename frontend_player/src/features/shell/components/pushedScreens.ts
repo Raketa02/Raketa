@@ -50,6 +50,8 @@ export const PUSHED_SCREENS = [
   'same-level',
   // Same vibe's See all (#803): the same.
   'same-vibe',
+  // The Groups heating up page, behind its line's *All groups ›* (#823): the same.
+  'hottest-groups',
   // Every screen behind a row on You: each is pushed over the tab, and backing out returns to the
   // row it was tapped from
   // ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)

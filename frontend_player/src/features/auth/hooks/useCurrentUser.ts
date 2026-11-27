@@ -57,6 +57,31 @@ export function fetchCurrentUserAtLaunch(client: QueryClient): Promise<Authentic
 }
 
 /**
+ * **The first read of a session a form opened** — sign-in, sign-up, an invitation's password, a
+ * reset — asked _before_ the status opens, as `beginSession`'s `readFirst`
+ * (`docs/specs/busy-indicator/decisions.md` §3.1).
+ *
+ * Opening the status unmounts the form, and the entry gate cannot choose where to go without this
+ * read. Asked afterwards, the gate drew blank paper while it was out; asked first, the form's busy
+ * button turns through the wait and the gate finds the answer here. The launch's sibling, and
+ * through the same cache for the same reason: **either answer is left where the gate looks.**
+ *
+ * - **`request` timeout.** The button is turning, so an ordinary wait is an honest one.
+ * - **No retry.** The gate retries, on a screen that says what is happening.
+ * - **`networkMode: 'always'`.** A paused read would hold the button busy until the connection came
+ *   back. Offline it fails at once, the session opens, and the gate says it is waiting.
+ * - **`staleTime: 0`.** A new session's answer, never whatever a cache still holds.
+ */
+export function fetchCurrentUserAtSessionStart(client: QueryClient): Promise<AuthenticatedUser> {
+  return client.fetchQuery({
+    ...currentUserQuery(),
+    staleTime: 0,
+    retry: false,
+    networkMode: 'always',
+  });
+}
+
+/**
  * `enabled` on the session status, not on a token: an unauthenticated launch must not
  * fire an authenticated request that can only 401, and a 401 fired at launch is exactly
  * what would make the rotation chase a session that never existed.

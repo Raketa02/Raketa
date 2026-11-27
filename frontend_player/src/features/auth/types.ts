@@ -170,3 +170,11 @@ export { useAcceptInvitation } from './hooks/useAuthActions';
 export { refreshTokens } from './use-cases/refreshTokens';
 export { restoreSession, type RestoredSession } from './use-cases/restoreSession';
 export { fetchCurrentUserAtLaunch } from './hooks/useCurrentUser';
+/**
+ * **The launch's offline rule, and the remembered profile read before any screen** (#874) — for the
+ * step after session restore, which warms Home only for an account the entry gate will send to the
+ * tabs (`shell`'s warm-up, through `onboarding`'s rule over the account) and never on a phone that
+ * already knows it is offline.
+ */
+export { phoneKnowsItIsOffline } from './use-cases/restoreSession';
+export { fetchLastProfile } from './hooks/useLastProfile';

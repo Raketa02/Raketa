@@ -372,6 +372,7 @@ def _booked_game(booking: Booking) -> BookedGame:
                 until=to_fix.until,
                 seat_charge_id=to_fix.seat_charge_id,
                 reason=ReopenReason(to_fix.reason),
+                refused_at=to_fix.refused_at,
             )
             for player, to_fix in booking.cards_to_fix.items()
         },
@@ -381,6 +382,7 @@ def _booked_game(booking: Booking) -> BookedGame:
                 seat_charge_id=kept.seat_charge_id,
                 reason=ReopenReason(kept.reason),
                 time_to=TimeTo.FIX_THE_CARD if kept.to_fix_the_card else TimeTo.PAY,
+                refused_at=kept.refused_at,
             )
             for player, kept in booking.kept.items()
         },
@@ -392,6 +394,7 @@ def _booked_game(booking: Booking) -> BookedGame:
                 player_id=seat.player_id,
                 side=seat.side,
                 until=seat.until,
+                invited_at=seat.invited_at,
                 answer=InvitationAnswer(seat.answer.value),
                 seat_of=seat.seat_of,
                 invited_by=seat.invited_by,

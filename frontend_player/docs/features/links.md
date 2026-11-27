@@ -116,7 +116,9 @@ invitation set aside this launch; a spent invitation link opened signed in is a
 toast; the two sheets' words (_This invitation is for …_, _Set a new password?_, _Stay signed in_, _Not
 now_); a group link in the area switches a playing administrator to Player, and waits for one who does
 not play; the field shows the scheme's spelling of the link while no domain is set, and the keyboard
-stays down; and a group link lands on Play's remembered segment under Join, which may be Explore.
+stays down; and a group link lands on Play under Join — on the _Groups_ title while the `explore`
+feature flag is off, which is every phone today, and on Play's remembered segment, which may be
+Explore, only while it is on (#826).
 **A backend contract gap, open**: the club's email to an existing account opens bare `raketa://`, so
 the app cannot tell whose invitation it is — **Kuba's phone opening Tomek's _existing-account_ email
 cannot name Tomek's address**; only a new person's token link can. Naming it would need that email to
@@ -141,10 +143,16 @@ once the account is in the player's app. **In an administrator area it moves as 
 function for both, `playersLinkMove` (formerly `groupLinkMove`): both are the player's.
 
 **Answered by opening the code, then Home** (`FriendLink`, `friendLinkLanding`). `friends`' opening
-answers where the opener stands with the owner: **`ASKED_YOU` lands on Home** — `shell`'s `openTab`,
-so Home's root, its FRIEND REQUESTS row at the top with _tomek.k wants to be your friend · Invited
-you to Raketa_ — with Home and the bell read again for the request and its notice. A request swallowed
-by the owner's block answers the same, and lands on a Home with no card (ADR-0202's named cost).
+answers where the opener stands with the owner: **`ASKED_YOU` lands on Home with Needs your answer
+up** ([#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1; until then Home's FRIEND
+REQUESTS row at the top) — `shell`'s `openNeedsYourAnswer`, which lays Home's root down as `openTab`
+does and raises the sheet, _tomek.k wants to be your friend_ in it — with Home and the bell read
+again for the request and its notice. The opening resolves once that re-read has landed, so the
+sheet opens on what Home says then. **A request swallowed by the owner's block answers the same, and
+lands on Home as it is**, with no sheet: nothing waits, and the sheet is never shown empty
+(ADR-0202's named cost; ADR-0205 §1's call). The walk is `friendLink.test.tsx`: from You, from a
+cold start, through sign-up, from an administrator area and through an Android install, each landing
+with the sheet up — and on Home already, and on a swallowed request.
 **`NONE` (your own link) and `FRIEND` (a friend's, or your own request crossing theirs) move nobody.**
 **A refusal is a toast, wherever the player is**: `friend_link_not_found` the public page's _Nothing
 at that link_, `unblock_them_first` how to see the request (#748's call, and the sentence a call),

@@ -11,7 +11,8 @@
  * | a Fill in alert's open seat | the rescue, seen from outside, in its group (`rescueRoute`) | the booking |
  * | a game still filling, or one that did not fill | its details in its group (`gameRoute`) | the game |
  * | a card waiting for the player | the group's deck, the card on top (`groups`' `groupDeckRoute`) | the group's decks |
- * | no game — *Get your level* (#731), a friend request (#753) | Home, laid down (`shell`'s `openTab`) | the ratings, the groups, a run left halfway, and Home |
+ * | no game — *Get your level* (#731) | Home, laid down (`shell`'s `openTab`) | the ratings, the groups, a run left halfway, and Home |
+ * | a friend request (#753), a friends game invitation (#759) | Home with Needs your answer up, where their cards wait (`shell`'s `openNeedsYourAnswer`, #817) | Home's, as above — all four of the sheet's sections ride on it (#819) |
  * | *You're friends* (#753) | the friend's record, a sheet over wherever the player is (`NoticesHost`) | nothing — a record reads itself on every open |
  * | *Level asked* (#758) | the sport's questionnaire, a pass begun from Home (`onboarding`'s `useAddASport`) | nothing — the start answers the opening question |
  * | *Level got* (#758) | the group's page on Friends in the sport, and its picker over it (`groups`' `groupPickerRoutes`) | your friends' lists |
@@ -39,7 +40,10 @@
  * does — from the list, from the banner over any screen, or from a push tapped — and is nothing to
  * do where Home is already on screen. Its card is drawn from the ratings, the groups and a run left
  * halfway, marked stale first: a level got on another phone since leaves no card asking for one,
- * and a group joined on another one is not a Home with no card.
+ * and a group joined on another one is not a Home with no card. **A notice whose card waits in Needs
+ * your answer** (#817) lays Home down the same way and asks for the sheet, which opens once Home is
+ * read again — on Home already too — and not at all when nothing waits by then: an invitation
+ * answered on another phone leaves Home as it is. Home's read is the sheet's whole read since #819.
  *
  * **The reads behind it are marked stale first**, so the screen draws what the notice said rather
  * than a read from before it: a deck read twenty seconds ago does not hold the card a notice is
@@ -64,7 +68,7 @@ import {
   proposalKeys,
   rescueRoute,
 } from '@/features/proposals/types';
-import { openTab } from '@/features/shell/types';
+import { openNeedsYourAnswer, openTab } from '@/features/shell/types';
 import type { AppError } from '@/shared/errors';
 import { showToast, type ToastRequest } from '@/shared/store/toast.store';
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -83,6 +87,7 @@ type Pushed = Parameters<ReturnType<typeof useRouter>['push']>[0];
 type Destination =
   | { readonly route: Pushed; readonly under?: Pushed; readonly reads: readonly QueryKey[] }
   | { readonly home: true; readonly reads: readonly QueryKey[] }
+  | { readonly needsYourAnswer: true; readonly reads: readonly QueryKey[] }
   | { readonly record: string; readonly reads: readonly QueryKey[] }
   | { readonly questionnaire: Sport; readonly reads: readonly QueryKey[] };
 
@@ -92,7 +97,18 @@ function destinationOf(target: NoticeTarget): Destination {
     case 'home':
       return {
         home: true,
-        // Home's own read too: a friend request's card is on it (#753).
+        reads: [
+          onboardingKeys.ratings(),
+          groupKeys.mine(),
+          onboardingKeys.runInProgress(),
+          proposalKeys.home(),
+        ],
+      };
+    case 'needsYourAnswer':
+      // Home's, as above — Home is laid down: the sheet's four sections are drawn from Home's one read
+      // (#819), and it opens on what it says once it lands.
+      return {
+        needsYourAnswer: true,
         reads: [
           onboardingKeys.ratings(),
           groupKeys.mine(),
@@ -171,6 +187,10 @@ export function useOpenNotice(words: OpenNoticeWords): (target: NoticeTarget) =>
       const destination = destinationOf(target);
       if ('home' in destination) {
         openTab('home', pathname);
+        return;
+      }
+      if ('needsYourAnswer' in destination) {
+        openNeedsYourAnswer(pathname);
         return;
       }
       if ('record' in destination) {

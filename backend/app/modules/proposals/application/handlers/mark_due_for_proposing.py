@@ -9,8 +9,10 @@ is missed.
 
 What makes a pool due (the mechanics §5.1: *a court frees up, a member joins,
 someone changes their hours*): somebody joining a group, a player's week, Play
-intent, first rating in a sport, Games & money or reliability filter (#661) —
-each of which changes which games they may be dealt in every pool they are in —
+intent, first rating in a sport, Games & money or reliability filter (#661), or
+Social tags (#832; ``docs/adr/0207`` §2) — each of which changes which games
+they may be dealt, or whom a For-fun table seats beside them, in every pool they
+are in —
 a swipe, which may leave a seat for the next best fits or a pick at half In, and
 **anything a club changes about what it sells**, which is everywhere: a club's
 courts may be in reach of any group near it. Its payments account going ready —
@@ -22,6 +24,15 @@ still in are owed a new card first — the court it was on closed for the hour
 (#673). **A club's move too** (#671): the court it left is free at the hour
 again, and offered again at once — unless a cancel moved it, which closes that
 court for the hour.
+
+**A tag edit pulls nobody off a card already dealt**; only the next build reads
+it. It marks every pool the editor is in, though their tags only ever seat a
+For-fun table — a pool with no friendly to build runs one batch for nothing, as
+a changed week does where nothing fits. **And tags are the one input read off a
+copy this same delivery writes**: the proposer reads them from Discovery's
+directory, written in the delivery's transaction, so a tick that takes the mark
+in the moment before that commit builds from the tags as they were. The sweep,
+and every build after it, read the new ones.
 """
 
 from __future__ import annotations
@@ -48,6 +59,7 @@ from app.modules.groups.domain.events import GroupJoined, JoinRequestApproved
 from app.modules.player_profile.domain.events import (
     PlayIntentDeclared,
     ReliabilityMinimumSet,
+    SocialTagsChanged,
     WeeklyHoursSet,
 )
 from app.modules.proposals.application.propose_games import DueForProposing
@@ -75,6 +87,8 @@ PLAYER_EVENTS = (
     GamesAndMoneySet,
     # The reliability filter: who they may share a court with (#661).
     ReliabilityMinimumSet,
+    # Their tags: whom a For-fun table seats beside them (#832).
+    SocialTagsChanged,
 )
 #: A swipe on a game still filling — or a yes that stopped counting, which
 #: opens a seat as a withdrawal does: a time to pay that ran out reopens its

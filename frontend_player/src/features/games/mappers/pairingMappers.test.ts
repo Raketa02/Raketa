@@ -104,3 +104,52 @@ describe('the pairing off the wire', () => {
     expect(toPairing(wire({ seats: [] })).seats).toEqual([]);
   });
 });
+
+/** #835: a For-fun game's pairing carries its Social vibe beside the forecast still sent. */
+describe('the Social vibe off the wire', () => {
+  it('carries the court’s % and your rows, carriers in the order served', () => {
+    const pairing = toPairing(
+      wire({
+        vibe: {
+          pct: 67,
+          rows: [
+            { tag: 'STAYS_FOR_A_DRINK', carried_by: ['me', 'them'] },
+            { tag: 'OPEN_TO_MEET_SOMEONE', carried_by: ['me'] },
+          ],
+        },
+      }),
+    );
+
+    expect(pairing.vibe).toEqual({
+      pct: 67,
+      rows: [
+        { tag: 'STAYS_FOR_A_DRINK', carriedBy: ['me', 'them'] },
+        { tag: 'OPEN_TO_MEET_SOMEONE', carriedBy: ['me'] },
+      ],
+    });
+    // The forecast still sent for older apps crosses too: the kind decides what is drawn.
+    expect(pairing.forecast).toEqual({ pct: 90 });
+  });
+
+  /** ADR-0207 §7: the server sends codes only, and a row with no words is not drawn. */
+  it('leaves off a tag this build cannot name', () => {
+    const pairing = toPairing(
+      wire({
+        vibe: {
+          pct: 50,
+          rows: [
+            { tag: 'NOT_A_TAG_YET' as Wire['SocialTag'], carried_by: ['me', 'them'] },
+            { tag: 'SHARES_A_LIFT', carried_by: ['me'] },
+          ],
+        },
+      }),
+    );
+
+    expect(pairing.vibe?.rows).toEqual([{ tag: 'SHARES_A_LIFT', carriedBy: ['me'] }]);
+  });
+
+  /** Competitive, a seat open, nobody holding a tag that counts — or an older server. */
+  it('has no vibe when the wire omits it', () => {
+    expect(toPairing(wire()).vibe).toBeUndefined();
+  });
+});

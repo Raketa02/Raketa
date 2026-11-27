@@ -1,6 +1,6 @@
 /**
  * **A game still filling, in detail** — `GET /proposals/{id}` (#542), the details a card's **i**,
- * a *You're In* row and a live yes open ([#557](https://github.com/Raketa02/Raketa/issues/557); the
+ * a *You’re in* row and a live yes open ([#557](https://github.com/Raketa02/Raketa/issues/557); the
  * screens A4.2; the mechanics §14.2).
  *
  * Pure. The read is the server's whole answer — who is In, the sides and their forecast, the club
@@ -11,9 +11,18 @@
  * is `open_seats − 1` on the server), read off the seats and the In count the details carry.
  */
 
+import type { SocialTagId } from '@/shared/vocabulary/socialTags';
+import type { SocialVibeColumn, SocialVibeGrid } from '@/shared/vocabulary/socialVibeGrid';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { youAreIn, type DeckCard, type Overlap } from './deck';
+import {
+  rowsOf,
+  youAreIn,
+  type DeckCard,
+  type DeckPerson,
+  type DeckRow,
+  type Overlap,
+} from './deck';
 import type { YesOn, YourPayment } from './fill';
 import { deadlineAhead, paymentWindowAt, type Deadline, type YourTime } from './home';
 import type { CardType, CourtState, GameKind, ProposalStatus, ReaderAction } from './vocabulary';
@@ -61,8 +70,163 @@ export interface ProposalDetails {
    * everybody In once they are In — the open seats drawn empty.
    */
   readonly sides: DeckCard['sides'];
-  readonly forecast?: DeckCard['forecast'];
+  /**
+   * A **competitive** game's full forecast — the deck's figure with the two side strengths it was
+   * read from (#833). Never sent on For fun, nor where somebody on it holds no level in the sport.
+   */
+  readonly forecast?: DetailsForecast;
+  /** What a counted result would do to **your** Level — the pair, or absent (see {@link AtStake}). */
+  readonly atStake?: AtStake;
+  /**
+   * A **For-fun** game's Social vibe and your tags' rows (#833). Never sent on a competitive game,
+   * nor where fewer than two are named or nobody at the table holds a tag that counts.
+   */
+  readonly vibe?: DetailsVibe;
   readonly overlap: Overlap;
+}
+
+/**
+ * **How much the table shares, and who shares yours** — the deck card's own number, and one row
+ * per tag **you** hold, in the vocabulary's order, 💘 too (ADR-0207 §6). Worked out from everybody's
+ * tags on every read, and stored nowhere: a tag edit moves it on the next read.
+ */
+export interface DetailsVibe {
+  /** A whole percent, the same the card was swiped on. */
+  readonly pct: number;
+  /** Your tags this build can name — a code it doesn't know is left off by the mapper. */
+  readonly rows: readonly DetailsVibeRow[];
+}
+
+export interface DetailsVibeRow {
+  readonly tag: SocialTagId;
+  /** Everybody on your version who carries it, you among them. */
+  readonly carriedBy: readonly string[];
+}
+
+/**
+ * **How even the game drawn is forecast, and the two side strengths it was read from** — the
+ * figures a booked game's pairing prints as its forecast and its split, for the same people standing
+ * the same way (ADR-0207 §6). One computation: while a seat is empty the % is `provisional`, and so
+ * are the strengths.
+ */
+export interface DetailsForecast {
+  readonly pct: number;
+  readonly provisional: boolean;
+  readonly split: {
+    readonly yourSide: number;
+    readonly theirSide: number;
+    /** `yourSide − theirSide`, **signed and served** — never subtracted here. */
+    readonly gap: number;
+  };
+}
+
+/**
+ * **What a counted result on this game would do to your Level** — *If you win +0,08 · If you lose
+ * −0,07*, priced as a booked game's pairing prices it. Two values or none: absent while a seat is
+ * open, once the game is no longer yours to play, once it is booked, and where there is nothing to
+ * price.
+ */
+export interface AtStake {
+  readonly winDelta: number;
+  readonly lossDelta: number;
+}
+
+/**
+ * **The card the details open on, above the game card** — the kind's own: a competitive game's
+ * full forecast with what is at stake (#839; for fun 3), or a For-fun game's Social vibe card with
+ * its grid (#840; for fun 7).
+ */
+export type DetailsTopCard =
+  | {
+      readonly kind: 'forecast';
+      readonly forecast: DetailsForecast;
+      readonly atStake?: AtStake;
+    }
+  | { readonly kind: 'vibe'; readonly grid: SocialVibeGrid };
+
+/**
+ * **The kind's own card, or nothing** (ADR-0207 §5). A competitive game opens on its forecast, the
+ * stakes inside it when the read sends them; **a For-fun game on its Social vibe card**. Each kind
+ * draws only its own — a For-fun forecast or a competitive vibe a read sent anyway is not drawn,
+ * the deck card's rule (`headlineOf`) read on the details. Nothing where the read sends nothing to
+ * draw: the stakes are drawn inside the forecast or not at all.
+ */
+export function topCardOf(
+  details: Pick<ProposalDetails, 'kind' | 'forecast' | 'atStake' | 'vibe' | 'sides' | 'seats'>,
+): DetailsTopCard | undefined {
+  if (details.kind === 'forFun') {
+    return details.vibe === undefined
+      ? undefined
+      : { kind: 'vibe', grid: vibeGridOf(details.vibe, details) };
+  }
+  if (details.forecast === undefined) return undefined;
+  return {
+    kind: 'forecast',
+    forecast: details.forecast,
+    ...(details.atStake === undefined ? {} : { atStake: details.atStake }),
+  };
+}
+
+/**
+ * **The Social vibe card's grid** (ADR-0207 §6; for fun 7, which leads over 5 and 6).
+ *
+ * - **The columns: you first, then the others as the tiles stand** — the tiles' own order
+ *   (`rowsOf`: the side with more people In on top, the people In first in a row), so a player reads
+ *   the faces above in the order of the tiles below. Everyone named, In or not; a seat still open is
+ *   nobody, as it is nobody at the read's table.
+ * - **The rows are the read's**: your tags, in the vocabulary's order, never resorted here.
+ * - **A dot under every carrier**, in the columns' order. The read names the carriers; nothing is
+ *   assumed, your own dot included.
+ * - **A row is shared when somebody else carries it** — through a carrier with a column, since a
+ *   dot nobody can see would be a band that claims more than the row shows.
+ */
+function vibeGridOf(
+  vibe: DetailsVibe,
+  details: Pick<ProposalDetails, 'sides' | 'seats'>,
+): SocialVibeGrid {
+  const columns = vibeColumnsOf(rowsOf(details, details.seats / 2));
+  return {
+    pct: vibe.pct,
+    columns,
+    rows: vibe.rows.map((row) => {
+      const dots = columns.map((column) => row.carriedBy.includes(column.playerId));
+      return {
+        tag: row.tag,
+        dots,
+        shared: columns.some((column, at) => !column.isYou && dots[at] === true),
+      };
+    }),
+  };
+}
+
+/**
+ * **The Social vibe card's columns, off the tiles' own rows** — you first, then the others as the
+ * tiles stand, each with the face and the name the tile draws (ADR-0207 §6). A seat still open is
+ * nobody. The details' grid reads it, and so does a booked game's (#841), which hands it to the
+ * Game's pairing card in `games`: the Game's seats carry neither the tiles' order nor a photograph.
+ */
+export function vibeColumnsOf({
+  top,
+  bottom,
+}: {
+  readonly top: DeckRow;
+  readonly bottom: DeckRow;
+}): readonly SocialVibeColumn[] {
+  const seated = [top, bottom].flatMap((row) =>
+    row.seats.flatMap((seat) => (seat.kind === 'person' ? [seat.person] : [])),
+  );
+  return [...seated.filter((one) => one.isYou), ...seated.filter((one) => !one.isYou)].map(
+    columnOf,
+  );
+}
+
+function columnOf(person: DeckPerson): SocialVibeColumn {
+  return {
+    playerId: person.playerId,
+    isYou: person.isYou,
+    ...(person.name === undefined ? {} : { name: person.name }),
+    ...(person.photoUrl === undefined ? {} : { photoUrl: person.photoUrl }),
+  };
 }
 
 /**

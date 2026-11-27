@@ -36,6 +36,7 @@ from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.domain.skill_rating import SkillRating
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
+from tests.api.discovery_world import a_crowd
 
 ROW = "/api/v1/same-vibe"
 ALL = "/api/v1/same-vibe/all"
@@ -121,10 +122,14 @@ async def rated(session_factory, player: dict, sport: Sport, mu: float) -> None:
 
 
 async def row(client, mailbox, reader: dict) -> list[dict]:
+    return (await whole_row(client, mailbox, reader))["players"]
+
+
+async def whole_row(client, mailbox, reader: dict) -> dict:
     await mailbox.drain()
     read = await client.get(ROW, headers=reader["headers"])
     assert read.status_code == 200, read.text
-    return read.json()["players"]
+    return read.json()
 
 
 async def see_all(client, mailbox, reader: dict, **params) -> dict:
@@ -211,6 +216,34 @@ async def test_the_vibe_percent_rises_with_each_shared_tag(client, mailbox, tome
         ("shares2", 2, 75),
         ("shares1", 1, 50),
     ]
+
+
+async def test_seven_shared_tags_read_99_and_eight_read_100(client, mailbox):
+    """A player may hold eight since ADR-0207 §7, so two players may share seven
+    or eight. **100 is true**: eight shared are the two players' eight, the same
+    tags on both sides."""
+
+    hers = (
+        T.STAYS_FOR_A_DRINK,
+        T.STAYS_FOR_A_COFFEE,
+        T.PLAYS_TO_WIN,
+        T.LAUGHS_OFF_MISTAKES,
+        T.PATIENT_WITH_BEGINNERS,
+        T.HERE_TO_IMPROVE,
+        T.HERE_TO_MEET_PLAYERS,
+        T.NEW_IN_TOWN,
+    )
+    ola = await a_player(client, "ola", tags(*hers))
+    await a_player(client, "seven", tags(*hers[:7], T.SHARES_A_LIFT))
+    await a_player(client, "eight", tags(*hers))
+
+    page = await see_all(client, mailbox, ola)
+
+    assert [
+        (card["nickname"], card["in_common"], card["vibe_percent"])
+        for card in page["players"]
+    ] == [("eight", 8, 100), ("seven", 7, 99)]
+    assert page["players"][0]["shared_tags"] == tags(*hers)
 
 
 async def test_a_card_carries_the_shared_tags_in_the_vocabulary_s_order(
@@ -358,23 +391,80 @@ async def test_nobody_sharing_none_blocked_switched_off_or_not_playing_is_on_it(
     await players.closed_to_new_people(client, shy["token"])
     await players.register(client, "halfway")
 
-    everyone = names(await row(client, mailbox, tomek))
+    read = await whole_row(client, mailbox, tomek)
+    everyone = names(read["players"])
     page = await see_all(client, mailbox, tomek)
 
     assert set(everyone) == {"karol", "bartek", "ola"}
     assert set(names(page["players"])) == {"karol", "bartek", "ola"}
     assert "tomek" not in everyone
+    # The total under the same exclusions: nobody, Kuba, the blocker, the shy
+    # one and the one who never finished sign-up are not counted.
+    assert read["total"] == 3
 
 
 async def test_nobody_else_sharing_a_tag_hides_the_row(client, mailbox, tomek):
     await a_player(client, "nobody", tags(*OTHERS[:2]))
 
-    assert await row(client, mailbox, tomek) == []
+    assert await whole_row(client, mailbox, tomek) == {"players": [], "total": 0}
     assert await see_all(client, mailbox, tomek) == {
         "players": [],
         "next": None,
         "sports": [],
     }
+
+
+# --------------------------------------------------------------------------- #
+# The total: everybody sharing a tag, counted up to 100 (#812)
+# --------------------------------------------------------------------------- #
+
+
+async def test_the_total_counts_each_player_once_however_many_tags_they_share(
+    client, mailbox, tomek, crowd
+):
+    # Karol shares six, Bartek three, Kuba two and Ola one: four people, the
+    # friend among them. Nobody shares none.
+    assert (await whole_row(client, mailbox, tomek))["total"] == 4
+
+
+async def test_the_total_stops_at_100_and_the_row_and_see_all_stand(
+    client, mailbox, session_factory, tomek
+):
+    await a_crowd(session_factory, 99, tags=sharing(2))
+    assert (await whole_row(client, mailbox, tomek))["total"] == 99
+
+    await a_crowd(session_factory, 2, tags=sharing(1, besides=1), named="one")
+    read = await whole_row(client, mailbox, tomek)
+    page = await see_all(client, mailbox, tomek)
+
+    assert read["total"] == 100
+    assert len(read["players"]) == 10
+    assert all(card["in_common"] == 2 for card in read["players"])
+    assert len(page["players"]) == 20 and page["next"] is not None
+
+
+async def test_the_total_is_counted_in_the_one_pass_over_the_tag_rows(
+    client, mailbox, session_factory, statements, tomek
+):
+    """**No statement more** than the row read before its total: the count is
+    a window over the pass the row already makes, so the tag rows are read
+    once for the reader's own and once a batch — never a second pass."""
+
+    await a_crowd(session_factory, 25, tags=sharing(2))
+    await mailbox.drain()
+    with statements.counting() as sent:
+        read = (await client.get(ROW, headers=tomek["headers"])).json()
+
+    assert read["total"] == 25 and len(read["players"]) == 10
+    his_tags, the_pass = sent.naming("discovery_player_tags")
+    assert sent.naming("discovery_players") == [the_pass]
+    assert "over ()" in the_pass.lower()
+    assert "discovery_players" not in his_tags
+
+    # See all carries no total, and its pass counts nothing.
+    with statements.counting() as page:
+        await client.get(ALL, headers=tomek["headers"])
+    assert not any("over ()" in one.lower() for one in page)
 
 
 # --------------------------------------------------------------------------- #

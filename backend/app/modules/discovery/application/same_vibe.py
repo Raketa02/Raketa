@@ -21,6 +21,11 @@ don't play and accounts that are gone (``docs/adr/0204`` §10): the directory's
 batch, about the cards that could be fresh — good matches the reader is not
 connected with — and nobody else, since a rest changes nothing for them. See
 all rests nobody.
+
+**The row's total** (#812; ``totals``) is everybody sharing a tag, counted by
+the first batch's own pass over the tag rows — read from the top, so what it
+lists is everybody — and never by a second pass or by reading more batches.
+A later batch, and See all, count nothing.
 """
 
 from __future__ import annotations
@@ -30,7 +35,7 @@ from dataclasses import dataclass
 from typing import Final, final
 from uuid import UUID
 
-from app.kernel import Sport
+from app.kernel import Sport, invariant
 from app.modules.discovery.application.on_screen import rested_among
 from app.modules.discovery.domain.ports import (
     BlocksEitherWay,
@@ -48,6 +53,7 @@ from app.modules.discovery.domain.same_vibe import (
     VibeKey,
     VibePlayer,
 )
+from app.modules.discovery.domain.totals import capped
 
 #: How many cards the row reads in order at a time — one statement, and one
 #: question to Friends, each. Two rows' worth, so a reader with a friend or two
@@ -73,6 +79,14 @@ class SameVibeCard:
     @property
     def in_common(self) -> int:
         return len(self.shared_tags)
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SameVibeRow:
+    cards: tuple[SameVibeCard, ...]
+    #: How many the row could show, counted up to 100 (``totals``).
+    total: int
 
 
 @final
@@ -143,18 +157,26 @@ class ReadSameVibe:
         self._rests = rests
         self._cards = _Cards(relations=relations, faces=faces)
 
-    async def execute(self, reader: UUID) -> tuple[SameVibeCard, ...]:
+    async def execute(self, reader: UUID) -> SameVibeRow:
         mine = await self._directory.tags_of(reader)
         if not mine:
-            return ()
+            return SameVibeRow(cards=(), total=0)
         leaving_out = {reader, *await self._blocks.either_way(reader)}
         row = RowOfTen()
         relations: dict[UUID, Relation] = {}
-        after: VibeKey | None = None
-        while not row.full:
-            batch = await self._directory.alike(
-                mine, leaving_out=leaving_out, sport=None, after=after, limit=A_BATCH
-            )
+        # The first batch is read from the top, so what it lists is everybody
+        # sharing a tag: it alone counts, in its own pass.
+        first = await self._directory.alike(
+            mine,
+            leaving_out=leaving_out,
+            sport=None,
+            after=None,
+            limit=A_BATCH,
+            counting=True,
+        )
+        everybody = invariant(first.listed, "a counted batch says how many it lists")
+        batch = first.players
+        while True:
             relations.update(await self._cards.relations_of(reader, batch))
             rested = await rested_among(
                 self._rests,
@@ -174,10 +196,20 @@ class ReadSameVibe:
                     relation=relations[one.player_id],
                     rested=one.player_id in rested,
                 )
-            if len(batch) < A_BATCH:
+            if row.full or len(batch) < A_BATCH:
                 break
-            after = batch[-1].key
-        return await self._cards.of(row.row(), relations)
+            batch = (
+                await self._directory.alike(
+                    mine,
+                    leaving_out=leaving_out,
+                    sport=None,
+                    after=batch[-1].key,
+                    limit=A_BATCH,
+                )
+            ).players
+        return SameVibeRow(
+            cards=await self._cards.of(row.row(), relations), total=capped(everybody)
+        )
 
 
 @final
@@ -204,9 +236,15 @@ class ReadSameVibePage:
         if not mine:
             return SameVibePage(cards=(), next=None, sports=())
         leaving_out = {reader, *await self._blocks.either_way(reader)}
-        found = await self._directory.alike(
-            mine, leaving_out=leaving_out, sport=sport, after=after, limit=A_PAGE + 1
-        )
+        found = (
+            await self._directory.alike(
+                mine,
+                leaving_out=leaving_out,
+                sport=sport,
+                after=after,
+                limit=A_PAGE + 1,
+            )
+        ).players
         shown = found[:A_PAGE]
         return SameVibePage(
             cards=await self._cards.of(

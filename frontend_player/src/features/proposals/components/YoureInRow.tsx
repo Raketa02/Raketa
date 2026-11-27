@@ -1,5 +1,5 @@
 /**
- * **A *You're In* row** — a yes of the reader's on a game still filling in this group
+ * **A *You’re in* row** — a yes of the reader's on a game still filling in this group
  * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A3.2; mock 13; the mechanics
  * §10.2).
  *

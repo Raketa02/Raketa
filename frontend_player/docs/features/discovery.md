@@ -29,8 +29,8 @@ dot), then the sports the first page says somebody holds a level in (`pillChoice
 chosen sport though it left that list). The grid is a two-column `FlatList`, newest first, **20 to a
 page read on as it nears its end** (`useNewInRaketaPage`, an infinite query per sport; an end
 reached while a page is coming joins it, and the pages are joined with each person once,
-`joinPages`). **The frame, the paging and the pill are every people row's** since #802: `domain/seeAll.ts` (`SeeAllSport`, `SeeAllPage<Person>`, `joinPages`, `pillChoices`), `hooks/useSeeAllPages.ts` (the infinite query, `LISTS_PEOPLE`, `SeeAllList<Person>`) and `components/SeeAllScreen.tsx` (the header, the pill keeping its last sports, every state, the list in one column or the caller's), each row handing in its key, its read and how it draws a person. Home's rows read through `usePeopleRow` (re-read on return, `LISTS_PEOPLE`). Every state is drawn: a
-spinner, the failure with _Try again_ (`groups`' `ReadFailure`), offline, a later page refused under
+`joinPages`). **The frame, the paging and the pill are every people row's** since #802: `domain/seeAll.ts` (`SeeAllSport`, `SeeAllPage<Person>`, `joinPages`, `pillChoices`), `hooks/useSeeAllPages.ts` (the infinite query, `LISTS_PEOPLE`, `SeeAllList<Person>`) and `components/SeeAllScreen.tsx` (the header, the pill keeping its last sports, every state, the list in one column or the caller's), each row handing in its key, its read and how it draws a person. Home's rows read through `usePeopleRow` (re-read on return, `LISTS_PEOPLE`). Every state is drawn: the
+grid's own skeleton (#872, below), the failure with _Try again_ (`groups`' `ReadFailure`), offline, a later page refused under
 the grid, the pull — the pill kept through a sport's failed read (the screen holds the last sports
 offered), so _All_ is a tap away — and _Nobody new plays squash yet_ when a sport leaves nobody, or _Nobody new right
 now_ with _All_ (a call: §31.7 words only the sport).
@@ -73,7 +73,9 @@ sheet.
 
 **The card** (`SameLevelCard`, design-system 7.34) draws the reader's face (`useReaderFace`: the id
 off the cached `/users/me`, the photo off `player_record`'s `useOwnFace`, read once per row or screen,
-never per card), _You_ and the level; the % in **the game cards' inks** by the game cards' breaks
+never per card — and **read with Home by the line's hook, open or not** (2026-11-21), so opening
+_Players at your level_ asks the server nothing and the cards are not drawn twice when it lands),
+_You_ and the level; the % in **the game cards' inks** by the game cards' breaks
 (`balanceTone`: green from 70, amber 55–69, red under 55), _EVEN_ under it always, the sport and its
 dot; the other's face, nickname and level. Under them `shared/ui`'s **`ComparisonBar`** (7.33), its
 dark paint: the Skill passport's 1,00–5,00 and four bands, a volt fill to their level, the white _YOU_
@@ -208,3 +210,105 @@ card never shown never, the batch, each row's own count, a refused report carrie
 nothing said, See all nothing, and a row read under See all or behind the home screen counted only
 on the way back; `use-cases/onScreen.test.ts` holds the reporter to its window, the midnight window,
 a late answer and its stop on a hand-turned clock.
+
+**The three people rows are FOR YOU's lines** ([#820](https://github.com/Raketa02/Raketa/issues/820);
+ADR-0205 §5; home refactor 6–11): **Players at your level**, **New in Raketa** and **Players with your
+vibe** — only the words on screen change; the glossary's terms, the code's names and the endpoints
+keep theirs (`DISCOVERY_COPY.*.line`). Each row component became a hook the shell calls
+(`useSameLevelLine`, `useNewInRaketaLine`, `useSameVibeLine`), handing the line's title, what it
+unfolds and its footer — _See all ›_ at the bottom right, to the same See all screen — or `undefined`
+while the read holds nobody, is out or failed. **The read and the on-screen reporter are the line's**,
+held while Home lives, so a report waiting to be sent outlives a close; **the cards are drawn only
+while the line is open**, so a closed line reports nobody (the mechanics §9.2), and the rail settles
+on its cards' edges. The copy is read inside each hook rather than at the module's top: `shell`'s
+surface imports these, and a module-level read of `DISCOVERY_COPY` met the copy module half-loaded
+through that cycle. The paragraphs above that say a row is _hidden with its heading_ and _See all ›
+on the heading_ were true until this one. Walked in `sameLevel`, `newInRaketa`, `sameVibe` and
+`onScreen.test.tsx` — the last now lays FOR YOU, the line and its fold out as a phone would, and adds
+a closed line reporting nothing and only the open line's cards counted.
+
+**The same-level card says no gap in words** ([#821](https://github.com/Raketa02/Raketa/issues/821);
+ADR-0205 §5, Q22; home refactor 7). _0,02 below you_, _0,09 above you_ and _Same level_ are gone from
+the card's foot, with the separator that joined them to _N sports ›_: the foot is _N sports ›_ where
+there is more than one shared sport, and the round button. **The pairing's spoken name drops the gap
+too** (`pairingLabel`), as the card no longer draws it. Everything else on the card stays. It is one
+card, so **See all's full-width cards lose it as well**. The comparison sheet's blocks still say the
+gap (`gapLine`, the words §31.6), and the read still serves it. Walked in `sameLevel.test.tsx` — no gap
+on any card, drawn or spoken, and See all's re-comparison read off the level instead — and
+`discoveryCopy.test.ts`. **Not seen on a device** — a look is owed against home refactor 7: the foot
+with _2 sports ›_ alone at its left.
+
+**The people lines count who there is to explore** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+ADR-0205 §6, Q17, Q33, Q34; the mechanics §6.9, §7.5, §8.8; home refactor 3, 4, 7). Each row's read now
+keeps the server's **`total`** beside its cards — `PeopleRow<Person>` (`domain/peopleRow.ts`), read by
+`toNewInRaketaRow`, `toSameLevelRow` and `toSameVibeRow` — and each line hands it to the shell as its
+`count`, and to its footer as **_See all N ›_** (`seeAllWords`, through `shared/formatting`'s
+`countFigure`: _99+_ past 99). **It is the pool, never the good matches**: everybody holding a level in
+a sport the reader holds one in, everybody who joined in the last 30 days, everybody sharing a tag —
+so a busy city reads _99+_, and _See all N_ carries the same figure though See all shows one sport at
+a time. Same competitive level's total counts a card this build cannot draw, as it counts everybody
+the row does not show. **It moves only with a read**: `usePeopleRow`'s `withRelation` draws a friend
+write on its card and leaves the total as read, and the next read — a return after 30 seconds,
+foregrounding, the pull, a block — brings the new figure. **The footer link keeps its spoken name**
+(_See all players at your level_): the line's own name has just said the count. Walked in the mapper
+and copy tests and the shell's `forYou.test.tsx`; the line suites now find a line by `lineNamed`, its
+title with or without a count.
+
+**New in Raketa's tiles are as wide as Players at your level's cards** (2026-11-24; design-system 7.7,
+7.31, Part 16). On a tile 0,355 of the line's content wide — two whole and the third cut — the
+nickname, the sports and _Joined …_ were too small to read, beside the line above standing one card and
+a peek. The `tiles` rail now hands each tile the peeking card's `railCardRatio` (0,74): one tile whole
+and the next peeking, settling on their edges as before. **Only the width moved**: the tile keeps its
+11:8, so it stands taller than the line above's cards, which are as tall as their content; its face,
+wash, _NEW_, round button and words are as they were, a lone tile keeps its width, and See all's grid
+is untouched. `portraitTile.railRatio` is gone, so the two lines read one ratio and cannot drift
+apart. Walked in `HomeRow.test.tsx`. **Not seen on a device** — a look is owed: the tile at its new
+size under Players at your level.
+
+**FOR YOU's cards stand a little bigger, and New in Raketa's tiles a little smaller** (2026-11-26;
+design-system 7.7, 7.31, 7.34, 7.35, Part 16). The card on screen was 0,74 of the line's content and
+the next one's edge showed a good third of a card; now **Players at your level's cards and Players with
+your vibe's tiles are `lineCardRatio` (0,83) of it** — 290 of 349 on a 411pt phone, the next one's
+edge 65 where it was 97 — with Groups heating up's (`groups.md`). A rail in an open line takes the share
+from the line (`RailBounds.cardRatio`); the page's peeking rail keeps 0,74. **Each keeps its shape**:
+its height is its drawing's, so every vertical gap grows by the width's factor (×1,6) onto the 3pt
+grid — the card 15·3·3·12·6·6 to 24·6·6·18·9·9 down it, its middle's 3·6 to 6·9 (226 → 253); the
+tile's 12·9·6·6 to 21·15·9·9 (182 → 203), its chips' lines 9 apart, their room kept to match
+(`sharedTagsRoom`) — each within half a grid step of growing as much as the width did. The words, the
+faces, the bar, the chips and the sides' insets are their own size; a lone card takes the content
+width at the same grown height. **The places keep theirs**: `layout` says which, and See all's list and
+grid draw the gaps they had. **New in Raketa's tiles step down to `portraitTile.railRatio` (0,70)**,
+their 11:8 kept (244 × 336 on a 411pt phone): at 0,83 a portrait would have stood 399 tall, a poster,
+so the 2026-11-24 tie to the level cards ends — one ratio a geometry again. Walked in
+`sameLevel.test.tsx`, `sameVibe.test.tsx` (each card's width, its gaps on the line and in See all, its
+height grown by the width's factor), `HomeRow.test.tsx` and `FoldingLine.test.tsx`. **Not seen on a
+device** — a look is owed on the A32: the three lines' cards and the tiles between them.
+
+**See all shimmers its own grid while its first page is read** (2026-11-24,
+[#872](https://github.com/Raketa02/Raketa/issues/872); PRD #867, the loading shimmer log §10; design
+system 5.6). The spinner at the top of an empty body is gone from all three. Under the real header,
+**the row's own tile or card stands as a skeleton, a column wide, in the grid's lines and gaps, as many
+lines as fill the screen** (`SeeAllScreen`'s `skeleton`, a `SeeAllSkeletonTile`: the drawing, and the
+height it stands at a column's width), on one `SkeletonGround`; the first page comes in on `Reveal`'s
+cross-fade once its read finishes. **New in Raketa's tile is one block** at the grid's 9:8 and the
+tile's corner, since everything on it is drawn over the photograph (`JOINER_TILE_SKELETON`). **Same
+level's dark card is one block** at the card's height, read off its drawing
+(`SAME_LEVEL_CARD_SKELETON`). **Same vibe's pale tile is a white card drawn as itself**, without the
+person's wash, at the grid tile's height (its three lines of chips keep their room, `SHARED_TAGS_ROOM`),
+holding the face, the nickname and the % circle, _2 things in common_'s width, a first chip, and the
+round button's circle (`SAME_VIBE_TILE_SKELETON`). **The shared rules hold**: the failure with _Try
+again_ and the offline note take the skeleton's place; the skeleton stays through Query's retries and
+stands again on _Try again_ or the connection back; an empty first page says its empty line; a pull
+and a later page never show it. **Each shape's height follows the phone's text size**: its words' lines
+are grown by the OS's `fontScale`, as the card's own text is. **Three calls made here.** **A sport not
+read yet shimmers too**: the reveal is keyed by the sport, so each sport's first read is its own, as on
+Rankings; a sport read in the last few minutes opens at once, and a switch opens the list at its top.
+**The pill stands from the first frame, offering every sport until the first page says which**, so it
+is drawn at its final shape, chevron and all, and the header never changes shape at the reveal (_Same
+competitive level players_ wraps beside it); a sport picked meanwhile is read like any other. **The spinner's three spoken names went with it**: the
+skeleton is hidden from a listener and says nothing (ADR-0198). Walked in `newInRaketa.test.tsx`,
+`sameLevel.test.tsx` and `sameVibe.test.tsx`, with the first page held in flight (test-support's
+`transport.hold`): the skeleton in its grid at the tile's size, then the page; the empty line; the
+retries, the failure and _Try again_; the offline note and the connection back; and, on New in
+Raketa, a sport not read, one read already, and a pull. **Not seen on a device**: a look is owed at
+each grid's shimmer and the fade onto it.

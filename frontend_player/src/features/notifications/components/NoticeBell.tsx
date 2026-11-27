@@ -13,6 +13,10 @@
  * Coral is a count of things only the player can clear (1.2), and news is not an obligation. Spoken
  * on the bell's own name, *Recent notifications, 3 new* — exactly, since a listener is not short of
  * room — and hidden as a mark, so the number is not read twice.
+ *
+ * **Home holds the number back while it shimmers** (#871; `showsCount`): the bell is drawn for real
+ * from the start, and its number comes with the rest of your things — or, past the ceiling, as it
+ * lands. Held back, it is said nowhere: the bell's name is the bare one.
  */
 
 import Feather from '@expo/vector-icons/Feather';
@@ -26,9 +30,15 @@ import { useRecentNotices } from '../hooks/useRecentNotices';
 import { NOTICES_ROUTE } from './noticeRoutes';
 import { bellFigure, bellSpoken } from './notificationsCopy';
 
-export function NoticeBell() {
+export interface NoticeBellProps {
+  /** Whether its number may be drawn — Home's to say while it shimmers (#871). Drawn unless said. */
+  readonly showsCount?: boolean;
+}
+
+export function NoticeBell({ showsCount = true }: NoticeBellProps) {
   const router = useRouter();
-  const count = useRecentNotices().data?.newCount ?? 0;
+  const read = useRecentNotices().data?.newCount ?? 0;
+  const count = showsCount ? read : 0;
   const figure = bellFigure(count);
 
   return (

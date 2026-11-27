@@ -1,30 +1,38 @@
 /**
- * **The sport pill on a Home row** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home
- * rows screens §7.3; home rows 27; design-system 7.36) — the deck's pill (#774) standing on a row's
- * heading line, before the row's link, and the bar it unfolds into **sliding over the heading**: Top
- * 10's sport, *● Padel ‹* beside *Rankings ›*.
+ * **The sport switcher on a Home line** ([#805](https://github.com/Raketa02/Raketa/issues/805); the
+ * Home rows screens §7.3; design-system 7.36, 7.37) — the deck's pill (#774) standing in a folding
+ * line's footer since [#820](https://github.com/Raketa02/Raketa/issues/820), and the bar it unfolds
+ * into **sliding over the footer**. Since [#821](https://github.com/Raketa02/Raketa/issues/821)
+ * (ADR-0205 §5, Q19, Q37; home refactor 12, 13) it stands **first, at the footer's left**, reading
+ * *● Padel ›*, with *Open the rankings ›* at the right, and **opens to the right** (`SportBar`'s
+ * `opens`): the current sport at the bar's left end where the pill stood, the others after it.
  *
  * `SportPillFrame` is the same control held on a **page**: its bar ends at the page's right edge,
- * where a header's pill stands. On a row the pill stands left of the link, and the link stays where
- * it is with the bar open (home rows 27), so the bar must end where **the pill** ends — which this
- * measures, and the frame does not.
+ * where a header's pill stands, and grows leftwards. On a line the bar must **start** where the pill
+ * starts — which this measures, and the frame does not — and runs across the footer, over the link,
+ * to the footer's right edge. **Measured in Archivo, the open bar is about 322pt** (304 of pills):
+ * inside the line with every sport in reach from a 375pt phone up; on a 360pt one its round end meets
+ * the line's inner edge and the last sport's far ~6pt stand past the footer, out of Android's reach;
+ * on a 320pt one it is cut by about 40pt (`rowSportBarFit.test.ts`). The leftward bar it replaces,
+ * ending at the pill left of *Rankings ›*, was cut on a 360pt phone too (#820).
  *
  * ```
- * TOP 10                 ● Padel ‹   Rankings ›      ← folded: the pill is the row's control
- * TO┌ ● Tennis  ● Squash  ● Badminton [● Padel ›]┐ Rankings ›   ← open: over the heading, ending
- *   └────────────────────────────────────────────┘                  where the pill ended
+ * ● Padel ›                     Open the rankings ›   ← folded: the pill at the left, the link right
+ * ┌[● Padel ‹] ● Tennis  ● Squash  ● Badminton┐ ›    ← open: over the footer, from where the
+ * └───────────────────────────────────────────┘          pill started, rightwards
  * ```
  *
- * **The row draws both halves** (`HomeRow`'s `control` and `over`): the pill on the heading's line,
- * and — while it is open — a layer over the whole row with a backdrop that folds it and the bar on the
- * pill's own line. **The pill stands directly on the heading's line, and the line at the row's
- * top-left**, as `HomeRow` draws them, so the pill's layout is where the bar must stand.
+ * **The line draws both halves** (`FoldingLineFooter`'s `control` and `over`): the pill in the footer,
+ * and — while it is open — a layer over the whole footer with a backdrop that folds it and the bar on
+ * the pill's own line. **The pill stands directly in the footer, and the footer's box is the layer's**,
+ * so the pill's layout is where the bar must stand. **A tap on the link while the bar is open folds
+ * the bar** — the backdrop is over it — and leaves Home where it is.
  *
- * **What folds it** is the frame's: a tap on the current sport or anywhere else on the row, Android's
- * back, and the screen losing focus (`FoldAway`). A tap elsewhere on the screen does not — the
- * backdrop is the row's — and leaves the bar open over a heading the reader may scroll past.
+ * **What folds it** is the frame's: a tap on the current sport or anywhere else on the footer,
+ * Android's back, and the screen losing focus (`FoldAway`). A tap elsewhere on the screen does not —
+ * the backdrop is the footer's — and leaves the bar open over a footer the reader may scroll past.
  *
- * Never a `Modal`: the bar is a layer of the row (ADR-0178).
+ * Never a `Modal`: the bar is a layer of the line (ADR-0178).
  */
 
 import { useState, type ReactNode } from 'react';
@@ -36,7 +44,7 @@ import { SportBar, SportPill, type SportChoice, type SportPillWords } from './Sp
 import { FoldAway } from './SportPillFrame';
 import { theme } from './theme';
 
-/** The bar's inset round its pills — the current sport stands this far in from the bar's right end. */
+/** The bar's inset round its pills — the current sport stands this far in from the bar's left end. */
 const PAD = theme.size.groupPage.filterPad;
 
 interface PillBox {
@@ -55,8 +63,8 @@ export interface RowSportPillProps<S extends SportChoice = Sport> {
   readonly onPick: (sport: S) => void;
   readonly words: SportPillWords<S>;
   /**
-   * The row: `pill` for its heading's line (`HomeRow`'s `control`) — `undefined` until there is a
-   * sport — and `over`, the open bar with its backdrop (`HomeRow`'s `over`), `undefined` while folded.
+   * The line: `pill` for its footer (`FoldingLineFooter`'s `control`) — `undefined` until there is a
+   * sport — and `over`, the open bar with its backdrop (the footer's `over`), `undefined` while folded.
    */
   readonly children: (pill: ReactNode | undefined, over: ReactNode | undefined) => ReactNode;
 }
@@ -81,7 +89,13 @@ export function RowSportPill<S extends SportChoice = Sport>({
 
   const pill = known ? (
     <View testID="row-sport-pill" onLayout={(event) => setBox(event.nativeEvent.layout)}>
-      <SportPill sports={sports} sport={sport} words={words} onUnfold={() => setUnfolded(true)} />
+      <SportPill
+        sports={sports}
+        sport={sport}
+        words={words}
+        onUnfold={() => setUnfolded(true)}
+        opens="right"
+      />
     </View>
   ) : undefined;
 
@@ -101,12 +115,10 @@ export function RowSportPill<S extends SportChoice = Sport>({
           pointerEvents="box-none"
           style={[
             s.barSlot,
-            box === undefined
-              ? undefined
-              : { top: box.y, height: box.height, width: box.x + box.width + PAD },
+            box === undefined ? undefined : { top: box.y, height: box.height, left: box.x - PAD },
           ]}
         >
-          <SportBar sports={sports} sport={sport} words={words} onChoose={choose} />
+          <SportBar sports={sports} sport={sport} words={words} onChoose={choose} opens="right" />
         </View>
       </View>
     ) : undefined;
@@ -115,13 +127,14 @@ export function RowSportPill<S extends SportChoice = Sport>({
 }
 
 const s = StyleSheet.create({
-  // From the row's left edge to the pill's right end and the bar's inset past it, on the pill's own
-  // line: the bar grows leftwards from there, over the heading, and its current sport stands exactly
-  // where the pill stood.
+  // From the bar's inset before the pill's left end to the footer's right edge, on the pill's own
+  // line: the bar grows rightwards from there, over the footer and its link, and its current sport
+  // stands exactly where the pill stood. Until the pill is measured, it is taken at the footer's left.
   barSlot: {
     position: 'absolute',
-    left: 0,
+    left: -PAD,
+    right: 0,
     justifyContent: 'center',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
 });

@@ -11,8 +11,11 @@ group the row cannot do without: **Wieczorny Kazimierz**, at Kazimierz Padel,
 *People I approve*, owned by the ranking's crowd's first player and joined by
 twenty-three more of them ten days ago — each let in by the Owner, as a
 request there is only let in — with **three games booked in it two, three and
-four days ago**, inside the seven days whatever the weekday. 3 × 24 new + 20 +
-2 × 3 = 98 against *Padel po pracy*'s 80.
+four days ago**, inside the seven days whatever the weekday. **A day the club
+sells nothing is stepped over**, a day further back: Kazimierz Padel sells no
+Monday, so a run on a Wednesday, Thursday or Friday plays one game a day
+earlier than four days ago. 3 × 24 new + 20 + 2 × 3 = 98 against *Padel po
+pracy*'s 80.
 
 **The crowd, because nobody deals them a game.** Their week is cleared
 (``ranking_crowd.py``), so joining a group puts no card in anybody's deck, and
@@ -52,7 +55,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Final, final
+from typing import Final, TypeVar, final
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -83,11 +86,17 @@ from app.modules.groups.application.commands import (
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
 from app.modules.groups.application.hottest_groups import (
     HottestGroupCard,
+    HottestGroupsRow,
     ReadHottestGroups,
+    ReadHottestGroupsPage,
 )
-from app.modules.groups.domain.hottest import HeatTag
+from app.modules.groups.domain.hottest import (
+    CARDS,
+    COUNTED_UP_TO,
+    GAMES_WINDOW,
+    HeatTag,
+)
 from app.modules.groups.domain.value_objects import GroupRelation, JoinPolicy
-from app.modules.groups.domain.hottest import GAMES_WINDOW
 from app.modules.proposals.domain.deck import GAME_LENGTH
 from app.seeds.booked_history import MADE_AHEAD
 from app.seeds.bookings import all_say_yes, club_id_of, the_cut_off_came
@@ -108,9 +117,13 @@ MEMBERS: Final = 24
 #: Created, and every member let in, this long before the run — inside the 30
 #: days, so all of them are new this month.
 OPENED_DAYS_AGO: Final = 10
-#: One game a day this many days before the run — inside the 7 days whatever
-#: the weekday, and each a different four.
-GAME_DAYS_AGO: Final = (2, 3, 4)
+#: Games in it this week, each a different four on a day of its own.
+GAMES: Final = 3
+#: The latest a game is played: this many days before the run, walking back a
+#: day at a time to the edge of the 7 days past a day the club sells nothing —
+#: Kazimierz Padel's Mondays, a closed day — so two, three and four days ago, or
+#: one more back, whatever the weekday.
+FIRST_GAME_DAYS_AGO: Final = 2
 #: Her request, asked this long before the run.
 ASKED_HOURS_AGO: Final = 1
 #: The two-player group the other layers leave, which the row leaves out.
@@ -188,15 +201,16 @@ async def write_the_hottest_groups(
             )
 
         games: list[tuple[Instant, bool]] = []
-        for index, days_ago in enumerate(GAME_DAYS_AGO):
+        hours: list[tuple[Instant, Instant]] | None = None
+        for index in range(GAMES):
             four = tuple(members[4 * index : 4 * index + 4])
             played = await _played_this_week(session, group_id, four, now=now)
             if played is not None:
                 games.append((played, False))
                 continue
-            start, made_at = await _a_padel_hour(
-                session, club_id, days_ago=days_ago, now=now
-            )
+            if hours is None:
+                hours = await _the_game_hours(session, club_id, now=now)
+            start, made_at = hours[index]
             answer = await all_say_yes(
                 session,
                 settings=settings,
@@ -240,22 +254,80 @@ async def assert_the_hottest_groups(
     """Her *Hottest groups*, read through its own use case: **one HOTTEST — this
     layer's group, with her request waiting on it — at least one GROWING and
     one untagged card, and the two-player group out**, or the run fails by
-    name. The screen line."""
+    name — and *Groups heating up*, page after page, through its own (#813):
+    **the row its first six, and the row's total and the first page's what it
+    lists**, capped. The screen line."""
 
     async with session_factory() as session:
         her = await _her_id(session)
-        row = await ReadHottestGroups(
-            directory=build_group_directory(session),
-            games=build_group_born_games(session),
-            clubs=build_home_clubs(session),
-            ratings=build_rated_group_members(session),
-            faces=build_group_faces(session, settings=settings),
-            relations=build_member_relations(session),
-            administrators=build_group_administrators(session),
-            clock=FixedClock(at=now),
+        row = await _built(
+            ReadHottestGroups, session, settings=settings, now=now
         ).execute(her)
-    _refuse_a_row_that_lies(row, seeded, whole_row=seeded.created)
-    return "Hottest groups: " + " · ".join(_card_line(card) for card in row)
+        first_total, listed = await _every_page(
+            _built(ReadHottestGroupsPage, session, settings=settings, now=now), her
+        )
+    _refuse_a_row_that_lies(row.cards, seeded, whole_row=seeded.created)
+    _refuse_a_page_that_disagrees(row, first_total=first_total, listed=listed)
+    return (
+        f"Hottest groups ({row.total}, {len(listed)} on Groups heating up): "
+        + " · ".join(_card_line(card) for card in row.cards)
+    )
+
+
+_Read = TypeVar("_Read", ReadHottestGroups, ReadHottestGroupsPage)
+
+
+def _built(
+    read: type[_Read], session: AsyncSession, *, settings: Settings, now: Instant
+) -> _Read:
+    return read(
+        directory=build_group_directory(session),
+        games=build_group_born_games(session),
+        clubs=build_home_clubs(session),
+        ratings=build_rated_group_members(session),
+        faces=build_group_faces(session, settings=settings),
+        relations=build_member_relations(session),
+        administrators=build_group_administrators(session),
+        clock=FixedClock(at=now),
+    )
+
+
+async def _every_page(
+    read: ReadHottestGroupsPage, her: UUID
+) -> tuple[int | None, list[HottestGroupCard]]:
+    """*Groups heating up*, page after page: the first page's total, and every
+    card on them."""
+
+    page = await read.execute(her, after=None)
+    first_total, listed = page.total, list(page.cards)
+    while page.next is not None:
+        page = await read.execute(her, after=page.next)
+        listed.extend(page.cards)
+    return first_total, listed
+
+
+def _refuse_a_page_that_disagrees(
+    row: HottestGroupsRow,
+    *,
+    first_total: int | None,
+    listed: Sequence[HottestGroupCard],
+) -> None:
+    """The row is the page's first six, and both count what the page lists."""
+
+    def placed(cards: Sequence[HottestGroupCard]) -> list[tuple[UUID, HeatTag | None]]:
+        return [(card.group.row.id, card.tag) for card in cards]
+
+    if placed(row.cards) != placed(listed[:CARDS]):
+        raise HottestGroupsRefused(
+            f"her Hottest groups should be the first {CARDS} of Groups heating "
+            f"up, and read {[_card_line(card) for card in row.cards]} against "
+            f"{[_card_line(card) for card in listed[:CARDS]]}"
+        )
+    if not row.total == first_total == min(len(listed), COUNTED_UP_TO):
+        raise HottestGroupsRefused(
+            f"her Hottest groups line counts {row.total}, the page's first "
+            f"{first_total}, and Groups heating up lists {len(listed)}"
+        )
 
 
 def _refuse_a_row_that_lies(
@@ -316,11 +388,34 @@ def hottest_group_lines(seeded: SeededHottestGroups) -> list[str]:
     return lines
 
 
+async def _the_game_hours(
+    session: AsyncSession, club_id: UUID, *, now: Instant
+) -> list[tuple[Instant, Instant]]:
+    """An hour for each game, latest first: one on each of the club's last days
+    to sell before the run, from ``FIRST_GAME_DAYS_AGO`` back to the edge of the
+    seven days, stepping over a day it sold nothing. The hour, and when it was
+    made."""
+
+    hours: list[tuple[Instant, Instant]] = []
+    for days_ago in range(FIRST_GAME_DAYS_AGO, GAMES_WINDOW.days):
+        hour = await _a_padel_hour(session, club_id, days_ago=days_ago, now=now)
+        if hour is not None:
+            hours.append(hour)
+        if len(hours) == GAMES:
+            return hours
+    raise HottestGroupsRefused(
+        f"{HOTTEST_CLUB.name} sold a padel hour on {len(hours)} of the days "
+        f"{FIRST_GAME_DAYS_AGO} to {GAMES_WINDOW.days - 1} before the run, and "
+        f"{HOTTEST_GROUP} needs {GAMES} inside the seven days"
+    )
+
+
 async def _a_padel_hour(
     session: AsyncSession, club_id: UUID, *, days_ago: int, now: Instant
-) -> tuple[Instant, Instant]:
+) -> tuple[Instant, Instant] | None:
     """The first padel hour the club sold on that day, made two days before it
-    and over before the run. The hour, and when it was made."""
+    and over before the run — or ``None``, on a day it sold none. The hour, and
+    when it was made."""
 
     day = local_day(days_before(now, days_ago).now())
     day_start = hour_start(day, 0)
@@ -341,10 +436,7 @@ async def _a_padel_hour(
             club_id, sport=Sport.PADEL, start=start, now=made_at
         ):
             return start, made_at
-    raise HottestGroupsRefused(
-        f"{HOTTEST_CLUB.name} sold no padel hour on {day:%a %d %b} for "
-        f"{HOTTEST_GROUP}'s game"
-    )
+    return None
 
 
 async def _played_this_week(

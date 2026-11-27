@@ -29,7 +29,7 @@ import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
 
 import { ReadFailure, usePull } from '@/features/groups/types';
 import { codeMessage } from '@/shared/errors';
-import { ScreenHeader, theme, TopSafeArea } from '@/shared/ui';
+import { ScreenHeader, theme, TopSafeArea, useTabBarReach } from '@/shared/ui';
 
 import { useOfficialGroup, useOfficialGroupReread } from '../hooks/useOfficialGroups';
 
@@ -44,6 +44,8 @@ export interface OfficialGroupScreenProps {
 }
 
 export function OfficialGroupScreen({ clubId, groupId }: OfficialGroupScreenProps) {
+  // Ends at the bar's reach, its own gap clear of it (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   const COPY = ADMINISTRATOR_COPY.group;
   const read = useOfficialGroup(clubId, groupId);
   const group = read.data;
@@ -59,7 +61,7 @@ export function OfficialGroupScreen({ clubId, groupId }: OfficialGroupScreenProp
 
       <ScrollView
         testID="official-group-page"
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, { paddingBottom: reach + theme.space.lg }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -94,7 +96,6 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.color.paper },
   content: {
     paddingHorizontal: theme.size.gutter,
-    paddingBottom: theme.space.lg,
     gap: theme.space.sm,
   },
 });

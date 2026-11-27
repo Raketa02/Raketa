@@ -25,6 +25,7 @@ from app.bootstrap.composition import build_clock
 from app.core.config import get_settings
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import instant
+from app.modules.clubs.domain.court_hours import CLUB_ZONE
 from app.seeds.catalog import SEED_PASSWORD, THE_POPULATED_PLAYER
 from app.seeds.club_courts import write_the_club_courts
 from app.seeds.clubs import write_the_clubs
@@ -185,3 +186,28 @@ async def test_a_run_days_later_books_this_week_s_games_again(
     first_card = (await her_row(client))[0]
     assert (first_card["id"], first_card["tag"]) == (str(first.group_id), "HOTTEST")
     assert (first_card["games_this_week"], first_card["relation"]) == (3, "REQUESTED")
+
+
+async def test_a_day_the_club_sells_nothing_is_stepped_over(
+    client, session_factory, crowd, now
+):
+    """Kazimierz Padel sells no Monday (``club_courts.py``), so a run on a
+    Friday, whose two, three and four days ago end on one, books its third game
+    on the Sunday before it — still three games, inside the seven days. Seeded
+    on the last Friday, so it holds on any day the suite runs."""
+
+    friday = instant(
+        now - timedelta(days=(now.astimezone(CLUB_ZONE).isoweekday() - 5) % 7)
+    )
+
+    seeded = await write_the_hottest_groups(
+        session_factory, settings=get_settings(), now=friday, crowd=crowd
+    )
+
+    assert [made for _, made in seeded.games] == [True, True, True]
+    assert [f"{start.astimezone(CLUB_ZONE):%a}" for start, _ in seeded.games] == [
+        "Sun",
+        "Tue",
+        "Wed",
+    ]
+    assert all(friday - timedelta(days=7) < start < friday for start, _ in seeded.games)

@@ -11,7 +11,7 @@
  *
  * ## A chip is drawn with an emoji and announced without one
  *
- * Nineteen chips of the same length in the same weight are a wall, and the emoji is what
+ * Twenty-seven chips of the same length in the same weight are a wall, and the emoji is what
  * lets a player find the one they meant by shape rather than by reading all of them. It is
  * **decoration**: `socialTagLabel` is what is drawn and `socialTagName` is what is spoken,
  * because a screen reader announcing "beer mug, stays for a drink" is reading the app's
@@ -36,7 +36,7 @@
  * file. They began on the competitive candidate card, where the tag row was the only thing
  * that drew them; they are here because the record sheet draws that row too
  * ([#373](https://github.com/Raketa02/Raketa/issues/373)) and the row is now one component
- * in `shared/ui`. A second spelling of the marker is exactly the drift the nineteen labels
+ * in `shared/ui`. A second spelling of the marker is exactly the drift the twenty-seven labels
  * were promoted to stop, one register down. What each surface **says about** a row still
  * belongs to that surface: the clauses a listener gets on a candidate card are
  * `features/play/components/playerCardPresentation`'s.
@@ -52,12 +52,19 @@ const LABEL: Readonly<Record<SocialTagId, string>> = {
   SETTLES_UP_ON_THE_SPOT: 'Settles up on the spot',
   BOOKS_THE_NEXT_ONE: 'Books the next one',
   SHARES_A_LIFT: 'Shares a lift',
+  STAYS_FOR_A_COFFEE: 'Stays for a coffee',
+  UP_FOR_A_BITE_AFTER: 'Up for a bite after',
+  KEEPS_IN_TOUCH: 'Keeps in touch',
   PLAYS_TO_WIN: 'Plays to win',
   LAUGHS_OFF_MISTAKES: 'Laughs off mistakes',
   ENCOURAGES_A_PARTNER: 'Encourages a partner',
   GENEROUS_ON_LINE_CALLS: 'Generous on line calls',
   QUIET_AND_FOCUSED: 'Quiet and focused',
   WARMS_UP_PROPERLY: 'Warms up properly',
+  HAPPY_TO_SWAP_PARTNERS: 'Happy to swap partners',
+  PATIENT_WITH_BEGINNERS: 'Patient with beginners',
+  HAPPY_TO_SHARE_TIPS: 'Happy to share tips',
+  BRINGS_THE_ENERGY: 'Brings the energy',
   HERE_TO_IMPROVE: 'Here to improve',
   HERE_TO_COMPETE: 'Here to compete',
   HERE_FOR_THE_EXERCISE: 'Here for the exercise',
@@ -65,6 +72,7 @@ const LABEL: Readonly<Record<SocialTagId, string>> = {
   HERE_FOR_A_REGULAR_GAME: 'Here for a regular game',
   HERE_TO_GET_BACK_INTO_IT: 'Here to get back into it',
   OPEN_TO_MEET_SOMEONE: 'Open to meet someone',
+  NEW_IN_TOWN: 'New in town',
 };
 
 /**
@@ -81,12 +89,19 @@ const EMOJI: Readonly<Record<SocialTagId, string>> = {
   SETTLES_UP_ON_THE_SPOT: '💸',
   BOOKS_THE_NEXT_ONE: '📅',
   SHARES_A_LIFT: '🚗',
+  STAYS_FOR_A_COFFEE: '☕',
+  UP_FOR_A_BITE_AFTER: '🍽️',
+  KEEPS_IN_TOUCH: '📲',
   PLAYS_TO_WIN: '🏆',
   LAUGHS_OFF_MISTAKES: '😄',
   ENCOURAGES_A_PARTNER: '👏',
   GENEROUS_ON_LINE_CALLS: '🤝',
   QUIET_AND_FOCUSED: '🎯',
   WARMS_UP_PROPERLY: '🤸',
+  HAPPY_TO_SWAP_PARTNERS: '🔄',
+  PATIENT_WITH_BEGINNERS: '🤲',
+  HAPPY_TO_SHARE_TIPS: '💡',
+  BRINGS_THE_ENERGY: '🎶',
   HERE_TO_IMPROVE: '📈',
   HERE_TO_COMPETE: '🔥',
   HERE_FOR_THE_EXERCISE: '💪',
@@ -94,6 +109,7 @@ const EMOJI: Readonly<Record<SocialTagId, string>> = {
   HERE_FOR_A_REGULAR_GAME: '🔁',
   HERE_TO_GET_BACK_INTO_IT: '🌱',
   OPEN_TO_MEET_SOMEONE: '💘',
+  NEW_IN_TOWN: '🧳',
 };
 
 /** What the chip is **drawn** with. */
@@ -129,7 +145,7 @@ export function socialTagGroupHeading(group: SocialTagGroupId): string {
  * The row is `socialTagOverlap`'s four answers; these are the four things they say
  * ([#311](https://github.com/Raketa02/Raketa/issues/311)). Nothing here decides which tags are
  * shared, and nothing here re-words a tag: `socialTagLabel` and `socialTagName` are the
- * promoted table's, and a second spelling of nineteen labels is what the promotion existed to
+ * promoted table's, and a second spelling of twenty-seven labels is what the promotion existed to
  * prevent ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §1).
  *
  * ## The chip is drawn with a glyph and a marker, and spoken as neither

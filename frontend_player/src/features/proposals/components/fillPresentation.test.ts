@@ -12,6 +12,7 @@ import {
   seatKeptBy,
   toConfirmLabel,
   toConfirmRowLine,
+  toConfirmWords,
 } from './fillPresentation';
 
 describe('the Undo toast', () => {
@@ -162,6 +163,62 @@ describe('the time to fix the card, before the cut-off (Q113)', () => {
     expect(toConfirmLabel(payment, day, 'UNNAMED')).toBe(
       'Confirm your payment for Padel · Saturday 15:00 at Bonarka Arena, 28 zł',
     );
+  });
+});
+
+/**
+ * **A To confirm payment as a row or a tile** (#817): You › Payments' row and Needs your answer's
+ * tile read the same words. Read Thursday 1 October 2026, 10:00 in Warsaw; the game Saturday 15:00;
+ * the time to pay ends at 14:40.
+ */
+describe('what a To confirm payment says, as a row or a tile', () => {
+  const READ = Date.parse('2026-10-01T08:00:00Z');
+  const payment = {
+    proposalId: 'p-1',
+    groupId: 'group-1',
+    sport: 'padel',
+    kind: 'competitive',
+    startsAt: '2026-10-03T13:00:00Z',
+    deadline: '2026-10-03T11:00:00Z',
+    club: { id: 'club-1', name: 'Bonarka Arena' },
+    shareGrosze: 3200,
+    waitingForTheClub: false,
+    seatChargeId: 's-1',
+    refusal: 'AUTHENTICATION_REQUIRED',
+    confirmBy: '2026-10-01T12:40:00Z',
+    timeTo: 'PAY',
+  } as const;
+
+  it('names the game, the club and the share, and the time to pay while it runs', () => {
+    expect(toConfirmWords(payment, READ, READ)).toEqual({
+      title: 'Padel · Saturday 15:00',
+      place: 'Bonarka Arena · 32 zł',
+      time: 'Confirm your payment by 14:40',
+      running: true,
+      nothingPaidNow: false,
+      action: 'Confirm',
+      spoken: 'Confirm your payment for Padel · Saturday 15:00 at Bonarka Arena, 32 zł',
+    });
+  });
+
+  it('says to fix the card before the cut-off, and that nothing is paid now', () => {
+    const words = toConfirmWords({ ...payment, timeTo: 'FIX_THE_CARD' }, READ, READ);
+    expect(words).toMatchObject({
+      time: 'Fix your card by 14:40',
+      running: true,
+      nothingPaidNow: true,
+      action: 'Fix',
+    });
+  });
+
+  it('drops the time at the deadline — the seat is theirs to take back, no window named', () => {
+    const after = Date.parse('2026-10-01T12:41:00Z');
+    expect(toConfirmWords({ ...payment, timeTo: 'FIX_THE_CARD' }, READ, after)).toMatchObject({
+      time: 'Your seat stays open until you confirm — or someone else takes it.',
+      running: false,
+      nothingPaidNow: false,
+      action: 'Confirm',
+    });
   });
 });
 

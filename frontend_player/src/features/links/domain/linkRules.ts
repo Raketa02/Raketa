@@ -68,10 +68,11 @@ export function playersLinkMove(
 }
 
 /**
- * **Where a friend link lands once it is opened** (#756, the friends mechanics §4.2) — on **Home**
- * when the owner's request is there (`ASKED_YOU`: asked by the opening, already open, or a set-aside
- * one brought back — and a request the owner's block swallowed answers the same, landing on a Home
- * with no card, the cost ADR-0202 names). **Nowhere** for the opener's own link (`NONE`) or a
+ * **Where a friend link lands once it is opened** (#756, the friends mechanics §4.2) — on **Home**,
+ * with Needs your answer up and the request in it since #817, when the owner's request is there
+ * (`ASKED_YOU`: asked by the opening, already open, or a set-aside one brought back — and a request
+ * the owner's block swallowed answers the same, landing on Home with no sheet, the cost ADR-0202
+ * names). **Nowhere** for the opener's own link (`NONE`) or a
  * friend's (`FRIEND`, which is also the opener's own request crossing the owner's): nothing waits
  * for an answer.
  */

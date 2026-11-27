@@ -59,15 +59,17 @@ asserting it renders correctly.
 
 ## Environment
 
-- **Copy `.env.example` → `.env.local` before the first run.** `EXPO_PUBLIC_API_URL` and
-  `EXPO_PUBLIC_ENV` are both required, validated once at launch by `src/shared/config/env.ts`.
-  A missing or malformed value stops the app on a startup screen naming it — that is the
-  guardrail working, not a bug. `EXPO_PUBLIC_LINK_DOMAIN` is the one optional value — the web
-  domain the app's links live on, empty until a domain exists (`docs/features/links.md`).
+- **Copy `.env.example` → `.env.local` before the first run.** `EXPO_PUBLIC_API_URL`,
+  `EXPO_PUBLIC_FEATURES_URL` and `EXPO_PUBLIC_ENV` are all required, validated once at launch by
+  `src/shared/config/env.ts`. A missing or malformed value stops the app on a startup screen
+  naming it — that is the guardrail working, not a bug. `EXPO_PUBLIC_LINK_DOMAIN` is the one
+  optional value — the web domain the app's links live on, empty until a domain exists
+  (`docs/features/links.md`).
 - `EXPO_PUBLIC_ENV` is `local | development | staging | production`, the backend's four names,
-  and **only `local` runs today.** The environment fixes the API URL's scheme — `https://` for
-  the three deployed ones — so a laptop URL under a deployed name fails at launch naming both
-  variables.
+  and **only `local` runs today.** The environment fixes the API and features URLs' scheme —
+  `https://` for the three deployed ones — so a laptop URL under a deployed name fails at launch
+  naming both variables. **Say _feature flag_, never a bare _flag_**, for
+  `features/feature_flags`: _flag_ is the phone's two marks kept at sign-out (ADR-0200 §8).
 - `app.config.ts` is a function of that environment (it replaced `app.json`) and holds no
   logic: `src/shared/config/appIdentity.ts` is the table it calls. Expo evaluates it in
   **Node**, before Metro, so it registers sucrase's TS require hook first — delete that line and
@@ -80,7 +82,7 @@ asserting it renders correctly.
   `jest` failing to parse React Native's untranspiled Flow.
 - Fonts (Archivo, IBM Plex Mono) are imported **file by file** — each `@expo-google-fonts`
   index `require`s every weight and Metro does not tree-shake, so one name costs 4,2 MB
-  instead of 1,0 MB — and awaited before the splash screen hides.
+  instead of 1,0 MB — and awaited before the tree mounts underneath the drawn splash.
 
 ## Safety — never without an explicit request
 
@@ -143,14 +145,20 @@ src/
   `player_record`, `payments`, `notifications`, `friends`, `auth` and `rankings` do this).
 - **One chokepoint per capability**, each the only importer of its module: `shared/lib/auth`
   (keychain), `shared/lib/http` (`fetch`, the 401 → refresh → retry rotation, timeouts as named
-  classes), and nine platform ports in `shared/lib/platform/` — `location.ts`,
+  classes), and eleven platform ports in `shared/lib/platform/` — `location.ts`,
   `imagePicking.ts`, `liveStream.ts`, `haptics.ts`, `clipboard.ts`, `payments.tsx`, `push.ts`,
   `installReferrer.ts` (`expo-application`, Android's install referrer, #756), `share.ts` (React
-  Native's `Share`, the one fenced name out of that module). Features depend on the port
-  and drive the fakes in `src/test-support/platform.ts`. AsyncStorage's one importer is
+  Native's `Share`, the first fenced name out of that module), `systemBars.ts` (the status and
+  navigation bars the launch gate paints for the splash and restores as it fades, #857: two
+  adapters, the iPhone's and `systemBars.android.ts`, the one importer of `expo-navigation-bar`),
+  `keyboard.ts` (React Native's `Keyboard`, the second fenced name: the app's one listener for the
+  keyboard's show and hide, on which both shells stand the tab bar down while it shrinks an Android
+  window, #882, ADR-0210 §9). Features depend on the port and drive the fakes in `src/test-support/platform.ts`. AsyncStorage has two importers:
   `shared/lib/preferences/phonePreferences.ts` — per-account choices, wiped at sign-out
   (ADR-0188), one per-account flag kept at sign-out (ADR-0200 §8), and one flag the phone keeps
-  for itself — _the install referrer was read_ (#756, ADR-0188's record owed). _(lint)_
+  for itself — _the install referrer was read_ (#756, ADR-0188's record owed) — and
+  `features/feature_flags/api/datafileCache.ts`, the feature flags' saved datafile (ADR-0206).
+  `@featurevisor/sdk`'s one importer is `features/feature_flags/api/featurevisor.ts`. _(lint)_
 - **`shared/` never imports a feature; a feature never deep-imports another** — go through its
   `types.ts`. _(lint)_ But do not move code to `shared/` because two files use it; keep it local
   until cross-feature ownership is proven (the third caller).
@@ -172,19 +180,21 @@ src/
 
 ### One owner per kind of state
 
-| State                     | Owner                                                                                                                            |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Anything from the backend | **TanStack Query** — never mirrored into a store                                                                                 |
-| A live frame's roster     | React state in the hook that follows the channel — not a query, not a store: it is the frame, and it is dropped with the channel |
-| A page's band on screen   | `shared/ui`'s `onScreen.ts`: followed values a page and its rows feed and a rail reads — never state, nothing redrawn            |
-| Access + refresh tokens   | `shared/lib/auth` → `expo-secure-store` (+ in-memory mirror)                                                                     |
-| Logged-in / out           | `SessionStatus`: `bootstrapping \| authenticated \| unauthenticated`                                                             |
-| Local component state     | `useState` / `useReducer`                                                                                                        |
-| Shared ephemeral UI state | Zustand, **feature-scoped first**                                                                                                |
-| Form input                | The form + one Zod schema                                                                                                        |
-| Navigation                | expo-router — a route param is not app state                                                                                     |
-| Config                    | `shared/config/env.ts`, Zod-validated at startup                                                                                 |
-| A choice the phone keeps  | `shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188); two flags, kept (ADR-0200 §8, #756)          |
+| State                       | Owner                                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Anything from the backend   | **TanStack Query** — never mirrored into a store                                                                                 |
+| A live frame's roster       | React state in the hook that follows the channel — not a query, not a store: it is the frame, and it is dropped with the channel |
+| A page's band on screen     | `shared/ui`'s `onScreen.ts`: followed values a page and its rows feed and a rail reads — never state, nothing redrawn            |
+| The tab bar's reach         | `shared/ui`'s `tabBarReach.ts`: one followed value the shell says and every screen follows — drawn, so a reader redraws          |
+| Access + refresh tokens     | `shared/lib/auth` → `expo-secure-store` (+ in-memory mirror)                                                                     |
+| Logged-in / out             | `SessionStatus`: `bootstrapping \| authenticated \| unauthenticated`                                                             |
+| Local component state       | `useState` / `useReducer`                                                                                                        |
+| Shared ephemeral UI state   | Zustand, **feature-scoped first**                                                                                                |
+| Form input                  | The form + one Zod schema                                                                                                        |
+| Navigation                  | expo-router — a route param is not app state                                                                                     |
+| Config                      | `shared/config/env.ts`, Zod-validated at startup                                                                                 |
+| A choice the phone keeps    | `shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188); two flags, kept (ADR-0200 §8, #756)          |
+| The feature flags' datafile | `features/feature_flags` → the saved datafile in AsyncStorage, the last readable one, kept at sign-out (ADR-0206)                |
 
 Reach for Zustand last: component-local → feature store → app-wide store, and only with a
 reason. Zustand never holds API entities, tokens, a backend cache, or a global loading flag.
@@ -194,8 +204,16 @@ reason. Zustand never holds API entities, tokens, a backend cache, or a global l
 Bootstrap is a **state**, never `user === undefined` — that ambiguity is what flashes a login
 screen while valid credentials are still being read out of the keychain. `shared/lib/bootstrap`
 runs one ordered sequence (error reporting → validate config → wire focus/online managers → read
-SecureStore → restore/validate session → start reading the install referrer, never awaited → hide
-splash → render) and nothing renders a route tree before it resolves. The guard is a redirect in `(app)/_layout.tsx` keyed on `SessionStatus`;
+SecureStore → restore/validate session → start warming Home, never awaited → start reading the
+install referrer, never awaited → load fonts → render) and nothing renders a route tree before it
+resolves. **Warming Home** (#874) sets Home's reads out during the splash, under the shell's
+`warmHome`, only for an account the entry gate will send to the tabs and never on a phone known to
+be offline. **Startup runs behind a drawn
+splash and is never held** ([ADR-0209](../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)):
+the launch gate draws the splash first, lets the OS launch window go on the splash's first layout,
+mounts the tree underneath when the sequence resolves, and fades at the later of 2.6 s and the
+first screen being ready — a screen that would draw nothing says so with `useSplashHold`, as the
+entry gate does while _pending_. The guard is a redirect in `(app)/_layout.tsx` keyed on `SessionStatus`;
 route groups make the authorization boundary visible in the file tree. iOS Keychain data can
 survive a reinstall, so **a token existing is not proof a session exists** — bootstrap validates
 it.
@@ -214,7 +232,8 @@ asymmetry with a proxy or a cookie session.
 - **`fetch` has no default timeout.** Timeouts are centralized in `shared/lib/http` as classes —
   no millisecond literal in a feature.
 - **Archivo ships no ✓, ✉, ★ or ⚡.** Every mark is drawn or is Feather (`@expo/vector-icons`,
-  declared in `package.json` on purpose — ADR-0135), never the character.
+  declared in `package.json` on purpose — ADR-0135) — **Ionicons on the tab bar alone**, from the
+  same package (ADR-0210 §5, #883) — never the character.
 - **Never log a token, an `Authorization` header, a password or a full payload.**
 - **A mounted Reanimated style makes every React Native `Modal` on Android unusable** (New
   Architecture + Reanimated 3.16): its content stays 0 × 0 and no press inside completes. No
@@ -223,7 +242,8 @@ asymmetry with a proxy or a cookie session.
   `docs/architecture.md` Part 13). A sheet's content keeps the root's contexts only: no
   provider below the root, no navigation hook inside a sheet. And never scale a layer to move
   things on the UI thread — iOS rasterises it blurred; translate a point per tile, as the radar
-  does.
+  does. The one scaled layer is the tab bar's selection marker, whose stretch is a scale on a
+  layer that holds no word or glyph, a flat capsule with nothing to blur (ADR-0210 §8, #884).
 - **Never animate a layout prop frame by frame with Reanimated** (`height`, `width`, a margin,
   `top`…). Under the New Architecture, Reanimated 3.16 commits it to the shadow tree and skips that
   commit while React commits anywhere in the app, so the motion freezes and then jumps — and

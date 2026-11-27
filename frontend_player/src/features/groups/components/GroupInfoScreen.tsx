@@ -37,7 +37,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useReaderId } from '@/features/auth/types';
 import { codeMessage } from '@/shared/errors';
-import { Card, DarkCard, DoorRow, PressableCard, theme } from '@/shared/ui';
+import { Card, DarkCard, DoorRow, PressableCard, theme, useTabBarReach } from '@/shared/ui';
 
 import type { Group } from '../domain/group';
 import { membersRow, readerFace } from '../domain/groupInfo';
@@ -64,13 +64,16 @@ import { WantToJoin } from './WantToJoin';
 const COPY = GROUPS_COPY.info;
 
 export function GroupInfoScreen({ groupId }: { readonly groupId: string }) {
+  // The way out is pinned at the foot, so the screen ends at the bar's reach and the door sits
+  // above the bar in flow (10.1, ADR-0210 §3, #881).
+  const reach = useTabBarReach();
   // Re-read as it opens and as it is come back to — `useGroupInfo`'s.
   const { read, reread } = useGroupInfo(groupId);
   const group = read.data;
   const { refreshing, pull } = usePull(reread);
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <SafeAreaView style={[s.screen, { paddingBottom: reach }]} edges={['top']}>
       <GroupHeader groupId={groupId} group={group} backLabel={COPY.back} />
       {group === undefined ? (
         read.error === null ? null : (

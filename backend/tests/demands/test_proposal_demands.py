@@ -23,6 +23,7 @@ import pytest
 import pytest_asyncio
 
 from app.bootstrap.composition import (
+    build_at_stake_query,
     build_booking_repository,
     build_clock,
     build_domain_event_store,
@@ -88,10 +89,16 @@ from app.modules.proposals.domain.ports import (
     PlayerNames,
     PlayersInPlay,
     PoolOrigins,
+    PlayersTags,
+    PlayedWith,
+    ReadersStakes,
     RefundReason,
     SeatRefunds,
+    Stakes,
     TagsInCommon,
 )
+from app.modules.proposals.domain.deck import Sides
+from app.modules.player_profile.domain.social_tags import SocialTag
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.post import LevelRange
@@ -1649,16 +1656,23 @@ async def test_the_asks_on_home_are_one_card_per_sport_newest_first(
     )
     asks: LevelAsksOnHome = implementation.build(session)
 
-    def face(player_id: UUID, nickname: str) -> HomeLevelAsker:
+    def face(player_id: UUID, nickname: str, *, hours: int) -> HomeLevelAsker:
+        """Each asker on a card with **their own ask's** instant (#815)."""
+
         return HomeLevelAsker(
-            player_id=player_id, nickname=nickname, photo_id=None, photo_url=None
+            player_id=player_id,
+            nickname=nickname,
+            photo_id=None,
+            photo_url=None,
+            asked_at=ASKED_AT + timedelta(hours=hours),
         )
 
     assert await asks.of(reader) == (
         HomeLevelAsk(
-            sport=Sport.PADEL, askers=(face(kuba, "kuba"), face(tomek, "tomek"))
+            sport=Sport.PADEL,
+            askers=(face(kuba, "kuba", hours=2), face(tomek, "tomek", hours=0)),
         ),
-        HomeLevelAsk(sport=Sport.SQUASH, askers=(face(kuba, "kuba"),)),
+        HomeLevelAsk(sport=Sport.SQUASH, askers=(face(kuba, "kuba", hours=1),)),
     )
     # Nothing waits on anybody who asked.
     assert await asks.of(tomek) == ()
@@ -1969,3 +1983,195 @@ async def test_tags_in_common_are_counted_off_the_profiles_as_they_stand(
 
     # Today's, never the day it was asked.
     assert await implementation.build(session).in_common(tomek, [ola]) == {ola: 0}
+
+
+# --------------------------------------------------------------------------- #
+# PlayersTags — a For-fun table's Social vibe, read in one go (#830)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(PlayersTags))
+async def test_players_tags_are_everybody_s_as_they_hold_them_now(
+    implementation, client, session, mailbox
+):
+    tomek, _ = await _tagged(
+        client, "tomek", "STAYS_FOR_A_DRINK", "OPEN_TO_MEET_SOMEONE", "PLAYS_TO_WIN"
+    )
+    ola, ola_token = await _tagged(client, "ola", "STAYS_FOR_A_DRINK", "NEW_IN_TOWN")
+    halfway, _ = await _tagged(client, "halfway")
+    stranger = new_uuid()
+    await mailbox.drain()
+    tags: PlayersTags = implementation.build(session)
+
+    # Every tag held — the ones that never count at a table too — and
+    # everybody asked answered, with none for an account holding none.
+    assert await tags.tags_of([tomek, ola, halfway, stranger]) == {
+        tomek: {
+            SocialTag.STAYS_FOR_A_DRINK,
+            SocialTag.OPEN_TO_MEET_SOMEONE,
+            SocialTag.PLAYS_TO_WIN,
+        },
+        ola: {SocialTag.STAYS_FOR_A_DRINK, SocialTag.NEW_IN_TOWN},
+        halfway: frozenset(),
+        stranger: frozenset(),
+    }
+    assert await tags.tags_of([]) == {}
+
+    changed = await client.put(
+        "/api/v1/players/me/social-tags",
+        json={"social_tags": ["QUIET_AND_FOCUSED", "SHARES_A_LIFT"]},
+        headers=players.auth(ola_token),
+    )
+    assert changed.status_code == 200, changed.text
+    await mailbox.drain()
+
+    # The tags as they stand now, never as they stood on a read before.
+    assert await implementation.build(session).tags_of([ola]) == {
+        ola: {SocialTag.QUIET_AND_FOCUSED, SocialTag.SHARES_A_LIFT}
+    }
+
+
+# --------------------------------------------------------------------------- #
+# PlayedWith — who already knows whom, a For-fun table's new faces (#831)
+# --------------------------------------------------------------------------- #
+
+
+def _a_friendly_played(one: UUID, other: UUID) -> Game:
+    """A singles friendly the two played, its score put up after its hour."""
+
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=Sport.PADEL,
+        kind=GameKind.FRIENDLY,
+        window=None,
+        line_up=LineUp.of(
+            (
+                Seating(side=GameSide.A, player_id=one),
+                Seating(side=GameSide.B, player_id=other),
+            )
+        ),
+        occurred_at=_at(-72),
+        starts_at=_at(-48),
+    )
+    game.state_result(by=one, score=A_SCORE, occurred_at=_at(-47))
+    return game
+
+
+@pytest.mark.parametrize("implementation", registered(PlayedWith))
+async def test_who_knows_whom_is_a_game_played_together_or_a_friendship(
+    implementation, session
+):
+    """Ola and Kuba have played a friendly; Ewa and Tomek are friends; Ania
+    asked Piotr, which is no friendship; Zosia and Marek were friends once.
+    Every other pair is new faces to each other."""
+
+    from tests.demands.friends_world import asks, befriends, removes
+
+    ola, kuba, ewa, tomek, ania, piotr, zosia, marek = (new_uuid() for _ in range(8))
+    await _saved(session, _a_friendly_played(ola, kuba))
+    await befriends(session, ewa, tomek)
+    await asks(session, ania, piotr)
+    await befriends(session, zosia, marek)
+    await removes(session, zosia, marek)
+    played_with: PlayedWith = implementation.build(session)
+    everybody = [ola, kuba, ewa, tomek, ania, piotr, zosia, marek]
+
+    assert await played_with.known_pairs(everybody, among=everybody, now=_at()) == {
+        frozenset({ola, kuba}),
+        frozenset({ewa, tomek}),
+    }
+    # One of ``players`` and one of ``among``: a rescue asks about the people
+    # on the game among its candidates.
+    assert await played_with.known_pairs([ola], among=[kuba, ewa], now=_at()) == {
+        frozenset({ola, kuba})
+    }
+    both = await played_with.known_pairs([kuba, ewa], among=[ola, tomek], now=_at())
+    assert both == {frozenset({ola, kuba}), frozenset({ewa, tomek})}
+    assert await played_with.known_pairs([ola, kuba], among=[ewa], now=_at()) == set()
+    assert await played_with.known_pairs([], among=everybody, now=_at()) == set()
+
+
+@pytest.mark.parametrize("implementation", registered(PlayedWith))
+async def test_a_game_still_ahead_makes_nobody_known(implementation, session):
+    """Booked together for Wednesday is not played together: they are still
+    new faces until the game is."""
+
+    await _saved(session, _a_booked_game())
+    played_with: PlayedWith = implementation.build(session)
+
+    assert (
+        await played_with.known_pairs(
+            [OLA, KUBA], among=[OLA, KUBA, EWA, TOMEK], now=_at(1)
+        )
+        == set()
+    )
+
+
+# --------------------------------------------------------------------------- #
+# ReadersStakes — what a competitive game puts at stake for its reader (#833)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(ReadersStakes))
+async def test_the_readers_stakes_are_the_booked_court_s_own_pair(
+    implementation, client, session_factory, session
+):
+    """**The very pair a booked game's pairing prints** — ``rating``'s rule
+    read forward through ``AtStakeQuery``, side against side — however the
+    sides are handed over."""
+
+    ola = await _rated(client, session_factory, "ola", mu=2.2)
+    kuba = await _rated(client, session_factory, "kuba", mu=2.4)
+    ewa = await _rated(client, session_factory, "ewa", mu=2.6)
+    tomek = await _rated(client, session_factory, "tomek", mu=2.7)
+    stakes: ReadersStakes = implementation.build(session)
+
+    read = await stakes.at_stake(
+        ola, sides=Sides(yours=(ola, tomek), theirs=(kuba, ewa)), sport=Sport.PADEL
+    )
+
+    court = await build_at_stake_query(session).counted_game_deltas_on_court(
+        player_id=ola,
+        own_side=[ola, tomek],
+        opposing_side=sorted([kuba, ewa]),
+        sport=Sport.PADEL,
+    )
+    assert court is not None
+    assert read == Stakes(win_delta=court.win_delta, loss_delta=court.loss_delta)
+    assert (
+        await stakes.at_stake(
+            ola, sides=Sides(yours=(tomek, ola), theirs=(ewa, kuba)), sport=Sport.PADEL
+        )
+        == read
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(ReadersStakes))
+async def test_nothing_is_at_stake_with_nothing_to_move_or_to_price_against(
+    implementation, client, session_factory, session
+):
+    """Two values or none: a reader with no level in the sport, or nobody
+    across the net with one, reads no pair — never a pair of noughts."""
+
+    ola = await _rated(client, session_factory, "ola", mu=2.5)
+    kuba = await _rated(client, session_factory, "kuba", mu=2.7)
+    unrated = new_uuid()
+    stakes: ReadersStakes = implementation.build(session)
+
+    def singles(reader: UUID, other: UUID) -> Sides:
+        return Sides(yours=(reader,), theirs=(other,))
+
+    priced = await stakes.at_stake(ola, sides=singles(ola, kuba), sport=Sport.PADEL)
+    assert priced is not None and priced.win_delta > 0 > priced.loss_delta
+    assert (
+        await stakes.at_stake(ola, sides=singles(ola, unrated), sport=Sport.PADEL)
+        is None
+    )
+    assert (
+        await stakes.at_stake(unrated, sides=singles(unrated, ola), sport=Sport.PADEL)
+        is None
+    )
+    assert (
+        await stakes.at_stake(ola, sides=singles(ola, kuba), sport=Sport.TENNIS) is None
+    )

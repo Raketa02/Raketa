@@ -348,7 +348,8 @@ unregistered and the local store reset, so the last yes books the game at every 
   (Seats to fill and its badge; *You're In* is still `GET /players/me/live-yeses`); **the
   deck** deals a `SEAT_OPEN` card (`CourtState.BOOKED`, `court_name`, tiles `paid`) only to the
   **best fits** — the offered members whose game with them in the seat is forecast most even,
-  three per open seat, the pool's order breaking a tie — and never again to somebody who said
+  three per open seat, the pool's order breaking a tie; on a For-fun game the best company for
+  the players still on it, by the vibe first (#831, `proposals.md`) — and never again to somebody who said
   no (`POST /bookings/{id}/no`, `NoSaidToTheSeat`; the board keeps the row). Derived at every
   read: the reader's own offer is asked first, and the whole pool is read only when a seat is
   offered to them. An outsider offered the seat reads `GET /bookings/{id}` from outside — in
@@ -646,3 +647,10 @@ unregistered and the local store reset, so the last yes books the game at every 
   Sent once: the summary is a stream of its own per club per day
   (`NewBookingsSummarised`, `domain/summary.py`), born in the transaction that queues the
   email, so a second process collides on it.
+- **What a booking puts in *Needs your answer* carries its arrival** (#815; `proposals.md`):
+  `InvitedSeat.invited_at` (the send for the card's own seats, `bookings.seat_invited` for a
+  seat invited into later), `RefusedHolding.refused_at` and `KeptSeat.refused_at`. Each is
+  folded off the event that first recorded it, and **kept** when it is recorded again (a holding
+  refused again while its card is still to fix, a rescuer refused again within their time) or
+  runs out. No answer or change of state moves it. Each is an event's `occurred_at`, so no
+  stored row changed.

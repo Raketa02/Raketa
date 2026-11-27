@@ -44,7 +44,7 @@ export const UNDO_WINDOW_MS = 10_000;
 /**
  * **Whether a yes on this card waits behind *Undo*** — a yes on *Book it now*, which fills the game
  * and charges everyone, and **every** rescue join, which pays at once (Q74). Any other yes is a
- * free vote, sent at once and withdrawn free from *You're In*. It is the yes that charges at once,
+ * free vote, sent at once and withdrawn free from *You’re in*. It is the yes that charges at once,
  * the one that says *Pay* (`chargesAtOnce`, Q124), read through one rule so what counts ten seconds
  * and what says *Pay* cannot drift apart.
  */
@@ -239,6 +239,20 @@ export interface PaymentToConfirm extends LiveYes {
   readonly confirmBy?: string;
   /** What it is for (Q113) — *Fix your card by 14:40* before the cut-off. With `confirmBy`. */
   readonly timeTo?: TimeTo;
+}
+
+/**
+ * **What a *TO CONFIRM* payment hands the fill's confirmation** — the deck it was dealt in, and the
+ * payment with its time — whether it was pressed on You › Payments' row or on Needs your answer's
+ * tile (#817).
+ */
+export function confirmAskOf(
+  payment: PaymentToConfirm,
+): { readonly dealtIn: DealtIn } & Confirmation {
+  return {
+    dealtIn: { groupId: payment.groupId, sport: payment.sport, kind: payment.kind },
+    ...confirmationOf(payment),
+  };
 }
 
 /**

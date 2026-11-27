@@ -67,6 +67,7 @@ export function toPerson(wire: Schemas['DeckTileSchema']): DeckPerson {
     ...(wire.friend ? { friend: true } : {}),
     ...(wire.nickname === null ? {} : { name: wire.nickname }),
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
+    ...(wire.photo_url === null || wire.photo_id === null ? {} : { photoId: wire.photo_id }),
     ...(wire.level === null ? {} : { level: wire.level }),
   };
 }
@@ -114,6 +115,15 @@ export function toForecast(wire: Schemas['DeckForecastSchema'] | null): Pick<Dec
 }
 
 /**
+ * A For-fun card's Social vibe, or nothing — always nothing on a competitive card (#830), and from
+ * an older server's read, which sends no `vibe` at all: the card is drawn without one, never a deck
+ * that fails over a field it did not know to send.
+ */
+export function toVibe(wire: Schemas['DeckVibeSchema'] | null | undefined): Pick<DeckCard, 'vibe'> {
+  return wire === null || wire === undefined ? {} : { vibe: { pct: wire.pct } };
+}
+
+/**
  * One card — or nothing, for a card whose game cell names no weekday: the ring would have
  * nowhere to go, and a card drawn without its game's own cell says less than the read did.
  */
@@ -139,6 +149,7 @@ export function toDeckCard(wire: Schemas['DeckCardSchema']): DeckCard | undefine
     noFreeCancellation: wire.no_free_cancellation,
     sides: toDeckSides(wire.sides),
     ...toForecast(wire.forecast),
+    ...toVibe(wire.vibe),
     overlap,
   };
 }
@@ -154,7 +165,11 @@ function toCappedWeek(wire: Schemas['CappedWeekSchema']): CappedWeek {
 export function toGroupDeck(wire: Schemas['GroupDeckResponse']): GroupDeck {
   return {
     segments: wire.segments.map(toSegment),
-    gamesBadge: wire.games_badge,
+    // The ids, across both kinds (#850); `games_badge`, their number, stays on the wire for older
+    // installed apps and is not read.
+    inCardIds: wire.in_card_ids,
+    // Every card dealt, the ones `toDeckCard` cannot draw too — what a look marks seen.
+    dealtIds: wire.cards.map((card) => card.proposal_id),
     gamesPerWeek: wire.games_per_week,
     cappedWeeks: wire.capped_weeks.map(toCappedWeek),
     cards: wire.cards.map(toDeckCard).filter((card): card is DeckCard => card !== undefined),

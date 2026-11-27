@@ -398,8 +398,8 @@ the questionnaire replacing the list.
 
 **The bell follows the ask's Home card** ([#765](https://github.com/Raketa02/Raketa/issues/765), on
 #764's; the friends mechanics §5.1, §12): a _level asked_ row is listed, and counted in the bell's
-number, only while its card is on Home's _ASKED FOR A LEVEL_ — the server's rule, matched by asker and
-sport. So **whatever takes the card re-reads the bell**: Not now on the card, a start refused as
+number, only while its card waits in Needs your answer's _ASKED FOR A LEVEL_ (Home's row until #816,
+ADR-0205 §1) — the server's rule, matched by asker and sport, which the sheet left as it was. So **whatever takes the card re-reads the bell**: Not now on the card, a start refused as
 `sport_already_rated`, and a level got by any route — the entry gate, as a rating pass ends, runs the
 shell's `useRereadAfterALevel`, which re-reads Home and the bell. Where the push and the row open is
 unchanged (_Level asked_ above), and the card's coral button runs the same start, failing with the
@@ -413,7 +413,25 @@ the game, where the seat reads _can't make it_ or _didn't answer_; and _called o
 the existing `GAME_CALLED_OFF`, its reason `BY_THE_SENDER`, opening the game. Nothing here needed
 more than the kinds spelled: Home and the booking are targets the mapping already reads off `opens`.
 **Answering an invitation on Home re-reads the bell** (the shell hands `FriendsGamesRow` the re-read,
-as it does the friend requests row); whether the server takes its row off is #751's gap.
+as it does the friend requests row); whether the server takes its row off is #751's gap. _(Since
+#817 the invitation is answered in Needs your answer — `FriendsGameSection`, handed the same re-read
+— and its notice opens the sheet: below.)_
+
+**A notice whose card waits in Needs your answer opens Home with the sheet up**
+([#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1; Q25). Two kinds pointed at a
+card that left Home for the sheet: `FRIEND_REQUEST` and `FRIENDS_GAME_INVITATION`, the seat
+invitation among them. Both still say they open `HOME`, and the kind decides
+(`homeTargetOf`, `domain/notice.ts`): they are `{ opens: 'needsYourAnswer' }`, and every other notice
+that opens Home — _Get your level_, whose card is still Home's, and a kind this build cannot name —
+is `{ opens: 'home' }`, as before. `useOpenNotice` marks Home's read and the payments to confirm stale
+— the reads the sheet is drawn from — and calls the shell's `openNeedsYourAnswer`, which lays Home
+down as `openTab` does (on Home already, it lays nothing) and asks the kept Home's sheet to open. **It
+opens once those reads have landed, and only if something waits by then**: a request answered on
+another phone, or an invitation run out, leaves Home as it is, never an empty sheet. _Level asked_
+still opens its questionnaire, and _Confirm your payment_ the game it is about, so neither is in the
+set. The walks are this feature's suite (a request from the bell, from a push, and answered
+elsewhere; _Get your level_ with no sheet) and `proposals`' `friendsGames.test.tsx` (the invitation's
+push from another tab, on Home, and with nothing left).
 
 **An empty seat's two new notices open the game** ([#760](https://github.com/Raketa02/Raketa/issues/760),
 on #752's; the friends mechanics §12): `COVER_WARNING` — the Split sender's warning a day before the

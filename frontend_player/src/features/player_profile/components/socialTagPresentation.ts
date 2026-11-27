@@ -5,14 +5,14 @@
  *
  * The tags themselves are named in
  * [`@/shared/vocabulary/socialTagPresentation`](../../../shared/vocabulary/socialTagPresentation.ts):
- * Play draws the same nineteen labels inside a reason line, so the table is promoted and
+ * Play draws the same twenty-seven labels inside a reason line, so the table is promoted and
  * this file holds what is genuinely this step's — sentences about a floor and a ceiling
  * this step is served and enforces
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §1).
  *
  * ## The numbers come from the server, and so do the sentences that quote them
  *
- * Nothing here writes 2 or 6. Both are served, the commit re-validates against the same
+ * Nothing here writes 2 or 8. Both are served, the commit re-validates against the same
  * two, and a client that hardcoded either would eventually tell a player a rule the
  * backend has stopped enforcing.
  */
@@ -42,7 +42,7 @@ export function socialTagsEyebrow(bounds: SocialTagSelectionBounds | undefined):
   return `${position} · ${socialTagsRule(bounds)}`;
 }
 
-/** The rule alone — *Pick 2 to 6* — which the You tab cites under its own group title. */
+/** The rule alone — *Pick 2 to 8* — which the You tab cites under its own group title. */
 export function socialTagsRule(bounds: SocialTagSelectionBounds): string {
   return `Pick ${bounds.minimum} to ${bounds.maximum}`;
 }
@@ -76,7 +76,7 @@ export function socialTagsSaveLabel(standing: SocialTagSelectionStanding, dirty:
 }
 
 /**
- * The **title** of what a refused seventh press says — the sentence under it is the
+ * The **title** of what a refused ninth press says — the sentence under it is the
  * screen's, because it names a control the player is looking at.
  *
  * It states the ceiling as a number rather than as "too many": the player pressed a chip

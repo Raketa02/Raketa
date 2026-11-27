@@ -105,18 +105,20 @@ nothing in `shared/` may import a feature.
 
 ### One source of truth per kind of state
 
-| State                         | Owner                                                                                  |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| Remote/backend data           | **TanStack Query**                                                                     |
-| Access + refresh tokens       | `src/shared/lib/auth` → `expo-secure-store`                                            |
-| Logged-in / logged-out status | The session state machine ([Part 3](#part-3--bootstrap-and-the-session-state-machine)) |
-| Local component UI state      | `useState` / `useReducer`                                                              |
-| Shared ephemeral UI state     | Zustand, feature-scoped                                                                |
-| Form input                    | The form layer + a Zod schema                                                          |
-| Navigation state              | expo-router                                                                            |
-| Build/environment config      | `src/shared/config/env.ts`                                                             |
-| A choice the phone remembers  | `src/shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188) |
-| What of a page is on screen   | `src/shared/ui/onScreen.ts`: followed values, read when wanted — never state           |
+| State                         | Owner                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------ |
+| Remote/backend data           | **TanStack Query**                                                                         |
+| Access + refresh tokens       | `src/shared/lib/auth` → `expo-secure-store`                                                |
+| Logged-in / logged-out status | The session state machine ([Part 3](#part-3--bootstrap-and-the-session-state-machine))     |
+| Local component UI state      | `useState` / `useReducer`                                                                  |
+| Shared ephemeral UI state     | Zustand, feature-scoped                                                                    |
+| Form input                    | The form layer + a Zod schema                                                              |
+| Navigation state              | expo-router                                                                                |
+| Build/environment config      | `src/shared/config/env.ts`                                                                 |
+| A choice the phone remembers  | `src/shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188)     |
+| The feature flags' datafile   | `features/feature_flags` → the saved datafile in AsyncStorage, kept at sign-out (ADR-0206) |
+| What of a page is on screen   | `src/shared/ui/onScreen.ts`: followed values, read when wanted — never state               |
+| The tab bar's reach           | `src/shared/ui/tabBarReach.ts`: one followed value the shell says — drawn by every reader  |
 
 Never represent the same state in two of these at once. In particular: **never copy
 Query data into Zustand**, **never put a token in Zustand**, and **never use a navigation
@@ -142,7 +144,7 @@ src/app/
         ├── index.tsx      Home, and the app's landing
         ├── booking/       a booked game's details, chat and result, pushed over Home
         ├── notices.tsx    the recent notices behind Home's bell
-        ├── play/          Groups | Explore, and a group's screens under it
+        ├── play/          the groups (or Groups | Explore, with `explore` on) and a group's screens
         └── you/           You, and a screen per row pushed over it
 ```
 
@@ -214,25 +216,89 @@ Three states, explicitly. Scattered `isLoading` booleans cannot express
 authenticated tree flashing before a redirect, and the login screen flashing while valid
 credentials are still being read out of the keychain.
 
-`src/shared/lib/bootstrap/` runs one ordered sequence:
+`src/shared/lib/bootstrap/` runs one ordered sequence, **behind the drawn splash**:
 
 ```
-native process starts
+native process starts                          (the OS launch window: a plain night field)
+   → the launch gate draws the splash          (the launch window is let go on its first layout)
    → initialise crash/error reporting          (so a bootstrap crash is visible)
    → read + Zod-validate public runtime config (fail fast on bad config)
    → wire focusManager / onlineManager to native state
    → read credentials from SecureStore
-   → restore + validate/refresh the session
+   → restore + validate/refresh the session    (not asked when the phone already knows it is offline — ADR-0209 §4)
+   → start warming Home                        (an account headed for the tabs, not known offline; never awaited — #874)
    → start reading the install referrer        (Android, first launch only; never awaited — #756)
    → initialise authenticated app state
-   → hide the splash screen
-   → render the authenticated or unauthenticated tree
+   → load fonts
+   → mount the authenticated or unauthenticated tree, underneath the splash
+   → fade the splash into it                   (at the later of 2.6 s and the first screen ready)
 ```
 
-The splash screen is the gate. Nothing renders a route tree before the sequence resolves.
+**The launch gate owns the launch, and startup is never held**
+([ADR-0209](../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)). It
+was the bootstrap gate, which held the native splash until the sequence resolved; that splash is
+now the OS's launch window, a plain `#0B2B33` field with no icon, kept only until the drawn
+splash's first layout. The drawn splash is the first thing the player sees, the sequence runs
+behind it, and when the sequence resolves the tree — or the startup failure screen — mounts
+**underneath** it, so the first screen's own requests start under the motion.
+
+- **The fade starts at the later of 2.6 s** (0.9 s under reduced motion), counted from the
+  splash's first layout, **and the first screen being ready**: the sequence settled, the tree laid
+  out, and **no hold standing**. It is a linear 0.5 s fade of the whole splash, which then
+  unmounts. _Ready_ never means the data has arrived.
+- **A hold** is the one interface between the tree and the gate (`useSplashHold`): a screen that
+  would draw nothing declares itself blank, and the fade waits while any declaration stands. The
+  entry gate holds while its decision is _pending_, so the splash never fades into a blank frame,
+  and the shared gate never imports a feature to know it.
+- **Home's reads set out while the splash plays** (#874; ADR-0209 §2, amended 2026-11-24). Right
+  after the session is restored the sequence **starts** _warm Home_ and never awaits it, as it
+  starts the install referrer's read: the splash waits on no read, and the fade rule above is
+  unchanged. The step is the shell's (`warmHome`), composed from each feature's Home prefetch under
+  the very query definitions its hooks observe — keys, functions and options, Top 10's opening
+  sport included — so Home mounts onto reads that are fresh under the 30 s `staleTime` and sends
+  none of them again. **It runs only for an account the entry gate will send to the tabs**, by the
+  gate's own rule over the cached account (`onboarding`'s `entryDestinationAtLaunch`, the phone's
+  last profile read first for an account that runs a club's groups), and **never on a phone that
+  already knows it is offline**, by the check's own rule (`auth`'s `phoneKnowsItIsOffline`). The
+  root layout composes it, because `shared/lib/bootstrap` may not import a feature. **Launch
+  only**: after a sign-in Home mounts the moment the session opens, and nothing is warmed. Reads
+  create no views, so the motion on the UI thread is not touched; the A32's cold-start trace is its
+  acceptance (the phone walk, #877).
+- **Reduced motion is decided once, before the first frame**, from the OS's answer —
+  `ReducedMotionProvider` starts from the setting as the process started, never a provisional
+  `false` — and never switched mid-play.
+- **The splash loads its wordmark's face itself, as it starts** (ADR-0209 §2, #855). The
+  sequence loads every face last, behind the session check, so the splash asks for Archivo 800 at
+  once (`fonts.ts`, `SplashFace`) and sets no letter before it is there; the sequence's own order
+  is unchanged. Its letters are placed on the **full screen** by a pure geometry
+  (`bootstrap/domain/splashGeometry.ts`), offset by where the app's view starts on it, which it
+  reads from the root's safe-area frame.
+- **The ball bounces the lockup into place** (#856). The same geometry gives the ball's keyframes
+  and the letters' cues, and a second pure module (`bootstrap/domain/splashMotion.ts`) the curves
+  between them. **One Reanimated clock**, started on the splash's first layout, moves the ball and
+  every letter on the UI thread, `transform` and `opacity` only, and ends exactly in the still
+  lockup; under reduced motion it stands at its end from the first frame. The motion's functions
+  carry Reanimated's `'worklet'` directive — a string, not an import, so the domain stays pure and
+  jest runs them as plain functions — because the UI thread calls them every frame.
+- **Until it is gone the splash swallows every touch**, and it sits above everything the root
+  draws: the overlay host, the toasts and the environment badge. The tree beneath takes no touch
+  and is hidden from a screen reader. **It plays once per JavaScript process**, a dev reload
+  included — never on a fast refresh, a return from the background or a sign-out — and the
+  sequence runs once with it.
+- **While the splash is up, the phone's bars belong to it** (#857). The gate paints them as the
+  splash starts and restores them as the fade starts, through the system bars port
+  (`shared/lib/platform/systemBars.ts`). On Android both bars take the field's edge, `#0B2B33`,
+  with light icons. On an iPhone the status bar shows light content. Restoring gives back exactly
+  the app's own look: the status bar the screens ask for, and the system's own navigation bar.
+- **What drawing last cannot cover reads `useCoveredBySplash`** (`shared/ui`). iOS's modal stage
+  is a native window above the whole app, so a sheet the first screen opens at once is presented
+  only as the splash goes; Android's is a layer in the tree, covered with it. A toast raised under
+  the splash is neither said nor timed until the splash has gone, then has its whole hold.
+
+Nothing renders a route tree before the sequence resolves.
 
 Fonts belong in this sequence too: Archivo (400–800) and IBM Plex Mono (400–600) are
-loaded with `expo-font` and **awaited before the splash hides** — a late font reflows
+loaded with `expo-font` and **awaited before the tree mounts** — a late font reflows
 every number on screen.
 
 ### Root provider composition
@@ -327,6 +393,16 @@ has been sent; `XMLHttpRequest` and a native uploader can, and either would be a
 transport with its own headers, timeout and rotation. So an upload reports the two stages
 it genuinely passes through — the bytes are read, then they are sent — and a screen drawing
 that never claims a percentage nobody measured.
+
+### The features host
+
+`httpGetFromFeaturesHost` is the module's third verb, and the only request the app makes to a
+host that is not the API: the feature-flag datafile, served from `EXPO_PUBLIC_FEATURES_URL`
+([ADR-0206](../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §4). It goes
+through the same `sendOnce` — timeout, correlation id, cancellation, error model — and is a verb
+rather than an option on `httpRequest` because of what it must never send: the call is built
+unauthenticated, so no bearer token can reach a machine on the LAN or a public bucket. It takes
+the `background` timeout class; nobody is waiting on it.
 
 ### Retry
 
@@ -756,6 +832,18 @@ acceptable for a product flow. Build the reusable states — `LoadingState`, `Em
 > `src/shared/errors/offlineMessage.ts` by
 > [#265](https://github.com/Raketa02/Raketa/issues/265).
 
+> **Amendment (2026-11-24) — `Skeleton` is built**, by
+> [#870](https://github.com/Raketa02/Raketa/issues/870) (PRD
+> [#867](https://github.com/Raketa02/Raketa/issues/867); design system 5.6): `Skeleton.tsx`'s block,
+> line and circle on a `SkeletonGround`, one band of light sweeping across all of them at once,
+> and `Reveal.tsx`, the cross-fade from a screen's skeleton to its content. **The primitive owns the
+> shapes and the band; each screen composes its own layout from them**, so there is no generic
+> loading screen to reach for. It is the _initial loading_ state's drawing, and only where the
+> layout is known: Rankings first, then Home, the four See all screens and the group page
+> (#871–#876). It never stands in for _empty_, a refusal or the offline note — those take its place
+> when the read ends that way — and never for _refreshing_. `LoadingState`, `EmptyState` and
+> `ErrorState` still stand as written.
+
 ### Loading granularity
 
 Distinguish screen initial load · pull-to-refresh · background refresh · button mutation ·
@@ -859,6 +947,17 @@ sessions.
   ([`docs/features/_shared.md`](features/_shared.md)). The eighth is **`PushPort` over
   `expo-notifications`** ([#559](https://github.com/Raketa02/Raketa/issues/559)): the permission, the
   push token, a push arriving while the app is open and a push tapped, with `fakePush()` beside it.
+  The ninth is the install referrer over `expo-application`
+  ([#756](https://github.com/Raketa02/Raketa/issues/756)). The tenth is **`SystemBarsPort`**
+  ([#857](https://github.com/Raketa02/Raketa/issues/857)): the status and navigation bars, which
+  the launch gate paints for the drawn splash and restores as it fades. It is the first port
+  split into platform files, `systemBars.ts` for an iPhone and `systemBars.android.ts`, the one
+  importer of `expo-navigation-bar`, with `fakeSystemBars()` beside them. The eleventh is
+  **`KeyboardPort`** ([#882](https://github.com/Raketa02/Raketa/issues/882), ADR-0210 §9): whether
+  the soft keyboard is up, and a way to follow it. It is the app's one listener for the keyboard's
+  show and hide, in `keyboard.ts` beside the avoidance value and the dismissal, the only importer of
+  React Native's `Keyboard`, with `fakeKeyboard()` beside it. Both shells stand the tab bar down
+  while it shrinks an Android window.
 - **A screen reaches a port through its context** — `useLocation()` /
   `useImagePicking()` / `useLiveStream()`, each defaulting to the real device, so nothing
   in the app wires anything up and a test wraps the tree in the device it wants. A screen
@@ -918,6 +1017,33 @@ sessions.
   Android does not end when one finger lifts — the recogniser stays active on the one that
   remains and reports it as the focal point — so a pinch is over on the event's pointer
   count, never on the recogniser's end (ADR-0177 §1 as amended).
+- **Nothing above a scroll view fades or moves on Reanimated.** On Android (React Native 0.76.9,
+  Reanimated 3.16.7) a Reanimated style animating the opacity of a view above a horizontal
+  `ScrollView` — opacity alone is enough, and detaching the style once the motion has run undoes
+  nothing — leaves that scroll view's offset out of what `measure` reads (measured 2026-11-21: a
+  face the rail had scrolled 988 points in measured at 1 162 instead of 172). A press tests every
+  move of the finger against that measure, and a thumb resting on a real screen reports moves, so
+  every tile and button the rail had scrolled in took the press and dropped it;
+  `adb shell input tap` sends no move and never shows it, and `input swipe x y x y 150` does. So
+  a FOR YOU line's content fades and slides on React Native's own `Animated` on the native driver
+  (`FoldingLine`). What measured harmless above the same rail: the line's border colour, a
+  Reanimated style, and Reanimated's layout transitions on the line and its fold.
+- **The group page's scroller stands alone in a view of its own.** On Android (React Native
+  0.76.9, Reanimated 3.16.7), as a bare sibling of the page's tab bar and its deck, the vertical
+  `ScrollView` that draws Fill in, You’re in and Friends never had its offset reach what `measure`
+  reads: sampled every frame for a second after each scroll, a view at the top of its content
+  stayed where it stood unscrolled (measured 2026-11-25: _Pick a different court_ drawn at 672
+  measured at 866, the 194 points the page had scrolled). Every button the page had scrolled in
+  then dropped a resting thumb's press, as above — Friends' _Send game and pay_ and _Pick a
+  different court_ took several taps. Inside any view of its own — a plain `View`, one with
+  `collapsable={false}`, or the `RefreshControl` the pulling tabs wrap it in — the offset arrives
+  frame by frame and every press lands. Taking away did not cure it: the reveal round the
+  scroller's content, the tab bar's reveal, its Reanimated layout transition and its chevron, the
+  deck kept mounted, the tab menus, or mounting the scroller with the page rather than on a tab
+  switch. And Home's and Members' bare scrollers, beside their own headers, measured right. So
+  the rule is this page's, from evidence, not a law of every scroller — which part of the page
+  breaks the bare one is not known. When a press inside a scroller drops on Android, log
+  `measure` against the touch's `pageY` before suspecting anything else.
 
 ### The live surface
 
@@ -979,10 +1105,19 @@ budget making it short.
 ```ts
 const EnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
+  EXPO_PUBLIC_FEATURES_URL: z.string().url(),
   EXPO_PUBLIC_ENV: z.enum(['local', 'development', 'staging', 'production']),
   EXPO_PUBLIC_LINK_DOMAIN: z.string().optional(), // a bare host, or nothing
 });
 ```
+
+`EXPO_PUBLIC_FEATURES_URL` is the base the feature-flag datafile is fetched from —
+`<base>/<environment>/featurevisor-player.json` — the developer's machine on the LAN today, served
+by the flags repo's `npm run serve`, and a bucket later
+([ADR-0206](../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §4). It is
+required, and it obeys the scheme rule below exactly as the API URL does, for the same reason: it
+is reached from a phone, and a datafile read in the clear is one somebody on the network can
+rewrite. Nothing is hosted yet, so off a developer's machine every feature is at its code default.
 
 `EXPO_PUBLIC_LINK_DOMAIN` is the one **optional** value: the web domain the app's links live on
 (`raketa.app`, bare), and **empty in every environment today**
@@ -1209,14 +1344,27 @@ adapter, a cache version with migrations, a maximum age, exclusion of sensitive 
 user-scoped clearing on logout, and schema-change handling. **Never store a query cache in
 SecureStore** — it is for small secrets.
 
-**The one thing persisted outside the keychain is the phone-preferences store**
+**Two things are persisted outside the keychain.** The first is the feature-flag datafile
+([ADR-0206](../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §6): the last one the app
+could read, kept raw in AsyncStorage by `features/feature_flags/api/datafileCache.ts` and read
+back at launch, so a player offline keeps the feature flags they last saw. It is not a query-cache
+persistence and none of the rules above are waived for it: it is public-read by design, names no
+player, is checked on the way out as it was on the way in, a read that fails is simply no cache,
+and sign-out leaves it, because it belongs to no account.
+
+**The second is the phone-preferences store**
 ([ADR-0188](../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)):
 `src/shared/lib/preferences/phonePreferences.ts` keeps the choices a player made on this phone —
 the Play segment since [#512](https://github.com/Raketa02/Raketa/issues/512), the last sport and
 the last profile to come — **one key per account per value**, and **empties itself at sign-out**
 as step 4 of `endSession`, beside the cache clear. It holds a choice, never a copy of server
 state; a value it cannot read, or one the owning feature no longer recognises, is that value's
-default. **One flag is the phone's rather than an account's**
+default. **Since [#849](https://github.com/Raketa02/Raketa/issues/849) it also keeps the rows a
+player has seen on a group page's tabs**
+([ADR-0208](../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)):
+one list of ids per group, sport and tab (`seenRows.<entry>`), per account and emptied at sign-out
+like the rest, and **the one value no screen holds its first frame for** — read without waiting,
+with no badge until it has been read, and written without waiting. **One flag is the phone's rather than an account's**
 ([ADR-0200](../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8, #732): _the guide on
 Your rating was shown_ (`readPhoneFlag` / `raisePhoneFlag`), under a prefix of its own that the
 sign-out never lists, so it is kept — a second account on the phone never sees the guide. A flag
@@ -1239,10 +1387,13 @@ encodes:
 - `domain/` and `use-cases/` import no React, React Native, Expo or wire types
 - no imports from `../backend/` or any sibling app
 - `@react-native-async-storage/async-storage` is importable only by
+  `features/feature_flags/api/datafileCache.ts`, which keeps the public feature-flag datafile, and by
   `shared/lib/preferences/phonePreferences.ts`, which keeps the per-account choices ADR-0188
   lists, ADR-0200 §8's one per-account flag kept past a session, and the one flag the phone keeps
-  for itself, _the install referrer was read_ (#756) — never a credential (ADR-0008, ADR-0188 §1).
-  The feature flags' saved datafile was its other owner until the flags were removed (#576)
+  for itself, _the install referrer was read_ (#756) — never a credential (ADR-0008, ADR-0206 §12,
+  ADR-0188 §1)
+- `@featurevisor/sdk` is importable only by `features/feature_flags/api/featurevisor.ts`, the
+  one module that holds the instance (ADR-0206 §5)
 - `expo-secure-store` is importable only inside `src/shared/lib/auth/`
 - `expo-location`, `expo-image-picker`, `react-native-sse`, `expo-haptics`, `expo-clipboard` and
   `expo-application` are importable only by the port that owns each — `platform/location.ts`,
@@ -1396,11 +1547,15 @@ when the code that needs them is written — not preemptively:
 > `react-native-sse`, with the app's first live surface — pure JS over `XMLHttpRequest`, no
 > native module, and therefore nothing for an SDK bump to break
 > ([ADR-0147](../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
-> §4, [the live surface](#the-live-surface)). A feature-flag service — Featurevisor — arrived
-> with ADR-0180 and left with the one loop it hid (#576); a later one arrives on its own decision.
-> The rule it carried here still stands: build-time config and runtime product flags stay
-> separate, no `if (env === 'production')` is a rollout mechanism, and every flag has an owner,
-> purpose, default, rollout strategy and a removal condition, and is deleted after rollout. All
+> §4, [the live surface](#the-live-surface)). And so has a feature-flag service —
+> Featurevisor, pinned exactly at 3.8.0, with AsyncStorage for its saved datafile — twice: it
+> arrived with ADR-0180, left with the one loop it hid (#576), and came back with its first gate
+> since, `explore` ([ADR-0206](../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md),
+> [#826](https://github.com/Raketa02/Raketa/issues/826)). The rule it carries here stands, whole:
+> build-time config and runtime product flags stay separate, no `if (env === 'production')` is a
+> rollout mechanism, and every feature flag has an owner, purpose, default, rollout strategy and a
+> removal condition — all five beside its key in `features/feature_flags/domain/featureFlags.ts`,
+> the rollout itself in the flags repo — and is deleted after rollout. All
 > of them are
 > listed as present rather than pending — this list is what is _missing_, and an entry that
 > outlives its own arrival makes the list untrustworthy.

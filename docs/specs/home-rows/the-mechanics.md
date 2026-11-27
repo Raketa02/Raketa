@@ -20,6 +20,12 @@
 >
 > **Calls marked *(a call)*** were made while specifying PRD #789 or writing this document, and are
 > open for the product owner to overrule ([§17](#17-calls-made-without-a-ruling)).
+>
+> **Amended by [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §6** for each people row's **total** — the count on its FOR YOU line — built by
+> [#812](https://github.com/Raketa02/Raketa/issues/812): §6.9, §7.5, §8.8 and §15; and **§6, §7**
+> for Hottest groups' total and the *Groups heating up* page, built by
+> [#813](https://github.com/Raketa02/Raketa/issues/813): §5.10 and §15.
 
 ---
 
@@ -75,12 +81,30 @@ group, *Anyone*, 7 players).
 
 ## 3. Home, top to bottom
 
-- **The header and today's rows stay on top, unchanged** (Q3): the title, the trophy and the bell;
-  *Get your level*, **FRIENDS GAME**, *To confirm*, **FRIEND REQUESTS**, **ASKED FOR A LEVEL**, *Your
-  games*.
-- **Then the five new rows, in this order:** *Hottest groups*, *Same competitive level players*, *New
-  in Raketa*, *Same vibe players*, *Top 10*.
-- **A row with nothing to show is hidden with its title**, as Home's rows are today.
+> **Amended by [#820](https://github.com/Raketa02/Raketa/issues/820)**
+> ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> §4, §5): the five rows fold into **FOR YOU**'s lines, and what waits for an answer is behind the
+> envelope.
+
+- **The header, *Get your level* and *Your games* on top** (ADR-0205 §4).
+- **Then FOR YOU: the five rows as five folding lines, in this order:** *Hottest groups* (**Groups
+  heating up**), *Same competitive level players* (**Players at your level**), *New in Raketa*, *Same
+  vibe players* (**Players with your vibe**), *Top 10*. The titles are the words on screen; the
+  row's name stays the term.
+- **One line is open at a time**, none at app start. A tap on a closed line opens it, and a tap on
+  another folds the first, then unfolds the second; only the open line's header closes it. **Home
+  remembers the open line while the app lives**, across tab switches, and never across a restart.
+  **For a player in no group, Groups heating up starts open.**
+- **A closed line draws no tiles.** Its read still runs, for its hiding and its count.
+- **Four lines carry a count** ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6):
+  each row's `total` — **how many there are to explore, never how many are a good match** (§5.10,
+  §6.9, §7.5, §8.8) — counted up to 100 and drawn *99+* past 99, in the pill and in *See all N ›*
+  alike. Top 10 has none. **It is the server's**: the phone never adds a card to it or takes one
+  away, so a friend write drawn on a card (§13) leaves it as read, and **it moves with the row's
+  next read** — a return after 30 seconds, foregrounding, the pull, and a push or a write that
+  re-reads the row. Nothing polls for it.
+- **A row with nothing to show is a hidden line**, as Home's rows were: while loading, empty or failed.
+  With all five hidden, FOR YOU is hidden. A line that empties while open closes and goes.
 - **Each row reads on its own.** A slow or failed row never holds up the others.
   - **Pull-to-refresh re-reads them all.**
   - **Home re-reads them each time the reader comes back to it** when the last read is older than 30
@@ -89,8 +113,9 @@ group, *Anyone*, 7 players).
 - **Nicknames and today's faces everywhere** (Q4): the photo, or the generated court poster as every
   face draws it.
 - **One list for the whole app** (Q2). Everything is split by city the day a second city opens.
-- **A player in no group** reads under *Your games*: *Join a group to get games — the hottest ones are
-  just below.*, instead of *⚡ Play finds you one*.
+- **A player in no group** reads under *Your games*: *Join a group to get games — see Groups heating
+  up, just below.*, instead of *⚡ Play finds you one* (#820; it read *— the hottest ones are just
+  below.* until then).
 
 ---
 
@@ -210,6 +235,10 @@ join a second or third group.
 
 ### 5.5 The heat bar
 
+**Drawn nowhere since [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home
+refactor 5.1): the card lost it, with *+N this month* and the sport line. The heat still orders the
+groups and picks the tags (§5.3, §5.4), and the read still serves each card's share. What the bar drew:
+
 - **Each card's heat over the HOTTEST card's**, which is full.
 - **With no HOTTEST, over the top card's** (call 3), **read as the highest heat in the row** *(a
   call)*: with no HOTTEST the first card is the strongest GROWING one, which an untagged card can
@@ -268,6 +297,29 @@ join a second or third group.
   **No See all.**
 - **The group page itself stays members-only.** *Open group* shows only for a member.
 
+### 5.10 Its total and the *Groups heating up* page (ADR-0205 §6, §7)
+
+- **The total** is **every group with 3 or more players**, the reader's own included — every
+  group the page lists — **counted up to 100**, drawn *99+* past 99. **0** with no group of 3.
+- **It costs no statement**: the heat already counts every group's members to pick the six, and
+  the total is how many groups that count found.
+- **The page lists every group of 3 or more in §5.4's order, without the cut at six**: HOTTEST,
+  then GROWING by heat, then untagged by heat; ties go to more games this week, then the group
+  id. **The row is exactly its first six** — the same groups, places and tags.
+- **20 a page, by cursor.** The first page carries the total; the last page names no next
+  cursor. Each card is the row's card, read whole for that page's 20 only: who runs it, the
+  club, the dots, the faces (the reader's friends first, never the reader), the friends count,
+  the reader's relation, the policy and whether the reader runs it.
+- **Heat is worked out on every read, so a group can shift between pages** (accepted). A cursor
+  names a place in the order — a tag, a heat, a number of games and a group id — never a
+  count: the next page is whatever stands behind that place now. A group whose heat rose past
+  the cursor since is missed; one that cooled behind it is read again; a group gone meanwhile
+  moves nobody else.
+- **The bars on the page** are over the HOTTEST's heat, or with none over the highest heat on
+  the whole list. They differ from the row's only when six GROWING groups push a hotter
+  untagged one off the row. The app draws no bar since ADR-0205; heat still orders and tags.
+- **No filter**, by sport or distance (ADR-0205 §7).
+
 ---
 
 ## 6. Same competitive level players
@@ -306,6 +358,9 @@ competitive game would be even with.
 
 - **The other's level minus the reader's, in the card's sport**, two decimals: *0,02 below you*,
   *0,09 above you*, and ***Same level*** when it rounds to 0,00.
+- **Said on the comparison sheet's blocks only** (§6.5) since
+  [#821](https://github.com/Raketa02/Raketa/issues/821) (ADR-0205 §5, Q22; home refactor 7): the card
+  no longer draws it, nor speaks it with the pairing. The read still serves the card's gap.
 - **The comparison bar** reads the same two levels on the Skill passport scale, 1,00–5,00.
 
 ### 6.5 The comparison sheet
@@ -332,6 +387,17 @@ competitive game would be even with.
 Tomek's row: 7 fresh good matches, then **Zofia** (a friend, 91%), **Ania** (request sent, 90%),
 **Piotr** (a stranger, 60%). Marta starts playing and reads 85% → Marta joins the fresh ones and Piotr
 leaves. Two more fresh matches → Ania leaves, then Zofia.
+
+### 6.9 Its total (ADR-0205 §6)
+
+- **Everybody holding a level in a sport the reader holds one in**, counted **once however many
+  sports they share**, and never anyone §4.6 leaves out. **0** while the reader holds no level.
+- **Who there is to explore, never the good matches**: nobody's % is worked out to count it, so a
+  busy city reads *99+* and that is intended.
+- **Counted up to 100**, drawn *99+* past 99, on the line and on *See all N ›* alike — whichever
+  sport See all opens on.
+- **Free once the row's own windows read everybody, or a hundred**; otherwise one count, which stops
+  at 100. No window is read to count.
 
 ---
 
@@ -382,6 +448,14 @@ No weekday names (a call made while writing PRD #789).
 - **If a sport leaves nobody:** *Nobody new plays squash yet*. (It can, between the read that offered
   the chip and the read of the sport.)
 
+### 7.5 Its total (ADR-0205 §6)
+
+- **Everybody who joined in the last 30 days**, strictly, as §7.1 reads them — friends and those the
+  reader asked included, anyone §4.6 leaves out not. **0** with nobody new.
+- **Counted up to 100**, drawn *99+* past 99, on the line and on *See all N ›*.
+- **Free when the row holds fewer than ten** — the row is everybody — and otherwise one count over
+  the month's sign-ups, which stops at 100.
+
 ---
 
 ## 8. Same vibe players
@@ -403,7 +477,11 @@ coffee with. **Skill plays no part** (Q15).
 | --- | --- | --- | --- | --- | --- | --- |
 | Vibe % | 50% | 75% | 88% | 94% | 97% | 98% |
 
-Six is the most: a player holds at most six tags.
+Six is the most: a player holds at most six tags. *(Eight since ADR-0207 §7, below.)*
+
+> **Amended 2026-11-22** by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
+> §7: a player holds up to **eight**, so the % also reaches **99%** (7 shared) and **100%** (8
+> shared) — the same formula; 100% is true, the two players' eight tags are identical.
 
 ### 8.3 Order
 
@@ -436,6 +514,15 @@ The You spec said *a tag is shown, never scored*. **Tags now order one row**, *S
 still score nothing else: no proposal, card, forecast, level or other row reads one. *A tag is not an
 intent* stands.
 
+### 8.8 Its total (ADR-0205 §6)
+
+- **Everybody sharing at least one tag with the reader**, counted **once however many they share**,
+  and never anyone §4.6 leaves out. **0** with nobody sharing one.
+- **Who there is to explore, never the good matches**: one shared tag counts as six do.
+- **Counted up to 100**, drawn *99+* past 99, on the line and on *See all N ›*.
+- **Counted in the row's own pass over the tags**, never a second one, and never by reading more of
+  the order.
+
 ---
 
 ## 9. Keeping the rows alive
@@ -459,6 +546,9 @@ Q33).
   without the reader adding them, while the pair is still unconnected.
 - **On screen** is at least half the card visible (call 2). **One count per card, row and day**, the
   phone reporting it. Opening Home without scrolling down to the row counts nothing.
+- **Only while its line is open** (#820, ADR-0205 §5): a closed FOR YOU line draws no card, so its
+  cards are never on screen and never counted, however far the page is scrolled. Opening the line and
+  reaching its cards is what counts them.
 - **Each row keeps its own count.** Karol resting in *Same vibe* is fresh in *Same competitive level*.
 - **A rested player can still come back in a gap.** They are never hidden.
 - **A friend added after resting stays a gap** (a call made while writing PRD #789): a friend is a gap
@@ -502,9 +592,10 @@ Q33).
 ### 10.4 Taps
 
 - **A card opens the record**: *This record isn't available* across a block.
-- **Rankings ›** opens the Rankings page on the row's sport, **in General**, the view Top 10 is drawn
-  from, so the reader sees the rest of the same list *(a call)*. The page then remembers General, as
-  any look at it does.
+- ***Open the rankings ›*** (*Rankings ›* until [#821](https://github.com/Raketa02/Raketa/issues/821),
+  now in the open line's footer) opens the Rankings page on the row's sport, **in General**, the
+  view Top 10 is drawn from, so the reader sees the rest of the same list *(a call)*. The page then
+  remembers General, as any look at it does.
 
 ### 10.5 The trophy (Q32, Q36)
 
@@ -561,7 +652,9 @@ Q33).
 
 - **Each row is its own read** (§3). A row that fails shows nothing, and the rest of Home stands.
 - **After any friend or join write from a row**, every row, See all and Home read that could show that
-  person or group is read again, so one tap shows everywhere.
+  person or group is read again, so one tap shows everywhere. **The Groups heating up page is one of
+  them** ([#823](https://github.com/Raketa02/Raketa/issues/823)): a join, an ask or a withdraw from
+  the page or the line moves the card on both at once, and reads both again.
 - **A people row holds still under the tap** (2026-11-15): the person's card stays where it stands and
   shows the new state, and §9.1 moves them on the row's next read — a return to Home, a pull — never
   under the thumb. Read at the tap, asking a fresh match on *Same vibe* made the card leave as it was
@@ -585,6 +678,8 @@ A withdrawn Join request tells nobody.
 | --- | --- |
 | Hottest groups' size to appear | 3 or more players |
 | Hottest groups' cards | up to 6 |
+| Hottest groups' total | every group of 3 or more, counted up to 100 · *99+* past 99 |
+| A *Groups heating up* page | 20 cards, every group of 3 or more; the row is its first 6 |
 | Heat | 2 × games this week + 3 × new this month + players (to 20) |
 | *Games this week* | court time in the last 7 days, not called off, scored or not |
 | *New this month* | joined in the last 30 days, still members |
@@ -595,6 +690,7 @@ A withdrawn Join request tells nobody.
 | *% even*'s ceiling | 96% |
 | A good match | ≥ 70% even · ≥ 2 shared tags |
 | People rows | 10 cards each |
+| A people row's total | everybody who qualifies, each once, counted up to 100 · *99+* past 99 |
 | New in Raketa | joined in the last 30 days, strictly |
 | Vibe % | 50 · 75 · 88 · 94 · 97 · 98 for 1–6 shared tags |
 | Rest | on screen on 5 different days, per row |
@@ -682,7 +778,7 @@ overrule):
 8. ***Joined …* counts Warsaw days**, and 28 days and up read *Joined 4 weeks ago* (§7.3).
 9. **A rested player stays rested** in that row; the count never resets (§9.2).
 10. **Top 10's fall-through goes round** the app's sport order (§10.3).
-11. **Rankings › opens the page in General**, the list Top 10 is the top of (§10.4).
+11. **Open the rankings › opens the page in General**, the list Top 10 is the top of (§10.4).
 12. **A player who turns the switch off while on a row** leaves it on the next read, and a request
     already sent to them stays open (§4.3).
 13. **A request refused under rule (b)** from a stale card puts the button back to **+**, with no

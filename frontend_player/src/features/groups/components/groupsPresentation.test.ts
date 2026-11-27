@@ -19,6 +19,8 @@ import {
   requestLevels,
   requestTags,
   emptySeatLabel,
+  fillInTabLabel,
+  gamesTabLabel,
   friendSeatLabel,
   seatMoreLine,
   takeOffLabel,
@@ -34,10 +36,12 @@ import {
   identityLine,
   membersAtClub,
   peopleLine,
+  postAGameBackLabel,
   waitingFor,
   membersLine,
   seatsFilledLabel,
   shareMessage,
+  youreInTabLabel,
   yourSeatLabel,
 } from './groupsPresentation';
 
@@ -127,6 +131,31 @@ describe('a club’s line', () => {
 });
 
 describe('the group page’s sentences', () => {
+  // #849: a badge counts what the player hasn't seen, and the tab's spoken name says so.
+  it('says the Fill in tab with its new seats, one or many', () => {
+    expect(fillInTabLabel(1)).toBe('Fill in, 1 new seat to fill');
+    expect(fillInTabLabel(2)).toBe('Fill in, 2 new seats to fill');
+  });
+
+  it('says the You’re in tab with its new games, one or many', () => {
+    expect(youreInTabLabel(1)).toBe('You’re in, 1 new game');
+    expect(youreInTabLabel(3)).toBe('You’re in, 3 new games');
+  });
+
+  // #850: Games counts what is new too — the cards with somebody In you haven't seen.
+  it('says the Games tab with its new cards with somebody In', () => {
+    expect(gamesTabLabel(1)).toBe('Games, 1 new with somebody In');
+    expect(gamesTabLabel(4)).toBe('Games, 4 new with somebody In');
+  });
+
+  // #848: Post a game's chevron names the tab a back-out returns to — the one it was opened from.
+  it('names the tab Post a game backs out to', () => {
+    expect(postAGameBackLabel('youreIn')).toBe('Back to You’re in');
+    expect(postAGameBackLabel('games')).toBe('Back to Games');
+    expect(postAGameBackLabel('fillIn')).toBe('Back to Fill in');
+    expect(postAGameBackLabel('friends')).toBe('Back to Friends');
+  });
+
   const card = (kind: GamesCard['kind'], rated: number, seats: number): GamesCard => ({
     kind,
     rated,
@@ -473,11 +502,12 @@ describe('Home’s Hottest groups (§31.2–§31.4)', () => {
     expect(hottestChipLabel('in', 'Ogrody 33 Club')).toBe('Ogrody 33 Club: You’re in');
   });
 
+  /** Since #821 the card draws no growth, so it says none — the group sheet still shows it. */
   it('speaks the card as what it draws', () => {
     expect(hottestCardLabel(ogrody)).toBe(
-      'Ogrody 33 Club, hottest, 14 games this week, 11 players, 3 new this month',
+      'Ogrody 33 Club, hottest, 14 games this week, 11 players',
     );
-    expect(hottestCardLabel({ ...ogrody, tag: null, gamesThisWeek: 1, newThisMonth: 0 })).toBe(
+    expect(hottestCardLabel({ ...ogrody, tag: null, gamesThisWeek: 1 })).toBe(
       'Ogrody 33 Club, 1 game this week, 11 players',
     );
   });

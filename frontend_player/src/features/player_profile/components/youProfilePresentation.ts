@@ -146,7 +146,7 @@ export function introLine(intro: string | undefined): string {
 
 /**
  * A screen's eyebrow under *On your card*: the group the row was opened from, and the step's
- * rule beside it where the step's eyebrow carried one — *On your card · Pick 2 to 6*, *On your
+ * rule beside it where the step's eyebrow carried one — *On your card · Pick 2 to 8*, *On your
  * card · On-court only — up to three* — the steps' own composition with the group in place of
  * the position. The group title alone until a served rule is in, for the tags step's reason.
  *

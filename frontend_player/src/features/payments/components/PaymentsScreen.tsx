@@ -49,7 +49,7 @@
 
 import { useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ShellScreen, YOU_COPY } from '@/features/shell/types';
 import { codeMessage, recoveryMessage, type AppError } from '@/shared/errors';
@@ -154,7 +154,7 @@ function Saved({
       <View style={s.remove}>
         <TextLink
           label={removal.isPending ? PAYMENTS_COPY.method.removing : PAYMENTS_COPY.method.remove}
-          disabled={removal.isPending}
+          busy={removal.isPending}
           onPress={removal.remove}
         />
         {removal.refusal === null || removal.refusal.kind === 'GONE' ? null : (
@@ -217,26 +217,40 @@ function ReadStanding({
   return <Text style={s.line}>{PAYMENTS_COPY.loading}</Text>;
 }
 
-/** A small link under a card — *Remove this method*, *Keep this one*. */
+/**
+ * A small link under a card — *Remove this method*, *Keep this one*.
+ *
+ * **`busy` is 6.1's busy on a link** (`docs/specs/busy-indicator/decisions.md` §3.7): no press,
+ * announced busy, and `ActivityIndicator` turning before the words in their own `muted` — the words
+ * are the caller's, so pass the busy one as `label`.
+ */
 function TextLink({
   label,
   onPress,
-  disabled = false,
+  busy = false,
 }: {
   readonly label: string;
   readonly onPress: () => void;
-  readonly disabled?: boolean;
+  readonly busy?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
+      accessibilityState={{ disabled: busy, busy }}
+      disabled={busy}
       onPress={onPress}
       hitSlop={theme.hit.btn}
-      style={({ pressed }) => [s.link, pressed ? s.pressed : undefined]}
+      style={({ pressed }) => [s.link, pressed && !busy ? s.pressed : undefined]}
     >
+      {busy ? (
+        <ActivityIndicator
+          size="small"
+          color={theme.color.muted}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      ) : null}
       <Text style={s.linkWords}>{label}</Text>
     </Pressable>
   );
@@ -246,7 +260,14 @@ const s = StyleSheet.create({
   column: { gap: theme.space.md },
   line: { ...theme.type.rlLabel, color: theme.color.muted },
   remove: { gap: theme.space.sm, alignItems: 'center' },
-  link: { alignSelf: 'center', paddingVertical: theme.space.xs },
+  // A row, so a busy link's spinner sits before its words a word's gap apart (6.1's busy row).
+  link: {
+    alignSelf: 'center',
+    paddingVertical: theme.space.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.xs,
+  },
   linkWords: { ...theme.type.rlValue, color: theme.color.muted, textDecorationLine: 'underline' },
   pressed: { opacity: 0.7 },
   action: { alignSelf: 'flex-start' },

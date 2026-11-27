@@ -24,6 +24,8 @@ import type {
   GroupMember,
   GroupPerson,
   HottestGroup,
+  HottestPage,
+  HottestRow,
   JoinRequest,
   Monogram,
   MyGroup,
@@ -213,10 +215,25 @@ export function toEditedGroup(wire: Schemas['EditedGroupResponse']): EditedGroup
 /**
  * **Home's Hottest groups** (#800), in the row's order — the server's. Everything the card and its
  * sheet draw rides on the one read, so nothing here is worked out: the share, the tag and the six
- * faces are carried as they came.
+ * faces are carried as they came. **The total is the server's too** (#822): every group of 3 or more,
+ * up to 100, which the line draws as its count.
  */
-export function toHottestGroups(wire: Schemas['HottestGroupsResponse']): readonly HottestGroup[] {
-  return wire.groups.map((group) => ({
+export function toHottestRow(wire: Schemas['HottestGroupsResponse']): HottestRow {
+  return { groups: wire.groups.map(toHottestGroup), total: wire.total };
+}
+
+/**
+ * **A page of *Groups heating up*** (#823) — the row's cards, read whole for the page's 20, and the
+ * cursor behind them; none on the last page. The first page's `total` is the line's count, already on
+ * the row's read, and the page draws no count, so it is left on the wire.
+ */
+export function toHottestPage(wire: Schemas['HottestGroupsPageResponse']): HottestPage {
+  const groups = wire.groups.map(toHottestGroup);
+  return wire.next === null ? { groups } : { groups, next: wire.next };
+}
+
+function toHottestGroup(group: Schemas['HottestGroupSchema']): HottestGroup {
+  return {
     id: group.id,
     kind: group.kind,
     name: group.name,
@@ -228,11 +245,10 @@ export function toHottestGroups(wire: Schemas['HottestGroupsResponse']): readonl
     club: toClubName(group.club),
     gamesThisWeek: group.games_this_week,
     newThisMonth: group.new_this_month,
-    heatShare: group.heat_share,
     tag: group.tag,
     faces: group.faces.map(toGroupPerson),
     friendsCount: group.friends_count,
     relation: group.relation,
     isAdministrator: group.is_administrator,
-  }));
+  };
 }

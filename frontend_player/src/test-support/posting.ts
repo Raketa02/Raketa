@@ -145,7 +145,16 @@ export function slotFit(tile: Wire['DeckTileSchema'], pct: number): Wire['SlotFi
     level: tile.level,
     friend: tile.friend,
     forecast: { pct, provisional: false },
+    vibe: null,
   };
+}
+
+/**
+ * A fit on a **For-fun** post (#834): the Social vibe of the poster and them, and no forecast — the
+ * server sends none there (ADR-0207 §5).
+ */
+export function forFunFit(tile: Wire['DeckTileSchema'], vibe: number): Wire['SlotFitSchema'] {
+  return { ...slotFit(tile, 0), forecast: null, vibe: { pct: vibe } };
 }
 
 /** Mock 34's five: Karol, Zofia, Ania, Ewa, Kuba. */

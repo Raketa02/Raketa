@@ -4,7 +4,13 @@
  * card 266,4 wide, a step of 275,4, the first card 15 in.
  */
 
-import { ON_SCREEN_SHARE, cardsOnScreen, followable, shareInside } from './onScreen';
+import {
+  ON_SCREEN_SHARE,
+  cardsOnScreen,
+  followable,
+  scrollToReveal,
+  shareInside,
+} from './onScreen';
 
 describe('the share of a span inside a view', () => {
   it('is whole inside, none outside, and the part that overlaps between', () => {
@@ -64,5 +70,30 @@ describe('a followed value', () => {
 
     expect(heard).toEqual([3, undefined]);
     expect(value.get()).toBe(5);
+  });
+});
+
+/**
+ * **Where a page scrolls to show a line just unfolded** (#820; the brief: *the page eases down just
+ * enough to bring it into view*) — a page 700 tall, scrolled 1000 down.
+ */
+describe('where a page scrolls to show a stretch of it', () => {
+  const band = { from: 1000, size: 700 };
+
+  it('stays where it is while the stretch’s foot is in view', () => {
+    expect(scrollToReveal({ from: 1200, size: 300 }, band)).toBeUndefined();
+    expect(scrollToReveal({ from: 1400, size: 300 }, band)).toBeUndefined();
+  });
+
+  it('scrolls just far enough to stand its foot at the page’s foot', () => {
+    expect(scrollToReveal({ from: 1500, size: 300 }, band)).toBe(1100);
+  });
+
+  it('stands its head at the page’s head when it is taller than the page shows', () => {
+    expect(scrollToReveal({ from: 1500, size: 900 }, band)).toBe(1500);
+  });
+
+  it('never scrolls back up to show it', () => {
+    expect(scrollToReveal({ from: 900, size: 900 }, band)).toBeUndefined();
   });
 });

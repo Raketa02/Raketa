@@ -79,6 +79,25 @@
  * third card; and its photograph mounting again. Each read as a blink between the release and
  * the card under it.
  *
+ * **A stack handed in standing arrives by its caller's motion, not this one** (`standing`, #863): the
+ * Games deck swapped to its other kind brings its whole stack up into the stage as one, and a top
+ * card that also came forward from a step back and a shrink smaller would be scaled under that rise.
+ * Its cards stand in place from their first frame — the value starts there, so no frame is drawn
+ * short of it — and every card after the swap arrives as ever.
+ *
+ * ## One card more is held drawn and unseen, and a new card is never drawn on the beat that needs the stage
+ *
+ * A card is some two hundred elements, and drawing one takes the thread the next swipe is read on.
+ * It used to be drawn **in the commit that frees the stage** — the one after a flight, which brings
+ * the next card forward and lets the drag and the buttons go — so the player waited for a card they
+ * could not even see yet. **A caller may hand one card more than the stage shows** (`SEEN`): it is
+ * drawn unseen, where the third card stands before its arrival, so a card leaving brings forward
+ * three cards that are already drawn, and the one after them is drawn once the new top card has
+ * arrived (`RESERVE_AFTER`). **A card new to the stage behind the top one** — the deck's first
+ * draw, a read that dealt a new card second — is drawn a frame after the top card, so the first
+ * frame a page or a tab is waiting on carries one card, not three. Once drawn, a card is drawn
+ * whatever depth it moves to; only the card on top is never kept waiting.
+ *
  * ## The durations live here rather than in the theme
  *
  * `theme.motion` is *"one entrance, one sheet, one popover, one fade"* and holds the shared
@@ -101,7 +120,7 @@
  * not a word to shout.
  */
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useReducer, useRef, type ReactNode } from 'react';
 import { Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
 
 import { useHaptics } from '@/shared/lib/platform';
@@ -112,6 +131,7 @@ import {
   claimsTheDrag,
   committed,
   crossedThreshold,
+  STACK,
   stackLift,
   stackOpacity,
   stackScale,
@@ -131,6 +151,18 @@ export type { DeckExit } from './deckStageGeometry';
  * enough that a player answering ten cards is not waiting on it nine times.
  */
 const LEAVING_MS = 240;
+
+/**
+ * How many cards the player sees on the stage — the top card and the two behind it. A card handed
+ * in past these is held in reserve: drawn, unseen (see the module note).
+ */
+export const SEEN = 3;
+
+/**
+ * When the reserve is drawn: once the card on top has arrived, and never in the commit that frees
+ * the stage for the next swipe.
+ */
+const RESERVE_AFTER = theme.motion.rise + 100;
 
 /**
  * How much of the finger's travel **down** the card follows — a thumb drags a card across, and
@@ -190,13 +222,21 @@ export interface DeckStageProps {
   readonly onLeft: () => void;
   /**
    * The cards on the stage, the top card first and then the cards behind, nearest first — real
-   * cards or nothing, never placeholders. **Keyed by the caller**, by the person on the deal
+   * cards or nothing, never placeholders — and past the `SEEN` ones, at most one more, held drawn
+   * and unseen in reserve. **Keyed by the caller**, by the person on the deal
    * they came off: the key is what lets a card that was behind become the top card as the same
    * element, and what gives each card its own motion.
    */
   readonly cards: readonly StagedCard[];
   /** What the two stamps say, for the card on top — see the module note. */
   readonly stamps: Readonly<Record<DeckExit, StampWords>>;
+  /**
+   * **The cards handed in now stand in place from their first frame** — a deck swapped to its other
+   * kind, whose stack rises in as one by the deck's own motion (#863, `KindSwap`): the arrival — a
+   * card coming forward from a step back and a shrink smaller — is not run for a card first drawn on
+   * top while this is set. Absent, every card arrives.
+   */
+  readonly standing?: boolean;
 }
 
 /** One card on the stage, and what tells it from every other across renders. */
@@ -213,10 +253,19 @@ export interface StagedCard {
 interface Motion {
   readonly drag: Animated.ValueXY;
   readonly arrival: Animated.Value;
+  /** Drawn standing in place — no arrival to run (`standing`). */
+  readonly standing: boolean;
   gone: boolean;
 }
 
-export function DeckStage({ leaving, onAnswer, onLeft, cards, stamps }: DeckStageProps) {
+export function DeckStage({
+  leaving,
+  onAnswer,
+  onLeft,
+  cards,
+  stamps,
+  standing = false,
+}: DeckStageProps) {
   const collapsed = useCollapsedPresentation();
   const haptics = useHaptics();
   /**
@@ -232,7 +281,8 @@ export function DeckStage({ leaving, onAnswer, onLeft, cards, stamps }: DeckStag
     if (held !== undefined) return held;
     const made: Motion = {
       drag: new Animated.ValueXY(),
-      arrival: new Animated.Value(collapsed ? 1 : 0),
+      arrival: new Animated.Value(collapsed || standing ? 1 : 0),
+      standing,
       gone: false,
     };
     motions.set(key, made);
@@ -297,10 +347,40 @@ export function DeckStage({ leaving, onAnswer, onLeft, cards, stamps }: DeckStag
     for (const key of [...motions.keys()]) if (!staged.has(key)) motions.delete(key);
   }, [keys, motions]);
 
+  /**
+   * The cards drawn so far, by key, and drawn whatever depth they move to — see the module note. The
+   * card on top always is; one new to the stage behind it is drawn a frame later, and the reserve
+   * once the top card has arrived. `round` is a redraw for the ones whose turn came.
+   */
+  const drawn = useRef(new Set<string>()).current;
+  const [round, drawTheirTurn] = useReducer((count: number) => count + 1, 0);
+  useEffect(() => {
+    const staged = keys === '' ? [] : keys.split('\n');
+    for (const key of [...drawn]) if (!staged.includes(key)) drawn.delete(key);
+    if (staged[0] !== undefined) drawn.add(staged[0]);
+    const waiting = (from: number, to?: number) =>
+      staged.slice(from, to).filter((key) => !drawn.has(key));
+    const draw = (turn: readonly string[]) => () => {
+      for (const key of turn) drawn.add(key);
+      drawTheirTurn();
+    };
+    const behind = waiting(1, SEEN);
+    if (behind.length > 0) {
+      const frame = requestAnimationFrame(draw(behind));
+      return () => cancelAnimationFrame(frame);
+    }
+    const reserve = waiting(SEEN);
+    if (reserve.length > 0) {
+      const later = setTimeout(draw(reserve), RESERVE_AFTER);
+      return () => clearTimeout(later);
+    }
+    return undefined;
+  }, [keys, round, drawn]);
+
   // The arrival: once per top card rather than once per render, from where it stood behind.
   useEffect(() => {
     if (motion === undefined) return;
-    if (collapsed) {
+    if (collapsed || motion.standing) {
       motion.arrival.setValue(1);
       return;
     }
@@ -361,6 +441,22 @@ export function DeckStage({ leaving, onAnswer, onLeft, cards, stamps }: DeckStag
           arrival, one step further back until it has arrived. */}
       {[...cards].reverse().map(({ key, card }, fromTheBack) => {
         const depth = cards.length - 1 - fromTheBack;
+        // A card whose turn to be drawn has not come — see the module note.
+        if (depth > 0 && !drawn.has(key)) return null;
+        if (depth >= SEEN) {
+          // The reserve: drawn and unseen, where the third card stands before its arrival.
+          return (
+            <Animated.View
+              key={key}
+              style={[s.card, s.reserve]}
+              pointerEvents="none"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            >
+              {card}
+            </Animated.View>
+          );
+        }
         const lift = motion.arrival.interpolate(stackLift(depth));
         const scale = motion.arrival.interpolate(stackScale(depth));
         const opacity = motion.arrival.interpolate(stackOpacity(depth));
@@ -464,6 +560,11 @@ const s = StyleSheet.create({
   // The height the phone gives the deck: every card in the stack takes the stage's box.
   stage: { flex: 1 },
   card: { ...StyleSheet.absoluteFillObject },
+  // Where the third card stands before its arrival, and unseen.
+  reserve: {
+    opacity: 0,
+    transform: [{ translateY: SEEN * STACK.step }, { scale: 1 - SEEN * STACK.shrink }],
+  },
   stamp: {
     position: 'absolute',
     top: STAMP.top,

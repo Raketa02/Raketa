@@ -9,6 +9,8 @@
 
 > **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The flags' datafile cache the ADR-0180 bullet above names is gone with the feature flags (#576), and ADR-0180 was deleted. `AsyncStorage` is imported by one module again, the phone-preferences store of ADR-0188, and `eslint.config.mjs` names it alone. The decision itself is untouched.
 
+> **Note — the feature flags return (2026-11-21, [#826](https://github.com/Raketa02/Raketa/issues/826)).** The enforcement is narrowed again by [ADR-0206](0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §12: the feature flags' saved datafile may import `AsyncStorage` beside the phone-preferences store, and `eslint.config.mjs` names both. A datafile is public and names no player; the decision itself is untouched.
+
 ## Context
 
 The club web app protects its session by keeping it out of JavaScript entirely, in

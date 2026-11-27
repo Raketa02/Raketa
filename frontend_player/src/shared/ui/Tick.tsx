@@ -26,7 +26,8 @@
  * than restated at every call site: the tick is `surface` on `ink` (17,50:1), the plus is
  * `volt` on `ink` — volt as a stroke, which is legal only on dark and this is dark — and the
  * dash is `muted` on `surface` (5,40:1). A `color` prop would be a choice offered to callers
- * that none of them has.
+ * that none of them has. **The tick's second bed is `coralInk`** (5,89:1): the tab's menu draws it
+ * in a circle before the line selected (`TabMenu`, 9.5, #861) — the same white, so the same mark.
  *
  * ## The plus is drawn twice, because it lands on two beds
  *

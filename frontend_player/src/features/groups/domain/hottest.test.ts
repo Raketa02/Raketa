@@ -3,8 +3,8 @@ import {
   CARD_FACES,
   SHEET_FACES,
   cardFaces,
-  heatFill,
   isJoinTap,
+  joinHottestPages,
   sheetButton,
   sheetFaces,
   withRelation,
@@ -25,7 +25,6 @@ function group(overrides: Partial<HottestGroup> = {}): HottestGroup {
     club: { id: 'c-ogrody', name: 'Ogrody 33' },
     gamesThisWeek: 14,
     newThisMonth: 3,
-    heatShare: 1,
     tag: 'HOTTEST',
     faces: [1, 2, 3, 4, 5, 6].map(face),
     friendsCount: 7,
@@ -73,26 +72,57 @@ describe('the faces', () => {
   });
 });
 
-describe('the heat bar', () => {
-  it('fills to the served share', () => {
-    expect(heatFill(44 / 48)).toBeCloseTo(0.9167);
-  });
-
-  it('never draws past full or below empty, whatever arrives', () => {
-    expect(heatFill(1.2)).toBe(1);
-    expect(heatFill(-0.1)).toBe(0);
-    expect(heatFill(Number.NaN)).toBe(0);
-  });
-});
-
 describe('a write’s relation, on the card it came from', () => {
   it('turns the one card and leaves the rest', () => {
     const kazimierz = group({ id: 'g-kazimierz', relation: 'MEMBER' });
-    const row = [group(), kazimierz];
+    const row = { groups: [group(), kazimierz], total: 2 };
 
     const asked = withRelation(row, 'g-ogrody', 'REQUESTED');
 
-    expect(asked[0]?.relation).toBe('REQUESTED');
-    expect(asked[1]).toBe(kazimierz);
+    expect(asked.groups[0]?.relation).toBe('REQUESTED');
+    expect(asked.groups[1]).toBe(kazimierz);
+  });
+
+  /** #822: the count moves with the line's read, never with a card's guess. */
+  it('keeps the row’s total', () => {
+    expect(withRelation({ groups: [group()], total: 38 }, 'g-ogrody', 'MEMBER').total).toBe(38);
+  });
+
+  /** #823: the page's cards move as the row's do, so the page and Home's line agree. */
+  it('turns the one card on a page of Groups heating up, and keeps its cursor', () => {
+    const page = { groups: [group(), group({ id: 'g-kazimierz' })], next: 'c-20' };
+
+    const joined = withRelation(page, 'g-kazimierz', 'MEMBER');
+
+    expect(joined.groups.map((each) => each.relation)).toEqual(['NONE', 'MEMBER']);
+    expect(joined.next).toBe('c-20');
+  });
+});
+
+describe('Groups heating up, page by page', () => {
+  it('lists the pages in the order read', () => {
+    const pages = [
+      { groups: [group({ id: 'g-1' }), group({ id: 'g-2' })], next: 'c-2' },
+      { groups: [group({ id: 'g-3' })] },
+    ];
+
+    expect(joinHottestPages(pages).map((each) => each.id)).toEqual(['g-1', 'g-2', 'g-3']);
+  });
+
+  /** The mechanics §5.10: heat is worked out on every read, so a group that cooled is read again. */
+  it('draws a group a later page reads again only once, where it was first drawn', () => {
+    const pages = [
+      { groups: [group({ id: 'g-1' }), group({ id: 'g-2' })], next: 'c-2' },
+      { groups: [group({ id: 'g-2', gamesThisWeek: 1 }), group({ id: 'g-3' })] },
+    ];
+
+    const listed = joinHottestPages(pages);
+
+    expect(listed.map((each) => each.id)).toEqual(['g-1', 'g-2', 'g-3']);
+    expect(listed[1]?.gamesThisWeek).toBe(14);
+  });
+
+  it('is empty before any page holds a group', () => {
+    expect(joinHottestPages([{ groups: [] }])).toEqual([]);
   });
 });

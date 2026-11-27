@@ -621,7 +621,7 @@ describe('the Owner’s count on the tile', () => {
     expect(tileCount('2')).toBeTruthy();
 
     fireEvent.press(await tab('Friends'));
-    await tab('Friends', true);
+    await tab('Friends, Competitive', true);
     expect(screen.getByRole('button', { name: waiting })).toBeTruthy();
     expect(tileCount('2')).toBeTruthy();
   });
@@ -733,11 +733,36 @@ describe('pulling the page', () => {
   it('is not Friends’', async () => {
     await openPage({ members: KAZIMIERZ });
     fireEvent.press(await tab('Friends'));
-    await tab('Friends', true);
+    await tab('Friends, Competitive', true);
 
     expect(
       within(screen.getByTestId('group-page-body')).UNSAFE_queryByType(RefreshControl),
     ).toBeNull();
+  });
+});
+
+// **The page's scroller stands alone in a view of its own** (2026-11-25; architecture.md's platform
+// rules). On an Android phone, as a bare sibling of the tab bar and the deck, the offset it scrolled
+// never reached what Fabric's `measure` reads, so every press it had scrolled in — Friends' *Send game
+// and pay* and *Pick a different court* — took a resting thumb's first move for a slide off the
+// button and dropped the press. That lives in the native shadow tree, beyond this renderer: what this
+// holds is the cure's shape, on Friends — which keeps no pull — and on a tab that pulls.
+describe('the page’s scroller', () => {
+  const alone = () => {
+    const frame = screen.getByTestId('group-page-scroll-frame');
+    expect(frame.children).toHaveLength(1);
+    expect(within(frame).getByTestId('group-page-body')).toBeTruthy();
+  };
+
+  it('stands alone in a view of its own, on Friends and on a tab that pulls', async () => {
+    await openPage({ members: KAZIMIERZ });
+    fireEvent.press(await tab('Friends'));
+    await tab('Friends, Competitive', true);
+    alone();
+
+    fireEvent.press(await tab('Fill in'));
+    await tab('Fill in', true);
+    alone();
   });
 });
 
@@ -949,7 +974,7 @@ describe('leaving and deleting', () => {
   it('is Info’s alone — no tab of the page draws it', async () => {
     await openPage({ members: KAZIMIERZ });
 
-    for (const name of ['Games', 'Fill in', 'Friends']) {
+    for (const name of ['Games', 'Fill in', 'You’re in', 'Friends']) {
       fireEvent.press(await tab(name));
       await tab(name, true);
       expect(screen.queryByRole('button', { name: COPY.info.leave })).toBeNull();

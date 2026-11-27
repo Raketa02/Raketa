@@ -23,7 +23,7 @@ export { PaymentsScreen, type PaymentsScreenProps } from './components/PaymentsS
  *   `challengeKeys` crosses for the same reason.
  */
 export { PaymentSetupSheet, type PaymentSetupSheetProps } from './components/PaymentSetupSheet';
-export { usePaymentSetupNeeded } from './hooks/usePaymentMethod';
+export { paymentMethodQuery, usePaymentSetupNeeded } from './hooks/usePaymentMethod';
 export {
   useCardFieldsReady,
   useConfirmOnPhone,

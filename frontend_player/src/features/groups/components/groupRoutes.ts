@@ -15,6 +15,13 @@ import type { DeckArrival } from '../schemas/groupRouteParams';
 /** **The Groups list** — Play's root, on its *Groups* segment; where leaving a group lands. */
 export const GROUPS_LIST_ROUTE = '/play';
 
+/**
+ * **The Groups heating up page** (#823; ADR-0205 §7) — the one groups screen **not** under Play:
+ * pushed over Home by its line's *All groups ›*, like the people See all screens, so the Home tab
+ * stays lit (`shellTabs`) and *back* is Home.
+ */
+export const HOTTEST_GROUPS_ROUTE = '/hottest-groups' as const;
+
 export const NEW_GROUP_ROUTE = '/play/new-group';
 export const JOIN_GROUP_ROUTE = '/play/join';
 

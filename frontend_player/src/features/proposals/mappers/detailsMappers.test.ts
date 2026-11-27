@@ -79,3 +79,89 @@ describe('a game still filling, in detail', () => {
     expect(toProposalDetails(wire)).toBeUndefined();
   });
 });
+
+describe('the kind’s own card (#833, #839)', () => {
+  it('reads a competitive game’s full forecast — the figure, both sides and the signed gap — and what is at stake', () => {
+    const wire = proposalDetails(deckCard(), {
+      forecast: { pct: 73, provisional: false, your_side: 2.65, their_side: 2.74, gap: -0.09 },
+      at_stake: { win_delta: 0.08, loss_delta: -0.07 },
+    });
+
+    expect(toProposalDetails(wire)).toMatchObject({
+      forecast: {
+        pct: 73,
+        provisional: false,
+        split: { yourSide: 2.65, theirSide: 2.74, gap: -0.09 },
+      },
+      atStake: { winDelta: 0.08, lossDelta: -0.07 },
+    });
+  });
+
+  // An older server (before #833) sends the card's forecast and no `at_stake`: no block — never a
+  // block of blanks, and never a read that fails over a field it did not know to send.
+  it('reads no forecast and no stakes from an older server’s read', () => {
+    const { at_stake: _unsent, ...older } = proposalDetails(deckCard());
+    const wire = {
+      ...older,
+      forecast: { pct: 87, provisional: false },
+    } as unknown as Wire['ProposalDetailsResponse'];
+
+    expect(toProposalDetails(wire)).not.toHaveProperty('forecast');
+    expect(toProposalDetails(wire)).not.toHaveProperty('atStake');
+    expect(toProposalDetails(wire)).toMatchObject({ status: 'FILLING' });
+  });
+
+  it('reads no forecast and no stakes where the read sends none', () => {
+    const wire = proposalDetails(deckCard(), { forecast: null, at_stake: null });
+
+    expect(toProposalDetails(wire)).not.toHaveProperty('forecast');
+    expect(toProposalDetails(wire)).not.toHaveProperty('atStake');
+  });
+});
+
+describe('a For-fun game’s Social vibe (#833, #840)', () => {
+  const forFun = (vibe: Wire['ProposalDetailsResponse']['vibe']) =>
+    proposalDetails(deckCard({ kind: 'FOR_FUN', forecast: null }), { forecast: null, vibe });
+
+  it('reads the % and your tags’ rows, each with who carries it, in the read’s order', () => {
+    const wire = forFun({
+      pct: 67,
+      rows: [
+        { tag: 'STAYS_FOR_A_DRINK', carried_by: ['me', 'kuba'] },
+        { tag: 'HERE_FOR_A_REGULAR_GAME', carried_by: ['me'] },
+      ],
+    });
+
+    expect(toProposalDetails(wire)?.vibe).toEqual({
+      pct: 67,
+      rows: [
+        { tag: 'STAYS_FOR_A_DRINK', carriedBy: ['me', 'kuba'] },
+        { tag: 'HERE_FOR_A_REGULAR_GAME', carriedBy: ['me'] },
+      ],
+    });
+  });
+
+  /** ADR-0207 §7: an app that doesn't know a tag code skips it, and never crashes. */
+  it('leaves off a row whose tag this build cannot name', () => {
+    const wire = forFun({
+      pct: 50,
+      rows: [
+        { tag: 'NOT_A_TAG_YET' as Wire['SocialTag'], carried_by: ['me'] },
+        { tag: 'PLAYS_TO_WIN', carried_by: ['me', 'ania'] },
+      ],
+    });
+
+    expect(toProposalDetails(wire)?.vibe?.rows).toEqual([
+      { tag: 'PLAYS_TO_WIN', carriedBy: ['me', 'ania'] },
+    ]);
+  });
+
+  it('reads no vibe where the read sends none, nor from an older server’s read', () => {
+    expect(toProposalDetails(forFun(null))).not.toHaveProperty('vibe');
+
+    const { vibe: _unsent, ...older } = forFun(null);
+    const wire = older as unknown as Wire['ProposalDetailsResponse'];
+    expect(toProposalDetails(wire)).not.toHaveProperty('vibe');
+    expect(toProposalDetails(wire)).toMatchObject({ kind: 'forFun', status: 'FILLING' });
+  });
+});
