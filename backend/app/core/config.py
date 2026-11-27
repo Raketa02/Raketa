@@ -310,11 +310,12 @@ class Settings(BaseSettings):
     #
     # **Where a button that opens the app goes**: the invitation an existing
     # account is sent has no link to set a password through, only the app to
-    # accept it in, and its button opens `<APP_SCHEME>://`. One scheme at every
-    # environment, as the app itself declares one (`frontend_player`'s
-    # `app.config.ts`), so there is nothing here for a deployed environment to
-    # refuse; universal links arrive with a domain and replace it there.
-    APP_SCHEME: str = "raketa"
+    # accept it in, and every money email's button opens the app as well; each
+    # goes to `<APP_SCHEME>://`. One scheme at every environment, as the app
+    # itself declares one (`frontend_player`'s `app.config.ts`), so there is
+    # nothing here for a deployed environment to refuse; universal links arrive
+    # with a domain and replace it there.
+    APP_SCHEME: str = "rakieta"
 
     # --- email (docs/adr/0186)
     #

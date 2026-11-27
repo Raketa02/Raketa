@@ -296,6 +296,8 @@ async def test_the_player_is_asked_by_email_to_confirm_and_the_others_are_not(
     assert "30 zł" in email.text
     assert "another card" in email.text
     assert "held for you until 08:30" in email.text
+    # Its button opens the app, on the scheme the app declares (#896).
+    assert 'href="rakieta://"' in email.html
     for player in ("ola", "kuba", "ewa"):
         assert await mailbox.to(f"{player}@example.com") == []
 

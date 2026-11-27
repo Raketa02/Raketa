@@ -45,7 +45,7 @@ def a_booking_email(*, held_until, booked_on_a_payment: bool = False):
         starts_at=warsaw(8, 19),
         share_grosze=40_00,
         held_until=held_until,
-        app_link="raketa://home",
+        app_link="rakieta://home",
         booked_on_a_payment=booked_on_a_payment,
     )
 
@@ -106,7 +106,7 @@ def a_seat_taken_email(*, refunded_grosze: int, fee_kept_grosze: int):
         share_grosze=40_00,
         refunded_grosze=refunded_grosze,
         fee_kept_grosze=fee_kept_grosze,
-        app_link="raketa://home",
+        app_link="rakieta://home",
     )
 
 
@@ -130,7 +130,7 @@ def a_late_leave_email(*, refund_grosze: int | None, fee_kept_grosze: int | None
         share_grosze=40_00,
         refund_grosze=refund_grosze,
         fee_kept_grosze=fee_kept_grosze,
-        app_link="raketa://home",
+        app_link="rakieta://home",
     )
 
 
@@ -166,7 +166,7 @@ def test_no_money_email_mentions_blik():
             sport=Sport.PADEL,
             starts_at=warsaw(8, 19),
             refunded_grosze=40_00,
-            app_link="raketa://home",
+            app_link="rakieta://home",
         ),
         game_cancelled_email(
             to="ivan@example.com",
@@ -176,7 +176,7 @@ def test_no_money_email_mentions_blik():
             starts_at=warsaw(8, 19),
             refunded_grosze=40_00,
             because=CancelledBecause.WEATHER,
-            app_link="raketa://home",
+            app_link="rakieta://home",
         ),
         game_you_left_cancelled_email(
             to="ivan@example.com",
@@ -186,7 +186,7 @@ def test_no_money_email_mentions_blik():
             starts_at=warsaw(8, 19),
             refunded_grosze=40_00,
             because=CancelledBecause.WEATHER,
-            app_link="raketa://home",
+            app_link="rakieta://home",
         ),
         left_the_game_email(
             to="ivan@example.com",
@@ -195,7 +195,7 @@ def test_no_money_email_mentions_blik():
             sport=Sport.PADEL,
             starts_at=warsaw(8, 19),
             share_grosze=40_00,
-            app_link="raketa://home",
+            app_link="rakieta://home",
         ),
     ]
 

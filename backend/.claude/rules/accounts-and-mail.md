@@ -58,7 +58,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   every account one. The club's five routes are under `/api/v1/club/administrators`; the
   player's are `/api/v1/invitations/{claim,password,by-token,{id}/acceptance}` and
   `POST /api/v1/users/me/adult-attestation`. `APP_SCHEME` is where the existing account's
-  button opens the app. Seeded by `app/seeds/administrators.py`: at Ogrody 33, the
+  button opens the app, and every money email's button too. Seeded by `app/seeds/administrators.py`: at Ogrody 33, the
   administrator-only `administrator-only@raketa.example`, `rated-in-every-sport` who also plays,
   and `the-one-sport-player`'s pending invitation, resent by a run that finds it expired.
 - **Signing out everywhere is one instant per account**

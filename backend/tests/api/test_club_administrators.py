@@ -148,8 +148,8 @@ async def test_an_existing_account_is_asked_to_accept_in_the_app_with_no_code(
     assert email.subject == "Ogrody 33 wants to make you an administrator"
     assert "/invite/" not in email.text
     assert code_in_nothing(email)
-    # The button opens the app, on the scheme the settings name.
-    assert f'href="{get_settings().APP_SCHEME}://' in email.html
+    # The button opens the app, on the scheme the app declares (#896).
+    assert 'href="rakieta://"' in email.html
 
 
 def code_in_nothing(email) -> bool:
