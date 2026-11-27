@@ -8,7 +8,7 @@ import { noteToldLive } from '../actions';
 import { OVERVIEW_COPY } from '../copy';
 
 /**
- * ***You're live — your courts can now be booked through Raketa***, said once (the screens B2).
+ * ***You're live — your courts can now be booked through Rakieta***, said once (the screens B2).
  * Drawn, it asks the server to remember it was said, which draws the page again as told; the
  * line stays until the desk leaves the page, because it holds what it was first drawn with. A
  * club no longer live is forgotten as told, so it is told again when it is.

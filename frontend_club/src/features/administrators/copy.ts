@@ -14,8 +14,8 @@ export const ADMINISTRATORS_COPY = {
     send: 'Send invitation',
     sending: 'Sending…',
     explain:
-      'Raketa emails them. They set their own password in the app; if the email already has a ' +
-      'Raketa account, they just accept.',
+      'Rakieta emails them. They set their own password in the app; if the email already has a ' +
+      'Rakieta account, they just accept.',
   },
   sent: {
     // No line under the name: the email says what to do, and which email went out — a password
@@ -26,7 +26,7 @@ export const ADMINISTRATORS_COPY = {
     reset: {
       kicker: 'Password reset · new invitation valid 72 hours',
       lead:
-        "Their password is cleared and they're signed out everywhere. Raketa emailed them a " +
+        "Their password is cleared and they're signed out everywhere. Rakieta emailed them a " +
         'button that opens the app, and a code that works in the app if the button does not. ' +
         'They set a new password there.',
     },
@@ -51,7 +51,7 @@ export const ADMINISTRATORS_COPY = {
     title: (name: string) => `Remove ${name}?`,
     lead:
       'They stop being one of your administrators at once, and an invitation they have not ' +
-      'taken up stops working. Raketa emails them to say so. Their groups stay, marked needs ' +
+      'taken up stops working. Rakieta emails them to say so. Their groups stay, marked needs ' +
       'an administrator, until you hand them over. If they also play, nothing changes for ' +
       'their player profile.',
     cancel: 'Cancel',
@@ -75,7 +75,7 @@ const ACT_REFUSALS: Readonly<Record<string, (name: string) => string>> = {
   administrator_already_active: (name) =>
     `${name} has already accepted, so there is no invitation to send again.`,
   administrator_also_plays: (name) =>
-    `${name} also plays on Raketa, so only they can reset their password, with Forgot ` +
+    `${name} also plays on Rakieta, so only they can reset their password, with Forgot ` +
     'password? in the app.',
   administrator_has_no_account: (name) =>
     `${name} hasn't set a password yet, so there is none to reset. Resend the invitation instead.`,

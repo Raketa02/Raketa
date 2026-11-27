@@ -140,7 +140,7 @@ export interface BookedFrom {
   readonly official: boolean;
 }
 
-/** **One Raketa booking at the club**, as a row of the Bookings page draws it. */
+/** **One Rakieta booking at the club**, as a row of the Bookings page draws it. */
 export interface Booking {
   readonly id: string;
   readonly hour: ClubHour;

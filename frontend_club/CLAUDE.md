@@ -1,8 +1,8 @@
-# Raketa for Clubs — the club website
+# Rakieta for Clubs — the club website
 
 Next.js 16 (App Router) + React 19 + TypeScript, pnpm. A club signs up, signs in, keeps its
-details, sets up what it sells through Raketa (courts, weekly hours, exceptions, prices and its
-Rakieta settings, followed by Overview's four-step setup checklist), runs its Raketa bookings
+details, sets up what it sells through Rakieta (courts, weekly hours, exceptions, prices and its
+Rakieta settings, followed by Overview's four-step setup checklist), runs its Rakieta bookings
 (moving a game to another court of its kind, or indoor for an outdoor game; cancelling one, which
 moves it instead when another of the club's courts takes it, as the dialog says first), connects
 Stripe and sees its money and payouts, invites its Administrators and watches its official
@@ -83,9 +83,9 @@ which answers with payloads typed from the generated contract and records every 
 fixtures reset it before each test and install **the fake club** (`e2e/stub/club.ts`): one
 club whose tokens rotate, whose reset signs everyone out, and whose administrators and official
 groups keep the backend's rules (a test seats them in `club.administrators` and `club.groups`;
-a group is run only while its administrator is active), and whose Raketa offer, `club.raketa`,
+a group is run only while its administrator is active), and whose Rakieta offer, `club.rakieta`,
 keeps the courts, prices and settings and reads the setup checklist off them (nothing set until
-a test says; `club.raketa.ready()` makes the club live), and whose bookings, `club.bookings`,
+a test says; `club.rakieta.ready()` makes the club live), and whose bookings, `club.bookings`,
 fold their status off the clock as the backend does (a test seats them with
 `club.bookings.add(booking(…))`) and hold each share until the game's `cut_off`, taken after it
 (`club.bookings.passTheCutOff(game)` takes them). Move puts a game only on a court of its kind,

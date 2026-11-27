@@ -558,7 +558,7 @@ export interface paths {
         };
         /**
          * Your bookings, by day
-         * @description Every Raketa booking at this club on one of its calendar days — the Bookings page — each with its status, its players (name, *paid*, *held*), its money (the court's price, collected, refunded) and the group it came from. `filter` narrows the list; `counts` are the whole day's.
+         * @description Every Rakieta booking at this club on one of its calendar days — the Bookings page — each with its status, its players (name, *paid*, *held*), its money (the court's price, collected, refunded) and the group it came from. `filter` narrows the list; `counts` are the whole day's.
          */
         get: operations["bookings_on_a_day_api_v1_club_bookings_get"];
         put?: never;
@@ -658,7 +658,7 @@ export interface paths {
         };
         /**
          * Your money, by month
-         * @description A month of your Raketa money, booking by booking — by the day each game is played on — with what the players paid, what was given back, the card fees and what is yours, and the month's totals. **You are the seller**: every figure is your own account's. Your payouts are `GET /api/v1/club/payouts`.
+         * @description A month of your Rakieta money, booking by booking — by the day each game is played on — with what the players paid, what was given back, the card fees and what is yours, and the month's totals. **You are the seller**: every figure is your own account's. Your payouts are `GET /api/v1/club/payouts`.
          */
         get: operations["money_by_month_api_v1_club_money_get"];
         put?: never;
@@ -870,7 +870,7 @@ export interface components {
         };
         /**
          * ClubBookingSchema
-         * @description One Raketa booking at the club.
+         * @description One Rakieta booking at the club.
          */
         ClubBookingSchema: {
             /**
@@ -902,7 +902,7 @@ export interface components {
             sport: components["schemas"]["Sport"];
             /** @description Competitive, or for fun (a friendly). */
             kind: components["schemas"]["SearchMode"];
-            /** @description `BOOKED` — full; each share held until your cut-off and taken at it (#637). `SEAT_OPEN` — a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again — but the court you cancelled stays closed for it, an exception you remove to sell it again (#673). `PLAYED` — the hour has passed; you are paid whatever happened on the court. */
+            /** @description `BOOKED` — full; each share held until your cut-off and taken at it (#637). `SEAT_OPEN` — a player left and Rakieta is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again — but the court you cancelled stays closed for it, an exception you remove to sell it again (#673). `PLAYED` — the hour has passed; you are paid whatever happened on the court. */
             status: components["schemas"]["ClubStatus"];
             /** @description Why a `CALLED_OFF` game will not be played — `null` otherwise. `SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). `BY_THE_SENDER` — the player who booked it for their friends called it off before your cut-off: nothing was taken, and the court is yours to sell again (#751). */
             called_off_reason: components["schemas"]["CalledOffReason"] | null;
@@ -929,7 +929,7 @@ export interface components {
         };
         /**
          * ClubBookingsResponse
-         * @description One day of the club's Raketa bookings — the Bookings page.
+         * @description One day of the club's Rakieta bookings — the Bookings page.
          */
         ClubBookingsResponse: {
             /**
@@ -948,7 +948,7 @@ export interface components {
             counts: components["schemas"]["ClubCountsSchema"];
             /**
              * Bookings
-             * @description Soonest first. Empty: *No Raketa bookings on this day.*
+             * @description Soonest first. Empty: *No Rakieta bookings on this day.*
              */
             bookings: components["schemas"]["ClubBookingSchema"][];
         };
@@ -1130,7 +1130,7 @@ export interface components {
         };
         /**
          * ClubMoneyResponse
-         * @description A month of your Raketa money — the Money page.
+         * @description A month of your Rakieta money — the Money page.
          */
         ClubMoneyResponse: {
             /**
@@ -1256,12 +1256,12 @@ export interface components {
             indoor: boolean;
             /**
              * Offered
-             * @description Offered to Raketa, or switched off — kept, with its hours, and selling nothing.
+             * @description Offered to Rakieta, or switched off — kept, with its hours, and selling nothing.
              */
             offered: boolean;
             /**
              * Hours
-             * @description The hours of an ordinary week this court is offered to Raketa, Monday-first and in the grid's order. Empty until they are painted.
+             * @description The hours of an ordinary week this court is offered to Rakieta, Monday-first and in the grid's order. Empty until they are painted.
              */
             hours: components["schemas"]["WeeklyHourResource"][];
         };
@@ -1412,7 +1412,7 @@ export interface components {
         FreeCourtsResponse: {
             /**
              * Courts
-             * @description Every other court of the game's sport you still have for Raketa at its hour **that keeps the game's kind** — the same kind, or an indoor court for an outdoor game, never outdoors from indoors — in your own order, each with its kind. Empty: there is none — **Cancel** with *repair* if the court cannot be played.
+             * @description Every other court of the game's sport you still have for Rakieta at its hour **that keeps the game's kind** — the same kind, or an indoor court for an outdoor game, never outdoors from indoors — in your own order, each with its kind. Empty: there is none — **Cancel** with *repair* if the court cannot be played.
              */
             courts: components["schemas"]["CourtToMoveToSchema"][];
         };
@@ -1564,7 +1564,7 @@ export interface components {
         MonogramSchema: {
             /**
              * Letters
-             * @description The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my raketa group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes — never change its case.
+             * @description The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my rakieta group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes — never change its case.
              */
             letters: string;
             /**
@@ -1738,7 +1738,7 @@ export interface components {
         RakietaSettingsRequest: {
             /**
              * Release Lead Days
-             * @description Days before a game unsold hours return to the club — the latest a Raketa game can fill, its book-by. 1–13, default 3.
+             * @description Days before a game unsold hours return to the club — the latest a Rakieta game can fill, its book-by. 1–13, default 3.
              */
             release_lead_days: number;
             /**
@@ -1819,7 +1819,7 @@ export interface components {
         };
         /**
          * Sport
-         * @description The four sports Raketa rates, as a closed enum.
+         * @description The four sports Rakieta rates, as a closed enum.
          * @enum {string}
          */
         Sport: "PADEL" | "TENNIS" | "SQUASH" | "BADMINTON";

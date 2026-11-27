@@ -34,7 +34,7 @@ e2e/                   the Playwright suite and its stub backend (§7)
 - **A feature is an area of the site**: `sign-in` (signing in and up, signing out, _Forgot
   password?_, _Set a new password_), `club-details`, `overview` (the setup checklist and
   _Connect with Stripe_, then _Live on Rakieta_),
-  `bookings` (the day's Raketa bookings, _Move_ and _Cancel_, which says first where the game would move), `courts` (_Courts & prices_: the courts, their weekly hours,
+  `bookings` (the day's Rakieta bookings, _Move_ and _Cancel_, which says first where the game would move), `courts` (_Courts & prices_: the courts, their weekly hours,
   exceptions and prices), `money` (a month of the club's money, its payouts and its Stripe
   dashboard), `rakieta-settings`, `administrators` and `groups` (the Groups table, and a group's page:
   _Want to join_ and _Hand over_). A feature may use another feature's components, schemas, copy and mappers
@@ -55,7 +55,7 @@ e2e/                   the Playwright suite and its stub backend (§7)
 
 ## 2. The cookie session
 
-The browser holds **one cookie**, `raketa_club_session`: the access token, the refresh token and
+The browser holds **one cookie**, `rakieta_club_session`: the access token, the refresh token and
 the moment the access token lapses, sealed by iron-session with `SESSION_SECRET`. It is
 `httpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` everywhere but `local`. Its thirty-day life is
 longer than any refresh token, so **the backend decides when a session ends**.
@@ -66,12 +66,12 @@ longer than any refresh token, so **the backend decides when a session ends**.
   server action, a route handler, the proxy. That one constraint shapes §3.
 - **Sign out** revokes the refresh token at the backend (idempotent), then deletes the cookie,
   whatever the backend answered.
-- **What a browser was told once is a third cookie**, `raketa_club_told_live`: Overview says
+- **What a browser was told once is a third cookie**, `rakieta_club_told_live`: Overview says
   _You're live_ once (the screens B2), and a club can go live while nobody is looking (Stripe
   says so later), so no save could carry the news. It holds no token and nothing anybody could
   use, has the session's attributes, and is set and cleared only by Overview's server action
   (`src/server/marks.ts`).
-- **_Forgot password?_ keeps its own sealed cookie**, `raketa_club_recovery`, for an hour at most:
+- **_Forgot password?_ keeps its own sealed cookie**, `rakieta_club_recovery`, for an hour at most:
   the email asked with, and once a right code is claimed, the ticket. The ticket is a credential,
   so it never reaches the browser either. The reset link's token is the exception that proves the
   rule: the browser arrived with it in the address bar, the page binds it to its action, and
@@ -223,9 +223,9 @@ points.
   refresh tokens are refused, whose reset signs every session out, whose administrators keep
   ADR-0184's rules, and whose official groups are run only by an active administrator, so a
   removal leaves them needing one until a handover, and each keeps its queue of join requests,
-  which the club answers whoever runs it. Its Raketa offer, `club.raketa`
+  which the club answers whoever runs it. Its Rakieta offer, `club.rakieta`
   (`e2e/stub/courts.ts`), keeps #535's rules for courts, hours, exceptions, prices and settings
-  and reads the setup checklist off them; it starts with nothing set, and `club.raketa.ready()`
+  and reads the setup checklist off them; it starts with nothing set, and `club.rakieta.ready()`
   makes the club live. Its setup checklist has four steps, and its settings are the release
   lead, the cut-off, other clubs' courts and the pause: every club works Only Rakieta (Q121). Its bookings, `club.bookings`
   (`e2e/stub/bookings.ts`), keep #547's, #637's, #669's, #671's and #672's rules: every game the club sees is
@@ -244,7 +244,7 @@ points.
   their totals, deriving what is the club's on every read, _not yet known_ while a fee or a
   refund a row needs is `null` (#641), and its payouts newest first. A test seats its people in `club.administrators`, its groups in
   `club.groups` (`officialGroup(…)`, with `requests: [joinRequest(…)]` or just a
-  `waiting_count`), its courts in `club.raketa.courts` (`court(…)`), its games
+  `waiting_count`), its courts in `club.rakieta.courts` (`court(…)`), its games
   with `club.bookings.add(booking(…))` and its money with `club.money.add(moneyRow(…))` and
   `club.money.payouts` (`payout(…)`), and a test about one reply overrides that operation; a handler reads the query string in
   `query`. Its tokens are unique across the run (`club.accessToken(n)`),

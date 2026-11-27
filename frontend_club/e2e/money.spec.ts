@@ -145,7 +145,7 @@ test.describe('Money', () => {
     await signIn(page);
     await page.goto('/money?month=2026-02');
     const month = page.getByRole('region', { name: 'February 2026' });
-    await expect(month).toContainText('No Raketa booking took money in February 2026.');
+    await expect(month).toContainText('No Rakieta booking took money in February 2026.');
     await expect(month.getByRole('table')).toHaveCount(0);
     await expect(month.getByRole('definition')).toHaveText(['0 zł', '0 zł', '0 zł', '0 zł']);
 
@@ -160,7 +160,7 @@ test.describe('Money', () => {
     page,
     club,
   }) => {
-    club.raketa.courts = [PADEL];
+    club.rakieta.courts = [PADEL];
     // A game two days ahead: its cut-off, a day before it, is still ahead.
     const day = dayFromToday(2);
     const month = day.slice(0, 7);
@@ -191,7 +191,7 @@ test.describe('Money', () => {
     );
     // A share only held is no money yet.
     await page.goto(`/money?month=${month}`);
-    await expect(theMonth()).toContainText(`No Raketa booking took money in ${named(month)}.`);
+    await expect(theMonth()).toContainText(`No Rakieta booking took money in ${named(month)}.`);
     await expect(theMonth().getByRole('definition')).toHaveText(['0 zł', '0 zł', '0 zł', '0 zł']);
 
     // The cut-off comes and takes the four shares. Stripe hasn't said its fees yet.
@@ -315,7 +315,7 @@ test.describe('Payouts', () => {
     stub,
     club,
   }) => {
-    club.raketa.payments = 'READY';
+    club.rakieta.payments = 'READY';
     const at = (day: string) => atClubHour(day, 12);
     club.money.payouts = [
       payout({ amount_grosze: 12_840_00, arrives_at: at('2026-03-03') }),
@@ -353,7 +353,7 @@ test.describe('Payouts', () => {
   });
 
   test('none yet, said so', async ({ page, club }) => {
-    club.raketa.payments = 'READY';
+    club.rakieta.payments = 'READY';
     await signIn(page);
     await page.goto('/money');
     await expect(payouts(page)).toContainText('No payouts yet.');
@@ -365,7 +365,7 @@ test.describe('Payouts', () => {
     stub,
     club,
   }) => {
-    club.raketa.payments = 'READY';
+    club.rakieta.payments = 'READY';
     club.money.add(moneyRow({ court: PADEL, day: '2026-03-02', hour: 19 }));
     stub.on('get', '/api/v1/club/payouts', () => ({
       status: 503,
@@ -398,7 +398,7 @@ test.describe('Payouts', () => {
     page,
     club,
   }) => {
-    club.raketa.payments = 'NEEDS_DETAILS';
+    club.rakieta.payments = 'NEEDS_DETAILS';
     await signIn(page);
     await page.goto('/money');
     await expect(

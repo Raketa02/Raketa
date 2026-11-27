@@ -56,7 +56,7 @@ test.describe('Weekly hours for Rakieta', () => {
     club,
   }) => {
     const one = court({ name: 'Court 1', sport: 'PADEL', hours: week([1], 17, 19) });
-    club.raketa.courts = [one];
+    club.rakieta.courts = [one];
     const hours = await openHours(page);
 
     await expect(hours.getByRole('checkbox')).toHaveCount(7 * 16);
@@ -88,7 +88,7 @@ test.describe('Weekly hours for Rakieta', () => {
     page,
     club,
   }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
     const hours = await openHours(page);
 
     await drag(page, cell(hours, 'Tuesday 08:00'), cell(hours, 'Tuesday 11:00'));
@@ -108,7 +108,7 @@ test.describe('Weekly hours for Rakieta', () => {
     page,
     club,
   }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
     const hours = await openHours(page);
 
     // One move, from Thursday 08:00 straight to Saturday 11:00: the line between is painted.
@@ -123,7 +123,7 @@ test.describe('Weekly hours for Rakieta', () => {
     page,
     club,
   }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
     const hours = await openHours(page);
 
     await cell(hours, 'Monday 07:00').focus();
@@ -144,7 +144,7 @@ test.describe('Weekly hours for Rakieta', () => {
     const one = court({ name: 'Court 1', sport: 'PADEL', hours: week([1], 17, 18) });
     const two = court({ name: 'Court 2', sport: 'PADEL', hours: week([2], 17, 18) });
     const tennis = court({ name: 'Kort centralny', sport: 'TENNIS', hours: week([3], 9, 10) });
-    club.raketa.courts = [one, two, tennis];
+    club.rakieta.courts = [one, two, tennis];
     const hours = await openHours(page);
 
     const picker = hours.getByRole('radiogroup', { name: 'Courts to set' });
@@ -168,7 +168,7 @@ test.describe('Weekly hours for Rakieta', () => {
     await expect(hours.getByRole('status')).toHaveText('Hours saved for Court 1 and Court 2.');
     const [saved] = stub.requests('put', '/api/v1/club/rakieta-hours');
     expect(saved?.body.court_ids).toEqual([one.id, two.id]);
-    expect(club.raketa.courts.map((each) => each.hours.length)).toEqual([2, 2, 1]);
+    expect(club.rakieta.courts.map((each) => each.hours.length)).toEqual([2, 2, 1]);
     await expect(hours).not.toContainText("These courts don't all have the same hours.");
   });
 
@@ -180,7 +180,7 @@ test.describe('Weekly hours for Rakieta', () => {
     const one = court({ name: 'Court 1', sport: 'PADEL', hours: week([1, 2], 17, 22) });
     const two = court({ name: 'Court 2', sport: 'PADEL' });
     const three = court({ name: 'Court 3', sport: 'TENNIS', offered: false });
-    club.raketa.courts = [one, two, three];
+    club.rakieta.courts = [one, two, three];
     const hours = await openHours(page);
 
     await hours.getByRole('button', { name: 'Copy to other courts' }).click();
@@ -193,7 +193,7 @@ test.describe('Weekly hours for Rakieta', () => {
     const [saved] = stub.requests('put', '/api/v1/club/rakieta-hours');
     expect(saved?.body.court_ids).toEqual([one.id, three.id]);
     expect(saved?.body.hours).toHaveLength(10);
-    expect(club.raketa.courts[2]?.hours).toEqual(one.hours);
+    expect(club.rakieta.courts[2]?.hours).toEqual(one.hours);
   });
 
   test('a court deleted elsewhere is said over the grid, which is drawn again', async ({
@@ -201,14 +201,14 @@ test.describe('Weekly hours for Rakieta', () => {
     stub,
     club,
   }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
     stub.on('put', '/api/v1/club/rakieta-hours', () => ({
       status: 404,
       body: refusal('court_not_found'),
     }));
     const hours = await openHours(page);
     await cell(hours, 'Monday 07:00').click();
-    club.raketa.courts = [];
+    club.rakieta.courts = [];
     await hours.getByRole('button', { name: 'Save hours' }).click();
 
     await expect(hours.getByRole('alert')).toHaveText("One of those courts isn't yours any more.");

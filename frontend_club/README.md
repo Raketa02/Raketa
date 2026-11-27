@@ -1,4 +1,4 @@
-# Raketa for Clubs
+# Rakieta for Clubs
 
 The club website: a club signs up with its name, district, city, sports and a pin on the map,
 signs in, keeps its details, and recovers its password. Administrators and official groups

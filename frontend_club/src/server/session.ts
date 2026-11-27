@@ -17,7 +17,7 @@ import { seal, cookieOptions, unseal } from './seal';
  * proxy seals and unseals through the same two functions.
  */
 
-export const SESSION_COOKIE = 'raketa_club_session';
+export const SESSION_COOKIE = 'rakieta_club_session';
 
 /**
  * The cookie outlives any refresh token, so **the backend decides when a session ends**, not the

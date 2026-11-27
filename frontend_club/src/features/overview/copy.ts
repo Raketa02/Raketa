@@ -40,7 +40,7 @@ const STEPS: Readonly<Record<SetupStep, StepWords>> = {
 };
 
 export const OVERVIEW_COPY = {
-  live: "You're live — your courts can now be booked through Raketa.",
+  live: "You're live — your courts can now be booked through Rakieta.",
   /** Once the club is live, in the checklist's place (Q121). */
   liveOnRakieta: {
     title: 'Live on Rakieta',

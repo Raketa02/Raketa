@@ -1,5 +1,5 @@
 /**
- * **The club's Raketa bookings, as the backend would keep them** (#547, #637, #669, #671, #672):
+ * **The club's Rakieta bookings, as the backend would keep them** (#547, #637, #669, #671, #672):
  * each booking's court and its kind, hour, players and money, and its status **folded on every
  * read** from where it stands and the clock, as `proposals/domain/club_bookings.py` folds it. The
  * rules are the club surface's own, from `backend/openapi.club.json`, kept just deep enough that a

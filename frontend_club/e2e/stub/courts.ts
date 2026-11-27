@@ -1,5 +1,5 @@
 /**
- * **One club's Raketa offer, as the backend would keep it** (#535, #670): its courts and their
+ * **One club's Rakieta offer, as the backend would keep it** (#535, #670): its courts and their
  * Rakieta hours, its exceptions, its prices and its settings, and the setup checklist read off all
  * of them. The rules are the club surface's own, from `backend/openapi.club.json`,
  * kept just deep enough that a test can add a court, paint its week, price its sport and confirm

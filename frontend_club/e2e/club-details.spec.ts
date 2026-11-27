@@ -150,7 +150,7 @@ test.describe('Club details', () => {
     stub,
     club,
   }) => {
-    club.raketa.courts = [court({ name: 'Kort centralny', sport: 'TENNIS', offered: false })];
+    club.rakieta.courts = [court({ name: 'Kort centralny', sport: 'TENNIS', offered: false })];
     await signIn(page);
     await page.goto('/details');
     await page.getByRole('checkbox', { name: 'Tennis' }).uncheck();

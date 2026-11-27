@@ -155,8 +155,8 @@ test.describe('Administrators', () => {
     await expect(name).toHaveAttribute('placeholder', 'Full name');
     await expect(
       page.getByText(
-        'Raketa emails them. They set their own password in the app; if the email already has a ' +
-          'Raketa account, they just accept.',
+        'Rakieta emails them. They set their own password in the app; if the email already has a ' +
+          'Rakieta account, they just accept.',
       ),
     ).toBeVisible();
 
@@ -347,7 +347,7 @@ test.describe('Administrators', () => {
     await remove.click();
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText('Their groups stay, marked needs an administrator');
-    await expect(dialog).toContainText('Raketa emails them to say so.');
+    await expect(dialog).toContainText('Rakieta emails them to say so.');
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(dialog).toBeHidden();
 
@@ -401,7 +401,7 @@ test.describe('Administrators', () => {
     club.administrators = [{ ...marta, can_reset_password: false }, club.administrators[1]!];
     await rowOf(page, 'Marta Wójcik').getByRole('button', { name: 'Reset password' }).click();
     await expect(refused).toHaveText(
-      'Marta Wójcik also plays on Raketa, so only they can reset their password, with Forgot ' +
+      'Marta Wójcik also plays on Rakieta, so only they can reset their password, with Forgot ' +
         'password? in the app.',
     );
     await expect(rowOf(page, 'Marta Wójcik').getByRole('button')).toHaveText(['Remove']);

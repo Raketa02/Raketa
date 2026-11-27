@@ -12,7 +12,7 @@ import { court, week } from './stub/courts';
  * Bookings. Connecting payments has its own spec, `connect-payments.spec.ts` (#562).
  */
 
-const TOLD_LIVE_COOKIE = 'raketa_club_told_live';
+const TOLD_LIVE_COOKIE = 'rakieta_club_told_live';
 
 function checklist(page: Page) {
   return page.getByRole('list', { name: 'Setup checklist' }).getByRole('listitem');
@@ -75,8 +75,8 @@ test.describe('Overview', () => {
   });
 
   test('steps done are ticked, and the first left to do is next', async ({ page, club }) => {
-    club.raketa.payments = 'READY';
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL', hours: week([1], 17, 19) })];
+    club.rakieta.payments = 'READY';
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL', hours: week([1], 17, 19) })];
     await signIn(page);
 
     await expect(checklist(page).locator('[data-state]')).toHaveText([
@@ -101,11 +101,11 @@ test.describe('Overview', () => {
     context,
     club,
   }) => {
-    club.raketa.ready();
+    club.rakieta.ready();
     await signIn(page);
 
     await expect(page.getByRole('main').getByRole('status')).toHaveText(
-      "You're live — your courts can now be booked through Raketa.",
+      "You're live — your courts can now be booked through Rakieta.",
     );
     await expect(page.getByRole('list', { name: 'Setup checklist' })).toHaveCount(0);
     await expect
@@ -125,7 +125,7 @@ test.describe('Overview', () => {
     context,
     club,
   }) => {
-    club.raketa.ready();
+    club.rakieta.ready();
     await signIn(page);
     await expect(page.getByText("You're live")).toBeVisible();
     await expect
@@ -133,7 +133,7 @@ test.describe('Overview', () => {
       .toContain(TOLD_LIVE_COOKIE);
 
     // Stripe wants more details: the club is not live until it has them.
-    club.raketa.payments = 'NEEDS_DETAILS';
+    club.rakieta.payments = 'NEEDS_DETAILS';
     await page.reload();
     await expect(checklist(page)).toHaveCount(4);
     await expect(page.getByRole('region', { name: 'Live on Rakieta' })).toHaveCount(0);
@@ -147,7 +147,7 @@ test.describe('Overview', () => {
       .poll(async () => (await context.cookies()).map((cookie) => cookie.name))
       .not.toContain(TOLD_LIVE_COOKIE);
 
-    club.raketa.payments = 'READY';
+    club.rakieta.payments = 'READY';
     await page.reload();
     await expect(page.getByText("You're live")).toBeVisible();
   });
@@ -166,8 +166,8 @@ test.describe('Overview', () => {
     page,
     club,
   }) => {
-    club.raketa.ready();
-    const padel = club.raketa.courts[0];
+    club.rakieta.ready();
+    const padel = club.rakieta.courts[0];
     if (padel === undefined) throw new Error('ready() seats a court');
     club.bookings.add(booking({ court: padel, day: dayFromToday(0), hour: 7 }));
     await signIn(page);

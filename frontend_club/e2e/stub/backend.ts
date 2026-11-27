@@ -83,7 +83,7 @@ const STRIPE_PATH = new URL(STRIPE_PAGES).pathname;
 const STRIPE_PAGE =
   '<!doctype html><title>Stripe</title>' +
   '<h1>Set up payments with Stripe</h1>' +
-  `<a href="${STRIPE_RETURN_URL}">Return to Raketa</a>`;
+  `<a href="${STRIPE_RETURN_URL}">Return to Rakieta</a>`;
 
 /** A 1 × 1 transparent PNG: every tile the map asks for. */
 const TILE = Buffer.from(

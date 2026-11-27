@@ -6,7 +6,7 @@
 
 export const SITE_COPY = {
   description:
-    "A club's desk: its courts and prices on Raketa, its bookings and its money, its settings, its administrators and its groups.",
+    "A club's desk: its courts and prices on Rakieta, its bookings and its money, its settings, its administrators and its groups.",
   frame: {
     /** The top bar's pages, as a screen reader names the list. */
     pagesLabel: 'Club website',
@@ -29,7 +29,7 @@ export const SITE_COPY = {
   notFound: {
     title: 'Nothing at this address',
     lead: 'The page may have moved, or the link is wrong.',
-    home: 'Go to Raketa for Clubs',
+    home: 'Go to Rakieta for Clubs',
   },
 } as const;
 

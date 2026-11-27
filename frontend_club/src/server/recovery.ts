@@ -14,7 +14,7 @@ import { seal, cookieOptions, unseal } from './seal';
  * set.
  */
 
-export const RECOVERY_COOKIE = 'raketa_club_recovery';
+export const RECOVERY_COOKIE = 'rakieta_club_recovery';
 
 /** A code lasts an hour (ADR-0184 §3), so a recovery has no reason to outlive one. */
 const RECOVERY_SECONDS = 60 * 60;

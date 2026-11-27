@@ -30,11 +30,11 @@ test.describe('Connect payments', () => {
     await row.getByRole('button', { name: 'Connect with Stripe' }).click();
     await expect(page.getByRole('heading', { name: 'Set up payments with Stripe' })).toBeVisible();
     expect(stub.requests('post', '/api/v1/club/payments/onboarding-link')).toHaveLength(1);
-    expect(stub.stripePages).toEqual(club.raketa.links);
+    expect(stub.stripePages).toEqual(club.rakieta.links);
 
     // The club gave Stripe what it had, and Stripe wants more.
-    club.raketa.payments = 'NEEDS_DETAILS';
-    await page.getByRole('link', { name: 'Return to Raketa' }).click();
+    club.rakieta.payments = 'NEEDS_DETAILS';
+    await page.getByRole('link', { name: 'Return to Rakieta' }).click();
     await expect(page).toHaveURL(/\/overview$/);
     await expect(row.locator('[data-state]')).toHaveText('Stripe needs more details');
     await expect(row.getByRole('button')).toHaveText('Continue with Stripe');
@@ -45,8 +45,8 @@ test.describe('Connect payments', () => {
     stub,
     club,
   }) => {
-    club.raketa.payments = 'NEEDS_DETAILS';
-    club.raketa.links.push(`${STRIPE_PAGES}/spent`);
+    club.rakieta.payments = 'NEEDS_DETAILS';
+    club.rakieta.links.push(`${STRIPE_PAGES}/spent`);
     await signIn(page);
     const row = payments(page);
     await expect(row.locator('[data-state]')).toHaveText('Stripe needs more details');
@@ -54,11 +54,11 @@ test.describe('Connect payments', () => {
     await row.getByRole('button', { name: 'Continue with Stripe' }).click();
     await expect(page.getByRole('heading', { name: 'Set up payments with Stripe' })).toBeVisible();
     expect(stub.requests('post', '/api/v1/club/payments/onboarding-link')).toHaveLength(1);
-    expect(stub.stripePages).toEqual([club.raketa.links[1]]);
+    expect(stub.stripePages).toEqual([club.rakieta.links[1]]);
   });
 
   test('ready: ticked, with nothing left to do', async ({ page, club }) => {
-    club.raketa.payments = 'READY';
+    club.rakieta.payments = 'READY';
     await signIn(page);
     const row = payments(page);
     await expect(row.locator('[data-state]')).toHaveText('ready ✓');
@@ -95,7 +95,7 @@ test.describe('Connect payments', () => {
     await signIn(page);
     // Every call reads the account as Stripe has it, before its notice arrives (#537).
     stub.on('post', '/api/v1/club/payments/onboarding-link', () => {
-      club.raketa.payments = 'READY';
+      club.rakieta.payments = 'READY';
       return { status: 409, body: refusal('payments_already_connected') };
     });
     const row = payments(page);
@@ -113,18 +113,18 @@ test.describe('Connect payments', () => {
  */
 test.describe('Continuing with Stripe from a link', () => {
   test('asks for a fresh link to Stripe’s pages, and follows it', async ({ page, stub, club }) => {
-    club.raketa.payments = 'NEEDS_DETAILS';
+    club.rakieta.payments = 'NEEDS_DETAILS';
     await signIn(page);
 
     await page.goto('/payments/continue');
     await expect(page.getByRole('heading', { name: 'Set up payments with Stripe' })).toBeVisible();
     expect(stub.requests('post', '/api/v1/club/payments/onboarding-link')).toHaveLength(1);
-    expect(stub.stripePages).toEqual(club.raketa.links);
+    expect(stub.stripePages).toEqual(club.rakieta.links);
   });
 
   test('an account Stripe says is ready lands on Overview, ticked', async ({ page, club }) => {
     await signIn(page);
-    club.raketa.payments = 'READY';
+    club.rakieta.payments = 'READY';
 
     await page.goto('/payments/continue');
     await expect(page).toHaveURL(/\/overview$/);
@@ -136,7 +136,7 @@ test.describe('Continuing with Stripe from a link', () => {
     stub,
     club,
   }) => {
-    club.raketa.payments = 'NEEDS_DETAILS';
+    club.rakieta.payments = 'NEEDS_DETAILS';
     await signIn(page);
     stub.on('post', '/api/v1/club/payments/onboarding-link', () => ({
       status: 503,

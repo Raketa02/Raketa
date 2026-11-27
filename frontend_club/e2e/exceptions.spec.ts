@@ -29,8 +29,8 @@ test.describe('Exceptions', () => {
   test('lists what is closed: why, when and which courts', async ({ page, club }) => {
     const one = court({ name: 'Court 1', sport: 'PADEL' });
     const two = court({ name: 'Court 2', sport: 'PADEL' });
-    club.raketa.courts = [one, two];
-    club.raketa.exceptions = [
+    club.rakieta.courts = [one, two];
+    club.rakieta.exceptions = [
       {
         id: '0b8f5c1e-1c1d-4d2e-8f3a-5a6b7c8d9e01',
         court_ids: null,
@@ -84,7 +84,7 @@ test.describe('Exceptions', () => {
   });
 
   test('a day on every court, added and listed', async ({ page, stub, club }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
     const exceptions = await openExceptions(page);
     await expect(exceptions).toContainText('Nothing closed.');
 
@@ -113,7 +113,7 @@ test.describe('Exceptions', () => {
   test('some hours on a day, on the courts ticked', async ({ page, stub, club }) => {
     const one = court({ name: 'Court 1', sport: 'PADEL' });
     const two = court({ name: 'Court 2', sport: 'PADEL' });
-    club.raketa.courts = [one, two];
+    club.rakieta.courts = [one, two];
     const exceptions = await openExceptions(page);
 
     const day = dayFromToday(3);
@@ -139,7 +139,7 @@ test.describe('Exceptions', () => {
   });
 
   test('several days run from the first to the last', async ({ page, stub, club }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
     const exceptions = await openExceptions(page);
 
     await exceptions.getByRole('button', { name: '+ Add an exception' }).click();
@@ -161,7 +161,7 @@ test.describe('Exceptions', () => {
     stub,
     club,
   }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
     const exceptions = await openExceptions(page);
     await exceptions.getByRole('button', { name: '+ Add an exception' }).click();
     await exceptions.getByRole('radio', { name: 'Some courts' }).check();
@@ -192,7 +192,7 @@ test.describe('Exceptions', () => {
   }) => {
     const one = court({ name: 'Court 1', sport: 'PADEL' });
     const two = court({ name: 'Court 2', sport: 'PADEL' });
-    club.raketa.courts = [one, two];
+    club.rakieta.courts = [one, two];
     const day = dayFromToday(6);
     const booking = club.bookings.book(two, day, 18);
     const exceptions = await openExceptions(page);
@@ -211,14 +211,14 @@ test.describe('Exceptions', () => {
       'href',
       `/bookings?date=${day}&booking=${booking.booking_id}`,
     );
-    expect(club.raketa.exceptions).toEqual([]);
+    expect(club.rakieta.exceptions).toEqual([]);
     // What the desk typed is still there to change.
     await expect(exceptions.getByLabel('Reason')).toHaveValue('Repair');
   });
 
   test('Remove opens the hours again', async ({ page, stub, club }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
-    club.raketa.exceptions = [
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.exceptions = [
       {
         id: '0b8f5c1e-1c1d-4d2e-8f3a-5a6b7c8d9e01',
         court_ids: null,
@@ -243,7 +243,7 @@ test.describe('Exceptions', () => {
     stub,
     club,
   }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
     stub.on('post', '/api/v1/club/exceptions', () => ({
       status: 400,
       body: refusal('exception_in_the_past', 'days'),
@@ -274,7 +274,7 @@ test.describe('Exceptions', () => {
     page,
     club,
   }) => {
-    club.raketa.exceptions = [
+    club.rakieta.exceptions = [
       {
         id: '0b8f5c1e-1c1d-4d2e-8f3a-5a6b7c8d9e01',
         court_ids: null,
@@ -286,7 +286,7 @@ test.describe('Exceptions', () => {
       },
     ];
     const exceptions = await openExceptions(page);
-    club.raketa.exceptions = [];
+    club.rakieta.exceptions = [];
     await rowOf(page, 'Tournament').getByRole('button', { name: 'Remove' }).click();
 
     await expect(exceptions.getByRole('alert')).toHaveText('That exception was removed already.');

@@ -156,13 +156,13 @@ export class FakeClub {
    */
   groups: OfficialGroup[] = [];
   /**
-   * What the club sells through Raketa: its courts, hours, exceptions, prices and settings, and
+   * What the club sells through Rakieta: its courts, hours, exceptions, prices and settings, and
    * the setup checklist read off them. Nothing is set, and payments are not
-   * started, unless the test says (`club.raketa.ready()` makes the club live).
+   * started, unless the test says (`club.rakieta.ready()` makes the club live).
    */
-  readonly raketa: FakeClubCourts;
+  readonly rakieta: FakeClubCourts;
   /**
-   * The club's Raketa bookings, any day: none unless the test seats them (`booking(…)`). A
+   * The club's Rakieta bookings, any day: none unless the test seats them (`booking(…)`). A
    * booking still to be played holds its court, which Courts & prices reads.
    */
   readonly bookings: FakeClubBookings;
@@ -177,15 +177,15 @@ export class FakeClub {
       this.accessIsLive(authorization)
         ? null
         : ({ status: 401, body: refusal('access_token_invalid') } as const);
-    this.raketa = new FakeClubCourts(
+    this.rakieta = new FakeClubCourts(
       stub,
       guard,
       () => this.details.sports,
       () => this.bookings.ahead(),
     );
     this.bookings = new FakeClubBookings(stub, guard, () => ({
-      courts: this.raketa.courts,
-      exceptions: this.raketa.exceptions,
+      courts: this.rakieta.courts,
+      exceptions: this.rakieta.exceptions,
     }));
     this.money = new FakeClubMoney(stub, guard);
   }
@@ -285,7 +285,7 @@ export class FakeClub {
         return { status: 401, body: refusal('access_token_invalid') };
       }
       // A sport one of the club's courts plays stays ticked, switched off or not (#535).
-      const played = this.raketa.courts.find((court) => !body.sports.includes(court.sport));
+      const played = this.rakieta.courts.find((court) => !body.sports.includes(court.sport));
       if (played !== undefined) {
         return {
           status: 409,
@@ -334,7 +334,7 @@ export class FakeClub {
 
     this.installAdministrators();
     this.installGroups();
-    this.raketa.install();
+    this.rakieta.install();
     this.bookings.install();
     this.money.install();
     return this;

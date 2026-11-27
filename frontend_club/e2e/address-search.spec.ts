@@ -80,7 +80,7 @@ test.describe('Finding the club by its address', () => {
     expect(north).toBeGreaterThan(MAP_START.latitude);
     expect(search?.query.get('bounded')).toBe('0');
     // Nominatim's usage policy asks every caller to identify itself.
-    expect(search?.agent).toMatch(/^Raketa for Clubs/);
+    expect(search?.agent).toMatch(/^Rakieta for Clubs/);
   });
 
   test('an address it cannot find is said under the box, and the pin stays where it was', async ({

@@ -9,7 +9,7 @@ import { court, week } from './stub/courts';
 
 /**
  * **Bookings** (#563, #674, #675, the screens B4, the mechanics §16.7, §16.9 and §16.16): every
- * Raketa booking at the club, one day at a time, with its court and the court's kind, its
+ * Rakieta booking at the club, one day at a time, with its court and the court's kind, its
  * players, its status, its money and the group it came from, and the games the club moves or
  * cancels. No club confirms a game (Q121), so nothing on the page waits for the desk's answer. A
  * cancel moves the game when another of the club's courts takes it (Q122), and the dialog says
@@ -45,7 +45,7 @@ test.describe('Bookings', () => {
       indoor: false,
       hours: week(EVERY_DAY, 7, 23),
     });
-    club.raketa.courts = [padel, tennis];
+    club.rakieta.courts = [padel, tennis];
     const day = dayFromToday(2);
     club.bookings.add(booking({ court: padel, day, hour: 19 }));
     club.bookings.add(
@@ -103,7 +103,7 @@ test.describe('Bookings', () => {
 
   test('Bookings is in the top bar, and opens on today', async ({ page, stub, club }) => {
     const padel = court({ name: 'Court 1', sport: 'PADEL' });
-    club.raketa.courts = [padel];
+    club.rakieta.courts = [padel];
     club.bookings.add(booking({ court: padel, day: dayFromToday(0), hour: 7 }));
     await signIn(page);
 
@@ -128,7 +128,7 @@ test.describe('Bookings', () => {
     club,
   }) => {
     const padel = court({ name: 'Court 1', sport: 'PADEL' });
-    club.raketa.courts = [padel];
+    club.rakieta.courts = [padel];
     club.bookings.add(booking({ court: padel, day: dayFromToday(0), hour: 7 }));
     await openDay(page, dayFromToday(0));
     await expect(page.getByRole('rowheader')).toHaveText([/07:00–08:00\s*Court 1/]);
@@ -144,7 +144,7 @@ test.describe('Bookings', () => {
     club,
   }) => {
     const padel = court({ name: 'Court 1', sport: 'PADEL' });
-    club.raketa.courts = [padel];
+    club.rakieta.courts = [padel];
     const day = dayFromToday(1);
     club.bookings.add(
       booking({
@@ -208,7 +208,7 @@ test.describe('Bookings', () => {
     club,
   }) => {
     const padel = court({ name: 'Court 1', sport: 'PADEL' });
-    club.raketa.courts = [padel];
+    club.rakieta.courts = [padel];
     club.bookings.add(booking({ court: padel, day: dayFromToday(1), hour: 19 }));
     const day = page.getByRole('navigation', { name: 'Day' });
     const lastQuery = () => stub.requests('get', '/api/v1/club/bookings').at(-1)?.query;
@@ -216,7 +216,7 @@ test.describe('Bookings', () => {
     await page.goto('/bookings');
 
     await expect(day.getByRole('heading', { name: /^Today · / })).toBeVisible();
-    await expect(page.getByText('No Raketa bookings on this day.')).toBeVisible();
+    await expect(page.getByText('No Rakieta bookings on this day.')).toBeVisible();
     await expect(day.getByRole('link', { name: 'Today', exact: true })).toHaveCount(0);
 
     await day.getByRole('link', { name: 'Next day' }).click();
@@ -268,7 +268,7 @@ test.describe('Bookings', () => {
     club,
   }) => {
     const padel = court({ name: 'Court 1', sport: 'PADEL' });
-    club.raketa.courts = [padel];
+    club.rakieta.courts = [padel];
     const day = dayFromToday(2);
     club.bookings.add(booking({ court: padel, day, hour: 18 }));
     club.bookings.add(booking({ court: padel, day, hour: 19, stage: 'SEAT_OPEN' }));
@@ -321,7 +321,7 @@ test.describe('Bookings', () => {
     club,
   }) => {
     const one = court({ name: 'Court 1', sport: 'PADEL' });
-    club.raketa.courts = [one];
+    club.rakieta.courts = [one];
     const day = dayFromToday(6);
     club.bookings.book(one, day, 17);
     const held = club.bookings.book(one, day, 18);
@@ -358,7 +358,7 @@ test.describe('Bookings', () => {
       const held = court({ name: 'Court 5', sport: 'PADEL', hours });
       const outside = court({ name: 'Court 6', sport: 'PADEL', indoor: false, hours });
       const tennis = court({ name: 'Kort tenisowy', sport: 'TENNIS', hours });
-      club.raketa.courts = [one, two, off, mornings, held, outside, tennis];
+      club.rakieta.courts = [one, two, off, mornings, held, outside, tennis];
       const day = dayFromToday(2);
       const game = club.bookings.add(booking({ court: one, day, hour: 19 }));
       club.bookings.add(booking({ court: held, day, hour: 19 }));
@@ -402,7 +402,7 @@ test.describe('Bookings', () => {
       const one = court({ name: 'Court 1', sport: 'PADEL', indoor: false, hours });
       const two = court({ name: 'Court 2', sport: 'PADEL', hours });
       const three = court({ name: 'Court 3', sport: 'PADEL', indoor: false, hours });
-      club.raketa.courts = [one, two, three];
+      club.rakieta.courts = [one, two, three];
       const day = dayFromToday(2);
       club.bookings.add(booking({ court: one, day, hour: 19 }));
       await openDay(page, day);
@@ -432,7 +432,7 @@ test.describe('Bookings', () => {
       const hours = week(EVERY_DAY, 7, 23);
       const one = court({ name: 'Court 1', sport: 'PADEL', hours });
       const outside = court({ name: 'Court 6', sport: 'PADEL', indoor: false, hours });
-      club.raketa.courts = [one, outside];
+      club.rakieta.courts = [one, outside];
       const day = dayFromToday(2);
       club.bookings.add(booking({ court: one, day, hour: 19 }));
       await openDay(page, day);
@@ -447,7 +447,7 @@ test.describe('Bookings', () => {
       await expect(dialog).toBeHidden();
 
       const two = court({ name: 'Court 2', sport: 'PADEL', hours });
-      club.raketa.courts = [one, two, outside];
+      club.rakieta.courts = [one, two, outside];
       stub.on('post', '/api/v1/club/bookings/{booking_id}/move', () => ({
         status: 409,
         body: refusal('court_just_taken'),
@@ -470,7 +470,7 @@ test.describe('Bookings', () => {
       const two = court({ name: 'Court 2', sport: 'PADEL', hours });
       const three = court({ name: 'Court 3', sport: 'PADEL', hours });
       const outside = court({ name: 'Court 4', sport: 'PADEL', indoor: false, hours });
-      club.raketa.courts = [two, three, outside];
+      club.rakieta.courts = [two, three, outside];
       const day = dayFromToday(2);
       const game = club.bookings.add(booking({ court: two, day, hour: 19 }));
       await openDay(page, day);
@@ -536,7 +536,7 @@ test.describe('Bookings', () => {
       const one = court({ name: 'Court 1', sport: 'PADEL', indoor: false, hours });
       const two = court({ name: 'Court 2', sport: 'PADEL', indoor: false, hours });
       const three = court({ name: 'Court 3', sport: 'PADEL', hours });
-      club.raketa.courts = [one, two, three];
+      club.rakieta.courts = [one, two, three];
       const day = dayFromToday(2);
       club.bookings.add(booking({ court: one, day, hour: 19 }));
       await openDay(page, day);
@@ -577,7 +577,7 @@ test.describe('Bookings', () => {
       const padel = court({ name: 'Court 1', sport: 'PADEL', hours });
       // Free, but outdoors: never for an indoor game.
       const outside = court({ name: 'Court 6', sport: 'PADEL', indoor: false, hours });
-      club.raketa.courts = [padel, outside];
+      club.rakieta.courts = [padel, outside];
       const day = dayFromToday(2);
       const game = club.bookings.add(booking({ court: padel, day, hour: 19, stage: 'SEAT_OPEN' }));
       await openDay(page, day);
@@ -635,7 +635,7 @@ test.describe('Bookings', () => {
       club,
     }) => {
       const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
+      club.rakieta.courts = [padel];
       const day = dayFromToday(1);
       club.bookings.add(booking({ court: padel, day, hour: 19, cut_off: fromNow(-HOUR_MS) }));
       await openDay(page, day);
@@ -667,7 +667,7 @@ test.describe('Bookings', () => {
       const hours = week(EVERY_DAY, 7, 23);
       const one = court({ name: 'Court 1', sport: 'PADEL', hours });
       const two = court({ name: 'Court 2', sport: 'PADEL', hours });
-      club.raketa.courts = [one, two];
+      club.rakieta.courts = [one, two];
       const day = dayFromToday(1);
       const game = club.bookings.add(
         booking({ court: one, day, hour: 19, cut_off: fromNow(-HOUR_MS) }),
@@ -713,7 +713,7 @@ test.describe('Bookings', () => {
       const one = court({ name: 'Court 1', sport: 'PADEL', hours });
       const three = court({ name: 'Court 3', sport: 'PADEL', hours });
       const four = court({ name: 'Court 4', sport: 'PADEL', hours });
-      club.raketa.courts = [one, three, four];
+      club.rakieta.courts = [one, three, four];
       const day = dayFromToday(2);
       club.bookings.add(booking({ court: one, day, hour: 18 }));
       club.bookings.add(booking({ court: one, day, hour: 19 }));
@@ -760,7 +760,7 @@ test.describe('Bookings', () => {
         .click();
       await dialog.getByRole('radio', { name: 'Repair' }).check();
       await expect(dialog.getByRole('status')).toContainText('This game is called off');
-      club.raketa.courts = [one, three, four, court({ name: 'Court 5', sport: 'PADEL', hours })];
+      club.rakieta.courts = [one, three, four, court({ name: 'Court 5', sport: 'PADEL', hours })];
       await dialog.getByRole('button', { name: 'Cancel the booking' }).click();
       await expect(notice).toHaveText(
         /^A court came free a moment ago, so the 20:00 game on .+ moved to Court 5 · indoor: the players are told, and nobody is refunded\.$/,
@@ -789,7 +789,7 @@ test.describe('Bookings', () => {
       club,
     }) => {
       const padel = court({ name: 'Court 1', sport: 'PADEL' });
-      club.raketa.courts = [padel];
+      club.rakieta.courts = [padel];
       const started = club.bookings.add(booking({ court: padel, day: dayFromToday(0), hour: 7 }));
       started.starts_at = fromNow(-30 * MINUTE_MS);
       const day = clubTime(started.starts_at).day;

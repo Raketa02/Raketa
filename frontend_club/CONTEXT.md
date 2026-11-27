@@ -14,12 +14,12 @@ it points back.
 - **View model** — what a page draws, made from a wire type by a mapper: a `Club`, with its
   sports in the registry's order. Pages never see a wire type.
 - **Cookie session** — the club's token pair and the moment its access token lapses, sealed with
-  `SESSION_SECRET` into one `httpOnly` cookie, `raketa_club_session`. Only the server can read it.
+  `SESSION_SECRET` into one `httpOnly` cookie, `rakieta_club_session`. Only the server can read it.
   _Avoid_: login, auth state.
 - **Mark** — a plain cookie that remembers what this browser was told once:
-  `raketa_club_told_live`, set when Overview says the club is live and cleared when it is not
+  `rakieta_club_told_live`, set when Overview says the club is live and cleared when it is not
   any more. Holds no token. Not a session.
-- **Recovery cookie** — _Forgot password?_'s own sealed cookie, `raketa_club_recovery`: the email
+- **Recovery cookie** — _Forgot password?_'s own sealed cookie, `rakieta_club_recovery`: the email
   a recovery was asked with, and once a right code is claimed, its **ticket**. Not a session.
 - **Ticket** — what a right code is exchanged for; the new password is set with it. A credential,
   so it lives in the recovery cookie and never reaches the browser.
@@ -52,8 +52,8 @@ path>`, a route handler that can set the cookie the render cannot, and is sent b
 - **Stub backend** — `e2e/stub/backend.ts`: an HTTP server standing in for the club surface in
   the Playwright suite, typed from the wire types, recording every request.
 - **Fake club** — `e2e/stub/club.ts`: the stub's default handlers, one club whose tokens rotate,
-  whose reset signs everyone out and whose administrators, official groups, Raketa offer
-  (`club.raketa`, `e2e/stub/courts.ts`), bookings (`club.bookings`, `e2e/stub/bookings.ts`) and
+  whose reset signs everyone out and whose administrators, official groups, Rakieta offer
+  (`club.rakieta`, `e2e/stub/courts.ts`), bookings (`club.bookings`, `e2e/stub/bookings.ts`) and
   money (`club.money`, `e2e/stub/money.ts`) keep the backend's rules, so a test programs only the
   reply it is about. The stub also draws Stripe's pages, which the fake club's links point at.
 - **Stripe's pages** — the hosted pages where a club gives Stripe its company, its

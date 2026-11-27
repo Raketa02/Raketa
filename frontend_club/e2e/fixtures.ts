@@ -13,7 +13,7 @@ import { DESK_EMAIL, DESK_PASSWORD, FakeClub } from './stub/club';
 import { STUB_PORT } from './suite';
 
 /** The cookie's name is part of what the browser sees, so the suite states it. */
-export const SESSION_COOKIE = 'raketa_club_session';
+export const SESSION_COOKIE = 'rakieta_club_session';
 
 interface Fixtures {
   stub: StubBackend;

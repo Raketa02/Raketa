@@ -7,7 +7,7 @@ import { court } from './stub/courts';
 
 /**
  * **Courts & prices: the courts** (#561, the screens B3, the mechanics §16.4): the courts the
- * club offers Raketa, each with one sport, indoor or outdoor, added, edited, switched off and on, and
+ * club offers Rakieta, each with one sport, indoor or outdoor, added, edited, switched off and on, and
  * deleted while nothing is booked on it.
  */
 
@@ -50,7 +50,7 @@ test.describe('Courts', () => {
     expect(stub.requests('post', '/api/v1/club/courts').map((r) => r.body)).toEqual([
       { name: 'Kort centralny', sport: 'TENNIS', indoor: false },
     ]);
-    expect(club.raketa.courts.map((each) => each.name)).toEqual(['Kort centralny']);
+    expect(club.rakieta.courts.map((each) => each.name)).toEqual(['Kort centralny']);
     await expect(courts.getByLabel('Name')).toHaveCount(0);
   });
 
@@ -77,7 +77,7 @@ test.describe('Courts', () => {
     page,
     club,
   }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
     const courts = await openCourts(page);
     await courts.getByRole('button', { name: '+ Add a court' }).click();
     await courts.getByLabel('Name').fill('court 1');
@@ -87,7 +87,7 @@ test.describe('Courts', () => {
 
     await expect(courts.getByText('Another of your courts has this name.')).toBeVisible();
     await expect(courts.getByLabel('Name')).toHaveAttribute('aria-invalid', 'true');
-    expect(club.raketa.courts).toHaveLength(1);
+    expect(club.rakieta.courts).toHaveLength(1);
   });
 
   test('Edit changes a court in place, keeping whether it is offered', async ({
@@ -96,7 +96,7 @@ test.describe('Courts', () => {
     club,
   }) => {
     const one = court({ name: 'Court 1', sport: 'PADEL', offered: false });
-    club.raketa.courts = [one];
+    club.rakieta.courts = [one];
     const courts = await openCourts(page);
     await rowOf(page, 'Court 1').getByRole('button', { name: 'Edit' }).click();
 
@@ -125,7 +125,7 @@ test.describe('Courts', () => {
     club,
   }) => {
     const one = court({ name: 'Court 1', sport: 'PADEL' });
-    club.raketa.courts = [one];
+    club.rakieta.courts = [one];
     club.bookings.book(one, dayFromToday(2), 18);
     const courts = await openCourts(page);
     await rowOf(page, 'Court 1').getByRole('button', { name: 'Edit' }).click();
@@ -135,7 +135,7 @@ test.describe('Courts', () => {
     await expect(courts.getByRole('alert')).toHaveText(
       'Court 1 has a booking ahead, so it keeps its sport until that game is played.',
     );
-    expect(club.raketa.courts[0]?.sport).toBe('PADEL');
+    expect(club.rakieta.courts[0]?.sport).toBe('PADEL');
   });
 
   test('Switch off asks first and says what it means; Switch on is at once', async ({
@@ -143,7 +143,7 @@ test.describe('Courts', () => {
     stub,
     club,
   }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
     await openCourts(page);
     await rowOf(page, 'Court 1').getByRole('button', { name: 'Switch off' }).click();
 
@@ -168,7 +168,7 @@ test.describe('Courts', () => {
   }) => {
     const one = court({ name: 'Court 1', sport: 'PADEL' });
     const two = court({ name: 'Court 2', sport: 'PADEL' });
-    club.raketa.courts = [one, two];
+    club.rakieta.courts = [one, two];
     club.bookings.book(two, dayFromToday(1), 19);
     const courts = await openCourts(page);
 
@@ -179,7 +179,7 @@ test.describe('Courts', () => {
     await expect(courts.getByRole('alert')).toHaveText(
       "Court 2 has a booking ahead, so it can't be deleted. Switch it off instead.",
     );
-    expect(club.raketa.courts).toHaveLength(2);
+    expect(club.rakieta.courts).toHaveLength(2);
 
     await rowOf(page, 'Court 1').getByRole('button', { name: 'Edit' }).click();
     await courts.getByRole('button', { name: 'Delete court' }).click();
@@ -200,10 +200,10 @@ test.describe('Courts', () => {
     page,
     club,
   }) => {
-    club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
+    club.rakieta.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
     await openCourts(page);
     // Deleted from another browser while this page was open.
-    club.raketa.courts = [];
+    club.rakieta.courts = [];
     await rowOf(page, 'Court 1').getByRole('button', { name: 'Switch off' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Switch off' }).click();
 

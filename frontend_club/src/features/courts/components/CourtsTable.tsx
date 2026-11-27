@@ -12,7 +12,7 @@ import styles from './CourtsAndPrices.module.css';
 const COPY = COURTS_COPY.courts;
 
 /**
- * **The courts table** (the screens B3): each court's name, sport, indoor or outdoor, whether Raketa sells it,
+ * **The courts table** (the screens B3): each court's name, sport, indoor or outdoor, whether Rakieta sells it,
  * and what the club may do about it. *Switch on* is a form that is only its button; *Switch off*
  * and *Edit* only say which court, since the first asks and the second opens a form. Every act
  * waits while one is under way.
@@ -37,7 +37,7 @@ export function CourtsTable({
           <th scope="col">{COPY.columns.court}</th>
           <th scope="col">{COPY.columns.sport}</th>
           <th scope="col">{COPY.columns.indoor}</th>
-          <th scope="col">{COPY.columns.raketa}</th>
+          <th scope="col">{COPY.columns.rakieta}</th>
           <th scope="col">
             <span className="visually-hidden">{COPY.columns.actions}</span>
           </th>

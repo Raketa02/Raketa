@@ -43,7 +43,7 @@ export interface Court {
   readonly name: string;
   readonly sport: Sport;
   readonly indoor: boolean;
-  /** Offered to Raketa, or switched off: kept, with its hours, and selling nothing new. */
+  /** Offered to Rakieta, or switched off: kept, with its hours, and selling nothing new. */
   readonly offered: boolean;
   /** Its Rakieta hours, Monday first and in the grid's order. Empty until they are painted. */
   readonly hours: readonly WeekHour[];

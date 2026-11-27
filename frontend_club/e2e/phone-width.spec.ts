@@ -33,7 +33,7 @@ test('the signed-out pages fit a phone', async ({ page }) => {
     '/reset/a-link',
   ]) {
     await page.goto(path);
-    await expect(page.getByText('Raketa for Clubs').first()).toBeVisible();
+    await expect(page.getByText('Rakieta for Clubs').first()).toBeVisible();
     await fitsSideways(page, path);
   }
 });
@@ -172,9 +172,9 @@ test('Courts & prices fits a phone: the table, the grid, the forms and the bands
     sport: 'PADEL',
     hours: week([1], 17, 22),
   });
-  club.raketa.courts = [one, court({ name: 'Court 2', sport: 'TENNIS', offered: false })];
-  club.raketa.price('PADEL', 140);
-  club.raketa.exceptions = [
+  club.rakieta.courts = [one, court({ name: 'Court 2', sport: 'TENNIS', offered: false })];
+  club.rakieta.price('PADEL', 140);
+  club.rakieta.exceptions = [
     {
       id: '0b8f5c1e-1c1d-4d2e-8f3a-5a6b7c8d9e01',
       court_ids: [one.id],
@@ -212,7 +212,7 @@ test('Bookings fits a phone: the day, its filters, its rows and each question', 
 }) => {
   const hours = week([1, 2, 3, 4, 5, 6, 7], 7, 23);
   const one = court({ name: 'Kort centralny przy wejściu', sport: 'PADEL', hours });
-  club.raketa.courts = [one, court({ name: 'Court 2', sport: 'PADEL', hours })];
+  club.rakieta.courts = [one, court({ name: 'Court 2', sport: 'PADEL', hours })];
   const day = dayFromToday(2);
   const long = club.bookings.add(
     booking({
@@ -266,7 +266,7 @@ test('Bookings fits a phone: the day, its filters, its rows and each question', 
 });
 
 test('Overview, once live, fits a phone', async ({ page, club }) => {
-  club.raketa.ready();
+  club.rakieta.ready();
   await signIn(page);
   await expect(page.getByRole('region', { name: 'Live on Rakieta' })).toBeVisible();
   await fitsSideways(page, '/overview, live');
@@ -276,7 +276,7 @@ test('Money fits a phone: the month, its totals, its rows and the payouts', asyn
   page,
   club,
 }) => {
-  club.raketa.payments = 'READY';
+  club.rakieta.payments = 'READY';
   const long = court({ name: 'Kort centralny przy wejściu', sport: 'PADEL' });
   club.money.add(
     moneyRow({
@@ -302,7 +302,7 @@ test('Money fits a phone: the month, its totals, its rows and the payouts', asyn
 });
 
 test("The checklist's Stripe step fits a phone, refused and all", async ({ page, stub, club }) => {
-  club.raketa.payments = 'NEEDS_DETAILS';
+  club.rakieta.payments = 'NEEDS_DETAILS';
   await signIn(page);
   stub.on('post', '/api/v1/club/payments/onboarding-link', () => ({
     status: 503,

@@ -68,7 +68,7 @@ test.describe('Rakieta settings', () => {
         paused: false,
       },
     ]);
-    expect(club.raketa.confirmed).toBe(true);
+    expect(club.rakieta.confirmed).toBe(true);
     await expect(page.getByRole('button', { name: 'Save settings' })).toBeVisible();
 
     await page.getByRole('navigation').getByRole('link', { name: 'Overview' }).click();
@@ -77,8 +77,8 @@ test.describe('Rakieta settings', () => {
   });
 
   test('a confirmed club saves its settings as they stand', async ({ page, stub, club }) => {
-    club.raketa.confirmed = true;
-    club.raketa.settings.release_lead_days = 5;
+    club.rakieta.confirmed = true;
+    club.rakieta.settings.release_lead_days = 5;
     await openSettings(page);
 
     await expect(page.getByLabel('Release lead')).toHaveValue('5');
@@ -125,8 +125,8 @@ test.describe('Rakieta settings', () => {
     stub,
     club,
   }) => {
-    club.raketa.confirmed = true;
-    club.raketa.settings.other_clubs_courts = { offered: true, within_km: 25 };
+    club.rakieta.confirmed = true;
+    club.rakieta.settings.other_clubs_courts = { offered: true, within_km: 25 };
     await openSettings(page);
     const otherClubs = page.getByRole('switch', { name: OTHER_CLUBS_SWITCH });
     await otherClubs.uncheck();
@@ -174,7 +174,7 @@ test.describe('Rakieta settings', () => {
     stub,
     club,
   }) => {
-    club.raketa.confirmed = true;
+    club.rakieta.confirmed = true;
     await openSettings(page);
 
     await page.getByRole('button', { name: 'Leave Rakieta' }).click();
@@ -214,7 +214,7 @@ test.describe('Rakieta settings', () => {
     await expect(dialog.getByRole('button', { name: 'Pause Rakieta bookings' })).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Close' }).click();
     expect(stub.requests('put', '/api/v1/club/rakieta-settings')).toEqual([]);
-    expect(club.raketa.confirmed).toBe(false);
+    expect(club.rakieta.confirmed).toBe(false);
   });
 
   test('a pause nobody answered is said beside the link, and nothing changes', async ({
@@ -222,7 +222,7 @@ test.describe('Rakieta settings', () => {
     stub,
     club,
   }) => {
-    club.raketa.confirmed = true;
+    club.rakieta.confirmed = true;
     stub.on('put', '/api/v1/club/rakieta-settings', () => ({ status: 'drop' }));
     await openSettings(page);
     await page.getByRole('button', { name: 'Leave Rakieta' }).click();

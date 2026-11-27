@@ -56,20 +56,20 @@ export function listed(names: readonly string[]): string {
 }
 
 export const COURTS_COPY = {
-  caption: 'What you sell through Raketa',
+  caption: 'What you sell through Rakieta',
   title: 'Courts & prices',
   courts: {
     title: 'Courts',
     lead:
-      'The courts you offer Raketa. Players never pick one: each game is given the first free ' +
+      'The courts you offer Rakieta. Players never pick one: each game is given the first free ' +
       'court of its sport when it is booked.',
     add: '+ Add a court',
-    none: 'No courts yet. Add each court you want to offer through Raketa.',
+    none: 'No courts yet. Add each court you want to offer through Rakieta.',
     columns: {
       court: 'Court',
       sport: 'Sport',
       indoor: 'Indoor or outdoor',
-      raketa: 'Raketa',
+      rakieta: 'Rakieta',
       actions: 'Actions',
     },
     indoorOrOutdoor: { indoor: 'Indoor', outdoor: 'Outdoor' },
@@ -94,7 +94,7 @@ export const COURTS_COPY = {
     confirmOff: {
       title: (name: string) => `Switch ${name} off?`,
       lead:
-        'It stops being offered to Raketa: no new games are built on it. Games already booked ' +
+        'It stops being offered to Rakieta: no new games are built on it. Games already booked ' +
         'on it are played as booked, and its hours are kept for when you switch it back on.',
       cancel: 'Cancel',
       confirm: 'Switch off',

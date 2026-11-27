@@ -101,7 +101,7 @@ function cancelledMoney(givesBack: CancelGivesBack | null): string {
 const ANYWAY = 'Cancel the game anyway';
 
 export const BOOKINGS_COPY = {
-  caption: 'Raketa games at your courts',
+  caption: 'Rakieta games at your courts',
   title: 'Bookings',
   day: {
     /** The day's controls, as a screen reader names them. */
@@ -121,7 +121,7 @@ export const BOOKINGS_COPY = {
     } satisfies Record<BookingsFilter, string>,
   },
   empty: {
-    ALL: 'No Raketa bookings on this day.',
+    ALL: 'No Rakieta bookings on this day.',
     SEAT_OPEN: 'No game on this day has a seat open.',
     CALLED_OFF: 'No game on this day was called off.',
   } satisfies Record<BookingsFilter, string>,

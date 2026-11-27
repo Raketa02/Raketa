@@ -143,13 +143,13 @@ test.describe('Groups', () => {
       page.getByRole('switch', { name: "Offer our groups other clubs' courts when ours are full" }),
     ).toBeInViewport();
 
-    club.raketa.settings.other_clubs_courts = { offered: false, within_km: 15 };
+    club.rakieta.settings.other_clubs_courts = { offered: false, within_km: 15 };
     await page.goto('/groups');
     await expect(page.getByRole('main').getByText(/^Your groups are offered/)).toHaveText(
       "Your groups are offered only your courts. Offer other clubs' courts in Rakieta settings.",
     );
 
-    club.raketa.settings.other_clubs_courts = { offered: true, within_km: 15 };
+    club.rakieta.settings.other_clubs_courts = { offered: true, within_km: 15 };
     await page.goto('/groups');
     await expect(page.getByRole('main').getByText(/^At an hour your courts are full/)).toHaveText(
       "At an hour your courts are full, your groups are also offered other clubs' courts within 15 km. Change it in Rakieta settings.",
@@ -234,7 +234,7 @@ test.describe('Groups, before there are any', () => {
     await openGroups(page);
     await expect(page.getByRole('table')).toHaveCount(0);
     await expect(page.getByRole('main')).toContainText(
-      'No official groups yet. Your administrators create them in the Raketa app.',
+      'No official groups yet. Your administrators create them in the Rakieta app.',
     );
     await expect(page.getByRole('main').getByRole('button')).toHaveCount(0);
   });
@@ -282,7 +282,7 @@ test.describe('Hand over', () => {
     const dialog = page.getByRole('dialog', { name: 'Hand Ogrody 33 Club over to Tomek K.?' });
     await handOver.click();
     await expect(dialog).toContainText('Tomek K. answers its join requests from now on');
-    await expect(dialog).toContainText('Raketa tells Tomek K. in the app.');
+    await expect(dialog).toContainText('Rakieta tells Tomek K. in the app.');
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(dialog).toBeHidden();
     expect(stub.requests('put', '/api/v1/club/groups/{group_id}/administrator')).toEqual([]);

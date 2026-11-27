@@ -7,7 +7,8 @@ test.describe('Sign in', () => {
   }) => {
     await page.goto('/sign-in');
 
-    await expect(page.getByText('Raketa for Clubs')).toBeVisible();
+    await expect(page).toHaveTitle('Sign in · Rakieta for Clubs');
+    await expect(page.getByText('Rakieta for Clubs')).toBeVisible();
     await expect(page.getByLabel('Club email')).toBeVisible();
     await expect(page.getByLabel('Password')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
@@ -25,8 +26,9 @@ test.describe('Sign in', () => {
   }) => {
     await signIn(page);
 
+    await expect(page).toHaveTitle('Overview · Rakieta for Clubs');
     const bar = page.getByRole('banner');
-    await expect(bar.getByText('Raketa for Clubs')).toBeVisible();
+    await expect(bar.getByText('Rakieta for Clubs')).toBeVisible();
     const pages = page.getByRole('navigation', { name: 'Club website' });
     await expect(pages.getByRole('link')).toHaveText([
       'Overview',

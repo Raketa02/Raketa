@@ -12,7 +12,7 @@ import type { SportLevel } from './mappers';
 export const GROUPS_COPY = {
   caption: (club: string) => `Official groups at ${club}`,
   madeInTheApp: 'Created by your administrators in the app',
-  none: 'No official groups yet. Your administrators create them in the Raketa app.',
+  none: 'No official groups yet. Your administrators create them in the Rakieta app.',
   columns: {
     group: 'Group',
     administrator: 'Administrator',
@@ -78,7 +78,7 @@ export const GROUPS_COPY = {
       lead: (to: string, from: string | null) =>
         `${to} answers its join requests from now on` +
         (from === null ? '.' : `, and ${from} stops seeing it in the app.`) +
-        ` Raketa tells ${to} in the app. Its players, its link and who can join stay as they are.`,
+        ` Rakieta tells ${to} in the app. Its players, its link and who can join stay as they are.`,
       cancel: 'Cancel',
       submit: 'Hand over',
     },

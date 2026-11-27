@@ -54,7 +54,7 @@ test.describe('Prices', () => {
   });
 
   test('a price band prices some hours differently', async ({ page, stub, club }) => {
-    club.raketa.price('PADEL', 120);
+    club.rakieta.price('PADEL', 120);
     const prices = await openPrices(page);
     const padel = sportRow(page, 'Padel');
     await expect(padel.getByLabel('Price per court-hour')).toHaveValue('120');
@@ -123,7 +123,7 @@ test.describe('Prices', () => {
     stub,
     club,
   }) => {
-    club.raketa.price('PADEL', 120);
+    club.rakieta.price('PADEL', 120);
     const prices = await openPrices(page);
     const padel = sportRow(page, 'Padel');
     await padel.getByRole('button', { name: '+ Add a price band' }).click();

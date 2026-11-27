@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import { SITE_COPY } from '@/ui/copy';
 
 export const metadata: Metadata = {
-  title: { default: 'Raketa for Clubs', template: '%s · Raketa for Clubs' },
+  title: { default: 'Rakieta for Clubs', template: '%s · Rakieta for Clubs' },
   description: SITE_COPY.description,
 };
 

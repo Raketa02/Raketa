@@ -1,8 +1,8 @@
 {
-  "name": "@raketa/frontend-club",
+  "name": "@rakieta/frontend-club",
   "version": "0.1.0",
   "private": true,
-  "description": "Raketa for Clubs, the club website. Next.js, with the club's session held server-side in a sealed cookie.",
+  "description": "Rakieta for Clubs, the club website. Next.js, with the club's session held server-side in a sealed cookie.",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=22"

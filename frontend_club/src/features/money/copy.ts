@@ -61,7 +61,7 @@ export const MONEY_COPY = {
     show: 'Show',
   },
   /** A month in which no booking took money. */
-  empty: (month: string) => `No Raketa booking took money in ${month}.`,
+  empty: (month: string) => `No Rakieta booking took money in ${month}.`,
   totals: FIGURES,
   columns: { when: 'When', court: 'Court', ...FIGURES, paidOut: 'Paid out' },
   paidOut: 'Paid out ✓',

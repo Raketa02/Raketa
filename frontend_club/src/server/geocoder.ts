@@ -80,7 +80,7 @@ export async function geocode(query: string): Promise<PlaceOutcome> {
   try {
     response = await fetch(url, {
       headers: {
-        'User-Agent': `Raketa for Clubs (${config.environment})`,
+        'User-Agent': `Rakieta for Clubs (${config.environment})`,
         Accept: 'application/json',
       },
       cache: 'no-store',
