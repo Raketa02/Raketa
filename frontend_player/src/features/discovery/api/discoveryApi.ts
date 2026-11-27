@@ -5,8 +5,8 @@
  *
  * | Route | |
  * | --- | --- |
- * | `GET /new-in-raketa` | Home's row: up to 10, the server's order |
- * | `GET /new-in-raketa/all?sport&after` | See all: 20 to a page, newest first, `next` behind them |
+ * | `GET /new-in-rakieta` | Home's row: up to 10, the server's order |
+ * | `GET /new-in-rakieta/all?sport&after` | See all: 20 to a page, newest first, `next` behind them |
  * | `GET /same-level` | Home's row: up to 10, fresh good matches first, then the gaps |
  * | `GET /same-level/all?sport&after` | See all: 20 to a page, best % first; a sport re-compares everybody in it |
  * | `GET /same-vibe` | Home's row: up to 10, fresh good matches first, then the gaps |
@@ -15,7 +15,7 @@
  *
  * Every one refuses `block_state_unavailable` (503) — the blocks could not be read, so no row is
  * drawn rather than one that might suggest a blocked person — and each See all its own code for a
- * cursor the server never wrote (`not_a_new_in_raketa_page`, `not_a_same_level_page`,
+ * cursor the server never wrote (`not_a_new_in_rakieta_page`, `not_a_same_level_page`,
  * `not_a_same_vibe_page`, 400). None is
  * said: the row is left out, and See all says the failure's recovery sentence with *Try again*. A
  * refused report is not said either: its cards go with the next one.
@@ -26,7 +26,7 @@ import { httpRequest } from '@/shared/lib/http';
 
 type Schemas = components['schemas'];
 
-const NEW_IN_RAKETA_PATH = '/api/v1/new-in-raketa';
+const NEW_IN_RAKIETA_PATH = '/api/v1/new-in-rakieta';
 const SAME_LEVEL_PATH = '/api/v1/same-level';
 const SAME_VIBE_PATH = '/api/v1/same-vibe';
 const ON_SCREEN_PATH = '/api/v1/on-screen';
@@ -35,12 +35,12 @@ export interface Cancellable {
   readonly signal?: AbortSignal;
 }
 
-export function getNewInRaketa({ signal }: Cancellable = {}): Promise<
-  Schemas['NewInRaketaResponse']
+export function getNewInRakieta({ signal }: Cancellable = {}): Promise<
+  Schemas['NewInRakietaResponse']
 > {
-  return httpRequest<Schemas['NewInRaketaResponse']>({
+  return httpRequest<Schemas['NewInRakietaResponse']>({
     method: 'GET',
-    path: NEW_IN_RAKETA_PATH,
+    path: NEW_IN_RAKIETA_PATH,
     authenticated: true,
     signal,
   });
@@ -52,13 +52,13 @@ export interface PageAsked {
   readonly after?: string;
 }
 
-export function getNewInRaketaPage(
+export function getNewInRakietaPage(
   page: PageAsked,
   { signal }: Cancellable = {},
-): Promise<Schemas['NewInRaketaPageResponse']> {
-  return httpRequest<Schemas['NewInRaketaPageResponse']>({
+): Promise<Schemas['NewInRakietaPageResponse']> {
+  return httpRequest<Schemas['NewInRakietaPageResponse']>({
     method: 'GET',
-    path: seeAllPath(NEW_IN_RAKETA_PATH, page),
+    path: seeAllPath(NEW_IN_RAKIETA_PATH, page),
     authenticated: true,
     signal,
   });

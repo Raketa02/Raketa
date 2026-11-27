@@ -41,7 +41,7 @@ import {
   launchSignedIn,
   stubGate,
   stubHome,
-  stubNewInRaketa,
+  stubNewInRakieta,
 } from '@/test-support/onboardingRouter';
 import { openNeedsYourAnswer } from '@/test-support/needsYourAnswer';
 import { servedReliability } from '@/test-support/playerRecord';
@@ -54,7 +54,7 @@ import {
 } from '@/test-support/transport';
 import { PLAYERS_BAR } from '@/test-support/tabBarReach';
 
-import { rereadDiscovery } from '../hooks/useNewInRaketa';
+import { rereadDiscovery } from '../hooks/useNewInRakieta';
 
 import { DISCOVERY_COPY, moreTags, nobodySharesYourTagsIn } from './discoveryCopy';
 import { SAME_VIBE_TILE_SKELETON, sameVibeTileHeight } from './SameVibeTile';
@@ -127,7 +127,7 @@ const KAROL_PHOTOS: Wire['RecordPhotoSchema'][] = [
   { photo_id: 'f-karol-2', photo_url: 'https://photos.example/karol-2.jpg' },
 ];
 
-const JOINER: Wire['NewInRaketaPlayerSchema'] = {
+const JOINER: Wire['NewInRakietaPlayerSchema'] = {
   player_id: 'e0000000-0000-4000-8000-000000000999',
   nickname: 'ola.n',
   photo_id: null,
@@ -269,15 +269,15 @@ function layOut(
 }
 
 describe('the line on Home', () => {
-  it('stands fourth of the five — after New in Raketa — closed', async () => {
+  it('stands fourth of the five — after New in Rakieta — closed', async () => {
     vibeServer();
-    stubNewInRaketa(transport, [JOINER]);
+    stubNewInRakieta(transport, [JOINER]);
     await launchSignedIn();
     await screen.findByRole('button', { name: lineNamed(COPY.line) });
-    await screen.findByRole('button', { name: lineNamed(DISCOVERY_COPY.newInRaketa.line) });
+    await screen.findByRole('button', { name: lineNamed(DISCOVERY_COPY.newInRakieta.line) });
 
     const titles = lineTitles();
-    expect(titles[titles.indexOf(DISCOVERY_COPY.newInRaketa.line) + 1]).toBe(COPY.line);
+    expect(titles[titles.indexOf(DISCOVERY_COPY.newInRakieta.line) + 1]).toBe(COPY.line);
     expect(isOpen(COPY.line)).toBe(false);
     expect(screen.queryAllByTestId(/^same-vibe-e0/)).toEqual([]);
   });

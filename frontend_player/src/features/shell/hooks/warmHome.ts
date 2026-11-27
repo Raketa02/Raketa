@@ -17,7 +17,7 @@
  * | `GET /home` | `proposals` | *Your games*, the envelope, the trophy's place, the bar's badge |
  * | `GET /ratings` | `onboarding` | the level card, and Top 10's opening sport |
  * | `GET /groups`, `GET /hottest-groups` | `groups` | the groupless line and the level card; Groups heating up |
- * | `GET /same-level`, `/new-in-raketa`, `/same-vibe` | `discovery` | FOR YOU's three people lines |
+ * | `GET /same-level`, `/new-in-rakieta`, `/same-vibe` | `discovery` | FOR YOU's three people lines |
  * | `GET /players/me/notices` | `notifications` | the bell's number |
  * | `GET /top-10` | `rankings` | Top 10 — once the trophy's sport, else the deck's, is known |
  *

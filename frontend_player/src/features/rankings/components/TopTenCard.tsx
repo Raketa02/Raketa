@@ -91,7 +91,7 @@ const s = StyleSheet.create({
   // the reader's ring is never clipped by the rail.
   item: { flexDirection: 'row', alignItems: 'flex-end', paddingVertical: RING },
   card: { marginLeft: -theme.size.topTen.overlap },
-  // Over the wash, as on New in Raketa's tile — every label with the on-media shadow (7.31).
+  // Over the wash, as on New in Rakieta's tile — every label with the on-media shadow (7.31).
   name: { ...theme.type.h2, color: theme.color.surface, ...theme.shadow.textOnMedia },
   levelLine: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm },
   level: {

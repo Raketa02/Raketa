@@ -1847,7 +1847,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/new-in-raketa": {
+    "/api/v1/new-in-rakieta": {
         parameters: {
             query?: never;
             header?: never;
@@ -1855,10 +1855,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Home's New in Raketa row
+         * Home's New in Rakieta row
          * @description The players who finished sign-up in the **last 30 days**, strictly — the 10 newest, unrated ones included — those you aren't connected with first, then those you sent a request to, then your friends, newest first within each. An 11th sign-up pushes the oldest off the row; they stay in See all until their 30 days end. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.
          */
-        get: operations["read_new_in_raketa_api_v1_new_in_raketa_get"];
+        get: operations["read_new_in_rakieta_api_v1_new_in_rakieta_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1867,7 +1867,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/new-in-raketa/all": {
+    "/api/v1/new-in-rakieta/all": {
         parameters: {
             query?: never;
             header?: never;
@@ -1875,10 +1875,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * New in Raketa's See all
+         * New in Rakieta's See all
          * @description Every player who joined in the last 30 days, newest first, friends where they fall, in pages of 20 — with `sport`, only those holding a level in it — and the sports at least one of them holds a level in. **Never on it**: you, anybody you blocked or who blocked you, players with *Show me to new people* off, and accounts that don't play.
          */
-        get: operations["read_new_in_raketa_page_api_v1_new_in_raketa_all_get"];
+        get: operations["read_new_in_rakieta_page_api_v1_new_in_rakieta_all_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3253,7 +3253,7 @@ export interface components {
              * @description Who to ask. You are never sent.
              */
             player_id: string;
-            /** @description Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** — `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group. From Home's **New in Raketa** row, or a record opened from it — `NEW_PLAYERS` (#793): their card and notice read *Found you among new players*. From Home's **Same competitive level players** row, or a record opened from it — `SAME_LEVEL`, with the card's `sport` (#794): their card and notice read *Your level in padel · 91% even*, today's %, or *Found you at your padel level* once either of you holds no level there. From Home's **Same vibe players** row, or a record opened from it — `SAME_VIBE` (#795): their card and notice read *6 things in common* (*1 thing in common*), counted when read, or *Found you through your tags* once you share none. */
+            /** @description Where **+ Add** or **Add friend** was pressed: a group's Members (or a face on one of its games), the player record, the result screen's *PLAYED WITH* card, or **the record opened from the Rankings page** — `RANKING`, with that page's `sport` (#773). Their Home card and notice then read *Found you in the padel ranking*, whether or not you share a group. From Home's **New in Rakieta** row, or a record opened from it — `NEW_PLAYERS` (#793): their card and notice read *Found you among new players*. From Home's **Same competitive level players** row, or a record opened from it — `SAME_LEVEL`, with the card's `sport` (#794): their card and notice read *Your level in padel · 91% even*, today's %, or *Found you at your padel level* once either of you holds no level there. From Home's **Same vibe players** row, or a record opened from it — `SAME_VIBE` (#795): their card and notice read *6 things in common* (*1 thing in common*), counted when read, or *Found you through your tags* once you share none. */
             made_from: components["schemas"]["AskedFrom"];
             /**
              * Group Id
@@ -6044,7 +6044,7 @@ export interface components {
             from_ranking: boolean;
             /**
              * From New Players
-             * @description Made from Home's *New in Raketa* row, or a record opened from it: draw *Found you among new players* in place of the group line (#793).
+             * @description Made from Home's *New in Rakieta* row, or a record opened from it: draw *Found you among new players* in place of the group line (#793).
              */
             from_new_players: boolean;
             /**
@@ -7044,13 +7044,13 @@ export interface components {
              */
             watermark: string | null;
         };
-        /** NewInRaketaPageResponse */
-        NewInRaketaPageResponse: {
+        /** NewInRakietaPageResponse */
+        NewInRakietaPageResponse: {
             /**
              * Players
              * @description Up to 20 players who joined in the last 30 days, newest first, friends where they fall — with `sport`, only those holding a level in it. Empty with a sport: *Nobody new plays squash yet*.
              */
-            players: components["schemas"]["NewInRaketaPlayerSchema"][];
+            players: components["schemas"]["NewInRakietaPlayerSchema"][];
             /**
              * Next
              * @description The cursor the next page is read `after`; `null` on the last page.
@@ -7063,10 +7063,10 @@ export interface components {
             sports: components["schemas"]["Sport"][];
         };
         /**
-         * NewInRaketaPlayerSchema
-         * @description One New in Raketa tile.
+         * NewInRakietaPlayerSchema
+         * @description One New in Rakieta tile.
          */
-        NewInRaketaPlayerSchema: {
+        NewInRakietaPlayerSchema: {
             /**
              * Player Id
              * Format: uuid
@@ -7102,25 +7102,25 @@ export interface components {
              * Sports
              * @description Every sport they hold a level in, in the sports' own order — **empty** for a player with no level, whose tile shows no sport line.
              */
-            sports: components["schemas"]["NewInRaketaSportSchema"][];
+            sports: components["schemas"]["NewInRakietaSportSchema"][];
             /** @description Your relation to them — the round friend button: `NONE` **+**, `SENT` **…**, `FRIEND` **✓**, `ASKED_YOU` the envelope. A request is named by their `player_id` on every friends route. Send one from this row with `made_from` `NEW_PLAYERS`. */
             relation: components["schemas"]["FriendRelation"];
         };
-        /** NewInRaketaResponse */
-        NewInRaketaResponse: {
+        /** NewInRakietaResponse */
+        NewInRakietaResponse: {
             /**
              * Players
              * @description Up to 10: the 10 newest of the last 30 days, those you aren't connected with first (someone who asked you among them), then those you sent a request to, then your friends — newest first within each. **Empty hides the row.**
              */
-            players: components["schemas"]["NewInRaketaPlayerSchema"][];
+            players: components["schemas"]["NewInRakietaPlayerSchema"][];
             /**
              * Total
              * @description How many the row could show: everybody who joined in the last 30 days — each person once, under the row's own exclusions — **counted up to 100**: 100 reads *100 or more*, drawn *99+*. The line's count and *See all N ›*: who there is to explore, never how many are good matches. `0` with an empty row.
              */
             total: number;
         };
-        /** NewInRaketaSportSchema */
-        NewInRaketaSportSchema: {
+        /** NewInRakietaSportSchema */
+        NewInRakietaSportSchema: {
             sport: components["schemas"]["Sport"];
             /**
              * Level
@@ -7311,7 +7311,7 @@ export interface components {
          * @description The cards that came on screen in one row (#796).
          */
         OnScreenRequest: {
-            /** @description The row they came on screen in — `SAME_LEVEL` or `SAME_VIBE`, each with its own count. New in Raketa and See all rest nobody, so are never reported. */
+            /** @description The row they came on screen in — `SAME_LEVEL` or `SAME_VIBE`, each with its own count. New in Rakieta and See all rest nobody, so are never reported. */
             row: components["schemas"]["OnScreenRow"];
             /**
              * Player Ids
@@ -14096,7 +14096,7 @@ export interface operations {
             };
         };
     };
-    read_new_in_raketa_api_v1_new_in_raketa_get: {
+    read_new_in_rakieta_api_v1_new_in_rakieta_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -14111,7 +14111,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NewInRaketaResponse"];
+                    "application/json": components["schemas"]["NewInRakietaResponse"];
                 };
             };
             /** @description `block_state_unavailable` — the blocks couldn't be read, so no row is shown rather than one that might suggest a blocked person. */
@@ -14125,7 +14125,7 @@ export interface operations {
             };
         };
     };
-    read_new_in_raketa_page_api_v1_new_in_raketa_all_get: {
+    read_new_in_rakieta_page_api_v1_new_in_rakieta_all_get: {
         parameters: {
             query?: {
                 /** @description Keep only the players holding a level in this sport. */
@@ -14145,10 +14145,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NewInRaketaPageResponse"];
+                    "application/json": components["schemas"]["NewInRakietaPageResponse"];
                 };
             };
-            /** @description `not_a_new_in_raketa_page` — a cursor this server never wrote. */
+            /** @description `not_a_new_in_rakieta_page` — a cursor this server never wrote. */
             400: {
                 headers: {
                     [name: string]: unknown;

@@ -1,11 +1,11 @@
 /**
- * **New in Raketa, read** ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows
+ * **New in Rakieta, read** ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows
  * mechanics §3, §7, §13).
  *
  * | | |
  * | --- | --- |
- * | `useNewInRaketa` | `GET /new-in-raketa` — Home's row, on its own: a slow or failed read holds up nothing else on Home |
- * | `useNewInRaketaPage` | `GET /new-in-raketa/all?sport&after` — See all, 20 to a page, read on as the grid nears its end (`useSeeAllPages`) |
+ * | `useNewInRakieta` | `GET /new-in-rakieta` — Home's row, on its own: a slow or failed read holds up nothing else on Home |
+ * | `useNewInRakietaPage` | `GET /new-in-rakieta/all?sport&after` — See all, 20 to a page, read on as the grid nears its end (`useSeeAllPages`) |
  * | `rereadDiscovery` | every Discovery read — Home's pull |
  *
  * **Coming back to Home re-reads the row once its last read is older than thirty seconds** (Q22) —
@@ -22,26 +22,26 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import type { Joiner } from '../domain/joiner';
 import { pageSport, type SeeAllSport } from '../domain/seeAll';
-import { readNewInRaketa, readNewInRaketaPage } from '../use-cases/newInRaketa';
+import { readNewInRakieta, readNewInRakietaPage } from '../use-cases/newInRakieta';
 
 import { discoveryKeys } from './discoveryKeys';
 import { peopleRowRead, usePeopleRow } from './usePeopleRow';
 import { useSeeAllPages, type SeeAllList } from './useSeeAllPages';
 
 /** Home's row's read — the hook's, and Home's warm-up's (#874). */
-export const newInRaketaRow = peopleRowRead<Joiner>(discoveryKeys.newInRaketa(), (signal) =>
-  readNewInRaketa({ signal }),
+export const newInRakietaRow = peopleRowRead<Joiner>(discoveryKeys.newInRakieta(), (signal) =>
+  readNewInRakieta({ signal }),
 );
 
 /** Home's row — re-read on return, holding still under a friend write (`usePeopleRow`). */
-export function useNewInRaketa() {
-  return usePeopleRow(newInRaketaRow);
+export function useNewInRakieta() {
+  return usePeopleRow(newInRakietaRow);
 }
 
 /** **See all** — 20 Joiners to a page, newest first; a sport keeps who holds a level in it. */
-export function useNewInRaketaPage(choice: SeeAllSport): SeeAllList<Joiner> {
-  return useSeeAllPages(discoveryKeys.newInRaketaAll(choice), (after, signal) =>
-    readNewInRaketaPage({ sport: pageSport(choice), after }, { signal }),
+export function useNewInRakietaPage(choice: SeeAllSport): SeeAllList<Joiner> {
+  return useSeeAllPages(discoveryKeys.newInRakietaAll(choice), (after, signal) =>
+    readNewInRakietaPage({ sport: pageSport(choice), after }, { signal }),
   );
 }
 

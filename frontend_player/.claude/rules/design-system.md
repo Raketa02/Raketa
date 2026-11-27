@@ -69,7 +69,7 @@ as the splash's alone. Neither is a dark mode, and neither is a licence for anot
   an open line's `RailBounds` hands a peeking rail — Groups heating up, Players at your level,
   Players with your vibe). **The line card keeps its shape**: its height is its drawing's, so it
   grows through its own vertical gaps, each ×1.6 onto the grid (`layout: 'row'`), never by a
-  height worked out at runtime. New in Raketa's tile is `portraitTile.railRatio` (0.70), Top 10's
+  height worked out at runtime. New in Rakieta's tile is `portraitTile.railRatio` (0.70), Top 10's
   card `topTen.railRatio` (0.31).
 - **Two envelopes, one meaning — _someone asked you_.** The round friend button's is `volt`
   with a halo; Home's header's is `ink` Feather `mail` (10.3, #816). Never a third.

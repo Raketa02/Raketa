@@ -529,9 +529,9 @@ describe('toHome — the friend requests waiting on the reader (#753)', () => {
     ).not.toHaveProperty('group');
   });
 
-  it('reads a request from New in Raketa (#801)', () => {
+  it('reads a request from New in Rakieta (#801)', () => {
     expect(home([request({ from_new_players: true })]).friendRequests).toEqual([
-      expect.objectContaining({ foundBy: { kind: 'newInRaketa' } }),
+      expect.objectContaining({ foundBy: { kind: 'newInRakieta' } }),
     ]);
     expect(home([request()]).friendRequests[0]).not.toHaveProperty('foundBy');
   });

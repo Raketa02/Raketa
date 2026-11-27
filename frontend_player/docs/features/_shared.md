@@ -451,7 +451,7 @@ a read declares when it lists people with the reader's relation to them (Home's 
 groups), and **`rereadPeopleLists`** re-reads every such read — what every friend write and every block
 calls, so a write made anywhere moves the person on every row without naming a feature's keys
 (architecture Part 7). Each has its suite: `HomeRow.test.tsx`, `SportPillFrame.test.tsx`,
-`Button.test.tsx`; the tile is walked through New in Raketa.
+`Button.test.tsx`; the tile is walked through New in Rakieta.
 
 **`RowSportPill`, `HomeRow`'s `over`, and a `numbered` rail** ([#805](https://github.com/Raketa02/Raketa/issues/805);
 the Home rows screens §7; home rows 25–27; design-system 7.36, Part 16 2026-11-15). Top 10 puts the

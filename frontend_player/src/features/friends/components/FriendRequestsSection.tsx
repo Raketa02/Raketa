@@ -40,7 +40,7 @@
  * **The sport-levels line** (#818; ADR-0205 §1; Q28): *● Padel 3,40 · ● Tennis 2,90*, every sport the
  * sender holds a published Level in, in the order served — the app's sport order, which nothing here
  * re-sorts. Each sport is its dot, its name and its Level, mono and tabular as every figure; the
- * dots and names are drawn as New in Raketa's tile draws them, and the line in the muted tiny mono the
+ * dots and names are drawn as New in Rakieta's tile draws them, and the line in the muted tiny mono the
  * where-line stood in. **A sport is never split across lines**: a sport that does not fit starts the
  * next one, and **two lines are the most it takes** — what a third would hold is not drawn, though it
  * is spoken. The cap is two of its own lines at the phone's text size, so a larger text setting shows

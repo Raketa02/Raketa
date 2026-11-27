@@ -359,7 +359,7 @@ function foundByOf(wire: Schemas['HomeFriendRequestSchema']): {
 } {
   if (wire.by_link) return { foundBy: { kind: 'link' } };
   if (wire.from_ranking) return { foundBy: { kind: 'ranking' } };
-  if (wire.from_new_players) return { foundBy: { kind: 'newInRaketa' } };
+  if (wire.from_new_players) return { foundBy: { kind: 'newInRakieta' } };
   if (wire.from_same_level) {
     return {
       foundBy: {

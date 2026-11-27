@@ -246,7 +246,7 @@ const color = {
    *  ([#801](https://github.com/Raketa02/Raketa/issues/801); home rows 17–19; docs/design-system.md
    *  7.31, Part 16 2026-11-14). The deck card it was fenced to (ADR-0169 §7, Part 16 2026-09-15) left
    *  with Classic play (#576), so the value moved here whole rather than standing twice: New in
-   *  Raketa's tile — and Top 10's portrait after it (#805) — is a face edge to edge with a name, a
+   *  Rakieta's tile — and Top 10's portrait after it (#805) — is a face edge to edge with a name, a
    *  Level and a line over its foot, which is the deck card's own problem.
    *
    *  One gradient over the lower part of the tile, from nothing to this: `ink` at .94, so the foot
@@ -1771,7 +1771,7 @@ const size = {
    *  — MEASURED off home rows 2 at 1,5 to the point and 25–26 at 3:
    *
    *  - `railRatio` — a card's share of the content width, for `railCardRatio`'s reason, narrower than
-   *    New in Raketa's tile because the numeral stands beside each one. 0,29 (104pt of 360 in both
+   *    New in Rakieta's tile because the numeral stands beside each one. 0,29 (104pt of 360 in both
    *    mocks) until 2026-11-26, then 0,31 — a little bigger, its 1,48 kept: 108 × 160 on a 411pt
    *    phone, two items whole and 34 of the third; past 0,31 the third's edge is gone on a 360pt one.
    *  - `aspect` — its height over its width: 154 over 104.

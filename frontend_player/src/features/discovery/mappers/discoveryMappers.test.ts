@@ -3,7 +3,7 @@ import type { components } from '@/generated/schema';
 import {
   toJoiner,
   toJoinerPage,
-  toNewInRaketaRow,
+  toNewInRakietaRow,
   toSameLevelPage,
   toSameLevelPlayer,
   toSameLevelRow,
@@ -14,7 +14,7 @@ import {
 
 type Wire = components['schemas'];
 
-const BARTEK: Wire['NewInRaketaPlayerSchema'] = {
+const BARTEK: Wire['NewInRakietaPlayerSchema'] = {
   player_id: 'p-bartek',
   nickname: 'bartek.l',
   photo_id: 'f-1',
@@ -215,8 +215,8 @@ describe('toSameVibePage (#803)', () => {
  * line's count and *See all N ›*. The total is the pool, as served, never the cards' number.
  */
 describe('a people row, with its total (#822)', () => {
-  it('reads New in Raketa’s cards and its total', () => {
-    expect(toNewInRaketaRow({ players: [BARTEK], total: 6 })).toEqual({
+  it('reads New in Rakieta’s cards and its total', () => {
+    expect(toNewInRakietaRow({ players: [BARTEK], total: 6 })).toEqual({
       people: [toJoiner(BARTEK)],
       total: 6,
     });

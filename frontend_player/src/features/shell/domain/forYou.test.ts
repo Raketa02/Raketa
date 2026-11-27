@@ -13,7 +13,7 @@ import {
 const everyLine = (): Readonly<Record<ForYouLine, boolean>> => ({
   hottestGroups: true,
   sameLevel: true,
-  newInRaketa: true,
+  newInRakieta: true,
   sameVibe: true,
   topTen: true,
 });
@@ -38,7 +38,7 @@ describe('FOR YOU’s five lines', () => {
     expect(FOR_YOU_LINES).toEqual([
       'hottestGroups',
       'sameLevel',
-      'newInRaketa',
+      'newInRakieta',
       'sameVibe',
       'topTen',
     ]);
@@ -51,7 +51,7 @@ describe('FOR YOU’s five lines', () => {
   /** Q21: with all five hidden, FOR YOU goes too. */
   it('are shown as a section while any one of them is', () => {
     expect(forYouShown(everyLine())).toBe(true);
-    expect(forYouShown(shownBut('hottestGroups', 'sameLevel', 'newInRaketa', 'sameVibe'))).toBe(
+    expect(forYouShown(shownBut('hottestGroups', 'sameLevel', 'newInRakieta', 'sameVibe'))).toBe(
       true,
     );
     expect(forYouShown(shownBut(...FOR_YOU_LINES))).toBe(false);
@@ -99,8 +99,8 @@ describe('a press on a line’s header', () => {
     });
 
     const closing = pressLine(open('sameLevel'), 'sameLevel', FOLDS);
-    expect(pressLine(closing, 'newInRaketa', FOLDS)).toEqual({
-      chosen: 'newInRaketa',
+    expect(pressLine(closing, 'newInRakieta', FOLDS)).toEqual({
+      chosen: 'newInRakieta',
       drawn: null,
       folding: true,
       pressed: true,
@@ -147,7 +147,7 @@ describe('once the fold has run', () => {
 
 describe('what is shown settles the open line', () => {
   it('changes nothing while the open line is shown', () => {
-    const now = open('newInRaketa');
+    const now = open('newInRakieta');
 
     expect(settleLine(now, everyLine(), undefined)).toBe(now);
   });

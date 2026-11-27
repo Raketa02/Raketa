@@ -1,7 +1,7 @@
 /**
  * **The portrait tile** — a player's face edge to edge, a wash rising over its foot, and the words
  * over the wash ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows screens §5.2,
- * §11; home rows 17–19; design-system 7.31). New in Raketa draws it on Home's row and in See all's
+ * §11; home rows 17–19; design-system 7.31). New in Rakieta draws it on Home's row and in See all's
  * two columns; Top 10's card draws it too (#805).
  *
  * ```
@@ -65,7 +65,7 @@ export interface PortraitTileProps {
   readonly accessibilityLabel: string;
   /** What the tile's own press does — opens the record. */
   readonly onPress: () => void;
-  /** Top-left over the face: a picture that lets touches through — New in Raketa's *NEW*. */
+  /** Top-left over the face: a picture that lets touches through — New in Rakieta's *NEW*. */
   readonly tag?: ReactNode;
   /** Top-right: **a control of its own**, beside the tile's press — the round friend button. */
   readonly corner?: ReactNode;

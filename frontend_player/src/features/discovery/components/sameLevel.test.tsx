@@ -40,7 +40,7 @@ import {
   stubGate,
   stubHome,
   stubHottestGroups,
-  stubNewInRaketa,
+  stubNewInRakieta,
   stubOwnRecord,
 } from '@/test-support/onboardingRouter';
 import { openNeedsYourAnswer } from '@/test-support/needsYourAnswer';
@@ -148,7 +148,7 @@ const HOT_GROUP: Wire['HottestGroupSchema'] = {
   relation: 'NONE',
   is_administrator: false,
 };
-const JOINER: Wire['NewInRaketaPlayerSchema'] = {
+const JOINER: Wire['NewInRakietaPlayerSchema'] = {
   player_id: 'e0000000-0000-4000-8000-000000000999',
   nickname: 'ola.n',
   photo_id: null,
@@ -254,18 +254,18 @@ async function homeWithTheRow() {
 }
 
 describe('the line on Home', () => {
-  it('stands second of the five — after Groups heating up, before New in Raketa — closed', async () => {
+  it('stands second of the five — after Groups heating up, before New in Rakieta — closed', async () => {
     levelServer();
     stubHottestGroups(transport, [HOT_GROUP]);
-    stubNewInRaketa(transport, [JOINER]);
+    stubNewInRakieta(transport, [JOINER]);
     await launchSignedIn();
-    await screen.findByRole('button', { name: lineNamed(DISCOVERY_COPY.newInRaketa.line) });
+    await screen.findByRole('button', { name: lineNamed(DISCOVERY_COPY.newInRakieta.line) });
     await screen.findByRole('button', { name: lineNamed(GROUPS_COPY.hottest.line) });
 
     expect(lineTitles().slice(0, 3)).toEqual([
       GROUPS_COPY.hottest.line,
       COPY.line,
-      DISCOVERY_COPY.newInRaketa.line,
+      DISCOVERY_COPY.newInRakieta.line,
     ]);
     expect(isOpen(COPY.line)).toBe(false);
     expect(screen.queryAllByTestId(/^same-level-e0/)).toEqual([]);

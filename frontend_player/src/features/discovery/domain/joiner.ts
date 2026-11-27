@@ -1,5 +1,5 @@
 /**
- * **A Joiner** — a player on New in Raketa: who **joined** (the profile commit that ends onboarding)
+ * **A Joiner** — a player on New in Rakieta: who **joined** (the profile commit that ends onboarding)
  * in the last 30 days ([#801](https://github.com/Raketa02/Raketa/issues/801); ADR-0204 §5; the Home
  * rows mechanics §7). The backend's word for the same person (#793); the glossary bars *newcomer*,
  * which is the **Newcomer**'s 14 days.

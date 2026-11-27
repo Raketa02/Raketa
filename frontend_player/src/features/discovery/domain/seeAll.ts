@@ -2,7 +2,7 @@
  * **A people row's See all** ([#801](https://github.com/Raketa02/Raketa/issues/801),
  * [#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows mechanics §6.7, §7.4) — a
  * plain list in the server's order, 20 to a page, and a sport pill: *All*, then the sports the server
- * offers. New in Raketa and Same competitive level read it the same way; who is on it, in which order,
+ * offers. New in Rakieta and Same competitive level read it the same way; who is on it, in which order,
  * and which sports the pill offers are the server's.
  */
 

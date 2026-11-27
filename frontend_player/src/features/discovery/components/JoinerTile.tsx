@@ -1,5 +1,5 @@
 /**
- * **A New in Raketa tile** ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows
+ * **A New in Rakieta tile** ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows
  * screens §5.2–§5.3; home rows 17–19; design-system 7.31) — `shared/ui`'s portrait tile, with:
  *
  * - **a volt *NEW*** top-left, and **`friends`' round button** top-right, asking from *new players*;
@@ -46,7 +46,7 @@ export function JoinerTile({ joiner, width, layout, onOpen }: JoinerTileProps) {
       aspect={aspect}
       accessibilityLabel={tileLabel(joiner, joined)}
       onPress={onOpen}
-      tag={<Tag label={DISCOVERY_COPY.newInRaketa.tag} variant="volt" />}
+      tag={<Tag label={DISCOVERY_COPY.newInRakieta.tag} variant="volt" />}
       corner={
         <RoundFriendButton
           playerId={joiner.playerId}

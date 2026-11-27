@@ -47,7 +47,7 @@ import {
 } from '@/test-support/transport';
 
 import { REPORT_BATCH_MS } from '../domain/onScreen';
-import { rereadDiscovery } from '../hooks/useNewInRaketa';
+import { rereadDiscovery } from '../hooks/useNewInRakieta';
 
 import { DISCOVERY_COPY } from './discoveryCopy';
 

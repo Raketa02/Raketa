@@ -27,7 +27,7 @@ is referenced from the other by a sentence, not copied.
 | [`auth.md`](auth.md)                         | Sign-up's attestation, the naming, the You tab, Forgot password, invitations, the last profile |
 | [`blocks.md`](blocks.md)                     | Block at the foot of a record, the confirm sheet, You › Account › Blocked players and Unblock  |
 | [`conversations.md`](conversations.md)       | A booked game's room, the optimistic send, the live layer, typing                              |
-| [`discovery.md`](discovery.md)               | Home's people rows: New in Raketa, its tiles and See all; one tap moves a person everywhere    |
+| [`discovery.md`](discovery.md)               | Home's people rows: New in Rakieta, its tiles and See all; one tap moves a person everywhere   |
 | [`feature_flags.md`](feature_flags.md)       | The datafile, its saved copy and the fallback order, the gate read once, `explore`'s record    |
 | [`friends.md`](friends.md)                   | Friend requests, Members' pills, the record's Add friend, Home; You › Friends; PLAYED WITH     |
 | [`find_a_game_next.md`](find_a_game_next.md) | The empty screen that is Play › Explore, behind `explore`                                      |

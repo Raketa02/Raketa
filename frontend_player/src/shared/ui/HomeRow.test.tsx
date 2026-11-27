@@ -162,7 +162,7 @@ describe('the Home row frame', () => {
   });
 
   /**
-   * New in Raketa's portrait tiles (#801; home rows 17): since 2026-11-26 their own share, a little
+   * New in Rakieta's portrait tiles (#801; home rows 17): since 2026-11-26 their own share, a little
    * narrower than the line cards either side — one whole and the next peeking.
    */
   describe('the tiles rail', () => {

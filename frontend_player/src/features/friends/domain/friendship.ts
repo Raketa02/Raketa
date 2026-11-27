@@ -35,7 +35,7 @@ export type AskedWhere =
  * round button, or from a record the row opened, so the other person's card says where they were
  * found:
  *
- * - **New in Raketa** names nothing else: *Found you among new players*, whatever group or sport the
+ * - **New in Rakieta** names nothing else: *Found you among new players*, whatever group or sport the
  *   two share;
  * - **Same competitive level** (#802) names **the card's sport**, the one its line compares — *Your
  *   level in padel · 91% even* — and the server refuses one without it, so the type carries it;

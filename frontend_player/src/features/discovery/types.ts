@@ -1,14 +1,14 @@
 /**
  * **The discovery feature's only public surface** ([#801](https://github.com/Raketa02/Raketa/issues/801);
- * ADR-0204; the Home rows spec set) — Home's **people rows** and their See all screens: New in Raketa,
+ * ADR-0204; the Home rows spec set) — Home's **people rows** and their See all screens: New in Rakieta,
  * Same competitive level ([#802](https://github.com/Raketa02/Raketa/issues/802)), and Same vibe
  * ([#803](https://github.com/Raketa02/Raketa/issues/803)).
  *
  * - **`useSameLevelLine`** — Players at your level, the second of FOR YOU's five lines on Home (#820),
  *   `undefined` while hidden; the shell folds it.
  * - **`SameLevelScreen`** — See all, the route `/same-level`, pushed over Home.
- * - **`useNewInRaketaLine`** — New in Raketa, the third of the five lines.
- * - **`NewInRaketaScreen`** — See all, the route `/new-in-raketa`, pushed over Home.
+ * - **`useNewInRakietaLine`** — New in Rakieta, the third of the five lines.
+ * - **`NewInRakietaScreen`** — See all, the route `/new-in-rakieta`, pushed over Home.
  * - **`useSameVibeLine`** — Players with your vibe, the fourth of the five lines.
  * - **`SameVibeScreen`** — See all, the route `/same-vibe`, pushed over Home.
  * - **`rereadDiscovery`** — every Discovery read again: Home's pull. A friend write or a block needs
@@ -22,19 +22,19 @@
  * record the vibe sheet reads, are `player_record`'s.
  */
 
-export { useNewInRaketaLine } from './components/NewInRaketaLine';
-export { NewInRaketaScreen } from './components/NewInRaketaScreen';
+export { useNewInRakietaLine } from './components/NewInRakietaLine';
+export { NewInRakietaScreen } from './components/NewInRakietaScreen';
 export { useSameLevelLine } from './components/SameLevelLine';
 export { SameLevelScreen } from './components/SameLevelScreen';
 export { useSameVibeLine } from './components/SameVibeLine';
 export { SameVibeScreen } from './components/SameVibeScreen';
 export {
-  NEW_IN_RAKETA_ROUTE,
+  NEW_IN_RAKIETA_ROUTE,
   SAME_LEVEL_ROUTE,
   SAME_VIBE_ROUTE,
 } from './components/discoveryRoutes';
 export { DISCOVERY_COPY, joinedLine, nobodyNewPlays } from './components/discoveryCopy';
-export { rereadDiscovery } from './hooks/useNewInRaketa';
+export { rereadDiscovery } from './hooks/useNewInRakieta';
 /** **Whether the three people lines have been read** (#871) — for the shell's reveal of FOR YOU. */
 export { useDiscoveryLinesFinished } from './hooks/useLinesFinished';
 /** **The three people lines, set out before Home is drawn** (#874) — the shell's warm-up. */

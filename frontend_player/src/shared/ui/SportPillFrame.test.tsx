@@ -236,7 +236,7 @@ describe('the sport pill', () => {
     });
   });
 
-  /** New in Raketa's See all (#801; home rows 12, 19): *All* beside the sports, a choice like them. */
+  /** New in Rakieta's See all (#801; home rows 12, 19): *All* beside the sports, a choice like them. */
   describe('offering All', () => {
     const ALL_WORDS: SportPillWords<SportChoice> = {
       sportName: (choice) => (choice === ALL_SPORTS ? 'All' : NAMES[choice]),

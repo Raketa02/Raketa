@@ -4,7 +4,7 @@
  * screens §1, §2; home refactor 3–13).
  *
  * What each line holds, its footer and its hidden states are its feature's suite's
- * (`hottestGroups`, `sameLevel`, `newInRaketa`, `sameVibe`, `topTen`), the on-screen reports
+ * (`hottestGroups`, `sameLevel`, `newInRakieta`, `sameVibe`, `topTen`), the on-screen reports
  * `onScreen`'s, and the frame's look `FoldingLine.test.tsx`'s. This is the shell's part: where FOR YOU
  * stands and in what order, which line is open — one at a time, switching by a fold and then an
  * unfold, closed only from its header, kept across tabs — every read running whether a line is open or
@@ -31,7 +31,7 @@ import {
 } from '@/test-support/forYou';
 import {
   HOTTEST_GROUPS_PATH,
-  NEW_IN_RAKETA_PATH,
+  NEW_IN_RAKIETA_PATH,
   SAME_LEVEL_PATH,
   SAME_VIBE_PATH,
   TOP_TEN_PATH,
@@ -39,7 +39,7 @@ import {
   stubGate,
   stubHottestGroups,
   stubMyGroups,
-  stubNewInRaketa,
+  stubNewInRakieta,
   stubSameLevel,
   stubSameVibe,
   stubTopTen,
@@ -53,7 +53,7 @@ import { HOME_COPY } from './shellCopy';
 
 const GROUPS = GROUPS_COPY.hottest.line;
 const LEVEL = DISCOVERY_COPY.sameLevel.line;
-const NEW = DISCOVERY_COPY.newInRaketa.line;
+const NEW = DISCOVERY_COPY.newInRakieta.line;
 const VIBE = DISCOVERY_COPY.sameVibe.line;
 const TOP = 'Top 10';
 
@@ -96,7 +96,7 @@ const AT_YOUR_LEVEL: Wire['SameLevelPlayerSchema'] = {
   relation: 'NONE',
 };
 
-const JOINER: Wire['NewInRaketaPlayerSchema'] = {
+const JOINER: Wire['NewInRakietaPlayerSchema'] = {
   player_id: 'e0000000-0000-4000-8000-000000008203',
   nickname: 'ola.n',
   photo_id: null,
@@ -154,7 +154,7 @@ function everyLine() {
   stubMyGroups(transport, [MINE]);
   stubHottestGroups(transport, [HOT_GROUP]);
   stubSameLevel(transport, [AT_YOUR_LEVEL]);
-  stubNewInRaketa(transport, [JOINER]);
+  stubNewInRakieta(transport, [JOINER]);
   stubSameVibe(transport, [WITH_YOUR_VIBE]);
   stubTopTen(transport, RANKED);
 }
@@ -171,7 +171,7 @@ const reads = (path: string) => transport.requestsTo('GET', path).length;
 const LINE_READS = [
   HOTTEST_GROUPS_PATH,
   SAME_LEVEL_PATH,
-  NEW_IN_RAKETA_PATH,
+  NEW_IN_RAKIETA_PATH,
   SAME_VIBE_PATH,
   TOP_TEN_PATH,
 ];
@@ -247,9 +247,9 @@ describe('FOR YOU', () => {
     const answered = new Promise<void>((resolve) => {
       answer = resolve;
     });
-    transport.on('GET', NEW_IN_RAKETA_PATH, async () => {
+    transport.on('GET', NEW_IN_RAKIETA_PATH, async () => {
       await answered;
-      return json<Wire['NewInRaketaResponse']>({ players: [JOINER], total: 1 });
+      return json<Wire['NewInRakietaResponse']>({ players: [JOINER], total: 1 });
     });
     await launchSignedIn();
     await screen.findByRole('button', { name: TOP });
@@ -453,7 +453,7 @@ describe('the counts', () => {
     everyLine();
     stubHottestGroups(transport, [HOT_GROUP], hottest);
     stubSameLevel(transport, [AT_YOUR_LEVEL], level);
-    stubNewInRaketa(transport, [JOINER], joined);
+    stubNewInRakieta(transport, [JOINER], joined);
     stubSameVibe(transport, [WITH_YOUR_VIBE], vibe);
     await launchSignedIn();
     await screen.findByRole('button', { name: TOP });
@@ -473,7 +473,7 @@ describe('the counts', () => {
 
     expect(drawn('hottest-groups')).toBe('6');
     expect(drawn('same-level')).toBe('14');
-    expect(drawn('new-in-raketa')).toBe('9');
+    expect(drawn('new-in-rakieta')).toBe('9');
     expect(drawn('same-vibe')).toBe('37');
   });
 
@@ -489,7 +489,7 @@ describe('the counts', () => {
 
     expect(drawn('hottest-groups')).toBe('99');
     expect(drawn('same-level')).toBe('99+');
-    expect(drawn('new-in-raketa')).toBe('99+');
+    expect(drawn('new-in-rakieta')).toBe('99+');
     expect(drawn('same-vibe')).toBe('99+');
   });
 
@@ -519,7 +519,7 @@ describe('the counts', () => {
 
     for (const [title, line, words, label] of [
       [LEVEL, 'same-level', 'See all 14', DISCOVERY_COPY.sameLevel.seeAllLabel],
-      [NEW, 'new-in-raketa', 'See all 99+', DISCOVERY_COPY.newInRaketa.seeAllLabel],
+      [NEW, 'new-in-rakieta', 'See all 99+', DISCOVERY_COPY.newInRakieta.seeAllLabel],
       [VIBE, 'same-vibe', 'See all 37', DISCOVERY_COPY.sameVibe.seeAllLabel],
     ] as const) {
       await openLine(title);
@@ -535,7 +535,7 @@ describe('the counts', () => {
     await openLine(LEVEL);
     stubHottestGroups(transport, [HOT_GROUP], 7);
     stubSameLevel(transport, [AT_YOUR_LEVEL], 100);
-    stubNewInRaketa(transport, [JOINER], 5);
+    stubNewInRakieta(transport, [JOINER], 5);
     stubSameVibe(transport, [WITH_YOUR_VIBE], 15);
 
     await act(async () => {
@@ -545,7 +545,7 @@ describe('the counts', () => {
     await waitFor(() => expect(drawn('same-level')).toBe('99+'));
     expect(footer('same-level').getByText('See all 99+')).toBeTruthy();
     expect(drawn('hottest-groups')).toBe('7');
-    expect(drawn('new-in-raketa')).toBe('5');
+    expect(drawn('new-in-rakieta')).toBe('5');
     expect(drawn('same-vibe')).toBe('15');
     expect(lineNames()[1]).toBe(`${LEVEL}, 99+`);
   });

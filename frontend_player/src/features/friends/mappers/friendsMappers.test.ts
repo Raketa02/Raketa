@@ -31,7 +31,7 @@ describe('toAskRequest', () => {
     });
   });
 
-  it('sends a request from New in Raketa with neither a group nor a sport (#801)', () => {
+  it('sends a request from New in Rakieta with neither a group nor a sport (#801)', () => {
     expect(toAskRequest('p-1', { from: 'NEW_PLAYERS' })).toEqual({
       player_id: 'p-1',
       made_from: 'NEW_PLAYERS',

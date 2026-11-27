@@ -33,7 +33,7 @@
  * - **Paging**: every card the content width, snapping one at a time, and 7.18's dots under it,
  *   tracking the scroll — a paging rail takes the dots always, but for Needs your answer's *FRIENDS
  *   GAME*, which draws them from two (`dotsAlone`, #817).
- * - **Tiles** (#801; 7.31): New in Raketa's portrait tiles, each `portraitTile.railRatio` of the
+ * - **Tiles** (#801; 7.31): New in Rakieta's portrait tiles, each `portraitTile.railRatio` of the
  *   content width since 2026-11-26 — one whole and the next peeking, a little narrower than the
  *   line cards either side, since a portrait as wide as they are would stand as a poster. **A lone
  *   tile keeps its width**: a portrait the width of the screen would be a poster, not a tile. It
@@ -163,7 +163,7 @@ export const RailDrawsAll = createContext(true);
 
 /**
  * 7.7's two geometries, Needs your answer's wider peeking card (7.7 as amended by #816), New in
- * Raketa's portrait tiles (7.31) and Top 10's numbered cards (7.36).
+ * Rakieta's portrait tiles (7.31) and Top 10's numbered cards (7.36).
  */
 export type HomeRowRailGeometry = 'peeking' | 'wide' | 'paging' | 'tiles' | 'numbered';
 

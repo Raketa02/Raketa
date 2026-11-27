@@ -25,7 +25,7 @@ export function toAskRequest(
   where: AskedWhere,
 ): Schemas['AskToBeFriendsRequest'] {
   // A request from the ranking names no group: its page shows none, and the server ignores one. One
-  // from New in Raketa or Same vibe names neither — their lines name no sport (#801, #803) — and one
+  // from New in Rakieta or Same vibe names neither — their lines name no sport (#801, #803) — and one
   // from Same competitive level its card's sport alone (#802).
   if (where.from === 'NEW_PLAYERS' || where.from === 'SAME_VIBE') {
     return { player_id: playerId, made_from: where.from };

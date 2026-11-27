@@ -1,6 +1,6 @@
 /**
- * **Discovery's wire, read** — New in Raketa ([#801](https://github.com/Raketa02/Raketa/issues/801);
- * #793's `NewInRaketaPlayerSchema`), Same competitive level
+ * **Discovery's wire, read** — New in Rakieta ([#801](https://github.com/Raketa02/Raketa/issues/801);
+ * #793's `NewInRakietaPlayerSchema`), Same competitive level
  * ([#802](https://github.com/Raketa02/Raketa/issues/802); #794's `SameLevelPlayerSchema`) and Same
  * vibe ([#803](https://github.com/Raketa02/Raketa/issues/803); #795's `SameVibePlayerSchema`). The
  * wire boundary: the generated types stop here and in `api/`.
@@ -25,7 +25,7 @@ import type { SeeAllAsk, SeeAllPage } from '../domain/seeAll';
 
 type Schemas = components['schemas'];
 
-export function toJoiner(wire: Schemas['NewInRaketaPlayerSchema']): Joiner {
+export function toJoiner(wire: Schemas['NewInRakietaPlayerSchema']): Joiner {
   return {
     playerId: wire.player_id,
     nickname: wire.nickname,
@@ -39,12 +39,12 @@ export function toJoiner(wire: Schemas['NewInRaketaPlayerSchema']): Joiner {
   };
 }
 
-/** **Home's New in Raketa** — the ten newest in the server's order, and its total (#822). */
-export function toNewInRaketaRow(wire: Schemas['NewInRaketaResponse']): PeopleRow<Joiner> {
+/** **Home's New in Rakieta** — the ten newest in the server's order, and its total (#822). */
+export function toNewInRakietaRow(wire: Schemas['NewInRakietaResponse']): PeopleRow<Joiner> {
   return { people: wire.players.map(toJoiner), total: wire.total };
 }
 
-export function toJoinerPage(wire: Schemas['NewInRaketaPageResponse']): JoinerPage {
+export function toJoinerPage(wire: Schemas['NewInRakietaPageResponse']): JoinerPage {
   return {
     people: wire.players.map(toJoiner),
     ...(wire.next === null ? {} : { next: wire.next }),

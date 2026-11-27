@@ -31,7 +31,7 @@ import {
   GATE_USER,
   HOME_PATH,
   HOTTEST_GROUPS_PATH,
-  NEW_IN_RAKETA_PATH,
+  NEW_IN_RAKIETA_PATH,
   OWN_RECORD_SERVED,
   SAME_LEVEL_PATH,
   SAME_VIBE_PATH,
@@ -471,7 +471,7 @@ describe('the switcher', () => {
     await homeWithTheRow();
     await waitFor(() => expect(cardsDrawn()).toHaveLength(10));
     const others = () =>
-      [HOME_PATH, HOTTEST_GROUPS_PATH, NEW_IN_RAKETA_PATH, SAME_LEVEL_PATH, SAME_VIBE_PATH].map(
+      [HOME_PATH, HOTTEST_GROUPS_PATH, NEW_IN_RAKIETA_PATH, SAME_LEVEL_PATH, SAME_VIBE_PATH].map(
         (path) => transport.requestsTo('GET', path).length,
       );
     const before = others();

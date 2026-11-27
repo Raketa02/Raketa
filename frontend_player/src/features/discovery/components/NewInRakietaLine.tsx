@@ -1,6 +1,6 @@
 /**
- * **New in Raketa** — the third of FOR YOU's five lines
- * ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5; was the NEW IN RAKETA row,
+ * **New in Rakieta** — the third of FOR YOU's five lines
+ * ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5; was the NEW IN RAKIETA row,
  * [#801](https://github.com/Raketa02/Raketa/issues/801), ADR-0204 §5; the Home rows screens §5.1; the
  * mechanics §7; home rows 1, 17, 17.2; home refactor 8, 9).
  *
@@ -25,32 +25,32 @@ import { memo, useState } from 'react';
 import { FoldingLineFooter, HomeRowRail, type FoldingLineParts } from '@/shared/ui';
 
 import { FOUND_AMONG_NEW_PLAYERS, type Joiner } from '../domain/joiner';
-import { useNewInRaketa } from '../hooks/useNewInRaketa';
+import { useNewInRakieta } from '../hooks/useNewInRakieta';
 
 import { DISCOVERY_COPY, seeAllWords } from './discoveryCopy';
-import { NEW_IN_RAKETA_ROUTE } from './discoveryRoutes';
+import { NEW_IN_RAKIETA_ROUTE } from './discoveryRoutes';
 import { RowRecord, type RecordOpened } from './RowRecord';
 import { JoinerTile } from './JoinerTile';
 
 /**
- * **The New in Raketa line, as the shell draws it** — `undefined` while it is hidden. Read whether it
+ * **The New in Rakieta line, as the shell draws it** — `undefined` while it is hidden. Read whether it
  * is open or not, so the read runs when Home opens.
  */
-export function useNewInRaketaLine(): FoldingLineParts | undefined {
-  const COPY = DISCOVERY_COPY.newInRaketa;
-  const row = useNewInRaketa().data;
+export function useNewInRakietaLine(): FoldingLineParts | undefined {
+  const COPY = DISCOVERY_COPY.newInRakieta;
+  const row = useNewInRakieta().data;
   if (row === undefined || row.people.length === 0) return undefined;
   return {
     title: COPY.line,
     count: row.total,
-    testID: 'new-in-raketa',
-    content: <NewInRaketa joiners={row.people} />,
+    testID: 'new-in-rakieta',
+    content: <NewInRakieta joiners={row.people} />,
     footer: (
       <FoldingLineFooter
         link={{
           words: seeAllWords(row.total),
           label: COPY.seeAllLabel,
-          onPress: () => router.push(NEW_IN_RAKETA_ROUTE),
+          onPress: () => router.push(NEW_IN_RAKIETA_ROUTE),
         }}
       />
     ),
@@ -59,7 +59,7 @@ export function useNewInRaketaLine(): FoldingLineParts | undefined {
 
 /** Memoised: the shell draws every line from one component, so a re-read of another line must not
  * draw this one's cards again. */
-const NewInRaketa = memo(function NewInRaketa({
+const NewInRakieta = memo(function NewInRakieta({
   joiners,
 }: {
   readonly joiners: readonly Joiner[];

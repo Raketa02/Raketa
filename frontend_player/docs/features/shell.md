@@ -368,13 +368,13 @@ where _Play finds you one._ stood (§31.1): the first empty line is the tab's an
 handed to `HomeRail` from `groups`' answer (`useInNoGroup`) and its words (`GROUPS_COPY.hottest`), as
 the empty sentences have always been handed down. The walk is `groups`' `hottestGroups.test.tsx`.
 
-**NEW IN RAKETA follows HOTTEST GROUPS, and See all is pushed over Home**
+**NEW IN RAKIETA follows HOTTEST GROUPS, and See all is pushed over Home**
 ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows screens §1, §5). `HomeScreen`
-draws `discovery`'s `NewInRaketaRow` after `HottestGroupsRow` — Same competitive level (#802) will
+draws `discovery`'s `NewInRakietaRow` after `HottestGroupsRow` — Same competitive level (#802) will
 stand between them — and the pull re-reads it (`rereadDiscovery`). **The shell hands it nothing
 else**: accepting a request on FRIEND REQUESTS turns that person's envelope to ✓ on the row because the
 row's reads list people (`LISTS_PEOPLE`) and every friend write re-reads those. See all is
-`/new-in-raketa`, in `PUSHED_SCREENS` and `INSIDE_A_TAB` (Home stays lit). The record is
+`/new-in-rakieta`, in `PUSHED_SCREENS` and `INSIDE_A_TAB` (Home stays lit). The record is
 [`discovery.md`](discovery.md).
 
 **Home says what of it is on screen** ([#804](https://github.com/Raketa02/Raketa/issues/804); the
@@ -491,12 +491,12 @@ mock 1, where it sits over the mail mark's corner as the bell's does over the be
 ([#820](https://github.com/Raketa02/Raketa/issues/820), ADR-0205 §5, §8; the Home rows screens §1,
 §2; home refactor 3–13). Under _Your games_, `ForYou` draws `shared/ui`'s `FoldingLines` — the eyebrow
 _FOR YOU_ (`HOME_COPY.forYou`) — and five `FoldingLine`s in ADR-0205 §5's order, each its feature's:
-`groups`' `useHottestGroupsLine`, `discovery`'s `useSameLevelLine`, `useNewInRaketaLine` and
+`groups`' `useHottestGroupsLine`, `discovery`'s `useSameLevelLine`, `useNewInRakietaLine` and
 `useSameVibeLine`, and `rankings`' `useTopTenLine`. **Each hands its title, what it unfolds and its
 footer, or `undefined` while its read is out, empty or failed**, so the shell knows from one call per
 line whether to draw it, and **every line's read runs when Home opens**, open or not. With all five
 hidden, FOR YOU is not drawn. The paragraphs above that say `HomeScreen` draws `HottestGroupsRow` and
-`NewInRaketaRow` were true until this one.
+`NewInRakietaRow` were true until this one.
 
 - **A hook that hands back elements**, rather than a component per line, because the shell must know
   which lines are shown — to hide FOR YOU and to close a line that empties — and a component that

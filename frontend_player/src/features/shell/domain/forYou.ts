@@ -25,7 +25,7 @@
 export const FOR_YOU_LINES = [
   'hottestGroups',
   'sameLevel',
-  'newInRaketa',
+  'newInRakieta',
   'sameVibe',
   'topTen',
 ] as const;

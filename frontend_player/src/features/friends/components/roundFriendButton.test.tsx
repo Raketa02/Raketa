@@ -1,8 +1,8 @@
 /**
  * **The round friend button's worded twin** — on a sheet's title row ([#801](https://github.com/Raketa02/Raketa/issues/801);
  * the Home rows screens §8.2; the words §31.9): *+ Add friend*, *Request sent*, *✓ Friends*, *Accept*,
- * the same taps as the round face. The round face is walked on Home's New in Raketa row
- * (`discovery`'s `newInRaketa.test.tsx`); no sheet draws the worded one until the comparison and vibe
+ * the same taps as the round face. The round face is walked on Home's New in Rakieta row
+ * (`discovery`'s `newInRakieta.test.tsx`); no sheet draws the worded one until the comparison and vibe
  * sheets (#802, #803), so it is walked here on a page of its own, over the real friends routes' fake.
  *
  * The page reads the person's relation from the fake server and hands that read in as the button's

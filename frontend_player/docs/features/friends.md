@@ -415,7 +415,7 @@ read when they turned _Show me to new people_ off); any other is a toast — no 
 `AskedWhere` a `FoundIn` — a Home row a request was found in, `{ from: 'NEW_PLAYERS' }`, naming
 neither a group nor a sport (`toAskRequest` sends neither). **A record a Home row opened keeps the
 row** (`recordAskedWhere`'s `foundIn`, ahead of the ranking). Home's request card reads _Found you
-among new players_ (`whereLine`'s `newInRaketa`, from `proposals`' `foundBy` since #802) in place of the
+among new players_ (`whereLine`'s `newInRakieta`, from `proposals`' `foundBy` since #802) in place of the
 whole where-line, as a link's and the ranking's do. #802 and #803 add their rows to `FoundIn`.
 
 **A request found at the same level** (#802; the words §31.10). `AskedFrom` gained `SAME_LEVEL`, and
@@ -428,7 +428,7 @@ level there.
 
 **The request card's origin is one discriminant now** (#802, #801's finding). `proposals`' mapper
 folds the wire's four exclusive flags (`by_link`, `from_ranking`, `from_new_players`,
-`from_same_level`) into `HomeFriendRequest.foundBy` — `link`, `ranking`, `newInRaketa`, or `sameLevel`
+`from_same_level`) into `HomeFriendRequest.foundBy` — `link`, `ranking`, `newInRakieta`, or `sameLevel`
 with its %, absent for a group's or a screen's request — and `whereLine` takes the same shape
 (`WhereFound`, spelled in `friendsCopy` with each sport already named inside a sentence, so the copy
 module imports no feature). `FriendRequestsRow`'s `whereFound` names the sport; a found request whose
@@ -437,7 +437,7 @@ vibe) is one arm in each and a `switch` that fails to compile without its words.
 
 **A request found through the tags** ([#803](https://github.com/Raketa02/Raketa/issues/803); the words
 §31.10) — that fifth origin. `AskedFrom` gained `SAME_VIBE` and `FoundIn` the arm `{ from: 'SAME_VIBE'
-}`, naming **neither a group nor a sport** (`toAskRequest` sends neither, as New in Raketa's): the
+}`, naming **neither a group nor a sport** (`toAskRequest` sends neither, as New in Rakieta's): the
 tile's round button, the vibe sheet's worded one and the record the sheet's face opens all send it.
 `proposals`' mapper reads the wire's fifth flag, `from_same_vibe`, with `in_common` — **today's** count,
 counted on the read — into `foundBy` `{ kind: 'sameVibe', inCommon }`, and the card reads _6 things in
@@ -497,7 +497,7 @@ maps onto `HomeFriendRequest.levels` — every sport the sender holds a publishe
 order served**, the app's sport order, which nothing here re-sorts. A sport this build cannot name is
 dropped, and a server older than #814 sends none, so no line.
 
-- **Each sport is its dot, its name and its Level**, drawn as New in Raketa's tile draws a sport (a
+- **Each sport is its dot, its name and its Level**, drawn as New in Rakieta's tile draws a sport (a
   `sportDot` before the words), in the muted tiny mono the where-line stood in, tabular as every
   figure. The `·` between two sports is held to the one before it, so a line that wraps ends in one
   rather than starting with one (`sportLevelEntries`, a call).

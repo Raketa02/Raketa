@@ -44,8 +44,8 @@ export const PUSHED_SCREENS = [
   'notices',
   // Rankings, behind the trophy left of the bell (#775): pushed over Home, and back is Home.
   'rankings',
-  // New in Raketa's See all, behind its row's *See all ›* (#801): pushed over Home, and back is Home.
-  'new-in-raketa',
+  // New in Rakieta's See all, behind its row's *See all ›* (#801): pushed over Home, and back is Home.
+  'new-in-rakieta',
   // Same competitive level's See all, behind its row's *See all ›* (#802): the same.
   'same-level',
   // Same vibe's See all (#803): the same.

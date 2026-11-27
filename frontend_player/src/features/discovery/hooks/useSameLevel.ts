@@ -8,7 +8,7 @@
  * | `useSameLevelPage` | `GET /same-level/all?sport&after` — See all, 20 to a page, read on as the list nears its end |
  *
  * **Coming back to Home re-reads the row once its last read is older than thirty seconds** — the
- * app's `staleTime`, as New in Raketa does; foregrounding does the same through the focus manager.
+ * app's `staleTime`, as New in Rakieta does; foregrounding does the same through the focus manager.
  * The row is worked out again on every read (§9), so a return shows a new fresh match.
  *
  * **One tap moves a person everywhere** (§13): both reads declare `LISTS_PEOPLE`, so every friend

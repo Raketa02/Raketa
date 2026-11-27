@@ -34,7 +34,7 @@ import BookedGameChatRoute from '@/app/(app)/(tabs)/booking/[bookingId]/chat';
 import BookedGameResultRoute from '@/app/(app)/(tabs)/booking/[bookingId]/result';
 import SeatInviteRoute from '@/app/(app)/(tabs)/booking/[bookingId]/invite';
 import NoticesRoute from '@/app/(app)/(tabs)/notices';
-import NewInRaketaRoute from '@/app/(app)/(tabs)/new-in-raketa';
+import NewInRakietaRoute from '@/app/(app)/(tabs)/new-in-rakieta';
 import RankingsRoute from '@/app/(app)/(tabs)/rankings';
 import SameLevelRoute from '@/app/(app)/(tabs)/same-level';
 import SameVibeRoute from '@/app/(app)/(tabs)/same-vibe';
@@ -182,7 +182,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/notices': NoticesRoute,
   // Rankings, behind the trophy left of Home's bell (#775).
   '(app)/(tabs)/rankings': RankingsRoute,
-  '(app)/(tabs)/new-in-raketa': NewInRaketaRoute,
+  '(app)/(tabs)/new-in-rakieta': NewInRakietaRoute,
   '(app)/(tabs)/same-level': SameLevelRoute,
   '(app)/(tabs)/same-vibe': SameVibeRoute,
   // The Groups heating up page, behind its line's *All groups ›* (#823).
@@ -998,19 +998,19 @@ export function stubHottestGroups(
  */
 export const HOTTEST_GROUPS_ALL_PATH = '/api/v1/hottest-groups/all';
 
-/** Home's New in Raketa (#801) — nobody unless the suite says, so the row is hidden. */
-export const NEW_IN_RAKETA_PATH = '/api/v1/new-in-raketa';
-/** New in Raketa's See all — the transport drops `?sport&after`, so one responder answers each page. */
-export const NEW_IN_RAKETA_ALL_PATH = '/api/v1/new-in-raketa/all';
+/** Home's New in Rakieta (#801) — nobody unless the suite says, so the row is hidden. */
+export const NEW_IN_RAKIETA_PATH = '/api/v1/new-in-rakieta';
+/** New in Rakieta's See all — the transport drops `?sport&after`, so one responder answers each page. */
+export const NEW_IN_RAKIETA_ALL_PATH = '/api/v1/new-in-rakieta/all';
 
 /** Its total is the players served unless the suite says (#822). */
-export function stubNewInRaketa(
+export function stubNewInRakieta(
   transport: Transport,
-  players: readonly Wire['NewInRaketaPlayerSchema'][] = [],
+  players: readonly Wire['NewInRakietaPlayerSchema'][] = [],
   total: number = players.length,
 ) {
-  transport.on('GET', NEW_IN_RAKETA_PATH, () =>
-    json<Wire['NewInRaketaResponse']>({ players: [...players], total }),
+  transport.on('GET', NEW_IN_RAKIETA_PATH, () =>
+    json<Wire['NewInRakietaResponse']>({ players: [...players], total }),
   );
 }
 
@@ -1253,7 +1253,7 @@ export function stubGate(
   stubDatafile(transport);
   stubMyGroups(transport);
   stubHottestGroups(transport);
-  stubNewInRaketa(transport);
+  stubNewInRakieta(transport);
   stubSameLevel(transport);
   stubSameVibe(transport);
   stubTopTen(transport);

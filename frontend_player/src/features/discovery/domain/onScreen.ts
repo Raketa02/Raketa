@@ -20,7 +20,7 @@
  *   batch window open at midnight is still told as it closes (`use-cases/onScreen.ts`).
  */
 
-/** The two rows whose cards rest — each with its own count. New in Raketa and See all rest nobody. */
+/** The two rows whose cards rest — each with its own count. New in Rakieta and See all rest nobody. */
 export type RestingRow = 'SAME_LEVEL' | 'SAME_VIBE';
 
 /** How long the cards that come on screen are gathered before one report says them all. */

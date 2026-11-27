@@ -1,5 +1,5 @@
 /**
- * **A people row on Home, as read** — New in Raketa, Same competitive level, Same vibe: up to ten
+ * **A people row on Home, as read** — New in Rakieta, Same competitive level, Same vibe: up to ten
  * cards in the server's order, and **how many the row could show**
  * ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6; the Home rows mechanics §6.9,
  * §7.5, §8.8).

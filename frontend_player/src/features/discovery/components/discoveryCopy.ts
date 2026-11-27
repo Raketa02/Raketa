@@ -1,5 +1,5 @@
 /**
- * **Every sentence Discovery's rows say** — New in Raketa
+ * **Every sentence Discovery's rows say** — New in Rakieta
  * ([#801](https://github.com/Raketa02/Raketa/issues/801); the words
  * [§31.1 and §31.7](../../../../../docs/specs/matchmaking/the-words.md#317-new-in-rakieta)): the row's
  * heading and its *See all ›*, the tile's tag, sports and *Joined …*, and See all's title, pill and
@@ -72,14 +72,14 @@ import type { SeeAllSport } from '../domain/seeAll';
 export const DISCOVERY_COPY = {
   /** Every See all pill's first choice. */
   all: 'All',
-  newInRaketa: {
-    /** FOR YOU's line (#820) — its title, and what it is named: never *Rakieta*. */
-    line: 'New in Raketa',
+  newInRakieta: {
+    /** FOR YOU's line (#820) — its title: the row was *NEW IN RAKIETA*. */
+    line: 'New in Rakieta',
     seeAllLabel: 'See all new players',
     /** The volt tag, top-left on every tile. */
     tag: 'NEW',
     /** See all's title. */
-    title: 'New in Raketa',
+    title: 'New in Rakieta',
     back: 'Back to Home',
     pillHint: 'Shows new players in another sport',
     nobodyAtAll: 'Nobody new right now',
@@ -267,6 +267,6 @@ function pillWords(pillHint: string): SportPillWords<SeeAllSport> {
   };
 }
 
-export const NEW_IN_RAKETA_PILL_WORDS = pillWords(DISCOVERY_COPY.newInRaketa.pillHint);
+export const NEW_IN_RAKIETA_PILL_WORDS = pillWords(DISCOVERY_COPY.newInRakieta.pillHint);
 export const SAME_LEVEL_PILL_WORDS = pillWords(DISCOVERY_COPY.sameLevel.pillHint);
 export const SAME_VIBE_PILL_WORDS = pillWords(DISCOVERY_COPY.sameVibe.pillHint);

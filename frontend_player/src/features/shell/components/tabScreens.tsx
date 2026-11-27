@@ -14,7 +14,7 @@ import { StyleSheet, View } from 'react-native';
 
 import {
   rereadDiscovery,
-  useNewInRaketaLine,
+  useNewInRakietaLine,
   useSameLevelLine,
   useSameVibeLine,
 } from '@/features/discovery/types';
@@ -90,7 +90,7 @@ import { HOME_COPY } from './shellCopy';
  *
  * **FOR YOU stands below *Your games*** ([#820](https://github.com/Raketa02/Raketa/issues/820);
  * ADR-0205 §5; home refactor 3–13): the five rows ADR-0204 put there, folded into five quiet lines —
- * **Groups heating up** (`groups`'), **Players at your level**, **New in Raketa** and **Players with
+ * **Groups heating up** (`groups`'), **Players at your level**, **New in Rakieta** and **Players with
  * your vibe** (`discovery`'s), and **Top 10** (`rankings`') — each feature handing its title, what it
  * unfolds and its footer, and `undefined` while its read is out, empty or failed. **Which line is
  * open is the shell's** (`useOpenLine`): one at a time, closed at the start, kept across tab switches
@@ -200,14 +200,14 @@ function ForYou({ inNoGroup }: { readonly inNoGroup: boolean }) {
   const lines: Readonly<Record<ForYouLine, FoldingLineParts | undefined>> = {
     hottestGroups: useHottestGroupsLine(),
     sameLevel: useSameLevelLine(),
-    newInRaketa: useNewInRaketaLine(),
+    newInRakieta: useNewInRakietaLine(),
     sameVibe: useSameVibeLine(),
     topTen: useTopTenLine(),
   };
   const shown: LinesShown = {
     hottestGroups: lines.hottestGroups !== undefined,
     sameLevel: lines.sameLevel !== undefined,
-    newInRaketa: lines.newInRaketa !== undefined,
+    newInRakieta: lines.newInRakieta !== undefined,
     sameVibe: lines.sameVibe !== undefined,
     topTen: lines.topTen !== undefined,
   };

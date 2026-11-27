@@ -11,11 +11,11 @@ import type { SeeAllSport } from '../domain/seeAll';
 
 export const discoveryKeys = {
   all: ['discovery'] as const,
-  /** `GET /new-in-raketa` — Home's row. */
-  newInRaketa: () => [...discoveryKeys.all, 'new-in-raketa', 'row'] as const,
-  /** `GET /new-in-raketa/all?sport` — See all, for *All* or one sport, every page read. */
-  newInRaketaAll: (sport: SeeAllSport) =>
-    [...discoveryKeys.all, 'new-in-raketa', 'see-all', sport] as const,
+  /** `GET /new-in-rakieta` — Home's row. */
+  newInRakieta: () => [...discoveryKeys.all, 'new-in-rakieta', 'row'] as const,
+  /** `GET /new-in-rakieta/all?sport` — See all, for *All* or one sport, every page read. */
+  newInRakietaAll: (sport: SeeAllSport) =>
+    [...discoveryKeys.all, 'new-in-rakieta', 'see-all', sport] as const,
   /** `GET /same-level` — Home's row. */
   sameLevel: () => [...discoveryKeys.all, 'same-level', 'row'] as const,
   /** `GET /same-level/all?sport` — See all, for *All* or one sport, every page read. */

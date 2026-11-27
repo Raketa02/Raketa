@@ -71,7 +71,7 @@
  * bar opens that much further and covers it whole (`BarCover`, which the frame measures). Where they
  * stop short of the tile, the bar ends where they do. A page with nothing to cover hands nothing.
  *
- * **It can offer *All*** (#801): a page that lists people from every sport — New in Raketa's See all —
+ * **It can offer *All*** (#801): a page that lists people from every sport — New in Rakieta's See all —
  * hands `ALL_SPORTS` among its choices, and the pill draws it as a sport with a two-toned dot. Which
  * choices it offers, and in what order, stays the page's.
  *
@@ -151,7 +151,7 @@ const CHEVRONS: Readonly<
 
 /**
  * ***All*** — **every sport at once**, a choice beside the sports where a page lists people from all of
- * them (#801: New in Raketa's See all; the Home rows screens §5.3, home rows 12, 19). Drawn with a
+ * them (#801: New in Rakieta's See all; the Home rows screens §5.3, home rows 12, 19). Drawn with a
  * two-toned dot, padel's into tennis's, as home rows 12 and 19 draw it: no sport's colour alone, since
  * it is none of them.
  */
