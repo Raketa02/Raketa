@@ -11,8 +11,11 @@ group the row cannot do without: **Wieczorny Kazimierz**, at Kazimierz Padel,
 *People I approve*, owned by the ranking's crowd's first player and joined by
 twenty-three more of them ten days ago — each let in by the Owner, as a
 request there is only let in — with **three games booked in it two, three and
-four days ago**, inside the seven days whatever the weekday. 3 × 24 new + 20 +
-2 × 3 = 98 against *Padel po pracy*'s 80.
+four days ago**, inside the seven days whatever the weekday. **A day the club
+sells nothing is stepped over**, a day further back: Kazimierz Padel sells no
+Monday, so a run on a Wednesday, Thursday or Friday plays one game a day
+earlier than four days ago. 3 × 24 new + 20 + 2 × 3 = 98 against *Padel po
+pracy*'s 80.
 
 **The crowd, because nobody deals them a game.** Their week is cleared
 (``ranking_crowd.py``), so joining a group puts no card in anybody's deck, and
@@ -114,9 +117,13 @@ MEMBERS: Final = 24
 #: Created, and every member let in, this long before the run — inside the 30
 #: days, so all of them are new this month.
 OPENED_DAYS_AGO: Final = 10
-#: One game a day this many days before the run — inside the 7 days whatever
-#: the weekday, and each a different four.
-GAME_DAYS_AGO: Final = (2, 3, 4)
+#: Games in it this week, each a different four on a day of its own.
+GAMES: Final = 3
+#: The latest a game is played: this many days before the run, walking back a
+#: day at a time to the edge of the 7 days past a day the club sells nothing —
+#: Kazimierz Padel's Mondays, a closed day — so two, three and four days ago, or
+#: one more back, whatever the weekday.
+FIRST_GAME_DAYS_AGO: Final = 2
 #: Her request, asked this long before the run.
 ASKED_HOURS_AGO: Final = 1
 #: The two-player group the other layers leave, which the row leaves out.
@@ -194,15 +201,16 @@ async def write_the_hottest_groups(
             )
 
         games: list[tuple[Instant, bool]] = []
-        for index, days_ago in enumerate(GAME_DAYS_AGO):
+        hours: list[tuple[Instant, Instant]] | None = None
+        for index in range(GAMES):
             four = tuple(members[4 * index : 4 * index + 4])
             played = await _played_this_week(session, group_id, four, now=now)
             if played is not None:
                 games.append((played, False))
                 continue
-            start, made_at = await _a_padel_hour(
-                session, club_id, days_ago=days_ago, now=now
-            )
+            if hours is None:
+                hours = await _the_game_hours(session, club_id, now=now)
+            start, made_at = hours[index]
             answer = await all_say_yes(
                 session,
                 settings=settings,
@@ -380,11 +388,34 @@ def hottest_group_lines(seeded: SeededHottestGroups) -> list[str]:
     return lines
 
 
+async def _the_game_hours(
+    session: AsyncSession, club_id: UUID, *, now: Instant
+) -> list[tuple[Instant, Instant]]:
+    """An hour for each game, latest first: one on each of the club's last days
+    to sell before the run, from ``FIRST_GAME_DAYS_AGO`` back to the edge of the
+    seven days, stepping over a day it sold nothing. The hour, and when it was
+    made."""
+
+    hours: list[tuple[Instant, Instant]] = []
+    for days_ago in range(FIRST_GAME_DAYS_AGO, GAMES_WINDOW.days):
+        hour = await _a_padel_hour(session, club_id, days_ago=days_ago, now=now)
+        if hour is not None:
+            hours.append(hour)
+        if len(hours) == GAMES:
+            return hours
+    raise HottestGroupsRefused(
+        f"{HOTTEST_CLUB.name} sold a padel hour on {len(hours)} of the days "
+        f"{FIRST_GAME_DAYS_AGO} to {GAMES_WINDOW.days - 1} before the run, and "
+        f"{HOTTEST_GROUP} needs {GAMES} inside the seven days"
+    )
+
+
 async def _a_padel_hour(
     session: AsyncSession, club_id: UUID, *, days_ago: int, now: Instant
-) -> tuple[Instant, Instant]:
+) -> tuple[Instant, Instant] | None:
     """The first padel hour the club sold on that day, made two days before it
-    and over before the run. The hour, and when it was made."""
+    and over before the run — or ``None``, on a day it sold none. The hour, and
+    when it was made."""
 
     day = local_day(days_before(now, days_ago).now())
     day_start = hour_start(day, 0)
@@ -405,10 +436,7 @@ async def _a_padel_hour(
             club_id, sport=Sport.PADEL, start=start, now=made_at
         ):
             return start, made_at
-    raise HottestGroupsRefused(
-        f"{HOTTEST_CLUB.name} sold no padel hour on {day:%a %d %b} for "
-        f"{HOTTEST_GROUP}'s game"
-    )
+    return None
 
 
 async def _played_this_week(

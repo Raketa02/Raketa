@@ -172,7 +172,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   **Wieczorny Kazimierz** at Kazimierz Padel (*People I approve*), twenty-three more of the
   crowd let in ten days ago, and **three unscored games** among four of them two, three and
   four days ago — made two days ahead and filled by four yeses, the cut-off job run at each
-  cut-off — and the protagonist's **Join request waits on it**, asked again on a run that
+  cut-off. **A day the club sells nothing is stepped over**, a day further back inside the
+  seven: Kazimierz Padel sells no Monday, so the layer refused every Wednesday, Thursday
+  and Friday until it walked past one. And the protagonist's **Join request waits on it**, asked again on a run that
   finds it withdrawn. The crowd because nobody deals them (their week is cleared), unscored
   because a result would move the ranking's promised places. **A game is looked for in
   the last seven days**, so a run days later books the same fours again where they now
