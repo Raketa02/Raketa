@@ -1,4 +1,4 @@
-"""The club surface's shapes for Courts & prices and Raketa settings (#535).
+"""The club surface's shapes for Courts & prices and Rakieta settings (#535).
 
 **The requests declare types and nothing else**, for the reason the details'
 do (``presentation/schemas.py``): every content rule — a name's length, a
@@ -60,8 +60,8 @@ class CourtChangeRequest(CourtRequest):
     )
 
 
-class RaketaHoursRequest(BaseModel):
-    """*Weekly hours for Raketa*, saved on one court or several at once —
+class RakietaHoursRequest(BaseModel):
+    """*Weekly hours for Rakieta*, saved on one court or several at once —
     which is what *Copy to other courts* and *All courts of a sport* send."""
 
     model_config = ConfigDict(extra="forbid")
@@ -335,7 +335,7 @@ class OtherClubsCourtsSchema(BaseModel):
     )
 
 
-class RaketaSettingsRequest(BaseModel):
+class RakietaSettingsRequest(BaseModel):
     """The settings form — every field on every save, defaults included, since
     the first save is the club **confirming** them. Each number is bounded by
     the domain: `setting_out_of_range` names the field and carries `least` and
@@ -360,14 +360,14 @@ class RaketaSettingsRequest(BaseModel):
     )
     paused: bool = Field(
         description=(
-            "*Pause Raketa bookings*: no new cards on the club's courts; booked "
+            "*Pause Rakieta bookings*: no new cards on the club's courts; booked "
             "games are played as booked, and cards already dealt keep their "
             "court until their book-by."
         )
     )
 
 
-class RaketaSettingsResponse(BaseModel):
+class RakietaSettingsResponse(BaseModel):
     """Every setting — **at its default until the club confirms it**, so the
     form can show what it would save."""
 
@@ -377,7 +377,7 @@ class RaketaSettingsResponse(BaseModel):
     paused: bool
 
     @classmethod
-    def from_domain(cls, club: ClubCourts) -> "RaketaSettingsResponse":
+    def from_domain(cls, club: ClubCourts) -> "RakietaSettingsResponse":
         settings = club.settings
         return cls(
             release_lead_days=settings.release_lead_days,

@@ -1,7 +1,7 @@
 """The Club courts aggregate — event-sourced, one stream per club.
 
 Everything a club offers Raketa and how it sells it (``docs/adr/0189`` §3, §5;
-the mechanics §16): its **courts** and the **Raketa hours** each is offered for.
+the mechanics §16): its **courts** and the **Rakieta hours** each is offered for.
 
 **Born by being used.** ``unwritten`` is a club that has done nothing here yet
 — no courts, and nothing to sell — and every write starts from it, so no act
@@ -31,11 +31,11 @@ from app.modules.clubs.domain.club_courts_events import (
     PaymentsAccountOpened,
     PaymentsStatusChanged,
     PricesSet,
-    RaketaHoursSet,
-    RaketaPaused,
-    RaketaResumed,
-    RaketaSettingsChanged,
-    RaketaSettingsChangedV2,
+    RakietaHoursSet,
+    RakietaPaused,
+    RakietaResumed,
+    RakietaSettingsChanged,
+    RakietaSettingsChangedV2,
 )
 from app.modules.clubs.domain.courts import Court, CourtName
 from app.modules.clubs.domain.errors import (
@@ -51,7 +51,7 @@ from app.modules.clubs.domain.hours_exceptions import (
 )
 from app.modules.clubs.domain.payments_account import PaymentsAccount, PaymentsStatus
 from app.modules.clubs.domain.prices import PriceBand, SportPrices
-from app.modules.clubs.domain.raketa_terms import OtherClubsCourts, RaketaSettings
+from app.modules.clubs.domain.rakieta_terms import OtherClubsCourts, RakietaSettings
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
@@ -72,7 +72,7 @@ class ClubCourts:
     #: row here, inert — no court of it can exist — until the next save.
     prices: dict[Sport, SportPrices] = field(default_factory=dict)
     #: The settings, **at their defaults until the club confirms them**.
-    settings: RaketaSettings = field(default_factory=RaketaSettings)
+    settings: RakietaSettings = field(default_factory=RakietaSettings)
     #: Whether the club has saved its settings at least once.
     settings_confirmed: bool = False
     paused: bool = False
@@ -139,7 +139,7 @@ class ClubCourts:
         return found
 
     def selling_courts(self) -> list[Court]:
-        """The courts that offer Raketa something: switched on, with Raketa
+        """The courts that offer Rakieta something: switched on, with Rakieta
         hours. Whether their sport is priced is the next question, asked by
         whoever needs it."""
 
@@ -208,7 +208,7 @@ class ClubCourts:
     def set_hours(
         self, court_ids: Collection[UUID], hours: WeeklyHours, *, occurred_at: datetime
     ) -> None:
-        """The same Raketa hours on every one of these courts — one court, or
+        """The same Rakieta hours on every one of these courts — one court, or
         the courts *Copy to other courts* and *All courts of a sport* reach —
         all or none: an unknown court refuses the whole save. Recorded per
         court, and only where the week moved."""
@@ -217,7 +217,7 @@ class ClubCourts:
         for court in courts:
             if court.hours != hours:
                 self._record_that(
-                    RaketaHoursSet(
+                    RakietaHoursSet(
                         club_id=self.club_id,
                         court_id=court.id,
                         hours=hours.codes,
@@ -332,7 +332,7 @@ class ClubCourts:
     # --------------------------------------------------------------- settings
 
     def save_settings(
-        self, settings: RaketaSettings, *, paused: bool, occurred_at: datetime
+        self, settings: RakietaSettings, *, paused: bool, occurred_at: datetime
     ) -> None:
         """The club saves its settings form. **The first save is the club
         confirming them**, so it records even when every value is a default;
@@ -342,7 +342,7 @@ class ClubCourts:
 
         if settings != self.settings or not self.settings_confirmed:
             self._record_that(
-                RaketaSettingsChanged(
+                RakietaSettingsChanged(
                     club_id=self.club_id,
                     release_lead_days=settings.release_lead_days,
                     cut_off_hours=settings.cut_off_hours,
@@ -352,7 +352,7 @@ class ClubCourts:
                 )
             )
         if paused != self.paused:
-            toggled = RaketaPaused if paused else RaketaResumed
+            toggled = RakietaPaused if paused else RakietaResumed
             self._record_that(toggled(club_id=self.club_id, occurred_at=occurred_at))
 
     # --------------------------------------------------------------- payments
@@ -452,21 +452,21 @@ class ClubCourts:
             )
         elif isinstance(event, ExceptionRemoved):
             del self.exceptions[event.exception_id]
-        elif isinstance(event, (RaketaSettingsChanged, RaketaSettingsChangedV2)):
-            self.settings = RaketaSettings(
+        elif isinstance(event, (RakietaSettingsChanged, RakietaSettingsChangedV2)):
+            self.settings = RakietaSettings(
                 release_lead_days=event.release_lead_days,
                 cut_off_hours=event.cut_off_hours,
                 other_clubs_courts=OtherClubsCourts(
                     # A v2 off was the old default, and the switch is on for
                     # existing clubs too (docs/adr/0202 §7).
                     offered=event.other_clubs_courts
-                    or isinstance(event, RaketaSettingsChangedV2),
+                    or isinstance(event, RakietaSettingsChangedV2),
                     within_km=event.other_clubs_within_km,
                 ),
             )
             self.settings_confirmed = True
-        elif isinstance(event, (RaketaPaused, RaketaResumed)):
-            self.paused = isinstance(event, RaketaPaused)
+        elif isinstance(event, (RakietaPaused, RakietaResumed)):
+            self.paused = isinstance(event, RakietaPaused)
         elif isinstance(event, PricesSet):
             sport = Sport(event.sport)
             if event.price_grosze is None:
@@ -477,7 +477,7 @@ class ClubCourts:
                     grosze=event.price_grosze,
                     bands=tuple(PriceBand.from_code(code) for code in event.bands),
                 )
-        elif isinstance(event, RaketaHoursSet):
+        elif isinstance(event, RakietaHoursSet):
             self.courts[event.court_id] = replace(
                 self.courts[event.court_id],
                 hours=WeeklyHours.from_codes(event.hours),

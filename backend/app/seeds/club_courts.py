@@ -1,9 +1,9 @@
 """The clubs' courts: what each seeded club offers Raketa, and how (#535).
 
 **A seeded court is a court a desk added** (``docs/adr/0029``): every write
-here is the use case the club website's Courts & prices and Raketa settings
-run — ``AddCourt``, ``SetRaketaHours``, ``AddException``, ``SetPrices``,
-``SaveRaketaSettings`` — so each club's **Club courts** stream is the one a
+here is the use case the club website's Courts & prices and Rakieta settings
+run — ``AddCourt``, ``SetRakietaHours``, ``AddException``, ``SetPrices``,
+``SaveRakietaSettings`` — so each club's **Club courts** stream is the one a
 desk would have left, and nothing opens a table.
 
 **The eight are arranged across every state the club website draws**
@@ -20,11 +20,11 @@ desk would have left, and nothing opens a table.
   Raketa's to sell and a card dealt there outlives a day of developing
   against it; Centrum Ruchu keeps two days, and Nowa Huta Squash and Zabłocie
   Sport the default three;
-- **courts per sport**, indoor and outdoor, a weekly pattern of Raketa hours on
+- **courts per sport**, indoor and outdoor, a weekly pattern of Rakieta hours on
   weekday evenings and weekend mornings — where the protagonists' own weeks
   are — **one exception** each, and **price bands** (dearer evenings or
   weekends) on every priced sport. **At least one live club has indoor and
-  outdoor courts of one sport at the same Raketa hours** (#671, Q122), so a
+  outdoor courts of one sport at the same Rakieta hours** (#671, Q122), so a
   move that keeps the kind, a weather cancel and a card's kind can all be
   walked, and the run refuses a seed with none: Bonarka Arena's padel Court 4
   is outdoor beside Courts 1–3 indoors — a padel card there promises neither
@@ -85,15 +85,15 @@ from app.bootstrap.composition import (
 )
 from app.core.config import Settings
 from app.kernel import Instant, Sport
-from app.modules.clubs.application.club_courts import AddCourt, SetRaketaHours
+from app.modules.clubs.application.club_courts import AddCourt, SetRakietaHours
 from app.modules.clubs.application.commands import (
     AddCourtCommand,
     AddExceptionCommand,
     ConnectPaymentsCommand,
     PriceBandInput,
-    SaveRaketaSettingsCommand,
+    SaveRakietaSettingsCommand,
     SetPricesCommand,
-    SetRaketaHoursCommand,
+    SetRakietaHoursCommand,
     SportPriceInput,
 )
 from app.modules.clubs.application.hours_exceptions import AddException
@@ -102,12 +102,12 @@ from app.modules.clubs.application.payments_account import (
     HeedPaymentsAccount,
 )
 from app.modules.clubs.application.prices import SetPrices
-from app.modules.clubs.application.raketa_settings import SaveRaketaSettings
+from app.modules.clubs.application.rakieta_settings import SaveRakietaSettings
 from app.modules.clubs.domain.court_hours import local_day
 from app.modules.clubs.domain.payments_account import PaymentsStatus
 from app.modules.clubs.domain.prices import BandDays, PriceBand
 from app.modules.clubs.domain.ports import ClubAccountRepository
-from app.modules.clubs.domain.raketa_terms import OtherClubsCourts, RaketaSettings
+from app.modules.clubs.domain.rakieta_terms import OtherClubsCourts, RakietaSettings
 from app.modules.clubs.domain.setup import checklist_of
 from app.modules.payments.domain.provider import ClubAccountStatus
 from app.modules.player_profile.domain.weekly_hours import WEEKEND_DAYS
@@ -133,7 +133,7 @@ def _week(days: tuple[int, ...], first: int, until: int) -> tuple[tuple[int, int
     return tuple((day, hour) for day in days for hour in range(first, until))
 
 
-#: Weekday evenings and weekend mornings, the club's busiest Raketa hours.
+#: Weekday evenings and weekend mornings, the club's busiest Rakieta hours.
 EVENINGS_AND_WEEKENDS: Final = _week(_WEEKDAYS, 17, 22) + _week(_WEEKEND, 9, 15)
 
 
@@ -181,8 +181,8 @@ class SeedClubCourts:
     #: The settings the desk confirms — the defaults but for the release
     #: lead, **a day ahead** unless a club says otherwise: the shortest, so the
     #: most of its hours stay Raketa's to sell.
-    settings: RaketaSettings = field(
-        default_factory=lambda: RaketaSettings(release_lead_days=1)
+    settings: RakietaSettings = field(
+        default_factory=lambda: RakietaSettings(release_lead_days=1)
     )
     paused: bool = False
     #: What the provider says of its account once the desk has been to the
@@ -226,7 +226,7 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
             SeedPrice(Sport.SQUASH, 60_00, PriceBand(BandDays.WEEKDAYS, 17, 22, 70_00)),
         ),
         exception=SeedException("Tournament", days_ahead=9, days=2),
-        settings=RaketaSettings(release_lead_days=2),
+        settings=RakietaSettings(release_lead_days=2),
     ),
     SeedClubCourts(
         club="Kazimierz Padel",
@@ -278,7 +278,7 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
             ),
         ),
         exception=SeedException("Tournament", days_ahead=6),
-        settings=RaketaSettings(),
+        settings=RakietaSettings(),
         paused=True,
     ),
     SeedClubCourts(
@@ -297,7 +297,7 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
             SeedPrice(Sport.SQUASH, 56_00, PriceBand(BandDays.WEEKDAYS, 16, 22, 64_00)),
         ),
         exception=SeedException("Repair", days_ahead=4, court=1, hours=(16, 19)),
-        settings=RaketaSettings(
+        settings=RakietaSettings(
             release_lead_days=1,
             other_clubs_courts=OtherClubsCourts(offered=True, within_km=8),
         ),
@@ -329,7 +329,7 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
         ),
         exception=SeedException("Repair", days_ahead=2, court=2, hours=(18, 19)),
         # The default three days: nothing is seeded here to fill.
-        settings=RaketaSettings(),
+        settings=RakietaSettings(),
     ),
 )
 
@@ -437,14 +437,14 @@ async def write_the_club_courts(
                     add_court=AddCourt(
                         clubs=club_repository, courts=courts, uow=uow, clock=clock
                     ),
-                    set_hours=SetRaketaHours(courts=courts, uow=uow, clock=clock),
+                    set_hours=SetRakietaHours(courts=courts, uow=uow, clock=clock),
                     add_exception=AddException(
                         courts=courts, bookings=bookings, uow=uow, clock=clock
                     ),
                     set_prices=SetPrices(
                         clubs=club_repository, courts=courts, uow=uow, clock=clock
                     ),
-                    save=SaveRaketaSettings(courts=courts, uow=uow, clock=clock),
+                    save=SaveRakietaSettings(courts=courts, uow=uow, clock=clock),
                 )
             if (await courts.load(club_id)).payments is None:
                 # The desk's *Connect with Stripe*: the link, and the provider's
@@ -503,10 +503,10 @@ async def _set_up(
     *,
     now: Instant,
     add_court: AddCourt,
-    set_hours: SetRaketaHours,
+    set_hours: SetRakietaHours,
     add_exception: AddException,
     set_prices: SetPrices,
-    save: SaveRaketaSettings,
+    save: SaveRakietaSettings,
 ) -> None:
     """The desk's own order: the courts and their hours, the exception, the
     prices — for a club that got that far — and the settings."""
@@ -525,7 +525,7 @@ async def _set_up(
         for court in declared.courts
     ]
     await set_hours.execute(
-        SetRaketaHoursCommand(
+        SetRakietaHoursCommand(
             club_id=club_id, court_ids=tuple(court_ids), hours=declared.week
         )
     )
@@ -570,7 +570,7 @@ async def _set_up(
         )
     settings = declared.settings
     await save.execute(
-        SaveRaketaSettingsCommand(
+        SaveRakietaSettingsCommand(
             club_id=club_id,
             release_lead_days=settings.release_lead_days,
             cut_off_hours=settings.cut_off_hours,
@@ -599,7 +599,7 @@ def _refuse_a_live_club_with_nothing_for_sale(
 
 def sports_of_both_kinds(declared: SeedClubCourts) -> tuple[Sport, ...]:
     """The sports this club offers on indoor and on outdoor courts alike — at
-    the same Raketa hours, since a seeded club's week is every court's."""
+    the same Rakieta hours, since a seeded club's week is every court's."""
 
     return tuple(
         sport
@@ -618,7 +618,7 @@ def _refuse_a_seed_with_no_club_of_both_kinds(
     if not any(entry.live and sports_of_both_kinds(entry.declared) for entry in seeded):
         raise ClubCourtsRefused(
             "no live club has indoor and outdoor courts of one sport at the "
-            "same Raketa hours — a move that keeps the kind cannot be walked"
+            "same Rakieta hours — a move that keeps the kind cannot be walked"
         )
 
 
@@ -637,7 +637,7 @@ def club_courts_lines(seeded: SeededCourts) -> list[str]:
     new = sum(1 for entry in seeded.clubs if entry.set_up_by_this_run)
     lines = [
         f"Club courts — {len(seeded.clubs)} clubs, {new} set up by this run. Each "
-        "desk's Courts & prices, Raketa settings and Overview draw from these:"
+        "desk's Courts & prices, Rakieta settings and Overview draw from these:"
     ]
     for entry in seeded.clubs:
         declared = entry.declared

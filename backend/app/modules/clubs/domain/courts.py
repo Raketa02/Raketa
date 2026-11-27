@@ -6,7 +6,7 @@ mechanics §16.4). It is **offered** to Raketa or switched off, and switching it
 off keeps it, its hours and its name. Players never pick one: a card promises a
 court at a club at an hour, and the number is given at booking.
 
-**Its Raketa hours are the player's own grid** — ``WeeklyHours``, seven days by
+**Its Rakieta hours are the player's own grid** — ``WeeklyHours``, seven days by
 sixteen hours from 07:00 (``docs/adr/0189`` §3, the screens B3) — reused rather
 than respelled, because *an hour outside it could never match a player* is the
 whole reason for the grid's edges, and a second spelling is how the two would

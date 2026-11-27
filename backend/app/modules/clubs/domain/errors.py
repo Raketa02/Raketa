@@ -320,7 +320,7 @@ class PriceBandsOverlap(BadRequestError):
 
 
 class SettingOutOfRange(BadRequestError):
-    """A Raketa setting outside the range its field offers. ``details`` names
+    """A Rakieta setting outside the range its field offers. ``details`` names
     the field and carries the range, so the website can say both."""
 
     code = "setting_out_of_range"

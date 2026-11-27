@@ -423,14 +423,18 @@ Raketa** — the one way of working until Raketa is the club's booking software 
 game's book-by is always its club's release time, a day or more before it. The seven
 booking events and the proposal event that recorded requests, and the club's
 `clubs.way_of_working_chosen`, left the code without decoders, and
-`clubs.raketa_settings_changed` moved to version 2 without the minimum notice and the
+`clubs.rakieta_settings_changed` moved to version 2 without the minimum notice and the
 time to confirm — a clean cut, since only `local` has ever run. A store written before it
 holds streams nothing can read, so `make down-v && make up && make seed`; migration
 `0058` drops the columns only requests used. `make seed` alone is not enough: it reads the
 store it is given. **The same reset follows the kind of court** (#671; ADR-0196 §4):
 `bookings.confirmed` and `bookings.court_moved` moved to version 2 carrying the court's
 kind, indoor or outdoor, and version 1 of each left without a decoder; migration `0059`
-adds the court a *Game moved* notice names.
+adds the court a *Game moved* notice names. **And again after the brand's rename** (#892;
+ADR-0211): `clubs.rakieta_settings_changed`, `clubs.rakieta_hours_set`,
+`clubs.rakieta_paused` and `clubs.rakieta_resumed` were filed under the old spelling until
+then, with no alias kept, so a store from before fails on the first read of a club's
+courts.
 
 Every address is `<state>@raketa.example`, and the state is what the name says. The
 catalog is a list of **edges**, not of people: nothing yet, exactly one, the maximum, the

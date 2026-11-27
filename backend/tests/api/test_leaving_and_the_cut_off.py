@@ -30,7 +30,7 @@ from app.api.dependencies import get_clock
 from app.bootstrap.composition import build_the_cut_off, build_court_hours
 from app.core.config import get_settings
 from app.kernel import Sport
-from app.modules.clubs.domain.raketa_terms import before_any_deadline
+from app.modules.clubs.domain.rakieta_terms import before_any_deadline
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,

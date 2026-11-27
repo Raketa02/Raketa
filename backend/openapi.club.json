@@ -461,7 +461,7 @@
         "tags": [
           "club"
         ],
-        "summary": "The club's courts, and the Raketa hours of each",
+        "summary": "The club's courts, and the Rakieta hours of each",
         "operationId": "read_courts_api_v1_club_courts_get",
         "responses": {
           "200": {
@@ -486,7 +486,7 @@
           "club"
         ],
         "summary": "Add a court",
-        "description": "A court is born **offered**, and offers nothing until its Raketa hours are painted (`PUT /raketa-hours`).",
+        "description": "A court is born **offered**, and offers nothing until its Rakieta hours are painted (`PUT /rakieta-hours`).",
         "operationId": "add_court_api_v1_club_courts_post",
         "requestBody": {
           "content": {
@@ -685,19 +685,19 @@
         }
       }
     },
-    "/api/v1/club/raketa-hours": {
+    "/api/v1/club/rakieta-hours": {
       "put": {
         "tags": [
           "club"
         ],
-        "summary": "Set the Raketa hours of one court or several",
+        "summary": "Set the Rakieta hours of one court or several",
         "description": "The same week on every court named \u2014 one court's *Save hours*, *Copy to other courts* or *All courts of a sport*. Recorded per court, only where the week moved. **Never refused over a booking or a card**: a booked game is played as booked, and the pattern is what the club offers from now on. Answers every court of the club.",
-        "operationId": "set_raketa_hours_api_v1_club_raketa_hours_put",
+        "operationId": "set_rakieta_hours_api_v1_club_rakieta_hours_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RaketaHoursRequest"
+                "$ref": "#/components/schemas/RakietaHoursRequest"
               }
             }
           },
@@ -975,21 +975,21 @@
         ]
       }
     },
-    "/api/v1/club/raketa-settings": {
+    "/api/v1/club/rakieta-settings": {
       "get": {
         "tags": [
           "club"
         ],
-        "summary": "The club's Raketa settings",
-        "description": "Every setting, **at its default until the club confirms it**. Only Raketa is the one way of working: Raketa sells the club's Raketa hours alone until each one's release time, the release lead before it, so there is no way to choose.",
-        "operationId": "read_raketa_settings_api_v1_club_raketa_settings_get",
+        "summary": "The club's Rakieta settings",
+        "description": "Every setting, **at its default until the club confirms it**. Only Rakieta is the one way of working: Rakieta sells the club's Rakieta hours alone until each one's release time, the release lead before it, so there is no way to choose.",
+        "operationId": "read_rakieta_settings_api_v1_club_rakieta_settings_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RaketaSettingsResponse"
+                  "$ref": "#/components/schemas/RakietaSettingsResponse"
                 }
               }
             }
@@ -1005,14 +1005,14 @@
         "tags": [
           "club"
         ],
-        "summary": "Save \u2014 the first time, confirm \u2014 the club's Raketa settings",
+        "summary": "Save \u2014 the first time, confirm \u2014 the club's Rakieta settings",
         "description": "Every setting, defaults included: **the first save confirms them**, the setup checklist's last step. A changed setting applies to games booked after the change. Pausing stops new cards on the club's courts; booked games are played as booked.",
-        "operationId": "save_raketa_settings_api_v1_club_raketa_settings_put",
+        "operationId": "save_rakieta_settings_api_v1_club_rakieta_settings_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RaketaSettingsRequest"
+                "$ref": "#/components/schemas/RakietaSettingsRequest"
               }
             }
           },
@@ -1024,7 +1024,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RaketaSettingsResponse"
+                  "$ref": "#/components/schemas/RakietaSettingsResponse"
                 }
               }
             }
@@ -4003,7 +4003,7 @@
         ],
         "title": "PricesResponse"
       },
-      "RaketaHoursRequest": {
+      "RakietaHoursRequest": {
         "properties": {
           "court_ids": {
             "items": {
@@ -4030,10 +4030,10 @@
           "court_ids",
           "hours"
         ],
-        "title": "RaketaHoursRequest",
-        "description": "*Weekly hours for Raketa*, saved on one court or several at once \u2014\nwhich is what *Copy to other courts* and *All courts of a sport* send."
+        "title": "RakietaHoursRequest",
+        "description": "*Weekly hours for Rakieta*, saved on one court or several at once \u2014\nwhich is what *Copy to other courts* and *All courts of a sport* send."
       },
-      "RaketaSettingsRequest": {
+      "RakietaSettingsRequest": {
         "properties": {
           "release_lead_days": {
             "type": "integer",
@@ -4052,7 +4052,7 @@
           "paused": {
             "type": "boolean",
             "title": "Paused",
-            "description": "*Pause Raketa bookings*: no new cards on the club's courts; booked games are played as booked, and cards already dealt keep their court until their book-by."
+            "description": "*Pause Rakieta bookings*: no new cards on the club's courts; booked games are played as booked, and cards already dealt keep their court until their book-by."
           }
         },
         "additionalProperties": false,
@@ -4063,10 +4063,10 @@
           "other_clubs_courts",
           "paused"
         ],
-        "title": "RaketaSettingsRequest",
+        "title": "RakietaSettingsRequest",
         "description": "The settings form \u2014 every field on every save, defaults included, since\nthe first save is the club **confirming** them. Each number is bounded by\nthe domain: `setting_out_of_range` names the field and carries `least` and\n`most`."
       },
-      "RaketaSettingsResponse": {
+      "RakietaSettingsResponse": {
         "properties": {
           "release_lead_days": {
             "type": "integer",
@@ -4091,7 +4091,7 @@
           "other_clubs_courts",
           "paused"
         ],
-        "title": "RaketaSettingsResponse",
+        "title": "RakietaSettingsResponse",
         "description": "Every setting \u2014 **at its default until the club confirms it**, so the\nform can show what it would save."
       },
       "RefreshRequest": {

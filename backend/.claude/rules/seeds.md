@@ -46,7 +46,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `decision_on_record` agrees to believe. The object store is the one thing the seed writes
   that lives outside the database, so the run **asks it one question first** and reports
   rather than dies when it cannot answer.
-- **At least one live club has indoor and outdoor courts of one sport at the same Raketa
+- **At least one live club has indoor and outdoor courts of one sport at the same Rakieta
   hours** (#671, Q122), and the run refuses a seed with none
   (`_refuse_a_seed_with_no_club_of_both_kinds`): Bonarka Arena's padel Court 4 is outdoor
   beside Courts 1–3 indoors — her game books Court 1 and may move to 2 or 3, never 4, and a

@@ -709,7 +709,7 @@ there; they are not repeated here.
   answered. **One source for every reader**: the proposer (picks and the owed card) and
   Post a game's grid and slot sheet, and the friends card with *Find a court* (#750), so a group
   never has two court rules. *No free court* is read off what Raketa may sell now: booked
-  out, closed, outside the club's Raketa hours, past its book-by, or the club paused — the
+  out, closed, outside the club's Rakieta hours, past its book-by, or the club paused — the
   notion the old refusal's *an hour at home* used too. _Avoid_: a refusal per set of players
   (the old *no shared hour at home in 14 days*), and filtering hours on sale in a reader of
   its own.

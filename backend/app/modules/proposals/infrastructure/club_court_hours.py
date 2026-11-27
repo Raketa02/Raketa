@@ -43,7 +43,7 @@ from app.modules.clubs.domain.ports import (
     ClubDirectory,
     SellableCourtHours,
 )
-from app.modules.clubs.domain.raketa_terms import before_any_deadline
+from app.modules.clubs.domain.rakieta_terms import before_any_deadline
 from app.modules.clubs.domain.sellable import ClubOffer, SellableCourtHour
 from app.modules.proposals.domain.deck import SellingTerms
 from app.modules.proposals.domain.ports import CourtHourKey, OfferedCourtHour

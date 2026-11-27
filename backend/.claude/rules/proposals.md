@@ -261,7 +261,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   Post a game's grid, and by the friends card (#750, below) — so a group never has two
   court rules. The
   old *no shared hour at home in 14 days* refusal is gone. **No free court is read off what
-  Raketa may sell now** — booked out, closed, outside the Raketa hours, past its book-by,
+  Rakieta may sell now** — booked out, closed, outside the Rakieta hours, past its book-by,
   or the club paused — as the old refusal read *an hour at home* (a call, #746's handover):
   so inside the home club's release lead, a neighbour with a shorter one is offered at
   every hour it sells, and the soonest-first dealing reaches it first.

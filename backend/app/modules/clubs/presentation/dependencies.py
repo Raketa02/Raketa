@@ -45,10 +45,10 @@ from app.modules.clubs.application.club_courts import (
     ReadClubCourts,
     ReadSetup,
     RemoveCourt,
-    SetRaketaHours,
+    SetRakietaHours,
 )
 from app.modules.clubs.application.prices import ReadPrices, SetPrices
-from app.modules.clubs.application.raketa_settings import SaveRaketaSettings
+from app.modules.clubs.application.rakieta_settings import SaveRakietaSettings
 from app.modules.clubs.application.hours_exceptions import (
     AddException,
     ReadExceptions,
@@ -197,13 +197,13 @@ def get_remove_court(
 RemoveCourtDep = Annotated[RemoveCourt, Depends(get_remove_court)]
 
 
-def get_set_raketa_hours(
+def get_set_rakieta_hours(
     courts: ClubCourtsRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
-) -> SetRaketaHours:
-    return SetRaketaHours(courts=courts, uow=uow, clock=clock)
+) -> SetRakietaHours:
+    return SetRakietaHours(courts=courts, uow=uow, clock=clock)
 
 
-SetRaketaHoursDep = Annotated[SetRaketaHours, Depends(get_set_raketa_hours)]
+SetRakietaHoursDep = Annotated[SetRakietaHours, Depends(get_set_rakieta_hours)]
 
 
 def get_change_club_details(
@@ -267,13 +267,15 @@ def get_set_prices(
 SetPricesDep = Annotated[SetPrices, Depends(get_set_prices)]
 
 
-def get_save_raketa_settings(
+def get_save_rakieta_settings(
     courts: ClubCourtsRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
-) -> SaveRaketaSettings:
-    return SaveRaketaSettings(courts=courts, uow=uow, clock=clock)
+) -> SaveRakietaSettings:
+    return SaveRakietaSettings(courts=courts, uow=uow, clock=clock)
 
 
-SaveRaketaSettingsDep = Annotated[SaveRaketaSettings, Depends(get_save_raketa_settings)]
+SaveRakietaSettingsDep = Annotated[
+    SaveRakietaSettings, Depends(get_save_rakieta_settings)
+]
 
 
 # --- The club's session: the auth use cases, built for the club audience -----

@@ -23,11 +23,11 @@ from app.modules.clubs.domain.club_courts_events import (
     PaymentsAccountOpened,
     PaymentsStatusChanged,
     PricesSet,
-    RaketaHoursSet,
-    RaketaPaused,
-    RaketaResumed,
-    RaketaSettingsChanged,
-    RaketaSettingsChangedV2,
+    RakietaHoursSet,
+    RakietaPaused,
+    RakietaResumed,
+    RakietaSettingsChanged,
+    RakietaSettingsChangedV2,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,14 +38,14 @@ ClubCourtsEvent = (
     | CourtSwitchedOff
     | CourtSwitchedOn
     | CourtRemoved
-    | RaketaHoursSet
+    | RakietaHoursSet
     | ExceptionAdded
     | ExceptionRemoved
     | PricesSet
-    | RaketaSettingsChanged
-    | RaketaSettingsChangedV2
-    | RaketaPaused
-    | RaketaResumed
+    | RakietaSettingsChanged
+    | RakietaSettingsChangedV2
+    | RakietaPaused
+    | RakietaResumed
     | PaymentsAccountOpened
     | PaymentsStatusChanged
 )
@@ -56,14 +56,14 @@ _LINES: dict[type, str] = {
     CourtSwitchedOff: "clubs.court.switched_off",
     CourtSwitchedOn: "clubs.court.switched_on",
     CourtRemoved: "clubs.court.removed",
-    RaketaHoursSet: "clubs.raketa_hours.set",
+    RakietaHoursSet: "clubs.rakieta_hours.set",
     ExceptionAdded: "clubs.exception.added",
     ExceptionRemoved: "clubs.exception.removed",
     PricesSet: "clubs.prices.set",
-    RaketaSettingsChanged: "clubs.raketa_settings.changed",
-    RaketaSettingsChangedV2: "clubs.raketa_settings.changed",
-    RaketaPaused: "clubs.raketa.paused",
-    RaketaResumed: "clubs.raketa.resumed",
+    RakietaSettingsChanged: "clubs.rakieta_settings.changed",
+    RakietaSettingsChangedV2: "clubs.rakieta_settings.changed",
+    RakietaPaused: "clubs.rakieta.paused",
+    RakietaResumed: "clubs.rakieta.resumed",
     PaymentsAccountOpened: "clubs.payments_account.opened",
     PaymentsStatusChanged: "clubs.payments_status.changed",
 }

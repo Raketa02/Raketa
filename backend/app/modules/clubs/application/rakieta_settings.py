@@ -1,18 +1,18 @@
-"""The club's Raketa settings (#535, the mechanics §16.3, §16.6, §16.15, the
-screens B5). Only Raketa is the one way of working, so there is nothing to
+"""The club's Rakieta settings (#535, the mechanics §16.3, §16.6, §16.15, the
+screens B5). Only Rakieta is the one way of working, so there is nothing to
 choose before them (#670; ``docs/adr/0196`` §1)."""
 
 from __future__ import annotations
 
 from app.application.ports import UnitOfWork
 from app.kernel import Clock
-from app.modules.clubs.application.commands import SaveRaketaSettingsCommand
+from app.modules.clubs.application.commands import SaveRakietaSettingsCommand
 from app.modules.clubs.domain.club_courts import ClubCourts
 from app.modules.clubs.domain.ports import ClubCourtsRepository
-from app.modules.clubs.domain.raketa_terms import OtherClubsCourts, RaketaSettings
+from app.modules.clubs.domain.rakieta_terms import OtherClubsCourts, RakietaSettings
 
 
-class SaveRaketaSettings:
+class SaveRakietaSettings:
     """The club saves — and the first time, **confirms** — its settings: the
     checklist's last step. Pausing is on the same form, and stops new cards on
     the club's courts while booked games are played as booked (§16.15)."""
@@ -24,8 +24,8 @@ class SaveRaketaSettings:
         self._uow = uow
         self._clock = clock
 
-    async def execute(self, command: SaveRaketaSettingsCommand) -> ClubCourts:
-        settings = RaketaSettings(
+    async def execute(self, command: SaveRakietaSettingsCommand) -> ClubCourts:
+        settings = RakietaSettings(
             release_lead_days=command.release_lead_days,
             cut_off_hours=command.cut_off_hours,
             other_clubs_courts=OtherClubsCourts(

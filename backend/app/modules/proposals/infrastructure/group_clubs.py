@@ -4,7 +4,7 @@ it may also play at (the mechanics §4.3, §18; ``docs/adr/0202`` §7).
 **A player group** plays at its home club first and then at any club within
 ``PLAYER_GROUP_CLUBS_WITHIN_KM`` of it, nearest first. **An official group**
 plays at its own club, and — while the club offers its groups other clubs'
-courts, a setting it holds in its Raketa settings (on by default), read off the
+courts, a setting it holds in its Rakieta settings (on by default), read off the
 offer the Club context publishes — at the clubs within the distance it chose,
 **only at an hour its own club has no free court**: that is
 ``PoolClubs.offered``'s rule, hour by hour, and this read answers only the

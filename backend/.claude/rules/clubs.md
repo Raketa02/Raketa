@@ -40,22 +40,22 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   answers an unwritten aggregate. It holds the courts (one sport each, from
   the club's own; indoor or outdoor — **the kind of court**, carried on every sellable hour
   and read by the fill, the club's Move and a card's promise, #671, Q122; offered or
-  switched off), each court's **Raketa hours** —
+  switched off), each court's **Rakieta hours** —
   the player's own `WeeklyHours`, imported rather than respelled, with no floor — the
   exceptions, the price table, the settings and pause, and the club's
   payments account (#537); **no projection of courts is written beside it** — the one row is
   which club a payments account is. Five things are load-bearing. **One way of working: Only
-  Raketa, until Raketa is the club's booking software**
+  Rakieta, until Rakieta is the club's booking software**
   ([ADR-0196](../../../docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
-  §1, #670): the club hands Raketa its Raketa hours, which Raketa sells alone until each
+  §1, #670): the club hands Rakieta its Rakieta hours, which Rakieta sells alone until each
   one's **release time** — the release lead before it, 1–13 days, 3 by default — so the
   **book-by is always the release time** and no game fills later than a day before its
   start. *Instant* and *On request* went with the choice between the three, and the
   **minimum notice** and the **time to confirm** with them: the settings
-  (`domain/raketa_terms.py`, `PUT /club/raketa-settings`) are the release lead, the
+  (`domain/rakieta_terms.py`, `PUT /club/rakieta-settings`) are the release lead, the
   cut-off, other clubs' courts for the club's groups, and pause, and saving them needs
   nothing chosen first. A clean cut: `clubs.way_of_working_chosen` is unregistered and
-  `clubs.raketa_settings_changed` went to version 2 (version 1, which carried the two
+  `clubs.rakieta_settings_changed` went to version 2 (version 1, which carried the two
   settings and the retired `check_in`, is a decoding error), with the local store reset.
   **Other clubs' courts are on by default, for existing clubs too** (#746;
   [ADR-0202](../../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
@@ -63,7 +63,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   offered other clubs within its distance **only at an hour its own courts are full** — the
   court source's rule (`proposals.md`), not this context's. Saves are written at **version
   3**, the same shape; **version 2 stays registered, decode-only**
-  (`RaketaSettingsChangedV2`) and **its switch folds on**, keeping its distance — an
+  (`RakietaSettingsChangedV2`) and **its switch folds on**, keeping its distance — an
   upcaster, not a reset, because a v2 *off* was the form saving the old default and cannot be
   told from a club's choice. From version 3, *off* is the club's own.
   The *double booking* cancel reason stays: a desk can still sell a handed-over hour by
@@ -71,7 +71,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   must **split** among the sport's seats (`price_does_not_split`), so a share is exact and
   nothing is rounded (`domain/prices.py`; `docs/value-formatting.md`). **What a club can sell is
   never stored**: `domain/sellable.py` folds the pattern less the exceptions less what bookings
-  hold less every hour past its **book-by** — derived once, in `raketa_terms.book_by`, and
+  hold less every hour past its **book-by** — derived once, in `rakieta_terms.book_by`, and
   carried on each hour — for a **live** club only, and publishes it as `SellableCourtHours`
   (`build_sellable_court_hours`), which the proposer, posting and the fill read; a paused club
   is still live and says `taking_new_cards=False`. **What bookings hold is the Bookings

@@ -19,11 +19,11 @@ from app.modules.clubs.domain.club_courts_events import (
     PaymentsAccountOpened,
     PaymentsStatusChanged,
     PricesSet,
-    RaketaHoursSet,
-    RaketaPaused,
-    RaketaResumed,
-    RaketaSettingsChanged,
-    RaketaSettingsChangedV2,
+    RakietaHoursSet,
+    RakietaPaused,
+    RakietaResumed,
+    RakietaSettingsChanged,
+    RakietaSettingsChangedV2,
 )
 from app.modules.clubs.domain.events import (
     ClubAccountOpened,
@@ -33,24 +33,31 @@ from app.modules.clubs.domain.events import (
 )
 
 
-#: The wire version ``clubs.raketa_settings_changed`` is written under: version
+#: The wire version ``clubs.rakieta_settings_changed`` is written under: version
 #: 1 carried the minimum notice and the time to confirm, which #670 removed with
 #: Instant and On request — a change to the wire shape, versioned as one — and
 #: ``check_in``, retired with desk check-in (#651) and decodable until then.
 #: Version 1 is not registered: the store is reset with the removal, so a
 #: stored row of it is a decoding error, and no row of version 2 ever carried
 #: *We check players in*. ``clubs.way_of_working_chosen`` is unregistered with
-#: the choice (``docs/adr/0196`` §1): Only Raketa is the one way, and a class
+#: the choice (``docs/adr/0196`` §1): Only Rakieta is the one way, and a class
 #: kept only so an old row decodes would be a reader for a fact nothing reads.
 #:
 #: **Version 3 is version 2's shape with a new meaning for one field** (#746,
 #: ``docs/adr/0202`` §7): other clubs' courts are on by default, for existing
 #: clubs too, and a v2 row cannot tell a club's *off* from the old default the
 #: form saved for it. So **version 2 stays registered, decode-only**
-#: (``RaketaSettingsChangedV2``), and the fold reads its switch on — an
-#: upcaster rather than a store reset, so a developer's local clubs read on
-#: without reseeding. From version 3, *off* is the club's own choice.
-RAKETA_SETTINGS_CHANGED_VERSION = 3
+#: (``RakietaSettingsChangedV2``), and the fold reads its switch on — an
+#: upcaster rather than a store reset, chosen so a developer's local clubs read
+#: on without reseeding. From version 3, *off* is the club's own choice.
+#:
+#: **The settings, the hours and pausing were filed under the brand's old
+#: spelling until #892** (``docs/adr/0211``). Those names are unregistered, with
+#: no alias, and the local store is reset with the rename, so no stored row
+#: holds version 2 under the new name. The rename kept every version as it
+#: stood (PRD #889): dropping version 2 is a decision of its own, not the
+#: rename's.
+RAKIETA_SETTINGS_CHANGED_VERSION = 3
 
 
 def register_club_events(catalog: EventCatalog) -> None:
@@ -68,20 +75,20 @@ def register_club_events(catalog: EventCatalog) -> None:
     catalog.register(CourtSwitchedOff, name="clubs.court_switched_off", version=1)
     catalog.register(CourtSwitchedOn, name="clubs.court_switched_on", version=1)
     catalog.register(CourtRemoved, name="clubs.court_removed", version=1)
-    catalog.register(RaketaHoursSet, name="clubs.raketa_hours_set", version=1)
+    catalog.register(RakietaHoursSet, name="clubs.rakieta_hours_set", version=1)
     catalog.register(ExceptionAdded, name="clubs.exception_added", version=1)
     catalog.register(ExceptionRemoved, name="clubs.exception_removed", version=1)
     catalog.register(PricesSet, name="clubs.prices_set", version=1)
     catalog.register(
-        RaketaSettingsChangedV2, name="clubs.raketa_settings_changed", version=2
+        RakietaSettingsChangedV2, name="clubs.rakieta_settings_changed", version=2
     )
     catalog.register(
-        RaketaSettingsChanged,
-        name="clubs.raketa_settings_changed",
-        version=RAKETA_SETTINGS_CHANGED_VERSION,
+        RakietaSettingsChanged,
+        name="clubs.rakieta_settings_changed",
+        version=RAKIETA_SETTINGS_CHANGED_VERSION,
     )
-    catalog.register(RaketaPaused, name="clubs.raketa_paused", version=1)
-    catalog.register(RaketaResumed, name="clubs.raketa_resumed", version=1)
+    catalog.register(RakietaPaused, name="clubs.rakieta_paused", version=1)
+    catalog.register(RakietaResumed, name="clubs.rakieta_resumed", version=1)
     # The club's payments account (#537), on the same stream.
     catalog.register(
         PaymentsAccountOpened, name="clubs.payments_account_opened", version=1
@@ -103,14 +110,14 @@ def subscribe_club_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(CourtSwitchedOff, LogClubCourtsEvent())
     dispatcher.subscribe(CourtSwitchedOn, LogClubCourtsEvent())
     dispatcher.subscribe(CourtRemoved, LogClubCourtsEvent())
-    dispatcher.subscribe(RaketaHoursSet, LogClubCourtsEvent())
+    dispatcher.subscribe(RakietaHoursSet, LogClubCourtsEvent())
     dispatcher.subscribe(ExceptionAdded, LogClubCourtsEvent())
     dispatcher.subscribe(ExceptionRemoved, LogClubCourtsEvent())
     dispatcher.subscribe(PricesSet, LogClubCourtsEvent())
-    dispatcher.subscribe(RaketaSettingsChanged, LogClubCourtsEvent())
+    dispatcher.subscribe(RakietaSettingsChanged, LogClubCourtsEvent())
     # A v2 row still in the outbox is delivered like any other.
-    dispatcher.subscribe(RaketaSettingsChangedV2, LogClubCourtsEvent())
-    dispatcher.subscribe(RaketaPaused, LogClubCourtsEvent())
-    dispatcher.subscribe(RaketaResumed, LogClubCourtsEvent())
+    dispatcher.subscribe(RakietaSettingsChangedV2, LogClubCourtsEvent())
+    dispatcher.subscribe(RakietaPaused, LogClubCourtsEvent())
+    dispatcher.subscribe(RakietaResumed, LogClubCourtsEvent())
     dispatcher.subscribe(PaymentsAccountOpened, LogClubCourtsEvent())
     dispatcher.subscribe(PaymentsStatusChanged, LogClubCourtsEvent())

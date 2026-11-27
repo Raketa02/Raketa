@@ -307,7 +307,7 @@ class PoolClubs:
         another club's **only at an hour where the home club has no free court
         of the sport**. *None* is read off what Raketa may sell now, as every
         free court here is: an hour booked out, closed, outside the club's
-        Raketa hours, past its book-by or while the club is paused all leave
+        Rakieta hours, past its book-by or while the club is paused all leave
         the home club nothing to sell then (a call, #746)."""
 
         free = [

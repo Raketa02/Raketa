@@ -28,7 +28,7 @@ from zoneinfo import ZoneInfo
 from app.kernel import Instant, Sport, instant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
 from app.modules.clubs.domain.ports import ClubListing
-from app.modules.clubs.domain.raketa_terms import OtherClubsCourts, RaketaSettings
+from app.modules.clubs.domain.rakieta_terms import OtherClubsCourts, RakietaSettings
 from app.modules.clubs.domain.sellable import ClubOffer
 from app.modules.matchmaking.domain.geography import KM_PER_DEGREE_OF_LATITUDE
 from app.modules.proposals.domain.pool import Pool, PoolKind
@@ -111,7 +111,7 @@ class Clubs:
 class Sellable:
     """Ogrody 33's offer — its terms, which is all the court source reads."""
 
-    settings: RaketaSettings = field(default_factory=RaketaSettings)
+    settings: RakietaSettings = field(default_factory=RakietaSettings)
 
     async def between(self, club_ids, *, start, end, now):
         return {
@@ -157,12 +157,12 @@ THE_WEEK = [
 
 
 async def the_courts_of(
-    *, official: bool = True, settings: RaketaSettings | None = None
+    *, official: bool = True, settings: RakietaSettings | None = None
 ) -> PoolClubs:
     clubs = await GroupClubs(
         groups=Groups(Listing(home_club_id=OGRODY, is_official=official)),
         clubs=Clubs(),
-        sellable=Sellable(settings or RaketaSettings()),
+        sellable=Sellable(settings or RakietaSettings()),
     ).of(GROUP, now=NOW)
     assert clubs is not None
     return clubs
@@ -210,7 +210,7 @@ async def test_where_the_home_club_is_full_a_club_within_its_distance_is_offered
 
 async def test_switched_off_the_group_plays_only_at_its_club():
     clubs = await the_courts_of(
-        settings=RaketaSettings(other_clubs_courts=OtherClubsCourts(offered=False))
+        settings=RakietaSettings(other_clubs_courts=OtherClubsCourts(offered=False))
     )
 
     assert offered(clubs, THE_WEEK) == [(OGRODY, TUESDAY_21, False)]
@@ -218,10 +218,10 @@ async def test_switched_off_the_group_plays_only_at_its_club():
 
 async def test_a_club_beyond_the_club_s_distance_is_never_offered():
     near = await the_courts_of(
-        settings=RaketaSettings(other_clubs_courts=OtherClubsCourts(within_km=3))
+        settings=RakietaSettings(other_clubs_courts=OtherClubsCourts(within_km=3))
     )
     far = await the_courts_of(
-        settings=RaketaSettings(other_clubs_courts=OtherClubsCourts(within_km=16))
+        settings=RakietaSettings(other_clubs_courts=OtherClubsCourts(within_km=16))
     )
 
     # Wisła Park is 4 km away and Tenis Katowice 15.

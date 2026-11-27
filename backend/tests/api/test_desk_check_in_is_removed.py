@@ -6,7 +6,7 @@ emits: the club's route and its day rows' checked-in time, the *We check players
 in* setting, the details' code and the tiles' flag, and the test console's press
 and situation. What each read still carries is asserted where it is read
 (``test_the_club_runs_its_bookings.py``, ``test_home_and_details.py``,
-``test_club_raketa_settings.py``, the console's own files); this holds the
+``test_club_rakieta_settings.py``, the console's own files); this holds the
 contract whole, and the routes that are no longer anybody's.
 """
 

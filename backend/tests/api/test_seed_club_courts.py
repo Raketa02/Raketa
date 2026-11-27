@@ -3,7 +3,7 @@ reads them (#535, #537).
 
 ``app/seeds/club_courts.py`` sets every seeded club up **through the use cases a
 desk's pages run**, so each is asserted by signing in as its desk and reading
-its Overview, Courts & prices and Raketa settings — never a stream or a table.
+its Overview, Courts & prices and Rakieta settings — never a stream or a table.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from tests.api.club_courts_world import (
     COURTS,
     EXCEPTIONS,
     PRICES,
-    RAKETA_SETTINGS,
+    RAKIETA_SETTINGS,
     SETUP,
 )
 from tests.api.test_clubs import SIGN_IN, bearer
@@ -77,7 +77,7 @@ async def test_one_club_is_not_live_and_one_is_paused(client, clock, session_fac
     leads, live, paused = {}, [], []
     for declared in SEED_CLUB_COURTS:
         desk = await desk_of(client, declared.club)
-        settings = await read(client, desk, RAKETA_SETTINGS)
+        settings = await read(client, desk, RAKIETA_SETTINGS)
         setup = await read(client, desk, SETUP)
         leads[declared.club] = settings["release_lead_days"]
         if setup["live"]:
@@ -137,7 +137,7 @@ async def test_a_club_seeded_before_payments_is_connected_on_the_next_run(
     )
     desk = await desk_of(client, "Wisła Park")
     saved = await client.put(
-        RAKETA_SETTINGS,
+        RAKIETA_SETTINGS,
         json={
             "release_lead_days": 3,
             "cut_off_hours": 24,
@@ -186,7 +186,7 @@ async def test_a_live_club_has_indoor_and_outdoor_courts_of_one_sport_at_one_hou
 ):
     """#671 (Q122): a move that keeps the kind, a weather cancel and a card's
     kind are walked at Bonarka Arena, where padel Court 4 is outdoor beside
-    three indoor courts on the same Raketa hours — and at Ogrody 33's tennis,
+    three indoor courts on the same Rakieta hours — and at Ogrody 33's tennis,
     where the outdoor court comes first."""
 
     await seeded(session_factory)

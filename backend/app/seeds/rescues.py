@@ -55,7 +55,7 @@ from app.bootstrap.composition import (
 from app.core.config import Settings
 from app.kernel import Instant, hours, shifted
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
-from app.modules.clubs.domain.raketa_terms import before_any_deadline
+from app.modules.clubs.domain.rakieta_terms import before_any_deadline
 from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.player_profile.domain.weekly_hours import free_for_the_hour
 from app.modules.proposals.application.commands import (

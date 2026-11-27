@@ -83,7 +83,7 @@ class CourtRemoved:
 
 
 @dataclass(frozen=True)
-class RaketaHoursSet:
+class RakietaHoursSet:
     """The hours of an ordinary week this court is offered to Raketa, **as they
     now stand** — the player's grid, each cell as its durable code
     (``"2:19"``), in the week's own order. Empty is a court offering nothing."""
@@ -153,8 +153,8 @@ class PricesSet:
 
 
 @dataclass(frozen=True)
-class RaketaSettingsChanged:
-    """The club saved its Raketa settings, **all of them as they now stand**.
+class RakietaSettingsChanged:
+    """The club saved its Rakieta settings, **all of them as they now stand**.
     The first one is also the club **confirming** them — defaults included —
     which is the setup checklist's last step.
 
@@ -170,8 +170,8 @@ class RaketaSettingsChanged:
 
 
 @dataclass(frozen=True)
-class RaketaSettingsChangedV2:
-    """``clubs.raketa_settings_changed`` **v2**, decode-only: the settings as
+class RakietaSettingsChangedV2:
+    """``clubs.rakieta_settings_changed`` **v2**, decode-only: the settings as
     they were saved while other clubs' courts were **off by default**
     (#670–#745).
 
@@ -179,7 +179,7 @@ class RaketaSettingsChangedV2:
     from a default nobody touched, and the switch is now **on by default for
     existing clubs too** (``docs/adr/0202`` §7): **the fold reads it on**, at
     the distance it kept, and every other setting as saved. Kept beside
-    :class:`RaketaSettingsChanged` rather than folded into it, because the
+    :class:`RakietaSettingsChanged` rather than folded into it, because the
     codec builds an event from every key its row carries.
     """
 
@@ -192,7 +192,7 @@ class RaketaSettingsChangedV2:
 
 
 @dataclass(frozen=True)
-class RaketaPaused:
+class RakietaPaused:
     """No new cards on this club's courts. Booked games are played as booked,
     and cards already dealt keep their court until their book-by (§16.15)."""
 
@@ -201,7 +201,7 @@ class RaketaPaused:
 
 
 @dataclass(frozen=True)
-class RaketaResumed:
+class RakietaResumed:
     """New cards on this club's courts again."""
 
     club_id: UUID

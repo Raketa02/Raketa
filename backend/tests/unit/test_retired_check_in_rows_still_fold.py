@@ -7,8 +7,8 @@ code that wrote them** (``.claude/rules/domain-events.md``), and every read of
 a booking walks the whole stream — so the row still decodes, and the fold reads
 it and changes nothing but the stream's version.
 
-A club's Raketa settings rows carried ``check_in`` too, decodable until #670
-moved ``clubs.raketa_settings_changed`` to version 2 with the store reset
+A club's Rakieta settings rows carried ``check_in`` too, decodable until #670
+moved ``clubs.rakieta_settings_changed`` to version 2 with the store reset
 (``test_club_event_codec.py``): a version 1 row is refused, and no version 2
 row ever carried the switch.
 """

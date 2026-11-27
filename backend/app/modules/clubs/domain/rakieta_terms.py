@@ -1,8 +1,8 @@
-"""A club's Raketa settings, and the book-by they give each hour (the mechanics
+"""A club's Rakieta settings, and the book-by they give each hour (the mechanics
 §5.4, §16.3, §16.6, §16.15; ``docs/adr/0189`` §3, ``docs/adr/0196`` §1).
 
-**One way of working: Only Raketa, until Raketa is the club's booking
-software** (#670). The club hands Raketa a block of hours, which Raketa sells
+**One way of working: Only Rakieta, until Rakieta is the club's booking
+software** (#670). The club hands Rakieta a block of hours, which Rakieta sells
 alone until the **release time** — the release lead before each game — and a
 court hour's **book-by** is that release time. Nobody chooses a book-by;
 ``book_by`` is where it is derived, once, so a card and the hours a club can
@@ -51,7 +51,7 @@ class OtherClubsCourts:
     official group is offered other clubs within the distance at an hour its
     club has no free court, and only its club's while switched off. The
     distance is kept while it is off, so switching it back on restores it. Its
-    range is refused by ``RaketaSettings``, in the form's order."""
+    range is refused by ``RakietaSettings``, in the form's order."""
 
     offered: bool = True
     within_km: int = 10
@@ -59,7 +59,7 @@ class OtherClubsCourts:
 
 @final
 @dataclass(frozen=True, slots=True)
-class RaketaSettings:
+class RakietaSettings:
     """The settings a club confirms, **each at its default until it does**
     (the mechanics §16.6). A changed setting applies to games booked after the
     change; a booked game keeps the cut-off it was booked with."""
@@ -79,7 +79,7 @@ class RaketaSettings:
         )
 
 
-def book_by(start: Instant, *, settings: RaketaSettings) -> Instant:
+def book_by(start: Instant, *, settings: RakietaSettings) -> Instant:
     """The latest moment a game on the court hour from ``start`` can still
     fill (the mechanics §5.4): **its release time**, the release lead before
     it — after which the hour is the club's again.

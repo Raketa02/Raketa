@@ -86,7 +86,7 @@ class RemoveCourtCommand:
 
 
 @dataclass(frozen=True)
-class SetRaketaHoursCommand:
+class SetRakietaHoursCommand:
     """The same week of ``(weekday, hour)`` cells on each of these courts."""
 
     club_id: UUID
@@ -138,7 +138,7 @@ class SetPricesCommand:
 
 
 @dataclass(frozen=True)
-class SaveRaketaSettingsCommand:
+class SaveRakietaSettingsCommand:
     """The settings form, every field as the desk leaves it."""
 
     club_id: UUID

@@ -36,7 +36,7 @@ from app.bootstrap.composition import (
 )
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Sport
-from app.modules.clubs.domain.raketa_terms import before_any_deadline
+from app.modules.clubs.domain.rakieta_terms import before_any_deadline
 from app.modules.bookings.domain.events import PlayerCheckedIn
 from app.modules.bookings.infrastructure.event_sourced_booking_repository import (
     BOOKING_AGGREGATE,

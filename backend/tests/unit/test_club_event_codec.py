@@ -31,12 +31,12 @@ from app.modules.clubs.domain.club_courts_events import (
     ExceptionAdded,
     ExceptionRemoved,
     PricesSet,
-    RaketaHoursSet,
-    RaketaPaused,
-    RaketaResumed,
-    RaketaSettingsChanged,
+    RakietaHoursSet,
+    RakietaPaused,
+    RakietaResumed,
+    RakietaSettingsChanged,
 )
-from app.modules.clubs.domain.raketa_terms import OtherClubsCourts
+from app.modules.clubs.domain.rakieta_terms import OtherClubsCourts
 from app.modules.clubs.domain.events import (
     ClubAccountOpened,
     ClubDetailsChanged,
@@ -144,7 +144,7 @@ COURT_EVENTS = [
     CourtSwitchedOff(club_id=CLUB, court_id=COURT, occurred_at=NOW),
     CourtSwitchedOn(club_id=CLUB, court_id=COURT, occurred_at=NOW),
     CourtRemoved(club_id=CLUB, court_id=COURT, occurred_at=NOW),
-    RaketaHoursSet(
+    RakietaHoursSet(
         club_id=CLUB, court_id=COURT, hours=("2:18", "2:19", "6:9"), occurred_at=NOW
     ),
     ExceptionAdded(
@@ -180,7 +180,7 @@ COURT_EVENTS = [
     PricesSet(
         club_id=CLUB, sport="TENNIS", price_grosze=None, bands=(), occurred_at=NOW
     ),
-    RaketaSettingsChanged(
+    RakietaSettingsChanged(
         club_id=CLUB,
         release_lead_days=3,
         cut_off_hours=24,
@@ -188,8 +188,8 @@ COURT_EVENTS = [
         other_clubs_within_km=15,
         occurred_at=NOW,
     ),
-    RaketaPaused(club_id=CLUB, occurred_at=NOW),
-    RaketaResumed(club_id=CLUB, occurred_at=NOW),
+    RakietaPaused(club_id=CLUB, occurred_at=NOW),
+    RakietaResumed(club_id=CLUB, occurred_at=NOW),
 ]
 
 
@@ -220,7 +220,7 @@ def test_the_club_courts_events_are_filed_in_the_clubs_namespace():
         ("clubs.court_switched_off", 1),
         ("clubs.court_switched_on", 1),
         ("clubs.court_removed", 1),
-        ("clubs.raketa_hours_set", 1),
+        ("clubs.rakieta_hours_set", 1),
         ("clubs.exception_added", 1),
         ("clubs.exception_added", 1),
         ("clubs.exception_removed", 1),
@@ -228,14 +228,51 @@ def test_the_club_courts_events_are_filed_in_the_clubs_namespace():
         ("clubs.prices_set", 1),
         # Version 2 since the minimum notice and the time to confirm went
         # (#670), and 3 since other clubs' courts are on by default (#746).
-        ("clubs.raketa_settings_changed", 3),
-        ("clubs.raketa_paused", 1),
-        ("clubs.raketa_resumed", 1),
+        ("clubs.rakieta_settings_changed", 3),
+        ("clubs.rakieta_paused", 1),
+        ("clubs.rakieta_resumed", 1),
+    ]
+
+
+def test_the_clubs_file_history_under_these_names_and_no_other():
+    """The whole register, not only the names an event is written under. The
+    settings, the hours and pausing were renamed with the brand (#892, ADR-0211)
+    and the local store was reset, so no event answers to a name from before
+    the rename: a registration under one would be one more pair here."""
+
+    catalog = EventCatalog()
+    register_club_events(catalog)
+    registered = [
+        (contract.name, contract.version)
+        for contract in map(catalog.contract_for, catalog.registered_classes())
+    ]
+
+    assert registered == [
+        ("clubs.club_registered", 1),
+        ("clubs.club_details_changed", 1),
+        ("clubs.club_account_opened", 1),
+        ("clubs.club_account_password_changed", 1),
+        ("clubs.court_added", 1),
+        ("clubs.court_changed", 1),
+        ("clubs.court_switched_off", 1),
+        ("clubs.court_switched_on", 1),
+        ("clubs.court_removed", 1),
+        ("clubs.rakieta_hours_set", 1),
+        ("clubs.exception_added", 1),
+        ("clubs.exception_removed", 1),
+        ("clubs.prices_set", 1),
+        # Decode-only: a v2 row reads other clubs' courts on (#746).
+        ("clubs.rakieta_settings_changed", 2),
+        ("clubs.rakieta_settings_changed", 3),
+        ("clubs.rakieta_paused", 1),
+        ("clubs.rakieta_resumed", 1),
+        ("clubs.payments_account_opened", 1),
+        ("clubs.payments_status_changed", 1),
     ]
 
 
 def test_the_way_of_working_has_no_reader_any_more():
-    """Only Raketa is the one way (#670; ``docs/adr/0196`` §1): the choice went
+    """Only Rakieta is the one way (#670; ``docs/adr/0196`` §1): the choice went
     with Instant and On request, and its name is given no class to answer to —
     the local store is reset with the removal."""
 
@@ -264,7 +301,7 @@ def test_settings_saved_under_version_1_are_refused_rather_than_misread():
         _codec().decode(
             SerializedEventEnvelope(
                 id=uuid4(),
-                event_type="clubs.raketa_settings_changed",
+                event_type="clubs.rakieta_settings_changed",
                 schema_version=1,
                 payload={
                     "club_id": str(CLUB),
@@ -285,7 +322,7 @@ def test_settings_saved_under_version_1_are_refused_rather_than_misread():
 def _settings_under_version_2(*, other_clubs_courts: bool) -> SerializedEventEnvelope:
     return SerializedEventEnvelope(
         id=uuid4(),
-        event_type="clubs.raketa_settings_changed",
+        event_type="clubs.rakieta_settings_changed",
         schema_version=2,
         payload={
             "club_id": str(CLUB),
@@ -317,7 +354,7 @@ def test_settings_saved_under_version_2_read_other_clubs_courts_on(recorded):
 def test_settings_saved_under_version_3_keep_other_clubs_courts_off():
     """From version 3 *off* is a club's own choice, and is read as one."""
 
-    saved = RaketaSettingsChanged(
+    saved = RakietaSettingsChanged(
         club_id=CLUB,
         release_lead_days=2,
         cut_off_hours=12,

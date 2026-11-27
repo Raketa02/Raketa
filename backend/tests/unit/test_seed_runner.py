@@ -188,7 +188,7 @@ AGGREGATE_WRITERS = {
     "build_club_account_repository": "clubs",
     # What each club offers Raketa — courts, hours, an exception, prices and
     # how it works — written by the use cases the club website's Courts &
-    # prices and Raketa settings run (#535), one stream per club.
+    # prices and Rakieta settings run (#535), one stream per club.
     "build_club_courts_repository": "clubs",
     # A group, created by its Owner and joined by its members — the two use
     # cases a request runs, over the one repository both take.

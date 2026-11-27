@@ -30,7 +30,7 @@ from app.modules.bookings.domain.booking import BookedCourt, CancelReason, FreeC
 from app.modules.bookings.domain.ports import BookingDirectory, CourtForTheGame
 from app.modules.clubs.application.hours_exceptions import CloseACourtForAnHour
 from app.modules.clubs.domain.ports import SellableCourtHours, TakenCourtHour
-from app.modules.clubs.domain.raketa_terms import before_any_deadline
+from app.modules.clubs.domain.rakieta_terms import before_any_deadline
 from app.modules.clubs.domain.sellable import ClubOffer
 
 #: Every game is one hour, for every sport (the mechanics §2).

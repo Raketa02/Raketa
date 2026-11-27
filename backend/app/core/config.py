@@ -456,7 +456,7 @@ class Settings(BaseSettings):
     # reads stay narrow as it grows.
     #
     # **The book-by itself is emphatically not here**: it is the club's release
-    # time, derived from its release lead in `clubs/domain/raketa_terms.py`, and
+    # time, derived from its release lead in `clubs/domain/rakieta_terms.py`, and
     # an environment that could move it would decide when a player's yes lapses.
     #
     # Every minute, chosen against the record's lag rather than a backlog: the

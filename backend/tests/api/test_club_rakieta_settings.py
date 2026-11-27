@@ -1,11 +1,11 @@
-"""A club's Raketa settings (#535, the mechanics §16.3, §16.6, §16.15, the
+"""A club's Rakieta settings (#535, the mechanics §16.3, §16.6, §16.15, the
 screens B5).
 
-**One way of working, Only Raketa, until Raketa is the club's booking
+**One way of working, Only Rakieta, until Rakieta is the club's booking
 software** (#670; ``docs/adr/0196`` §1): nothing to choose, so the settings
 stand on their own — the release lead, the free-cancellation cut-off, other
 clubs' courts for the club's groups, and pause, **confirmed** by saving them,
-defaults included. *How you work with Raketa*, the minimum notice and the time
+defaults included. *How you work with Rakieta*, the minimum notice and the time
 to confirm went with Instant and On request; *We check players in* went with
 desk check-in (#651).
 """
@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 
 from tests.api.club_courts_world import (
-    RAKETA_SETTINGS,
+    RAKIETA_SETTINGS,
     a_desk,
     confirms_settings,
     settings,
@@ -31,7 +31,7 @@ DEFAULTS = {
 
 
 async def read(client, desk) -> dict:
-    answered = await client.get(RAKETA_SETTINGS, headers=desk)
+    answered = await client.get(RAKIETA_SETTINGS, headers=desk)
     assert answered.status_code == 200, answered.text
     return answered.json()
 
@@ -62,7 +62,7 @@ async def test_there_is_no_way_of_working_to_choose(client):
 
     refused = await client.put(
         "/api/v1/club/way-of-working",
-        json={"way_of_working": "ONLY_RAKETA"},
+        json={"way_of_working": "ONLY_RAKIETA"},
         headers=desk,
     )
 
@@ -87,14 +87,14 @@ async def test_a_form_still_sending_a_removed_setting_is_refused(client, field, 
     _, desk = await a_desk(client)
 
     refused = await client.put(
-        RAKETA_SETTINGS, json=settings(**{field: value}), headers=desk
+        RAKIETA_SETTINGS, json=settings(**{field: value}), headers=desk
     )
 
     assert (refused.status_code, refused.json()["code"]) == (422, "validation_error")
     assert await read(client, desk) == DEFAULTS
 
 
-async def test_the_desk_pauses_raketa_bookings_and_resumes_them(client):
+async def test_the_desk_pauses_rakieta_bookings_and_resumes_them(client):
     _, desk = await a_desk(client)
 
     paused = await confirms_settings(client, desk, paused=True)
@@ -121,7 +121,7 @@ async def test_a_setting_out_of_its_range_is_refused_with_the_range(
     _, desk = await a_desk(client)
 
     refused = await client.put(
-        RAKETA_SETTINGS, json=settings(**{field: value}), headers=desk
+        RAKIETA_SETTINGS, json=settings(**{field: value}), headers=desk
     )
 
     assert refused.status_code == 400, refused.text

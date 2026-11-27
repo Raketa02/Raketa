@@ -20,10 +20,10 @@ from app.modules.payments.presentation.dependencies import get_payment_provider
 from tests.api.administration_world import club_signs_up
 
 COURTS = "/api/v1/club/courts"
-RAKETA_HOURS = "/api/v1/club/raketa-hours"
+RAKIETA_HOURS = "/api/v1/club/rakieta-hours"
 EXCEPTIONS = "/api/v1/club/exceptions"
 PRICES = "/api/v1/club/prices"
-RAKETA_SETTINGS = "/api/v1/club/raketa-settings"
+RAKIETA_SETTINGS = "/api/v1/club/rakieta-settings"
 SETUP = "/api/v1/club/setup"
 PAYMENTS_LINK = "/api/v1/club/payments/onboarding-link"
 
@@ -55,7 +55,7 @@ async def adds_a_court(
 
 async def sets_hours(client, desk: dict, court_ids: list[str], cells) -> dict:
     saved = await client.put(
-        RAKETA_HOURS,
+        RAKIETA_HOURS,
         json={
             "court_ids": court_ids,
             "hours": [{"day": day, "hour": hour} for day, hour in cells],
@@ -86,7 +86,7 @@ def settings(**overrides) -> dict:
 
 
 async def confirms_settings(client, desk: dict, **overrides) -> dict:
-    saved = await client.put(RAKETA_SETTINGS, json=settings(**overrides), headers=desk)
+    saved = await client.put(RAKIETA_SETTINGS, json=settings(**overrides), headers=desk)
     assert saved.status_code == 200, saved.text
     return saved.json()
 

@@ -3,7 +3,7 @@
 
 A court has a name as the club uses it, **one sport** from the club's own, and
 is indoor or outdoor. It can be switched off — kept, but not offered to Raketa —
-and deleted, except while it has bookings ahead of it. Its Raketa hours are the
+and deleted, except while it has bookings ahead of it. Its Rakieta hours are the
 player's own grid, seven days by sixteen hours from 07:00, because an hour
 outside it could never match anybody.
 """
@@ -20,7 +20,7 @@ from tests.api.administration_world import player_signs_up
 from tests.api.club_courts_world import (
     COURTS,
     PRICES,
-    RAKETA_HOURS,
+    RAKIETA_HOURS,
     a_desk,
     adds_a_court,
     court_path,
@@ -311,7 +311,7 @@ async def test_a_court_whose_bookings_are_over_can_be_deleted(client, app, clock
 
 
 # --------------------------------------------------------------------------- #
-# Weekly hours for Raketa
+# Weekly hours for Rakieta
 # --------------------------------------------------------------------------- #
 
 
@@ -357,7 +357,7 @@ async def test_a_court_the_club_does_not_have_refuses_the_whole_save(client):
     court = await adds_a_court(client, desk, name="Court 1")
 
     refused = await client.put(
-        RAKETA_HOURS,
+        RAKIETA_HOURS,
         json={
             "court_ids": [court["id"], str(uuid4())],
             "hours": [{"day": 1, "hour": 7}],
@@ -381,7 +381,7 @@ async def test_an_hour_off_the_grid_is_not_an_hour(client, cell):
     court = await adds_a_court(client, desk, name="Court 1")
 
     refused = await client.put(
-        RAKETA_HOURS, json={"court_ids": [court["id"]], "hours": [cell]}, headers=desk
+        RAKIETA_HOURS, json={"court_ids": [court["id"]], "hours": [cell]}, headers=desk
     )
 
     assert refused.status_code == 422, refused.text

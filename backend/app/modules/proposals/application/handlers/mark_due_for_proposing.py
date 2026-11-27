@@ -49,11 +49,11 @@ from app.modules.clubs.domain.club_courts_events import (
     ExceptionRemoved,
     PaymentsStatusChanged,
     PricesSet,
-    RaketaHoursSet,
-    RaketaPaused,
-    RaketaResumed,
-    RaketaSettingsChanged,
-    RaketaSettingsChangedV2,
+    RakietaHoursSet,
+    RakietaPaused,
+    RakietaResumed,
+    RakietaSettingsChanged,
+    RakietaSettingsChangedV2,
 )
 from app.modules.groups.domain.events import GroupJoined, JoinRequestApproved
 from app.modules.player_profile.domain.events import (
@@ -110,15 +110,15 @@ CLUB_EVENTS = (
     CourtSwitchedOff,
     CourtSwitchedOn,
     CourtRemoved,
-    RaketaHoursSet,
+    RakietaHoursSet,
     ExceptionAdded,
     ExceptionRemoved,
     PricesSet,
-    RaketaSettingsChanged,
+    RakietaSettingsChanged,
     # Decode-only (#746): a v2 row still in the outbox changes what is sold.
-    RaketaSettingsChangedV2,
-    RaketaPaused,
-    RaketaResumed,
+    RakietaSettingsChangedV2,
+    RakietaPaused,
+    RakietaResumed,
     # Ready is the checklist's first step: a club goes live on it, and off.
     PaymentsStatusChanged,
     # A booking holds a court hour the club no longer sells (#541).

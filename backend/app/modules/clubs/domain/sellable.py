@@ -30,7 +30,7 @@ from app.kernel import Instant, Sport, Zone, iso_weekday
 from app.modules.clubs.domain.club_courts import ClubCourts
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, hour_start, local_day
 from app.modules.clubs.domain.prices import share_of
-from app.modules.clubs.domain.raketa_terms import RaketaSettings, book_by
+from app.modules.clubs.domain.rakieta_terms import RakietaSettings, book_by
 from app.modules.clubs.domain.setup import checklist_of
 from app.modules.player_profile.domain.weekly_hours import HOURS_OF_THE_DAY
 
@@ -58,7 +58,7 @@ class ClubOffer:
     """What one live club sells through Raketa in a window, and on what terms."""
 
     club_id: UUID
-    settings: RaketaSettings
+    settings: RakietaSettings
     #: ``False`` while the club is paused: no new card may be built on its
     #: courts, while the cards already dealt keep theirs.
     taking_new_cards: bool

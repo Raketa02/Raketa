@@ -92,7 +92,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   it **buys the record, not correctness**: a proposal past its book-by is over at every read,
   because every read compares the book-by with its clock, so what it appends —
   `ProposalExpired`, silently — is what a poster will be told from. The book-by is the club's
-  (`clubs/domain/raketa_terms.py`); only the cadence is a setting.
+  (`clubs/domain/rakieta_terms.py`); only the cadence is a setting.
   The fifteenth and sixteenth are **the proposer** (`proposer`, #540) and **its short tick**
   (`proposer-on-changes`), and **correctness depends on them**: nothing else deals a pick,
   hands a seat a no left to the next best fits or widens a pick at half In — but

@@ -264,7 +264,7 @@ class WeeklyHours:
         **Three callers, and none is a commit**: the weekly-hours write route,
         a search's ``availability_override`` — the week a player improvised for
         one evening, on any of the three surfaces that take one — and a club
-        court's **Raketa hours** (``clubs/domain/courts.py``), the same grid
+        court's **Rakieta hours** (``clubs/domain/courts.py``), the same grid
         with no floor at all, since a court offering nothing is a court not
         painted yet. The first two are edits of an answer already given, which
         is exactly what the floor does not bind; the third was never an answer

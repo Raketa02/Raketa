@@ -1,4 +1,4 @@
-"""The club's courts, their Raketa hours, exceptions, prices and settings, on the
+"""The club's courts, their Rakieta hours, exceptions, prices and settings, on the
 club surface (#535, the mechanics §16, the screens B2–B5).
 
 Mounted only on the club surface (``app/api/v1/club.py``), and every route takes
@@ -21,9 +21,9 @@ from app.modules.clubs.application.commands import (
     RemoveCourtCommand,
     PriceBandInput,
     RemoveExceptionCommand,
-    SaveRaketaSettingsCommand,
+    SaveRakietaSettingsCommand,
     SetPricesCommand,
-    SetRaketaHoursCommand,
+    SetRakietaHoursCommand,
     SportPriceInput,
 )
 from app.modules.clubs.domain.club_courts import ClubCourts
@@ -37,9 +37,9 @@ from app.modules.clubs.presentation.courts_schemas import (
     ExceptionsResponse,
     PricesRequest,
     PricesResponse,
-    RaketaHoursRequest,
-    RaketaSettingsRequest,
-    RaketaSettingsResponse,
+    RakietaHoursRequest,
+    RakietaSettingsRequest,
+    RakietaSettingsResponse,
     SetupResponse,
 )
 from app.modules.clubs.presentation.dependencies import (
@@ -53,9 +53,9 @@ from app.modules.clubs.presentation.dependencies import (
     ReadSetupDep,
     RemoveCourtDep,
     RemoveExceptionDep,
-    SaveRaketaSettingsDep,
+    SaveRakietaSettingsDep,
     SetPricesDep,
-    SetRaketaHoursDep,
+    SetRakietaHoursDep,
 )
 
 router = APIRouter(tags=["club"])
@@ -71,7 +71,7 @@ def _courts(club: ClubCourts) -> CourtsResponse:
     "/courts",
     response_model=CourtsResponse,
     status_code=status.HTTP_200_OK,
-    summary="The club's courts, and the Raketa hours of each",
+    summary="The club's courts, and the Rakieta hours of each",
 )
 async def read_courts(
     account: CurrentClubAccountDep, read: ReadClubCourtsDep
@@ -95,8 +95,8 @@ async def read_courts(
     },
     summary="Add a court",
     description=(
-        "A court is born **offered**, and offers nothing until its Raketa hours "
-        "are painted (`PUT /raketa-hours`)."
+        "A court is born **offered**, and offers nothing until its Rakieta hours "
+        "are painted (`PUT /rakieta-hours`)."
     ),
 )
 async def add_court(
@@ -196,11 +196,11 @@ async def remove_court(
 
 
 @router.put(
-    "/raketa-hours",
+    "/rakieta-hours",
     response_model=CourtsResponse,
     status_code=status.HTTP_200_OK,
     responses=_COURT_NOT_FOUND,
-    summary="Set the Raketa hours of one court or several",
+    summary="Set the Rakieta hours of one court or several",
     description=(
         "The same week on every court named — one court's *Save hours*, *Copy to "
         "other courts* or *All courts of a sport*. Recorded per court, only where "
@@ -209,13 +209,13 @@ async def remove_court(
         "now on. Answers every court of the club."
     ),
 )
-async def set_raketa_hours(
-    payload: RaketaHoursRequest,
+async def set_rakieta_hours(
+    payload: RakietaHoursRequest,
     account: CurrentClubAccountDep,
-    set_hours: SetRaketaHoursDep,
+    set_hours: SetRakietaHoursDep,
 ) -> CourtsResponse:
     club = await set_hours.execute(
-        SetRaketaHoursCommand(
+        SetRakietaHoursCommand(
             club_id=account.club_id,
             court_ids=tuple(payload.court_ids),
             hours=tuple((cell.day, cell.hour) for cell in payload.hours),
@@ -378,26 +378,26 @@ async def set_prices(
 
 
 @router.get(
-    "/raketa-settings",
-    response_model=RaketaSettingsResponse,
+    "/rakieta-settings",
+    response_model=RakietaSettingsResponse,
     status_code=status.HTTP_200_OK,
-    summary="The club's Raketa settings",
+    summary="The club's Rakieta settings",
     description=(
         "Every setting, **at its default until the club confirms it**. Only "
-        "Raketa is the one way of working: Raketa sells the club's Raketa "
+        "Rakieta is the one way of working: Rakieta sells the club's Rakieta "
         "hours alone until each one's release time, the release lead before "
         "it, so there is no way to choose."
     ),
 )
-async def read_raketa_settings(
+async def read_rakieta_settings(
     account: CurrentClubAccountDep, read: ReadClubCourtsDep
-) -> RaketaSettingsResponse:
-    return RaketaSettingsResponse.from_domain(await read.execute(account.club_id))
+) -> RakietaSettingsResponse:
+    return RakietaSettingsResponse.from_domain(await read.execute(account.club_id))
 
 
 @router.put(
-    "/raketa-settings",
-    response_model=RaketaSettingsResponse,
+    "/rakieta-settings",
+    response_model=RakietaSettingsResponse,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_400_BAD_REQUEST: {
@@ -408,7 +408,7 @@ async def read_raketa_settings(
             ),
         },
     },
-    summary="Save — the first time, confirm — the club's Raketa settings",
+    summary="Save — the first time, confirm — the club's Rakieta settings",
     description=(
         "Every setting, defaults included: **the first save confirms them**, "
         "the setup checklist's last step. A changed setting applies to games "
@@ -416,13 +416,13 @@ async def read_raketa_settings(
         "booked games are played as booked."
     ),
 )
-async def save_raketa_settings(
-    payload: RaketaSettingsRequest,
+async def save_rakieta_settings(
+    payload: RakietaSettingsRequest,
     account: CurrentClubAccountDep,
-    save: SaveRaketaSettingsDep,
-) -> RaketaSettingsResponse:
+    save: SaveRakietaSettingsDep,
+) -> RakietaSettingsResponse:
     club = await save.execute(
-        SaveRaketaSettingsCommand(
+        SaveRakietaSettingsCommand(
             club_id=account.club_id,
             release_lead_days=payload.release_lead_days,
             cut_off_hours=payload.cut_off_hours,
@@ -431,7 +431,7 @@ async def save_raketa_settings(
             paused=payload.paused,
         )
     )
-    return RaketaSettingsResponse.from_domain(club)
+    return RakietaSettingsResponse.from_domain(club)
 
 
 @router.get(

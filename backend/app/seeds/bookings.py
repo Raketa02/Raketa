@@ -78,7 +78,7 @@ from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, hours, instant, shifted
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, local_day
-from app.modules.clubs.domain.raketa_terms import before_any_deadline
+from app.modules.clubs.domain.rakieta_terms import before_any_deadline
 from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.commands import (

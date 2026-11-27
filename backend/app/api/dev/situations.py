@@ -151,7 +151,7 @@ from app.modules.clubs.domain.ports import (
     ClubAccountRepository,
     ClubCourtsRepository,
 )
-from app.modules.clubs.domain.raketa_terms import RaketaSettings, book_by
+from app.modules.clubs.domain.rakieta_terms import RakietaSettings, book_by
 from app.modules.clubs.presentation.dependencies import (
     ClubAccountRepositoryDep,
     ClubCourtsRepositoryDep,
@@ -994,7 +994,7 @@ def _when(start: Instant) -> str:
     return f"{start.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
 
 
-def _before_its_release(start: Instant, terms: RaketaSettings) -> Instant:
+def _before_its_release(start: Instant, terms: RakietaSettings) -> Instant:
     """An hour before the release time of an hour starting at ``start`` — its
     book-by, the club's release lead before it (#670): that hour, and every
     hour after it, was still on sale then, with time to fill it. When a
@@ -1844,7 +1844,7 @@ async def just_played(
     ended_by = stated_at or now
     since = instant(ended_by - JUST_PLAYED_WITHIN)
 
-    latest: tuple[CourtHourOnSale, Sequence[UUID], RaketaSettings] | None = None
+    latest: tuple[CourtHourOnSale, Sequence[UUID], RakietaSettings] | None = None
     for club_id in await hours_finder.clubs(body.group_id, now=now):
         terms = (await club_courts.load(club_id)).settings
         for hour, free in await hours_finder.hours_free(

@@ -505,7 +505,7 @@ forbidden_modules =
 allow_indirect_imports = true
 
 # The Player profile does not know a club exists. `clubs` reads
-# `player_profile` — a court's Raketa hours are the player's own `WeeklyHours`
+# `player_profile` — a court's Rakieta hours are the player's own `WeeklyHours`
 # — and the one thing the profile asks back, *where is the club a player picked
 # in place of a reading* (docs/adr/0200 §10), is a port declared in the
 # profile's own words and **signed in `clubs/infrastructure/`**, as clubs'

@@ -17,7 +17,7 @@ from app.modules.clubs.application.commands import (
     AddCourtCommand,
     ChangeCourtCommand,
     RemoveCourtCommand,
-    SetRaketaHoursCommand,
+    SetRakietaHoursCommand,
 )
 from app.modules.clubs.application.club_details import the_club
 from app.modules.clubs.domain.club_courts import ClubCourts
@@ -35,7 +35,7 @@ from app.shared.ids import new_uuid
 
 class ReadClubCourts:
     """The club's courts and terms as its stream tells them — every section of
-    Courts & prices and Raketa settings is drawn from this one read."""
+    Courts & prices and Rakieta settings is drawn from this one read."""
 
     def __init__(self, *, courts: ClubCourtsRepository) -> None:
         self._courts = courts
@@ -178,8 +178,8 @@ class RemoveCourt:
         await self._uow.commit()
 
 
-class SetRaketaHours:
-    """The desk saves *Weekly hours for Raketa* for one court or several.
+class SetRakietaHours:
+    """The desk saves *Weekly hours for Rakieta* for one court or several.
 
     **Nothing is refused over a booking or a card**: the pattern is what the
     club offers from now on, a booked game is played as booked whatever the
@@ -194,7 +194,7 @@ class SetRaketaHours:
         self._uow = uow
         self._clock = clock
 
-    async def execute(self, command: SetRaketaHoursCommand) -> ClubCourts:
+    async def execute(self, command: SetRakietaHoursCommand) -> ClubCourts:
         week = WeeklyHours.edited(command.hours)
         club = await self._courts.load(command.club_id)
         club.set_hours(

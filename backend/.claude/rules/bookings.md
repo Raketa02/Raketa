@@ -506,7 +506,7 @@ unregistered and the local store reset, so the last yes books the game at every 
   *We check players in*, and nothing reads who the desk saw. Check-ins lived only in event
   streams, so nothing was migrated: a stored `bookings.player_checked_in` stays registered
   and **folds to nothing** but the stream's version, and a stored
-  `clubs.raketa_settings_changed` keeps decoding its `check_in`, which nothing reads (a row
+  `clubs.rakieta_settings_changed` keeps decoding its `check_in`, which nothing reads (a row
   saved since carries `null`) — `tests/unit/test_retired_check_in_rows_still_fold.py`.
 - **Somebody Didn't come: caught at the court, and the Game's** (#657, replacing #547's
   report; ADR-0195 §3; written up in `games.md`). A player at the club taps *isn't here yet*
