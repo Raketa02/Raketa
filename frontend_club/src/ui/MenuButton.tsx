@@ -9,7 +9,7 @@ import type { NavItem } from './NavLinks';
 
 /**
  * **A button that opens a short list of pages** (the screens B1: the club's name opening
- * *Details* and *Raketa settings*). A disclosure, not an application menu: the button says
+ * *Details* and *Rakieta settings*). A disclosure, not an application menu: the button says
  * whether it is open, Tab walks the links, and the page being shown is marked. It closes with
  * Escape (back on its button), with a click or a focus anywhere else, and when a page opens.
  */

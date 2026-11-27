@@ -15,7 +15,7 @@ const COPY = OVERVIEW_COPY.checklist;
 const PATHS: Readonly<Record<Exclude<SetupStep, 'CONNECT_PAYMENTS'>, string>> = {
   COURTS: '/courts',
   HOURS_AND_PRICES: '/courts#hours',
-  SETTINGS: '/raketa-settings',
+  SETTINGS: '/rakieta-settings',
 };
 
 const TONES = {

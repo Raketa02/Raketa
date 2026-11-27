@@ -9,7 +9,7 @@ import type { Sport } from '@/features/club-details/mappers';
 type WireCourt = components['schemas']['CourtResponse'];
 type WireCourtBody = components['schemas']['CourtRequest'];
 type WireCourtChange = components['schemas']['CourtChangeRequest'];
-type WireHoursBody = components['schemas']['RaketaHoursRequest'];
+type WireHoursBody = components['schemas']['RakietaHoursRequest'];
 type WireException = components['schemas']['ExceptionResponse'];
 type WireExceptionBody = components['schemas']['ExceptionRequest'];
 type WirePrice = components['schemas']['SportPriceResponse'];
@@ -45,7 +45,7 @@ export interface Court {
   readonly indoor: boolean;
   /** Offered to Raketa, or switched off: kept, with its hours, and selling nothing new. */
   readonly offered: boolean;
-  /** Its Raketa hours, Monday first and in the grid's order. Empty until they are painted. */
+  /** Its Rakieta hours, Monday first and in the grid's order. Empty until they are painted. */
   readonly hours: readonly WeekHour[];
 }
 

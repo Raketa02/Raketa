@@ -1,7 +1,7 @@
 /**
  * **Overview's words**: the setup checklist until the club is live (the screens B2), with where
  * Stripe has the club's account; then once, *You're live*, and after that, that the club is live
- * on Raketa.
+ * on Rakieta.
  */
 
 import type { PaymentsStatus, SetupStep, StepState } from './mappers';
@@ -42,9 +42,9 @@ const STEPS: Readonly<Record<SetupStep, StepWords>> = {
 export const OVERVIEW_COPY = {
   live: "You're live — your courts can now be booked through Raketa.",
   /** Once the club is live, in the checklist's place (Q121). */
-  liveOnRaketa: {
-    title: 'Live on Raketa',
-    lead: 'Every game booked on your courts through Raketa is in Bookings, a day at a time.',
+  liveOnRakieta: {
+    title: 'Live on Rakieta',
+    lead: 'Every game booked on your courts through Rakieta is in Bookings, a day at a time.',
     today: 'Today’s bookings',
   },
   checklist: {

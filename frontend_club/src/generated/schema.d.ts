@@ -170,12 +170,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The club's courts, and the Raketa hours of each */
+        /** The club's courts, and the Rakieta hours of each */
         get: operations["read_courts_api_v1_club_courts_get"];
         put?: never;
         /**
          * Add a court
-         * @description A court is born **offered**, and offers nothing until its Raketa hours are painted (`PUT /raketa-hours`).
+         * @description A court is born **offered**, and offers nothing until its Rakieta hours are painted (`PUT /rakieta-hours`).
          */
         post: operations["add_court_api_v1_club_courts_post"];
         delete?: never;
@@ -205,7 +205,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/club/raketa-hours": {
+    "/api/v1/club/rakieta-hours": {
         parameters: {
             query?: never;
             header?: never;
@@ -214,10 +214,10 @@ export interface paths {
         };
         get?: never;
         /**
-         * Set the Raketa hours of one court or several
+         * Set the Rakieta hours of one court or several
          * @description The same week on every court named — one court's *Save hours*, *Copy to other courts* or *All courts of a sport*. Recorded per court, only where the week moved. **Never refused over a booking or a card**: a booked game is played as booked, and the pattern is what the club offers from now on. Answers every court of the club.
          */
-        put: operations["set_raketa_hours_api_v1_club_raketa_hours_put"];
+        put: operations["set_rakieta_hours_api_v1_club_rakieta_hours_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -284,7 +284,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/club/raketa-settings": {
+    "/api/v1/club/rakieta-settings": {
         parameters: {
             query?: never;
             header?: never;
@@ -292,15 +292,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The club's Raketa settings
-         * @description Every setting, **at its default until the club confirms it**. Only Raketa is the one way of working: Raketa sells the club's Raketa hours alone until each one's release time, the release lead before it, so there is no way to choose.
+         * The club's Rakieta settings
+         * @description Every setting, **at its default until the club confirms it**. Only Rakieta is the one way of working: Rakieta sells the club's Rakieta hours alone until each one's release time, the release lead before it, so there is no way to choose.
          */
-        get: operations["read_raketa_settings_api_v1_club_raketa_settings_get"];
+        get: operations["read_rakieta_settings_api_v1_club_rakieta_settings_get"];
         /**
-         * Save — the first time, confirm — the club's Raketa settings
+         * Save — the first time, confirm — the club's Rakieta settings
          * @description Every setting, defaults included: **the first save confirms them**, the setup checklist's last step. A changed setting applies to games booked after the change. Pausing stops new cards on the club's courts; booked games are played as booked.
          */
-        put: operations["save_raketa_settings_api_v1_club_raketa_settings_put"];
+        put: operations["save_rakieta_settings_api_v1_club_rakieta_settings_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -767,7 +767,7 @@ export interface components {
          * @description Why a game will not be played (the mechanics §14.1, §16.7).
          * @enum {string}
          */
-        CalledOffReason: "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB";
+        CalledOffReason: "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB" | "BY_THE_SENDER";
         /**
          * CancelOutcomeKind
          * @description What a cancel came to — or, in its preview, would come to (#672).
@@ -904,7 +904,7 @@ export interface components {
             kind: components["schemas"]["SearchMode"];
             /** @description `BOOKED` — full; each share held until your cut-off and taken at it (#637). `SEAT_OPEN` — a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again — but the court you cancelled stays closed for it, an exception you remove to sell it again (#673). `PLAYED` — the hour has passed; you are paid whatever happened on the court. */
             status: components["schemas"]["ClubStatus"];
-            /** @description Why a `CALLED_OFF` game will not be played — `null` otherwise. `SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). */
+            /** @description Why a `CALLED_OFF` game will not be played — `null` otherwise. `SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). `BY_THE_SENDER` — the player who booked it for their friends called it off before your cut-off: nothing was taken, and the court is yours to sell again (#751). */
             called_off_reason: components["schemas"]["CalledOffReason"] | null;
             /** @description Why you cancelled it — on a game you cancelled, else `null`. */
             cancel_reason: components["schemas"]["ClubCancelReason"] | null;
@@ -1712,11 +1712,11 @@ export interface components {
             prices: components["schemas"]["SportPriceResponse"][];
         };
         /**
-         * RaketaHoursRequest
-         * @description *Weekly hours for Raketa*, saved on one court or several at once —
+         * RakietaHoursRequest
+         * @description *Weekly hours for Rakieta*, saved on one court or several at once —
          *     which is what *Copy to other courts* and *All courts of a sport* send.
          */
-        RaketaHoursRequest: {
+        RakietaHoursRequest: {
             /**
              * Court Ids
              * @description Each court to give this week. One the club does not have refuses the whole save with `404 court_not_found`. A court named twice is named once.
@@ -1729,13 +1729,13 @@ export interface components {
             hours: components["schemas"]["WeeklyHourResource"][];
         };
         /**
-         * RaketaSettingsRequest
+         * RakietaSettingsRequest
          * @description The settings form — every field on every save, defaults included, since
          *     the first save is the club **confirming** them. Each number is bounded by
          *     the domain: `setting_out_of_range` names the field and carries `least` and
          *     `most`.
          */
-        RaketaSettingsRequest: {
+        RakietaSettingsRequest: {
             /**
              * Release Lead Days
              * @description Days before a game unsold hours return to the club — the latest a Raketa game can fill, its book-by. 1–13, default 3.
@@ -1750,16 +1750,16 @@ export interface components {
             other_clubs_courts: components["schemas"]["OtherClubsCourtsSchema"];
             /**
              * Paused
-             * @description *Pause Raketa bookings*: no new cards on the club's courts; booked games are played as booked, and cards already dealt keep their court until their book-by.
+             * @description *Pause Rakieta bookings*: no new cards on the club's courts; booked games are played as booked, and cards already dealt keep their court until their book-by.
              */
             paused: boolean;
         };
         /**
-         * RaketaSettingsResponse
+         * RakietaSettingsResponse
          * @description Every setting — **at its default until the club confirms it**, so the
          *     form can show what it would save.
          */
-        RaketaSettingsResponse: {
+        RakietaSettingsResponse: {
             /** Release Lead Days */
             release_lead_days: number;
             /** Cut Off Hours */
@@ -2482,7 +2482,7 @@ export interface operations {
             };
         };
     };
-    set_raketa_hours_api_v1_club_raketa_hours_put: {
+    set_rakieta_hours_api_v1_club_rakieta_hours_put: {
         parameters: {
             query?: never;
             header?: never;
@@ -2491,7 +2491,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RaketaHoursRequest"];
+                "application/json": components["schemas"]["RakietaHoursRequest"];
             };
         };
         responses: {
@@ -2704,7 +2704,7 @@ export interface operations {
             };
         };
     };
-    read_raketa_settings_api_v1_club_raketa_settings_get: {
+    read_rakieta_settings_api_v1_club_rakieta_settings_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2719,12 +2719,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RaketaSettingsResponse"];
+                    "application/json": components["schemas"]["RakietaSettingsResponse"];
                 };
             };
         };
     };
-    save_raketa_settings_api_v1_club_raketa_settings_put: {
+    save_rakieta_settings_api_v1_club_rakieta_settings_put: {
         parameters: {
             query?: never;
             header?: never;
@@ -2733,7 +2733,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RaketaSettingsRequest"];
+                "application/json": components["schemas"]["RakietaSettingsRequest"];
             };
         };
         responses: {
@@ -2743,7 +2743,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RaketaSettingsResponse"];
+                    "application/json": components["schemas"]["RakietaSettingsResponse"];
                 };
             };
             /** @description `setting_out_of_range` — `details.field` names the setting and `least` and `most` its range. Nothing was recorded. */

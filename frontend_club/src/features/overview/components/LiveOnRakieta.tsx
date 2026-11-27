@@ -4,17 +4,17 @@ import { SectionHeader } from '@/ui/SectionHeader';
 
 import { OVERVIEW_COPY } from '../copy';
 
-const COPY = OVERVIEW_COPY.liveOnRaketa;
+const COPY = OVERVIEW_COPY.liveOnRakieta;
 
 /**
- * **Live on Raketa** (the screens B2, Q121): what Overview says in the checklist's place once the
+ * **Live on Rakieta** (the screens B2, Q121): what Overview says in the checklist's place once the
  * club is live, with the way to today's Bookings.
  */
-export function LiveOnRaketa() {
+export function LiveOnRakieta() {
   return (
-    <Card labelledBy="live-on-raketa-title">
+    <Card labelledBy="live-on-rakieta-title">
       <SectionHeader
-        id="live-on-raketa-title"
+        id="live-on-rakieta-title"
         title={COPY.title}
         lead={COPY.lead}
         aside={<ButtonLink href="/bookings">{COPY.today}</ButtonLink>}

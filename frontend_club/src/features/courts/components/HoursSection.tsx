@@ -52,7 +52,7 @@ function sameWeek(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
 }
 
 /**
- * **Weekly hours for Raketa** (the screens B3, the mechanics §16.5): a court picker, the week
+ * **Weekly hours for Rakieta** (the screens B3, the mechanics §16.5): a court picker, the week
  * on the grid, and *Save hours*. *All padel courts* starts from the first court's week, and says
  * when the courts differ, since a save gives each of them the week shown. *Copy to other
  * courts* gives one court's week, as shown, to the courts ticked, saving it on this one too. A

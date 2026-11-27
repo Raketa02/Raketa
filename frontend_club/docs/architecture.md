@@ -13,7 +13,7 @@ src/
   app/                 routes and layouts only
     (signed-out)/      sign-in, sign-up, forgot-password/…, reset/[token]
     (signed-in)/       layout (the frame), overview, bookings, courts, money, groups,
-                       administrators, details, raketa-settings
+                       administrators, details, rakieta-settings
     session/           renew and end: the session's own route handlers (§3)
     payments/continue  where Stripe sends a desk whose link is spent: a fresh one, followed
   proxy.ts             renews a lapsing session and stamps each request's path (§3)
@@ -33,13 +33,13 @@ e2e/                   the Playwright suite and its stub backend (§7)
   Overview's action says (`continueWithStripe`).
 - **A feature is an area of the site**: `sign-in` (signing in and up, signing out, _Forgot
   password?_, _Set a new password_), `club-details`, `overview` (the setup checklist and
-  _Connect with Stripe_, then _Live on Raketa_),
+  _Connect with Stripe_, then _Live on Rakieta_),
   `bookings` (the day's Raketa bookings, _Move_ and _Cancel_, which says first where the game would move), `courts` (_Courts & prices_: the courts, their weekly hours,
   exceptions and prices), `money` (a month of the club's money, its payouts and its Stripe
-  dashboard), `raketa-settings`, `administrators` and `groups` (the Groups table, and a group's page:
+  dashboard), `rakieta-settings`, `administrators` and `groups` (the Groups table, and a group's page:
   _Want to join_ and _Hand over_). A feature may use another feature's components, schemas, copy and mappers
   (sign-up draws Club details' fields; Overview greets a `Club` and says _Set a new password_ in
-  sign-in's words; Raketa settings reads the checklist through Overview's mappers),
+  sign-in's words; Rakieta settings reads the checklist through Overview's mappers),
   and never another feature's actions or queries: a route reads both features' queries and
   hands each its view model. A feature's queries and actions call the backend only
   through the three doors of §4, and may read the session, the recovery cookie, the marks of
@@ -227,7 +227,7 @@ points.
   (`e2e/stub/courts.ts`), keeps #535's rules for courts, hours, exceptions, prices and settings
   and reads the setup checklist off them; it starts with nothing set, and `club.raketa.ready()`
   makes the club live. Its setup checklist has four steps, and its settings are the release
-  lead, the cut-off, other clubs' courts and the pause: every club works Only Raketa (Q121). Its bookings, `club.bookings`
+  lead, the cut-off, other clubs' courts and the pause: every club works Only Rakieta (Q121). Its bookings, `club.bookings`
   (`e2e/stub/bookings.ts`), keep #547's, #637's, #669's, #671's and #672's rules: every game the club sees is
   booked (no club confirms one), each status folded from where the booking stands and the clock,
   as the backend folds it (booked or with a seat open, called off, played once its hour is over),

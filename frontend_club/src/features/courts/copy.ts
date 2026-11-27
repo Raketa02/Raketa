@@ -109,7 +109,7 @@ export const COURTS_COPY = {
     },
   },
   hours: {
-    title: 'Weekly hours for Raketa',
+    title: 'Weekly hours for Rakieta',
     lead:
       'The hours of an ordinary week each court is offered, from 07:00 to 23:00: an hour ' +
       'outside them could never match a player. Tap an hour, or drag across several.',

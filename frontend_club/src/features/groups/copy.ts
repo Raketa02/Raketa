@@ -4,7 +4,7 @@
  */
 
 import { sportName } from '@/features/club-details/mappers';
-import { SETTINGS_COPY } from '@/features/raketa-settings/copy';
+import { SETTINGS_COPY } from '@/features/rakieta-settings/copy';
 import { sentenceAbout, type RefusalAbout } from '@/ui/forms';
 
 import type { SportLevel } from './mappers';
@@ -31,7 +31,7 @@ export const GROUPS_COPY = {
       offered
         ? `${SETTINGS_COPY.otherClubs.hint(km)} Change it in`
         : "Your groups are offered only your courts. Offer other clubs' courts in",
-    settings: 'Raketa settings',
+    settings: 'Rakieta settings',
     end: '.',
   },
   needsAdministrator: 'needs an administrator',

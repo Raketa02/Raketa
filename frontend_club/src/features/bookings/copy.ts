@@ -144,6 +144,8 @@ export const BOOKINGS_COPY = {
   calledOff: {
     SHORT_AT_THE_CUT_OFF: 'Short at the cut-off',
     CANCELLED_BY_THE_CLUB: 'Cancelled by you',
+    /** A friends game its sender called off before the cut-off: nothing was taken (#751). */
+    BY_THE_SENDER: 'Cancelled by the player who booked it',
   } satisfies Record<CalledOffReason, string>,
   cancelReasons: {
     WEATHER: 'Weather',

@@ -7,7 +7,7 @@ import { Notice } from '@/ui/Notice';
 
 import { SETTINGS_COPY, SETTINGS_REFUSALS } from '../copy';
 
-import styles from './RaketaSettingsForm.module.css';
+import styles from './RakietaSettingsForm.module.css';
 
 const COPY = SETTINGS_COPY.leave;
 
@@ -18,14 +18,14 @@ function leadOf(confirmed: boolean, paused: boolean): string {
 }
 
 /**
- * ***Leave Raketa***, a quiet link at the bottom of the settings (the screens B5): what leaving
+ * ***Leave Rakieta***, a quiet link at the bottom of the settings (the screens B5): what leaving
  * is, and its first step, the pause. Disconnecting payments has no door here yet, so the dialog
  * says when it can happen and does what can be done now. A club that has not confirmed its
  * settings sells nothing, so it is told there is nothing to leave, and offered no pause, which
  * would confirm them. Pausing posts and closes the question at once; a refusal is said beside
  * the link.
  */
-export function LeaveRaketa({
+export function LeaveRakieta({
   open,
   confirmed,
   paused,

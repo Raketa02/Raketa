@@ -2,12 +2,12 @@ import { expect, signIn, test } from './fixtures';
 
 /**
  * **The top bar** (#561, #563, #562, the screens B1): the pages a desk works in, and the club's
- * name opening the two pages about the club itself, *Details* and *Raketa settings*. The coral
+ * name opening the two pages about the club itself, *Details* and *Rakieta settings*. The coral
  * count on Bookings is Bookings' own spec's.
  */
 
 test.describe('The top bar', () => {
-  test("lists the pages, and the club's name opens Details and Raketa settings", async ({
+  test("lists the pages, and the club's name opens Details and Rakieta settings", async ({
     page,
     club,
   }) => {
@@ -33,16 +33,16 @@ test.describe('The top bar', () => {
     await expect(menu).toHaveAttribute('aria-expanded', 'true');
     await expect(bar.getByRole('list', { name: 'Ogrody 33' }).getByRole('link')).toHaveText([
       'Details',
-      'Raketa settings',
+      'Rakieta settings',
     ]);
 
-    await bar.getByRole('link', { name: 'Raketa settings' }).click();
-    await expect(page).toHaveURL(/\/raketa-settings$/);
-    await expect(page.getByRole('heading', { name: 'Raketa settings', level: 1 })).toBeVisible();
+    await bar.getByRole('link', { name: 'Rakieta settings' }).click();
+    await expect(page).toHaveURL(/\/rakieta-settings$/);
+    await expect(page.getByRole('heading', { name: 'Rakieta settings', level: 1 })).toBeVisible();
     // Leaving for the page closed the menu; opening it again marks where the desk is.
     await expect(menu).toHaveAttribute('aria-expanded', 'false');
     await menu.click();
-    await expect(bar.getByRole('link', { name: 'Raketa settings' })).toHaveAttribute(
+    await expect(bar.getByRole('link', { name: 'Rakieta settings' })).toHaveAttribute(
       'aria-current',
       'page',
     );

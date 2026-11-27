@@ -12,17 +12,17 @@ import { Toggle } from '@/ui/Toggle';
 import { useFormFeedback } from '@/ui/useFormFeedback';
 
 import {
-  pauseRaketaBookings,
-  saveRaketaSettings,
+  pauseRakietaBookings,
+  saveRakietaSettings,
   type PauseState,
   type SettingsFormState,
 } from '../actions';
 import { RANGE_REFUSALS, SETTINGS_COPY as COPY, SETTINGS_REFUSALS } from '../copy';
-import type { RaketaSettings } from '../mappers';
+import type { RakietaSettings } from '../mappers';
 import { draftOf, numbersOf, type NumberField, type SettingsDraft } from '../schemas';
 
-import { LeaveRaketa } from './LeaveRaketa';
-import styles from './RaketaSettingsForm.module.css';
+import { LeaveRakieta } from './LeaveRakieta';
+import styles from './RakietaSettingsForm.module.css';
 
 const NOTHING_YET: SettingsFormState = {
   refusals: {},
@@ -46,21 +46,21 @@ function submitLabel(confirmed: boolean, pending: boolean): string {
 }
 
 /**
- * **Raketa settings** (the screens B5): one form, one save. The release lead and the cut-off;
+ * **Rakieta settings** (the screens B5): one form, one save. The release lead and the cut-off;
  * then other clubs' courts, on by default. Their help line names the distance the backend holds.
  * The distance is asked only while they are offered, and is otherwise sent as the backend holds
  * it, so a hidden box can never be what a save is refused for. Then the pause. The first save
  * confirms the settings, the setup checklist's last step, and the button says so.
  */
-export function RaketaSettingsForm({
+export function RakietaSettingsForm({
   settings,
   confirmed,
 }: {
-  settings: RaketaSettings;
+  settings: RakietaSettings;
   confirmed: boolean;
 }) {
-  const [state, formAction, pending] = useActionState(saveRaketaSettings, NOTHING_YET);
-  const [pauseState, pause, pausing] = useActionState(pauseRaketaBookings, NOT_PAUSED);
+  const [state, formAction, pending] = useActionState(saveRakietaSettings, NOTHING_YET);
+  const [pauseState, pause, pausing] = useActionState(pauseRakietaBookings, NOT_PAUSED);
   const [draft, setDraft] = useState<SettingsDraft>(() => draftOf(settings));
   const [answered, setAnswered] = useState(state);
   const [pauseAnswered, setPauseAnswered] = useState(pauseState);
@@ -149,7 +149,7 @@ export function RaketaSettingsForm({
           ) : null}
         </div>
       </Form>
-      <LeaveRaketa
+      <LeaveRakieta
         open={leaving}
         confirmed={confirmed}
         paused={settings.paused}

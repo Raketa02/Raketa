@@ -1,4 +1,4 @@
-import type { RaketaSettings } from '@/features/raketa-settings/mappers';
+import type { RakietaSettings } from '@/features/rakieta-settings/mappers';
 import { Card } from '@/ui/Card';
 import { SITE_COPY } from '@/ui/copy';
 import { PageHeader } from '@/ui/PageHeader';
@@ -10,8 +10,8 @@ import type { GroupRow } from '../mappers';
 import styles from './Groups.module.css';
 import { GroupsTable } from './GroupsTable';
 
-/** Where the setting is: Raketa settings, at *Offer our groups other clubs' courts*. */
-const OTHER_CLUBS_SETTING = '/raketa-settings#other-clubs';
+/** Where the setting is: Rakieta settings, at *Offer our groups other clubs' courts*. */
+const OTHER_CLUBS_SETTING = '/rakieta-settings#other-clubs';
 
 /**
  * **Groups** (#500 stories 105–107, the screens B8): the club's official groups, which its
@@ -26,7 +26,7 @@ export function Groups({
 }: {
   club: string;
   groups: readonly GroupRow[];
-  otherClubs: RaketaSettings['otherClubs'];
+  otherClubs: RakietaSettings['otherClubs'];
 }) {
   const other = COPY.otherClubs;
   return (

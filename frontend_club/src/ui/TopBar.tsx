@@ -24,7 +24,7 @@ export function TopBar({
   club: {
     readonly name: string;
     readonly place: string;
-    /** The pages the club's line opens: its details and its Raketa settings. */
+    /** The pages the club's line opens: its details and its Rakieta settings. */
     readonly pages: readonly NavItem[];
   };
   signOut: ReactNode;

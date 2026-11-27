@@ -2,13 +2,13 @@
 
 Next.js 16 (App Router) + React 19 + TypeScript, pnpm. A club signs up, signs in, keeps its
 details, sets up what it sells through Raketa (courts, weekly hours, exceptions, prices and its
-Raketa settings, followed by Overview's four-step setup checklist), runs its Raketa bookings
+Rakieta settings, followed by Overview's four-step setup checklist), runs its Raketa bookings
 (moving a game to another court of its kind, or indoor for an outdoor game; cancelling one, which
 moves it instead when another of the club's courts takes it, as the dialog says first), connects
 Stripe and sees its money and payouts, invites its Administrators and watches its official
 groups
 ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)).
-Every club works one way, Only Raketa: there is nothing to choose, and no club confirms a game,
+Every club works one way, Only Rakieta: there is nothing to choose, and no club confirms a game,
 so nothing here waits for the desk's answer
 ([ADR-0196](../docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)).
 It talks to the backend's **club surface** (`backend/openapi.club.json`) **from its server

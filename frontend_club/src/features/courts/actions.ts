@@ -204,7 +204,7 @@ export async function saveHours(_previous: HoursState, form: FormData): Promise<
   if (courtIds.length === 0) return { saved: null, formRefusal: 'court_not_found' };
 
   const outcome = await writeAsClub((api, auth) =>
-    api.PUT('/api/v1/club/raketa-hours', { ...auth, body: toHoursBody(courtIds, hours) }),
+    api.PUT('/api/v1/club/rakieta-hours', { ...auth, body: toHoursBody(courtIds, hours) }),
   );
   if (!outcome.ok) {
     redrawIfStale(outcome.error);

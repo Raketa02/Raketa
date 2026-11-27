@@ -1,6 +1,6 @@
 /**
  * **One club's Raketa offer, as the backend would keep it** (#535, #670): its courts and their
- * Raketa hours, its exceptions, its prices and its settings, and the setup checklist read off all
+ * Rakieta hours, its exceptions, its prices and its settings, and the setup checklist read off all
  * of them. The rules are the club surface's own, from `backend/openapi.club.json`,
  * kept just deep enough that a test can add a court, paint its week, price its sport and confirm
  * the settings without programming each reply. A test that is about one reply overrides that
@@ -23,7 +23,7 @@ type SetupStep = components['schemas']['SetupStep'];
 type BandDays = components['schemas']['BandDays'];
 export type Court = components['schemas']['CourtResponse'];
 export type Exception = components['schemas']['ExceptionResponse'];
-type Settings = components['schemas']['RaketaSettingsResponse'];
+type Settings = components['schemas']['RakietaSettingsResponse'];
 type SportPrice = components['schemas']['SportPriceResponse'];
 type ErrorBody = components['schemas']['ErrorResponse'];
 
@@ -245,7 +245,7 @@ export class FakeClubCourts {
       return { status: 204, body: undefined };
     });
 
-    stub.on('put', '/api/v1/club/raketa-hours', ({ headers, body }) => {
+    stub.on('put', '/api/v1/club/rakieta-hours', ({ headers, body }) => {
       const signedOut = this.guard(headers.authorization);
       if (signedOut !== null) return signedOut;
       if (body.court_ids.some((id) => !this.courts.some((each) => each.id === id))) {
@@ -375,11 +375,11 @@ export class FakeClubCourts {
       return { status: 200, body: this.pricesResponse() };
     });
 
-    stub.on('get', '/api/v1/club/raketa-settings', ({ headers }) => {
+    stub.on('get', '/api/v1/club/rakieta-settings', ({ headers }) => {
       return this.guard(headers.authorization) ?? { status: 200, body: this.settingsResponse() };
     });
 
-    stub.on('put', '/api/v1/club/raketa-settings', ({ headers, body }) => {
+    stub.on('put', '/api/v1/club/rakieta-settings', ({ headers, body }) => {
       const signedOut = this.guard(headers.authorization);
       if (signedOut !== null) return signedOut;
       const values = {

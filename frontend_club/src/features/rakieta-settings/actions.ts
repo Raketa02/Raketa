@@ -6,7 +6,7 @@ import { stepDone, toSetup } from '@/features/overview/mappers';
 import { writeAsClub } from '@/server/club';
 import { formText, hasRefusals, placeRefusal, type FormState } from '@/ui/forms';
 
-import { toRaketaSettings, toSettingsBody, type RaketaSettings } from './mappers';
+import { toRakietaSettings, toSettingsBody, type RakietaSettings } from './mappers';
 import {
   checkSettings,
   NUMBER_FIELDS,
@@ -15,11 +15,11 @@ import {
   type NumberField,
 } from './schemas';
 
-const PAGE = '/raketa-settings';
+const PAGE = '/rakieta-settings';
 
 export interface SettingsFormState extends FormState<NumberField> {
   /** The settings as the backend recorded them, after a save that landed. */
-  readonly saved: RaketaSettings | null;
+  readonly saved: RakietaSettings | null;
   /** Whether that save was the first: the club confirming its settings. */
   readonly confirmedNow: boolean;
 }
@@ -34,7 +34,7 @@ function refused(error: { readonly code: string; readonly field?: string }): Set
  * `confirmed` says whether the club had confirmed its settings before, so the page can say which
  * this was.
  */
-export async function saveRaketaSettings(
+export async function saveRakietaSettings(
   _previous: SettingsFormState,
   form: FormData,
 ): Promise<SettingsFormState> {
@@ -45,7 +45,7 @@ export async function saveRaketaSettings(
   }
 
   const outcome = await writeAsClub((api, auth) =>
-    api.PUT('/api/v1/club/raketa-settings', { ...auth, body: toSettingsBody(settingsOf(draft)) }),
+    api.PUT('/api/v1/club/rakieta-settings', { ...auth, body: toSettingsBody(settingsOf(draft)) }),
   );
   if (!outcome.ok) return refused(outcome.error);
   revalidatePath(PAGE);
@@ -53,7 +53,7 @@ export async function saveRaketaSettings(
   return {
     refusals: {},
     formRefusal: null,
-    saved: toRaketaSettings(outcome.data),
+    saved: toRakietaSettings(outcome.data),
     confirmedNow: formText(form, 'confirmed') !== 'true',
   };
 }
@@ -65,25 +65,25 @@ export interface PauseState {
 }
 
 /**
- * ***Leave Raketa* begins with a pause** (the mechanics §16.15): the settings as the backend
+ * ***Leave Rakieta* begins with a pause** (the mechanics §16.15): the settings as the backend
  * holds them, paused. Read first, so a pause never saves what the form holds unsaved. Refused
  * (`settings_not_confirmed`, the website's own) while the settings are not confirmed: a save
  * would confirm them, the checklist's last step, which is the desk's to take on purpose, and a
  * club not live sells nothing to pause.
  */
-export async function pauseRaketaBookings(): Promise<PauseState> {
+export async function pauseRakietaBookings(): Promise<PauseState> {
   const setup = await writeAsClub((api, auth) => api.GET('/api/v1/club/setup', auth));
   if (!setup.ok) return { paused: false, refusal: setup.error.code };
   if (!stepDone(toSetup(setup.data), 'SETTINGS')) {
     return { paused: false, refusal: 'settings_not_confirmed' };
   }
-  const now = await writeAsClub((api, auth) => api.GET('/api/v1/club/raketa-settings', auth));
+  const now = await writeAsClub((api, auth) => api.GET('/api/v1/club/rakieta-settings', auth));
   if (!now.ok) return { paused: false, refusal: now.error.code };
-  const settings = toRaketaSettings(now.data);
+  const settings = toRakietaSettings(now.data);
   if (settings.paused) return { paused: true, refusal: null };
 
   const outcome = await writeAsClub((api, auth) =>
-    api.PUT('/api/v1/club/raketa-settings', {
+    api.PUT('/api/v1/club/rakieta-settings', {
       ...auth,
       body: toSettingsBody({ ...settings, paused: true }),
     }),

@@ -50,7 +50,7 @@ test('the signed-in pages fit a phone, top bar and all', async ({ page, club }) 
     '/groups',
     '/administrators',
     '/details',
-    '/raketa-settings',
+    '/rakieta-settings',
   ]) {
     await page.goto(path);
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
@@ -140,7 +140,7 @@ test('Groups and Hand over fit a phone: the table, the choices and the question'
   await fitsSideways(page, '/groups/<id>, confirming');
 });
 
-test("The club's menu, the checklist and Raketa settings fit a phone", async ({ page, club }) => {
+test("The club's menu, the checklist and Rakieta settings fit a phone", async ({ page, club }) => {
   void club;
   await signIn(page);
   await expect(page.getByRole('list', { name: 'Setup checklist' })).toBeVisible();
@@ -150,17 +150,17 @@ test("The club's menu, the checklist and Raketa settings fit a phone", async ({ 
     .getByRole('button', { name: /Ogrody 33/ })
     .click();
   await expect(
-    page.getByRole('banner').getByRole('link', { name: 'Raketa settings' }),
+    page.getByRole('banner').getByRole('link', { name: 'Rakieta settings' }),
   ).toBeVisible();
   await fitsSideways(page, '/overview, the menu open');
 
-  await page.goto('/raketa-settings');
+  await page.goto('/rakieta-settings');
   // Other clubs' courts are on by default, so the distance box is drawn too.
   await expect(page.getByLabel('Distance')).toBeVisible();
-  await fitsSideways(page, '/raketa-settings');
-  await page.getByRole('button', { name: 'Leave Raketa' }).click();
+  await fitsSideways(page, '/rakieta-settings');
+  await page.getByRole('button', { name: 'Leave Rakieta' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await fitsSideways(page, '/raketa-settings, leaving');
+  await fitsSideways(page, '/rakieta-settings, leaving');
 });
 
 test('Courts & prices fits a phone: the table, the grid, the forms and the bands', async ({
@@ -268,7 +268,7 @@ test('Bookings fits a phone: the day, its filters, its rows and each question', 
 test('Overview, once live, fits a phone', async ({ page, club }) => {
   club.raketa.ready();
   await signIn(page);
-  await expect(page.getByRole('region', { name: 'Live on Raketa' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Live on Rakieta' })).toBeVisible();
   await fitsSideways(page, '/overview, live');
 });
 

@@ -21,7 +21,7 @@ const PAGES: readonly NavItem[] = [
 ];
 const CLUB_PAGES = [
   { href: '/details', label: frame.clubPages.details },
-  { href: '/raketa-settings', label: frame.clubPages.raketaSettings },
+  { href: '/rakieta-settings', label: frame.clubPages.rakietaSettings },
 ] as const;
 
 /**

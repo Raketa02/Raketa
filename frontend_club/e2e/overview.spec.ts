@@ -8,7 +8,7 @@ import { court, week } from './stub/courts';
 /**
  * **Overview** (#561, #674, the screens B2): the setup checklist's four steps until the club is
  * live, each with its state and the one button that does it; then, once, *You're live*, the
- * checklist is gone, and Overview says the club is live on Raketa, with the way to today's
+ * checklist is gone, and Overview says the club is live on Rakieta, with the way to today's
  * Bookings. Connecting payments has its own spec, `connect-payments.spec.ts` (#562).
  */
 
@@ -52,7 +52,7 @@ test.describe('Overview', () => {
       'to do',
     ]);
 
-    await expect(page.getByRole('region', { name: 'Live on Raketa' })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Live on Rakieta' })).toHaveCount(0);
 
     await expect(step(page, 'Connect payments').getByRole('button')).toHaveText(
       'Connect with Stripe',
@@ -69,9 +69,9 @@ test.describe('Overview', () => {
     );
     const settings = step(page, 'Check the settings').getByRole('link');
     await expect(settings).toHaveText('Check the settings');
-    await expect(settings).toHaveAttribute('href', '/raketa-settings');
+    await expect(settings).toHaveAttribute('href', '/rakieta-settings');
     await settings.click();
-    await expect(page.getByRole('heading', { name: 'Raketa settings', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Rakieta settings', level: 1 })).toBeVisible();
   });
 
   test('steps done are ticked, and the first left to do is next', async ({ page, club }) => {
@@ -91,7 +91,7 @@ test.describe('Overview', () => {
     );
     await expect(step(page, 'Check the settings').getByRole('link')).toHaveAttribute(
       'href',
-      '/raketa-settings',
+      '/rakieta-settings',
     );
     await expect(page.getByText("You're live")).toBeHidden();
   });
@@ -136,7 +136,7 @@ test.describe('Overview', () => {
     club.raketa.payments = 'NEEDS_DETAILS';
     await page.reload();
     await expect(checklist(page)).toHaveCount(4);
-    await expect(page.getByRole('region', { name: 'Live on Raketa' })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Live on Rakieta' })).toHaveCount(0);
     await expect(step(page, 'Connect payments').locator('[data-state]')).toHaveText(
       'Stripe needs more details',
     );
@@ -162,7 +162,7 @@ test.describe('Overview', () => {
     await expect(checklist(page)).toHaveCount(4);
   });
 
-  test("a live club is told it is live on Raketa, with the way to today's Bookings", async ({
+  test("a live club is told it is live on Rakieta, with the way to today's Bookings", async ({
     page,
     club,
   }) => {
@@ -172,9 +172,9 @@ test.describe('Overview', () => {
     club.bookings.add(booking({ court: padel, day: dayFromToday(0), hour: 7 }));
     await signIn(page);
 
-    const live = page.getByRole('region', { name: 'Live on Raketa' });
+    const live = page.getByRole('region', { name: 'Live on Rakieta' });
     await expect(live).toContainText(
-      'Every game booked on your courts through Raketa is in Bookings, a day at a time.',
+      'Every game booked on your courts through Rakieta is in Bookings, a day at a time.',
     );
     // Nothing waits for the club's answer any more (Q121).
     await expect(page.getByText('Waiting for your answer')).toHaveCount(0);

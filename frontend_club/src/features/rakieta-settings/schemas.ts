@@ -6,7 +6,7 @@
 
 import { formText, type Refusals } from '@/ui/forms';
 
-import type { RaketaSettings } from './mappers';
+import type { RakietaSettings } from './mappers';
 
 /** The settings typed as a number, by the names the backend's `details.field` gives them. */
 export const NUMBER_FIELDS = ['release_lead_days', 'cut_off_hours', 'other_clubs_courts'] as const;
@@ -28,7 +28,7 @@ export interface SettingsDraft {
 }
 
 /** Each number as the settings hold it. */
-export function numbersOf(settings: RaketaSettings): Record<NumberField, number> {
+export function numbersOf(settings: RakietaSettings): Record<NumberField, number> {
   return {
     release_lead_days: settings.releaseLeadDays,
     cut_off_hours: settings.cutOffHours,
@@ -36,7 +36,7 @@ export function numbersOf(settings: RaketaSettings): Record<NumberField, number>
   };
 }
 
-export function draftOf(settings: RaketaSettings): SettingsDraft {
+export function draftOf(settings: RakietaSettings): SettingsDraft {
   const numbers = numbersOf(settings);
   return {
     numbers: Object.fromEntries(
@@ -75,7 +75,7 @@ export function checkSettings(draft: SettingsDraft): Refusals<NumberField> {
 }
 
 /** A draft that passed {@link checkSettings}, as the settings a save sends. */
-export function settingsOf(draft: SettingsDraft): RaketaSettings {
+export function settingsOf(draft: SettingsDraft): RakietaSettings {
   const number = (field: NumberField) => Number(draft.numbers[field].trim());
   return {
     releaseLeadDays: number('release_lead_days'),

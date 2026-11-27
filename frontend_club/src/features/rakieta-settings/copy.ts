@@ -1,13 +1,13 @@
 /**
- * **Every sentence Raketa settings says** (the screens B5; the settings and their defaults, the
+ * **Every sentence Rakieta settings says** (the screens B5; the settings and their defaults, the
  * mechanics §16.6; leaving, §16.15).
  */
 
 import type { NumberField } from './schemas';
 
 export const SETTINGS_COPY = {
-  caption: 'How your club sells its courts through Raketa',
-  title: 'Raketa settings',
+  caption: 'How your club sells its courts through Rakieta',
+  title: 'Rakieta settings',
   numbers: {
     release_lead_days: {
       label: 'Release lead',
@@ -31,7 +31,7 @@ export const SETTINGS_COPY = {
       `At an hour your courts are full, your groups are also offered other clubs' courts within ${km} km.`,
   },
   paused: {
-    label: 'Pause Raketa bookings',
+    label: 'Pause Rakieta bookings',
     hint:
       'No new games are built on your courts. Games already booked are played as booked, and ' +
       'games still filling can book until their book-by.',
@@ -43,20 +43,20 @@ export const SETTINGS_COPY = {
   confirmed: 'Settings confirmed.',
   saved: 'Settings saved.',
   leave: {
-    open: 'Leave Raketa',
-    title: 'Leave Raketa?',
+    open: 'Leave Rakieta',
+    title: 'Leave Rakieta?',
     lead:
       'Leaving starts with a pause: no new games are built on your courts, and every game ' +
       'already booked is played as booked. Once every booked game has been played and paid ' +
       'out, your payments can be disconnected.',
     paused:
-      'Raketa bookings are paused. Once every booked game has been played and paid out, your ' +
+      'Rakieta bookings are paused. Once every booked game has been played and paid out, your ' +
       'payments can be disconnected.',
     notSelling:
-      "Your settings aren't confirmed yet, so Raketa sells none of your courts: there is " +
+      "Your settings aren't confirmed yet, so Rakieta sells none of your courts: there is " +
       'nothing to leave.',
     cancel: 'Cancel',
-    pause: 'Pause Raketa bookings',
+    pause: 'Pause Rakieta bookings',
     close: 'Close',
   },
 } as const;
@@ -64,7 +64,7 @@ export const SETTINGS_COPY = {
 /** The refusals the settings can meet that are not a number out of its range. */
 export const SETTINGS_REFUSALS: Readonly<Record<string, string>> = {
   settings_not_confirmed:
-    'Confirm your settings first: until then Raketa sells none of your courts.',
+    'Confirm your settings first: until then Rakieta sells none of your courts.',
 };
 
 /** A number out of its range, or no whole number at all: one sentence per field, with its range. */

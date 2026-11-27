@@ -135,10 +135,10 @@ test.describe('Groups', () => {
     // On by default (Q128), within 10 km.
     const line = page.getByRole('main').getByText(/^At an hour your courts are full/);
     await expect(line).toHaveText(
-      "At an hour your courts are full, your groups are also offered other clubs' courts within 10 km. Change it in Raketa settings.",
+      "At an hour your courts are full, your groups are also offered other clubs' courts within 10 km. Change it in Rakieta settings.",
     );
-    await line.getByRole('link', { name: 'Raketa settings' }).click();
-    await expect(page).toHaveURL(/\/raketa-settings#other-clubs$/);
+    await line.getByRole('link', { name: 'Rakieta settings' }).click();
+    await expect(page).toHaveURL(/\/rakieta-settings#other-clubs$/);
     await expect(
       page.getByRole('switch', { name: "Offer our groups other clubs' courts when ours are full" }),
     ).toBeInViewport();
@@ -146,13 +146,13 @@ test.describe('Groups', () => {
     club.raketa.settings.other_clubs_courts = { offered: false, within_km: 15 };
     await page.goto('/groups');
     await expect(page.getByRole('main').getByText(/^Your groups are offered/)).toHaveText(
-      "Your groups are offered only your courts. Offer other clubs' courts in Raketa settings.",
+      "Your groups are offered only your courts. Offer other clubs' courts in Rakieta settings.",
     );
 
     club.raketa.settings.other_clubs_courts = { offered: true, within_km: 15 };
     await page.goto('/groups');
     await expect(page.getByRole('main').getByText(/^At an hour your courts are full/)).toHaveText(
-      "At an hour your courts are full, your groups are also offered other clubs' courts within 15 km. Change it in Raketa settings.",
+      "At an hour your courts are full, your groups are also offered other clubs' courts within 15 km. Change it in Rakieta settings.",
     );
   });
 

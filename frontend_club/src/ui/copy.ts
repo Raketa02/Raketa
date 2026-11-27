@@ -19,7 +19,7 @@ export const SITE_COPY = {
       administrators: 'Administrators',
     },
     /** The pages the club's name opens. */
-    clubPages: { details: 'Details', raketaSettings: 'Raketa settings' },
+    clubPages: { details: 'Details', rakietaSettings: 'Rakieta settings' },
   },
   error: {
     title: 'Something went wrong',

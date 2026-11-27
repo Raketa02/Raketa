@@ -1,16 +1,16 @@
 /**
- * **The club's Raketa settings, wire to view and back.** The only file in this feature that
- * imports a generated type (ADR-0187 §6); everything else reads the {@link RaketaSettings} it
- * makes. Every club works one way, Only Raketa (Q121), so there is no way to choose.
+ * **The club's Rakieta settings, wire to view and back.** The only file in this feature that
+ * imports a generated type (ADR-0187 §6); everything else reads the {@link RakietaSettings} it
+ * makes. Every club works one way, Only Rakieta (Q121), so there is no way to choose.
  */
 
 import type { components } from '@/generated/schema';
 
-type WireSettings = components['schemas']['RaketaSettingsResponse'];
-type WireSettingsBody = components['schemas']['RaketaSettingsRequest'];
+type WireSettings = components['schemas']['RakietaSettingsResponse'];
+type WireSettingsBody = components['schemas']['RakietaSettingsRequest'];
 
-/** The Raketa settings a club confirms (the mechanics §16.6), each at its default until it does. */
-export interface RaketaSettings {
+/** The Rakieta settings a club confirms (the mechanics §16.6), each at its default until it does. */
+export interface RakietaSettings {
   readonly releaseLeadDays: number;
   readonly cutOffHours: number;
   /** *Offer our groups other clubs' courts when ours are full*, and how far; kept while off. */
@@ -18,7 +18,7 @@ export interface RaketaSettings {
   readonly paused: boolean;
 }
 
-export function toRaketaSettings(wire: WireSettings): RaketaSettings {
+export function toRakietaSettings(wire: WireSettings): RakietaSettings {
   return {
     releaseLeadDays: wire.release_lead_days,
     cutOffHours: wire.cut_off_hours,
@@ -31,7 +31,7 @@ export function toRaketaSettings(wire: WireSettings): RaketaSettings {
 }
 
 /** Every setting, every time: the first save is the club confirming them, defaults included. */
-export function toSettingsBody(settings: RaketaSettings): WireSettingsBody {
+export function toSettingsBody(settings: RakietaSettings): WireSettingsBody {
   return {
     release_lead_days: settings.releaseLeadDays,
     cut_off_hours: settings.cutOffHours,

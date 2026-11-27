@@ -4,7 +4,7 @@ import { expect, signIn, test } from './fixtures';
 import { refusal } from './stub/backend';
 
 /**
- * **Raketa settings** (#561, #674, the screens B5, the mechanics §16.6): one form, every setting
+ * **Rakieta settings** (#561, #674, the screens B5, the mechanics §16.6): one form, every setting
  * the club confirms: the release lead, the cut-off, other clubs' courts and the pause. Every club
  * works one way (Q121), so there is no way to choose. The first save confirms the settings, the
  * setup checklist's last step.
@@ -14,11 +14,11 @@ const OTHER_CLUBS_SWITCH = "Offer our groups other clubs' courts when ours are f
 
 async function openSettings(page: Page) {
   await signIn(page);
-  await page.goto('/raketa-settings');
-  await expect(page.getByRole('heading', { name: 'Raketa settings', level: 1 })).toBeVisible();
+  await page.goto('/rakieta-settings');
+  await expect(page.getByRole('heading', { name: 'Rakieta settings', level: 1 })).toBeVisible();
 }
 
-test.describe('Raketa settings', () => {
+test.describe('Rakieta settings', () => {
   test("a new club sees every setting at its default, other clubs' courts on within 10 km, and no way to choose", async ({
     page,
     club,
@@ -28,10 +28,10 @@ test.describe('Raketa settings', () => {
 
     await expect(page.getByLabel('Release lead')).toHaveValue('3');
     await expect(page.getByLabel('Free-cancellation cut-off')).toHaveValue('24');
-    // Only Raketa is the one way (Q121): nothing to choose, and nothing only another way asked.
+    // Only Rakieta is the one way (Q121): nothing to choose, and nothing only another way asked.
     await expect(page.getByRole('radiogroup')).toHaveCount(0);
     await expect(page.getByRole('main').getByRole('radio')).toHaveCount(0);
-    for (const gone of ['How you work with Raketa', 'Instant', 'On request']) {
+    for (const gone of [/How you work with/, 'Instant', 'On request']) {
       await expect(page.getByText(gone)).toHaveCount(0);
     }
     await expect(page.getByLabel('Minimum notice')).toHaveCount(0);
@@ -46,7 +46,7 @@ test.describe('Raketa settings', () => {
     await expect(page.getByLabel('Distance')).toHaveValue('10');
     // The desk checks nobody in (ADR-0195): these two are the only switches.
     await expect(page.getByRole('main').getByRole('switch')).toHaveCount(2);
-    await expect(page.getByRole('switch', { name: 'Pause Raketa bookings' })).not.toBeChecked();
+    await expect(page.getByRole('switch', { name: 'Pause Rakieta bookings' })).not.toBeChecked();
     await expect(page.getByRole('button', { name: 'Confirm settings' })).toBeVisible();
   });
 
@@ -60,7 +60,7 @@ test.describe('Raketa settings', () => {
     await page.getByRole('button', { name: 'Confirm settings' }).click();
 
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Settings confirmed.');
-    expect(stub.requests('put', '/api/v1/club/raketa-settings').map((r) => r.body)).toEqual([
+    expect(stub.requests('put', '/api/v1/club/rakieta-settings').map((r) => r.body)).toEqual([
       {
         release_lead_days: 1,
         cut_off_hours: 24,
@@ -86,7 +86,7 @@ test.describe('Raketa settings', () => {
     await page.getByRole('button', { name: 'Save settings' }).click();
 
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Settings saved.');
-    expect(stub.requests('put', '/api/v1/club/raketa-settings').map((r) => r.body)).toEqual([
+    expect(stub.requests('put', '/api/v1/club/rakieta-settings').map((r) => r.body)).toEqual([
       {
         release_lead_days: 5,
         cut_off_hours: 12,
@@ -106,12 +106,12 @@ test.describe('Raketa settings', () => {
     await otherClubs.check();
     await expect(page.getByLabel('Distance')).toHaveValue('10');
     await page.getByLabel('Distance').fill('15');
-    await page.getByRole('switch', { name: 'Pause Raketa bookings' }).check();
+    await page.getByRole('switch', { name: 'Pause Rakieta bookings' }).check();
     await expect(page.getByText('No new games are built on your courts.')).toBeVisible();
     await page.getByRole('button', { name: 'Confirm settings' }).click();
 
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Settings confirmed.');
-    expect(stub.requests('put', '/api/v1/club/raketa-settings')[0]?.body).toMatchObject({
+    expect(stub.requests('put', '/api/v1/club/rakieta-settings')[0]?.body).toMatchObject({
       other_clubs_courts: { offered: true, within_km: 15 },
       paused: true,
     });
@@ -133,7 +133,7 @@ test.describe('Raketa settings', () => {
     await page.getByRole('button', { name: 'Save settings' }).click();
 
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Settings saved.');
-    expect(stub.requests('put', '/api/v1/club/raketa-settings')[0]?.body).toMatchObject({
+    expect(stub.requests('put', '/api/v1/club/rakieta-settings')[0]?.body).toMatchObject({
       other_clubs_courts: { offered: false, within_km: 25 },
     });
     await page.reload();
@@ -156,9 +156,9 @@ test.describe('Raketa settings', () => {
     await expect(page.getByText('A release lead is 1 to 13 days.')).toBeVisible();
     await expect(page.getByLabel('Release lead')).toHaveAttribute('aria-invalid', 'true');
     await expect(page.getByText('A cut-off is 0 to 72 hours.')).toBeVisible();
-    expect(stub.requests('put', '/api/v1/club/raketa-settings')).toEqual([]);
+    expect(stub.requests('put', '/api/v1/club/rakieta-settings')).toEqual([]);
 
-    stub.on('put', '/api/v1/club/raketa-settings', () => ({
+    stub.on('put', '/api/v1/club/rakieta-settings', () => ({
       status: 400,
       body: refusal('setting_out_of_range', 'cut_off_hours', { least: 0, most: 72 }),
     }));
@@ -169,7 +169,7 @@ test.describe('Raketa settings', () => {
     await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
   });
 
-  test('Leave Raketa explains leaving, and starts it with a pause', async ({
+  test('Leave Rakieta explains leaving, and starts it with a pause', async ({
     page,
     stub,
     club,
@@ -177,14 +177,14 @@ test.describe('Raketa settings', () => {
     club.raketa.confirmed = true;
     await openSettings(page);
 
-    await page.getByRole('button', { name: 'Leave Raketa' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Leave Raketa?' });
+    await page.getByRole('button', { name: 'Leave Rakieta' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Leave Rakieta?' });
     await expect(dialog).toContainText('Leaving starts with a pause');
-    await dialog.getByRole('button', { name: 'Pause Raketa bookings' }).click();
+    await dialog.getByRole('button', { name: 'Pause Rakieta bookings' }).click();
 
     await expect(dialog).toBeHidden();
-    await expect(page.getByRole('switch', { name: 'Pause Raketa bookings' })).toBeChecked();
-    expect(stub.requests('put', '/api/v1/club/raketa-settings').map((r) => r.body)).toEqual([
+    await expect(page.getByRole('switch', { name: 'Pause Rakieta bookings' })).toBeChecked();
+    expect(stub.requests('put', '/api/v1/club/rakieta-settings').map((r) => r.body)).toEqual([
       {
         release_lead_days: 3,
         cut_off_hours: 24,
@@ -193,9 +193,9 @@ test.describe('Raketa settings', () => {
       },
     ]);
 
-    await page.getByRole('button', { name: 'Leave Raketa' }).click();
-    await expect(dialog).toContainText('Raketa bookings are paused.');
-    await expect(dialog.getByRole('button', { name: 'Pause Raketa bookings' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Leave Rakieta' }).click();
+    await expect(dialog).toContainText('Rakieta bookings are paused.');
+    await expect(dialog.getByRole('button', { name: 'Pause Rakieta bookings' })).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Close' }).click();
     await expect(dialog).toBeHidden();
   });
@@ -207,13 +207,13 @@ test.describe('Raketa settings', () => {
   }) => {
     void club;
     await openSettings(page);
-    await page.getByRole('button', { name: 'Leave Raketa' }).click();
+    await page.getByRole('button', { name: 'Leave Rakieta' }).click();
 
-    const dialog = page.getByRole('dialog', { name: 'Leave Raketa?' });
+    const dialog = page.getByRole('dialog', { name: 'Leave Rakieta?' });
     await expect(dialog).toContainText("Your settings aren't confirmed yet");
-    await expect(dialog.getByRole('button', { name: 'Pause Raketa bookings' })).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Pause Rakieta bookings' })).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Close' }).click();
-    expect(stub.requests('put', '/api/v1/club/raketa-settings')).toEqual([]);
+    expect(stub.requests('put', '/api/v1/club/rakieta-settings')).toEqual([]);
     expect(club.raketa.confirmed).toBe(false);
   });
 
@@ -223,17 +223,17 @@ test.describe('Raketa settings', () => {
     club,
   }) => {
     club.raketa.confirmed = true;
-    stub.on('put', '/api/v1/club/raketa-settings', () => ({ status: 'drop' }));
+    stub.on('put', '/api/v1/club/rakieta-settings', () => ({ status: 'drop' }));
     await openSettings(page);
-    await page.getByRole('button', { name: 'Leave Raketa' }).click();
+    await page.getByRole('button', { name: 'Leave Rakieta' }).click();
     await page
-      .getByRole('dialog', { name: 'Leave Raketa?' })
-      .getByRole('button', { name: 'Pause Raketa bookings' })
+      .getByRole('dialog', { name: 'Leave Rakieta?' })
+      .getByRole('button', { name: 'Pause Rakieta bookings' })
       .click();
 
     await expect(page.getByRole('main').getByRole('alert')).toHaveText(
       "We couldn't reach the server. Try again in a moment.",
     );
-    await expect(page.getByRole('switch', { name: 'Pause Raketa bookings' })).not.toBeChecked();
+    await expect(page.getByRole('switch', { name: 'Pause Rakieta bookings' })).not.toBeChecked();
   });
 });

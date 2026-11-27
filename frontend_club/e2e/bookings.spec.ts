@@ -166,6 +166,15 @@ test.describe('Bookings', () => {
         called_off_reason: 'SHORT_AT_THE_CUT_OFF',
       }),
     );
+    club.bookings.add(
+      booking({
+        court: padel,
+        day,
+        hour: 13,
+        stage: 'CALLED_OFF',
+        called_off_reason: 'BY_THE_SENDER',
+      }),
+    );
     const nameless = club.bookings.add(
       booking({ court: padel, day, hour: 12, cut_off: fromNow(-HOUR_MS) }),
     );
@@ -175,7 +184,7 @@ test.describe('Bookings', () => {
 
     await openDay(page, day);
 
-    await expect(page.getByRole('rowheader')).toHaveCount(3);
+    await expect(page.getByRole('rowheader')).toHaveCount(4);
     await expect(rowAt(page, '10:00–11:00').getByRole('cell').nth(2)).toHaveText(
       /Called off\s*Cancelled by you · Double booking/,
     );
@@ -184,6 +193,9 @@ test.describe('Bookings', () => {
     );
     await expect(rowAt(page, '11:00–12:00').getByRole('cell').nth(2)).toHaveText(
       /Called off\s*Short at the cut-off/,
+    );
+    await expect(rowAt(page, '13:00–14:00').getByRole('cell').nth(2)).toHaveText(
+      /Called off\s*Cancelled by the player who booked it/,
     );
     await expect(
       rowAt(page, '12:00–13:00').getByRole('cell').nth(1).getByRole('listitem').last(),

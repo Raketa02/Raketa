@@ -5,7 +5,7 @@ import { refusal } from './stub/backend';
 import { court, week } from './stub/courts';
 
 /**
- * **Courts & prices: Weekly hours for Raketa** (#561, the screens B3, the mechanics §16.5): the
+ * **Courts & prices: Weekly hours for Rakieta** (#561, the screens B3, the mechanics §16.5): the
  * hours of an ordinary week each court is offered, on the player's own grid, seven days by
  * sixteen hours from 07:00 to 23:00. A tap or a drag paints them; a save gives the week to one
  * court, to every court of a sport, or, with *Copy to other courts*, to the courts ticked.
@@ -14,7 +14,7 @@ import { court, week } from './stub/courts';
 async function openHours(page: Page) {
   await signIn(page);
   await page.goto('/courts');
-  return page.getByRole('region', { name: 'Weekly hours for Raketa' });
+  return page.getByRole('region', { name: 'Weekly hours for Rakieta' });
 }
 
 function cell(hours: Locator, name: string) {
@@ -42,7 +42,7 @@ async function drag(page: Page, from: Locator, to: Locator, steps = 12) {
   await page.mouse.up();
 }
 
-test.describe('Weekly hours for Raketa', () => {
+test.describe('Weekly hours for Rakieta', () => {
   test('waits for a court', async ({ page, club }) => {
     void club;
     const hours = await openHours(page);
@@ -73,7 +73,7 @@ test.describe('Weekly hours for Raketa', () => {
     await hours.getByRole('button', { name: 'Save hours' }).click();
 
     await expect(hours.getByRole('status')).toHaveText('Hours saved for Court 1.');
-    expect(stub.requests('put', '/api/v1/club/raketa-hours').map((r) => r.body)).toEqual([
+    expect(stub.requests('put', '/api/v1/club/rakieta-hours').map((r) => r.body)).toEqual([
       {
         court_ids: [one.id],
         hours: [
@@ -166,7 +166,7 @@ test.describe('Weekly hours for Raketa', () => {
     await hours.getByRole('button', { name: 'Save hours' }).click();
 
     await expect(hours.getByRole('status')).toHaveText('Hours saved for Court 1 and Court 2.');
-    const [saved] = stub.requests('put', '/api/v1/club/raketa-hours');
+    const [saved] = stub.requests('put', '/api/v1/club/rakieta-hours');
     expect(saved?.body.court_ids).toEqual([one.id, two.id]);
     expect(club.raketa.courts.map((each) => each.hours.length)).toEqual([2, 2, 1]);
     await expect(hours).not.toContainText("These courts don't all have the same hours.");
@@ -190,7 +190,7 @@ test.describe('Weekly hours for Raketa', () => {
     await dialog.getByRole('button', { name: 'Copy' }).click();
 
     await expect(hours.getByRole('status')).toHaveText('Hours saved for Court 1 and Court 3.');
-    const [saved] = stub.requests('put', '/api/v1/club/raketa-hours');
+    const [saved] = stub.requests('put', '/api/v1/club/rakieta-hours');
     expect(saved?.body.court_ids).toEqual([one.id, three.id]);
     expect(saved?.body.hours).toHaveLength(10);
     expect(club.raketa.courts[2]?.hours).toEqual(one.hours);
@@ -202,7 +202,7 @@ test.describe('Weekly hours for Raketa', () => {
     club,
   }) => {
     club.raketa.courts = [court({ name: 'Court 1', sport: 'PADEL' })];
-    stub.on('put', '/api/v1/club/raketa-hours', () => ({
+    stub.on('put', '/api/v1/club/rakieta-hours', () => ({
       status: 404,
       body: refusal('court_not_found'),
     }));
