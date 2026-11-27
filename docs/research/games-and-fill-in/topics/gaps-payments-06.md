@@ -11,7 +11,7 @@ rule/help/interface text · `[DOCS]` a provider's document · `[MEASURED]` what 
 
 ---
 
-### R-CLUBBOOK-24 — How soon a Polish bank's app drops a hold Raketa let go: unpublished, and the email can only say so
+### R-CLUBBOOK-24 — How soon a Polish bank's app drops a hold Rakieta let go: unpublished, and the email can only say so
 
 **Already answered in this folder.** The grade can rest on these.
 
@@ -32,7 +32,7 @@ rule/help/interface text · `[DOCS]` a provider's document · `[MEASURED]` what 
 
 *Reading:* because no Polish bank states the time, the cancel email cannot promise one. The honest wording is what the
 market's own documents say: the hold has been released, it will clear on the bank's own cycle, and that can take from
-seconds to a few days — never a Raketa-set deadline. The grade's missing fact (a published Polish release time) is
+seconds to a few days — never a Rakieta-set deadline. The grade's missing fact (a published Polish release time) is
 settled as genuinely absent, which is itself the answer.
 
 ### R-SECURITY-22 — No Kraków rival publishes a login lockout, a CAPTCHA, or a new-sign-in / password-change email (covers both gap lines)
@@ -58,15 +58,15 @@ change. Both resolve to the same finding.
   Measuring it would need wrong-password attempts on real accounts at each rival, which this round cannot do.
 
 *Reading:* the grade's missing fact resolves to parity by absence. No Kraków rival advertises any of these protections,
-and the players' status quo (WhatsApp + a club desk) has no account login that moves money at all. So Raketa having no
+and the players' status quo (WhatsApp + a club desk) has no account login that moves money at all. So Rakieta having no
 published lockout / CAPTCHA / sign-in alert is level with the market (=), and the club's provisional "?" can settle on
 that. The positive facts (an actual lockout threshold, a sign-in email) stay **not found** — unmeasurable without
 accounts — but the grade no longer depends on them.
 
-### R-SECURITY-15 — Raketa's way back from the bank is documented; the real-Android misroute and the rivals' flow stay device-gated
+### R-SECURITY-15 — Rakieta's way back from the bank is documented; the real-Android misroute and the rivals' flow stay device-gated
 
-- **Raketa's own mechanism is answered.** The React Native SDK sets the 3-D Secure return to the custom scheme
-  `raketa://safepay`; a `Linking` listener hands the incoming address to Stripe only while a confirmation is running,
+- **Rakieta's own mechanism is answered.** The React Native SDK sets the 3-D Secure return to the custom scheme
+  `rakieta://safepay`; a `Linking` listener hands the incoming address to Stripe only while a confirmation is running,
   and the router ignores any address it does not know — so a stray or misrouted return lands nowhere rather than into
   another screen. Universal (https) links are not supported by the SDK version in the app
   (`topics/stripe-authentication.md#the-way-back-from-the-banks-own-app`,
@@ -81,7 +81,7 @@ accounts — but the grade no longer depends on them.
   that mobile SDKs (Braintree, PayPal, Adyen) use a custom-scheme or App-Links return — not Playtomic's or Playmore's
   actual behaviour. Reachable only by driving their apps on a device with a challenge card.
 
-*Reading:* the grade-bearing half — can a misrouted return leak or confuse Raketa — is answered: the listener is
+*Reading:* the grade-bearing half — can a misrouted return leak or confuse Rakieta — is answered: the listener is
 scoped to an in-flight confirmation and unknown addresses are dropped. The device-level and competitor comparisons
 remain **not found**, both gated on a real Android phone.
 
@@ -96,12 +96,12 @@ remain **not found**, both gated on a real Android phone.
   Stripe's own Unacceptable Risk Policy holds a restricted user's payouts 120 days
   ([Stripe](https://stripe.com/legal/unacceptable-risk-policy), read 2026-10-20) — restrictions, not a test-money
   mix-up.
-- The test/live-key facet for Raketa itself is already a **code** matter, not a market one: a live key accepted where
+- The test/live-key facet for Rakieta itself is already a **code** matter, not a market one: a live key accepted where
   a test key belongs (or the reverse) is a SECURITY family attack, and a deployed server refusing test keys is a
   product rule (`topics/stripe-gaps-07.md` R-SECURITY-4 on key shape and the organisation-key `Stripe-Context`;
   SECURITY area digest). No market precedent bears on it.
 
-*Reading:* the gap's missing fact (a real case) is settled as genuinely absent, so the club's "?" rests on Raketa's own
+*Reading:* the gap's missing fact (a real case) is settled as genuinely absent, so the club's "?" rests on Rakieta's own
 code rule that a deployed server must run on live keys, not on any market comparator.
 
 ### R-SECURITY-13 — No gateway publishes a per-payment card-try cap, and no Kraków club card-testing case was found
@@ -121,7 +121,7 @@ code rule that a deployed server must run on live keys, not on any market compar
   guesses — barely applies; so the local status quo has little exposure, and none is reported.
 
 *Reading:* the gap resolves to absence on every market side. The grade rests on Stripe's documented ten-try ceiling and
-the club's Radar, not on a gateway or competitor cap, and Raketa's card-entry flow is the one place in this market that
+the club's Radar, not on a gateway or competitor cap, and Rakieta's card-entry flow is the one place in this market that
 takes a raw card, so the comparison is with the gateways' bank-transfer rails rather than a like-for-like card cap.
 
 ### R-SECURITY-20 — Only Playmore's "remember me" is published; Playtomic Manager's and tenis4U's session lengths are not found
@@ -150,7 +150,7 @@ staff-session behaviour any Kraków rival publishes. Playtomic Manager's and ten
 
 *Answer:* **no** — as served, Playtomic Manager's return address after sign-in cannot be bent to another site; it is a
 relative path within `manager.playtomic.io`, built from the router's own location rather than from input. (This is the
-rival's behaviour; it sets the market bar that Raketa's own return handling meets or exceeds.)
+rival's behaviour; it sets the market bar that Rakieta's own return handling meets or exceeds.)
 
 ### R-SECURITY-26 — Every rival gates a club behind a human onboarding step or payment-processor KYC; none lets a fake club self-serve into taking money
 
@@ -171,7 +171,7 @@ rival's behaviour; it sets the market bar that Raketa's own return handling meet
   self-serve kluby.org club sign-up.
 
 *Answer:* the market norm is that a club cannot self-serve straight into taking bookings and money. Every rival gates
-it — tenis4U, Playmore and kluby.org by a human onboarding/contact step, Playtomic (and, by the same logic, Raketa via
+it — tenis4U, Playmore and kluby.org by a human onboarding/contact step, Playtomic (and, by the same logic, Rakieta via
 Stripe Connect onboarding) by payment-processor KYC. No Kraków rival lets an unvetted fake club register itself and
-immediately take payments, so the gap is answered: Raketa's Stripe-Connect onboarding gate is at or above the market
+immediately take payments, so the gap is answered: Rakieta's Stripe-Connect onboarding gate is at or above the market
 bar.

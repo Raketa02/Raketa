@@ -20,7 +20,7 @@ sibling files (`gaps-payments-02.md` to `-04.md`), are cited by anchor, not repe
   Padel. Fame Sport's rules PDF now answers 404.
 - **kluby.org**: its changelogs, feature list and help page, and its help videos' titles.
 - **Google's Google Pay API documents**, and Recurly's Google Pay page.
-- **Raketa's code** in the copy at `9ab0ea5b`, for R-RESCUE-11 only.
+- **Rakieta's code** in the copy at `9ab0ea5b`, for R-RESCUE-11 only.
 
 Every quoted string and code line from the three products, and the terms quoted below, is saved in
 [`../shots/gaps-payments-05-playtomic-playmore-tenis4u-2026-10-20.txt`](../shots/gaps-payments-05-playtomic-playmore-tenis4u-2026-10-20.txt).
@@ -169,7 +169,7 @@ himself is a case no rule names.
   - Playmore's payment page names the "Obiekt sportowy" by its trade name only
     (`gaps-RESCUE.md#a-code-question-with-the-market-beside-it`).
 
-*Reading:* the gap is not the rescue screen's alone. Raketa holds no club address that any screen could show.
+*Reading:* the gap is not the rescue screen's alone. Rakieta holds no club address that any screen could show.
 
 ---
 
@@ -207,7 +207,7 @@ himself is a case no rule names.
   (`competitor-club.md#what-the-club-sees-of-its-money`; the article was updated 2026-09-25).
 
 *Reading:* Playtomic's desk never sees a bare name. A hold shows as one word on the owner's line, and every share
-not yet paid shows as an action. On Raketa's day a name shows "held", "taken", or nothing at all.
+not yet paid shows as an action. On Rakieta's day a name shows "held", "taken", or nothing at all.
 
 ---
 
@@ -257,7 +257,7 @@ not yet paid shows as an action. On Raketa's day a name shows "held", "taken", o
   `calendar-DawkByxO.js`, `reports-Ct22FugR.js`, extract §B — read 2026-10-20
 
 *Reading:* the market says nothing about fees at the press. The cost shows later, on an invoice or in a report.
-Raketa's dialog says, at the press, that the card fees are not returned, which is more than any rival says. Its
+Rakieta's dialog says, at the press, that the card fees are not returned, which is more than any rival says. Its
 fault is reading the cut-off from a page left open.
 
 ---
@@ -308,7 +308,7 @@ fault is reading the cut-off from a page left open.
   - Playtomic counts Google Pay as a card-on-file guarantee, yet asks for manual renewal of a membership paid with a
     wallet (`gaps-payments-03.md#r-pay-6--how-often-an-apple-pay-device-token-fails-a-later-charge-after-the-player-changes-phones`).
 
-*Reading:* in principle Google allows Raketa's later charge made without the player: a stored card, varying
+*Reading:* in principle Google allows Rakieta's later charge made without the player: a stored card, varying
 amounts, and terms accepted in the flow. But none of its three ways to enrol a card is for an unscheduled charge.
 A card saved on an Android phone is a device token, so it carries the same new-phone risk as Apple's. A card saved
 from Chrome or a Google account is the card's own number, which no phone change touches.
@@ -475,8 +475,8 @@ away from cancelled hours and closed clubs.
   Squash4You and Garden Padel. — read 2026-10-20
 
 *Reading:* by KSG's words, a club's move to a comparable court is not even a cancellation, so the game stands at the
-price paid. Raketa's "same price" test has the shape of Playmore's rule for a player moving his own booking, but
-Raketa applies it to a club's move. No Kraków rule, and no rival's desk, does that.
+price paid. Rakieta's "same price" test has the shape of Playmore's rule for a player moving his own booking, but
+Rakieta applies it to a club's move. No Kraków rule, and no rival's desk, does that.
 
 ---
 

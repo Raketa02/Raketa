@@ -79,7 +79,7 @@
 - Finding your own next game
 - Support is a bot
 
-**9. Reading: the joiner at Playtomic and at Raketa** (not sources)
+**9. Reading: the joiner at Playtomic and at Rakieta** (not sources)
 - Reading on money at the moment of joining
 - Reading on leaving in time
 - Reading on the late leaver

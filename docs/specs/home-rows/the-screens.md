@@ -32,7 +32,7 @@
 
 - **The header, *Get your level* and *Your games***, as ADR-0205 §4 orders them.
 - **Then FOR YOU** (home refactor 3, 4): the eyebrow *FOR YOU*, grey caps, letter-spaced, and five
-  quiet lines in this order — **Groups heating up**, **Players at your level**, **New in Raketa**,
+  quiet lines in this order — **Groups heating up**, **Players at your level**, **New in Rakieta**,
   **Players with your vibe**, **Top 10**. *Only the words on screen change*: the rows' own names
   (Hottest groups, Same competitive level players, Same vibe players) stay the glossary's and the
   code's.
@@ -41,7 +41,7 @@
   count.
 - **The count is how many there are to explore** ([#822](https://github.com/Raketa02/Raketa/issues/822);
   ADR-0205 §6; home refactor 3, 4): *Groups heating up · 6*, *Players at your level · 99+*, *New in
-  Raketa · 6*, *Players with your vibe · 14*. It is the line's **pool**, never how many of them are a
+  Rakieta · 6*, *Players with your vibe · 14*. It is the line's **pool**, never how many of them are a
   good match: every group of 3 or more; everybody holding a level in a sport the reader plays;
   everybody who joined in the last 30 days; everybody sharing a tag with the reader
   ([the mechanics](the-mechanics.md) §5.10, §6.9, §7.5, §8.8). So in a busy city the people lines
@@ -249,7 +249,7 @@ draws it**, so it is made of the line's card and the people See all screens' fra
   re-compares every card in that sport (designed, no mock).
 - **Every card keeps its *N sports ›***.
 
-### 5. New in Raketa
+### 5. New in Rakieta
 
 #### 5.1 The row (home rows 1, 17, 17.2)
 
@@ -267,7 +267,7 @@ draws it**, so it is made of the line's card and the people See all screens' fra
 
 #### 5.3 See all (home rows 19, 19.2)
 
-- **Header:** ‹, *New in Raketa*, and the pill, *● All ‹*. **Opened**, it slides over the title, the
+- **Header:** ‹, *New in Rakieta*, and the pill, *● All ‹*. **Opened**, it slides over the title, the
   sports first and the chosen one last in ink with *›* (home rows 19.2).
 - **Body:** the same tiles in a two-column grid, newest first, two sports to a line where they fit,
   loaded in pages of 20.
@@ -427,7 +427,7 @@ New parts, each a row in the design system's Part 16 when its ticket builds it:
   (retired with the slimmer card, #821).
 - **The comparison bar**, dark and light: four tinted bands, a fill, a tall mark with *YOU*. It reads
   the Skill passport's scale and bands, never new ones.
-- **The portrait tile** with its fade and a corner tag (New in Raketa, Top 10).
+- **The portrait tile** with its fade and a corner tag (New in Rakieta, Top 10).
 - **The tinted pale tile** (Same vibe), its tint taken from the court poster's hue.
 - **The Top 10 numeral**, a gradient with a paper outline.
 - **The round friend button**, four states, and its worded sheet version.

@@ -33,7 +33,7 @@
 ## 1. The whole thing in one page
 
 **Tomek** plays competitive padel at 2,71. **Karol** plays at 2,75, **Zofia** at 2,69, and **Inés**,
-the best padel player in Raketa, at 3,40. **Ola** has no level and only browses. **Marek** is in a
+the best padel player in Rakieta, at 3,40. **Ola** has no level and only browses. **Marek** is in a
 group with Tomek, and Tomek blocked Marek.
 
 1. **On Home**, the trophy left of the bell reads *🏆 #7*: Tomek's General place in padel, the sport
@@ -87,7 +87,7 @@ For fun game, *Played · no score* and a *Disputed* game move no level and are n
 
 - **One list per sport, for all four sports**: padel, tennis, squash and badminton.
 - **Men and women in one list** (Q8).
-- **No cities** (Q1). General is everybody in Raketa. Splitting it by city, once a second city opens,
+- **No cities** (Q1). General is everybody in Rakieta. Splitting it by city, once a second city opens,
   is a follow-up and not decided ([#782](https://github.com/Raketa02/Raketa/issues/782)).
 
 ### 3.3 Competitive games only
@@ -323,7 +323,7 @@ reaches the ranking and the record (Q9, Q12, agreed call 1):
 - **A request sent from a record opened on the Rankings page is made from the ranking**, with that
   page's sport, in the friend relation's existing *made from* and sport.
 - **Its card and notice read *Found you in the padel ranking***, in place of the group line, as a
-  link's *Invited you to Raketa* stands *(a call)*.
+  link's *Invited you to Rakieta* stands *(a call)*.
 - **A request from the ranking to a group-mate still names the ranking**, and isn't counted towards
   the limit *(a call: PRD #766 call 15)*.
 
@@ -444,7 +444,7 @@ product owner to overrule:
 2. **A tie line still names the player below**, and a player below at the reader's own level reads
    *Zofia is level with you* ([§7.1](#71-what-it-says)).
 3. **A request from the ranking reads *Found you in the padel ranking* in place of the group line**,
-   as a link's request reads *Invited you to Raketa*.
+   as a link's request reads *Invited you to Rakieta*.
 4. **A link's request never counts towards the limit.**
 5. **The record shows *Add friend* only when a request may be sent.** Otherwise **Block** stands
    alone ([the screens §6](the-screens.md#6-the-record-from-the-ranking-designed-no-mock)).
@@ -509,7 +509,7 @@ From [the research](../../research/rankings-market.md):
   federations).
 - **Rating-based leaderboards always limit who appears.** Lichess requires 30 games, a game in the
   last week and a settled rating. Chess.com requires 20 games, one in the last 90 days.
-- **Raketa's engine is already a rating:**
+- **Rakieta's engine is already a rating:**
   - a padel win moves a player with about 10 games by about 0,03, and a seasoned one by about 0,01;
   - a padel level takes about 42–44 games to be called settled, and a tennis level about 26;
   - after 5 padel games, 56% of a level still comes from the questionnaire;

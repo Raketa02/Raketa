@@ -122,13 +122,13 @@ and a new Invitation clears it.
   sent you no longer works"*, which also covers an existing account's in-app invitation, which had
   no code.
 
-Both end *"If this is a surprise, ask [Club] about it."* and are signed *Raketa*. The club
-website's *Remove* question now says *"Raketa emails them to say so."*
+Both end *"If this is a surprise, ask [Club] about it."* and are signed *Rakieta*. The club
+website's *Remove* question now says *"Rakieta emails them to say so."*
 
 ### 5. A notice carries no button and no code
 
 ADR-0186 §3's messages each lead somewhere, and every one has a button. These two lead nowhere:
-nothing is asked of the person, and nothing opens. A button to *Open Raketa* would be noise to
+nothing is asked of the person, and nothing opens. A button to *Open Rakieta* would be noise to
 somebody who never installed it.
 
 **The layout's button becomes optional, both its label and its address or neither, and a code

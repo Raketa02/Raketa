@@ -24,7 +24,7 @@ Lines marked *reading* are not sources.
 | Rule | Status |
 |---|---|
 | R-PLATFORM-13 | Answered: the outcome is unknown, and the request may have run. The recommended timeout is `[ABSENT]` |
-| R-PLATFORM-33 | Answered for organisation keys. The same `acct_` id across modes is `[ABSENT]`, and moot for Raketa's flow |
+| R-PLATFORM-33 | Answered for organisation keys. The same `acct_` id across modes is `[ABSENT]`, and moot for Rakieta's flow |
 | R-PLATFORM-46 | Answered (SDK source): no key on confirm, and only a `429` is retried |
 | R-FILL-37 (fresh copy) | Partly: the reference allows it, and a measured near-twin. The exact path is `[ABSENT]` |
 | R-FILL-37, R-FILL-61 (window) | Answered by Stripe's table: 7 days, measured on a typed-card twin. The 3-D Secure case is `[ABSENT]` |
@@ -115,7 +115,7 @@ Lines marked *reading* are not sources.
   - connect/testing, first 100 000 characters (2026-10-20): "no explicit statement";
   - testing-use-cases and connect/webhooks (2026-10-19,
     [`stripe-security.md`](stripe-security.md#production-connect-endpoints-also-receive-test-events--check-livemode)).
-- *Reading:* for Raketa the question does not arise. A club onboarded in the sandbox is a sandbox
+- *Reading:* for Rakieta the question does not arise. A club onboarded in the sandbox is a sandbox
   object, and a live club is a new account made by live onboarding, so no sandbox id can carry over.
 
 ### R-PLATFORM-46 · Neither phone SDK sends an idempotency key on `confirmPayment`, and each retries only a 429
@@ -347,7 +347,7 @@ Lines marked *reading* are not sources.
 - *Reading:*
   - The number is Stripe's to vary, so no product limit should be pinned to it. On this sandbox, 10
     refused attempts were allowed.
-  - Stripe's own cancel here carried no reason, so a null reason does not mean Raketa let the
+  - Stripe's own cancel here carried no reason, so a null reason does not mean Rakieta let the
     payment go. See the next section.
 
 ### R-FILL-50, R-FILL-63 · A lapsed hold's reason and events: unreadable until 26 October
@@ -370,15 +370,15 @@ Lines marked *reading* are not sources.
   - `pi_3USA7i5y1DMwE3zY0Nemxwtn`'s `status`, `cancellation_reason` and `canceled_at`;
   - the account's `charge.expired` and `payment_intent.canceled` events.
 - *Reading:*
-  - Raketa's own let-go carries its key in the event's `request`. A lapse, which Stripe makes on its
+  - Rakieta's own let-go carries its key in the event's `request`. A lapse, which Stripe makes on its
     own clock, should carry none.
-  - The request is therefore the dependable way to tell a lapse from Raketa's own let-go. The reason
+  - The request is therefore the dependable way to tell a lapse from Rakieta's own let-go. The reason
     is not: Stripe's measured self-cancel above also read null.
 
-### R-FILL-13, R-FILL-63 · After a club is removed Raketa can't capture or cancel; after it loses card payments, nothing is documented
+### R-FILL-13, R-FILL-63 · After a club is removed Rakieta can't capture or cancel; after it loses card payments, nothing is documented
 
 - **[DOCS]** Carried from 2026-10-19
-  ([`stripe-connect.md`](stripe-connect.md#removing-a-club-ends-every-api-call-raketa-can-make-for-it)):
+  ([`stripe-connect.md`](stripe-connect.md#removing-a-club-ends-every-api-call-rakieta-can-make-for-it)):
   "A removed account … you can't process payments or make API calls for it."
 - **[DOCS]** [Error codes](https://docs.stripe.com/error-codes) *(translated)*, read 2026-10-20:
   `platform_api_key_expired` "occurs if your platform has generated a new key or if the connected
@@ -404,7 +404,7 @@ Lines marked *reading* are not sources.
 
   This is a question for Stripe support.
 - *Reading:* on a removed club, the held share lapses at its `capture_before` unless the club takes
-  or lets it go in its own Dashboard. Raketa's cut-off capture fails with `platform_api_key_expired`,
+  or lets it go in its own Dashboard. Rakieta's cut-off capture fails with `platform_api_key_expired`,
   and the player reads paid while nothing is taken.
 
 ### R-FILL-15, R-FILL-44, R-FILL-49, R-FILL-56 · A fee for letting a hold lapse is documented only in Japan, where Stripe's advice is to cancel
@@ -515,7 +515,7 @@ Lines marked *reading* are not sources.
   Pausing a club's payments doesn't block charges in a sandbox either (the pausing page, above).
 - **[MEASURED]** Seven of the sandbox's eight connected accounts read `charges_enabled: false`,
   `card_payments: inactive`, `disabled_reason: requirements.past_due`. Examples are
-  `acct_1USELi5y1DCSZFum` and `acct_1USPFh5y1DXbCdOQ`. None holds a copy or a hold made by Raketa.
+  `acct_1USELi5y1DCSZFum` and `acct_1USPFh5y1DXbCdOQ`. None holds a copy or a hold made by Rakieta.
 - **[MEASURED]** On `acct_1US8XX5y1Dlh7WsG`, one of Stripe's sample accounts, a payment went through
   without card payments:
   - At 04:51:23 the events show `capability.updated` (`card_payments` `inactive`) and

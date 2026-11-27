@@ -40,17 +40,17 @@
 
 **Tomek** plays padel at 2,71. He is in **Ogrody open play**, the official group of the club
 **Ogrody 33**, where **Ewa** and **Magda** play, and in **Kazimierz crew**, a group players made,
-where **Ania** and **Inés** play. **Zofia** plays with him every week and isn't on Raketa.
+where **Ania** and **Inés** play. **Zofia** plays with him every week and isn't on Rakieta.
 
 1. **Inés asks Tomek** from Kazimierz crew's Members. Her request is a card on his Home. He taps
    **Not now**: the card goes, the request stays open, and Inés still reads *request sent*. On
    Thursday he accepts from her record, and she is told *"Tomek said yes — you're friends"*.
-2. **Tomek sends Zofia his link** on WhatsApp. She installs Raketa, signs up, and lands on Home with
+2. **Tomek sends Zofia his link** on WhatsApp. She installs Rakieta, signs up, and lands on Home with
    *Needs your answer* already up and *"Tomek wants to be your friend"* in it *(since 2026-11-17,
-   ADR-0205 §1: the tile names no where-line, so no longer · Invited you to Raketa)*. She accepts. She has no padel level, so
+   ADR-0205 §1: the tile names no where-line, so no longer · Invited you to Rakieta)*. She accepts. She has no padel level, so
    on Tomek's picker she is greyed; he asks her to get one, and she does.
 3. **On Monday at 19:00**, on Ogrody's **Friends** tab, Tomek picks **Competitive**, seats Ewa, Magda
-   and Ania (Ania isn't in Ogrody: she plays as a **guest**), and taps **Done**. Raketa seats them in
+   and Ania (Ania isn't in Ogrody: she plays as a **guest**), and taps **Done**. Rakieta seats them in
    the evenest sides and builds the card: *YOU + EWA VS MAGDA + ANIA · 87% · Very even*, and
    **Saturday 10:00 · Ogrody 33 · Court 3 · 25 zł each**. The club's cut-off is **Friday 10:00**.
 4. **He taps Send game and pay 25 zł**, chooses **Split the cost**, and confirms. His card holds
@@ -118,7 +118,7 @@ A **friend request** is made from:
 The request records **where it was made**: the group (Members, or a face on a game of that group),
 the record, the result, or the link. The card on the other person's Home names **the group** where
 the + Add was pressed, or the group of the game it was pressed from, and its sport. A request made by
-link reads *Invited you to Raketa*. *(Since 2026-11-07, Q130:)* a request made from the ranking
+link reads *Invited you to Rakieta*. *(Since 2026-11-07, Q130:)* a request made from the ranking
 records the ranking and its sport, and reads ***Found you in the padel ranking***, even to a
 group-mate.
 
@@ -204,7 +204,7 @@ reaches friendship too (Q5):
 ### 4.2 Opening it
 
 **Opening it never makes friends by itself** (Q37). As a signed-in player, it puts the owner's
-**friend request** on the opener's Home, *"Tomek wants to be your friend · Invited you to Raketa"*,
+**friend request** on the opener's Home, *"Tomek wants to be your friend · Invited you to Rakieta"*,
 with **Accept** and **Not now**, like any request. This is the same for a new player like Zofia and for
 Ania, who already has the app. Unless:
 
@@ -221,17 +221,17 @@ Ania, who already has the app. Unless:
 In production the link is a deep link, exactly like a group's `join/` link: a universal link on
 iPhone and an app link on Android, through the public site's app-link files, which gain `/f/`.
 
-- **App installed, signed in**: Raketa opens on Home with **Needs your answer already up**, and the
+- **App installed, signed in**: Rakieta opens on Home with **Needs your answer already up**, and the
   request in it *(since 2026-11-17, ADR-0205 §1; it was at the top of Home)*. When nothing waits by
   then — a crossing request made friends, or one a block swallowed — Home opens as it is, with no
   sheet: the sheet is never shown empty.
-- **App installed, signed out or no account**: Raketa opens on sign-up. The link waits through
+- **App installed, signed out or no account**: Rakieta opens on sign-up. The link waits through
   sign-up and onboarding, as a group link does, then lands on Home with Needs your answer up and the
   request in it.
 - **App not installed**: the link opens the public site's page, *"Tomek invited you to play on
-  Raketa"*, with his face, the store buttons, **Open in Raketa**, and a preview image for the chat it
+  Rakieta"*, with his face, the store buttons, **Open in Rakieta**, and a preview image for the chat it
   is pasted into.
-  - **On iPhone**, the install forgets the link, so she taps **Open in Raketa** once more.
+  - **On iPhone**, the install forgets the link, so she taps **Open in Rakieta** once more.
   - **On Android**, the store button carries the link through the install as the **install
     referrer**, which the app reads **once, on first launch**. This holds **for group links too**: the
     group page's Android store button carries its link the same way. Android keeps a referrer for 90
@@ -308,7 +308,7 @@ bullet, and its Q29.
 
 - **Official group**, at each hour:
   - where the **home club has a free court**, only the home club is offered;
-  - where it has **none**, other Raketa clubs **within the club's distance** (10 km by default) are
+  - where it has **none**, other Rakieta clubs **within the club's distance** (10 km by default) are
     offered too, **listed after the home club** and marked ***Ogrody 33 is full at 10:00***.
 - **The club's switch**, *"Offer our groups other clubs' courts when ours are full"*, is kept, and is
   now **on by default**, for existing clubs too *(call 3)*. Switched off, the group plays only at its
@@ -321,7 +321,7 @@ bullet, and its Q29.
 **Why hour by hour, not a fill threshold.** At 70% booked, Saturday 10:00 at Ogrody 33 may still be
 free, and a threshold would offer Wisła Park beside it, sending the club's own players away from an
 hour it could sell. At 30% booked, the one hour four friends share may already be gone, and they
-would get nothing. Raketa has no measure of a club's fullness today. Hour by hour, the club never
+would get nothing. Rakieta has no measure of a club's fullness today. Hour by hour, the club never
 loses an hour it could have sold, and players are never left without a game at an hour it can't
 serve.
 
@@ -360,14 +360,14 @@ seat and **+ Friends** under it.
 
 ### 7.3 Seating
 
-- **On Done**, Raketa seats the picks into the **evenest sides** (Q10).
+- **On Done**, Rakieta seats the picks into the **evenest sides** (Q10).
 - **Swap** two people by tapping one face and then the other. **A face's ×** takes them off.
 - **Until every seat is filled**, the court reads *Seat 1 more friend* (*Seat 2 more friends*, …), and
   there is **no card** (Q16).
 
 ### 7.4 The card
 
-**The moment every seat is filled**, Raketa builds the **friends card** under the court, with a
+**The moment every seat is filled**, Rakieta builds the **friends card** under the court, with a
 loading state while it works. It is the deck's card **without the player tiles**:
 
 - the sides, *YOU + EWA VS MAGDA + ANIA*, and **the kind's own number** (amended 2026-11-23,
@@ -504,7 +504,7 @@ seat until the cut-off; with Whole court, it pays every seat.
 - **24 hours to answer** (Q30), **never past the cut-off**. An invitation made after the cut-off, into
   a rescue seat, runs 24 hours **never past the game's start** *(call 9)*. **Not answering counts as
   Not this time.**
-- **Accept** (Split) holds her 25 zł until the cut-off, like any Raketa seat, with her present: a bank
+- **Accept** (Split) holds her 25 zł until the cut-off, like any Rakieta seat, with her present: a bank
   confirmation happens in the app. The card moves to her **Your games**.
 - **Not this time** takes the card off her Home.
 - **Answering on Home clears the invitation from the bell.**
@@ -573,7 +573,7 @@ first to accept and pay, or the first rescuer, takes it. Money moves at once, as
 
 ### 11.1 A friend who accepted
 
-**She can leave free until the cut-off** (Q32), like any Raketa game: her hold is let go, her seat
+**She can leave free until the cut-off** (Q32), like any Rakieta game: her hold is let go, her seat
 goes empty as in [§10](#10-a-seat-goes-empty), and the sender is told. After the cut-off she is a late
 leaver ([§11.3](#113-after-the-cut-off)).
 
@@ -585,7 +585,7 @@ His leave sheet offers two choices (Q19, Q43):
   goes back to the club. Free until the cut-off.
 - **Leave · the others play on**:
   - **With Split**, his share and every cover are let go, and **he stops covering**: from then on it
-    is an **ordinary Raketa game**. His seat, and any seat no friend has taken, become rescues at
+    is an **ordinary Rakieta game**. His seat, and any seat no friend has taken, become rescues at
     once. A seat still empty at the cut-off **calls the game off**, with nobody paying, as any game
     short at its cut-off.
   - **With Whole court**, he **still pays the court**. His covers stay, his own seat becomes a rescue

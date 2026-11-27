@@ -22,7 +22,7 @@
     group. In place of the group, it shows the sender's level in every sport they hold one in (§1).
     *Found you in the padel ranking*, which ADR-0203 §9 put on that card, goes with it.
   - **§3's *"the request is at the top of Home"*:** the friend link opens Home with Needs your
-    answer already up, and the request in it (§1). The tile no longer reads *Invited you to Raketa*.
+    answer already up, and the request in it (§1). The tile no longer reads *Invited you to Rakieta*.
   - **§5's *"a FRIENDS GAME · n row at the very top of Home"*** and its *"Home reads, top to
     bottom"*: an invitation waits in Needs your answer, one big tile at a time, and *Not this time*
     takes it out of the sheet (§1).
@@ -99,7 +99,7 @@ opens Home and reads up to ten stacked blocks:
   friend's ask in its place;
 - then *Your games*;
 - then five full rails, each drawn whole with faces, figures and subtitles: *Hottest groups*,
-  *Same competitive level players*, *New in Raketa*, *Same vibe players* and *Top 10*.
+  *Same competitive level players*, *New in Rakieta*, *Same vibe players* and *Top 10*.
 
 Everything shouts at once, so nothing is the one thing to look at.
 
@@ -183,7 +183,7 @@ Everything shouts at once, so nothing is the one thing to look at.
      sport she holds a published level in**, in the app's sport order: *● Padel 3,40 · ● Tennis
      2,90*. The line takes at most two lines, and is left out when she holds none. Then **Not now**
      and **Accept**. **The where-line and every found-by line are gone**: *With you in Kazimierz
-     crew*, *Invited you to Raketa*, *Found you in the padel ranking*, and ADR-0204 §9's three.
+     crew*, *Invited you to Rakieta*, *Found you in the padel ranking*, and ADR-0204 §9's three.
   4. **ASKED FOR A LEVEL · n**: the faces and *Kuba and Zofia want to play squash with you*, with no
      subtitle, *You're on question 5* included. Then **Not now** and **Get your squash level**, or
      **Carry on** for a questionnaire left halfway.
@@ -294,7 +294,7 @@ with a title on the left, a grey count pill and a chevron on the right, and noth
 | --- | --- | --- |
 | **Groups heating up** | Hottest groups | every group with at least 3 players |
 | **Players at your level** | Same competitive level players | everyone holding a level in a sport Tomek plays |
-| **New in Raketa** | New in Raketa | everyone who joined in the last 30 days |
+| **New in Rakieta** | New in Rakieta | everyone who joined in the last 30 days |
 | **Players with your vibe** | Same vibe players | everyone sharing at least one tag with Tomek |
 | **Top 10** | Top 10 | no count |
 
@@ -345,7 +345,7 @@ theirs, and the copy deck records the new titles.
 **A count says how many there are to explore, never how many are a good match** (Q17, Q33). In a
 busy city the two people lines will usually read *99+*, and that is intended.
 
-- **The field:** each of *Hottest groups*, *Same competitive level players*, *New in Raketa* and
+- **The field:** each of *Hottest groups*, *Same competitive level players*, *New in Rakieta* and
   *Same vibe players* answers a new `total`.
 - **What it counts:** the distinct groups or people that qualify for the row, under the row's own
   exclusions: the reader, a block either way, *Show me to new people* off, and an account that
@@ -355,7 +355,7 @@ busy city the two people lines will usually read *99+*, and that is intended.
 - **How each is counted** (Q45): always in SQL, on the row's own qualifying condition.
   - **Hottest groups:** the number of groups its grouped members query already counts. **No new
     statement.**
-  - **New in Raketa:** one COUNT over the last 30 days' sign-ups, on the joined-at index. It costs
+  - **New in Rakieta:** one COUNT over the last 30 days' sign-ups, on the joined-at index. It costs
     nothing when the row came back with fewer than ten.
   - **Same vibe:** folded into the one pass over the tag rows as a window count. **Never a second
     pass.**

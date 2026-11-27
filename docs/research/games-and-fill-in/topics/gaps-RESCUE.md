@@ -323,7 +323,7 @@ release, so each fact quotes enough text to find it again.
 ### A code question, with the market beside it
 - *Routed:* whether the rescue's details show the club's address is for the Rule agent to read in the code.
 - **[LAW]** Carried: the seller's identity and address must be shown before the player is bound (art.
-  12, the club's when Raketa concludes for it) ([local-market](local-market.md#what-the-player-must-see-before-being-bound)).
+  12, the club's when Rakieta concludes for it) ([local-market](local-market.md#what-the-player-must-see-before-being-bound)).
 - **[POLICY]** Playmore's open-game join card on a booking page lists "Termin", "Kort", "Wolne miejsca",
   "Cena za osobę"; its payment page names "Obiekt sportowy" with court, date and price; its club data
   carry a trade name only (carried: [platforms](platforms.md#playmore--operator-scale-and-seller)). [CG9yQPLY.js](https://playmore.pl/assets/CG9yQPLY.js) — read 2026-10-08

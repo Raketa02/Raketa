@@ -21,7 +21,7 @@ Kinds as in the topics; *reading* is arithmetic or comparison, not a source.
 
 - **Competitor.** [POLICY] Playtomic books the court in stages (never at one player; at two only >12 h ahead; at three >4 h; at four at once) and cancels a match still short about 1 h before, refunding all, fee included — `topics/competitor-organiser.md#the-court-is-held-in-stages`, `topics/competitor-organiser.md#automatic-cancellation-and-refunds`.
 - **Competitor.** [POLICY] In a split private booking only the owner pays at booking; shares unpaid 2 h after the game fall on the owner, and Poland is on neither guarantee list, so likely a debt — `topics/competitor-club.md#split-payment-an-unpaid-share-is-charged-after-the-game`, `topics/competitor-organiser.md#who-covers-unpaid-shares-three-guarantees-by-country`.
-- **Platforms.** [POLICY] Playmore *Gry otwarte* has Raketa's outcome ("Komplet graczy – gra potwierdzona… Brak kompletu… pełny zwrot dla wszystkich") but every player pays at join, organiser first — `topics/platforms.md#playmore--open-games-each-player-pays-at-join`.
+- **Platforms.** [POLICY] Playmore *Gry otwarte* has Rakieta's outcome ("Komplet graczy – gra potwierdzona… Brak kompletu… pełny zwrot dla wszystkich") but every player pays at join, organiser first — `topics/platforms.md#playmore--open-games-each-player-pays-at-join`.
 - **Platforms.** [POLICY] MATCHi holds the card at booking and captures 12 h after the start or 7 days after booking, whichever comes first — `topics/platforms.md#matchi--the-card-is-held-at-booking-and-captured-later`.
 - **Provider (R-FILL-10, R-FILL-15).** [DOCS] A card hold lasts 4 days 18 h (Visa, merchant-initiated) to 7 days; cancelling an uncaptured payment costs nothing; BLIK and P24 cannot be held — `topics/local-market.md#how-long-a-hold-lasts`.
 - **Provider (R-FILL-11).** [DOCS] Charging a saved card without the player there needs a recorded agreement naming the transactions, timing, how the amount is set and the cancellation policy — `topics/local-market.md#charging-a-saved-card-without-the-player-there`.
@@ -30,7 +30,7 @@ Kinds as in the topics; *reading* is arithmetic or comparison, not a source.
 - **Processor down (R-FILL-16).** [DATA] PKO BP's app and BLIK were down one July 2025 night; plastic cards worked — `situations.md` SIT-30.
 - **Complaints.** [COMPLAINT] The organiser's card carries everyone: "charges you the full 60 and refunds you within 2 weeks"; a hold "for up to a week" — `topics/complaints.md#the-organisers-card-carries-everyones-share-until-the-others-pay`.
 - **Complaints (R-FILL-15).** [COMPLAINT] Playmore, PL 2026-07-17: "Pieniądze na koncie zablokowane, ale płatność nieudana" — `topics/complaints.md#charged-twice-or-charged-when-the-booking-failed`.
-- *reading:* a joiner of a 40 zł Playtomic spot pays 43,99 zł at join; at Raketa nothing moves until the last yes — `topics/competitor-joiner.md#reading-on-money-at-the-moment-of-joining`.
+- *reading:* a joiner of a 40 zł Playtomic spot pays 43,99 zł at join; at Rakieta nothing moves until the last yes — `topics/competitor-joiner.md#reading-on-money-at-the-moment-of-joining`.
 
 ## 3. The booked game: court, sides, chat and the player's other yeses (R-FILL-18 to R-FILL-26)
 
@@ -82,11 +82,11 @@ In `topics/gaps-FILL.md` (`g`), by section.
 - **R-FILL-1–4.** [DOCS] Gmail's 5–30 s Undo; [POLICY] Uber's free 2 min; [ABSENT] no app charging after an undo count — `g#2-undo-before-money-moves`.
 - **R-FILL-5/6/8.** [DOCS] Only Stripe Terminal stores and forwards offline payments, at the seller's risk — `g#3-kept-offline-sent-later`.
 - **R-FILL-6.** [DOCS] Android timers stop in the background; iOS suspends after ~5 s; not measured — `g#4-the-countdown-in-the-background`.
-- **R-FILL-11.** [DOCS] Raketa's terms name what, when, how much and cancelling, not how often — `g#5-the-saved-card-agreement`.
+- **R-FILL-11.** [DOCS] Rakieta's terms name what, when, how much and cancelling, not how often — `g#5-the-saved-card-agreement`.
 - **R-FILL-15/36/44/49.** [POLICY] mBank drops a hold on the cancellation, else 14 days online — `g#6-released-holds-on-polish-cards`.
 - **R-FILL-16.** [DOCS] The charge request is refused, not each card — `g#7-a-club-that-lost-card-payments`.
 - **R-FILL-19.** [ABSENT] No feed, import or API at kluby.org or tenis4U — `g#8-blocking-hours-from-outside`.
-- **R-FILL-20.** [DOCS] Raketa's sides bind the result; [POLICY] Playtomic lets players swap before it — `g#9-the-drawn-sides`.
+- **R-FILL-20.** [DOCS] Rakieta's sides bind the result; [POLICY] Playtomic lets players swap before it — `g#9-the-drawn-sides`.
 - **R-FILL-21.** [POLICY] tenis4U pushes tournaments only — `g#10-a-club-messaging-its-players`.
 - **R-FILL-27.** [ABSENT] — `g#11-the-fourth-joiner`. **R-FILL-30.** [DOCS] No club receipt: no address — `g#12-the-clubs-own-receipt`.
 - **R-FILL-31.** [POLICY] Desks ~07:00–23:00, booking on the spot — `g#13-desk-hours`.

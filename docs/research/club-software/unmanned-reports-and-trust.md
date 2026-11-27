@@ -1,6 +1,6 @@
 # Unmanned hours, reports and trust — what rivals give a club, and what a club can rely on
 
-Research for areas 12, 15 and 17 of the planning map *Raketa becomes the club's booking software*: how a
+Research for areas 12, 15 and 17 of the planning map *Rakieta becomes the club's booking software*: how a
 court runs with nobody at the desk, what an owner and a desk read from their software, and what a club
 needs before it trusts a vendor with all its bookings and money.
 
@@ -51,7 +51,7 @@ Lines marked *reading* are inferences, not sources.
 - **Codes come per player, per booking or per court.** tenis4U gives each player a permanent personal
   code, and QT gives a code to each player per booking. Playtomic gives one code per match. MATCHi's
   venue codes are shared by everyone booking that court in that time window. tenis4U holds back the
-  door until a cash-at-club payment is confirmed. *Reading:* Raketa charges every seat, so a code per
+  door until a cash-at-club payment is confirmed. *Reading:* Rakieta charges every seat, so a code per
   player fits it.
 - **Every rival reports occupancy, revenue and customers; Playmore goes furthest.** It has 20+ reports.
   Among them are no-show patterns, repeat no-showers, a daily PDF for the owner and a monthly Excel file
@@ -79,13 +79,13 @@ Lines marked *reading* are inferences, not sources.
     its data is returned or deleted.
   - kluby.org: one month's notice.
   - tenis4U: publishes nothing on leaving.
-- **The law sets a floor that Raketa's terms must meet.**
+- **The law sets a floor that Rakieta's terms must meet.**
   - **EU Data Act**, from 12 September 2025: it covers software as a service. Notice to start a switch
     can be at most 2 months, the move gets 30 days, the club has at least 30 days to take its data, and
     switching charges are banned from 12 January 2027.
-  - **EU P2B Regulation**, if Raketa connects clubs with players: it sets what the terms must contain,
+  - **EU P2B Regulation**, if Rakieta connects clubs with players: it sets what the terms must contain,
     15 days' notice of changes, and 30 days' notice with reasons before ending a club.
-  - **Polish e-services act, art. 8**: Raketa must publish its terms (a regulamin) and give them free
+  - **Polish e-services act, art. 8**: Rakieta must publish its terms (a regulamin) and give them free
     before the contract.
   - Playmore's partner terms are the only rival terms found that cite P2B.
 
@@ -162,7 +162,7 @@ Lines marked *reading* are inferences, not sources.
     "samoobsług", "bezobsług".
 - **What it means for the player app.** *Reading:* in an unmanned hour the player app is the only
   desk. The player needs the code or door button there, the help number, and what to do if the door
-  fails. SAO's "brak kasy na miejscu" assumes everyone has paid online, which Raketa's every-seat
+  fails. SAO's "brak kasy na miejscu" assumes everyone has paid online, which Rakieta's every-seat
   payment already does.
 - **Market signal.** Offered by every rival vendor as an add-on, so table stakes for the software. Rare
   among clubs: two Kraków venues found, neither padel-only nor squash.
@@ -232,12 +232,12 @@ Lines marked *reading* are inferences, not sources.
 - **What a Kraków desk does today.** At SAO the gate code is in the tenis4U app 15 minutes before play;
   Smartpong sends the code by SMS or email (both §12.1). Carried: Fame Sport bans screenshots of its
   app's codes (`../games-and-fill-in/areas/CHECKIN.md`, gaps answers, read 2026-10-08).
-- **What it means for the player app.** *Reading:* Raketa charges each seat, and each of the four
+- **What it means for the player app.** *Reading:* Rakieta charges each seat, and each of the four
   players arrives alone. A code per player (tenis4U, QT) lets the first player in without the
   organiser. A code per booking (Playtomic) has to be shared. tenis4U's rule — no door until the money
-  is in — matches Raketa's game, which is paid before it is booked. Playmore says "Każde wejście
+  is in — matches Rakieta's game, which is paid before it is booked. Playmore says "Każde wejście
   zapisuje się w systemie" (every entry is logged, KS Zakręt case). A door-open event could therefore
-  stand beside Raketa's *I'm here* attendance as evidence of arrival. **[ABSENT]** Any rival using door
+  stand beside Rakieta's *I'm here* attendance as evidence of arrival. **[ABSENT]** Any rival using door
   events for no-shows.
 - **Market signal.** Table stakes for vendors, and installed club by club. A code per player is the
   better practice, offered by tenis4U and QT.
@@ -275,7 +275,7 @@ Lines marked *reading* are inferences, not sources.
   and lights no longer left on after the last game.
 - **What a Kraków desk does today.** At SAO the lights come on 10 minutes before play (§12.1).
 - **What it means for the player app.** *Reading:* where lights cost extra (tenis4U), the price of an
-  evening game depends on them, and somebody has to choose. A Raketa game would either include lights
+  evening game depends on them, and somebody has to choose. A Rakieta game would either include lights
   in the seat price or ask the four players.
 - **Market signal.** Table stakes wherever automation exists. Lights as a paid extra chosen by the
   player: rare (tenis4U only).
@@ -379,14 +379,14 @@ Lines marked *reading* are inferences, not sources.
   - The code must be on the phone before the player reaches a hall with no signal, so it should be
     shown ahead of time and kept offline.
   - The help number belongs on the booking, as tenis4U does it.
-  - A failed door is a refund or rescue case for the game. Raketa's money rules would need to say who
+  - A failed door is a refund or rescue case for the game. Rakieta's money rules would need to say who
     pays when the club's door fails.
 - **Market signal.** Offline codes at the lock: table stakes with TTLock-class hardware. An emergency
   path for the player (Playmore's code after two failures, MATCHi's emergency line): a differentiator.
 
 ### 12.6 The device makers' APIs and what they cost
 
-- **What it covers.** The locks and relays Raketa could drive directly, how codes are pushed, and
+- **What it covers.** The locks and relays Rakieta could drive directly, how codes are pushed, and
   whether access is free.
 - **Who has it.**
   - **[DOCS] TTLock:** "Develop your own platform based on our SDKs, which is free"; a new application
@@ -425,7 +425,7 @@ Lines marked *reading* are inferences, not sources.
 - **What a Kraków desk does today.** **[ABSENT]** Which lock brand SAO or Smartpong uses. SAO goes
   through tenis4U's automation.
 - **What it means for the player app.** *Reading:* TTLock's random passcodes are accurate to the hour,
-  which fits Raketa's one-hour games starting on the hour. A code needed from :50 before a :00 start
+  which fits Rakieta's one-hour games starting on the hour. A code needed from :50 before a :00 start
   would need a custom passcode, which goes through the gateway.
 - **Market signal.** TTLock and Shelly are tenis4U's consumer-grade picks; QT, Telkey, CONLAN, MPC and
   Loxone serve the others. **[ABSENT]** A rival naming Tedee, Nuki or Salto.
@@ -475,7 +475,7 @@ Lines marked *reading* are inferences, not sources.
   (`integration.md` §4). Their day is its calendar and day PDF. Atras, Paolo and Squash4You are on
   Playmore and have its dashboard.
 - **What it means for the player app.** *Reading:* "klienci obecni" (customers present) needs arrival
-  data. Raketa already records attendance at the court (#657: *isn't here yet*, *I'm here*), which
+  data. Rakieta already records attendance at the court (#657: *isn't here yet*, *I'm here*), which
   could feed such a figure.
 - **Market signal.** A live dashboard is a differentiator, offered by Playmore and Padel Mates. A daily
   report sent to the owner is rare: only Playmore.
@@ -580,7 +580,7 @@ Lines marked *reading* are inferences, not sources.
   ([analiza przychodów](https://join.playmore.pl/analiza-przychodow/)). That is a vendor's picture, not a
   club's. Carried: "Multisport i FitProfit na zeszyt: recepcja spisuje numery kart" (benefit cards
   logged in a notebook) (`integration.md` §4).
-- **What it means for the player app.** *Reading:* Raketa's player payments are Stripe direct charges on
+- **What it means for the player app.** *Reading:* Rakieta's player payments are Stripe direct charges on
   the club's account. A channel tag (Games deck, online booking, desk) and a method tag (card, BLIK,
   cash, benefit card) on each booking are what a revenue-by-channel report would cut by.
 - **Market signal.** Revenue by method: table stakes. Revenue by channel (desk / app / portal) and a
@@ -609,7 +609,7 @@ Lines marked *reading* are inferences, not sources.
 - **The desk/owner's day with it.** Monthly, for the owner: loyalty and retention. Playmore's own label
   says so.
 - **What a Kraków desk does today.** **[ABSENT]** A Kraków club's practice; ask a real club.
-- **What it means for the player app.** *Reading:* Playtomic cuts players by level. Raketa holds a Skill
+- **What it means for the player app.** *Reading:* Playtomic cuts players by level. Rakieta holds a Skill
   per sport for each player, which a club report could use, subject to what the club may see of a player
   (§17.5).
 - **Market signal.** Top customers: table stakes. New versus returning by first-ever visit: a
@@ -644,7 +644,7 @@ Lines marked *reading* are inferences, not sources.
 - **What a Kraków desk does today.** Carried: Miazga blocks booking after a no-show until it is paid;
   Fame Sport charges the booker the full court (`../games-and-fill-in/areas/CHECKIN.md` §6, read
   2026-10-08).
-- **What it means for the player app.** *Reading:* Raketa already records attendance at the court
+- **What it means for the player app.** *Reading:* Rakieta already records attendance at the court
   (#657: *Came late*, *Didn't come*, checked against the club's position) — the raw data such a report
   needs. A report about players raises whether a player can see their own record.
 - **Market signal.** Differentiator: only Playmore reports no-shows fully. Late cancellations as a count:
@@ -725,7 +725,7 @@ Lines marked *reading* are inferences, not sources.
   **[COMPLAINT]**: "W wyniku awarii systemu reservise straciłem wszystkie rezerwacje w klubie" (a system
   failure at Reservise lost all my club's bookings; Google Play, 2024-02-03), and kluby.org users a week
   without login (`../games-and-fill-in/topics/complaints.md`; `situations.md` SIT-38).
-- **What it means for the player app.** *Reading:* Raketa's surfaces are the player app, the club
+- **What it means for the player app.** *Reading:* Rakieta's surfaces are the player app, the club
   website, payments (Stripe) and, if built, door control. A status page covering payments and the door
   would go beyond Playtomic's.
 - **Market signal.** Differentiator in Poland (only Playmore). Table stakes among the international
@@ -835,7 +835,7 @@ Lines marked *reading* are inferences, not sources.
   support for refund—they bounced me off to the club. Contacted the club—the club bounced me off to the
   app" (Reservise/Playmore App Store, 2025-03-25) (`platforms.md`).
 - **What it means for the player app.** *Reading:* the player app must say who answers the player, the
-  club or Raketa. tenis4U puts its automation hotline on the booking. MATCHi keeps its emergency number
+  club or Rakieta. tenis4U puts its automation hotline on the booking. MATCHi keeps its emergency number
   away from players.
 - **Market signal.** Polish-language phone support: table stakes in Poland (Playmore, kluby.org,
   tenis4U). Evening and weekend cover: a differentiator (Playmore's 24/7 claim, MATCHi's 08–21
@@ -884,7 +884,7 @@ Lines marked *reading* are inferences, not sources.
   exports are a CSV report of at most 60 days and `users.csv` (§15.6). Standing bookings ("rezerwacje
   stałe") would have to be re-entered or mapped from something else. Smartpong did move from kluby.org
   to tenis4U (§12.1), so clubs do switch.
-- **What it means for the player app.** *Reading:* the imported customers have no Raketa account yet.
+- **What it means for the player app.** *Reading:* the imported customers have no Rakieta account yet.
   Their standing weekly hours have to reach the one calendar before the Games deck sells around them.
 - **Market signal.** Free set-up with data migration: table stakes among the challengers (Playmore,
   Padel Mates). Paid training: kluby.org.
@@ -953,9 +953,9 @@ Lines marked *reading* are inferences, not sources.
   reaches its players through the vendor.
 - **What a Kraków desk does today.** tenis4U's model: the club controls its booking data, and tenis4U
   keeps it in Germany behind Cloudflare.
-- **What it means for the player app.** *Reading:* a Raketa player is Raketa's account holder. When they
+- **What it means for the player app.** *Reading:* a Rakieta player is Rakieta's account holder. When they
   book a club's court, the Polish model would make the club controller of that booking's data (name,
-  phone, email), with Raketa its processor. The player app's privacy notice would have to say so, as
+  phone, email), with Rakieta its processor. The player app's privacy notice would have to say so, as
   Playmore's §3.7–3.8 do.
 - **Market signal.** Club as controller, with a published processing agreement: table stakes among the
   serious vendors (Playmore, MATCHi). An EEA-only promise: Playmore only.
@@ -1021,14 +1021,14 @@ Lines marked *reading* are inferences, not sources.
   Twojego Konta" at termination, with no export window stated, is exactly that risk.
 - **What a Kraków desk does today.** *Reading:* switches happen (Smartpong, the Reservise clubs), but
   through the new vendor importing from whatever the old one exports.
-- **What it means for the player app.** *Reading:* if a club leaves Raketa, its players keep their
-  Raketa accounts, but the club's future bookings and paid seats need a rule. The club's customer list
+- **What it means for the player app.** *Reading:* if a club leaves Rakieta, its players keep their
+  Rakieta accounts, but the club's future bookings and paid seats need a rule. The club's customer list
   can only leave with the consents the players gave.
 - **Market signal.** Short notice: table stakes in Poland (monthly at Playmore and kluby.org). A
   published exit export and retrieval window: nobody offers one, so it would be a differentiator — and
   for SaaS the Data Act now requires it (§17.7).
 
-### 17.7 The contractual minimum Raketa must publish
+### 17.7 The contractual minimum Rakieta must publish
 
 - **What it covers.** What Polish and EU law requires of the terms a club software vendor offers, and of
   a vendor that also brings players to clubs.
@@ -1116,9 +1116,9 @@ Lines marked *reading* are inferences, not sources.
 - **The desk/owner's day with it.** Not applicable.
 - **What a Kraków desk does today.** tenis4U publishes only its player terms and privacy policy, no club
   contract (carried, `integration.md` §5).
-- **What it means for the player app.** *Reading:* Raketa's player app shows clubs' courts and games,
+- **What it means for the player app.** *Reading:* Rakieta's player app shows clubs' courts and games,
   and players pay the club directly. That fits P2B's "facilitating the initiating of direct
-  transactions", which would make Raketa an online intermediation service towards clubs — a legal
+  transactions", which would make Rakieta an online intermediation service towards clubs — a legal
   question to confirm. Separately, MATCHi encourages each club to show its own terms to players (§5.6),
   so the player app may need a place for each club's rules.
 - **Market signal.** A published regulamin and processing agreement: table stakes. P2B-ready terms:
@@ -1180,7 +1180,7 @@ Lines marked *reading* are inferences, not sources.
   booking history before the account is deleted.
 - **Clubs' complaints about lock-in in Poland.** None found.
 - **Legal questions needing advice:**
-  - whether Raketa's player app makes it a P2B "online intermediation service" towards clubs;
+  - whether Rakieta's player app makes it a P2B "online intermediation service" towards clubs;
   - whether the Data Act's Chapter VI applies to club booking SaaS (the art. 2(8) definition against
     recital 81);
   - whether Dz.U. 2026 poz. 1296 changes art. 8 of the e-services act;

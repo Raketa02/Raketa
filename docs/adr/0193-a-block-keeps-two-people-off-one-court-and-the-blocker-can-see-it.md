@@ -10,7 +10,7 @@
   §6: the pair rule gains one more clause, the **reliability filter**, asked exactly where a block
   is asked. Unlike §4, it takes no yes back: yeses already given stand.
 - **§4, its header's reach into ADR-0095 §7, and its *Consequences*' *a waiting game drops back to
-  filling*, amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)** §1. *On request* is removed,
+  filling*, amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)** §1. *On request* is removed,
   so no booking waits for a club. A block takes back the blocker's yeses on **proposals still
   filling** and **never touches a booking**. The second case of §4, *a booking waiting for the club*,
   which told the others In that the blocker left, has nothing left to apply to.
@@ -209,7 +209,7 @@ Picked for you games and Posts alike, including a post the blocker made or joine
 - **Unblocking brings no yes back.** Nothing reappears on the blocker's behalf.
 - **Any later yes that would pair them is refused** by §1's rule.
 
-> **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1.** No booking waits for a club any more: *On
+> **Amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1.** No booking waits for a club any more: *On
 > request* is removed, and a full game books the moment it fills. So the second bullet above has no
 > case, and *until the club confirms* now reads *until the game is booked*. Every withdrawal a block
 > makes is the ordinary one, from a proposal still filling. The fill's re-check of the pair rule
@@ -284,7 +284,7 @@ From ADR-0095, unchanged:
   block. But Kuba gets *"Ania left"* a second after she blocks him, which a withdrawal from a game
   still filling never does.
 
-  > **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1.** This cost went with *On request*: no
+  > **Amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1.** This cost went with *On request*: no
   > game waits for a club, so no request disappears under it. A block's withdrawal is the ordinary
   > one, from a proposal still filling.
 - **Old v1 events carry a field nobody reads.** The decoder keeps one more shape for as long as the

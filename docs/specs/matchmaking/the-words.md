@@ -24,8 +24,10 @@ Decided by
 > **§F1 rule 6's *no Rakieta* has one exception, from
 > [ADR-0187](../../adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
 > §8 (2026-09-25).** Wherever a Play › Groups, club website or public site mock sentence names the
-> app (*"Join Ogrody 33 Club on Raketa: <link>"*), the app is named, and it is named **Raketa**.
-> Everywhere else the rule stands. Those surfaces' mocks are in
+> app (*"Join Ogrody 33 Club on Rakieta: <link>"*), the app is named, and it is named **Rakieta**.
+> Everywhere else the rule stands. *(The name follows
+> [ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md), 2026-11-27. Until then this
+> exception named the app **Raketa**, as ADR-0187 §8 decided.)* Those surfaces' mocks are in
 > [`../play-groups/`](../play-groups/README.md).
 
 ---
@@ -88,7 +90,7 @@ it ([#569](https://github.com/Raketa02/Raketa/issues/569)).
 
 **The gap's words, one string, everywhere:**
 
-> **This app is too old to read this one — update Raketa.**
+> **This app is too old to read this one — update Rakieta.**
 
 It names neither the code nor the vocabulary. A raw `SOCIAL_VIBE` is a wire token in a
 player's face; *"an unknown evidence kind"* is a sentence about our schema. And one string
@@ -226,7 +228,7 @@ skill card draws the range as a bracket under the level bar and says it `Likely 
 > [ADR-0171](../../adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md):
 > the Name is retired, and the nickname is what is said.
 
-A player is known in Raketa by one thing: their **Nickname**, a unique handle of **2–64
+A player is known in Rakieta by one thing: their **Nickname**, a unique handle of **2–64
 characters** from `[A-Za-z0-9_.-]`, which they chose and can change at any time. **The nickname is what every
 sentence says, and it is never written with an @**: *ania.k put a score up*, *Hi ania.k*, a card
 that draws **ania.k** large with nothing under it. ADR-0107 §4's rule reads on it: *every sentence
@@ -1045,7 +1047,7 @@ anything else.
 | Live line, reliability | `{points} · {band}` · `100 · New` | *(ADR-0195)* written in from the sheet's own head, `75 · High` ([#660](https://github.com/Raketa02/Raketa/issues/660): *the You row's line uses points and bands*); `{score} of 100 · {n} things counted` and `Nothing counted yet` retired with the strands |
 | Live line, kind of game | `{sport} {intent}` joined by ` · `, `not set` for a sport with no answer | the intent words are `playIntentPresentation`'s |
 | Live line, week | `{n} slots ticked` · `Nothing ticked — we do not know when you play` | |
-| Live line, area | `Area set · updates when you open Raketa` | the one state — a profile cannot be committed without an area, a reading or *(ADR-0200)* a picked club; the words for a picked club on a phone without permission, which the cold start never updates, are [#733](https://github.com/Raketa02/Raketa/issues/733)'s |
+| Live line, area | `Area set · updates when you open Rakieta` | the one state — a profile cannot be committed without an area, a reading or *(ADR-0200)* a picked club; the words for a picked club on a phone without permission, which the cold start never updates, are [#733](https://github.com/Raketa02/Raketa/issues/733)'s |
 | Live line, who you play with | `Matched with anyone` · `… women only` · `… men only` | **the preference only** — the gender is drawn on its own screen and nowhere else on the tab |
 | Live line, record | `Your player record, as a stranger reads it` | |
 | Live line, photos | `{n} of 3 · profile photo on court` · `{n} of 3 · profile photo not checked as on court` · `None — a court poster stands in` | |
@@ -1061,11 +1063,11 @@ anything else.
 | Reliability, the filter | `Play only with players of at least High reliability` · `… at least Medium reliability` · off by default · `Your filter hides {n} of the {m} players in your groups.` | *(ADR-0195)* the *hides* line only while a filter is on ([#662](https://github.com/Raketa02/Raketa/issues/662)) |
 | Reliability, a player someone filters out | `Some players in your groups play only with {band} reliability or above. At {floor} you're dealt with everyone again.` | *(ADR-0195)* names nobody; `{floor}` is the lowest band floor among the filters that hide them ([#662](https://github.com/Raketa02/Raketa/issues/662)) |
 | What kind of game, under the title | `This changes how people find you` | replaces the section's heading and body; the footnote for an undeclared sport is #296's, cited |
-| What kind of game, under an answer that drops a kind | `Your {n} {kind} cards in your groups go. Games you're In on stay.` · `Your 1 {kind} card in your groups goes. Games you're In on stay.` · `Raketa stops dealing you {kind} games. Games you're In on stay.` | *(ADR-0201)* under *Competitive* or *For fun* when the current answer is the other kind or *Either suits me*; `{kind}` is the kind that goes, `competitive` or `for-fun`; `{n}` is `GET /players/me/deck-counts`'s count of it, summed over the player's groups; the third at `{n}` = 0 ([#742](https://github.com/Raketa02/Raketa/issues/742)) |
+| What kind of game, under an answer that drops a kind | `Your {n} {kind} cards in your groups go. Games you're In on stay.` · `Your 1 {kind} card in your groups goes. Games you're In on stay.` · `Rakieta stops dealing you {kind} games. Games you're In on stay.` | *(ADR-0201)* under *Competitive* or *For fun* when the current answer is the other kind or *Either suits me*; `{kind}` is the kind that goes, `competitive` or `for-fun`; `{n}` is `GET /players/me/deck-counts`'s count of it, summed over the player's groups; the third at `{n}` = 0 ([#742](https://github.com/Raketa02/Raketa/issues/742)) |
 | What kind of game, under *Either suits me* | `Keep your {kind} cards and get {other kind} ones too.` | *(ADR-0201)* when the current answer is one kind: `Keep your competitive cards and get for-fun ones too.` · `Keep your for-fun cards and get competitive ones too.`; no count |
 | What kind of game, the current answer and an undeclared sport | *no line* | *(ADR-0201)* the current answer is marked as today; an undeclared sport keeps its footnote |
 | Your week, the buttons | `Save your week` · `Saved` · `Clear all` | the grid's footnote is the step's, cited |
-| Where you play | `Your area is set` · `Your area updates each time you open Raketa; it is never finer than about a kilometre.` · `Use my location` · `Pick a club near where you play` | the permission states are the step's, cited; the middle line is static, the one written trace of the cold-start refresh, and was §26's until the radar went; *(ADR-0200)* the two ways are the location step's own, replacing `Read my area again` ([#733](https://github.com/Raketa02/Raketa/issues/733)) |
+| Where you play | `Your area is set` · `Your area updates each time you open Rakieta; it is never finer than about a kilometre.` · `Use my location` · `Pick a club near where you play` | the permission states are the step's, cited; the middle line is static, the one written trace of the cold-start refresh, and was §26's until the radar went; *(ADR-0200)* the two ways are the location step's own, replacing `Read my area again` ([#733](https://github.com/Raketa02/Raketa/issues/733)) |
 | Who you play with | *the step's headings, labels, cost line and reach sentence* · `Save` · `Saved` | the scope sentences are not repeated |
 | Photos | *the step's, whole* | title `Your court photos`; eyebrow `On-court only — up to three`; no *Continue* |
 | Tags, the eyebrow | `On your card · Pick {min} to {max}` | *On your card · Pick 2 to 8* *(ADR-0207)*; onboarding's is `Setting up · Step 1 of 6 · Pick 2 to 8`; both quote the served bounds |
@@ -1133,14 +1135,14 @@ spoken names, the selected tab's *Games, Competitive* and each line's, are worde
 | Where | A competitive player taps *For fun* | A for-fun player taps *Competitive* | Note |
 | --- | --- | --- | --- |
 | The switch, the door | `For fun`, dimmed | `Competitive`, dimmed | no number; the same size and press target as the live kind |
-| Panel, the title | `You play {sport} competitively, so Raketa only puts you in competitive games.` | `You play {sport} for fun, so Raketa only puts you in for-fun games.` | |
+| Panel, the title | `You play {sport} competitively, so Rakieta only puts you in competitive games.` | `You play {sport} for fun, so Rakieta only puts you in for-fun games.` | |
 | Panel, the question | `Want for-fun games too?` | `Want competitive games too?` | |
 | Panel, *Either suits me*'s line, `{n}` ≥ 2 | `Keep your {n} competitive cards and get for-fun ones too.` | `Keep your {n} for-fun cards and get competitive ones too.` | the first answer, highlighted |
 | … `{n}` = 1 | `Keep your 1 competitive card and get for-fun ones too.` | `Keep your 1 for-fun card and get competitive ones too.` | |
 | … `{n}` = 0 | `Get for-fun games as well as competitive ones.` | `Get competitive games as well as for-fun ones.` | a zero drops the number (PRD #736, call 4) |
 | Panel, the tapped kind's line, `{n}` ≥ 2 | `Your {n} competitive cards go. Games you're In on stay.` | `Your {n} for-fun cards go. Games you're In on stay.` | the second answer |
 | … `{n}` = 1 | `Your 1 competitive card goes. Games you're In on stay.` | `Your 1 for-fun card goes. Games you're In on stay.` | |
-| … `{n}` = 0 | `Raketa stops dealing you competitive games. Games you're In on stay.` | `Raketa stops dealing you for-fun games. Games you're In on stay.` | |
+| … `{n}` = 0 | `Rakieta stops dealing you competitive games. Games you're In on stay.` | `Rakieta stops dealing you for-fun games. Games you're In on stay.` | |
 | Panel, the way out | `Keep competitive` | `Keep for fun` | closes the panel and sends nothing |
 
 **Finding** is the deck's area right after an intent answer on Games, while the deal request is in
@@ -1212,7 +1214,7 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 | The card, what they play | `{Sport} {level} · {Sport} {level}` | under who asks, since 2026-11-17 ([#818](https://github.com/Raketa02/Raketa/issues/818), ADR-0205 §1): every sport the sender holds a Level in, in the order served, each with its dot drawn before it: *● Padel 3,40 · ● Tennis 2,90*. Mono, a decimal comma. The `·` goes with the sport before it, so a wrapped line ends in one *(a call)*. Two lines at most; no line when they hold no Level |
 | The card, spoken | `{nickname} wants to be your friend, {Sport} {level}, {Sport} {level}` | the title and the levels as one name, every sport included *(a call)*: *ines.d wants to be your friend, Padel 3,40, Tennis 2,90*. The face, the chip and the buttons keep their own |
 | The card, where (a group) | `With you in {group} · {Sport} {level} ·` and the reliability chip | the group the request was made in and its sport; the chip is the existing one (*✦ 98*). **Retired on the tile 2026-11-17** (ADR-0205 §1, #816): the tile draws the chip alone, on its own line, and #818's *what they play* above it. The notice's body still says it |
-| The card, where (a link) | `Invited you to Raketa` | in place of the group line. **Retired on the tile 2026-11-17**, as the group line |
+| The card, where (a link) | `Invited you to Rakieta` | in place of the group line. **Retired on the tile 2026-11-17**, as the group line |
 | The card, where (the ranking) | §30.8's `Found you in the {sport} ranking`, cited | in place of the group line, as a link's stands (ADR-0203 §9); a request from the ranking to a group-mate reads it too. **Retired on the tile 2026-11-17**, as the group line; the notice keeps it |
 | The card, buttons | `Not now` · `Accept` | at the tile's foot |
 | Notice, a request | `{nickname} wants to be your friend` · body: the card's where-line | once per request; opens Home with Needs your answer up since 2026-11-17 (#817) |
@@ -1238,15 +1240,15 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 | The picker, no friends | `Nobody you know here yet` and its card | `groupsCopy`'s, cited (play 55) |
 | The sheet | `Add friends` · `From your groups` | |
 | The sheet, a group | `{n} members · {m} to add` · `{n} members · 1 to add` · `{n} members · nobody to add` · `1 member · …` | |
-| The sheet, the link | `Not on Raketa yet?` · `{public site}/f/{code}` · `Copy` · `New link` | |
+| The sheet, the link | `Not on Rakieta yet?` · `{public site}/f/{code}` · `Copy` · `New link` | |
 | The sheet, after *New link* | `New link made. The old one no longer works.` | *(a call)* |
 
 ### 29.4 The link
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| Home, the request | `{nickname} wants to be your friend` · `Invited you to Raketa` · `Not now` · `Accept` | the card of §29.2. Since 2026-11-17 it waits in Needs your answer, without `Invited you to Raketa` (#816) |
-| The public page | `{nickname} invited you to play on Raketa` · the store buttons · `Open in Raketa` | the stores' own badges; the preview image carries the same sentence |
+| Home, the request | `{nickname} wants to be your friend` · `Invited you to Rakieta` · `Not now` · `Accept` | the card of §29.2. Since 2026-11-17 it waits in Needs your answer, without `Invited you to Rakieta` (#816) |
+| The public page | `{nickname} invited you to play on Rakieta` · the store buttons · `Open in Rakieta` | the stores' own badges; the preview image carries the same sentence |
 | The public page, a replaced or unknown code | `Nothing at that link` | |
 
 ### 29.5 Asking for a level
@@ -1475,7 +1477,8 @@ list*.
 > while recording it, for the product owner to overrule. **No sentence says *her*, *his*, *she* or
 > *he* about another player** (ADR-0096, the glossary's **Gender**). The marks ▲, ▼, ✓, +, …, the
 > envelope and the dots are drawn, never characters. **The mocks' names, initials, tags and numbers
-> are sample data**: *Rakieta* reads **Raketa**, a district reads as a distance.
+> are sample data**: a district reads as a distance. Their *Rakieta* is the brand as written
+> ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md)).
 
 **Placeholders.** `{nickname}` is a player's whole nickname (§15), and `You` for the reader.
 `{sport}` is the sport's name inside a sentence (*padel*), `{Sport}` at a line's start or after a `·`
@@ -1493,7 +1496,7 @@ the club the group plays at.
 > moved to the open line's footer. **Only the words on screen change**: *Hottest groups*, *Same
 > competitive level players* and *Same vibe players* stay the glossary's terms and the code's names.
 > Until #820 the rows read `HOTTEST GROUPS` (no See all), `SAME COMPETITIVE LEVEL PLAYERS` ·
-> `See all ›`, `NEW IN RAKETA` · `See all ›`, `SAME VIBE PLAYERS` · `See all ›` and `TOP 10` · the
+> `See all ›`, `NEW IN RAKIETA` · `See all ›`, `SAME VIBE PLAYERS` · `See all ›` and `TOP 10` · the
 > sport pill · `Rankings ›`, and the groupless line `… — the hottest ones are just below.`
 >
 > **Amended by [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q19, Q37; home
@@ -1511,7 +1514,7 @@ the club the group plays at.
 | The section, under *Your games* | `FOR YOU` | the eyebrow, drawn uppercase from *For you* |
 | Hottest groups, the line | `Groups heating up` · the count `{n}` · footer `All groups ›` | to the Groups heating up page ([§31.14](#3114-the-groups-heating-up-page)); spoken *All groups heating up* *(a call)* (#823) |
 | Same competitive level, the line | `Players at your level` · the count `{n}` · footer `See all {n} ›` | spoken *See all players at your level* |
-| New in Raketa, the line | `New in Raketa` · the count `{n}` · footer `See all {n} ›` | never *Rakieta*; spoken *See all new players* |
+| New in Rakieta, the line | `New in Rakieta` · the count `{n}` · footer `See all {n} ›` | spoken *See all new players* |
 | Same vibe, the line | `Players with your vibe` · the count `{n}` · footer `See all {n} ›` | spoken *See all same vibe players*, the screen it opens |
 | A line's count | `{n}`, or `99+` past 99 | in the grey pill between the title and the chevron, open or closed; the footer's `{n}` is the same figure, though See all shows one sport at a time; none on Top 10 |
 | Top 10, the line | `Top 10` · footer: the switcher `{Sport} ›` on the left · `Open the rankings ›` on the right | the switcher is the deck's control, cited, its chevron pointing the way it opens: right; the link spoken *Open the rankings in padel*; the closed line shows neither |
@@ -1582,7 +1585,7 @@ the club the group plays at.
 | A block's gap, none | `Same level` | when the gap rounds to 0,00 |
 | A block's tag | `{pct} even` | *91% even*, in the light version of its colour |
 
-### 31.7 New in Raketa
+### 31.7 New in Rakieta
 
 | Where | Sentence | Note |
 | --- | --- | --- |
@@ -1630,7 +1633,7 @@ them, and the server still serves where a request was found:
 | Found in | Sentence | Falls back to |
 | --- | --- | --- |
 | Same competitive level | `Your level in {sport} · {pct} even` | `Found you at your {sport} level`, when either no longer has a level there |
-| New in Raketa | `Found you among new players` | — |
+| New in Rakieta | `Found you among new players` | — |
 | Same vibe | `{n} things in common` (`1 thing in common`) | `Found you through your tags`, when none is shared any more |
 | Top 10 | §30.8's `Found you in the {sport} ranking`, cited | — |
 

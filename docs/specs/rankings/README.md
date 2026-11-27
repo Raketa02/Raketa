@@ -1,7 +1,7 @@
 # Rankings: the spec set
 
 **What PRD [#766](https://github.com/Raketa02/Raketa/issues/766) is drawn from.** The product owner's
-Rankings brief and its eleven mocks, copied here from `raketa_v2.0/4-features/4-ranking` so that every
+Rankings brief and its eleven mocks, copied here from `rakieta_v2.0/4-features/4-ranking` so that every
 session can read them, then grilled on 2026-11-07 (Q1–Q26 there, the
 [games and fill-in mechanics' Q130](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log)).
 Landed by [#767](https://github.com/Raketa02/Raketa/issues/767) on 2026-11-07. **Amended 2026-11-14**
@@ -15,7 +15,7 @@ gains **Top 10**.
 | [the-mechanics.md](the-mechanics.md) | What happens: what is ranked, who is listed, the order and ties, the chip, the gap line and its win count, Home's trophy, *Show me in General*, blocks, records, requests and their limit, with every number |
 | [the-screens.md](the-screens.md) | The trophy, then the page section by section with every state, and which mock draws it |
 | [`mocks/`](mocks/) | The eleven mocks, renamed (the [index](#index) gives each original name) |
-| [rankings_feature.md](rankings_feature.md) | The product owner's brief, verbatim. Its paths point at the product owner's desktop: read `…/4-ranking/N_….png` as `mocks/NN_….png`. Where the brief and these documents disagree, these documents win: they carry the grilling's rulings |
+| [rankings_feature.md](rankings_feature.md) | The product owner's brief, verbatim but for the brand's spelling ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md) §6). Its paths point at the product owner's desktop: read `…/4-ranking/N_….png` as `mocks/NN_….png`. Where the brief and these documents disagree, these documents win: they carry the grilling's rulings |
 
 **The decision** is [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md). The terms
 are in the root [`CONTEXT.md`](../../../CONTEXT.md), under **Rankings**, and under **Player record**

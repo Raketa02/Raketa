@@ -252,7 +252,7 @@ dimmed kind.)* **Open, for [#862](https://github.com/Raketa02/Raketa/issues/862)
 didn't decide what a tap on the selected Games tab does while the panel is open and no answer is
 out. Today a press on the switch then closes the panel, and a live kind is chosen.
 
-> **You play padel competitively, so Raketa only puts you in competitive games.**
+> **You play padel competitively, so Rakieta only puts you in competitive games.**
 > Want for-fun games too?
 >
 > **Either suits me** — *Keep your 7 competitive cards and get for-fun ones too.*
@@ -263,11 +263,11 @@ out. Today a press on the switch then closes the panel, and a live kind is chose
   the You tab's words.
 - The number is the member's own count of that kind in this group, the one the menu's live line
   shows. One card reads *Your 1 competitive card goes.*; none drops the number: *Get for-fun games
-  as well as competitive ones.* and *Raketa stops dealing you competitive games. Games you're In on stay.*
+  as well as competitive ones.* and *Rakieta stops dealing you competitive games. Games you're In on stay.*
   ([the words §28](../matchmaking/the-words.md#28-the-games-tabs-door-and-finding)).
 - An answer changes this sport only, lands on the kind tapped, and goes on to state 5.
 - *Keep competitive* closes the panel and sends nothing.
-- Kuba's panel is the mirror: *You play padel for fun, so Raketa only puts you in for-fun games.
+- Kuba's panel is the mirror: *You play padel for fun, so Rakieta only puts you in for-fun games.
   Want competitive games too?*, with *Keep for fun*.
 
 ### A2.2 The deck stage
@@ -810,7 +810,7 @@ above *Your games*, from Q128 and Q129. **Home's tab badge still counts the paym
 a link or a notice that pointed at one of the four cards — the friend link, a friend request's, a
 friends game invitation's — opens Home with the sheet already up, or Home as it is when nothing waits
 by then. *(The rows' order from ADR-0204 — Hottest groups, Same competitive level players, New in
-Raketa, Same vibe players, Top 10 — stands until FOR YOU folds them,
+Rakieta, Same vibe players, Top 10 — stands until FOR YOU folds them,
 [#820](https://github.com/Raketa02/Raketa/issues/820)–[#823](https://github.com/Raketa02/Raketa/issues/823).)*
 
 ## A9. Notifications delivery
@@ -865,7 +865,7 @@ row, and there is no *mark all*. The app icon carries no number until push is on
 
 **Banners** (Q101, Q102):
 
-- **None at launch.** What was told while Raketa was closed is in the bell's number.
+- **None at launch.** What was told while Rakieta was closed is in the bell's number.
 - **Coming back from the background** shows a banner for the newest notice only; the number counts
   the rest.
 - **Never for your own act.** The player whose yes filled the game, or whose confirmed payment
@@ -903,7 +903,7 @@ doors. Clean and minimal: one task per page, one primary button per section.
 ## B1. The top bar
 
 **Overview · Bookings · Courts & prices · Money · Groups · Administrators**, and on the right the
-club's name opening a menu with **Details** and **Raketa settings**. (A coral count badge on
+club's name opening a menu with **Details** and **Rakieta settings**. (A coral count badge on
 Bookings, for requests waiting for an answer, went with *On request*, Q121.)
 
 ## B2. Overview
@@ -914,11 +914,11 @@ Bookings, for requests waiting for an answer, went with *On request*, Q121.)
      States: *not started*, *Stripe needs more details* (with *Continue with Stripe*), *ready*.
   2. **Add your courts** → Courts & prices.
   3. **Set hours and prices** → Courts & prices, the week grid.
-  4. **Check the settings** → Raketa settings, **Confirm settings**.
+  4. **Check the settings** → Rakieta settings, **Confirm settings**.
   When the fourth is done: a one-time line *"You're live — your courts can now be booked through
-  Raketa"*, and the checklist is gone. (Until Q121 there were five: the second was **Choose how you
-  work with Raketa**.)
-- **After that** — a line that the club is live on Raketa and a link to **today's Bookings** (Q121,
+  Rakieta"*, and the checklist is gone. (Until Q121 there were five: the second was **Choose how you
+  work with Rakieta**.)
+- **After that** — a line that the club is live on Rakieta and a link to **today's Bookings** (Q121,
   *a call*), and any *Stripe needs something from you* notice. Nothing waits for the club's answer
   any more: until Q121 this listed the *On request* bookings with their countdown and Accept /
   Refuse. (The statistics that will live here are out of scope.)
@@ -930,9 +930,9 @@ Three sections on one page.
 - **Courts** — a table: name · sport · indoor/outdoor · on/off · edit. **Add a court** opens a
   small form (name, sport from the club's sports, indoor/outdoor). A court with future bookings
   can be switched off but not deleted; switching it off asks to confirm and lists what is booked.
-- **Weekly hours for Raketa** — a court picker (tabs per court, or *All courts of a sport*), then
+- **Weekly hours for Rakieta** — a court picker (tabs per court, or *All courts of a sport*), then
   the same **7 × 16 hour grid** as the player's week (07:00–23:00 — an hour outside it could
-  never match a player), tap or drag to paint the hours offered to Raketa. **Copy to other courts** copies one court's
+  never match a player), tap or drag to paint the hours offered to Rakieta. **Copy to other courts** copies one court's
   pattern. Saved with **Save hours**.
 - **Exceptions** — a list (*Tournament · 4–5 Oct · all courts*, *Repair · Court 2 · 12 Oct
   09:00–12:00*) with **Add an exception**: what (all courts or some), when (a date, a range, or
@@ -969,9 +969,9 @@ Three sections on one page.
   - Until Q121, a **Waiting for you** row offered **Accept** / **Refuse** with a countdown, and an
     Accept that met a refused card read **Accepted · waiting for one player's payment until 21:20**
     (Q112). Both went with *On request*.
-- **Empty day**: *"No Raketa bookings on this day."*
+- **Empty day**: *"No Rakieta bookings on this day."*
 
-## B5. Raketa settings
+## B5. Rakieta settings
 
 One page, one form, **Save settings**:
 
@@ -979,13 +979,13 @@ One page, one form, **Save settings**:
 - **Other clubs' courts for our groups** — on/off + distance (default **on**, 10 km, since Q128). Its
   help line says the club's groups are offered other clubs' courts *at an hour your courts are full*,
   and only then ([the mechanics §4.3](the-mechanics.md#43-courts)).
-- **Pause Raketa bookings** — on/off with its consequence line.
-- **Leave Raketa** — a text link at the bottom, refused while anything is booked or unpaid.
+- **Pause Rakieta bookings** — on/off with its consequence line.
+- **Leave Rakieta** — a text link at the bottom, refused while anything is booked or unpaid.
 
 *We check players in* was removed with desk check-in on 2026-10-11 (Q116). **How you work with
-Raketa** (three radio cards, Only Raketa / Instant / On request), the **Minimum notice** and the
+Rakieta** (three radio cards, Only Rakieta / Instant / On request), the **Minimum notice** and the
 **Time to confirm** were removed with *Instant* and *On request* on 2026-10-12 (Q121): every club
-works Only Raketa.
+works Only Rakieta.
 
 ## B6. Check in
 
@@ -1029,12 +1029,12 @@ The shape is ADR-0189 §5. What each app needs from it:
 ## C1. Aggregates and their events (all event-sourced)
 
 - **Club courts** (Clubs, per club): `CourtAdded`, `CourtChanged`, `CourtSwitchedOff/On`,
-  `RaketaHoursSet` (per court, weekly hours), `ExceptionAdded/Removed`, `PricesSet`,
-  `RaketaSettingsChanged`, `StripeAccountLinked`, `StripeAccountStatusChanged`,
-  `RaketaPaused/Resumed`. `WayOfWorkingChosen` and the settings' minimum notice and time to confirm
+  `RakietaHoursSet` (per court, weekly hours), `ExceptionAdded/Removed`, `PricesSet`,
+  `RakietaSettingsChanged`, `StripeAccountLinked`, `StripeAccountStatusChanged`,
+  `RakietaPaused/Resumed`. `WayOfWorkingChosen` and the settings' minimum notice and time to confirm
   go with Q121, with no decoder: the local store is reset (a clean cut, *a call*).
   *We check players in* left the settings with check-in (Q116); its field
-  stays decodable on `RaketaSettingsChanged` and folds to nothing.
+  stays decodable on `RakietaSettingsChanged` and folds to nothing.
 - **Proposal** (Proposals, per proposed game): `ProposalMade` (origin: pick | post; pool, sport,
   kind, who, level range, club, start, share, book-by), `VersionDealt`, `YesSaid`, `YesWithdrawn`,
   `NoSaid`, `ProposalFilled` (the people and sides), `ProposalExpired`, `ProposalWithdrawn`,
@@ -1152,7 +1152,7 @@ proposals' needs, per club and hour.
   attendance acts on a game, each with a location fix in its body, and one sets the reliability
   filter; the no-show routes are gone. The tickets settle the paths.
 - **Club surface** — `GET/POST/PATCH /club/courts`, `PUT /club/courts/{id}/hours`,
-  `GET/POST/DELETE /club/exceptions`, `PUT /club/prices`, `GET/PUT /club/raketa-settings`,
+  `GET/POST/DELETE /club/exceptions`, `PUT /club/prices`, `GET/PUT /club/rakieta-settings`,
   `POST /club/stripe/onboarding-link`, `GET /club/setup`, `GET /club/bookings?date&filter`,
   `POST /club/bookings/{id}/move|cancellation` — the cancellation takes a reason and an *anyway*
   flag and answers *moved* (with the court and its kind) or *called off*, beside a **cancel
@@ -1176,8 +1176,8 @@ stored in UTC and shown in Europe/Warsaw.
 Seeds drive the real use cases only (ADR-0029; `backend/app/seeds/`), with the **fake payments
 adapter**, and **nothing a mock shows is hard-coded**. On top of today's cohort and groups:
 
-- **Clubs**, every one **Only Raketa** since Q121 (*a call*: each with a release lead that keeps its
-  seeded games fillable), none with a check-in switch (Q116), with courts per sport, weekly Raketa
+- **Clubs**, every one **Only Rakieta** since Q121 (*a call*: each with a release lead that keeps its
+  seeded games fillable), none with a check-in switch (Q116), with courts per sport, weekly Rakieta
   hours, one exception, price bands, a linked (fake) payments account; **at least one with indoor
   and outdoor courts of one sport at the same hours**, so that a move by cancel, the weather rule and
   a card's kind can be walked (Q122); one club **not live** (half its checklist done) and one

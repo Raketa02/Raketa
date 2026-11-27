@@ -32,11 +32,11 @@ as in the topics; *reading* is comparison, not a source.
 - **Competitor.** [ABSENT] A booking that waits for the club, a timed release, a minimum notice for courts; the "private club" workaround (Book Ahead Limit 0) "will disable Open Match creation for everyone" — `topics/competitor-club.md#no-booking-that-waits-for-the-club-to-confirm`, `topics/competitor-club.md#no-timed-release-and-the-private-club-workaround`, `topics/competitor-club.md#no-minimum-notice`.
 - **Competitor (Instant).** [POLICY] Desk and app sell from one calendar and cannot double-sell — `topics/competitor-club.md#manager-is-a-web-app-and-the-clubs-only-calendar`.
 - **Platforms (On request).** [ABSENT] Courts booked on the club's yes at Playmore, tenis4U, kluby.org, PADO or MATCHi — `topics/platforms.md#no-club-confirms-booking-mode-anywhere`. Playmore's terms form the contract at the club's confirmation (§4.6), but only payment waits, 30 minutes — `topics/platforms.md#playmore--the-contract-waits-for-the-club-but-no-confirm-step-exists`, `topics/platforms.md#playmore--an-unpaid-booking-lapses-after-30-minutes`.
-- **Platforms (Only Raketa).** [POLICY] MATCHi's per-court "Offline only": visible, booked only by administrators — `market.md#s02-g7--a-pause-online-bookings-switch-and-what-it-does-to-bookings-already-made`.
-- **Status quo (Only Raketa).** [POLICY] Season and 12-week slots paid up front hold the prime hours — `topics/local-market.md#fixed-weekly-slots-take-the-prime-hours`, `situations.md` SIT-46; Squash4You's desk resells a late-cancelled slot first — `topics/local-market.md#the-cut-off-is-24-hours-late-means-the-full-price-unless-the-court-is-resold`.
+- **Platforms (Only Rakieta).** [POLICY] MATCHi's per-court "Offline only": visible, booked only by administrators — `market.md#s02-g7--a-pause-online-bookings-switch-and-what-it-does-to-bookings-already-made`.
+- **Status quo (Only Rakieta).** [POLICY] Season and 12-week slots paid up front hold the prime hours — `topics/local-market.md#fixed-weekly-slots-take-the-prime-hours`, `situations.md` SIT-46; Squash4You's desk resells a late-cancelled slot first — `topics/local-market.md#the-cut-off-is-24-hours-late-means-the-full-price-unless-the-court-is-resold`.
 - **Status quo.** [POLICY] "Wieczory wyprzedane, ale rano i wczesnym popołudniem korty stoją puste" (Playmore's pitch to clubs) — `topics/local-market.md#what-a-club-says-it-lacks-today`.
 - **Situation (On request).** *opinion* A request arrives when nobody is at the desk — `situations.md` SIT-36.
-- *Reading:* Instant is how every platform read already works; Only Raketa and On request have no equivalent (`topics/platforms.md#no-club-confirms-booking-mode-anywhere`).
+- *Reading:* Instant is how every platform read already works; Only Rakieta and On request have no equivalent (`topics/platforms.md#no-club-confirms-booking-mode-anywhere`).
 
 ## 4. The settings, and when a change bites (R-CLUBSETUP-14 to -19)
 
@@ -92,7 +92,7 @@ records another platform's (`topics/competitor-club.md#2-onboarding`, `topics/pl
 - **R-CLUBSETUP-21, -22.** [ABSENT] What kluby.org's or tenis4U's switch does to bookings made — `topics/gaps-CLUBSETUP.md#both-have-a-club-wide-switch-neither-says-what-it-does-to-bookings-already-made`.
 - **R-CLUBSETUP-3.** [DOCS] Stripe's `government_entity` is "available for US connected accounts only"; [ABSENT] a Polish budget unit as `company` — `topics/gaps-CLUBSETUP.md#stripe-offers-government-entity-to-us-accounts-only-and-lists-no-structures-for-poland`.
 - **R-CLUBSETUP-10.** [POLICY] Playtomic: "You will receive an email from us with the date & time you will be LIVE" — `topics/gaps-CLUBSETUP.md#playtomic-emails-the-date-and-time-before-the-club-goes-live`.
-- **R-CLUBSETUP-35, -11.** [DOCS] With a Stripe-built dashboard "Stripe will proactively reach out"; Raketa's clubs have `dashboard: full` — `topics/gaps-CLUBSETUP.md#with-a-stripe-built-dashboard-stripe-contacts-the-account-itself`.
+- **R-CLUBSETUP-35, -11.** [DOCS] With a Stripe-built dashboard "Stripe will proactively reach out"; Rakieta's clubs have `dashboard: full` — `topics/gaps-CLUBSETUP.md#with-a-stripe-built-dashboard-stripe-contacts-the-account-itself`.
 - **R-CLUBSETUP-13, -39.** [ABSENT] Independent evidence of how far ahead groups settle; Kraków clubs book 7–30 days ahead — `topics/gaps-CLUBSETUP.md#clubs-take-bookings-7-to-30-days-ahead-no-measure-of-when-groups-settle`.
 
 Still open: a test-mode refund on a stopped account (R-CLUBSETUP-38); open games when a club stops selling (R-CLUBSETUP-11); a group handover elsewhere (R-CLUBSETUP-33); the effect of kluby.org's switch (R-CLUBSETUP-21, -22); Stripe and a Polish budget unit (R-CLUBSETUP-3); lead time in Kraków (R-CLUBSETUP-13, -39).

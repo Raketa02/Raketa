@@ -1,6 +1,6 @@
 # The club's customers, its staff, and what players are told
 
-Research for the club-software planning map ("Raketa becomes the club's booking software", decided
+Research for the club-software planning map ("Rakieta becomes the club's booking software", decided
 2026-10-12): areas 7 (the club's customers), 13 (staff) and 14 (telling players), feature by feature,
 with the Polish law that bounds each.
 
@@ -55,7 +55,7 @@ the Official Journal text, because EUR-Lex's HTML answered with a bot challenge.
   credit-information bureau only if it is at least 200 zł, 30 days overdue, and a registered-letter
   warning went out a month earlier (art. 14 of the act on economic information). *Reading:* a shared
   "blocked at another club" flag sits outside that route.
-- **Every rival gives each staff member their own login; Raketa's one shared desk login has no
+- **Every rival gives each staff member their own login; Rakieta's one shared desk login has no
   counterpart.** Roles: Playmore five (its published matrix lets reception see financial reports and
   add employees), tenis4U four (the panel hides cancel, price change and payment registration from
   reception and court staff), MATCHi six additive roles per venue, Playtomic view or edit per menu
@@ -125,9 +125,9 @@ przez recepcję" and confirms each "wiadomość SMS wysłana z systemu"
 ([Miazga regulamin](https://www.miazgasquash.pl/regulamin/)). Miazga may verify a booker's details
 and cancel a booking with doubtful ones (carried, `gaps-EMAIL.md` §3, 2026-10-08).
 
-**What it means for the player app.** *Reading:* a booked game may now hold people Raketa has never
+**What it means for the player app.** *Reading:* a booked game may now hold people Rakieta has never
 met. The player app's game, its roster and its notices have to cope with a seat held by a name and a
-phone, and Raketa's identity (one account, several profiles) needs a place for a person who is only
+phone, and Rakieta's identity (one account, several profiles) needs a place for a person who is only
 the club's customer.
 
 **Market signal.** Table stakes.
@@ -280,7 +280,7 @@ it one tap inside the booking, Playmore a tick box on the customer card.
 odwołaniem wszystkich kolejnych rezerwacji i blokadą możliwości robienia rezerwacji do czasu
 uregulowania należności" ([Miazga regulamin](https://www.miazgasquash.pl/regulamin/)).
 
-**What it means for the player app.** *Reading:* a banned person may still be in a Raketa group whose
+**What it means for the player app.** *Reading:* a banned person may still be in a Rakieta group whose
 deck deals that club's games. Whether the ban reaches the deck, the yes and the booking — and whether
 the player is told why — is a decision the player app cannot dodge. tenis4U's unexplained,
 platform-wide ban is the complaint to avoid.
@@ -320,7 +320,7 @@ zaległości pracownik recepcji klubu poinformuje klubowicza w danym dniu lub na
 the member of the no-show and the debt that day or the next)
 ([Atras regulamin](https://www.atrassquash.pl/regulamin/)).
 
-**What it means for the player app.** *Reading:* Raketa charges every seat at the yes, so its own debts
+**What it means for the player app.** *Reading:* Rakieta charges every seat at the yes, so its own debts
 come from failed charges and late-leave fees. A club-side debt for a desk booking is new; the player app
 would need somewhere to see and pay it.
 
@@ -354,7 +354,7 @@ evening.
 **What a Kraków desk does today.** **[ABSENT]** A kept count; the rules read punish each no-show
 singly (7.5, 7.6).
 
-**What it means for the player app.** *Reading:* Raketa already records attendance at the court
+**What it means for the player app.** *Reading:* Rakieta already records attendance at the court
 (#657), which a club report could count; the player's own record of it is the other side of the same
 fact.
 
@@ -383,7 +383,7 @@ Tuesdays".
 
 **What a Kraków desk does today.** **[ABSENT]** Not documented.
 
-**What it means for the player app.** *Reading:* the club's history of a person includes Raketa games;
+**What it means for the player app.** *Reading:* the club's history of a person includes Rakieta games;
 a group game booked by one yes appears in each seat holder's history at that club.
 
 **Market signal.** Table stakes.
@@ -410,13 +410,13 @@ a group game booked by one yes appears in each seat holder's history at that clu
   bookings and payments to Excel ([2021](https://oferta.kluby.org/changelog?rok=2021)).
 
 **The desk's day with it.** *Reading:* rare for the desk; decisive when a club switches software, and
-Raketa is the one asking clubs to switch.
+Rakieta is the one asking clubs to switch.
 
 **What a Kraków desk does today.** Kraków clubs moving from Reservise had "Rezerwacje, bazę klientów,
 cennik i całą historię" carried over (carried, `integration.md` §4, 2026-10-12).
 
 **What it means for the player app.** *Reading:* an import makes thousands of desk customers at once;
-the join (7.2) decides how many of them meet their Raketa account.
+the join (7.2) decides how many of them meet their Rakieta account.
 
 **Market signal.** Table stakes.
 
@@ -445,7 +445,7 @@ it is also the easiest thing to tick without asking.
 elektroniczną – wyłącznie w przypadku wyrażenia zgody przez Użytkownika"
 ([polityka prywatności](https://gardenpadel.pl/polityka-prywatnosci/)).
 
-**What it means for the player app.** *Reading:* consent is per club; one Raketa player may say yes to
+**What it means for the player app.** *Reading:* consent is per club; one Rakieta player may say yes to
 one club's newsletter and no to another's, so a single "marketing" switch is not enough.
 
 **Market signal.** Table stakes (see 14.13 for the law).
@@ -509,15 +509,15 @@ the contract between them (umowa powierzenia przetwarzania danych).
 - **[LAW]** Two or more bodies that "wspólnie ustalają cele i sposoby przetwarzania" are joint
   controllers and must set their responsibilities out (art. 26 ust. 1, [RODO](https://eur-lex.europa.eu/legal-content/PL/TXT/?uri=CELEX:32016R0679)).
 - *Reading:* the market's pattern — club controls its customers, the software is its processor and
-  separately controls its own app accounts — is Playmore's written split. Raketa's Games deck uses
-  player data for Raketa's own purposes (dealing games), which art. 28 ust. 10 would make a controller's
+  separately controls its own app accounts — is Playmore's written split. Rakieta's Games deck uses
+  player data for Rakieta's own purposes (dealing games), which art. 28 ust. 10 would make a controller's
   act, not a processor's.
 
 **The desk's day with it.** *Reading:* invisible day to day; it surfaces when a person asks "what do you
 hold on me" (7.13) or the club switches software.
 
-**What it means for the player app.** *Reading:* the player app is Raketa's own product (Raketa
-controls), while the club website's customer list is the club's (Raketa processes). One person can be
+**What it means for the player app.** *Reading:* the player app is Rakieta's own product (Rakieta
+controls), while the club website's customer list is the club's (Rakieta processes). One person can be
 both, and the line between the two records is where the processing agreement bites.
 
 **Market signal.** Table stakes (legally required); only Playmore publishes it.
@@ -590,12 +590,12 @@ roszczeń" (art. 17 ust. 3 lit. b, e); the processor helps the controller answer
 ([RODO](https://eur-lex.europa.eu/legal-content/PL/TXT/?uri=CELEX:32016R0679)).
 
 **The desk's day with it.** *Reading:* rare; when it comes, it has a one-month clock, and the request
-may arrive at the club about data only Raketa holds, or the reverse.
+may arrive at the club about data only Rakieta holds, or the reverse.
 
 **What a Kraków desk does today.** Garden Padel names a contact for the controller "pisemnie … mailem …
 telefonicznie" ([polityka prywatności](https://gardenpadel.pl/polityka-prywatnosci/)).
 
-**What it means for the player app.** *Reading:* deleting a Raketa account does not delete the clubs'
+**What it means for the player app.** *Reading:* deleting a Rakieta account does not delete the clubs'
 customer records (Playtomic's and MATCHi's split), and anonymising a club customer must not erase the
 booking and invoice it still has to keep.
 
@@ -625,7 +625,7 @@ booking and invoice it still has to keep.
 **The law.** *Reading:* each club is its own controller (7.11); passing one club's ban or debt to
 another is a disclosure needing its own legal basis and notice, and debts have the bureau route (7.6).
 
-**What it means for the player app.** *Reading:* a Raketa group plays at several clubs. A ban at club A
+**What it means for the player app.** *Reading:* a Rakieta group plays at several clubs. A ban at club A
 must not leak to club B through the deck, the roster or a shared "reliability" figure unless that
 sharing is designed and told.
 
@@ -654,7 +654,7 @@ and drew the complaint in 7.5.
   list or by user ID) ([panel demo](https://test-panel.tenis4u.pl/)).
 - **[POLICY] kluby.org:** "Możliwość zarządzania pracownikami: dodawanie, usuwanie, przydzielanie
   uprawnień" (2017) ([changelog](https://oferta.kluby.org/changelog?rok=2017)).
-- **Raketa today:** one shared login per club (ticket context).
+- **Rakieta today:** one shared login per club (ticket context).
 
 **The desk's day with it.** *Reading:* with personal logins, a leaver is removed without changing the
 password for everyone, and every action has a name (13.6).
@@ -662,7 +662,7 @@ password for everyone, and every action has a name (13.6).
 **What a Kraków desk does today.** **[ABSENT]** Whether desks share one panel login; not in any club
 rule read.
 
-**What it means for the player app.** *Reading:* Raketa already has per-person Administrators (one per
+**What it means for the player app.** *Reading:* Rakieta already has per-person Administrators (one per
 club and email) for groups, so a person may be both a player and a club's staff on one account.
 
 **Market signal.** Table stakes.
@@ -706,7 +706,7 @@ changes away from reception; Playmore does not keep financial reports away from 
 
 **What a Kraków desk does today.** **[ABSENT]** Not documented.
 
-**What it means for the player app.** *Reading:* a staff member's role decides who may cancel a Raketa
+**What it means for the player app.** *Reading:* a staff member's role decides who may cancel a Rakieta
 game for the club and trigger its refunds; the player app shows the result, so the club-side role
 should be named in what the player is told.
 
@@ -734,7 +734,7 @@ bookings quietly.
 
 **What a Kraków desk does today.** **[ABSENT]** Not documented (carried, `gaps-EMAIL.md` §9).
 
-**What it means for the player app.** *Reading:* a Raketa game booked by the last yes, or a seat left,
+**What it means for the player app.** *Reading:* a Rakieta game booked by the last yes, or a seat left,
 reaches whoever the club names, not "the club".
 
 **Market signal.** Table stakes.
@@ -757,7 +757,7 @@ reaches whoever the club names, not "the club".
 
 **What a Kraków desk does today.** **[ABSENT]** Not documented.
 
-**What it means for the player app.** *Reading:* none until Raketa sells lessons.
+**What it means for the player app.** *Reading:* none until Rakieta sells lessons.
 
 **Market signal.** Differentiator.
 
@@ -777,7 +777,7 @@ reaches whoever the club names, not "the club".
 - **[POLICY] kluby.org:** "Dodatkowe uprawnienia zarządcy" (2023) ([changelog](https://oferta.kluby.org/changelog?rok=2023)).
 - **[ABSENT] tenis4U:** an owner view across courts (not in the panel text).
 
-**What it means for the player app.** *Reading:* none directly; Raketa's Administrator is already one
+**What it means for the player app.** *Reading:* none directly; Rakieta's Administrator is already one
 per club and email, so the owner model needs one account, many clubs.
 
 **Market signal.** Table stakes for chains; rare need in Kraków (single-site clubs).
@@ -811,7 +811,7 @@ login makes that unprovable.
 
 **The desk's day with it.** *Reading:* used after the fact — a disputed refund, cash short at closing.
 
-**What it means for the player app.** *Reading:* when the club cancels a Raketa game, the player's
+**What it means for the player app.** *Reading:* when the club cancels a Rakieta game, the player's
 notice can say who at the club did it only if staff sign in as themselves.
 
 **Market signal.** Table stakes (per booking); per-employee reports are a differentiator.
@@ -886,8 +886,8 @@ with "każda osoba dostaje e-mail wyłącznie ze swoimi zmianami", leave request
 telefonicznej, internetowej lub przez recepcję jest wiadomość SMS wysłana z systemu"
 ([Miazga](https://www.miazgasquash.pl/regulamin/)).
 
-**What it means for the player app.** *Reading:* Raketa players get the push and email it already sends;
-a desk customer without the app needs SMS or email, and Raketa's "Notice" model has no non-app reader.
+**What it means for the player app.** *Reading:* Rakieta players get the push and email it already sends;
+a desk customer without the app needs SMS or email, and Rakieta's "Notice" model has no non-app reader.
 
 **Market signal.** Table stakes.
 
@@ -943,7 +943,7 @@ system SMS ([Miazga](https://www.miazgasquash.pl/regulamin/)).
   ([2021](https://oferta.kluby.org/changelog?rok=2021), [2022](https://oferta.kluby.org/changelog?rok=2022)).
 - **[POLICY] MATCHi:** payment links ([Working with payment links](https://matchi.zendesk.com/hc/en-gb/articles/14858820219165)).
 
-**What it means for the player app.** *Reading:* Raketa's seat charge needs no link; a desk booking
+**What it means for the player app.** *Reading:* Rakieta's seat charge needs no link; a desk booking
 paid later does, and that is a message to a person who may have no app.
 
 **Market signal.** Table stakes in Poland.
@@ -1021,7 +1021,7 @@ paid later does, and that is a message to a person who may have no app.
 **What a Kraków desk does today.** Miazga's system SMS (14.1); tenis4U clubs buy the 30 gr desk SMS.
 
 **What it means for the player app.** *Reading:* SMS is how a club reaches the half of its customers
-without an app; Raketa's player notices have no SMS today. Playmore's rule — SMS only when there is no
+without an app; Rakieta's player notices have no SMS today. Playmore's rule — SMS only when there is no
 push — is the cost control.
 
 **Market signal.** Table stakes in Poland (Playmore, kluby.org, tenis4U, Kraków desks); absent at
@@ -1043,7 +1043,7 @@ Playtomic.
   aplikacji"), statuses down to "Tylko w dzwonku w apce" ([manager](https://manager.playmore.pl/)).
 - **[POLICY] tenis4U:** tournament pushes, "Powiadom o rozpoczęciu turnieju" ([panel demo](https://test-panel.tenis4u.pl/)).
 
-**What it means for the player app.** *Reading:* a club message lands in the same bell as Raketa's game
+**What it means for the player app.** *Reading:* a club message lands in the same bell as Rakieta's game
 notices; per-club mute (MATCHi) keeps the bell the player's.
 
 **Market signal.** Differentiator (MATCHi, Playmore).
@@ -1091,7 +1091,7 @@ the club phone ([Atras §3](https://www.atrassquash.pl/regulamin/)); Garden Pade
   from the business" and "the business's name"; collectable by SMS, website, phone or paper
   ([getting opt-in](https://developers.facebook.com/docs/whatsapp/overview/getting-opt-in)).
 
-**What it means for the player app.** *Reading:* Raketa's groups already live in WhatsApp; a utility
+**What it means for the player app.** *Reading:* Rakieta's groups already live in WhatsApp; a utility
 message costs about 4 gr, against 10–17 gr for an SMS.
 
 **Market signal.** Rare (as a channel for booking notices).
@@ -1169,9 +1169,9 @@ log is the desk's answer (carried, `NOTIFY.md` §1).
 wyrażenia zgody" ([polityka prywatności](https://gardenpadel.pl/polityka-prywatnosci/)); Miazga cites
 "marketing usług własnych" as a legitimate interest ([Miazga](https://www.miazgasquash.pl/regulamin/)).
 
-**What it means for the player app.** *Reading:* Raketa's game notices (a game booked, a seat left, a
+**What it means for the player app.** *Reading:* Rakieta's game notices (a game booked, a seat left, a
 payment to confirm) are service messages; "Fill in alerts" and "Challenges for you" that invite a
-player to a new purchase sit near the line UOKiK drew, and a club's "come play" blast to Raketa players
+player to a new purchase sit near the line UOKiK drew, and a club's "come play" blast to Rakieta players
 needs that club's consent per player.
 
 **Market signal.** Table stakes (legal).

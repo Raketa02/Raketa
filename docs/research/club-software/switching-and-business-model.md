@@ -1,9 +1,9 @@
-# Why a Kraków club would switch — and what Raketa could charge
+# Why a Kraków club would switch — and what Rakieta could charge
 
-Research for the root grilling of the club-software map ("Raketa becomes the club's booking
+Research for the root grilling of the club-software map ("Rakieta becomes the club's booking
 software", decided 2026-10-12 on [#609](https://github.com/Raketa02/Raketa/issues/609)): what a
 Kraków club pays and gets today, why clubs change systems, what an empty hour is worth, and the
-mechanics and law of each way Raketa could charge.
+mechanics and law of each way Rakieta could charge.
 
 **Extends** [`integration.md`](integration.md),
 [`../games-and-fill-in/topics/platforms.md`](../games-and-fill-in/topics/platforms.md),
@@ -62,16 +62,16 @@ marked *reading* are inferences, not sources.
   **80–140 zł** (75–91 % of the evening price; Garden Padel's 8–9 slot is 50 zł); a squash hour for
   **40–65 zł online**, a third to a half of the evening's 103,50–120 zł. (§4)
 - **Each way of charging has a clean Stripe mechanism.** A per-booking fee is `application_fee_amount`
-  on the club's direct charge, with no Stripe fee on the fee itself but refunded only if Raketa says
+  on the club's direct charge, with no Stripe fee on the fee itself but refunded only if Rakieta says
   so; a subscription is Stripe Billing at 0,7 % of billing volume, invoiced with 23 % VAT and, for a
   Polish business, through KSeF. (§5)
 - **A player fee must be inside the price the player first sees.** The consumer act requires the total
   price before the order and voids fees not disclosed (art. 12 ust. 1 pkt 5, art. 23); UOKiK made
   eBilet put its service fee into every "od" price in 2023. Any shown discount on an empty hour must
   also show the lowest price of the last 30 days, services included. (§5)
-- **Selling clubs' courts to players makes Raketa a regulated intermediary.** The P2B Regulation
+- **Selling clubs' courts to players makes Rakieta a regulated intermediary.** The P2B Regulation
   (terms, 15-day notice of changes, ranking parameters, data access, 30-day reasons before cutting a
-  club off) applies; complaint handling and mediation do not, while Raketa is a small enterprise.
+  club off) applies; complaint handling and mediation do not, while Rakieta is a small enterprise.
   Under Poland's DAC7 text the activity is "udostępnienie nieruchomości, ich części" (making real
   property or a part of it available) — court hire very likely in scope — with an annual report to KAS
   by the end of January. (§5)
@@ -252,7 +252,7 @@ marked *reading* are inferences, not sources.
 - **[ABSENT]** Any first-party price or transaction fee ([clubspark.com](https://clubspark.com/); /pricing is 404).
   A rival's comparison claims "1.4% + 5p" per transaction plus Stripe (via web search, Book & Go — not used).
 
-### Raketa today
+### Rakieta today
 - **[POLICY]** No platform fee; the club is the seller on its own Stripe account and pays Stripe's fee,
   1,5 % + 1 zł for a standard EEA card (carried, `local-market.md`,
   [Stripe pricing PL](https://stripe.com/en-pl/pricing), read 2026-10-06).
@@ -458,12 +458,12 @@ marked *reading* are inferences, not sources.
 - *Reading:* the marginal cost of a filled hour (light, heat, cleaning) was not found; KSOS's "10 zł" light
   surcharge (carried) is the only public proxy.
 
-## 5. What Raketa could charge — mechanics and law
+## 5. What Rakieta could charge — mechanics and law
 
 ### Ways to charge, side by side (*reading*, on a 100 zł court split four ways)
-| Way | Who pays Raketa | What it costs whom on that booking | Precedent |
+| Way | Who pays Rakieta | What it costs whom on that booking | Precedent |
 | --- | --- | --- | --- |
-| Free (today) | nobody | the club pays Stripe 4 × (1,5 % × 25 + 1 zł) = **5,50 zł** for four seat charges | Raketa |
+| Free (today) | nobody | the club pays Stripe 4 × (1,5 % × 25 + 1 zł) = **5,50 zł** for four seat charges | Rakieta |
 | Monthly subscription | the club | a fixed zł a month; Stripe Billing 0,7 % of it | tenis4U, kluby.org, Eversports, CourtReserve |
 | Per-booking fee from the club's charge | the club | X % on top of the 5,50 zł | Playmore 1,79 %, kluby.org 2 %, PADO 2 %, Playtomic (example 3,5 %) |
 | Player service fee | the player | e.g. 1,48 zł a booking, or 20 % capped at 3,99 zł a seat | Playmore, Playtomic, MATCHi |
@@ -507,7 +507,7 @@ marked *reading* are inferences, not sources.
   ([direct charges](https://docs.stripe.com/connect/direct-charges)).
 - **[POLICY]** Precedent for invoicing it: Playtomic deducts its fee before the money reaches the club and
   sends "a single invoice for the total" monthly ([help](https://helpmanager.playtomic.com/hc/en-gb/articles/50654517291537)).
-  - *Reading:* Raketa's fee to a Polish club is its own B2B sale — 23 % VAT and a KSeF invoice.
+  - *Reading:* Rakieta's fee to a Polish club is its own B2B sale — 23 % VAT and a KSeF invoice.
 
 ### A service fee on top, paid by the player
 - **[LAW]** Before the consumer is bound the trader states "łącznej cenie lub wynagrodzeniu za świadczenie wraz
@@ -532,13 +532,13 @@ marked *reading* are inferences, not sources.
   and is "collected by MATCHi" ([help](https://matchi.zendesk.com/hc/en-gb/articles/21623335434269));
   Playtomic invoices its B2C fee to the player itself (carried, `games-and-fill-in-market.md` §1.2, read 2026-10-06).
   - *Reading:* on a direct charge the whole amount is the club's sale (merchant of record, carried), so a
-    Raketa fee to the player is either a second charge on Raketa's own account, with its own 23 % VAT
+    Rakieta fee to the player is either a second charge on Rakieta's own account, with its own 23 % VAT
     receipt, or part of the club's price.
 
 ### Free
-- *Reading:* staying free costs Raketa nothing at Stripe while Stripe collects its fees from the clubs — no
+- *Reading:* staying free costs Rakieta nothing at Stripe while Stripe collects its fees from the clubs — no
   per-account or payout fee ([Connect pricing](https://stripe.com/en-pl/connect/pricing)); the 9 zł a month
-  per active account and 0,25 % + 1,35 zł per payout apply only if Raketa takes over fee collection (same page).
+  per active account and 0,25 % + 1,35 zł per payout apply only if Rakieta takes over fee collection (same page).
   The club still pays card fees, as tenis4U's clubs pay Przelewy24/Tpay today.
 
 ### What a platform owes clubs: the P2B Regulation
@@ -556,7 +556,7 @@ marked *reading* are inferences, not sources.
   apply to providers … that are small enterprises" — "fewer than 50 persons" and turnover or balance sheet "not
   exceed[ing] EUR 10 million" ([Recommendation 2003/361/EC, Annex art. 2](https://eur-lex.europa.eu/eli/reco/2003/361/oj)).
 - *Reading:* the club website alone is the club's own tool; the Games deck, which shows clubs' courts and
-  games to Raketa's players, is what makes Raketa an "online intermediation service".
+  games to Rakieta's players, is what makes Rakieta an "online intermediation service".
 
 ### The DSA, briefly
 - **[LAW]** The trader-traceability section for "online platforms allowing consumers to conclude distance
@@ -588,9 +588,9 @@ marked *reading* are inferences, not sources.
   ([help, updated 2026-09-16](https://matchi.zendesk.com/hc/en-gb/articles/16302209202205)). Booksy, a Polish
   booking platform, reports "rezerwacji dokonanych i opłaconych przez klientów za pomocą Booksy"
   ([Booksy, 14 Oct 2024](https://biz.booksy.com/pl-pl/blog/unijna-dyrektywa-dac7-co-powinni-wiedziec-o-niej-wlasciciele-biznesow)).
-  - *Reading:* under the Polish text an hour of court hire paid through Raketa is very likely "udostępnienie
-    części nieruchomości", so Raketa would report each club; a municipal centre (MOSiR/OSiR) is an excluded
-    governmental seller; a club passing 2 000 Raketa bookings a year at one address drops out as a seller.
+  - *Reading:* under the Polish text an hour of court hire paid through Rakieta is very likely "udostępnienie
+    części nieruchomości", so Rakieta would report each club; a municipal centre (MOSiR/OSiR) is an excluded
+    governmental seller; a club passing 2 000 Rakieta bookings a year at one address drops out as a seller.
 
 ## 6. Threats
 
@@ -638,7 +638,7 @@ marked *reading* are inferences, not sources.
 | Eversports Manager | €99 / 149 / 199 by courts (yearly); €113 / 166 / 221 monthly | none found | per contract + surcharge | yearly saves ≤ 17 % · setup €199 | not published |
 | CourtReserve | $199 / 369 / 549 by courts ($159 / 329 / 499 yearly) | club may add ≤ 4 % | processor's rate · club or player | subscription; branded app 1 year + $499 | not published |
 | ClubSpark | free to LTA venues; else not published | none found | not published | — | — |
-| Raketa today | 0 | 0 | 0 · club pays Stripe 1,5 % + 1 zł per charge | — | — |
+| Rakieta today | 0 | 0 | 0 · club pays Stripe 1,5 % + 1 zł per charge | — | — |
 
 ## 8. Gaps
 

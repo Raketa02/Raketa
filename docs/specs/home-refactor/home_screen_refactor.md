@@ -151,8 +151,8 @@ The tiles stay as they are.
 -> Mock references:
 
 ```
-"C:\Users\rober\Desktop\homeRefactor\8_new_in_raketa_open.png"
-"C:\Users\rober\Desktop\homeRefactor\9_new_in_raketa_open_detail.png"
+"C:\Users\rober\Desktop\homeRefactor\8_new_in_rakieta_open.png"
+"C:\Users\rober\Desktop\homeRefactor\9_new_in_rakieta_open_detail.png"
 ```
 
 #### 4- Players with your vibe

@@ -32,7 +32,7 @@ direct charge sends in `local-market.md#receipts-on-a-direct-charge-come-from-th
   2026-10-08
 - **[DOCS]** "When a payout fails, the status might initially show as `paid`, but then change to `failed` within 5
   business days." [same page](https://docs.stripe.com/payouts#payout-failures) — read 2026-10-08
-  - *Reading:* on Stripe's own daily schedule nobody at Raketa has to act: the club re-enters its account (or presses
+  - *Reading:* on Stripe's own daily schedule nobody at Rakieta has to act: the club re-enters its account (or presses
     Resume Payouts) and the next daily payout carries the money again, together with whatever came in since.
 
 ### A returned payout's money goes back to the club's Stripe balance
@@ -51,7 +51,7 @@ direct charge sends in `local-market.md#receipts-on-a-direct-charge-come-from-th
 - **[ABSENT]** Any Stripe statement that a failed **manual** payout is re-sent by Stripe: the retry sentence above
   speaks only of "the next scheduled payout interval"; searched docs.stripe.com `payouts`, `connect/manual-payouts`,
   `connect/payouts-connected-accounts`, the Payout API object, and support.stripe.com — read 2026-10-08
-  - *Reading:* when Raketa asked for the payout itself, the money lands back in the
+  - *Reading:* when Rakieta asked for the payout itself, the money lands back in the
     club's balance and stays there until someone asks for a payout again — or until a later automatic payout sweeps
     it, if the account is on a schedule.
 
@@ -61,7 +61,7 @@ direct charge sends in `local-market.md#receipts-on-a-direct-charge-come-from-th
   until the platform updates the connected account's external account details"; "For connected accounts with access
   to the full Stripe Dashboard or Express Dashboard, the account holder manages their external payout accounts."
   [Stripe: Payouts to connected accounts](https://docs.stripe.com/connect/payouts-connected-accounts) — read 2026-10-08
-  - *Reading:* for a Raketa club (full Dashboard) the fix is the club's own: Raketa cannot change its bank account,
+  - *Reading:* for a Rakieta club (full Dashboard) the fix is the club's own: Rakieta cannot change its bank account,
     only tell it.
 
 ### A failed payout shows in Stripe's report only on an automatic schedule
@@ -109,7 +109,7 @@ direct charge sends in `local-market.md#receipts-on-a-direct-charge-come-from-th
   - *Reading:* the person who completed Stripe's onboarding for the club holds the Stripe login, so the email reaches
     that person's inbox — often the owner, not the desk — unless the club invites the desk as a team member.
 
-### Raketa cannot rebrand or redirect a full-Dashboard club's requirement emails
+### Rakieta cannot rebrand or redirect a full-Dashboard club's requirement emails
 
 - **[DOCS]** On the requirement emails Stripe sends Standard or Express accounts: "We don't currently support
   customization." [Stripe support FAQ](https://support.stripe.com/questions/emails-for-connected-account-onboarding-and-risk-requirements-faq)
@@ -123,7 +123,7 @@ direct charge sends in `local-market.md#receipts-on-a-direct-charge-come-from-th
   [Stripe: Platform controls](https://docs.stripe.com/connect/platform-controls-for-stripe-dashboard-accounts) —
   read 2026-10-08
 
-### Raketa's own admins hear when a club is about to lose payments or payouts
+### Rakieta's own admins hear when a club is about to lose payments or payouts
 
 - **[DOCS]** "Platforms can receive email notifications before, or immediately when, capabilities degrade for their
   connected accounts": near-immediate for an action that immediately degrades a capability, a daily batch for those
@@ -184,8 +184,8 @@ direct charge sends in `local-market.md#receipts-on-a-direct-charge-come-from-th
   balance transaction included in the payout", with `fee`, `automatic_payout_id` and, for Connect,
   `connected_account_direct_charge_id`; on manual payouts Stripe points to the Balance report instead. [Stripe: Payout
   reconciliation report](https://docs.stripe.com/reports/payout-reconciliation) — read 2026-10-08
-  - *Reading:* a payout Raketa creates itself is one Stripe cannot itemise; the link between a payout and its games
-    exists only if Raketa keeps it (the club's statement shows a lump sum).
+  - *Reading:* a payout Rakieta creates itself is one Stripe cannot itemise; the link between a payout and its games
+    exists only if Rakieta keeps it (the club's statement shows a lump sum).
 
 ### Przelewy24 lists each payout package's transactions and the refunds taken off it (status quo)
 
@@ -207,7 +207,7 @@ direct charge sends in `local-market.md#receipts-on-a-direct-charge-come-from-th
 
 ---
 
-## 5. A payout Raketa asks of Stripe (R-CLUBMONEY-19)
+## 5. A payout Rakieta asks of Stripe (R-CLUBMONEY-19)
 
 ### A payout above the available balance is refused with `balance_insufficient`
 
@@ -351,7 +351,7 @@ direct charge sends in `local-market.md#receipts-on-a-direct-charge-come-from-th
   2026-10-08
   - *Reading:* a Kraków club on Przelewy24 or Tpay today has each court's money the next business day after the
     booking, days before the game, and pays out daily or at a threshold; a refund owed later needs money still in the
-    balance, or it fails. Paying after the game, as Raketa does, is slower than the status quo but never meets that
+    balance, or it fails. Paying after the game, as Rakieta does, is slower than the status quo but never meets that
     failure.
 
 ---

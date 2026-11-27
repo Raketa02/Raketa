@@ -27,7 +27,7 @@ Gaps already answered elsewhere are cited by anchor rather than repeated.
 | R-LEAVE-45 | `capture_before` after the bank's check | `[ABSENT]`: no such payment anywhere; nearest case measured |
 | R-LEAVE-45 | How many confirmations cancel a payment? | **Measured:** cancelled after ten failed tries |
 | R-LEAVE-32, R-LEAVE-52 | A lapsed hold's reason, events and errors | **Errors answered.** Reason and events `[ABSENT]` until 26 Oct |
-| R-LEAVE-54 | What tells a Dashboard capture from Raketa's? | **Answered:** the notice's request and its key |
+| R-LEAVE-54 | What tells a Dashboard capture from Rakieta's? | **Answered:** the notice's request and its key |
 | R-LEAVE-36, R-LEAVE-41 | Refunds on a stopped or removed club | Partly: removed is answered; charges disabled `[ABSENT]` |
 | R-LEAVE-7, R-LEAVE-38 | How issuers rule a kept share | Evidence documented; outcomes `[ABSENT]` |
 | R-LEAVE-51 | Is a full-Dashboard club emailed when a refund fails? | **Answered:** not on Stripe's list of emails |
@@ -78,7 +78,7 @@ Gaps already answered elsewhere are cited by anchor rather than repeated.
 
 - Suppose a player opens the bank's check with less than 10 minutes left (iPhone) or less than 5 (Android). He can
   still be inside the check when his time to fix ends.
-- Stripe forbids a timeout below 5 minutes, so the app cannot shrink the check to fit. Near the cut-off, Raketa's
+- Stripe forbids a timeout below 5 minutes, so the app cannot shrink the check to fit. Near the cut-off, Rakieta's
   deadline decides, not the SDK's.
 
 ### R-LEAVE-6 · Keeping Stripe's fee back from a consumer's refund, under the surcharge clause
@@ -126,7 +126,7 @@ Gaps already answered elsewhere are cited by anchor rather than repeated.
 **Reading**
 
 - Stripe names a cost difference between a reversal and a refund only for IC+ users.
-- On standard pricing, which Raketa's clubs use, that suggests a reversal costs the club what a refund does. The
+- On standard pricing, which Rakieta's clubs use, that suggests a reversal costs the club what a refund does. The
   original fee stays with Stripe, and "doesn't withhold any fees" means no extra fee for the reversal itself.
 - If so, the fee kept from a leaver is a fee the club really paid.
 
@@ -222,7 +222,7 @@ Gaps already answered elsewhere are cited by anchor rather than repeated.
 **What it costs the club** (read 2026-10-20)
 
 - **[DOCS]** "You can cancel a payment before it's completed at no cost" *(translated)*. This is on standard
-  pricing, which Raketa's clubs use.
+  pricing, which Rakieta's clubs use.
   - Source: [Refund and cancel payments](https://docs.stripe.com/refunds).
 - **[DOCS]** On IC+, per-auth fees apply "for each instance you direct Stripe to submit a request to a payment
   method", "including for authorization (successful and declined), void, charge, reversal, or to validate a card".
@@ -365,7 +365,7 @@ Gaps already answered elsewhere are cited by anchor rather than repeated.
 **Reading**
 
 - On the sandbox, Stripe allowed ten failed tries on one payment. The next confirmation found it cancelled.
-- The cancellation carries no reason, so it cannot be told apart from Raketa's own let-go by its reason. Only the
+- The cancellation carries no reason, so it cannot be told apart from Rakieta's own let-go by its reason. Only the
   request tells them apart.
 - The spec's "at most 8 retries" stays within this limit.
 
@@ -422,17 +422,17 @@ Gaps already answered elsewhere are cited by anchor rather than repeated.
 
 - **[MEASURED]** All 56 `payment_intent.succeeded` events on the test club, from 2026-10-19 06:32 to 22:49 UTC, carry
   a request id and an idempotency key.
-- The product's own captures carry `raketa-capture-<charge id>`. Example: `evt_3USPCF5y1DMwE3zY1K4GZYiy` on
+- The product's own captures carry `rakieta-capture-<charge id>`. Example: `evt_3USPCF5y1DMwE3zY1K4GZYiy` on
   `pi_3USPCF5y1DMwE3zY1ZZ8B4cn`, `req_vmmdVcCqRts36M`. That is the key `capture_key` builds
   (`backend/app/modules/payments/application/handlers/settle_seat_charges.py:53-54`).
 - The L6 shares were taken by a stand-in for the desk, and their captures carry the stand-in's own key:
 
   | Share | `payment_intent.succeeded` event | Request | Key |
   |---|---|---|---|
-  | `pi_3USPCt5y1DMwE3zY1F38KqZ9` | `evt_3USPCt5y1DMwE3zY1tzo1lVD` | `req_F48OWqxUZZ8n2N` | `raketa-breaker-leave-dashboard-capture-…` |
+  | `pi_3USPCt5y1DMwE3zY1F38KqZ9` | `evt_3USPCt5y1DMwE3zY1tzo1lVD` | `req_F48OWqxUZZ8n2N` | `rakieta-breaker-leave-dashboard-capture-…` |
   | `pi_3USPCw5y1DMwE3zY1cQfpDvj` | `evt_3USPCw5y1DMwE3zY1TpsYA9J` | `req_mTE1dvZrG7Nfvw` | the same stand-in key |
 
-- Both payments read `captured: true` and `application: ca_VT4JuiojqLY0o3NiUC7dcMvrueSONfGf` (Raketa's), exactly as
+- Both payments read `captured: true` and `application: ca_VT4JuiojqLY0o3NiUC7dcMvrueSONfGf` (Rakieta's), exactly as
   a product capture does.
 - No event on the club comes from a real press in the Dashboard.
 
@@ -443,10 +443,10 @@ Gaps already answered elsewhere are cited by anchor rather than repeated.
 
 **Reading**
 
-- The one field that tells the two apart is the event's `request.idempotency_key`. Raketa's capture always sends
-  `raketa-capture-<its charge id>`.
-- Anything else is not Raketa's: another key, no key, or `request.id: null` from Stripe's own automatic capture.
-- Put another way: a `payment_intent.succeeded` for a share Raketa still holds as held is someone else's take.
+- The one field that tells the two apart is the event's `request.idempotency_key`. Rakieta's capture always sends
+  `rakieta-capture-<its charge id>`.
+- Anything else is not Rakieta's: another key, no key, or `request.id: null` from Stripe's own automatic capture.
+- Put another way: a `payment_intent.succeeded` for a share Rakieta still holds as held is someone else's take.
 
 **Not found**
 
@@ -455,12 +455,12 @@ Gaps already answered elsewhere are cited by anchor rather than repeated.
   - Stripe does not document it, and the sandbox holds none.
   - A press in the club's Dashboard is a write, so it was not made here.
 
-### R-LEAVE-36, R-LEAVE-41 · Refunds on a club Stripe stopped or Raketa removed
+### R-LEAVE-36, R-LEAVE-41 · Refunds on a club Stripe stopped or Rakieta removed
 
 **What Stripe says**
 
 - Carried **[DOCS]** A removed account: "you can't process payments or make API calls for it".
-  - From [`stripe-connect.md#removing-a-club-ends-every-api-call-raketa-can-make-for-it`](stripe-connect.md#removing-a-club-ends-every-api-call-raketa-can-make-for-it).
+  - From [`stripe-connect.md#removing-a-club-ends-every-api-call-rakieta-can-make-for-it`](stripe-connect.md#removing-a-club-ends-every-api-call-rakieta-can-make-for-it).
 - Carried **[DOCS]** A full-Dashboard club handles its own refunds.
   - From [`stripe-connect.md#the-club-handles-its-own-payments-refunds-and-disputes`](stripe-connect.md#the-club-handles-its-own-payments-refunds-and-disputes).
 - **[DOCS]** Closing an Accounts v2 account: "Closed Accounts can no longer be operated on, but limited information can
@@ -468,7 +468,7 @@ Gaps already answered elsewhere are cited by anchor rather than repeated.
   - It refuses with `stripe_loss_liable_cannot_be_deleted` ("Account with Stripe-owned loss liability and dashboard
     cannot be deleted"), `cannot_delete_account_with_balance` and `pending_transactions_cannot_be_deleted`.
   - Source: [Close an account (v2)](https://docs.stripe.com/api/v2/core/accounts/close), read 2026-10-20.
-  - So Raketa cannot close one of its clubs, which are Stripe-liable with a full Dashboard. "Removed" can only mean
+  - So Rakieta cannot close one of its clubs, which are Stripe-liable with a full Dashboard. "Removed" can only mean
     disconnected.
 - **[DOCS]** "Your connected accounts must have the card_payments capability active in order to use direct charges."
   This is about making charges, not refunding them.
@@ -477,7 +477,7 @@ Gaps already answered elsewhere are cited by anchor rather than repeated.
 **Reading**
 
 - Once a club is removed, a late leaver's refund can be made only by the club, in its own Dashboard.
-- Raketa's refund call fails with `platform_api_key_expired` (carried, same file, §7).
+- Rakieta's refund call fails with `platform_api_key_expired` (carried, same file, §7).
 
 **Not found**
 
@@ -545,7 +545,7 @@ Gaps already answered elsewhere are cited by anchor rather than repeated.
 
 - A full-Dashboard club is not emailed when a share's refund fails. It sees the failure only if it opens the payment
   in its Dashboard.
-- Raketa hears `refund.failed` on its Connect endpoint.
+- Rakieta hears `refund.failed` on its Connect endpoint.
 
 **Not found**
 

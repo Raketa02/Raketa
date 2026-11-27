@@ -1,11 +1,11 @@
-# Raketa — Domain Context
+# Rakieta — Domain Context
 
 The shared, ubiquitous language for the whole system. When you name a concept — in an
 issue, a test, a type, a refactor proposal — use the term as defined here. Every app
 obeys this file; see [`CONTEXT-MAP.md`](CONTEXT-MAP.md) for how the vocabulary is
 split, and [`docs/adr/`](docs/adr/) for the decisions behind these terms.
 
-Raketa is a racket-sport platform. Today a player signs up, picks a nickname, joins **Groups**,
+Rakieta is a racket-sport platform. Today a player signs up, picks a nickname, joins **Groups**,
 answers a questionnaire for a **Skill rating** in a sport where a group first asks for one, and is
 dealt games by their group's Games deck — the last yes books a club's court and charges every seat — while a **Club** runs its
 courts, bookings and money on its website. That is served by the **player app**, the **club
@@ -42,9 +42,9 @@ adapters), DDD, and event sourcing.
 > player app, and is defined in [`frontend_player/CONTEXT.md`](frontend_player/CONTEXT.md): it
 > names no domain concept. *Tester* did not come back.
 >
-> **On request and Instant were removed on 2026-10-12** ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
-> §1). **Only Raketa** is the one way a club sells
-> through Raketa until Raketa is the club's booking software. Their words went with them: *Way of
+> **On request and Instant were removed on 2026-10-12** ([ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+> §1). **Only Rakieta** is the one way a club sells
+> through Rakieta until Rakieta is the club's booking software. Their words went with them: *Way of
 > working* as a choice, *Instant*, *On request*, *time to confirm*, *minimum notice*, *Waiting for the
 > club*, *answers by*, *Waiting for you*, *Accepted · waiting for one player's payment*, *said no* and
 > *didn't answer in time*, and the **request** with its acceptance, refusal and timeout. A full game is
@@ -269,7 +269,7 @@ Identity and account state.
 - **Email** — value object. Trimmed, lower-cased, RFC-ish validated, ≤ 320 chars.
 - **Name** — *retired 2026-11-03* ([ADR-0199](docs/adr/0199-a-player-is-known-by-their-nickname.md), superseding
   [ADR-0171](docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
-  A player has no Name in Raketa, only a **Nickname** (the backend since
+  A player has no Name in Rakieta, only a **Nickname** (the backend since
   [#724](https://github.com/Raketa02/Raketa/issues/724); the phone not yet —
   [#728](https://github.com/Raketa02/Raketa/issues/728)). The name a club types when it invites
   somebody is the **Administrator**'s (Administrators), never a player's. _Avoid_: a player's
@@ -800,7 +800,7 @@ more.**
 - **Newcomer** — a player within **14 days** of the profile commit that made them playable. A
   **predicate over a date, never a stored flag**: a flag would need a loop to keep it true, and a
   date needs nothing. The days are a ceiling and not a definition, so a player who has played
-  nothing still stops being new. **Not to be confused with New in Raketa** (Discovery), which runs **30 days** from the
+  nothing still stops being new. **Not to be confused with New in Rakieta** (Discovery), which runs **30 days** from the
   same profile commit: the window bends a level gate, the row shows a person.
 - **Newcomer window** — the period a Newcomer is in, and it has exactly one power: it **tightens
   the level window for both sides of a pairing** to the competitive tolerance, whatever the game's
@@ -1065,7 +1065,7 @@ about how good anybody is — that is the rating context reading this one.
   in the tap window, from the club, each carrying only the verdict *at the club*. Money never
   moves on them: everyone paid, and the club was paid for the hour.
 - **We will not arbitrate.** Two people who were both on court and cannot agree what happened is
-  not a result, and Raketa will not invent one. A settled result is final: no support correction
+  not a result, and Rakieta will not invent one. A settled result is final: no support correction
   path and no reversal.
 - **The people who may act are the people who were on the court**, and nobody else, ever.
 - **Nothing announces a conclusion the record already implies.** There is no `ResultConfirmed`,
@@ -1466,13 +1466,13 @@ Settled by
 [ADR-0182](docs/adr/0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md)
 on [#501](https://github.com/Raketa02/Raketa/issues/501), and built by
 [#503](https://github.com/Raketa02/Raketa/issues/503). Its **Courts** and how it sells them through
-Raketa were settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)
+Rakieta were settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)
 §3, §5 and built by [#535](https://github.com/Raketa02/Raketa/issues/535); connecting its payments
 by [#537](https://github.com/Raketa02/Raketa/issues/537).
 
 **A place where racket sports are played, known to the platform because it signed up.** Players
 search clubs to set a group's home and to find groups; the club manages its own facts from the club
-website, and lists there the courts, hours and prices it sells through Raketa.
+website, and lists there the courts, hours and prices it sells through Rakieta.
 
 - **Club** — an **event-sourced aggregate**: a name, a district, a city, **the sports it offers**
   (a non-empty subset of the four — they *filter* the `Sport` registry and never extend it) and
@@ -1491,30 +1491,30 @@ website, and lists there the courts, hours and prices it sells through Raketa.
   creation and never changes; an Official group's is its club. Distances to it are measured from
   the reader's Location area and printed as everywhere else. _Avoid_: base, venue, home court.
 - **Club courts** — an **event-sourced aggregate, one stream per club, filed under the club's own
-  id**: its Courts and their Raketa hours, its Exceptions, its Prices, its Raketa settings, and
+  id**: its Courts and their Rakieta hours, its Exceptions, its Prices, its Rakieta settings, and
   whether it is Paused. **Born by being used** — nothing is written at sign-up, and a club that has
   set nothing reads no courts and the default settings. Its *way of working* left it on 2026-10-12
-  with the choice itself (**Only Raketa**, below; not yet built — [#670](https://github.com/Raketa02/Raketa/issues/670)).
+  with the choice itself (**Only Rakieta**, below; not yet built — [#670](https://github.com/Raketa02/Raketa/issues/670)).
   A stream of its own rather than more events on the Club's, because the Club's is what
   every player's home-club search is built from.
 - **Court** — one physical court at a Club: a **name** the club uses (*Court 2*, *Kort centralny*;
   1–40 characters, unique at the club ignoring case), **one sport** from the club's own, and its
-  **Kind of court**, indoor or outdoor. **Offered** to Raketa, or **switched off** — kept,
+  **Kind of court**, indoor or outdoor. **Offered** to Rakieta, or **switched off** — kept,
   with its hours, selling nothing new, whatever is booked on it. **Deleted**, or given another
   sport, only while no booking is ahead of it. Players never pick its **number**: a card or a post
   names a court hour at a club, and the number is given at booking. _Avoid_: pitch, field.
 - **Kind of court** — **indoor** or **outdoor**, recorded on each Court by its club. **Players see
-  it** since [ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §4 (not yet built — [#671](https://github.com/Raketa02/Raketa/issues/671), [#677](https://github.com/Raketa02/Raketa/issues/677)): a booked game always shows its court's kind
+  it** since [ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §4 (not yet built — [#671](https://github.com/Raketa02/Raketa/issues/671), [#677](https://github.com/Raketa02/Raketa/issues/677)): a booked game always shows its court's kind
   (*Court 3 · indoor*), and a card shows *Indoor* or *Outdoor* only when every free court it could be
   booked on is of that kind, because the court is picked at booking. It decides where a game may be
   moved: a **Move by cancel** and the club's own move go to the same kind, or indoor for an outdoor
   game, and never outdoors from indoors. A player sees it and never chooses by it: it is no
   preference and no filter. _Avoid_: surface, covered, court type.
-- **Raketa hours** — the hours of an ordinary week a Court is offered to Raketa: **the player's
+- **Rakieta hours** — the hours of an ordinary week a Court is offered to Rakieta: **the player's
   own Weekly hours grid**, seven days by sixteen one-hour cells from 07:00 to 23:00 — an hour
   outside it could never match anybody — with **no floor**: a court with none offers nothing yet.
   One save may give the same week to several courts.
-- **Exception** — hours a club closes **without touching its Raketa hours**: a local day or a run
+- **Exception** — hours a club closes **without touching its Rakieta hours**: a local day or a run
   of days, whole or between two hours, on **every court** — one added later included — or some,
   with a **reason** for the club's own records that no player reads. **Refused over a booking**,
   which the club cancels instead, and allowed over hours that only have cards on them; the cards
@@ -1527,30 +1527,30 @@ website, and lists there the courts, hours and prices it sells through Raketa.
 - **Share** — the court hour's price divided by the seats — four for padel and badminton, two for
   tennis and squash — exact to the grosz, fixed on the card and never changed by a later price.
 - **Court hour** — one court at one club for **one hour**. Every game lasts exactly one hour. The
-  **sellable court hours** of a club are what it can sell through Raketa: its Raketa hours, less
+  **sellable court hours** of a club are what it can sell through Rakieta: its Rakieta hours, less
   its Exceptions, less what bookings hold, less every hour past its Book-by, each priced by its
   band or the standard price — **derived, never stored hour by hour**, only for a club that is
   **Live**, and published to other contexts through a port.
-- **Only Raketa** — how every club sells through Raketa: it hands Raketa a block of hours, its
-  Courts' Raketa hours, and **Raketa sells them alone** until the **release lead** before each game,
-  after which an unsold hour goes back to the club. **The one way, until Raketa is the club's booking
-  software** ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1; decided, and not yet built — [#670](https://github.com/Raketa02/Raketa/issues/670), [#674](https://github.com/Raketa02/Raketa/issues/674)). Until
+- **Only Rakieta** — how every club sells through Rakieta: it hands Rakieta a block of hours, its
+  Courts' Rakieta hours, and **Rakieta sells them alone** until the **release lead** before each game,
+  after which an unsold hour goes back to the club. **The one way, until Rakieta is the club's booking
+  software** ([ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1; decided, and not yet built — [#670](https://github.com/Raketa02/Raketa/issues/670), [#674](https://github.com/Raketa02/Raketa/issues/674)). Until
   2026-10-12 it was one of three **ways of working** a club chose, beside **Instant** (both sold, and
   the desk closed by hand what it sold elsewhere) and **On request** (the club confirmed each full game
   within its *time to confirm*). Both were removed, with the choice: no court platform makes a club
   confirm a booking, and none relies on a desk closing hours by hand. _Avoid_: way of working (there
   is no choice), allotment, Instant, On request.
-- **Raketa settings** — the terms a club **confirms**, its first save doing so defaults included:
+- **Rakieta settings** — the terms a club **confirms**, its first save doing so defaults included:
   the **release lead** (1–13 days, default 3), the **Cut-off**, **other clubs' courts** for its
   groups (within 10 km; **on by default** since [ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §7, existing clubs included, and
   read hour by hour, as **Official group** says — not yet built,
   [#746](https://github.com/Raketa02/Raketa/issues/746), [#747](https://github.com/Raketa02/Raketa/issues/747); it was off) and **Paused** (off). Each bound is domain, never
   configuration. The *minimum notice* and the *time to confirm* left them on 2026-10-12 with *Instant*
-  and *On request* ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, not yet built — [#670](https://github.com/Raketa02/Raketa/issues/670)). *We check players in* left them on 2026-10-11 with **Check-in** ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+  and *On request* ([ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, not yet built — [#670](https://github.com/Raketa02/Raketa/issues/670)). *We check players in* left them on 2026-10-11 with **Check-in** ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
   §4, not yet built — [#651](https://github.com/Raketa02/Raketa/issues/651)); the field stays
   decodable on the settings event and folds to nothing. Until #670 lands they can be confirmed only
   once a way of working is chosen.
-- **Cut-off** — the club's free-cancellation deadline, a Raketa setting (0–72 h, default 24 h
+- **Cut-off** — the club's free-cancellation deadline, a Rakieta setting (0–72 h, default 24 h
   before), and **the one deadline in a game, the same for everyone in it**. Leaving before it is
   free: nothing is taken, and the share's hold is let go. At it, a full game's shares are
   **taken**, and a game still short is called off with every hold let go, nobody paying anything.
@@ -1558,7 +1558,7 @@ website, and lists there the courts, hours and prices it sells through Raketa.
   ([#637](https://github.com/Raketa02/Raketa/issues/637)); until then a leave before it is
   refunded at once, less the card fee.
 - **Book-by** — the latest moment a proposal can still fill: **always the release time**, the
-  game's start minus the club's release lead ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1; until [#670](https://github.com/Raketa02/Raketa/issues/670) lands, the start minus the
+  game's start minus the club's release lead ([ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1; until [#670](https://github.com/Raketa02/Raketa/issues/670) lands, the start minus the
   minimum notice at an Instant or On request club). So no game fills later than a day before its
   start, and by default three. **Derived, never chosen** — once, from the club's terms, and carried
   on every sellable court hour. No other clock runs on a proposal.
@@ -1566,8 +1566,8 @@ website, and lists there the courts, hours and prices it sells through Raketa.
   cards already dealt keep their court until their book-by, so its hours stay sellable. A paused
   club is still **Live**.
 - **Setup checklist** — the **four** steps before a club's courts reach any deck: connect payments,
-  add Courts, set Raketa hours and Prices, confirm the Raketa settings. *Choose a way of working*
-  left it on 2026-10-12 ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, not yet built — [#670](https://github.com/Raketa02/Raketa/issues/670), [#674](https://github.com/Raketa02/Raketa/issues/674)). Each is **done**, **to do**,
+  add Courts, set Rakieta hours and Prices, confirm the Rakieta settings. *Choose a way of working*
+  left it on 2026-10-12 ([ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, not yet built — [#670](https://github.com/Raketa02/Raketa/issues/670), [#674](https://github.com/Raketa02/Raketa/issues/674)). Each is **done**, **to do**,
   **locked** behind the step it needs (hours and prices behind a court) or **pending** — payments,
   until connecting Stripe is built. Read off the Club courts, never stored. **Live** — every step
   but a pending one done.
@@ -1696,7 +1696,7 @@ on [#501](https://github.com/Raketa02/Raketa/issues/501), and built by
 guard). Official groups are built by [#509](https://github.com/Raketa02/Raketa/issues/509), and
 the Handover by [#510](https://github.com/Raketa02/Raketa/issues/510).
 
-**The person a club names to run its WhatsApp groups inside Raketa.** Their one job is to make an
+**The person a club names to run its WhatsApp groups inside Rakieta.** Their one job is to make an
 Official group per WhatsApp group and post its link there.
 
 - **Administrator** — a User acting **for one club**: an **event-sourced aggregate**, one per
@@ -1751,7 +1751,7 @@ Official group per WhatsApp group and post its link there.
 Settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5 and built
 by [#541](https://github.com/Raketa02/Raketa/issues/541) (the fill),
 [#543](https://github.com/Raketa02/Raketa/issues/543) (On request, removed by
-[ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) — [#669](https://github.com/Raketa02/Raketa/issues/669)),
+[ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) — [#669](https://github.com/Raketa02/Raketa/issues/669)),
 [#544](https://github.com/Raketa02/Raketa/issues/544) (leaving and the cut-off),
 [#545](https://github.com/Raketa02/Raketa/issues/545) (rescues) and
 [#547](https://github.com/Raketa02/Raketa/issues/547) (the club runs it). A club's cancel that moves the
@@ -1766,7 +1766,7 @@ charges' (**Payments**), its result the Game's (**Games**).
   every club; *played* is read off the clock and never recorded. It opens the ordinary **Game**
   when it is booked. *Waiting for the club* — an On request club's request, which it accepted,
   refused or let time out — and the wait on a payment after the club's yes retired on 2026-10-12
-  ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1; not yet built — [#669](https://github.com/Raketa02/Raketa/issues/669)). _Avoid_: reservation, and *held* for a booking (a
+  ([ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1; not yet built — [#669](https://github.com/Raketa02/Raketa/issues/669)). _Avoid_: reservation, and *held* for a booking (a
   **Seat charge**'s share is held — Payments).
 - **Leaver** — a player who left a booking. **Before the cut-off, nothing is taken**: the share's
   hold is let go, nobody is refunded, and no fee arises for the leaver or the club. **After it**,
@@ -1813,7 +1813,7 @@ charges' (**Payments**), its result the Game's (**Games**).
   amendment (the mechanics Q106), a full game that **went back to filling before it was booked**
   while it waited on one payment: a player left it, a yes was taken back, or the **Time to pay**
   (since Q113, also the **Time to fix the card**) ran out. (Until 2026-10-12 a full game could also
-  fall back while it waited for its On request club, [ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md).) That second
+  fall back while it waited for its On request club, [ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md).) That second
   kind is not a rescue: its seat is offered only in decks, as any proposal still filling, and it
   is on *You’re in* as well. It is booked when it refills, and is called off, nobody paid, if its
   book-by passes first.
@@ -1825,7 +1825,7 @@ charges' (**Payments**), its result the Game's (**Games**).
   *Waiting for one payment · until 14:40 · Nobody pays until it's in* in both windows. The refused
   player's own card reads *Fix your card by 14:40* before the cut-off (Q113) and *Confirm your
   payment by 14:40* after it. The club sees nothing of it: the booking-level wait after a club's yes,
-  *Accepted · waiting for one player's payment*, retired with On request ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1). It ends booked
+  *Accepted · waiting for one player's payment*, retired with On request ([ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1). It ends booked
   when the payment is in, *Seat open* when the time runs out, or called off when no time is left
   before the book-by. Decided by ADR-0189's 2026-10-09 amendment (the mechanics Q109–Q112) and
   built by [#625](https://github.com/Raketa02/Raketa/issues/625) and
@@ -1838,7 +1838,7 @@ charges' (**Payments**), its result the Game's (**Games**).
   called off**: every hold, or every share already taken, stays as it was, nothing is refunded or
   let go, nobody is owed a card, and every player is told **Game moved** (Notifications). The club's
   cancel dialog previews it, and *Cancel the game anyway* skips it. The cancel decides afresh when
-  the club confirms. Decided by [ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §2, not yet built ([#672](https://github.com/Raketa02/Raketa/issues/672)). _Avoid_: reschedule, transfer, and *move* for anything
+  the club confirms. Decided by [ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §2, not yet built ([#672](https://github.com/Raketa02/Raketa/issues/672)). _Avoid_: reschedule, transfer, and *move* for anything
   that changes the club, the day, the hour or the price — that is a new card.
 - **Friends game** — a Booking **born at its send**, booked by a friend: one player, the **sender**,
   seats friends (**Friends**) on a group's Friends tab, picks the kind for this game only, and
@@ -1910,9 +1910,9 @@ estimated card fee is printed anywhere — decided, and not yet built
 ([#636](https://github.com/Raketa02/Raketa/issues/636)–[#641](https://github.com/Raketa02/Raketa/issues/641)).
 
 - **The club is the seller** — every charge is made on the club's own Stripe account, and the club
-  pays the card fee. Raketa takes no fee.
+  pays the card fee. Rakieta takes no fee.
 - **Seat charge** — one seat's money in one booking: an **event-sourced aggregate, one stream per
-  payment**, born at the fill and never before — a yes moves no money. Raketa's account of a
+  payment**, born at the fill and never before — a yes moves no money. Rakieta's account of a
   payment; Stripe is the ledger of record, and a notice from it moves a charge only forward. Since
   ADR-0189's 2026-10-10 amendment (Q113; not yet built — [#636](https://github.com/Raketa02/Raketa/issues/636), [#637](https://github.com/Raketa02/Raketa/issues/637), [#639](https://github.com/Raketa02/Raketa/issues/639),
   [#641](https://github.com/Raketa02/Raketa/issues/641)) it is:
@@ -1942,7 +1942,7 @@ estimated card fee is printed anywhere — decided, and not yet built
 - **Time to pay** — the **30 minutes** a player whose share was refused **after the cut-off**,
   where money is taken at once — when a game filled, or taking a **Rescue** — has to pay, never past
   the game's book-by (a rescue: never past its start). An On request club's yes started one too
-  until that way was removed ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, not yet built — [#669](https://github.com/Raketa02/Raketa/issues/669)).
+  until that way was removed ([ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, not yet built — [#669](https://github.com/Raketa02/Raketa/issues/669)).
   Their seat is theirs alone meanwhile, and the other seats' holds are kept, so paying in time
   books the game without asking anybody's bank again; when it runs out the holds are
   let go and the seat is offered as any open seat of a game still filling (on a rescue, the seat is
@@ -1983,7 +1983,7 @@ estimated card fee is printed anywhere — decided, and not yet built
   Google Pay, or none). An **event-sourced aggregate, one stream per player**, born by being
   used: a player who never opened the setup has none — *Not set up*. **Change** keeps the old
   method working until the new one is saved; **remove** is refused while anything could still be
-  charged to it — a live yes, or a booked game ahead. A card number never reaches Raketa.
+  charged to it — a live yes, or a booked game ahead. A card number never reaches Rakieta.
   _Avoid_: card for the method as a whole (it may be a wallet — though a wallet saves a card, and
   *card* is right for what the provider holds: its brand and last four), payment details, billing
   info.
@@ -2075,7 +2075,7 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
 - **Fills** — the moment the last needed yes lands and a **Booking** opens. Every seat's share is
   then **held** together, all or nothing — a **Card check** where a seat's hold would not reach the
   cut-off — and **taken at the club's Cut-off**, or at once for a game that fills after it. **At
-  every club**: no club confirms a game since [ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1 (not yet built — [#669](https://github.com/Raketa02/Raketa/issues/669)), which retired an
+  every club**: no club confirms a game since [ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1 (not yet built — [#669](https://github.com/Raketa02/Raketa/issues/669)), which retired an
   On request club's *waiting for the club*.
   Holding in place of charging is decided by ADR-0189's 2026-10-10 amendment (Q113) and not yet
   built ([#637](https://github.com/Raketa02/Raketa/issues/637)).
@@ -2084,7 +2084,7 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   (the mechanics Q103, Q110), it also shows when one payment is still missing, and the player whose
   confirmed payment completes a game sees it too. The missing payment coming in never brings a
   second one ([#622](https://github.com/Raketa02/Raketa/issues/622), [#625](https://github.com/Raketa02/Raketa/issues/625)). Its *answers by · Nobody pays until
-  it confirms*, at an On request club, retired with that way ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, [#676](https://github.com/Raketa02/Raketa/issues/676)).
+  it confirms*, at an On request club, retired with that way ([ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, [#676](https://github.com/Raketa02/Raketa/issues/676)).
 - **Home** — the first tab of the bottom bar. **Since [ADR-0205](docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
   §4 it reads, top to bottom** (not yet built — [#816](https://github.com/Raketa02/Raketa/issues/816)–[#823](https://github.com/Raketa02/Raketa/issues/823)):
   - **the header: the envelope, the bell and the trophy**, right-aligned in that order, the trophy in
@@ -2101,11 +2101,11 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
     reads *Join a group to get games — see Groups heating up, just below.*;
   - **FOR YOU**: the five rows of [ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
     §1, in that order (built by [#798](https://github.com/Raketa02/Raketa/issues/798)–[#805](https://github.com/Raketa02/Raketa/issues/805)):
-    **Hottest groups** (Groups), **Same competitive level players**, **New in Raketa**, **Same vibe
+    **Hottest groups** (Groups), **Same competitive level players**, **New in Rakieta**, **Same vibe
     players** (Discovery) and **Top 10** (Rankings). Each is **folded into one line**, a title with a
     count of how many there are to explore (*99+* past 99; none on Top 10), **one open at a time**,
     each read on its own and hidden while it has nothing to show. On screen they are titled *Groups
-    heating up*, *Players at your level*, *New in Raketa*, *Players with your vibe* and *Top 10*;
+    heating up*, *Players at your level*, *New in Rakieta*, *Players with your vibe* and *Top 10*;
     the terms keep their names. For a player in no group, *Groups heating up* starts open.
 
   **The four cards that waited on the player are no longer on Home.** *To confirm*, the friends game
@@ -2187,7 +2187,7 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   It is an ordinary pick — its players free and fit, and each swipes it — that **records the
   players it is owed to**, and it is **first in each of their group decks** whenever they open it,
   until they answer it or it is gone, **with no mark**. A game no hour is found for stays owed until
-  its old hour passes. Its notice is *Your new game*. Decided by [ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §3, not yet built
+  its old hour passes. Its notice is *Your new game*. Decided by [ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §3, not yet built
   ([#673](https://github.com/Raketa02/Raketa/issues/673), [#677](https://github.com/Raketa02/Raketa/issues/677)).
   A card a no or a club's silence owed went with On request, and so did the rule that
   never dealt the owed players that club and hour again. _Avoid_: priority card, replacement game,
@@ -2242,7 +2242,7 @@ told by the other contexts and tells none of them.
   Nothing is told twice about the same thing, and nothing for a single swipe. A card that never
   filled ends untold. The kinds that told of an On request club's answer — *It's a game! · … answers
   by …*, *… confirmed your game* and *… couldn't take your game*, said no or didn't answer in time,
-  the last two emailed — retired on 2026-10-12 ([ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, not yet built — [#669](https://github.com/Raketa02/Raketa/issues/669), [#676](https://github.com/Raketa02/Raketa/issues/676)). A club's
+  the last two emailed — retired on 2026-10-12 ([ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1, not yet built — [#669](https://github.com/Raketa02/Raketa/issues/669), [#676](https://github.com/Raketa02/Raketa/issues/676)). A club's
   cancel notice says *We'll look for another game for you first*, as its email does, except to a
   leaver it refunds. _Avoid_: notification for the record (a notification is a delivery: a push,
   a banner, an email); and the payments provider's **notice** (Payments: an event Stripe sends,
@@ -2251,7 +2251,7 @@ told by the other contexts and tells none of them.
   booked game, never emailed. After a **Move by cancel** (Bookings): *Bonarka Arena moved your game
   to Court 3 · Thu 19:00* / *Court 2 can't be played · Padel · indoor · nothing else changes*, the
   reason worded per the cancel's reason. After the club's own move: the same title, with *Padel ·
-  indoor · nothing else changes*. Decided by [ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §2, not yet built ([#671](https://github.com/Raketa02/Raketa/issues/671), [#672](https://github.com/Raketa02/Raketa/issues/672), [#677](https://github.com/Raketa02/Raketa/issues/677)).
+  indoor · nothing else changes*. Decided by [ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §2, not yet built ([#671](https://github.com/Raketa02/Raketa/issues/671), [#672](https://github.com/Raketa02/Raketa/issues/672), [#677](https://github.com/Raketa02/Raketa/issues/677)).
 - **The bell's number** — the notices given since the player last opened the recent notices,
   shown as *99+* above 99. **Kept by the server, per player**, so it is the same on every phone;
   opening the list clears it, and the rows that came since the last visit stand out on that visit.
@@ -2321,7 +2321,7 @@ across all of them. Since [ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by
 - **Friend request** — one player asking another to be friends, recording **where it was made**: a
   group, the record, a result, a link, **the ranking** with its sport (*Found you in the padel
   ranking*), or since ADR-0204 §9 one of Home's people rows — **Same competitive level** with its
-  sport (*Your level in padel · 91% even*), **New in Raketa** (*Found you among new players*) or
+  sport (*Your level in padel · 91% even*), **New in Rakieta** (*Found you among new players*) or
   **Same vibe** (*6 things in common*), the line worked out when the card is read. **Anybody may be asked, with no daily
   limit** ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2, built by [#791](https://github.com/Raketa02/Raketa/issues/791)), except somebody whose **Show me to new
   people** is off and who shares no group, game or friendship with the requester, which is refused
@@ -2342,7 +2342,7 @@ across all of them. Since [ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by
   with the sheet up, through sign-up and onboarding when the opener has no account (since
   [ADR-0205](docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
   §1, not yet built — [#817](https://github.com/Raketa02/Raketa/issues/817); until then at the top of
-  Home, *Invited you to Raketa*). Nothing happens for the owner, or
+  Home, *Invited you to Rakieta*). Nothing happens for the owner, or
   for somebody already a friend; a request the opener already sent crosses it; and when the owner
   blocked the opener, the owner's request is swallowed and nothing reaches the opener's Home. _Avoid_: invite link, referral link, and **Group link**,
   which joins a group.
@@ -2392,7 +2392,7 @@ ago can't be folded on every read (ADR-0203 §10).
   ranking per sport, for all four; men and women in one list; no cities. Read on the Rankings page,
   opened from Home's trophy. _Avoid_: leaderboard, ladder, standings, points, league; *rank* for the
   number, which is a **Place**.
-- **General** — the view of everybody in Raketa **Listed** in a sport, from their 5th result. It is
+- **General** — the view of everybody in Rakieta **Listed** in a sport, from their 5th result. It is
   loaded in pages of 50. _Avoid_: global, overall, everyone.
 - **Friends** (the view) — the reader and the reader's **Friends**, each **Listed** from their first
   result, shown whole. In prose, *the Friends view*: not the **Friends** context, and not a
@@ -2447,14 +2447,14 @@ specified in [`docs/specs/home-rows/`](docs/specs/home-rows/README.md). **Built*
 and the player app's [#801](https://github.com/Raketa02/Raketa/issues/801)–[#804](https://github.com/Raketa02/Raketa/issues/804).
 
 **Who is around you, on Home.** The three **people rows** suggest players to the reader: at their
-level, new to Raketa, or like them. It owns nothing about a player. It keeps **stored copies** — a
+level, new to Rakieta, or like them. It owns nothing about a player. It keeps **stored copies** — a
 **player directory** fed by the profile's and the user's events, and every player's **current level
 per sport** fed by the rating's events, questionnaire and results alike — and the per-viewer **rest
 count**: the stated exceptions to the backend's *derived, never stored*, because a Home read can't
 replay every player's streams (ADR-0204 §10). Hottest groups belongs to **Groups** and Top 10 to
 **Rankings**.
 
-- **People rows** — *Same competitive level players*, *New in Raketa* and *Same vibe players*, and
+- **People rows** — *Same competitive level players*, *New in Rakieta* and *Same vibe players*, and
   their See all screens. **Never** the reader, a blocked pair either way, a player with **Show me to
   new people** off, an account that doesn't play, or a deleted account. Each person carries the
   reader's own relation and the **round friend button**: **+** sends a request, **…** opens *Cancel
@@ -2467,7 +2467,7 @@ replay every player's streams (ADR-0204 §10). Hottest groups belongs to **Group
   read by the one forecast function: it falls with the gap **and** with either level's doubt, and tops
   out at 96%. Coloured as game cards: green 70% and above, amber 55–69%, red below 55%. Nothing else
   computes it. _Avoid_: match %, compatibility, balance (for this number).
-- **New in Raketa** — the players who **joined** — the profile commit that ends onboarding — in the
+- **New in Rakieta** — the players who **joined** — the profile commit that ends onboarding — in the
   **last 30 days**, strictly, unrated included, newest first. Not the **Newcomer**'s 14 days, which
   bend a level gate. _Avoid_: newcomers (the **Newcomer** term), new players (except in copy).
 - **Same vibe players** — anyone sharing **at least one Social tag** with the reader, more shared tags
@@ -2478,7 +2478,7 @@ replay every player's streams (ADR-0204 §10). Hottest groups belongs to **Group
   §7) 99 for 7 and **100** for 8 — true, since 8 shared are both players' 8. _Avoid_: match %,
   similarity.
 - **Connected** — the reader is friends with a player, or has a request to them still open. Somebody
-  who asked the reader is **not** connected. **Unconnected** is neither. New in Raketa orders its 10
+  who asked the reader is **not** connected. **Unconnected** is neither. New in Rakieta orders its 10
   by it: unconnected, then sent, then friends.
 - **Good match** — at or above a row's line: **70% even** in Same competitive level, **2 shared
   tags** in Same vibe.

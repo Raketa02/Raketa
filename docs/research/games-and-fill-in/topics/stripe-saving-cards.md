@@ -1,7 +1,7 @@
 # Stripe — saving cards
 
 What Stripe says about saving a player's card for charges made without the player, and what the
-sandbox holds, read **2026-10-19** against the code at `9ab0ea5b`. Raketa's shape: a player is a
+sandbox holds, read **2026-10-19** against the code at `9ab0ea5b`. Rakieta's shape: a player is a
 **v1 Customer on the platform** carrying only their id; the card is typed into Stripe's `CardField`
 and saved by a **SetupIntent** (`off_session`, cards only) after the player accepts the terms; each
 share **clones the card onto the club's account** (Accounts v2, the club pays the fees, Stripe
@@ -142,7 +142,7 @@ the sandbox's platform events).
   [Payment method support for Connect](https://docs.stripe.com/payments/payment-methods/payment-method-connect-support) — read 2026-10-19
 - **[ABSENT]** The same wording for cards: no card page asks it; looked in the two pages above and
   [direct-charges-multiple-accounts](https://docs.stripe.com/connect/direct-charges-multiple-accounts) — read 2026-10-19.
-  Raketa's terms do name "the club it is played at" as the one that holds the share (mechanics §12.5).
+  Rakieta's terms do name "the club it is played at" as the one that holds the share (mechanics §12.5).
 
 ---
 
@@ -155,7 +155,7 @@ the sandbox's platform events).
 - **[DOCS]** The Payment Sheet "doesn't support customer-configured Accounts … It only supports
   `Customer` objects", and "When used with a SetupIntent, PaymentSheet supports cards and PayPal."
   [Accept in-app payments (setup)](https://docs.stripe.com/payments/mobile/accept-payment?platform=react-native&type=setup) — read 2026-10-19
-- *Code:* Raketa presents its own four steps (choose, card, terms, bank) with `CardField`
+- *Code:* Rakieta presents its own four steps (choose, card, terms, bank) with `CardField`
   (`frontend_player/src/shared/lib/platform/payments.tsx:6-41`) — the "present payment methods
   separately" case, so the terms can sit between the card and the bank.
 
@@ -199,7 +199,7 @@ the sandbox's platform events).
   [Set up future card payments (React Native)](https://docs.stripe.com/payments/save-and-reuse-cards-only?platform=react-native) — read 2026-10-19
 - *Code:* the same, on the club's account (`stripeAccountId`), with the bank's check for
   `authentication_required` and a typed card for a decline (`payments.tsx:388-414`). Stripe's sample
-  reuses a card attached to a customer; Raketa's `lastPaymentError.paymentMethod` is the **clone**
+  reuses a card attached to a customer; Rakieta's `lastPaymentError.paymentMethod` is the **clone**
   (§7, *A refused clone*).
 
 ---
@@ -303,7 +303,7 @@ the sandbox's platform events).
   account's. [Fee behaviour on connected accounts](https://docs.stripe.com/connect/direct-charges-fee-payer-behavior) — read 2026-10-19
 - This **corrects** the 2026-10-08 reading in
   [`gaps-PAY.md#automatic-card-updates-are-not-documented-for-polish-issuers`](gaps-PAY.md#automatic-card-updates-are-not-documented-for-polish-issuers)
-  that any updater fee is the club's: Raketa stores the cards on the platform, so it is Raketa's.
+  that any updater fee is the club's: Rakieta stores the cards on the platform, so it is Rakieta's.
 
 ### The expiry is on every card, and an updated card keeps working
 - **[DOCS]** `card.exp_month`, `card.exp_year`: the card's expiry month and four-digit year.
@@ -314,7 +314,7 @@ the sandbox's platform events).
   and replace their saved cards." [How cards work](https://docs.stripe.com/payments/cards/overview) — read 2026-10-19
 - **[DOCS]** An expired card is declined with error code `expired_card` (test card
   4000 0000 0000 0069, `pm_card_chargeDeclinedExpiredCard`). [Testing](https://docs.stripe.com/testing) — read 2026-10-19
-- *Code:* `card_of` reads brand, last four and wallet only; Raketa never reads or shows the expiry
+- *Code:* `card_of` reads brand, last four and wallet only; Rakieta never reads or shows the expiry
   (`stripe_payments.py:145-157`).
 
 ---
@@ -388,12 +388,12 @@ the sandbox's platform events).
   [`…#the-test-club-account-full-dashboard-the-club-pays-the-fees-stripe-covers-losses`](stripe-sandbox.md#the-test-club-account-full-dashboard-the-club-pays-the-fees-stripe-covers-losses)), and setups carry
   `on_behalf_of: null` (above) — same country, so the caution does not bite today.
 
-### A direct charge follows the club's Radar rules, not Raketa's
+### A direct charge follows the club's Radar rules, not Rakieta's
 - **[DOCS]** "With Connect, the rules you create only apply to payments created on the platform
   account. Payments created directly on the connected account are subject to the connected account's
   rules." [SCA for Connect platforms](https://docs.stripe.com/strong-customer-authentication/connect-platforms) — read 2026-10-19
-- Raketa's clubs have the full Dashboard (`stripe_payments.py:317-347`), so a club can add rules that
-  block or challenge Raketa's off-session holds on its own account.
+- Rakieta's clubs have the full Dashboard (`stripe_payments.py:317-347`), so a club can add rules that
+  block or challenge Rakieta's off-session holds on its own account.
 
 ### A clone on the test club
 - **[MEASURED]** `stripe-club` · `GET /v1/payment_intents/pi_3USELx5y1DMwE3zY14aUf4wv?expand[]=payment_method&expand[]=latest_charge`
@@ -467,11 +467,11 @@ the sandbox's platform events).
 12. **Assuming the club pays for card updates**: platform-saved cards are billed to the platform.
     ([fee behaviour](https://docs.stripe.com/connect/direct-charges-fee-payer-behavior))
 13. **The club's Radar rules** govern direct charges; a full-Dashboard club can block or challenge
-    Raketa's holds. ([SCA for platforms](https://docs.stripe.com/strong-customer-authentication/connect-platforms))
+    Rakieta's holds. ([SCA for platforms](https://docs.stripe.com/strong-customer-authentication/connect-platforms))
 14. **Cancelling a succeeded setup** is refused; its card stays attached unless detached.
     ([cancel](https://docs.stripe.com/api/setup_intents/cancel))
 15. **Fingerprints differ between platform and club** (measured above): a club's Dashboard cannot be
-    joined to Raketa's cards by fingerprint.
+    joined to Rakieta's cards by fingerprint.
 
 ## Checks
 
@@ -498,6 +498,6 @@ the sandbox's platform events).
     logged or stored?
 14. Are setups limited per signed-in player per day, and does Stripe get enough about the player for
     its card-testing models?
-15. Do card-update, setup 3D Secure and setup Radar costs sit with Raketa, and the club's own Radar and
+15. Do card-update, setup 3D Secure and setup Radar costs sit with Rakieta, and the club's own Radar and
     3D Secure with the club?
 16. Is the React Native SDK on a minor version that still receives Stripe's fixes?

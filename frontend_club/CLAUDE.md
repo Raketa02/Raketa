@@ -10,7 +10,7 @@ groups
 ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)).
 Every club works one way, Only Raketa: there is nothing to choose, and no club confirms a game,
 so nothing here waits for the desk's answer
-([ADR-0196](../docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)).
+([ADR-0196](../docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)).
 It talks to the backend's **club surface** (`backend/openapi.club.json`) **from its server
 only**: the browser never holds a token.
 

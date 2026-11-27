@@ -1,7 +1,7 @@
 # Stripe security — keys, secrets, notices and what a client may send
 
 What Stripe documents about keeping a Stripe integration secure, read on **2026-10-19** for the way
-Raketa uses Stripe at `9ab0ea5b`, with the product's own anchors beside each fact. Written for the
+Rakieta uses Stripe at `9ab0ea5b`, with the product's own anchors beside each fact. Written for the
 payments pass on PRD #530 (topic `security`). The sandbox itself is measured in
 [`stripe-sandbox.md`](stripe-sandbox.md); its *Differences* D1 (no registered endpoint), D2 (API
 version) and D6 (refund notices dropped) are not repeated here, only cited.
@@ -13,7 +13,7 @@ read or copied. **A note on language:** several docs.stripe.com pages were serve
 in Spanish. A quote taken from one of those is Stripe's Spanish text translated here and marked
 *(translated)*; every other quote is Stripe's English as the documentation search returned it.
 
-**How Raketa uses Stripe, for this topic.** A club is a connected account opened with **Accounts
+**How Rakieta uses Stripe, for this topic.** A club is a connected account opened with **Accounts
 v2**, `dashboard: full`, the `merchant` configuration, `fees_collector` and `losses_collector`
 both `stripe` (`backend/app/modules/payments/infrastructure/stripe_payments.py:317-347`). A player
 is a v1 Customer on the platform; a card is saved there with a SetupIntent (`usage: off_session`,
@@ -47,7 +47,7 @@ party obtains your secret API key, they can make unauthorized charges, access cu
 disrupt your integration." — "**Never embed secret API keys in applications** … For client-side
 use cases such as client tools, SDKs, and mobile apps, embed publishable keys instead."
 
-**In Raketa:** the secret key is a server setting only (`backend/app/core/config.py:402`); the
+**In Rakieta:** the secret key is a server setting only (`backend/app/core/config.py:402`); the
 publishable key reaches the phone in two answers — opening a setup
 (`backend/app/modules/payments/application/setup.py:126-130`) and a refused share waiting for its
 player (`backend/app/modules/payments/application/seat_charges.py:854-859`).
@@ -63,7 +63,7 @@ before creating a live-mode key." https://docs.stripe.com/keys *(translated)*: s
 don't recommend using secret keys for new use cases and, for existing integrations, we recommend
 migrating secret-key usage to RAKs." These are recommendations, not requirements.
 
-**In Raketa:** the settings accept `sk_` and `rk_` keys alike (`config.py:99-102`); which kind the
+**In Rakieta:** the settings accept `sk_` and `rk_` keys alike (`config.py:99-102`); which kind the
 user placed in `backend/.env` was not read (it holds secrets).
 
 ### A restricted key that lacks a permission fails as an invalid request
@@ -92,7 +92,7 @@ diagnostic modes available to a broad audience." "Share secret API keys through 
 secret-management tools—not in emails, chat messages, or customer support messages. **Stripe never
 asks you for your secret API key.**"
 
-**In Raketa:** the production task definition reads all four Stripe values from AWS Secrets
+**In Rakieta:** the production task definition reads all four Stripe values from AWS Secrets
 Manager (`backend/deploy/ecs/taskdef.json:51-54`); a laptop reads them from `backend/.env` and
 `backend/.env.docker`, both ignored by git ([MEASURED] `git check-ignore -v` → `.gitignore:7` and
 `:8`, 2026-10-19); the template holds placeholders only (`backend/.env.example:179-184`); the
@@ -128,7 +128,7 @@ payouts or update payout destinations for more than 180 days. You can't use a ke
 access to create payouts and transfers or to create payout destinations." It can be restored in
 the Dashboard.
 
-**In Raketa:** the club payouts job creates payouts with the platform key on each club's account
+**In Rakieta:** the club payouts job creates payouts with the platform key on each club's account
 (`stripe_payments.py:393-462`).
 
 ### Dashboard sign-in: multi-factor, roles, sandbox access levels
@@ -152,7 +152,7 @@ other." Sandbox keys start `pk_test_`, `rk_test_`, `sk_test_`; live keys `pk_liv
 `sk_live_`. https://docs.stripe.com/keys-best-practices: "Make sure your developers aren't using live
 keys when a Sandbox key is appropriate."
 
-**In Raketa:** a live secret key outside production and a test secret key in production both stop
+**In Rakieta:** a live secret key outside production and a test secret key in production both stop
 the process at start (`config.py:915-934`); only `STRIPE_SECRET_KEY` is checked — the publishable
 key is checked for presence only (`config.py:902`), and the phone decides by its prefix
 (`payments.tsx:180-182`; Google Pay's test switch follows it, `:354`).
@@ -186,7 +186,7 @@ sandbox has none registered today: [`stripe-sandbox.md#no-webhook-endpoint-and-n
 ### Both servers are on the sandbox, in test mode
 
 [MEASURED] `stripe` · `list_available_accounts_or_orgs` → one account, `acct_1US89K5y1DB8chHb`
-"Raketa sandbox", `livemode: false`; `stripe-club` · `get_stripe_account_info` →
+"Rakieta sandbox", `livemode: false`; `stripe-club` · `get_stripe_account_info` →
 `acct_1US95f5y1DMwE3zY` "Robert Club" · 2026-10-19. Agrees with
 [`stripe-sandbox.md#1-mode`](stripe-sandbox.md#1-mode).
 
@@ -214,7 +214,7 @@ embed it in URLs, or expose it to anyone but the customer."
 are handled, no additional confirmation is required"; "`manual` All payment attempts must be made
 using a secret key."
 
-**In Raketa:** the product never sets `confirmation_method` (`stripe_payments.py:485-542`), so a
+**In Rakieta:** the product never sets `confirmation_method` (`stripe_payments.py:485-542`), so a
 refused share's PaymentIntent is confirmable from the phone — with the card on file or with a newly
 typed card (`payments.tsx:388-415`).
 
@@ -226,7 +226,7 @@ secret can do follows its intent's status (`confirmation_method`, above). The on
 hour" found is Stripe Identity's ephemeral key secret (https://docs.stripe.com/identity/verify-identity-documents),
 which this product does not use.
 
-**In Raketa:** the setup's secret is answered only to accepting the terms for the caller's own open
+**In Rakieta:** the setup's secret is answered only to accepting the terms for the caller's own open
 setup (`backend/app/modules/payments/presentation/routes.py:110-136`, `setup.py:151-169`); a
 payment's secret only while it waits for its player (`stripe_payments.py:627-629`), only on its own
 player's `GET /seat-charges/{id}` (`seat_charges.py:841-859`), with the club's account id and the
@@ -259,7 +259,7 @@ providing the PCI documentation. React Native is not named in the guide.
 https://docs.stripe.com/sdks/react-native lists the SDK's "**Card Element (Legacy)**: Use the basic
 card field in your own payment UI" beside the recommended Payment Sheet.
 
-**In Raketa:** the number is typed into Stripe's `CardField` and never reaches the app's own code
+**In Rakieta:** the number is typed into Stripe's `CardField` and never reaches the app's own code
 (`payments.tsx:6-20`, `:270-299`).
 
 ### Stripe tells each account which PCI form to file
@@ -279,7 +279,7 @@ of the card, and the expiration date. This information isn't subject to PCI comp
 store any of these properties in your database. Additionally, you can store anything returned by
 our API."
 
-**In Raketa:** a saved card is kept as its method id, brand, last four and wallet
+**In Rakieta:** a saved card is kept as its method id, brand, last four and wallet
 (`stripe_payments.py:146-158`).
 
 ---
@@ -307,7 +307,7 @@ all requests that enable card checks or payments with Stripe". Radar velocity ru
 supports it". Stripe's automatic controls come with the Payment Element or Checkout; otherwise
 "include as much data as possible or implement your own controls".
 
-**In Raketa:** five setups per player per day, refused before Stripe is asked
+**In Rakieta:** five setups per player per day, refused before Stripe is asked
 (`backend/app/modules/payments/domain/terms.py:31`, `payment_method.py:173-179`,
 `errors.py:113-120`); every payment route needs a signed-in player.
 
@@ -338,7 +338,7 @@ attacks, ignore all schemes that aren't `v1`" and "use a constant-time-string co
 https://docs.stripe.com/events/manage-webhook-endpoints: "The secret for a CLI-forwarded endpoint is
 different from the secret for a Dashboard-managed endpoint—don't mix them up."
 
-**In Raketa:** the raw body is passed unparsed (`webhook_routes.py:45-49`) to stripe-python's
+**In Rakieta:** the raw body is passed unparsed (`webhook_routes.py:45-49`) to stripe-python's
 `WebhookSignature.verify_header` (`backend/app/modules/payments/infrastructure/stripe_notices.py:84-100`);
 unsigned, mis-signed or stale notices are a 400 and nothing is read; each endpoint has its own
 secret (`composition.py:980-987`); without one an endpoint answers 503 (`stripe_notices.py:80-81`).
@@ -353,7 +353,7 @@ Stripe retries an event … then we generate a new signature and timestamp for t
 attempt." Duplicates: "guard against duplicated event receipts by logging the event IDs you've
 processed".
 
-**In Raketa:** `TOLERANCE_SECONDS = 300` passed explicitly (`stripe_notices.py:50-52`, `:86-88`); a
+**In Rakieta:** `TOLERANCE_SECONDS = 300` passed explicitly (`stripe_notices.py:50-52`, `:86-88`); a
 notice id already in the inbox is acknowledged and does nothing (ADR-0190 §3).
 
 ### Allowlist Stripe's webhook IPs too, and use HTTPS with TLS 1.2 or 1.3
@@ -380,7 +380,7 @@ a top-level `account` property that identifies the connected account. Because th
 owns the object that triggered the event, you must make API requests for that object as the
 connected account."
 
-**In Raketa:** a notice is a prompt and never a reading — the object it names is read from Stripe
+**In Rakieta:** a notice is a prompt and never a reading — the object it names is read from Stripe
 as it stands (ADR-0190 §3), on the account the signed event names (`stripe_notices.py:114-133`).
 
 ### Roll a signing secret with up to 24 hours of overlap
@@ -399,7 +399,7 @@ v2 `Events` use the **Your account** scope, while v1 `Events` use the **Connecte
 even when triggered by the same v2 `Account`." Direct charges' events are in the **Connected
 accounts** scope.
 
-**In Raketa:** the Connect endpoint reads v1 `account.updated` and the `payment_intent.*` and
+**In Rakieta:** the Connect endpoint reads v1 `account.updated` and the `payment_intent.*` and
 `charge.updated` kinds; an `account.updated` without a top-level `account` is read as nothing
 (`stripe_notices.py:59-69`, `:114-134`).
 
@@ -415,7 +415,7 @@ platform's API secret key and the connected account's Account ID." Stripe's docu
 answered (knowledge entry, 2026-10-19): restricting a key to specific connected accounts "is not
 directly possible within Stripe. Implement validation checks in your own code".
 
-**In Raketa:** the account id on every charge call comes from the platform's own record of the
+**In Rakieta:** the account id on every charge call comes from the platform's own record of the
 charge (`seat_charges.py:851-853`), and no route takes an amount, a fee or an account id from a
 player (state `area_sources.SECURITY`).
 
@@ -458,7 +458,7 @@ older v1 pages, such as https://docs.stripe.com/connect/custom/hosted-onboarding
 redirecting them to this URL." https://docs.stripe.com/api/v2/core/account-links/create: "a
 single-use URL"; its example response expires 10 minutes after it was created.
 
-**In Raketa:** a link is made only by `POST /club/payments/onboarding-link` behind the club's cookie
+**In Rakieta:** a link is made only by `POST /club/payments/onboarding-link` behind the club's cookie
 session (`backend/app/modules/payments/presentation/club_routes.py:45-84`); the desk's *Stripe needs
 something from you* email carries the website's own continue page, not a Stripe link
 (`backend/app/modules/clubs/application/payments_account.py:153`,
@@ -503,7 +503,7 @@ means read from the code path and not run.
    drops it as unheeded (`stripe_notices.py:134`). Shares already held on that club can then no
    longer be taken or let go by the platform, and the refusal would surface as a permission error,
    which the adapter calls an outage (`stripe_payments.py:70-79`). Suspected.
-6. **A club acts on a share outside Raketa.** With the full Dashboard a club can refund, and handle
+6. **A club acts on a share outside Rakieta.** With the full Dashboard a club can refund, and handle
    disputes, itself ([full Dashboard](#a-full-dashboard-club-can-see-refund-and-dispute-its-payments-itself)).
    A capture or cancel made there arrives as `payment_intent.*` and is re-read; a refund made there
    arrives as `charge.refunded` / `refund.updated`, which the product drops
@@ -575,7 +575,7 @@ The questions a grader asks of a product rule at these moments.
     names, rather than trusted from the payload?
 13. Are saving a card and confirming a refused share protected against card testing: sign-in,
     limits per player and per address, a limit on attempts, and the club's Radar?
-14. Can a club refund, capture or cancel a share in its own Dashboard, and does Raketa notice each?
+14. Can a club refund, capture or cancel a share in its own Dashboard, and does Rakieta notice each?
 15. What happens to shares already held when a club disconnects the platform, and is
     `account.application.deauthorized` handled?
 16. Is an onboarding link made on demand, only for the signed-in desk, never emailed, with HTTPS

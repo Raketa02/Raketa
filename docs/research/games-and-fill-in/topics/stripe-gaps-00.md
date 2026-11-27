@@ -89,11 +89,11 @@ What can be narrowed is below.
 has already cancelled. The measurement after 2026-10-26 answers both rules.
 
 - **Carried:** Stripe's own backstop, `capture_method=automatic_delayed` (private preview), captures "about 6 hours
-  before the expiration time". It is the one Stripe feature that keeps a share from being lost while Raketa is
+  before the expiration time". It is the one Stripe feature that keeps a share from being lost while Rakieta is
   down. The product does not use it.
   [`stripe-holds-and-capture.md#stripes-own-backstop-captures-about-six-hours-before-a-hold-lapses-private-preview`](stripe-holds-and-capture.md#stripes-own-backstop-captures-about-six-hours-before-a-hold-lapses-private-preview)
 
-### R-PLATFORM-5, R-PLATFORM-20 — a hold or refund on a club Raketa removed, or whose charges Stripe disabled
+### R-PLATFORM-5, R-PLATFORM-20 — a hold or refund on a club Rakieta removed, or whose charges Stripe disabled
 
 **Answered for a removed club. `[ABSENT]` for disabled charges.**
 
@@ -116,13 +116,13 @@ has already cancelled. The measurement after 2026-10-26 answers both rules.
 - **[MEASURED]** read via the SDK in the copy, 2026-10-20: every club account opened during the runs, and the test
   club, reads `controller.losses.payments: stripe`, `controller.fees.payer: account` and
   `stripe_dashboard.type: full`.
-  So **Raketa cannot reject a club**. Its only removal is the disconnect quoted above.
-- **Carried:** after a disconnect, Raketa's key fails for that club (`platform_api_key_expired`).
-  [`stripe-connect.md#a-disconnected-club-makes-raketas-key-fail-for-it`](stripe-connect.md#a-disconnected-club-makes-raketas-key-fail-for-it)
-- **Reading — what happens after Raketa removes a club:**
+  So **Rakieta cannot reject a club**. Its only removal is the disconnect quoted above.
+- **Carried:** after a disconnect, Rakieta's key fails for that club (`platform_api_key_expired`).
+  [`stripe-connect.md#a-disconnected-club-makes-rakietas-key-fail-for-it`](stripe-connect.md#a-disconnected-club-makes-rakietas-key-fail-for-it)
+- **Reading — what happens after Rakieta removes a club:**
   - The club's held shares, taken shares and refunds stay on the club's own account, which "still functions as a
     normal Stripe account".
-  - **Raketa** can no longer take, let go or refund any of them: every call fails as on a disconnected account.
+  - **Rakieta** can no longer take, let go or refund any of them: every call fails as on a disconnected account.
   - **The club** can still take or let go a hold, and refund a taken share, from its own full Dashboard.
     [`stripe-holds-and-capture.md#a-club-on-the-full-dashboard-can-capture-or-cancel-a-held-share-itself`](stripe-holds-and-capture.md#a-club-on-the-full-dashboard-can-capture-or-cancel-a-held-share-itself),
     [`stripe-refunds-and-disputes.md#a-card-refund-can-be-cancelled-only-in-the-dashboard-for-a-short-while--and-the-club-has-one`](stripe-refunds-and-disputes.md#a-card-refund-can-be-cancelled-only-in-the-dashboard-for-a-short-while--and-the-club-has-one)
@@ -301,7 +301,7 @@ The facts:
     a whole number. So it is recorded as a **known fee of 0,00 zł**, not as "not yet known"
     (`backend/app/modules/payments/domain/seat_charge.py:446-459`, `:756-790`).
   - **The late leaver's refund would then give back the whole 40,00 zł.** The club bears the card fee that Stripe
-    takes up to 36 hours later in an aggregate transaction no share points to. Raketa's net for the club would be
+    takes up to 36 hours later in an aggregate transaction no share points to. Rakieta's net for the club would be
     over by that fee.
   - The code's own comment expects such a club's fee to arrive "later" as `None`, then a report. The documented
     shape is `0`, then a separate aggregate. *Unverified on a live club.*
@@ -310,7 +310,7 @@ The facts:
   - whether a new Polish Accounts v2 club, which pays its own fees, can be moved to IC+ or standalone fees without
     the platform knowing. An account's pricing is not readable through the API.
 
-### R-PLATFORM-24 — the error `payouts.create` returns on a daily-schedule account, and whether Raketa may set `manual` through Balance Settings
+### R-PLATFORM-24 — the error `payouts.create` returns on a daily-schedule account, and whether Rakieta may set `manual` through Balance Settings
 
 **Part-answered.** Balance Settings is now read, and a platform payout on a manual Stripe-liable full-Dashboard club
 works on the sandbox. **The error on a daily account is still `[ABSENT]`.**
@@ -326,7 +326,7 @@ works on the sandbox. **The error on a daily account is still `[ABSENT]`.**
   - v1 `settings.payouts` agrees on every account.
 - **[MEASURED]** A platform payout through the product's own code succeeded on the manual test club:
   `po_1USPGD5y1DMwE3zY2VJcHrmh`, 37,70 zł.
-  - `metadata.raketa_payout` is set, `automatic: false`, `method: standard`.
+  - `metadata.rakieta_payout` is set, `automatic: false`, `method: standard`.
   - Destination `ba_1US9LA5y1DMwE3zYHPe7QQUm`; created 2026-10-19 22:42:29.
   - So a Stripe-liable, full-Dashboard v2 account **can** be on `manual` and be paid out by the platform. Who set
     the test club to manual is not visible through the API.
@@ -339,7 +339,7 @@ works on the sandbox. **The error on a daily account is still `[ABSENT]`.**
 - **[DOCS]** Balance Settings update: "Updates balance settings for a given connected account." It is called with
   the `Stripe-Account` header and states no condition.
   [Update balance settings](https://docs.stripe.com/api/balance-settings/update) — 2026-10-20.
-- **Reading:** Raketa may set `manual` on the clubs it opens, through Balance Settings, once platform controls are on.
+- **Reading:** Rakieta may set `manual` on the clubs it opens, through Balance Settings, once platform controls are on.
   No page names a refusal for v2 or Stripe-liable accounts.
 - **[ABSENT]** The error on a daily account.
   - Looked on 2026-10-20 in a docs and support search: manage-payout-schedule, manual-payouts, the payouts embedded

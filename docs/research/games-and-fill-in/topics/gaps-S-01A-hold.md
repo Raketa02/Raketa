@@ -31,7 +31,7 @@ Not redone, and cited where they matter: `gaps-S-01A-leave-fee.md` (Stripe's hol
   the correct information (13 December 2019)](https://usa.visa.com/content/dam/VCOM/download/merchants/authorization-reversals.pdf)
   — read 2026-10-11
 - *Reading:* cancelling the payment at Stripe sends the reversal; whether it reaches a Polish bank complete is Stripe's
-  and the acquirer's work, not Raketa's, and nothing published says it ever arrives incomplete.
+  and the acquirer's work, not Rakieta's, and nothing published says it ever arrives incomplete.
 
 ### Stripe: some banks update the balance at once, others later
 - **[DOCS]** "If a business releases a hold without capturing the payment, the available balance or credit updates when
@@ -146,7 +146,7 @@ Not redone, and cited where they matter: `gaps-S-01A-leave-fee.md` (Stripe's hol
   payment method, then cancels the old one, and emails the shop if that fails. [OroCommerce 7.0: Re-Authorization of
   Uncaptured Payments](https://doc.oroinc.com/bundles/extensions/StripePaymentBundle/reauthorization) — read 2026-10-11
 - *Reading:* a second hold on a saved card is ordinary in lodging and is built on Stripe by at least one commerce
-  platform. None of them leaves days between letting the first hold go and placing the second, as Raketa does between
+  platform. None of them leaves days between letting the first hold go and placing the second, as Rakieta does between
   the fill's check and the holding time.
 
 ### Stripe documents reauthorisation only for in-person payments, and no objection to a new hold
@@ -195,7 +195,7 @@ Not redone, and cited where they matter: `gaps-S-01A-leave-fee.md` (Stripe's hol
   player articles searched in §3, nor the venue articles on the payment process, orders and split payments, mentions
   one. What would answer it: a real MATCHi booking made more than 7 days ahead, with the inbox and the app watched on
   day 7 — read 2026-10-11
-- *Reading:* MATCHi documents a debit that is silent apart from a receipt appearing in the app. Raketa's quiet row and
+- *Reading:* MATCHi documents a debit that is silent apart from a receipt appearing in the app. Rakieta's quiet row and
   emailed receipt are at least level with it, and the emailed receipt is more than MATCHi describes.
 
 ---
@@ -230,7 +230,7 @@ Not redone, and cited where they matter: `gaps-S-01A-leave-fee.md` (Stripe's hol
   in 2024, and 87 % of Polish bank checks succeed
   (`gaps-S-01B.md#eea-2024-charges-made-without-the-payer-were-22-per-cent-of-remote-card-payments-taken-without-the-banks-check`,
   `gaps-S-01B.md#when-a-polish-cards-bank-does-ask-about-87-per-cent-of-checks-succeed`). What would answer it: the
-  decline codes and notice-open times on Raketa's own account once live — read 2026-10-11
+  decline codes and notice-open times on Rakieta's own account once live — read 2026-10-11
 
 ---
 
@@ -245,7 +245,7 @@ Not redone, and cited where they matter: `gaps-S-01A-leave-fee.md` (Stripe's hol
   (`competitor-organiser.md#playtomic-has-no-club-in-krakow`).
 - **[MEASURED]** The home pages of Fame Sport, Garden Padel, Squash4You, Atras, Miazga, SAO, Bajada, Padel Lounge and
   Playmore name no payment provider at all; kluby.org's names Przelewy24 and PayU. Extract §D — read 2026-10-11
-- *Reading:* a club joins Raketa by opening a fresh Stripe account on standard pricing. A club on negotiated pricing
+- *Reading:* a club joins Rakieta by opening a fresh Stripe account on standard pricing. A club on negotiated pricing
   would have to bring an existing high-volume Stripe account, and none of Kraków's clubs is known to have one.
 
 ### Negotiated pricing, IC+ among it, is arranged through sales for large volumes
@@ -316,7 +316,7 @@ Not redone, and cited where they matter: `gaps-S-01A-leave-fee.md` (Stripe's hol
   before 4 days 18 hours, which is 12 hours more than the 4 days 6 hours the holding time needs. The fallback fires
   only where a particular charge's `capture_before` comes earlier than the table says.
 - **[ABSENT]** How often a live charge's `capture_before` comes earlier than the table: no source publishes a spread.
-  What would answer it: the `capture_before` of Raketa's own live holds, logged per card brand and bank — read 2026-10-11
+  What would answer it: the `capture_before` of Rakieta's own live holds, logged per card brand and bank — read 2026-10-11
 
 ---
 
@@ -365,7 +365,7 @@ Not redone, and cited where they matter: `gaps-S-01A-leave-fee.md` (Stripe's hol
   about one free weekend hour in ten sold over the last day
   (`gaps-S-02.md#over-the-last-day-about-one-free-weekend-hour-in-ten-was-sold`). What would answer it: reads of Kraków
   clubs' Playmore open games at 48, 24 and 2 hours before each start (this needs the list call from Playmore's lazy
-  chunks, or a signed-in session), or Raketa's own fills once live — read 2026-10-11
+  chunks, or a signed-in session), or Rakieta's own fills once live — read 2026-10-11
 
 ---
 
@@ -378,7 +378,7 @@ Not redone, and cited where they matter: `gaps-S-01A-leave-fee.md` (Stripe's hol
 - Whether Stripe objects to a second hold placed days after a first was let go, and whether Visa would treat a
   full-share check as an authorisation for an "erroneous amount" (§3).
 - How fast a Polish player answers a payment notice, and how often a Polish bank refuses or asks on a charge made
-  without her (§5). Raketa's own data once live answers both.
+  without her (§5). Rakieta's own data once live answers both.
 - Whether a platform can run a connected club's Fees report through the API (§6).
 - The lawyer's reading of art. 37a ust. 3 UUP on a fee kept back after the cut-off (§7).
 - How often a live hold's `capture_before` comes earlier than the published window (§8).

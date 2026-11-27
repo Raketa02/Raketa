@@ -7,8 +7,8 @@ session can read them. Landed by [#811](https://github.com/Raketa02/Raketa/issue
 
 | File | What it holds |
 | --- | --- |
-| [home_screen_refactor.md](home_screen_refactor.md) | The product owner's brief, verbatim. Its paths point at their own folder: read `…\homeRefactor\5_groupos_heating_up_open.png` as the [index](#index)'s file for that number |
-| [decisions.md](decisions.md) | The grilling's decision log, verbatim: every ruling with its reason, the facts it rests on (as found on `main` at `bc6ca793`), and the question index Q1–Q46. Its status line and its branch name predate PRD #810 |
+| [home_screen_refactor.md](home_screen_refactor.md) | The product owner's brief, verbatim but for the brand's spelling ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md) §6). Its paths point at their own folder: read `…\homeRefactor\5_groupos_heating_up_open.png` as the [index](#index)'s file for that number |
+| [decisions.md](decisions.md) | The grilling's decision log, verbatim but for the brand's spelling ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md) §6): every ruling with its reason, the facts it rests on (as found on `main` at `bc6ca793`), and the question index Q1–Q46. Its status line and its branch name predate PRD #810 |
 | [`mocks/`](mocks/) | The 14 mocks, renamed (the [index](#index) gives each original name). PRD #810 and #811 say 15; the product owner's folder holds 14, numbered 1 to 13 with a 5.1 |
 
 **The decision** is [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md).
@@ -48,9 +48,9 @@ and **Rankings**, which keep their names.
    the mock references is just data so do not hardcode or make decisions based on mocked data."* No
    rule is read off a mock: not *6* or *14* in a pill, *See all 14*, *91%*, *▼1*, *1 h 35*, *25 zł*,
    *Joined 2 days ago*, nor which line is drawn open.
-3. **A mock's *Rakieta* reads Raketa**
-   ([ADR-0187](../../adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
-   §8). *New in Rakieta*, in mocks 3, 4, 6, 8, 9, 10 and 12, is ***New in Raketa***.
+3. **A mock's *Rakieta* is the brand as written**
+   ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md)). *New in Rakieta*, in mocks 3, 4, 6, 8, 9, 10 and 12, is the line's
+   title as built.
 4. **The mocks predate rulings that hold everywhere**:
    - a player is named by their **nickname**, never with an @
      ([ADR-0199](../../adr/0199-a-player-is-known-by-their-nickname.md)), so *Inés D.* reads as a
@@ -69,15 +69,15 @@ and **Rankings**, which keep their names.
 | --- | --- | --- | --- |
 | 1 | The header's buttons | *Home* on the left; on the right, the **envelope** (an ink outline), the **bell**, and the dark trophy pill in the far-right corner, in that order; their spacing | *#7* (note 1). The envelope's badge isn't drawn: it is the bell's ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §2) |
 | 2 | *Needs your answer* | The sheet over Home: the grab handle, the bold title, the × in its beige circle; section labels in grey caps with *· n*; **FRIENDS GAME**'s one big tile at full width, as drawn (the title and clock, the faces with ✓ on who's in and a faded face for who's invited, the when/where/sport line, *Not this time* outlined and *Accept and pay 25 zł* in coral); **FRIEND REQUESTS**' wider tile, the next one peeking, the face, the title, the reliability chip, and *Not now* and *Accept* at the bottom | The request's subtitle (note 5); FRIENDS GAME drawn first (note 6); the names, counts, price and clock (notes 1–2) |
-| 3 | Home, FOR YOU closed | The header (1); the **FOR YOU** eyebrow; five white line cards, each a title on the left and a grey count pill and › on the right; *Top 10* with no pill; the lines' spacing and order | *Your games* (note 5 of *How to read*); the counts (note 1); *Rakieta*; Home's badge *4* (note 1) |
-| 4 | FOR YOU closed, close up | The line card's radius, padding and type, the pill's size and grey, the chevron | The counts; *Rakieta* |
+| 3 | Home, FOR YOU closed | The header (1); the **FOR YOU** eyebrow; five white line cards, each a title on the left and a grey count pill and › on the right; *Top 10* with no pill; the lines' spacing and order | *Your games* (note 5 of *How to read*); the counts (note 1); Home's badge *4* (note 1) |
+| 4 | FOR YOU closed, close up | The line card's radius, padding and type, the pill's size and grey, the chevron | The counts |
 | 5 | Groups heating up, open | The open line: the **ink border** and soft shadow, the chevron turned down (⌄), the pill kept; the next tile peeking; **All groups ›** at the bottom right | The data; the faces' letters (note 3) |
 | 5.1 | Groups heating up's tile | **The simplified tile**: the striped band in the group's colour, *▲ HOTTEST*, the shield monogram, the name, *14 games this week* on the left and *11 players* on the right, the faces bottom-left, the chip bottom-right (*Ask to join*). **No heat bar, no *+N this month*, no sport line** | The figures and the tag's holder (note 1) |
 | 6 | Players at your level, open | The open line under a closed one; today's dark card; **See all 14 ›** at the bottom right, carrying the line's count | Zofia, a friend, first (note 7); *91%* (note 1) |
 | 7 | Players at your level's tile | The card's footer with *2 sports ›* and the round button, and **no *0,02 below you*** | The data |
-| 8 | New in Raketa, open | The open line under two closed ones; today's tiles, unchanged; **See all 6 ›** | *Rakieta*; *Bartek L.*, *Michał R.* (note 2) |
-| 9 | New in Raketa, close up | Today's tiles inside the open line | As 8 |
-| 10 | Players with your vibe, open | The open line under three closed ones; today's tiles, unchanged; **See all 14 ›** | Karol, a friend, first (note 7); *Rakieta* |
+| 8 | New in Rakieta, open | The open line under two closed ones; today's tiles, unchanged; **See all 6 ›** | *Bartek L.*, *Michał R.* (note 2) |
+| 9 | New in Rakieta, close up | Today's tiles inside the open line | As 8 |
+| 10 | Players with your vibe, open | The open line under three closed ones; today's tiles, unchanged; **See all 14 ›** | Karol, a friend, first (note 7) |
 | 11 | Players with your vibe, close up | Today's tiles inside the open line | As 10 |
 | 12 | Top 10, open | The open line last, with **no count**; today's numerals and portrait cards; **the footer**: the sport switcher on the left, **Open the rankings ›** on the right; the bottom bar | The switcher's chevron (note 4); *▼1* on place 1 (note 1); the names |
 | 13 | Top 10, close up | The footer: the switcher's white pill with its sport dot, and *Open the rankings ›* | As 12 |
@@ -122,8 +122,8 @@ a rule from an earlier record. The mock is correct everywhere else.
 | 5.1 | [`05.1_groups_heating_up_open_detail.png`](mocks/05.1_groups_heating_up_open_detail.png) | `5.1_groupos_heating_up_tile.png` |
 | 6 | [`06_players_at_your_level_open.png`](mocks/06_players_at_your_level_open.png) | `6_players_at_your_level_open.png` |
 | 7 | [`07_players_at_your_level_open_detail.png`](mocks/07_players_at_your_level_open_detail.png) | `7_player_at_your_level_detail.png` |
-| 8 | [`08_new_in_raketa_open.png`](mocks/08_new_in_raketa_open.png) | `8_new_in_raketa_open.png` |
-| 9 | [`09_new_in_raketa_open_detail.png`](mocks/09_new_in_raketa_open_detail.png) | `9_new_in_raketa_open_detail.png` |
+| 8 | [`08_new_in_rakieta_open.png`](mocks/08_new_in_rakieta_open.png) | `8_new_in_rakieta_open.png` |
+| 9 | [`09_new_in_rakieta_open_detail.png`](mocks/09_new_in_rakieta_open_detail.png) | `9_new_in_rakieta_open_detail.png` |
 | 10 | [`10_players_with_your_vibe_open.png`](mocks/10_players_with_your_vibe_open.png) | `10_players_at_your_vibe_open.png` |
 | 11 | [`11_players_with_your_vibe_open_detail.png`](mocks/11_players_with_your_vibe_open_detail.png) | `11_players_at_your_vibe_open_detail.png` |
 | 12 | [`12_top_10_open.png`](mocks/12_top_10_open.png) | `12_top_10_open.png` |

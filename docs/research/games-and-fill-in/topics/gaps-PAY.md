@@ -102,9 +102,9 @@ App packages read: Playtomic Android 6.93.2 (`com.playtomic`) and Playmore/Reser
 - **[PRICE]** Stripe Poland offers, beside 1.5 % + 1 zł: "Custom — Design a custom package – available for businesses
   with large payments volume or unique business models. Contact sales · IC+ pricing · Volume discounts ·
   Multi-product discounts · Country-specific rates." [Stripe pricing, Poland](https://stripe.com/en-pl/pricing) — read 2026-10-08
-- **[DOCS]** With `fees_collector = stripe` (Raketa's club accounts), the connected account itself pays "Interchange
+- **[DOCS]** With `fees_collector = stripe` (Rakieta's club accounts), the connected account itself pays "Interchange
   Plus Payment Fees", and also Radar, 3D Secure and Card Account Updater fees, so IC+ would be the club's own deal
-  with Stripe, not Raketa's. [Stripe: Fee behavior on connected accounts](https://docs.stripe.com/connect/direct-charges-fee-payer-behavior) — read 2026-10-08
+  with Stripe, not Rakieta's. [Stripe: Fee behavior on connected accounts](https://docs.stripe.com/connect/direct-charges-fee-payer-behavior) — read 2026-10-08
 - **[DOCS]** IC+ still has a fixed part: Stripe's markup is a percentage "`volume_fee`" plus a "`per_auth_fee`", charged
   on every gateway request (authorisations, voids and card validations alike); networks may bill their costs "up to
   two months after" the payment. [Stripe support: Reviewing IC+ fees](https://support.stripe.com/questions/reviewing-ic-fees-stripe-fees-and-network-costs) — read 2026-10-08
@@ -170,7 +170,7 @@ App packages read: Playtomic Android 6.93.2 (`com.playtomic`) and Playmore/Reser
   a recognisable statement descriptor and a receipt for each payment. [same page](https://docs.stripe.com/disputes/categories) — read 2026-10-08
 - **[ABSENT]** Any Polish guidance (Rzecznik Finansowy, KNF, UOKiK, a bank's chargeback rules) on what an internet
   address proves in a card dispute — searched in Polish and English — read 2026-10-08
-- *Reading:* a Raketa share is charged when the game fills, with nobody pressing anything, so there is no "address at
+- *Reading:* a Rakieta share is charged when the game fills, with nobody pressing anything, so there is no "address at
   purchase". The address recorded with the terms supports the agreement, and helps under CE 3.0 only if the same card
   paid the same club twice before, 120–364 days earlier, from a matching address or device.
 
@@ -213,7 +213,7 @@ App packages read: Playtomic Android 6.93.2 (`com.playtomic`) and Playmore/Reser
   `payment_method.automatically_updated`. [Stripe: How cards work — Automatic card updates](https://docs.stripe.com/payments/cards/overview) — read 2026-10-08
 - **[DOCS]** "Participation in Visa Account Updater is highest in the U.S., Canada, UK, Ireland, Italy and Greece";
   elsewhere issuers are told to ask their Visa representative. Poland is not named. [Visa Developer: Visa Account Updater](https://developer.visa.com/capabilities/vau/docs-getting-started-vau) — read 2026-10-08
-- **[DOCS]** On Raketa's club accounts (`fees_collector = stripe`) any Card Account Updater fee is the club's.
+- **[DOCS]** On Rakieta's club accounts (`fees_collector = stripe`) any Card Account Updater fee is the club's.
   [Stripe: Fee behavior on connected accounts](https://docs.stripe.com/connect/direct-charges-fee-payer-behavior) — read 2026-10-08
 - **[ABSENT]** Whether PKO BP, Pekao, mBank, ING or Santander send updates to Visa Account Updater or Mastercard's
   Automatic Billing Updater — searched the networks' pages, Stripe's docs and the banks' card terms — read 2026-10-08
@@ -241,7 +241,7 @@ App packages read: Playtomic Android 6.93.2 (`com.playtomic`) and Playmore/Reser
   might display it incorrectly or not at all." [Stripe: Statement descriptors](https://docs.stripe.com/get-started/account/statement-descriptors) — read 2026-10-08
 - *Reading (code):* the hold passes a `description` and metadata only, no `statement_descriptor_suffix`
   (`backend/app/modules/payments/infrastructure/stripe_payments.py:469-534`; no `statement_descriptor` anywhere in
-  `backend/app/modules/payments/`), so the player's bank shows the club's own descriptor, never "Raketa" or "Padel".
+  `backend/app/modules/payments/`), so the player's bank shows the club's own descriptor, never "Rakieta" or "Padel".
 
 ### How Polish banks rename the line
 - **[DOCS]** PKO BP's IKO and iPKO show "nazwę sprzedawcy, a w przypadku wybranych sklepów nawet logo" on a card payment,

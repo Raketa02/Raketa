@@ -64,7 +64,7 @@
 - **A mutual is a grey line.** On Match me the yes is optimistic — the card flies on the press —
   and when the reply says `mutual` the deck picks one of three sentences for a toast: a one-sided
   yes (*Noted — …*), a mutual naming no chat (*You both said yes — … sees it the next time they
-  open Raketa*), a mutual naming one (*You both said yes — … is in your Chats now*). Nothing
+  open Rakieta*), a mutual naming one (*You both said yes — … is in your Chats now*). Nothing
   navigates; the row in Chats is the door. Tomek taps *Let's play* on Marek, Marek had already
   said yes, and what he gets is gone in under three seconds. If he blinks, the next card is up.
 

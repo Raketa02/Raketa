@@ -126,7 +126,7 @@ Extracts: [`../shots/gaps-S-01B-playmore-unread-unpaid-2026-10-10.txt`](../shots
   Searched this round: the EBA-ECB 2025 report (above), NBP's quarterly notes on fraudulent transactions (found by
   search; they split by channel, not by SCA or initiator), Ravelin (above), Checkout.com's and Mastercard's SCA guides.
   Carried: France 2021, 4.35 % of e-commerce payments soft-declined with the payer present
-  (`gaps-PAY.md#how-often-issuers-ask-and-how-fast-people-answer`). What would answer it: the decline codes on Raketa's
+  (`gaps-PAY.md#how-often-issuers-ask-and-how-fast-people-answer`). What would answer it: the decline codes on Rakieta's
   own Stripe account once live, or an acquirer's published split — read 2026-10-10
 
 ---
@@ -160,7 +160,7 @@ Extracts: [`../shots/gaps-S-01B-playmore-unread-unpaid-2026-10-10.txt`](../shots
 
 ---
 
-## 4. R-REQUEST-55 (also R-REQUEST-14, R-REQUEST-52): whether a Kraków desk blocks the hour in its own system when it accepts a Raketa request
+## 4. R-REQUEST-55 (also R-REQUEST-14, R-REQUEST-52): whether a Kraków desk blocks the hour in its own system when it accepts a Rakieta request
 
 ### tenis4U desks already type bookings made elsewhere into their grid as named blocks
 - **[MEASURED]** tenis4U's grid carries, per court and day, the hours a desk has blocked under a name. In the 14 days
@@ -169,11 +169,11 @@ Extracts: [`../shots/gaps-S-01B-playmore-unread-unpaid-2026-10-10.txt`](../shots
   ROTATION", "BLOKADA EVENT", "RTL FINALS"; Padel House and Garden Padel close hours as "nieczynne" and "zamkniete".
   Extract [`../shots/gaps-S-01B-tenis4u-krakow-padel-2026-10-10-evening.txt`](../shots/gaps-S-01B-tenis4u-krakow-padel-2026-10-10-evening.txt),
   from [tenis4U's public occupancy endpoint](https://app.tenis4u.pl/) — read 2026-10-10 17:21
-- *Reading:* the tool a desk would use to keep a Raketa hour from being sold twice exists, and desks use it for lessons
-  and standing groups. With no import or API at tenis4U, kluby.org or Playmore, a Raketa booking reaches that grid only
+- *Reading:* the tool a desk would use to keep a Rakieta hour from being sold twice exists, and desks use it for lessons
+  and standing groups. With no import or API at tenis4U, kluby.org or Playmore, a Rakieta booking reaches that grid only
   by someone typing it (carried: `gaps-FILL.md#tenis4us-club-calendar-has-no-published-import-or-api`).
 
-### Whether a desk will do it for a Raketa booking: not found
+### Whether a desk will do it for a Rakieta booking: not found
 - **[ABSENT]** No club's terms or page says how it records bookings from another platform. Only a real desk answers
   this. What would answer it: asking the five clubs, or, after the first accepted request, reading the tenis4U grid for
   that hour — read 2026-10-10
@@ -198,7 +198,7 @@ Extracts: [`../shots/gaps-S-01B-playmore-unread-unpaid-2026-10-10.txt`](../shots
 - **[ABSENT]** No platform found publishes why its players' shares fail (terms not accepted, no card saved, a decline,
   the bank's check). Playmore names a decline's reason to the player (carried:
   `platforms.md#playmore--an-unpaid-booking-lapses-after-30-minutes`) but no one gives shares. Searched this round:
-  Baymard, the Gemius and Autopay coverage (search and Shoper), soft-decline studies. What would answer it: Raketa's own
+  Baymard, the Gemius and Autopay coverage (search and Shoper), soft-decline studies. What would answer it: Rakieta's own
   refusals, counted by reason, once live — read 2026-10-10
 
 ---

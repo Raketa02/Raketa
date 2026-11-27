@@ -26,7 +26,7 @@ Sixteen Stripe gaps from the REQUEST and CLUBBOOK rounds (R-REQUEST-57 to -61; R
 | 11 | R-CLUBBOOK-20 | Fee on a Polish card | Answered: 1,60 zł measured |
 | 12 | R-CLUBBOOK-44 | Refund before the money is available | Answered by Stripe's words, as in 2 |
 | 13 | R-CLUBBOOK-44 | How long a pending refund waits before it fails | Answered: 45 days |
-| 14 | R-CLUBBOOK-27 | Does a Dashboard press reach Raketa, and can Raketa tell it apart? | Answered: it reaches Raketa, and only the `raketa-` key tells it apart. The press itself is [ABSENT] |
+| 14 | R-CLUBBOOK-27 | Does a Dashboard press reach Rakieta, and can Rakieta tell it apart? | Answered: it reaches Rakieta, and only the `rakieta-` key tells it apart. The press itself is [ABSENT] |
 | 15 | R-CLUBBOOK-20 | `cancellation_reason` on a lapsed hold | **[ABSENT]** until 26 Oct. Stripe's own cancel reads null |
 | 16 | R-CLUBBOOK-35 | A weather-stopped game refused a refund, then disputed | Answered: the evidence. The bank decides |
 
@@ -34,7 +34,7 @@ Sixteen Stripe gaps from the REQUEST and CLUBBOOK rounds (R-REQUEST-57 to -61; R
 
 ### 1 · R-REQUEST-61 (also R-CLUBBOOK-20, R-CLUBMONEY-2) · Whether a reversal gives back the fee taken at capture
 
-**The question.** Bonarka Arena cancels a game soon after Raketa took four shares of 40,00 zł. Each share
+**The question.** Bonarka Arena cancels a game soon after Rakieta took four shares of 40,00 zł. Each share
 cost the club 1,60 zł in Stripe's fee. Does a refund processed as a *reversal* give those 1,60 zł back?
 
 - **[DOCS]** On the same page, two sentences point opposite ways:
@@ -159,14 +159,14 @@ cost the club 1,60 zł in Stripe's fee. Does a refund processed as a *reversal* 
   - "Customer balance transaction is created".
 
   Capturing or cancelling a payment is not among them. "By default, only team members with the Administrator
-  role can create or edit approval rules", so these are the club's settings, not Raketa's.
+  role can create or edit approval rules", so these are the club's settings, not Rakieta's.
   [Set up two-party approvals](https://docs.stripe.com/account/approvals?locale=en-US) — 2026-10-20
 - Carried: the full Dashboard gives "unrestricted access to Stripe's full feature set", and the Dashboard type
   is permanent. The **Capture** and **Cancel** buttons are carried in
   [`stripe-holds-and-capture.md#a-club-on-the-full-dashboard-can-capture-or-cancel-a-held-share-itself`](stripe-holds-and-capture.md#a-club-on-the-full-dashboard-can-capture-or-cancel-a-held-share-itself).
 - **[ABSENT]** A statement from Stripe that no such control exists, or a control granted on request.
   Searched: the pages above — 2026-10-20. This is a question for Stripe support.
-- **Answer:** no published control. Raketa can only hear the press (§14) and react to it.
+- **Answer:** no published control. Rakieta can only hear the press (§14) and react to it.
 
 ### 4 · R-REQUEST-58, R-REQUEST-59 · Stripe's published emails to a club leave out uncaptured, cancelled and failed payments
 
@@ -209,7 +209,7 @@ cost the club 1,60 zł in Stripe's fee. Does a refund processed as a *reversal* 
   Searched: the teams page, support's notifications page, and a web search for Stripe's email about expiring
   uncaptured payments — 2026-10-20.
 - **Answer:** no published Stripe email covers these moments, so the desk can't count on Stripe to tell it.
-  A club could build its own email with Workflows, and Raketa could too, on the club's events.
+  A club could build its own email with Workflows, and Rakieta could too, on the club's events.
 
 ### 5 · R-REQUEST-57 · A club's own Radar rule blocking the fill's hold: `blocked`, never sent to the bank, read as `generic_decline`
 
@@ -422,7 +422,7 @@ cost the club 1,60 zł in Stripe's fee. Does a refund processed as a *reversal* 
 - *Reading:* a club whose available balance stays short for 45 days has the refund fail. `refund.failed`
   reaches the Connect endpoint and is dropped, so the player gets nothing back and nobody is told.
 
-### 14 · R-CLUBBOOK-27 · A Capture or Cancel pressed in the club's own Dashboard reaches Raketa, and only the key tells it apart
+### 14 · R-CLUBBOOK-27 · A Capture or Cancel pressed in the club's own Dashboard reaches Rakieta, and only the key tells it apart
 
 - **[DOCS]** The Connect scope covers "Events triggered by resources that exist in connected accounts … Direct
   charges for customers of your connected accounts"; "Each event for a connected account contains a
@@ -437,16 +437,16 @@ cost the club 1,60 zł in Stripe's fee. Does a refund processed as a *reversal* 
   - No field names the Dashboard as the source.
 
   [Event object](https://docs.stripe.com/api/events/object?query=request) — 2026-10-20
-- *Code:* every key Raketa's server sends begins with `raketa-`:
-  - the take, `raketa-capture-{charge_id}`;
-  - the let-go, `raketa-cancel-seat-{charge_id}`;
-  - the card check, `raketa-cancel-check-{charge_id}`;
-  - the refund, `raketa-refund-{charge_id}`
+- *Code:* every key Rakieta's server sends begins with `rakieta-`:
+  - the take, `rakieta-capture-{charge_id}`;
+  - the let-go, `rakieta-cancel-seat-{charge_id}`;
+  - the card check, `rakieta-cancel-check-{charge_id}`;
+  - the refund, `rakieta-refund-{charge_id}`
     (`backend/app/modules/payments/application/handlers/settle_seat_charges.py:54-70`);
-  - the hold, `raketa-{kind}-…` (`backend/app/modules/payments/application/seat_charges.py:169`).
+  - the hold, `rakieta-{kind}-…` (`backend/app/modules/payments/application/seat_charges.py:169`).
 - **[MEASURED]** The test club holds 228 events of the six money kinds (`payment_intent.canceled` and
   `.succeeded`, `charge.captured`, `charge.refunded`, `refund.created`, `charge.expired`). All 228 carry a
-  request ID, and all but one carry a `raketa-…` key.
+  request ID, and all but one carry a `rakieta-…` key.
   - The exception is `evt_3USPKC5y1DMwE3zY0xQEMKTV` (`payment_intent.canceled`, payment
     `pi_3USPKC5y1DMwE3zY00HIKsMU`). It carries `req_ZW2hNCf2S7SLgf` with the key
     `ff2e7700-48da-b31a-018a-fcc6250d53b6`.
@@ -458,12 +458,12 @@ cost the club 1,60 zł in Stripe's fee. Does a refund processed as a *reversal* 
   and Stripe documents no Dashboard marker. Searched: the Event object, Connect webhooks, and the refunds
   page's "Cancel a payment" — 2026-10-20. *What would answer it:* press Capture or Cancel on an uncaptured
   share in the test club's Dashboard, then read that event's `request`. Three holds remain to press (§15).
-- **Answer:** the press reaches Raketa's Connect endpoint as `payment_intent.succeeded` or `.canceled`, as
-  documented. Raketa can tell its own server's act from everyone else's by the `raketa-` key. Nothing
+- **Answer:** the press reaches Rakieta's Connect endpoint as `payment_intent.succeeded` or `.canceled`, as
+  documented. Rakieta can tell its own server's act from everyone else's by the `rakieta-` key. Nothing
   documented tells the club's press from the player's phone confirming, or from Stripe's own automatic
   cancel.
 
-### 15 · R-CLUBBOOK-20 · The `cancellation_reason` on a lapsed hold is still unread, and null is not only Raketa's
+### 15 · R-CLUBBOOK-20 · The `cancellation_reason` on a lapsed hold is still unread, and null is not only Rakieta's
 
 - **[DOCS]** `cancellation_reason`: "Reason for cancellation of this PaymentIntent, either user-provided
   (`duplicate`, `fraudulent`, `requested_by_customer`, or `abandoned`) or **generated by Stripe internally
@@ -486,7 +486,7 @@ cost the club 1,60 zł in Stripe's fee. Does a refund processed as a *reversal* 
   2026-10-26 06:32:43 UTC on `pi_3USA7i5y1DMwE3zY0Nemxwtn`. Searched: the API reference, the hold page, the
   lifecycle page, and a web search — 2026-10-20. Earlier:
   [`stripe-holds-and-capture.md#which-reason-and-which-events-an-expired-hold-carries-undocumented-readable-on-the-sandbox-after-26-october`](stripe-holds-and-capture.md#which-reason-and-which-events-an-expired-hold-carries-undocumented-readable-on-the-sandbox-after-26-october).
-- *Reading:* the carried reading that null marks Raketa's own let-go is weaker now. Stripe's automatic cancel
+- *Reading:* the carried reading that null marks Rakieta's own let-go is weaker now. Stripe's automatic cancel
   after too many confirmations also reads null. A share the club cancels after Stripe refused its take is
   safer told apart by the event's key (§14) than by the reason.
 

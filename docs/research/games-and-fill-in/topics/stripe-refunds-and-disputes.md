@@ -1,6 +1,6 @@
 # Stripe — refunds and disputes
 
-What Stripe says about refunds and disputes for the way Raketa uses it: every share is a **direct charge**
+What Stripe says about refunds and disputes for the way Rakieta uses it: every share is a **direct charge**
 on the club's **Accounts v2** connected account (full Dashboard, `fees_collector` and `losses_collector`
 both `stripe`), a single-use clone of the player's platform card, held with manual capture and taken at the
 club's cut-off; złoty; Poland. Read 2026-10-19 from docs.stripe.com (fetched as Markdown,
@@ -13,7 +13,7 @@ a leaver after the cut-off whose seat is taken gets the share less exactly the f
 (`SEAT_TAKEN`); a game called off at the cut-off, a club's cancel, and a club's cancel after the player left
 give the whole share. A **held** share is let go, never refunded. The refund is one call,
 `refunds.create(payment_intent, amount)` on the club's account with no `reason` and no `metadata`, under
-the key `raketa-refund-{charge}` — "One refund per charge, ever"
+the key `rakieta-refund-{charge}` — "One refund per charge, ever"
 (`backend/app/modules/payments/infrastructure/stripe_payments.py:583-609`;
 `backend/app/modules/payments/application/handlers/settle_seat_charges.py:67-70`, `:142-161`), sent from
 the outbox after the commit. Nothing under `backend/app` reads a dispute.
@@ -114,7 +114,7 @@ refund ([`gaps-S-01.md#stripe-keeps-a-stopped-accounts-money-to-cover-refunds-a-
   ([`stripe-security.md#a-full-dashboard-club-can-see-refund-and-dispute-its-payments-itself`](stripe-security.md#a-full-dashboard-club-can-see-refund-and-dispute-its-payments-itself));
   a Dashboard refund asks for a reason ("If you select **Other**, you must add a note").
   [Refunds — issue refunds](https://docs.stripe.com/refunds#issue-refunds) — 2026-10-19
-- *Reading:* a club can cancel the refund Raketa made, or refund a share itself; Raketa hears neither.
+- *Reading:* a club can cancel the refund Rakieta made, or refund a share itself; Rakieta hears neither.
 
 ### A refund within about two hours of the capture is usually a reversal, with no credit line
 
@@ -130,7 +130,7 @@ refund ([`gaps-S-01.md#stripe-keeps-a-stopped-accounts-money-to-cover-refunds-a-
   `destination_details.card.type: refund`, with an ARN · `stripe-club` · 2026-10-19.
 - **[ABSENT]** A test card or setting that produces a reversal in test mode: not on the testing page
   ("With all other test cards, refunds succeed immediately") — 2026-10-19.
-- *Reading:* in Raketa a share is taken at the club's cut-off (24 h before at Bonarka Arena); a late
+- *Reading:* in Rakieta a share is taken at the club's cut-off (24 h before at Bonarka Arena); a late
   leaver's seat taken within about two hours of that is the only refund likely to be a reversal.
 
 ### The player sees a card refund in about 5–10 business days; the reference comes within 7
@@ -178,7 +178,7 @@ refund ([`gaps-S-01.md#stripe-keeps-a-stopped-accounts-money-to-cover-refunds-a-
 - **[DOCS]** `reason`: `duplicate`, `fraudulent`, `requested_by_customer`; "specifying `fraudulent` … will
   add the associated card and email to your block lists" (on a direct charge, the club's).
   `refund_application_fee` and `reverse_transfer` apply only to application fees and destination charges,
-  which Raketa does not use. [Create a refund](https://docs.stripe.com/api/refunds/create) — 2026-10-19
+  which Rakieta does not use. [Create a refund](https://docs.stripe.com/api/refunds/create) — 2026-10-19
 - *Code:* no reason ("a game called off is none of them", `stripe_payments.py:596-598`) and no metadata;
   the club's Dashboard ties the refund to the game only through the payment's description, such as
   "Padel · Bonarka Arena", and its `game_id`/`player_id` metadata
@@ -205,7 +205,7 @@ refund ([`gaps-S-01.md#stripe-keeps-a-stopped-accounts-money-to-cover-refunds-a-
   responsibilities for disputes and refunds in your agreements with connected accounts."
   [Handle refunds and disputes (SaaS)](https://docs.stripe.com/connect/saas/tasks/refunds-disputes) — 2026-10-19
 
-### The club is told by email and in its Dashboard; Raketa only by its Connect endpoint
+### The club is told by email and in its Dashboard; Rakieta only by its Connect endpoint
 
 - **[DOCS]** "We notify you of a dispute through … Your email address, The Stripe Dashboard, A
   `charge.dispute.created` event (if your integration is set up to receive events …), A push notification".
@@ -326,7 +326,7 @@ refund ([`gaps-S-01.md#stripe-keeps-a-stopped-accounts-money-to-cover-refunds-a-
   Visa CE 3.0 needs earlier undisputed payments matching IP, device, email or customer account ID
   ([`gaps-PAY.md#where-an-internet-address-counts-in-a-dispute-and-where-it-does-not`](gaps-PAY.md#where-an-internet-address-counts-in-a-dispute-and-where-it-does-not)).
 - *Reading:* the share's payment holds none of the player's name, email, the terms accepted or whether they
-  came; Raketa holds them, and nothing hands them to the club.
+  came; Rakieta holds them, and nothing hands them to the club.
 
 ### Withdrawn disputes still need evidence, and still count
 
@@ -349,7 +349,7 @@ refund ([`gaps-S-01.md#stripe-keeps-a-stopped-accounts-money-to-cover-refunds-a-
   [Event types](https://docs.stripe.com/api/events/types) — 2026-10-19
 - *Reading:* every share (25–40 zł) is below 90 zł; on a direct charge the warning lands on the club's
   account, where only the club's Radar runs
-  ([`stripe-connect.md#the-club-writes-its-own-radar-rules-raketas-rules-dont-reach-its-payments`](stripe-connect.md#the-club-writes-its-own-radar-rules-raketas-rules-dont-reach-its-payments)).
+  ([`stripe-connect.md#the-club-writes-its-own-radar-rules-rakietas-rules-dont-reach-its-payments`](stripe-connect.md#the-club-writes-its-own-radar-rules-rakietas-rules-dont-reach-its-payments)).
 
 ### Tools a platform can give its clubs: Smart Disputes and embedded components
 
@@ -408,15 +408,15 @@ refund ([`gaps-S-01.md#stripe-keeps-a-stopped-accounts-money-to-cover-refunds-a-
    refund; "Always respond", with the refund's amount and date
    ([best practices](https://docs.stripe.com/disputes/best-practices#partial-refund-bp)).
 6. **Forgetting the club's own Dashboard.** It can refund a share, refund it in part, or cancel a card
-   refund for a short while ([refunds](https://docs.stripe.com/refunds#cancel-refund)); Raketa's later
-   refund then fails as an over-refund, or Raketa's refund silently turns `canceled`.
+   refund for a short while ([refunds](https://docs.stripe.com/refunds#cancel-refund)); Rakieta's later
+   refund then fails as an over-refund, or Rakieta's refund silently turns `canceled`.
 7. **Taking the sandbox's instant success for the live behaviour.** Only 7726 and 5126 make a refund wait or
    fail ([testing](https://docs.stripe.com/testing#refunds)); every sandbox refund so far was `succeeded`
    at once ([`stripe-sandbox.md#refunds-exactly-the-amounts-asked-succeeded-at-once`](stripe-sandbox.md#refunds-exactly-the-amounts-asked-succeeded-at-once)),
    and a pre-settlement refund was netted against pending funds where the docs speak of the available
    balance ([above](#the-money-comes-off-the-clubs-balance-on-the-sandbox-off-its-pending-balance-at-once)).
 8. **Promising Stripe's refund email.** Stripe emails only for a charge made on a Customer
-   ([refunds](https://docs.stripe.com/refunds#refund-requests)); a share's payment has none, so Raketa's
+   ([refunds](https://docs.stripe.com/refunds#refund-requests)); a share's payment has none, so Rakieta's
    own message is the only one the player gets.
 9. **Telling the player to look for a credit after a reversal.** A refund within about two hours of the
    capture "drops off the customer's statement, and a separate credit isn't issued", with no ARN
@@ -434,7 +434,7 @@ refund ([`gaps-S-01.md#stripe-keeps-a-stopped-accounts-money-to-cover-refunds-a-
 12. **Counting a club's money without its disputes.** A dispute takes the share plus 90 zł from the club's
     balance at once ([how disputes work](https://docs.stripe.com/disputes/how-disputes-work);
     [June 2025 pricing](https://support.stripe.com/questions/june-2025-pricing-updates-for-disputes)); a
-    payout sized from Raketa's own ledger then asks for money the balance no longer holds, and a negative
+    payout sized from Rakieta's own ledger then asks for money the balance no longer holds, and a negative
     balance blocks payouts ([`stripe-connect.md#stripe-covers-only-what-it-cant-recover-and-first-takes-it-from-the-clubs-bank`](stripe-connect.md#stripe-covers-only-what-it-cant-recover-and-first-takes-it-from-the-clubs-bank)).
 13. **Missing the deadline.** 7–21 days, one submission, and no answer is a loss
     ([responding](https://docs.stripe.com/disputes/responding)); a club that doesn't read Stripe's email
@@ -455,7 +455,7 @@ refund ([`gaps-S-01.md#stripe-keeps-a-stopped-accounts-money-to-cover-refunds-a-
 5. Does a refusal that never clears (`charge_disputed`, `refund_disputed_payment`,
    `charge_already_refunded`, too large) stop being retried and reach a person?
 6. When a share is disputed, does the rule stop every refund of it, and say who is told — the club, the
-   player, Raketa?
+   player, Rakieta?
 7. Does the rule say the club pays a dispute — the share and 90 zł at once, 90 zł more to counter, the 90 zł
    received fee never back — and does the club's Money show it?
 8. Can the club, in its own Dashboard, show what each likely reason needs: the cancellation policy as the
@@ -467,7 +467,7 @@ refund ([`gaps-S-01.md#stripe-keeps-a-stopped-accounts-money-to-cover-refunds-a-
 11. Does any text promise the player an email from Stripe about a refund? None is sent.
 12. Is a refund made before the share's money is available expected to wait (`charge_pending`,
     `insufficient_funds`) or go through? The sandbox nets it against pending funds, and live is unread.
-13. Does a payout sized from Raketa's ledger survive a dispute, or a refund the club made itself?
+13. Does a payout sized from Rakieta's ledger survive a dispute, or a refund the club made itself?
 14. Was a refund rule proven only on the fake or on a card whose refunds always succeed, rather than on
     4000 0000 0000 7726 and 5126?
 15. When a club account is closed, removed or disabled, are the refunds it still owes, and its open disputes,

@@ -12,7 +12,7 @@
 
 ## Context
 
-Three specification documents describe the computational core of Raketa — ten engines over
+Three specification documents describe the computational core of Rakieta — ten engines over
 a shared kernel, roughly ninety functions and ninety constants. They were written against a
 different codebase: TypeScript, a `packages/kernel`, an `apps/api` on Node, and — critically
 — **the same compiled kernel imported unchanged by the server and by both clients.**

@@ -58,7 +58,7 @@ account · `[ABSENT]` looked for and not found, with where. *Reading* lines are 
   ([Playmore web app](https://playmore.pl/), its source as shipped in Android 6.118.0 from APKPure, as in `gaps-NOTIFY.md`) — read 2026-10-09
 - **[POLICY]** Carried: whether the notice centre is switched on for every player is a server switch
   (`gaps-NOTIFY.md#playmore-numbers-the-bell-and-the-app-icon`).
-- *Reading:* Playmore carries the same information as Raketa's row (the time today, Yesterday and the time, a date
+- *Reading:* Playmore carries the same information as Rakieta's row (the time today, Yesterday and the time, a date
   further back) in a day header plus a clock time; it has no weekday tier, and dates a notice when its server wrote it.
 
 ### tenis4U's web list puts no time on a row
@@ -74,7 +74,7 @@ account · `[ABSENT]` looked for and not found, with where. *Reading* lines are 
 - **[ABSENT]** WhatsApp's own description of the chat list's time format (clock time today, a weekday within the week, a
   date further back): searched faq.whatsapp.com through web search; not found — read 2026-10-09
 - *Reading:* the `=` no longer rests on Playtomic alone: Playmore dates every row with the day and the clock time, as
-  Raketa does; tenis4U dates none.
+  Rakieta does; tenis4U dates none.
 
 ---
 
@@ -105,7 +105,7 @@ account · `[ABSENT]` looked for and not found, with where. *Reading* lines are 
   (updated 2026-10-07; read through the help centre's public API) — read 2026-10-09
 - *Reading:* three independent players (GB 2022, ES 2025, GB 2025) treat the figure as a line to choose partners by,
   which meets the two-complaint threshold. On Playtomic the line is also enforced in places (a match or a challenge can
-  require a reliability); Raketa's words name a bar nothing enforces.
+  require a reliability); Rakieta's words name a bar nothing enforces.
 
 ---
 
@@ -147,9 +147,9 @@ account · `[ABSENT]` looked for and not found, with where. *Reading* lines are 
   [`../shots/gaps-S-01-tenis4u-krakow-padel-occupancy-2026-10-09.txt`](../shots/gaps-S-01-tenis4u-krakow-padel-occupancy-2026-10-09.txt),
   from the endpoints [tenis4U's web app](https://app.tenis4u.pl/) calls for a visitor (`/court/{id}`, `/occupancy/{id}`) — read 2026-10-09
 - *Reading:* at Padel House every weekday evening hour two weeks out is already taken (by standing bookings, since its
-  grid opens only 14 days ahead), so a Raketa game there is an hour the club sells anyway, or none at all. At the
+  grid opens only 14 days ahead), so a Rakieta game there is an hour the club sells anyway, or none at all. At the
   other four, about half the evening hours and most daytime hours are still unsold three to thirteen days ahead: there a
-  game Raketa fills is mostly a sale the club would not otherwise have made, and its card fee buys that sale.
+  game Rakieta fills is mostly a sale the club would not otherwise have made, and its card fee buys that sale.
 
 ### Published occupancy: British peak hours near 85 per cent, nothing for Poland
 - **[DOCS]** Citing Playtomic and Strategy&'s 2026 Global Padel Report: "In major British clubs, the occupancy rate reaches
@@ -179,7 +179,7 @@ account · `[ABSENT]` looked for and not found, with where. *Reading* lines are 
   [Tagvenue help](https://support.tagvenue.com/hc/en-gb/articles/360019425457-How-does-Tagvenue-manage-venue-response-times-and-communication) — read 2026-10-09
 - *Reading:* outside racket sport, a seller that lets a request lapse carries it in a public figure and in its ranking,
   and the guest is told the host took too long. No racket platform has a request to lapse; the nearest market practice
-  puts the lapse on the seller's record, where Raketa names the club on the card and keeps no record.
+  puts the lapse on the seller's record, where Rakieta names the club on the card and keeps no record.
 
 ---
 
@@ -232,7 +232,7 @@ account · `[ABSENT]` looked for and not found, with where. *Reading* lines are 
   level defaults to "Active", and "Time Sensitive" needs the app's Time Sensitive Notifications capability.
   [Braze: Push settings](https://www.braze.com/docs/user_guide/administer/global/workspace_settings/push_settings),
   [Braze: iOS notification options](https://braze.com/docs/user_guide/channels/push/platform_specific_resources/ios/notification_options) — read 2026-10-09
-- *Reading:* unless their servers say otherwise, the rivals' pushes travel as Raketa's do: normal on Android, kept up to
+- *Reading:* unless their servers say otherwise, the rivals' pushes travel as Rakieta's do: normal on Android, kept up to
   four weeks, never time-sensitive on an iPhone. What their servers actually set is still unread: **only a dated test on
   a phone with a real booking or alert settles it.**
 
@@ -290,4 +290,4 @@ account · `[ABSENT]` looked for and not found, with where. *Reading* lines are 
   the risk policy and support pages — read 2026-10-09
 - *Reading:* everything written points to the balance, not the account's state, as what stops a refund. **Only a Stripe
   test-mode run settles it**, and it must stop the account by letting requirements go past due: a platform pause is not
-  enforced in a sandbox and is not offered for Accounts v2, which Raketa's clubs use.
+  enforced in a sandbox and is not offered for Accounts v2, which Rakieta's clubs use.

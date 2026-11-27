@@ -32,7 +32,7 @@
 ## 1. The whole thing in one page
 
 - **Five new rows on Home, below *Your games*:** *Hottest groups*, *Same competitive level players*,
-  *New in Raketa*, *Same vibe players*, *Top 10*. Each reads on its own and is hidden when empty.
+  *New in Rakieta*, *Same vibe players*, *Top 10*. Each reads on its own and is hidden when empty.
 - **Any player may open any record and send any friend request, with no daily limit.** One switch,
   ***Show me to new people***, on by default, takes a player out of the three people rows and closes
   their record and requests to anyone who shares no group, game or friendship with them. It replaces
@@ -45,7 +45,7 @@
   can now be **withdrawn**.
 - **Same competitive level**: the **% even** is the Forecast with one player a side, each person in
   their evenest shared sport, coloured as game cards. Hidden until the reader has a level.
-- **New in Raketa**: who finished sign-up in the last 30 days, newest first, unrated included.
+- **New in Rakieta**: who finished sign-up in the last 30 days, newest first, unrated included.
 - **Same vibe**: anyone sharing a tag; the **vibe %** is 1 − ½ⁿ for n shared tags. Skill plays no
   part.
 - **Rows stay alive**: *fresh* good matches first, *gaps* at the right, worked out on every read; a
@@ -62,7 +62,7 @@
 | Word | Meaning here |
 | --- | --- |
 | **The reader** | The player whose Home it is. In the examples, **Tomek** |
-| **People rows** | *Same competitive level players*, *New in Raketa* and *Same vibe players*, and their See all screens |
+| **People rows** | *Same competitive level players*, *New in Rakieta* and *Same vibe players*, and their See all screens |
 | **Connected** | Friends with the reader, or the reader sent them a request still open. Someone who asked the reader is **not** connected |
 | **Unconnected** | Neither |
 | **A good match** | *Same competitive level*: a % even of **70% or more**. *Same vibe*: **2 or more** shared tags |
@@ -88,7 +88,7 @@ group, *Anyone*, 7 players).
 
 - **The header, *Get your level* and *Your games* on top** (ADR-0205 §4).
 - **Then FOR YOU: the five rows as five folding lines, in this order:** *Hottest groups* (**Groups
-  heating up**), *Same competitive level players* (**Players at your level**), *New in Raketa*, *Same
+  heating up**), *Same competitive level players* (**Players at your level**), *New in Rakieta*, *Same
   vibe players* (**Players with your vibe**), *Top 10*. The titles are the words on screen; the
   row's name stays the term.
 - **One line is open at a time**, none at app start. A tap on a closed line opens it, and a tap on
@@ -401,7 +401,7 @@ leaves. Two more fresh matches → Ania leaves, then Zofia.
 
 ---
 
-## 7. New in Raketa
+## 7. New in Rakieta
 
 **What it is:** the players who joined in the last 30 days, newest first — visible on day one, before
 they have a ranking or a history.
@@ -557,7 +557,7 @@ Q33).
 
 ### 9.3 Where it doesn't apply
 
-- **New in Raketa** turns over by itself (§7.2), and has no rest.
+- **New in Rakieta** turns over by itself (§7.2), and has no rest.
 - **See all lists** are plain orders, and rest nobody.
 
 ---
@@ -638,7 +638,7 @@ Q33).
 | Found in | Line | Falls back to |
 | --- | --- | --- |
 | Same competitive level | *Your level in padel · 91% even* | *Found you at your padel level*, when either no longer has a level there |
-| New in Raketa | *Found you among new players* | — |
+| New in Rakieta | *Found you among new players* | — |
 | Same vibe | *6 things in common* | *Found you through your tags*, when none is shared any more |
 | Top 10 | *Found you in the padel ranking* | — (today's line) |
 
@@ -691,7 +691,7 @@ A withdrawn Join request tells nobody.
 | A good match | ≥ 70% even · ≥ 2 shared tags |
 | People rows | 10 cards each |
 | A people row's total | everybody who qualifies, each once, counted up to 100 · *99+* past 99 |
-| New in Raketa | joined in the last 30 days, strictly |
+| New in Rakieta | joined in the last 30 days, strictly |
 | Vibe % | 50 · 75 · 88 · 94 · 97 · 98 for 1–6 shared tags |
 | Rest | on screen on 5 different days, per row |
 | On screen | at least half the card visible; once per card, row and day |
@@ -773,7 +773,7 @@ overrule):
 5. **An Official group that needs an administrator** reads *run by* its club (§5.9).
 6. **Two sports with the same % even** go to the app's sport order; **two players with the same %**
    to the player id (§6.3, §6.6).
-7. **Someone who asked the reader** is with the unconnected in New in Raketa (§7.2), as they count as
+7. **Someone who asked the reader** is with the unconnected in New in Rakieta (§7.2), as they count as
    fresh in the other two rows.
 8. ***Joined …* counts Warsaw days**, and 28 days and up read *Joined 4 weeks ago* (§7.3).
 9. **A rested player stays rested** in that row; the count never resets (§9.2).
@@ -798,7 +798,7 @@ the four new sheets carry the mocks' × in a beige circle.
 
 ## 18. Edge cases
 
-- **A reader with no level and no group** sees Hottest groups, New in Raketa, Same vibe and, once
+- **A reader with no level and no group** sees Hottest groups, New in Rakieta, Same vibe and, once
   anyone is ranked, Top 10. *Same competitive level* is hidden, and *Your games* reads the groupless
   line.
 - **A group exactly at 3 players** appears; one member leaving takes it off the row on the next read.
@@ -815,7 +815,7 @@ the four new sheets carry the mocks' × in a beige circle.
 - **Two players sharing all six tags** read 98%; the tie goes to the player id, since neither has an
   unshared tag.
 - **A tag the vocabulary retires** still counts, as long as both hold it: a tag id is permanent.
-- **New in Raketa and a newcomer with a level in no sport**: their tile shows no sport lines; a sport
+- **New in Rakieta and a newcomer with a level in no sport**: their tile shows no sport lines; a sport
   filter in See all leaves them out.
 - **Top 10 with the reader at place 4**: the reader's card reads *You*, with the volt numeral and
   ring, among the ten.

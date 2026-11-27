@@ -300,7 +300,7 @@ const TAG_BOUNDS = { min: 2, max: 6 };
 const STRAND = { SHOWS_UP: 'Shows up', ANSWERS_CHALLENGES: 'Answers challenges', ANSWERS_RESULTS: 'Answers about results' };
 const BAND_WORD = { GOOD: 'Good', MIXED: 'Mixed', POOR: 'Poor' };
 const INTRO_CAP = 100;
-const TAKEN_NICKNAMES = ['marek', 'ania', 'raketa'];
+const TAKEN_NICKNAMES = ['marek', 'ania', 'rakieta'];
 
 /* ============================ formatting (docs/value-formatting.md) ============================ */
 const lvl = (n) => n.toFixed(2).replace('.', ',');
@@ -396,7 +396,7 @@ const L = {
   intent: () => S.ratings.map((r) => `${SPORT[r.sport]} ${S.intents[r.sport] ? INTENT_LABEL[S.intents[r.sport]] : '<span style="color:var(--coral-ink)">not set</span>'}`).join(' · '),
   week: () => S.week.size === 0 ? 'Nothing ticked — we do not know when you play' : `${S.week.size} slot${S.week.size === 1 ? '' : 's'} ticked`,
   radius: () => `<span class="mono">${S.radius} km</span> · ${radiusWords(S.radius)}`,
-  area: () => 'Area set · updates when you open Raketa',
+  area: () => 'Area set · updates when you open Rakieta',
   gender: () => `Matched with ${{ ANY: 'anyone', WOMEN_ONLY: 'women only', MEN_ONLY: 'men only' }[S.preference]}`,
   optin: () => S.optIn.accepted ? `Yes — since ${S.optIn.at}` : `No — since ${S.optIn.at}`,
   record: () => 'Your player record, as a stranger reads it',
@@ -442,7 +442,7 @@ V.you = () => {
     ${row('name', 'name', 'Name', L.name())}
   </div>`;
   h += `<div class="action" style="padding-top:18px"><button class="btn dark" data-act="signout">Sign out</button></div>`;
-  h += `<div class="foot">Raketa · local · prototype</div>`;
+  h += `<div class="foot">Rakieta · local · prototype</div>`;
   return h;
 };
 
@@ -551,11 +551,11 @@ V.area = () => {
   let h = head('Finding players', 'Where you play');
   h += '<div class="stack">';
   h += `<div class="card"><span class="tag ok"><i></i>Your area is set</span>
-    <div class="tiny" style="margin-top:8px">Your area updates each time you open Raketa; it is never finer than about a kilometre.</div></div>`;
+    <div class="tiny" style="margin-top:8px">Your area updates each time you open Rakieta; it is never finer than about a kilometre.</div></div>`;
   const perm = S.area.permission;
   if (perm === 'granted') h += `<div class="btns"><button class="btn dark" data-act="area-read">Read my area again</button></div>`;
-  else if (perm === 'refused') h += note('Raketa cannot see where you play', 'Press <i>Use my location</i> again to allow it.', 'coral') + `<div class="btns"><button class="btn dark" data-act="area-allow">Use my location</button></div>`;
-  else h += note('Location is turned off for Raketa', 'Turn it on for Raketa in Settings, then press <i>Use my location</i> again.', 'coral') + `<div class="btns"><button class="btn dark" data-act="area-allow">Open Settings</button></div>`;
+  else if (perm === 'refused') h += note('Rakieta cannot see where you play', 'Press <i>Use my location</i> again to allow it.', 'coral') + `<div class="btns"><button class="btn dark" data-act="area-allow">Use my location</button></div>`;
+  else h += note('Location is turned off for Rakieta', 'Turn it on for Rakieta in Settings, then press <i>Use my location</i> again.', 'coral') + `<div class="btns"><button class="btn dark" data-act="area-allow">Open Settings</button></div>`;
   h += '</div>';
   h += `<div class="foot">Prototype only: <a href="#" data-act="area-sim" data-v="blocked">pretend location is off</a></div>`;
   return h;
@@ -621,7 +621,7 @@ V.record = () => {
 V.photos = () => {
   let h = head('On your card · On-court only — up to three', 'Your court photos');
   h += '<div class="stack">';
-  h += note('Rackets mandatory, faces optional', 'Photos on Raketa follow one simple rule: keep it about the racket sports. Show yourself on court or in a racket-sport setting — no casual selfies, party photos, or gym mirrors. Showing your face is optional. The sport context isn’t.');
+  h += note('Rackets mandatory, faces optional', 'Photos on Rakieta follow one simple rule: keep it about the racket sports. Show yourself on court or in a racket-sport setting — no casual selfies, party photos, or gym mirrors. Showing your face is optional. The sport context isn’t.');
   const tiles = [];
   if (S.photos.length === 0) tiles.push(`<div class="ptile poster-tile"><div class="poster fill" aria-label="A generated court poster, not a photograph — what other players see until you add one.">${POSTER_SVG}</div></div>`);
   S.photos.forEach((p, i) => {
@@ -684,7 +684,7 @@ V.name = () => {
     <div class="lab-top">Nickname</div><div style="display:flex;align-items:center;gap:6px"><span class="mono" style="color:var(--muted)">@</span><input class="field mono" id="nick" value="${esc(D.nick)}" aria-label="Nickname"></div>
     ${!nickOk && D.nick ? `<div style="margin-top:8px">${note('', 'Two to sixty-four characters: letters, digits, dot, dash or underscore.', 'coral')}</div>` : ''}${D.nameError ? `<div style="margin-top:8px">${note('', D.nameError, 'coral')}</div>` : ''}</div>`;
   h += `<div class="action"><button class="btn primary" data-act="name-save" ${dirty && nameOk && nickOk ? '' : 'disabled'}>${dirty ? 'Save' : 'Saved'}</button></div>`;
-  h += `<div class="foot">Prototype: <span class="mono">marek</span>, <span class="mono">ania</span> and <span class="mono">raketa</span> are taken.</div>`;
+  h += `<div class="foot">Prototype: <span class="mono">marek</span>, <span class="mono">ania</span> and <span class="mono">rakieta</span> are taken.</div>`;
   return h;
 };
 
@@ -740,7 +740,7 @@ function renderNotes() {
     <div class="k">What is on the screen</div><p>${n.what}</p>
     <div class="k">Reads</div><p>${n.reads}</p>
     <div class="k">How the update happens</div><p>${n.writes}</p>
-    <div class="k">What changes in Raketa</div><p>${n.changes}</p>
+    <div class="k">What changes in Rakieta</div><p>${n.changes}</p>
     <div class="k">What it needs</div><p>${n.needs}</p>
     <div class="k">Requests this prototype sent</div>
     <pre class="log">${LOG.length ? LOG.map((l) => `<span class="m">${l.method}</span> ${l.path}${l.body !== undefined ? '  ' + esc(JSON.stringify(l.body)) : ''}   <span style="opacity:.55">${l.t}</span>`).join('\n') : 'Nothing yet — change something.'}</pre>

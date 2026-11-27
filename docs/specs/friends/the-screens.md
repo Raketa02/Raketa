@@ -118,7 +118,7 @@ your friend.** Shown after a For fun game too.
 - **From your groups**: a card listing each of your groups, monogram, name and *8 members · 2 to add*,
   and a chevron. *To add* counts members who aren't your friends, have no open request either way,
   aren't you, and aren't blocked by you. A tap opens that group's Members.
-- **Not on Raketa yet?**: the link in a field, **Copy** (coral), and a small **New link** under it,
+- **Not on Rakieta yet?**: the link in a field, **Copy** (coral), and a small **New link** under it,
   which turns the old link off and shows the new one.
 
 ### 6. Home — the three new rows
@@ -170,7 +170,7 @@ A horizontal row of invitation cards, each with a coral border *(an `ink` border
 
 A horizontal row of request cards: the face, *Inés D. wants to be your friend*, *With you in Kazimierz
 crew · Padel 3,40 ·* and the reliability chip, **Not now** (outline) / **Accept** (coral). A link's
-request reads *Invited you to Raketa* in place of the group line. A tap on the face opens the record.
+request reads *Invited you to Rakieta* in place of the group line. A tap on the face opens the record.
 *(Since 2026-11-07, Q130:)* a request from the ranking reads ***Found you in the padel ranking*** in
 place of the group line, even from a group-mate. *(Since 2026-11-14, Q131:)* a request found on
 Home's rows reads its row's line in the same place — *Your level in padel · 91% even*, *Found you
@@ -192,7 +192,7 @@ tile in *Needs your answer*** is about 0,83 of the content width, measured off t
 peeking. A lone tile takes the content width. It reads the face, *Inés D. wants to be your friend* in
 two lines at most, and the reliability chip on its own line under the title. **Not now** and
 **Accept** sit at its foot. **The where-line and every found-by line are gone from it**: *With you in
-Kazimierz crew · Padel 3,40*, *Invited you to Raketa*, *Found you in the padel ranking* and the Home
+Kazimierz crew · Padel 3,40*, *Invited you to Rakieta*, *Found you in the padel ranking* and the Home
 rows' three. ~~Until #818 lands, nothing stands in their place.~~ The sport-levels line does, since
 #818 (below).
 
@@ -363,8 +363,8 @@ in *You have a padel level already.*
 Built like the group page: server-rendered from the public read, the public site's own look (paper,
 the coral wordmark, a white card), phone first.
 
-- **The card**: Tomek's face, *Tomek invited you to play on Raketa*, the store buttons, and **Open in
-  Raketa**.
+- **The card**: Tomek's face, *Tomek invited you to play on Rakieta*, the store buttons, and **Open in
+  Rakieta**.
 - **The Android store button carries the link as the install referrer**, on this page and on the
   group page.
 - **A preview image** for the chat the link is pasted into.
@@ -375,13 +375,13 @@ the coral wordmark, a white card), phone first.
 
 ## Part C — The club website
 
-### 12. Raketa settings and Groups
+### 12. Rakieta settings and Groups
 
-- **Raketa settings**: **Other clubs' courts for our groups** reads **on** by default (10 km). The help
+- **Rakieta settings**: **Other clubs' courts for our groups** reads **on** by default (10 km). The help
   line under it says *at an hour your courts are full*.
 - **Groups**: the line above the table that links to the setting says the same.
 
-The games and fill-in screens' [B5](../games-and-fill-in/the-screens.md#b5-raketa-settings) and
+The games and fill-in screens' [B5](../games-and-fill-in/the-screens.md#b5-rakieta-settings) and
 [B8](../games-and-fill-in/the-screens.md#b8-groups-changed) carry it. Bookings shows a friends game as
 any booking.
 

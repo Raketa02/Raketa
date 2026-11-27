@@ -15,7 +15,7 @@ topics; *reading* is a comparison, not a source.
 - **Cap (R-SWIPE-21).** [POLICY] Caps are the club's: Playmore "maks. {max} aktywne gry naraz", Padel Mates' per-club join limit, PADELHUB's active-booking cap — `topics/platforms.md#playmore--the-clubs-open-game-settings`, `topics/platforms.md#padel-mates--find-a-replacement-for-your-spot`, `situations.md` SIT-49.
 - **Complaints (R-SWIPE-21).** [COMPLAINT] Playtomic: "unless you pay, you are restricted to only 2 games registered on the app at any one time" — `topics/competitor-newcomer.md#how-many-games-at-once`.
 - **Status quo (R-SWIPE-14).** [POLICY] WhatsApp events: "others can respond so the whole group knows who is coming" — `topics/platforms.md#whatsapp-groups-polls-events-and-1024-members`; a Kraków meetup takes sign-ups by a Register button — `topics/local-market.md#a-meetup-splits-the-court-among-whoever-comes`.
-- *reading:* a Playtomic joiner pays at join; a Raketa yes moves no money until the last seat — `topics/competitor-joiner.md#reading-on-money-at-the-moment-of-joining`.
+- *reading:* a Playtomic joiner pays at join; a Rakieta yes moves no money until the last seat — `topics/competitor-joiner.md#reading-on-money-at-the-moment-of-joining`.
 
 ## 2. What may refuse a yes (R-SWIPE-3 to R-SWIPE-8, R-SWIPE-20, R-SWIPE-22 to R-SWIPE-25)
 

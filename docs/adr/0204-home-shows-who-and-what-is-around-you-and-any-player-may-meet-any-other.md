@@ -47,7 +47,7 @@
   and still score nothing else (§6). *A tag is not an intent* stands.
 - **Narrows [ADR-0095](0095-block-directed-record-symmetric-effect-gates-fail-closed.md) §7's
   *everywhere*, and ADR-0203's honouring of it, for the ranking alone.** A block keeps a pair out of
-  each other's **people rows** — *Same competitive level*, *New in Raketa* and *Same vibe* — and
+  each other's **people rows** — *Same competitive level*, *New in Rakieta* and *Same vibe* — and
   their See all screens, which are exactly the surfaces that suggest one player to another. The
   ranking, Top 10 and a group sheet show the pair to each other, because each is a fact about
   everybody (a true list, a group's crowd), not a suggestion (§2). The record stays closed both ways.
@@ -90,7 +90,7 @@
   only**: the product owner ruled that no rule is read off a mock's numbers, names or tags. Built by
   the backend's [#791](https://github.com/Raketa02/Raketa/issues/791) (who sees whom),
   [#792](https://github.com/Raketa02/Raketa/issues/792) (Hottest groups and Withdraw),
-  [#793](https://github.com/Raketa02/Raketa/issues/793) (New in Raketa and the player directory),
+  [#793](https://github.com/Raketa02/Raketa/issues/793) (New in Rakieta and the player directory),
   [#794](https://github.com/Raketa02/Raketa/issues/794) (Same competitive level and the level
   projection), [#795](https://github.com/Raketa02/Raketa/issues/795) (Same vibe),
   [#796](https://github.com/Raketa02/Raketa/issues/796) (the rest count) and
@@ -183,7 +183,7 @@ alike, or who sits at the top of the ranking.
   your level*, **FRIENDS GAME**, *To confirm*, **FRIEND REQUESTS**, **ASKED FOR A LEVEL**, *Your
   games* (Q3).
 - **Then the five new rows, in this order:** **Hottest groups**, **Same competitive level players**,
-  **New in Raketa**, **Same vibe players**, **Top 10**.
+  **New in Rakieta**, **Same vibe players**, **Top 10**.
 - **A row with nothing to show is hidden with its title**, as Home's rows are today.
 - **Each row reads on its own.** One slow row never holds up the others. Pull-to-refresh re-reads
   them all, and Home re-reads them each time the player comes back to it when the last read is older
@@ -199,7 +199,7 @@ alike, or who sits at the top of the ranking.
 > *To confirm*, FRIEND REQUESTS and ASKED FOR A LEVEL leave Home for *Needs your answer*, the sheet
 > the envelope opens. Home reads the header, *Get your level*, *Your games* and **FOR YOU**: the five
 > rows, in this order, folded into one-line headings with a count, one open at a time, and titled
-> *Groups heating up*, *Players at your level*, *New in Raketa*, *Players with your vibe* and *Top
+> *Groups heating up*, *Players at your level*, *New in Rakieta*, *Players with your vibe* and *Top
 > 10* on screen. A line is hidden as a row is. The groupless line reads *Join a group to get games —
 > see Groups heating up, just below.*
 
@@ -209,7 +209,7 @@ alike, or who sits at the top of the ranking.
   daily limit.** A block still swallows a request silently, as ADR-0202 §2 decided.
 - **One switch, *Show me to new people*, on the You tab, on by default.** It replaces *Show me in
   General*: a player who had that off starts with this off. Turned off:
-  - the player leaves the three **people rows** — *Same competitive level*, *New in Raketa* and *Same
+  - the player leaves the three **people rows** — *Same competitive level*, *New in Rakieta* and *Same
     vibe* — on everybody else's Home, and their See all screens;
   - **anyone who shares no group, no game and no friendship with them** reads *This record isn't
     available* and can't send them a request;
@@ -301,7 +301,7 @@ would be even with.
   everyone is in their evenest shared sport; picking a sport re-compares everyone in that sport. The
   pill offers only sports the reader shares with somebody.
 
-### 5. New in Raketa
+### 5. New in Rakieta
 
 **The players who joined in the last 30 days, newest first** — visible on day one, before they have
 a ranking or a history.
@@ -368,7 +368,7 @@ Q34):
    (call 2). The phone reports it. Each row keeps its own count. A rested player can still come back
    in a gap.
 
-*New in Raketa* has no rest: its 10 are the newest, ordered unconnected, then sent, then friends
+*New in Rakieta* has no rest: its 10 are the newest, ordered unconnected, then sent, then friends
 (§5). See all lists never rest anybody.
 
 ### 8. Top 10
@@ -409,7 +409,7 @@ Q34):
   read** (call 6):
   - from *Same competitive level*: *Your level in padel · 91% even*, falling back to *Found you at
     your padel level* when either no longer has a level there;
-  - from *New in Raketa*: *Found you among new players*;
+  - from *New in Rakieta*: *Found you among new players*;
   - from *Same vibe*: *6 things in common*, falling back to *Found you through your tags* when none
     is shared any more;
   - from *Top 10*: *Found you in the padel ranking*, the ranking's own line.
@@ -451,7 +451,7 @@ first exception. These three are the next:
 
 - **A Home read can't replay every player's streams.** *Same vibe* compares the reader's tags with
   every other player's; *Same competitive level* reads every player's level in every shared sport;
-  *New in Raketa* asks who finished sign-up in the last 30 days. Folding every profile and rating
+  *New in Rakieta* asks who finished sign-up in the last 30 days. Folding every profile and rating
   stream on each Home open is the cost the rule never had to pay.
 - **The ranking's projection is not enough.** It has a row only after a first result, and a
   questionnaire level is exactly what a newcomer has.

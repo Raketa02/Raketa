@@ -69,7 +69,7 @@ heading that names its rules. The sections are numbered across three files, each
   (`paymentsCopy.ts:82-94`) — read 2026-10-20
 - **[DOCS]** A player who accepted older words is asked again before the next hold: a card whose terms are not in
   force is refused without asking Stripe (`terms.py:22-24`; `backend/app/modules/payments/application/seat_charges.py:422-432`) — read 2026-10-20
-- *Reading:* this replaces `gaps-FILL.md#raketas-terms-accepted-once-in-the-payment-setup-name-all-four` (2026-10-08),
+- *Reading:* this replaces `gaps-FILL.md#rakietas-terms-accepted-once-in-the-payment-setup-name-all-four` (2026-10-08),
   which quoted the retired words. All four moments of the mechanics are in the player's own terms: the hold at the
   fill, the check when a hold wouldn't last, the hold four days before the cut-off, and the take at the cut-off.
 
@@ -109,7 +109,7 @@ heading that names its rules. The sections are numbered across three files, each
   charge when "More than six months have elapsed since the previous transaction"; in the April 2026 rules that
   six-month notice stands only for recurring transactions (Table 5-21).
   Same source, p. 460, p. 462; [Visa: Improving Authorization Management for Transactions with Stored Credentials (VBS 10.MAY.17), p. 15](https://www.commerce.uwo.ca/pdf/stored-credential-transaction-framework-vbs-10-may-17.pdf) (a university's copy of Visa's guide) — read 2026-10-20
-- *Reading:* Raketa's holds are unscheduled: each one follows an event (the fill, four days before the cut-off, the
+- *Reading:* Rakieta's holds are unscheduled: each one follows an event (the fill, four days before the cut-off, the
   cut-off), and the terms name those events. Under Visa's rule, naming the event is what is asked, so "when a game you
   said yes to fills" meets the frequency item. The terms are shown on their own step (`paymentsCopy.ts:119-124`).
   Asking again for changed words before the next hold (`seat_charges.py:422-432`) is stricter than Visa's two working
@@ -131,7 +131,7 @@ heading that names its rules. The sections are numbered across three files, each
   Cardholder may still be required to cancel a contractual relationship". Card portfolios up to 250,000 active cards
   are exempt (ID# 0031077–0031078, updated Apr 2026).
   [Visa Core Rules, 18 April 2026, pp. 248–249](https://usa.visa.com/content/dam/VCOM/download/about-visa/visa-rules-public.pdf) — read 2026-10-20
-  - *Reading:* a player can now stop the clubs' holds from her bank's app. Raketa then meets a decline at the hold, not
+  - *Reading:* a player can now stop the clubs' holds from her bank's app. Rakieta then meets a decline at the hold, not
     a missing card. It looks like any other refusal at the fill or at the holding time.
 
 ---
@@ -283,7 +283,7 @@ the hold as on the payment, and a direct charge carries the club's descriptor
   - Poland: about 87 % of the bank's checks succeed
     (`gaps-S-01B.md#when-a-polish-cards-bank-does-ask-about-87-per-cent-of-checks-succeed`, 2026-10-10).
   - France 2021: 4,35 % of payments soft-declined with the payer present (`gaps-PAY.md#how-often-issuers-ask-and-how-fast-people-answer`).
-- What would answer it: the decline codes on Raketa's own Stripe account once live, split by bank and by "asked for
+- What would answer it: the decline codes on Rakieta's own Stripe account once live, split by bank and by "asked for
   its check" against "refused".
 
 ### R-FILL-33, R-FILL-61 · Visa: after a refused payment made without the cardholder, she gets written notice and at least 7 days
@@ -295,7 +295,7 @@ the hold as on the payment, and a direct charge carries the club's descriptor
   [Visa Core Rules, 18 April 2026, p. 464](https://usa.visa.com/content/dam/VCOM/download/about-visa/visa-rules-public.pdf) — read 2026-10-20
 - **[ABSENT]** Neither a Visa page nor any other source was found applying this row to a seat that is let go rather
   than a debt still owed. A web search for its wording found no processor or Visa guidance quoting it — read 2026-10-20
-  - *Reading:* Raketa writes to the player ("Fix your card by 19:30 to keep your seat", by email and notice,
+  - *Reading:* Rakieta writes to the player ("Fix your card by 19:30 to keep your seat", by email and notice,
     `backend/app/modules/notifications/application/telling.py:23`). It gives her 30 minutes, never past the cut-off,
     and then lets the seat go. Read literally, Visa's row asks for 7 days to pay another way. Whether letting the seat
     go, with nothing owed, meets the row is for Stripe's support or the acquirer.

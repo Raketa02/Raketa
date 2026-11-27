@@ -3,7 +3,7 @@
 - **Status:** Accepted — **§4 amended [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) on 2026-11-07** (Q129) — **§1 amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** (Q130) — **§1 amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** (Q131): anyone may be asked, with no daily limit, except across *Show me to new people*'s rule; three new origins from Home's rows — **§1's Home row, §3's *at the top of Home*, §5's FRIENDS GAME row and the 2026-11-07 amendment's Home row and hand-off amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)** (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)): a request, an invitation and an ask wait in *Needs your answer*, behind Home's envelope, and an ask is never drawn instead of *Get your level*
 - **Date:** 2026-11-06
 - **Supersedes [ADR-0199](0199-a-player-is-known-by-their-nickname.md)'s line *"there is no
-  friendship in Raketa (the Friends tab is out of scope)"***, in its rejected alternative *Keep the
+  friendship in Rakieta (the Friends tab is out of scope)"***, in its rejected alternative *Keep the
   name, show it to friends only*. There is now friendship (§1). The alternative stays rejected: the
   Name is retired, and a friend reads the same nickname as everybody else.
 - **Supersedes [ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
@@ -21,7 +21,7 @@
     It applies to friends games alone; the deck's, Post a game's and rescues' money is unchanged.
 - **Amends the official-group court rule** of the mechanics §4.3 and Q29, *another club's court
   only when the club has no court at any hour those players share in the next 14 days*, which no
-  ADR decided and [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+  ADR decided and [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
   §3 restated for the owed card and §1 kept among *What stays*. **The rule is now hour by hour, and the club's switch is on by
   default** (§7). It serves the Games deck (the owed card included), Post a game and the friends
   card alike. The proposals rule note that states the old rule
@@ -108,18 +108,18 @@
 **Kazimierz crew**, a group players made, where Ania plays. He would like to play this Saturday
 morning with the three of them.
 
-- **Raketa has no friendship.** The group page already has a Friends tab, which draws a court with
+- **Rakieta has no friendship.** The group page already has a Friends tab, which draws a court with
   Tomek in one seat and a **+ Friends** button. The picker behind it always reads *"Nobody you know
-  here yet"*, and ADR-0199 says *"there is no friendship in Raketa"*.
+  here yet"*, and ADR-0199 says *"there is no friendship in Rakieta"*.
 - **The only way to play together is luck.** Tomek can hope the Games deck deals the four of them
-  onto one card, or post a game and hope Raketa offers it to them first. Ania isn't in Ogrody, so no
+  onto one card, or post a game and hope Rakieta offers it to them first. Ania isn't in Ogrody, so no
   Ogrody card can ever name her.
 - **Nothing keeps a good partner.** Members lists the people Tomek meets, and the result screen
   shows who he just played with, but neither lets him keep them.
-- **A friend who isn't on Raketa can't be brought in.** Zofia plays with Tomek every week and has
+- **A friend who isn't on Rakieta can't be brought in.** Zofia plays with Tomek every week and has
   never installed the app. The only link Tomek can share is his group's.
 
-**Official groups run out of courts.** Ogrody 33 gives Raketa 20 court hours a week, and by Friday
+**Official groups run out of courts.** Ogrody 33 gives Rakieta 20 court hours a week, and by Friday
 most are booked. An official group plays only at its own club unless the club switches on *"Offer
 our groups other clubs' courts when ours are full"*, which is off by default. Even then, another club
 is used only when the players share **no hour at all** at the club in the next 14 days. Tomek and his
@@ -153,7 +153,7 @@ to play Saturday 10:00 would lose the court to a stranger's card while Ania look
 - **Use other clubs above a fill threshold** (the brief's *70%*). At 70% booked, Saturday 10:00 at
   Ogrody 33 may still be free, and a threshold would offer Wisła Park beside it, sending the club's
   own players away from an hour it could sell. At 30% booked, the one hour four friends share may
-  already be gone, and they would get nothing. Raketa has no measure of a club's fullness today.
+  already be gone, and they would get nothing. Rakieta has no measure of a club's fullness today.
 
 **Every rival books at once and holds one person responsible.** Playtomic's split booking has *"the
 owner"* book, the others pay until 2 hours after the match, and the unpaid rest is charged to the
@@ -256,7 +256,7 @@ old code then reads as not found (`friend_link_not_found`).
 
 **Opening a code never makes friends by itself.** As a signed-in player, it records the owner's
 request to the opener, made by *link*, which Home shows as *"Tomek wants to be your friend · Invited
-you to Raketa"* with **Accept** and **Not now**. This is true for a new player like Zofia and for Ania,
+you to Rakieta"* with **Accept** and **Not now**. This is true for a new player like Zofia and for Ania,
 who already has the app. Unless:
 
 - the opener is the owner, or they are already friends: nothing happens;
@@ -267,19 +267,19 @@ who already has the app. Unless:
 **It travels as a group link does.** In production it is a universal link on iPhone and an app link
 on Android, like `join/`:
 
-- **App installed, signed in**: Raketa opens, and the request is at the top of Home.
-- **Signed out, or no account**: Raketa opens on sign-up. The link waits through sign-up and
+- **App installed, signed in**: Rakieta opens, and the request is at the top of Home.
+- **Signed out, or no account**: Rakieta opens on sign-up. The link waits through sign-up and
   onboarding, then lands on Home with the request.
-- **Not installed**: the public site's page reads *"Tomek invited you to play on Raketa"*, with his
-  face, the store buttons and **Open in Raketa**. After installing, an iPhone has forgotten the link,
-  so she taps *Open in Raketa* once more. On Android the store button carries the link as the
+- **Not installed**: the public site's page reads *"Tomek invited you to play on Rakieta"*, with his
+  face, the store buttons and **Open in Rakieta**. After installing, an iPhone has forgotten the link,
+  so she taps *Open in Rakieta* once more. On Android the store button carries the link as the
   **install referrer**, which the app reads once on first launch, **for group links too**. A replaced
   or unknown code shows *Nothing at that link*.
 
 > **Amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md) §1.** Wherever the link lands on Home, it opens
 > Home with *Needs your answer* already up, the owner's request in it, in place of *at the top of
 > Home*. The tile reads *Tomek wants to be your friend* with his levels, and no longer *Invited you to
-> Raketa*; the request still records the link as where it was made.
+> Rakieta*; the request still records the link as where it was made.
 
 The public surface gains one read of a code: the owner's nickname and face, or
 `friend_link_not_found`, and nothing else about them.
@@ -315,11 +315,11 @@ without one ([the words §29](../specs/matchmaking/the-words.md#29-friends)).
 - **Any friend may be seated**, from this group or any other. A friend who isn't a member plays as a
   **Guest**: the game is on her Home, in its chat and on its result, and she never sees the group's
   deck or Fill in.
-- **On Done**, Raketa seats the picks into the **evenest sides**. Tapping one face and then another
+- **On Done**, Rakieta seats the picks into the **evenest sides**. Tapping one face and then another
   swaps them, and a face's × takes them off. Until every seat is filled the court reads *Seat 1 more
   friend*, and there is no card.
 
-**The card.** Once every seat is filled, Raketa builds **the friends card** under the court: the
+**The card.** Once every seat is filled, Rakieta builds **the friends card** under the court: the
 deck's card without the player tiles. It shows the sides, the balance, the overlap of the four
 weeks, and a court with the share, *Court available · Sat 10:00 · Ogrody 33 · Court 3 · 25 zł each*.
 
@@ -394,7 +394,7 @@ cost*, and never a forecast's **Split**:
 
 - **Split the cost** (first): *"We hold 100 zł on your card until Fri 10:00. You pay 25 zł, plus 25 zł
   for any seat still empty then."* · **Send game and pay 25 zł**. Each friend pays her own share:
-  **Accept and pay 25 zł** holds it on her card until the cut-off, like any Raketa seat.
+  **Accept and pay 25 zł** holds it on her card until the cut-off, like any Rakieta seat.
 - **Pay the whole court**: **Send game and pay 100 zł**. Friends **Accept** without paying, and their
   card says *"Tomek paid the court"*.
 
@@ -418,7 +418,7 @@ accept holds nothing.
   Ania's seat."*, with **Invite a friend**, **Open to Ogrody** and **Call it off**. A seat that empties
   inside those 24 hours puts the same line in the notice that tells him.
 
-**Leaving.** A friend who accepted leaves free until the cut-off, like any Raketa game: her hold is
+**Leaving.** A friend who accepted leaves free until the cut-off, like any Rakieta game: her hold is
 let go and her seat is empty again. Before the cut-off the sender has two choices:
 
 - **Call it off for everyone**: every hold and cover is let go, everyone is told, nobody pays, and the
@@ -444,7 +444,7 @@ it, makes a valid order for up to 100 zł under art. 17 ust. 3–4 of the consum
 **The source of a pool's courts answers per hour.**
 
 - **For an official group**, it answers the home club's free courts. **Only at an hour where the
-  home club has none**, and its switch is on, it also answers other Raketa clubs within the club's
+  home club has none**, and its switch is on, it also answers other Rakieta clubs within the club's
   distance (10 km by default), listed after the home club and **marked as offered because the home
   club is full**: *Ogrody 33 is full at 10:00*.
 - **For a player group**, it is unchanged: the home club first, then other clubs within 10 km.
@@ -495,13 +495,13 @@ serve. No threshold has either property.
   empty seat. Every rival's split booking works this way, so clubs and players already know it.
 - **An official group can always find a court**: other clubs fill only the hours its own club can't,
   and the club loses none it could have sold.
-- **A friend outside Raketa arrives through a link** that lands her on Tomek's request, and a
+- **A friend outside Rakieta arrives through a link** that lands her on Tomek's request, and a
   leaked link is turned off with one tap.
 - **A good game becomes a lasting partner**, from Members, the record or the result.
 
 **Harder**
 
-- **Raketa now moves one player's money for another's seat.** The money model carries an exception
+- **Rakieta now moves one player's money for another's seat.** The money model carries an exception
   where it used to carry a rule. It rests on the words above the sender's button, on one lawyer's
   answer (open item O3), and on the amount being recorded with the terms. If the lawyer says no, the
   send needs a confirm step of its own before any friends game takes real money.
@@ -533,7 +533,7 @@ serve. No threshold has either property.
 - **The court source changes under three readers at once.** The proposer's *no shared hour in 14
   days* refusal goes, and the deck, the posting grid and the owed card change with it, along with
   their seeds and tests ([#746](https://github.com/Raketa02/Raketa/issues/746)).
-- **An iPhone forgets the link through an install**, so a new player taps *Open in Raketa* twice.
+- **An iPhone forgets the link through an install**, so a new player taps *Open in Rakieta* twice.
   Android carries it through the install referrer, for group links too.
 - **A link is the one place a block could be guessed.** A blocked player who opens the blocker's
   link finds nothing on Home, where anybody else finds a request. Swallowing it is still right, since

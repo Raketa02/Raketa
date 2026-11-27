@@ -123,7 +123,7 @@ Lines marked *Reading* are not sources.
 - **[ABSENT]** A rate of refusals for charges made without the cardholder (merchant-initiated), for Poland or the EEA.
   - Searched Forter's PSD2 pages (UK, Germany, France, Spain and Italy only), Ravelin 2026 (3-D Secure only), and
     vendor blogs (Solidgate, Checkout.com).
-  - What would answer it is unchanged: Raketa's own decline codes once live — read 2026-10-20.
+  - What would answer it is unchanged: Rakieta's own decline codes once live — read 2026-10-20.
 - **[POLICY]** MATCHi, nearest facts (the day-7 take itself is not covered):
   - Player help: "If one of your co-players does not pay for their part of the booking, you as the booker will be
     charged for your co-player's part of the booking according to the regular price."
@@ -163,7 +163,7 @@ Lines marked *Reading* are not sources.
   (`gaps-S-01A-hold.md#visa-a-reversal-that-matches-tells-the-bank-to-lift-the-hold-one-that-doesnt-leaves-it-1-to-8-days`).
 - Carried, the banks: none of PKO BP, ING, Pekao, Erste or Millennium states a time for a hold the seller cancelled
   (`gaps-payments-01.md#r-fill-13---how-soon-each-of-the-five-banks-drops-a-cancelled-hold-still-not-published`,
-  `gaps-payments-06.md#r-clubbook-24--how-soon-a-polish-banks-app-drops-a-hold-raketa-let-go-unpublished-and-the-email-can-only-say-so`).
+  `gaps-payments-06.md#r-clubbook-24--how-soon-a-polish-banks-app-drops-a-hold-rakieta-let-go-unpublished-and-the-email-can-only-say-so`).
 - **[POLICY]** Erste Bank Polska, the former Santander Bank Polska (santander.pl now answers 308 to erste.pl):
   - Its card FAQ says a hold "może być utrzymana maksymalnie przez 30 dni (w zależności od rodzaju karty i transakcji)".
   - At a cancellation in a shop, "powinieneś otrzymać stosowny dokument". No time is given for a cancelled hold.
@@ -390,7 +390,7 @@ Lines marked *Reading* are not sources.
   - [React Native docs: AccessibilityInfo](https://reactnative.dev/docs/accessibilityinfo) (source
     [docs/accessibilityinfo.md](https://raw.githubusercontent.com/facebook/react-native-website/main/docs/accessibilityinfo.md)) — read 2026-10-20
 - *Code, for comparison (the copy at `9ab0ea5b`):*
-  - Raketa's window is a fixed `UNDO_WINDOW_MS = 10_000` (`frontend_player/src/features/proposals/domain/fill.ts:42`).
+  - Rakieta's window is a fixed `UNDO_WINDOW_MS = 10_000` (`frontend_player/src/features/proposals/domain/fill.ts:42`).
   - No file under `frontend_player/src` calls `getRecommendedTimeoutMillis`.
 - **[ABSENT]** How players read "Booking in 10 s": as money being held, or not. No study or test was found. Only testing
   with players can say (carried, `gaps-RESCUE.md#needs-players-not-research`).
@@ -409,7 +409,7 @@ Lines marked *Reading* are not sources.
   - On iOS, timers run for a few seconds, then the app is suspended.
   - `gaps-FILL.md#on-android-react-native-stops-firing-timers-while-the-app-is-in-the-background`,
     `gaps-FILL.md#on-ios-timers-keep-running-briefly-then-the-app-is-suspended`.
-- **[ABSENT]** A device run. It is a measurement of Raketa on the walker's phones and seeded store, which a researcher
+- **[ABSENT]** A device run. It is a measurement of Rakieta on the walker's phones and seeded store, which a researcher
   does not touch. It stays for the walk.
   - Say Book it now, press Home within two seconds, wait a minute, then read the booking's time and the console's Sent
     pane, on each phone.

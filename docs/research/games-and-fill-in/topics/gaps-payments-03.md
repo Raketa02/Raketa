@@ -59,7 +59,7 @@ threshold. Third-party figures contradict each other.
   ([toolradar](https://toolradar.com/tools/stripe/pricing)) or "around $1M a month"
   ([eightx](https://eightx.co/blog/what-is-interchange-fee-ecommerce)). They disagree, and neither is Stripe's word.
 - *Reading:* Bonarka Arena's whole weekday padel offer is 4 courts from 17:00 to 22:00, or 100 court-hours a week at
-  160 zł. Sold out, that is about 69 000 zł a month, well below either opinion. A Raketa club stays on 1,5 % + 1 zł a
+  160 zł. Sold out, that is about 69 000 zł a month, well below either opinion. A Rakieta club stays on 1,5 % + 1 zł a
   share unless Stripe says otherwise.
 - What would answer it: a club's own terminal contract, which is private, or Stripe sales' answer for one named club.
 
@@ -70,8 +70,8 @@ threshold. Third-party figures contradict each other.
 **Answer:** answered in part.
 - How and why it fails is documented, and Stripe says it "can cause failures" for later charges made without the player.
 - Visa has announced that it will decline such charges on device tokens. Its date is now "delayed until further notice".
-- Apple says its merchant token cannot be used for an unscheduled card on file, which is Raketa's case.
-- No source publishes how often it happens. Stripe's own data can measure it once Raketa is live.
+- Apple says its merchant token cannot be used for an unscheduled card on file, which is Rakieta's case.
+- No source publishes how often it happens. Stripe's own data can measure it once Rakieta is live.
 
 - Carried: Stripe's sentence on device tokens failing later charges, and Apple's limits on merchant tokens
   (`stripe-saving-cards.md`, section 4 and Pitfall 5;
@@ -118,7 +118,7 @@ threshold. Third-party figures contradict each other.
   credential-on-file charge on a device token, the use Visa has said it will decline (on hold). Apple's merchant token,
   which Visa points to, is not offered for that use. So it can fail when Nerea changes phones, and every Visa card saved
   through Apple Pay could fail if Visa sets a new date. Playtomic charges wallet tokens later only with a fallback.
-- What would answer it: on Raketa's live account, Sigma's `card_token_type = 'dpan'` against each charge's outcome, per
+- What would answer it: on Rakieta's live account, Sigma's `card_token_type = 'dpan'` against each charge's outcome, per
   month, by brand.
 
 ---
@@ -151,7 +151,7 @@ threshold. Third-party figures contradict each other.
 - **[ABSENT]** Any Polish court, ombudsman, KNF, UOKiK or bank text saying what an internet address proves in a card
   dispute. Searched in Polish, using "adres IP" with "transakcja nieautoryzowana", "dowód" and "zarejestrowanego użycia
   instrumentu płatniczego", across UOKiK's two sites, rf.gov.pl, SAOS and Lege Artis case notes. — read 2026-10-20
-- *Reading:* a Polish player who says "I never agreed to this share" is on the side Polish law favours. Raketa's
+- *Reading:* a Polish player who says "I never agreed to this share" is on the side Polish law favours. Rakieta's
   record of her address, by itself, is the kind of technical record that law calls not enough. What carries weight is
   the agreement itself: the terms she accepted, when, and on which screen. With the card network, CE 3.0 helps only if
   the same card paid the same club twice before, 120–364 days earlier.
@@ -208,7 +208,7 @@ known only from the press.
     cards, over 3¼ years.
   - The swing also includes cards opened and closed, so it is not a count of changes. Some cards may have moved the
     other way too, which makes the real number of changes higher, not lower.
-  - Each card that changes network at renewal gets a new number. For a card on file at Raketa, that is a card Stripe's
+  - Each card that changes network at renewal gets a new number. For a card on file at Rakieta, that is a card Stripe's
     updater may not follow (`gaps-PAY.md#automatic-card-updates-are-not-documented-for-polish-issuers`).
 - **[ABSENT]** A published count of Polish cards that changed network in a year, and PKO BP's own confirmation of the
   switch. Searched pkobp.pl (its terms and fee tables surface; none mentions the change of network) and NBP. — read 2026-10-20
@@ -238,7 +238,7 @@ either is shown by its statement name.
 - **[ABSENT]** Whether mBank, ING, Pekao (PeoPay) or Erste uses Visa's or Mastercard's name-and-logo data, and what
   each shows for a merchant not enrolled. Searched each bank's help and news pages and the press. — read 2026-10-20
 - *Reading:* a Kraków club that never enrols is shown by the descriptor Stripe sends. That makes the descriptor the
-  one name Raketa controls, through the club's onboarding, and it should read as the club's own name, not Stripe's.
+  one name Rakieta controls, through the club's onboarding, and it should read as the club's own name, not Stripe's.
 
 ---
 
@@ -278,7 +278,7 @@ either is shown by its statement name.
   ([Airship 2026](https://www.airship.com/mobile-app-push-notification-benchmarks-for-2026/)). — read 2026-10-20
 - *Reading:* Checkout's causes put the weight on the moment the card is saved. A card whose saving went through the
   bank's check, and whose later charges are marked as made without the player, is the case banks are least likely to
-  stop. What would answer the rate is unchanged: the decline codes and notice-open times on Raketa's own live account.
+  stop. What would answer the rate is unchanged: the decline codes and notice-open times on Rakieta's own live account.
 
 ---
 
@@ -423,7 +423,7 @@ payment lands on the club's own Stripe account, so a restricted club account wou
   account is restricted. Looked in all 160 club and 94 player help articles (titles and bodies searched for
   "restricted", "suspend", "interrupt", "KYC", "Stripe account") and in the Legal Conditions. — read 2026-10-20
 - *Reading:* on the Distribution Model a restricted club account only stops the club's payout, which Playtomic then
-  pays by hand, and players keep booking. On the New Billing Model, which is Raketa's shape, a restricted club account
+  pays by hand, and players keep booking. On the New Billing Model, which is Rakieta's shape, a restricted club account
   would stop players' payments and Manager warns in advance. What happens to matches already gathering is unwritten.
 
 ---
@@ -457,7 +457,7 @@ offered.
   "haven't received") and in the Legal Conditions. — read 2026-10-20
 - *Reading:* Playtomic tells the player nothing and sends her to her bank. Stripe documents that a card refund to a
   closed or expired card fails, and that the money returns to the seller's balance
-  (`stripe-gaps-04.md`, *R-CLUBMONEY-33*, which measured four `expired_or_canceled_card` failures). Raketa can do better
+  (`stripe-gaps-04.md`, *R-CLUBMONEY-33*, which measured four `expired_or_canceled_card` failures). Rakieta can do better
   than the market only by noticing the failure and offering another way to repay.
 
 ---

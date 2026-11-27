@@ -22,11 +22,11 @@ quoted from that code is tagged [POLICY]; the code is what every visitor's brows
 - **[DOCS]** "If your bank account can't receive a payout for any reason, your bank returns the funds to us … It can take up to 5 additional business days for your bank to return the payout and inform us that it failed. If this happens, you're notified by email and in the Dashboard. If a payout fails, make sure your bank account details are correct by re-entering them. Stripe then reattempts the payout at the next scheduled payout interval." And: "When a payout fails, the status might initially show as `paid`, but then change to `failed` within 5 business days." [Stripe: Payouts — Payout failures](https://docs.stripe.com/payouts#payout-failures) — read 2026-10-08
 - **[DOCS]** The email's subject is "Action required to resume payouts from your Stripe balance"; its body says "Your bank notified us that they could not process this payout" and asks for the bank details again. [Stripe support: Bank accounts and payouts FAQ](https://support.stripe.com/questions/bank-accounts-and-payouts-faq) — read 2026-10-08
 - **[DOCS]** If the details were right and the bank was the problem, "After you resolve any issues with your bank, you can reactivate the payouts by clicking **Resume Payouts**." [Stripe: Payouts](https://docs.stripe.com/payouts#payout-failures) — read 2026-10-08
-  - *Reading:* a club holding its own full Stripe Dashboard is told by Stripe itself, by email, and sends the money again itself (re-enter the account, or Resume Payouts); nobody at Raketa has to act for the money to move.
+  - *Reading:* a club holding its own full Stripe Dashboard is told by Stripe itself, by email, and sends the money again itself (re-enter the account, or Resume Payouts); nobody at Rakieta has to act for the money to move.
 
 ### The platform hears of it as an event: `payout.failed`
 - **[DOCS]** For connected accounts: "`failed`: … When a payout fails, the external account involved is disabled and can't receive payouts until the platform updates the connected account's external account details." A platform listening to connected-account events receives "`payout.failed`: Sent when a payout fails … Stripe also sends an `account.external_account.updated` event because the failed external account is disabled." For accounts with the full Stripe Dashboard, "the account holder manages their external payout accounts". [Stripe: Payouts to connected accounts](https://docs.stripe.com/connect/payouts-connected-accounts) — read 2026-10-08
-  - *Reading:* the club lens's opinion holds: Raketa could read the failure as it reads its other Stripe notices.
+  - *Reading:* the club lens's opinion holds: Rakieta could read the failure as it reads its other Stripe notices.
 
 ### Przelewy24 and Tpay: a payout that does not arrive
 - **[POLICY]** Przelewy24's help for "the balance payout has been ordered, yet the funds have not reached the indicated account for a couple of days" answers only: "Check whether the account has been blocked due to re-verification or whether the account number is valid." [Przelewy24 help](https://www.przelewy24.pl/en/help-center/i-sell-with-przelewy24/balance-and-payouts/there-is-a-notice-in-the-panel-that-the-balance-payout-has-been-ordered-yet-the-funds-have-not-reached-the-indicated-account-for-a-couple-of-days-now-why-is-that) — read 2026-10-08
@@ -90,7 +90,7 @@ quoted from that code is tagged [POLICY]; the code is what every visitor's brows
 - **[POLICY]** Changelog 2022: "Podgląd wysłanych powiadomień w historii klienta o rezerwacjach"; 2017: "Zapisywanie informacji o zmianach w rezerwacji". [kluby.org: Co nowego 2022](https://oferta.kluby.org/changelog?rok=2022), [2017](https://oferta.kluby.org/changelog?rok=2017) — read 2026-10-08
 - **[ABSENT]** tenis4U's privacy policy (`tenis4u.pl/polityka-prywatnosci/` returns 404) and Playmore's (an app shell with no text) were not readable — read 2026-10-08
 
-### Raketa's own: the words are a function of the booking, but not stored
+### Rakieta's own: the words are a function of the booking, but not stored
 - *Code, not market:* the queue keeps kind, recipient, subject and times (backend/app/infrastructure/mail/mail_queue_model.py:39-58) and nulls both bodies once sent or given up (backend/app/infrastructure/mail/sqlalchemy_mail_queue.py:74-83, 100-101). The booking email's words come only from the reader's name, club, court, sport, start, amount and cut-off (backend/app/modules/payments/application/seat_charge_emails.py:69-107), so they can be re-derived from the booking's events with the code of the day it was sent — *unverified* that every input is still in the event store, and nothing records which code version wrote it.
 
 ---
@@ -113,7 +113,7 @@ quoted from that code is tagged [POLICY]; the code is what every visitor's brows
 ### A custom-scheme button in webmail on a computer (the newcomer lens's opinion)
 - **[COMPLAINT]** A FileMaker developer: an `fmp://` link "worked from Mac Mail, but in Gmail the href data was stripped out", leaving only the words "Click here". [FM Forums: fmp protocol & Gmail](https://fmforums.com/topic/92588-fmp-protocol-gmail/) (2014) — read 2026-10-08
 - **[ABSENT]** Google's own statement of which link schemes Gmail keeps — searched support.google.com — read 2026-10-08
-  - *Reading:* a button addressed to an app scheme can arrive as plain text, or open nothing, on a laptop; an `https` address on Raketa's own domain does not have that problem.
+  - *Reading:* a button addressed to an app scheme can arrive as plain text, or open nothing, on a laptop; an `https` address on Rakieta's own domain does not have that problem.
 
 ---
 
@@ -286,4 +286,4 @@ quoted from that code is tagged [POLICY]; the code is what every visitor's brows
 - **[ABSENT]** Guidance that a plain, uniform layout makes a fake easier to spot — read 2026-10-08
 
 ### Bonarka Arena's door code (the R-EMAIL-3 opinion)
-- Not a market question: Bonarka Arena is the seeded club in Raketa's own test data. The market facts on codes in confirmations are in §10 above and `platforms.md#matchi--access-codes-in-the-confirmation`.
+- Not a market question: Bonarka Arena is the seeded club in Rakieta's own test data. The market facts on codes in confirmations are in §10 above and `platforms.md#matchi--access-codes-in-the-confirmation`.

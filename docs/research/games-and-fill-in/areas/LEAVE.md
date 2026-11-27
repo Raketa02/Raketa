@@ -12,7 +12,7 @@ Digest for R-LEAVE-1 to 37, 2026-10-08; no new facts. Each line cites the topic 
 
 ## 2. Leaving before the cut-off: refund, card fee, email (R-LEAVE-4, 5, 6)
 
-- **Competitor [POLICY]:** a timely leave refunds everything, service fee included, to the original method [j-refund-full]: 43,99 zł on a 40 zł spot, where Raketa returns 38,40 zł [j-fee].
+- **Competitor [POLICY]:** a timely leave refunds everything, service fee included, to the original method [j-refund-full]: 43,99 zł on a 40 zł spot, where Rakieta returns 38,40 zł [j-fee].
 - **Competitor [POLICY]:** a card refund "can take 2-15 business days", a wallet one is instant [j-refund-days]; a cancellation email "cannot be disabled" [j-on-joining].
 - **Platforms [POLICY]:** MATCHi refunds before its cut-off less the platform fee [m-venue]; Playmore refunds to its wallet only, "Opłata serwisowa nie podlega zwrotowi" [p-wallet]; Padel Mates: full refund to 24 h, "Policies may vary by club" [pm-what].
 - **Status quo [POLICY]:** tenis4U and Garden Padel refund less a 2 % payment fee [l-2pct]; Squash4You moves a timely cancellation to the next booking [l-cutoff].
@@ -23,7 +23,7 @@ Digest for R-LEAVE-1 to 37, 2026-10-08; no new facts. Each line cites the topic 
 ## 3. Leaving after the cut-off (R-LEAVE-7, 8, 9)
 
 - **Competitor [POLICY]:** inside 24 h of a full match only the club can let her go [j-late-club]; it decides, refunding "commonly" for weather, injury or illness [cl-late]. The seat is not freed: swaps are the club's, at least 2 h before [j-swap], and the Terms charge a player who "is replaced" [j-terms-noshow].
-- **Platforms [POLICY]:** Playmore and MATCHi return nothing past their windows unless the game is off [p-leave] [m-venue]. Padel Mates is closest to Raketa: if someone joins through the leaver's link, the leaver is "automatically removed" and refunded [pm-replace].
+- **Platforms [POLICY]:** Playmore and MATCHi return nothing past their windows unless the game is off [p-leave] [m-venue]. Padel Mates is closest to Rakieta: if someone joins through the leaver's link, the leaver is "automatically removed" and refunded [pm-replace].
 - **Status quo [POLICY]:** late means the full price; Atras, Miazga and Squash4You waive it only if someone else books the court [l-cutoff]; Stacja Nowa Gdynia likewise under 12 h [SIT-51]; the booker owes the whole court [l-booker].
 - **Complaints:** "Keep the cancellation fee, but let the player leave the match and reopen the spot for someone else" [c-dropped]; no exception for illness ("Who gets a medical report for a cold?!") [c-illness].
 - **Last-minute game (R-LEAVE-9):** Playtomic warns of no passed window [j-checkout]; Playmore states it before the join [p-card].

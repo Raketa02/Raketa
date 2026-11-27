@@ -28,7 +28,7 @@
 ## Context
 
 Each club has someone who runs its WhatsApp groups: a coach, a desk worker, a regular with a
-business tie to the club. For clubs to cooperate, Raketa has to keep that figure. PRD #500 calls
+business tie to the club. For clubs to cooperate, Rakieta has to keep that figure. PRD #500 calls
 them the **Administrator**. Their one job is to create an **official group** for each WhatsApp
 group and post its link there
 ([ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)).
@@ -37,7 +37,7 @@ The forces:
 
 - **The club names the person and must never hold their credentials.** The desk types a name and an
   email and nothing else. It never sets, sees or handles a password or a code.
-- **The person may be new to Raketa or may already play.** A new person needs an account. An
+- **The person may be new to Rakieta or may already play.** A new person needs an account. An
   existing player needs no second password, because one email means one account
   ([ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)).
 - **The link might not reach the app.** The email may be opened on a laptop, or before the app is
@@ -133,7 +133,7 @@ of its lifetime.
 
 In the app it serves players and administrators, and on the club website it serves clubs. The answer
 to a request is **identical whether or not the email has an account**, so nobody can use the form to
-find out who uses Raketa. Requests are **throttled per email**. Setting a new password follows the
+find out who uses Rakieta. Requests are **throttled per email**. Setting a new password follows the
 existing password rule, **signs out everywhere**
 ([ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §7),
 and signs this session in. A club's reset link points at the club website's own *Set a new password*

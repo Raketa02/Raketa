@@ -44,8 +44,8 @@ Both were made locally and installed beside the player's own apps, under their o
 
 | Build | How | App id |
 | --- | --- | --- |
-| **Debug native, JS in production mode** (the build #880 names) | `gradlew assembleDebug`. The shared-prefs switch (`js_dev_mode_debug=false`, `js_minify_debug=true`, `hot_module_replacement=false`) and Metro on :8083 | `com.raketa.player.spike` |
-| **Release** | `gradlew assembleRelease`, arm64-v8a, signed with the debug key, from a short-path worktree. 14 min | `com.raketa.player.spike.rel` |
+| **Debug native, JS in production mode** (the build #880 names) | `gradlew assembleDebug`. The shared-prefs switch (`js_dev_mode_debug=false`, `js_minify_debug=true`, `hot_module_replacement=false`) and Metro on :8083 | `com.rakieta.player.spike` |
+| **Release** | `gradlew assembleRelease`, arm64-v8a, signed with the debug key, from a short-path worktree. 14 min | `com.rakieta.player.spike.rel` |
 
 **A release build is possible locally now.** ADR-0210's Context says it isn't, because of Windows'
 path length. That was true until a checkout at a short path (`C:\rs`) built one. So T2's

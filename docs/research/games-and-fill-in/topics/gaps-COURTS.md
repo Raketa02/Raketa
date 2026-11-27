@@ -54,7 +54,7 @@ Kinds: `[POLICY]` a rule, term, help text or interface text the operator publish
   "listopad". [Fame Sport cennik](https://famesport.pl/cennik/), [KSOS korty](https://obiekty.ksos.pl/korty-tenisowe/),
   [Atras cennik](https://www.atrassquash.pl/cennik/), [Miazga cennik](https://www.miazgasquash.pl/cennik/),
   [PADO Kraków](https://pado.app/poland/krakow) — read 2026-10-08
-- *reading:* every Kraków list found is written in weekdays and weekends, as Raketa's bands are; whether a desk charges
+- *reading:* every Kraków list found is written in weekdays and weekends, as Rakieta's bands are; whether a desk charges
   the weekend price on 11 November is not written anywhere a player can read.
 
 ## 2. A court renamed after it is booked (R-COURTS-8)
@@ -88,7 +88,7 @@ Kinds: `[POLICY]` a rule, term, help text or interface text the operator publish
 - **[ABSENT]** A message for an edit made by someone else meanwhile, in tenis4U's panel (searched "międzyczasie", "ktoś
   inny", "inny użytkownik", "409", "If-Match"), Playtomic Manager's English strings (searched "another admin",
   "modified", "someone", "outdated", "refresh"), and kluby.org's changelog. — read 2026-10-08
-- *reading:* at tenis4U the later save wins, as at Raketa; nobody is told.
+- *reading:* at tenis4U the later save wins, as at Rakieta; nobody is told.
 
 ## 4. Open matches with no court, and the desk (R-COURTS-12)
 
@@ -105,7 +105,7 @@ Kinds: `[POLICY]` a rule, term, help text or interface text the operator publish
 - **[ABSENT]** A warning to the desk when it books a private reservation at an hour where a court-less open match is
   gathering. Searched the four articles above and the schedule strings ("open match", "conflict", "overlap"). — read 2026-10-08
 - *reading:* a Playtomic desk can see those games, but only on a second page; the schedule it books from does not show
-  them. Showing a Raketa desk the cards a closing ends would be ahead of that.
+  them. Showing a Rakieta desk the cards a closing ends would be ahead of that.
 
 ### MATCHi: a public match is a booking, so it is on the schedule
 
@@ -141,7 +141,7 @@ Kinds: `[POLICY]` a rule, term, help text or interface text the operator publish
   [2022](https://oferta.kluby.org/changelog?rok=2022) — read 2026-10-08
 - **[ABSENT]** An iCal or other calendar feed, or a bookings API, in tenis4U's panel (searched "ical", "text/calendar",
   "webcal", "eksport") or kluby.org's changelog (searched "ical", "kalendarz Google", "API"). — read 2026-10-08
-- *reading:* Raketa could read a tenis4U or kluby.org desk's bookings only from a file someone downloads by hand.
+- *reading:* Rakieta could read a tenis4U or kluby.org desk's bookings only from a file someone downloads by hand.
 
 ## 6. Editing a block (R-COURTS-16)
 

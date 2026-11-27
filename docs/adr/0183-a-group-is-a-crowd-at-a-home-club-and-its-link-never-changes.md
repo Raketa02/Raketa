@@ -60,7 +60,7 @@
 **Racket players in a city already organise, and they don't do it here.** Each club has WhatsApp
 groups, usually one per sport, run by someone with a business tie to the club. In them players
 arrange a game, one person books the court, and that person chases the others for money. Find a
-game is one person searching the whole pool alone. Raketa has no concept of a crowd of people who
+game is one person searching the whole pool alone. Rakieta has no concept of a crowd of people who
 already play together.
 
 PRD #500 brings those crowds in without making the club feel it's losing its players. Two shapes of
@@ -115,7 +115,7 @@ none is left to infer from a null.
 ### 2. A player group has an Owner, a home club, a name and a join policy
 
 - **The Owner** is the player who created it, until ownership passes (§7).
-- **The home club** is required, chosen from every club in Raketa, and **never changes**. Editing it
+- **The home club** is required, chosen from every club in Rakieta, and **never changes**. Editing it
   is out of scope.
 - **The name** is 1–40 characters, trimmed, and not unique. Two groups at one club may share a name.
   The New group form tints a club that already has groups and lists them, so a player can join the
@@ -152,7 +152,7 @@ The mocks' `rakieta.app/g/g4_394` is illustrative only. The shape is this sectio
 ### 5. The monogram and its colour are served by the backend
 
 - **Letters**: the first character of each of the first two words, **as typed**, or the first two
-  characters of a one-word name. *my raketa group* gives `mr`, and *Ogrody 33 Club* gives `O3`.
+  characters of a one-word name. *my rakieta group* gives `mr`, and *Ogrody 33 Club* gives `O3`.
 - **Colour**: a **key**, derived stably from the group's id, that never changes, even on rename.
 
 **Three clients draw this tile**: the player app, the club website and the public site. A rule

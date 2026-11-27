@@ -265,7 +265,7 @@ hours** — never merely on foreground, which the author refused as tracking —
 onboarding used, and puts it. A revoked permission changes nothing and says nothing: the stored
 cell stays. A trip is a trip: a cold start in Lisbon moves Ania to Lisbon for everyone, and the
 next cold start at home moves her back. The deck's next hand deals around the new cell; nothing
-is reset. **You** carries one static sentence — *Your area updates each time you open Raketa;
+is reset. **You** carries one static sentence — *Your area updates each time you open Rakieta;
 it is never finer than about a kilometre.* — because silent motion with no written trace is the
 one thing that would surprise a careful player.
 

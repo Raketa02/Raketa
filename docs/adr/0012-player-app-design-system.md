@@ -14,7 +14,7 @@
 
 Like the club console (**ADR-0011** *(removed)*), the player app was
 designed before it was built: a v34 HTML prototype
-(`raketa-player-app-prototype-v34.html`) established the whole visual language and was
+(`rakieta-player-app-prototype-v34.html`) established the whole visual language and was
 audited value by value, including an honest list of its own inconsistencies and
 accessibility gaps.
 

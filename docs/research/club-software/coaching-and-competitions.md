@@ -1,7 +1,7 @@
 # Coaches, classes and competitions — what rivals run, and what Kraków does
 
 Research for the club-software grilling that follows story S-01E
-([#609](https://github.com/Raketa02/Raketa/issues/609)), whose decisions of 2026-10-12 set Raketa on the path
+([#609](https://github.com/Raketa02/Raketa/issues/609)), whose decisions of 2026-10-12 set Rakieta on the path
 to becoming the club's whole booking software. This file covers the map's **area 8** (coaches, lessons,
 classes, academies) and **area 9** (leagues, tournaments, ladders).
 
@@ -228,7 +228,7 @@ the coach's diary and a free court; with it the desk only sees lessons arrive.
 - **[PRICE] Squash4You:** "Nowy w klubie? Czeka na Ciebie lekcja -50%!" ([trenerzy](https://www.squash4you.pl/trenerzy)).
 
 **What it means for the player app.** *Reading:* a lesson is a booking with a coach on it — a different object
-from a Raketa game (one player or a few, no Level matching, the coach's price on top of the court's). It
+from a Rakieta game (one player or a few, no Level matching, the coach's price on top of the court's). It
 could sit beside games on Home without touching the deck.
 
 **Market signal.** Differentiator turning table stakes: all four large rivals and two Polish ones have it;
@@ -331,7 +331,7 @@ plus the court (Fame), the coach's school sells the lesson and books the court l
 (teniskrakow.pl), and the club tolerates only its own coaches (Miazga, Squash4You's passes rule).
 
 **What it means for the player app.** *Reading:* if a coach sells his own lessons, the seller on the receipt
-is not the club — the opposite of Raketa's "the club is the seller" (ADR-0189). Lesson VAT differs from court
+is not the club — the opposite of Rakieta's "the club is the seller" (ADR-0189). Lesson VAT differs from court
 VAT.
 
 **Market signal.** Coach-pay tooling is a differentiator abroad and table stakes among the Polish rivals
@@ -417,7 +417,7 @@ everyone is told and refunded.
 - **[POLICY] Fame Sport** dissolves a term group instead: "Jeżeli liczba Uczestników w grupie spadnie poniżej
   minimalnej liczby … Klub może rozwiązać grupę" (rules V.13) ([regulamin](https://famesport.pl/wp-content/uploads/2026/08/Regulamin_Fame_Sport_Club_2026_Aktualny.pdf)).
 
-**What it means for the player app.** *Reading:* the same shape as a Raketa game short of players at its
+**What it means for the player app.** *Reading:* the same shape as a Rakieta game short of players at its
 cut-off — the "class short of people" and the game that falls back are one pattern, and the player needs the
 same telling.
 
@@ -468,7 +468,7 @@ which month; Playmore's "Zaległości" (arrears) screen is the selling point.
   school runs September–June for ages 7–16 ([squash4you.pl](https://www.squash4you.pl/)).
 
 **What it means for the player app.** *Reading:* a term fee is a recurring charge to a saved card — a payment
-shape Raketa's money port does not have today (it charges seats per game).
+shape Rakieta's money port does not have today (it charges seats per game).
 
 **Market signal.** Table stakes for any club with an academy; recurring card billing is a differentiator
 (Playtomic); passes are table stakes in Poland.
@@ -502,7 +502,7 @@ sessions") and, at ActiveNow-style schools, the bill.
 - **[POLICY]** Playmore says coaches today mark "w zeszycie albo Excelu" (in a notebook or Excel)
   ([szkółki](https://join.playmore.pl/szkolki/)). *Reading:* the vendor's claim.
 
-**What it means for the player app.** *Reading:* Raketa already catches attendance at the court for games
+**What it means for the player app.** *Reading:* Rakieta already catches attendance at the court for games
 (#657); a class register is the coach's version of the same fact.
 
 **Market signal.** Table stakes for Polish academy software; absent at Playtomic.
@@ -539,7 +539,7 @@ piszą na prywatny numer trenera" ([szkoły](https://join.playmore.pl/dla-szkole
 - **[POLICY]** AGH Kraków: under-18s need written parental consent, under-13s only with a parent (carried,
   [AGH](https://swfis.agh.edu.pl/home/swfis/dokumenty/REGULAMIN_KORZYSTANIA_Z_KORTU_DO_SQUASHA.pdf), read 2026-10-06).
 
-**What it means for the player app.** *Reading:* a child in Raketa would be a profile without its own sign-in,
+**What it means for the player app.** *Reading:* a child in Rakieta would be a profile without its own sign-in,
 owned by an adult who pays — an account shape the player app has not got.
 
 **Market signal.** Table stakes for academies; parent-facing apps are a differentiator (Playmore, kluby.org).
@@ -757,8 +757,8 @@ cannot tell a league match from any other, nor give its league price without bei
   ([Liga GOS Tenis 2025, Pawłowice](https://gos.pawlowice.pl/fileadmin/repozytorium/GOS/Regulamin_Ligi_GOS_Tenis_2025.pdf)).
 
 **What it means for the player app.** *Reading:* the most common Kraków pattern — two players book an ordinary
-court for a league match and split it — is a Raketa booking with a league label. A no-show "pays 100% of the
-court" in every league read, the same rule as Raketa's.
+court for a league match and split it — is a Rakieta booking with a league label. A no-show "pays 100% of the
+court" in every league read, the same rule as Rakieta's.
 
 **Market signal.** Table stakes inside club software; the Kraków gap is that league tools and booking tools
 are different products.
@@ -809,7 +809,7 @@ list; unpaid entrants are the no-shows.
 - **[PRICE] Padel Krakow League:** 280 zł a pair by bank transfer (carried, `local-market.md`, read 2026-10-08).
 
 **What it means for the player app.** *Reading:* an entry fee is paid once for a season or an evening, by one
-player for a pair or each for himself — shapes Raketa's per-seat charge already half covers.
+player for a pair or each for himself — shapes Rakieta's per-seat charge already half covers.
 
 **Market signal.** Table stakes; Kraków still mixes cash, transfer and Przelewy24.
 
@@ -865,7 +865,7 @@ rules all reserve the right to move a player up.
 - **[POLICY]** The Padel Krakow League levels unranked players "by self-evaluation over WhatsApp" (carried,
   `local-market.md`, read 2026-10-08).
 
-**What it means for the player app.** *Reading:* Raketa's questionnaire gives a Level per sport; Kraków's
+**What it means for the player app.** *Reading:* Rakieta's questionnaire gives a Level per sport; Kraków's
 organisers speak letters (C to A) and squash leagues seed by the PZSq ranking. A Level that league results
 move, and that maps to the letters, is the bridge the deck and the leagues would share.
 

@@ -34,7 +34,7 @@ The way in is the button with the trophy in the top-right corner of Home, which 
 
 ->this is the mock reference for the button in the top-right corner of Home:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/4-ranking/1-ranking_button_home.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/4-ranking/1-ranking_button_home.png`
 
 ---
 
@@ -54,9 +54,9 @@ The Friends view is the one most people will keep coming back to: a league table
 
 This is the mock reference to show you how the overall ranking screen looks like. Since the screen can be scrollable depending on the number of rows I will give you more than one mock reference:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/4-ranking/4_rankings_screen1.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/4-ranking/4_rankings_screen1.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/4-ranking/5_rankings_screen2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/4-ranking/5_rankings_screen2.png`
 
 ### 1. Header
 
@@ -70,7 +70,7 @@ A two-way toggle. General ranks everybody who plays that sport; Friends ranks on
 
 ->mock reference:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/4-ranking/2-ranking_header.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/4-ranking/2-ranking_header.png`
 
 ### 3. Your place (dark card)
 
@@ -85,7 +85,7 @@ When this card can’t be shown, its place is taken by a message: Not ranked in 
 
 -> mock reference:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/4-ranking/3_your_place_card.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/4-ranking/3_your_place_card.png`
 
 ### 4. Podium
 
@@ -93,7 +93,7 @@ The top three of the current view on three steps: 1st in the middle on the talle
 
 -> mock reference:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/4-ranking/6_rankings_podium.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/4-ranking/6_rankings_podium.png`
 
 ### 5. The list
 
@@ -103,7 +103,7 @@ Every ranked player, best to worst, one row each:
 
   ->mock reference:
 
-  `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/4-ranking/7_top_three.png`
+  `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/4-ranking/7_top_three.png`
 
 - Face and name — tap to open the player’s record.
 - Form dots — the last five competitive games, green for a win, grey for a loss, oldest to newest.
@@ -111,11 +111,11 @@ Every ranked player, best to worst, one row each:
 
   ->mock reference:
 
-  `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/4-ranking/8_ranking_up.png`
+  `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/4-ranking/8_ranking_up.png`
 
-  `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/4-ranking/9_ranking_down.png`
+  `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/4-ranking/9_ranking_down.png`
 
-  `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/4-ranking/10_ranking_same.png`
+  `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/4-ranking/10_ranking_same.png`
 
 - Rating — the player’s rating that you determined in this sport, right-aligned, the number the list is sorted by.
 
@@ -123,4 +123,4 @@ Your own row is tinted and labelled You, so it stands out while scrolling.
 
 ->mock reference:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/4-ranking/11_ranking_you.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/4-ranking/11_ranking_you.png`

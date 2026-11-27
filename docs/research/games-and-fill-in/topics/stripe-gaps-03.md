@@ -59,7 +59,7 @@ phone would ask the player to type another card.
 **[ABSENT] Not found anywhere.**
 
 - **The questions:**
-  - whether PKO BP, Pekao, mBank, ING or Santander send the soft decline in a way that reaches Raketa as
+  - whether PKO BP, Pekao, mBank, ING or Santander send the soft decline in a way that reaches Rakieta as
     `card_declined` with decline code `authentication_required`;
   - which decline code Stripe gives a Mastercard `65`.
 - **Where we looked:**
@@ -93,10 +93,10 @@ phone would ask the player to type another card.
   Radar costs either "Starting at 0.23zł per screened transaction" (pay per use) or a monthly plan "Starting at
   46.00zł". The [Radar pricing page for Poland](https://stripe.com/en-pl/radar/pricing) lists platform plans from
   80 zł a month and gives no separate rate for setups.
-- **Who pays:** the setup runs on the platform account, so the screening is billed to Raketa. Stripe says "Any activity
+- **Who pays:** the setup runs on the platform account, so the screening is billed to Rakieta. Stripe says "Any activity
   occurring at the platform account level is billed to your platform"
   ([`stripe-saving-cards.md#card-updates-on-the-platform-are-billed-to-the-platform`](stripe-saving-cards.md#card-updates-on-the-platform-are-billed-to-the-platform)).
-- *Reading:* the bill is per attempt. On pay per use, Paula saving her card at the first try costs Raketa about
+- *Reading:* the bill is per attempt. On pay per use, Paula saving her card at the first try costs Rakieta about
   0,23 zł, and a refused try followed by a second costs about 0,46 zł.
 
 **[ABSENT] Whether the setting is on for the sandbox platform.**
@@ -206,7 +206,7 @@ acknowledged and ignored.
   - **No lapse yet:** the test club has no `charge.expired` event.
   - **Every cancel so far reads `null`:** all 48 cancelled payments on the club read `cancellation_reason: null`.
     That includes `pi_3USPKC5y1DMwE3zY00HIKsMU`, which Stripe itself cancelled after ten refused tries. So `null`
-    doesn't by itself mean Raketa let the share go; only `expired` marks a lapse.
+    doesn't by itself mean Rakieta let the share go; only `expired` marks a lapse.
 - Same answer in a sibling file:
   [`stripe-gaps-05.md#r-rescue-28--a-lapsed-hold-reads-cancellation_re…`](stripe-gaps-05.md#r-rescue-28--a-lapsed-hold-reads-cancellation_reason-expired-and-sends-chargeexpired-and-payment_intentcanceled-the-sandbox-reading-waits-until-26-october).
 - **Still to measure after 2026-10-26 11:03:41 UTC.** On both payments, read `status`, `cancellation_reason` and
@@ -527,7 +527,7 @@ A sibling file reached the same answer from the same source:
   - [`stripe-payouts-and-balances.md#a-standard-manual-payout-needs-the-account-on-th…`](stripe-payouts-and-balances.md#a-standard-manual-payout-needs-the-account-on-the-manual-schedule);
   - [`gaps-CLUBMONEY.md#not-found-a-platform-payout-while-the-account-st…`](gaps-CLUBMONEY.md#not-found-a-platform-payout-while-the-account-stays-on-an-automatic-schedule);
   - the same two questions for the platform, with all seven accounts' Balance Settings:
-    [`stripe-gaps-00.md#r-platform-24--the-error-payoutscreate-returns-o…`](stripe-gaps-00.md#r-platform-24--the-error-payoutscreate-returns-on-a-daily-schedule-account-and-whether-raketa-may-set-manual-through-balance-settings).
+    [`stripe-gaps-00.md#r-platform-24--the-error-payoutscreate-returns-o…`](stripe-gaps-00.md#r-platform-24--the-error-payoutscreate-returns-on-a-daily-schedule-account-and-whether-rakieta-may-set-manual-through-balance-settings).
 - **[DOCS]** [Create a payout](https://docs.stripe.com/api/payouts/create) — 2026-10-20.
   - "To send funds to your own bank account, create a new payout object. Your Stripe balance must cover the payout
     amount. If it doesn't, you receive an 'Insufficient Funds' error."
@@ -543,7 +543,7 @@ A sibling file reached the same answer from the same source:
 - **[MEASURED]** Read via the SDK in the copy, 2026-10-20, with `GET /v1/balance_settings` made as each account.
   - **The test club:** `payments.payouts.schedule.interval: manual`, `payouts.status: enabled`,
     `settlement_timing.delay_days: 7`, the day starting 00:00 `Etc/UTC`.
-  - **A club Raketa opened:** `acct_1USELi5y1DCSZFum` reads `interval: daily` and `payouts.status: disabled`; it was
+  - **A club Rakieta opened:** `acct_1USELi5y1DCSZFum` reads `interval: daily` and `payouts.status: disabled`; it was
     never onboarded.
   - **The one payout so far:** `po_1USPGD5y1DMwE3zY2VJcHrmh`, 37,70 zł, `automatic: false`, standard, `paid`. It was
     made on the manual club.
@@ -556,7 +556,7 @@ A sibling file reached the same answer from the same source:
     answer, and that is outside this research.
   - A question for Stripe support, or a Breaker proof.
 
-### R-CLUBMONEY-34 — whether Raketa may set `manual` through Balance Settings on its clubs, and whether the club can still pay itself out
+### R-CLUBMONEY-34 — whether Rakieta may set `manual` through Balance Settings on its clubs, and whether the club can still pay itself out
 
 - **[DOCS]** Carried from three sections of `stripe-payouts-and-balances.md`:
   - [`#who-may-change-a-clubs-interval-and-delay`](stripe-payouts-and-balances.md#who-may-change-a-clubs-interval-and-delay):
@@ -579,14 +579,14 @@ A sibling file reached the same answer from the same source:
     [`stripe-sandbox.md#the-test-club-account-full-dashboard-the-club-pa…`](stripe-sandbox.md#the-test-club-account-full-dashboard-the-club-pays-the-fees-stripe-covers-losses))
     was moved from `daily` to `manual`, and Stripe accepted it.
   - **No Balance Settings event:** there is no `balance_settings.updated` on the club or the platform.
-  - **Who did it:** the API doesn't show whose key made the request, Raketa's platform key or the club's own Dashboard.
+  - **Who did it:** the API doesn't show whose key made the request, Rakieta's platform key or the club's own Dashboard.
 - **Answer:**
-  - Stripe's docs say Raketa may set `manual`, through platform controls and Balance Settings.
+  - Stripe's docs say Rakieta may set `manual`, through platform controls and Balance Settings.
   - The sandbox shows a club of exactly this kind can sit on `manual`.
   - Nothing stops the club paying itself out, instantly too. Stripe documents that.
 - **[ABSENT] Still open.**
-  - Stripe's confirmation that Raketa's own key, not only the club, may set `manual` on a Stripe-liable,
+  - Stripe's confirmation that Rakieta's own key, not only the club, may set `manual` on a Stripe-liable,
     full-Dashboard v2 club.
   - What Stripe's "full control" arrangement would add.
   - A question for Stripe support. One write would settle the first part: `POST /v1/balance_settings` with
-    `Stripe-Account` set to a club Raketa opened, then read the answer.
+    `Stripe-Account` set to a club Rakieta opened, then read the answer.

@@ -77,12 +77,12 @@ a screenshot.
 
 - **[POLICY]** A drag paints toward the opposite of the first cell's state
   (`y=!t(e.day,e.hour)`) and paints each cell once (`d.has(e.key)` skips it): turning back
-  un-ticks nothing — the same as Raketa. [Playmore grid code](https://playmore.pl/assets/DQ5ScoLS.js)
+  un-ticks nothing — the same as Rakieta. [Playmore grid code](https://playmore.pl/assets/DQ5ScoLS.js)
   — read 2026-10-08
 - **[POLICY]** The cell under the finger is found with `document.elementFromPoint(…)
   .closest("[data-avail-cell]")`; off the cells it returns nothing and nothing is painted, and the
   drag paints again if the finger comes back. It does **not** keep ticking the edge row or column,
-  as Raketa does. Same source — read 2026-10-08
+  as Rakieta does. Same source — read 2026-10-08
 - **[POLICY]** On a touch screen the paint starts only after a 250 ms hold; a move of more than
   10 px before then cancels it and the page scrolls (`setTimeout(…,250)`,
   `Math.hypot(…)>10`). Hour labels are not cells, so a drag there scrolls. Each part of the day
@@ -127,7 +127,7 @@ a screenshot.
   [Błonia Sport](https://pado.app/poland/krakow/clubs/blonia-sport),
   [Fame Sport](https://pado.app/poland/krakow/clubs/fame-sport-club-krakow),
   [Ahoj Padel](https://pado.app/poland/krakow/clubs/ahoj-padel) — read 2026-10-08
-  - *Reading:* Raketa's grid (07:00–23:00) leaves out SAO's 06:00 padel hour and the 23:00 hour
+  - *Reading:* Rakieta's grid (07:00–23:00) leaves out SAO's 06:00 padel hour and the 23:00 hour
     at SAO, Padel House and Atras. Playmore's grid runs 06:00–23:00
     ([code](https://playmore.pl/assets/_5DcUrM8.js)), so it holds the 06:00 hour but not the 23:00
     one either; Playtomic's preferences take any hour ("specify by the hour").
@@ -236,7 +236,7 @@ a screenshot.
 - **[ABSENT]** Any platform that brings back, or tells the player about, a join refused under a
   cap once the cap is raised. Looked in: the same code and strings, Playtomic Android 6.93.2.
   - *Reading:* because the refusal elsewhere happens at the press and holds nothing, raising a cap
-    there needs no rule for old refusals: the next press passes. Raketa's pause is different, a
+    there needs no rule for old refusals: the next press passes. Rakieta's pause is different, a
     held yes that stays held.
 
 ### UK rules: a player-set limit goes up only after 24 hours, down at once

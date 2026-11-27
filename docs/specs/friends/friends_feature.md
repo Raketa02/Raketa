@@ -45,7 +45,7 @@ Friends are made where you meet people, which in Rakieta is inside your groups. 
 - the functionality and design of the **+ Add** button;
 - the corresponding tags for **request waiting** and **friend**.
 
-> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/1.members_friends_add.png`
+> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/1.members_friends_add.png`
 
 ### 3.2 Player record (tap anyone's face)
 
@@ -68,7 +68,7 @@ When the player is on the **Friends tab** and taps the **+** icons on the court 
 - Each row represents a friend, and a row can be selected when tapped.
 - The mock below shows how the list of friends is presented and how it should look in terms of design and theming.
 
-> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/3_Friends_screen.png`
+> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/3_Friends_screen.png`
 
 ### 3.5 "+ Add friends" bottom sheet
 
@@ -77,7 +77,7 @@ When **"+ Add friends"** is tapped, a bottom sheet dialog appears offering two w
 1. **From your groups** — it shows the groups you are in. Tapping a group navigates you to that group's **Members** page, where you can add players as friends.
 2. **Invite link** — if your friend is not a Rakieta member yet, it provides you an invite link. When they sign up through it, you are friends automatically.
 
-> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/4_add_friends_bottom_dislog.png`
+> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/4_add_friends_bottom_dislog.png`
 
 ### 3.6 Friend requests
 
@@ -92,7 +92,7 @@ Adding a friend is a **request**:
 - When you answer all the requests — by pressing either **Accept** or **Not now** — the entire row, including its **"Friend Requests"** title, disappears, leaving the Games row alone in a clean UI.
 - **The Friend Requests row must not be kept if it is empty.**
 
-> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/5_reqeust_card.png`
+> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/5_reqeust_card.png`
 
 > **To evaluate — push notifications for friend requests:** evaluate whether a friend request should send a push notification, and whether the player can turn it on or off, or whether it belongs to the group of notifications that are on by default when the player opts in for notifications.
 
@@ -129,12 +129,12 @@ The payoff lives on the **Friends tab inside a group**: a court drawn on screen 
   - **Doubles:** 3 players (you are already seated on the court).
   - **Singles:** 1 player.
 
-> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/6_freinds_grayed_out.png`
+> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/6_freinds_grayed_out.png`
 
 - After picking all the players required for the game, tap the **Done** button on the Friends page.
 - Tapping **Done** navigates you back to the Friends tab with all the players seated on the court graphic.
 
-> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/7_graphic_court_filled.png`
+> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/7_graphic_court_filled.png`
 
 ### 4.4 Building the game card
 
@@ -156,9 +156,9 @@ If that court does not suit you, you can pick another available one from the cal
 
 The mock below shows the Friends tab once your friends have been added to the court graphic and the game card is built. Since the screen is scrollable in this state (court graphic + game card), the mock does not show the top of the screen — only the court graphic and the game card.
 
-> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/8_friends_and_game.png`
+> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/8_friends_and_game.png`
 
-> Mock reference with details about the game card: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/9_friends_game_card.png`
+> Mock reference with details about the game card: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/9_friends_game_card.png`
 
 **Important:** the game card here shows exactly the same information and has exactly the same design as in the game deck, **except that the player tiles are not shown**.
 
@@ -191,8 +191,8 @@ When the **"Pick a different court"** button is tapped, a bottom sheet with the 
 The mocks below show how the overall design and layout should look. They are only for orientation on design and layout; the logic, and which courts should appear according to your evaluation of the rules for the business model, the clubs and the players, is up to you to determine.
 
 > Mock references:
-> - `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/10_find_court_1.png`
-> - `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/11_find_court_2.png`
+> - `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/10_find_court_1.png`
+> - `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/11_find_court_2.png`
 
 Once a court is selected, the game card is updated automatically.
 
@@ -203,7 +203,7 @@ When the **"Send game and pay [amount] zł"** button is tapped, the game is sent
 - They are notified, and the invitation is also available under the **bell** icon.
 - The game invitation is also materialized on the Home screen with the following design:
 
-> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/12_game_friend_invitation.png`
+> Mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/12_game_friend_invitation.png`
 
 ### 4.7 Acceptance and payment
 
@@ -215,14 +215,14 @@ When all your friends accept the invitation, payment takes place when the last f
 
 | # | Screen | Path |
 |---|--------|------|
-| 1 | Members page — + Add / request waiting / friend tags | `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/1.members_friends_add.png` |
-| 3 | Friends list screen | `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/3_Friends_screen.png` |
-| 4 | Add friends bottom sheet | `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/4_add_friends_bottom_dislog.png` |
-| 5 | Friend request card (Home) | `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/5_reqeust_card.png` |
-| 6 | Friends picker — greyed out | `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/6_freinds_grayed_out.png` |
-| 7 | Court graphic filled | `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/7_graphic_court_filled.png` |
-| 8 | Friends tab — court + game card | `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/8_friends_and_game.png` |
-| 9 | Friends game card details | `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/9_friends_game_card.png` |
-| 10 | Find court (1) | `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/10_find_court_1.png` |
-| 11 | Find court (2) | `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/11_find_court_2.png` |
-| 12 | Game friend invitation (Home) | `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/3-Friends/12_game_friend_invitation.png` |
+| 1 | Members page — + Add / request waiting / friend tags | `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/1.members_friends_add.png` |
+| 3 | Friends list screen | `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/3_Friends_screen.png` |
+| 4 | Add friends bottom sheet | `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/4_add_friends_bottom_dislog.png` |
+| 5 | Friend request card (Home) | `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/5_reqeust_card.png` |
+| 6 | Friends picker — greyed out | `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/6_freinds_grayed_out.png` |
+| 7 | Court graphic filled | `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/7_graphic_court_filled.png` |
+| 8 | Friends tab — court + game card | `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/8_friends_and_game.png` |
+| 9 | Friends game card details | `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/9_friends_game_card.png` |
+| 10 | Find court (1) | `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/10_find_court_1.png` |
+| 11 | Find court (2) | `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/11_find_court_2.png` |
+| 12 | Game friend invitation (Home) | `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/3-Friends/12_game_friend_invitation.png` |

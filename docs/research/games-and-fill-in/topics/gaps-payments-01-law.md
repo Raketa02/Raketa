@@ -54,7 +54,7 @@ and [`#a-dated-sports-booking-has-no-statutory-withdrawal-right-the-leave-right-
   - This is secondary reporting; the judgment's full text was not read.
   - Source: [beck-aktuell, 25 March 2021](https://www.beck-aktuell.de/heute-im-recht/rechtsprechung/bgh-gebuehr-fuer-zahlung-per-sofortueberweisung-oder-paypal-zulaessig-2021-03-25), read 2026-10-20.
 - *Reading:* this is the nearest court ruling found, and it is German, about a fee charged at payment, not about a
-  refund. Its test goes against R-LEAVE-6. The amount Raketa keeps is the card's own processing fee, which differs by
+  refund. Its test goes against R-LEAVE-6. The amount Rakieta keeps is the card's own processing fee, which differs by
   card kind, not a separate service. Under the Flixbus test it would sit on the banned side.
 
 ### R-LEAVE-6 · Still nothing rules on a fee kept back from a refund rather than charged at payment
@@ -201,7 +201,7 @@ Both were read 2026-10-20.
     court bookings, online bookings, cancelled tickets.
 - *Reading, for a tax adviser:* the club lowers the base under art. 29a ust. 10 pkt 3. It records the refund as a minus
   entry on an internal document against the share's own WEW entry, citing the Stripe refund. By question 4's logic it
-  does so in the period of the leave or the refund. Raketa's per-share record (payer, game, amounts, refund) is what lets
+  does so in the period of the leave or the refund. Rakieta's per-share record (payer, game, amounts, refund) is what lets
   the club "jednoznacznie" link each payment and each refund to a service, which both poz. 42 and question 4 require.
 
 ### R-LEAVE-6, R-LEAVE-41 · With an invoice: a business always, a consumer on request; a refund needs a corrective invoice, through KSeF for a business

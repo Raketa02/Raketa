@@ -2,7 +2,7 @@
 
 Answers to the facts the FILL Moderator found missing (`$W/areas/FILL/gaps.md`), one `###` per fact.
 Read 2026-10-08. Kinds as in the other topic files; *reading* is arithmetic or comparison, not a
-source. A claim about Raketa's own code carries `path:line` in the repo (read in the story copy at
+source. A claim about Rakieta's own code carries `path:line` in the repo (read in the story copy at
 commit `3e65f213`). Nothing here was measured on a device: the phones and the local stack hold the
 walker's seeded store and were left alone.
 
@@ -46,7 +46,7 @@ Rules: R-FILL-1 to R-FILL-4.
 
 - **[DOCS]** "If you decide you don't want to send an email, you have a short time after to cancel
   it… select a Send cancellation period of 5, 10, 20, or 30 seconds." The message leaves only when
-  the period ends — the same delayed-send pattern as Raketa's ten seconds, but no money is involved.
+  the period ends — the same delayed-send pattern as Rakieta's ten seconds, but no money is involved.
   [Google: Unsend Gmail messages](https://support.google.com/mail/answer/2819488?hl=en) — read 2026-10-08
 
 ### Uber lets a rider cancel free for two minutes after a driver accepts
@@ -66,7 +66,7 @@ Rules: R-FILL-1 to R-FILL-4.
   "30 minutes for 1-Click" appears only on third-party sites. Searched: Google, Uber, Wolt, DoorDash,
   Amazon help — read 2026-10-08.
   - *Reading:* the market's grace windows run **after** the binding act (Playtomic's free hour,
-    Uber's two minutes); Raketa's runs **before** it. That is what makes Undo leave nothing to
+    Uber's two minutes); Rakieta's runs **before** it. That is what makes Undo leave nothing to
     refund (R-FILL-2).
 
 ---
@@ -86,7 +86,7 @@ Rules: R-FILL-5, R-FILL-6, R-FILL-8.
   [Stripe: Collect card payments while offline](https://docs.stripe.com/terminal/features/operate-offline/collect-card-payments.md?terminal-card-present-integration=terminal&reader-type=bluetooth&terminal-sdk-platform=react-native),
   [overview](https://docs.stripe.com/terminal/features/operate-offline/overview) — read 2026-10-08
   - *Reading:* the one store-and-forward payment design found puts the risk on the party that chose
-    it and lets it cap the amount (`REQUIRE_ONLINE` above a sum). Raketa's offline free vote (R-FILL-8)
+    it and lets it cap the amount (`REQUIRE_ONLINE` above a sum). Rakieta's offline free vote (R-FILL-8)
     is the reverse: the person who typed it carries the charge, and so do three others.
 
 ### WhatsApp queues a message typed offline and sends it on reconnect
@@ -109,7 +109,7 @@ Rules: R-FILL-5, R-FILL-6, R-FILL-8.
 
 Rules: R-FILL-6.
 
-### Raketa's countdown is a JavaScript timer in the phone's memory
+### Rakieta's countdown is a JavaScript timer in the phone's memory
 
 - **[DOCS]** The count is a `setTimeout` chain that sends the yes when `endsAt - Date.now()` reaches
   zero (`frontend_player/src/features/proposals/components/FillProvider.tsx:223-239`); nothing
@@ -125,7 +125,7 @@ Rules: R-FILL-6.
   `onHostResume()` re-posts it. Timers run in the background only while a headless JS task runs.
   [JavaTimerManager.kt @ v0.76.9, lines 71-86, 135-142, 276-278](https://github.com/facebook/react-native/blob/v0.76.9/packages/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/core/JavaTimerManager.kt) — read 2026-10-08
   - *Reading:* on the Galaxy A55, a yes whose ten seconds run out after the player switches app is
-    sent the moment Raketa comes back to the front — possibly minutes later — or never, if the
+    sent the moment Rakieta comes back to the front — possibly minutes later — or never, if the
     system kills it first (Samsung's sleeping apps, `situations.md` SIT-95).
 
 ### On iOS, timers keep running briefly, then the app is suspended
@@ -139,7 +139,7 @@ Rules: R-FILL-6.
   the suspended state", unless it asks for more time with `beginBackgroundTask`.
   [Apple: Extending your app's background execution time](https://developer.apple.com/documentation/uikit/extending-your-app-s-background-execution-time) — read 2026-10-08
   - *Reading:* on the iPhone, a count with more than about five seconds left when the player leaves
-    is sent when Raketa next comes to the front; a count with less may still go out in the background.
+    is sent when Rakieta next comes to the front; a count with less may still go out in the background.
 - **[ABSENT]** Not seen on either device: the phones belong to the walk. A walker can check it by
   saying Book it now, pressing Home within two seconds, waiting a minute, and watching the console's
   Sent pane and the booking time.
@@ -158,7 +158,7 @@ Rules: R-FILL-11.
   payment amount; your cancellation policy…" and "Keep a record of each customer's agreement to
   your terms." [Stripe: CITs and MITs](https://docs.stripe.com/payments/cits-and-mits) — read 2026-10-08
 
-### Raketa's terms, accepted once in the payment setup, name all four
+### Rakieta's terms, accepted once in the payment setup, name all four
 
 - **[DOCS]** The terms the player accepts with *Accept and continue* (version `2026-09-29`, recorded
   by version): "When a game you said yes to fills, **the club it is played at** charges your share at
@@ -194,7 +194,7 @@ Rules: R-FILL-15, R-FILL-36, R-FILL-44, R-FILL-49.
   blokada wygaśnie po 14 dniach" (internet purchases; 7 days with the card present). Elsewhere:
   "Blokadę autoryzacyjną utrzymujemy maksymalnie do 30 dni" for any unsettled transaction.
   [mBank: Karty debetowe — pytania i odpowiedzi](https://www.mbank.pl/indywidualny/karty/pytania-i-odpowiedzi/karty-debetowe/) — read 2026-10-08
-  - *Reading:* a hold Raketa cancels (an authorisation reversal sent at once) should leave an mBank
+  - *Reading:* a hold Rakieta cancels (an authorisation reversal sent at once) should leave an mBank
     customer's app when the reversal arrives; a hold left to lapse can show for up to 14 days at
     mBank — longer than the 4 days 18 hours to 7 days after which the network itself releases it.
 
@@ -239,7 +239,7 @@ Rules: R-FILL-16.
 - **[ABSENT]** Stripe's own documentation of the error type and code for a PaymentIntent created on
   an account without active card payments — searched the error-codes page (`account_invalid`,
   `capability_not_active` are listed, neither for this case) — read 2026-10-08.
-  - *Reading:* if it comes back as an invalid request, Raketa's adapter treats it as its own bug and
+  - *Reading:* if it comes back as an invalid request, Rakieta's adapter treats it as its own bug and
     raises it, rather than calling it an outage or a decline
     (`backend/app/modules/payments/infrastructure/stripe_payments.py:18-22, 73-79`). A test-mode check
     on a restricted test account would settle it.
@@ -268,7 +268,7 @@ Rules: R-FILL-19.
 - **[ABSENT]** tenis4U's site describes a day/week calendar per court with "Błyskawiczne dodawanie i
   usuwanie rezerwacji", standing slots and league bookings, and nothing on API, iCal or import; its
   App Store listing (4.9.2) neither. [tenis4U](https://tenis4u.pl/), [App Store](https://apps.apple.com/pl/app/tenis4u-korty-i-turnieje/id1222721113) — read 2026-10-08
-  - *Reading:* in all three, a Raketa booking reaches the club's own calendar only by a person typing
+  - *Reading:* in all three, a Rakieta booking reaches the club's own calendar only by a person typing
     it, as a phone booking does today.
 
 ---
@@ -277,7 +277,7 @@ Rules: R-FILL-19.
 
 Rules: R-FILL-20.
 
-### Raketa: the sides drawn at the fill are the sides the result is entered for
+### Rakieta: the sides drawn at the fill are the sides the result is entered for
 
 - **[DOCS]** "The line-up is frozen until somebody leaves it": the fill draws the sides, and only a
   departure or a rescue moves a seat (`backend/app/modules/games/domain/lineup.py:1-25`,
@@ -296,7 +296,7 @@ Rules: R-FILL-20.
   and are matched with opponents of similar levels." [Playtomic help: How to sign up for an Open Match](https://playerhelp.playtomic.com/hc/en-gb/articles/19832151055121-How-to-sign-up-for-an-Open-Match) (updated 2026-10-03) — read 2026-10-08
   - *Reading:* the market leader expects players to rearrange sides on court and lets the result
     follow what was played; Playmore assigns sides only at result entry
-    (`platforms.md#a-balance-figure-or-suggested-sides`). Raketa's drawn sides are stricter than both.
+    (`platforms.md#a-balance-figure-or-suggested-sides`). Rakieta's drawn sides are stricter than both.
 
 ### Social formats rotate partners
 
@@ -357,14 +357,14 @@ Rules: R-FILL-30.
   if the payment succeeds"; a platform may send one by passing `receipt_email`. Accounts with the
   Stripe Dashboard set this themselves. [Stripe: Receipts](https://docs.stripe.com/receipts) — read 2026-10-08
 
-### Raketa gives the club's Stripe no address to send to
+### Rakieta gives the club's Stripe no address to send to
 
 - **[DOCS]** The club's account is opened with its own full Stripe Dashboard (`"dashboard": "full"`,
   `backend/app/modules/payments/infrastructure/stripe_payments.py:301-331`); the player's Stripe
-  customer carries no name or email ("Stripe needs no name or email… Raketa sends none",
+  customer carries no name or email ("Stripe needs no name or email… Rakieta sends none",
   `:176-184`); the charge passes no `receipt_email` (`:512-544`) — read 2026-10-08
   - *Reading:* even if the club switches Successful payments on in its own Dashboard, Stripe has no
-    address, so the player gets only Raketa's email; the club can still send one by hand from its
+    address, so the player gets only Rakieta's email; the club can still send one by hand from its
     Dashboard by typing an address, in Stripe's words and with the club's branding.
 
 ---
@@ -436,9 +436,9 @@ Rules: R-FILL-36, R-FILL-37, R-FILL-42, R-FILL-45.
   [Stripe: Direct charges on multiple accounts](https://docs.stripe.com/connect/direct-charges-multiple-accounts) — read 2026-10-08
 - **[ABSENT]** Whether a clone whose off-session attempt was declined or asked for 3-D Secure counts
   as "consumed" when the player confirms the **same** PaymentIntent in the app — no Stripe page, issue
-  or answer found; a Stripe test-mode check is still needed (Raketa's own demand suite skips it:
+  or answer found; a Stripe test-mode check is still needed (Rakieta's own demand suite skips it:
   `backend/tests/demands/test_payments_demands.py:121-124`) — read 2026-10-08.
-  - *Reading:* Raketa confirms the same payment with the same clone
+  - *Reading:* Rakieta confirms the same payment with the same clone
     (`stripe_payments.py:545-566` returns the refused payment's `client_secret`); if Stripe treats the
     clone as used, that confirmation fails and only a new payment with a fresh clone works.
 

@@ -13,7 +13,7 @@ screen is open, and logs every request the screen would send.
 > **Amended 2026-11-07** by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §7
 > (the games and fill-in mechanics Q130, PRD [#766](https://github.com/Raketa02/Raketa/issues/766)):
 > **ON YOUR CARD** gains ***Show me in General***, a switch, [§3.14](#314-show-me-in-general). §4's
-> *Rankings* line is retired: Raketa ranks players, by the level.
+> *Rankings* line is retired: Rakieta ranks players, by the level.
 
 > **Amended 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2 and §6
 > (the games and fill-in mechanics Q131, PRD [#789](https://github.com/Raketa02/Raketa/issues/789)):
@@ -132,7 +132,7 @@ were on the first draft and are out — §4 says why and what each would need.
 | Player reliability | `75 · High` · `100 · New` (since ADR-0195, written in from #660's sheet head; it read `92 of 100 · 3 things counted`) | the figure and its band, the four counts, the reliability filter | the filter only | read exists; one decision (§5.3); the filter's route is #661's |
 | What kind of game | `Padel Competitive · Tennis For fun · Squash not set` | one row per rated sport, expands to the three answers | in place, `PUT /play-intents/{sport}` | **built** |
 | Your week | `10 slots ticked` | the availability grid as the step draws it, *Save* / *Clear all* | `PUT /players/me/availability` on *Save* | route exists, screen missing |
-| Where you play | `Area set · updates when you open Raketa` | *Your area is set*, then *Use my location* and *Pick a club near where you play* (§3.6) | `PUT /players/me/location`, with a reading or a `club_id` | route exists, screen missing; the club form is #726's |
+| Where you play | `Area set · updates when you open Rakieta` | *Your area is set*, then *Use my location* and *Pick a club near where you play* (§3.6) | `PUT /players/me/location`, with a reading or a `club_id` | route exists, screen missing; the club form is #726's |
 | Who you play with | `Matched with anyone` | the gender step's two radio groups, each with *Save*; the reach sentence at the press | two new `PUT`s | **needs a decision** (§5.2) and two routes |
 | How others see you | `Your player record, as a stranger reads it` | `PlayerRecordSheet` for yourself, section for section | none — the doors are the rows below | **built**, needs a door |
 | Photos | `2 of 3 · profile photo on court` | the photos step as it is: tiles, add, promote, hold for options, the flagged notice | `POST /photos`, then `PUT /players/me/photos` on every change | needs a route and the read |
@@ -144,7 +144,7 @@ were on the first draft and are out — §4 says why and what each would need.
 ## 3. Each row
 
 Every row below answers the same four questions: **what it is**, **what opens**, **how the
-update happens**, and **what changes in Raketa when a new value lands**. The last is the reason
+update happens**, and **what changes in Rakieta when a new value lands**. The last is the reason
 the row is on this tab at all — a preference that changed nothing would be decoration.
 
 ### 3.1 Skill passport
@@ -286,7 +286,7 @@ only "a line under each answer")*:
 
 | From | To | The line |
 | --- | --- | --- |
-| *Competitive*, or *Either suits me* | *For fun* | *Your 7 competitive cards in your groups go. Games you're In on stay.* — one card: *Your 1 competitive card in your groups goes. Games you're In on stay.* — none: *Raketa stops dealing you competitive games. Games you're In on stay.* |
+| *Competitive*, or *Either suits me* | *For fun* | *Your 7 competitive cards in your groups go. Games you're In on stay.* — one card: *Your 1 competitive card in your groups goes. Games you're In on stay.* — none: *Rakieta stops dealing you competitive games. Games you're In on stay.* |
 | *For fun*, or *Either suits me* | *Competitive* | the mirror: *Your 3 for-fun cards in your groups go. …*, with the same one-card and zero forms |
 | *Competitive* | *Either suits me* | *Keep your competitive cards and get for-fun ones too.* |
 | *For fun* | *Either suits me* | *Keep your for-fun cards and get competitive ones too.* |
@@ -340,16 +340,16 @@ pick**, whose point on the map becomes the area, rounded to the cell like any re
 a neighbourhood and the screen does not pretend to. Two things:
 
 - **the state**: *Your area is set* (mint) with the one sentence the tab already carries — *Your
-  area updates each time you open Raketa; it is never finer than about a kilometre*. **It is the
+  area updates each time you open Rakieta; it is never finer than about a kilometre*. **It is the
   only state**: onboarding cannot finish without an area (*the one answer setting up cannot
   finish without*, the last step's own words), so every profile the tab can read holds one;
 - **Read my area again** (***Use my location*** since ADR-0200, as the step says it) — the
   control from the location step, in its three permission states
-  (*Raketa cannot see where you play · Location is turned off for Raketa → Open Settings*, and
+  (*Rakieta cannot see where you play · Location is turned off for Rakieta → Open Settings*, and
   the plain control).
 
 **Since ADR-0200, the screen offers both ways**, as the location step does: ***Use my location***
-(the control above, under the step's label), and ***Pick a club near where you play***, which searches Raketa's clubs by name or district —
+(the control above, under the step's label), and ***Pick a club near where you play***, which searches Rakieta's clubs by name or district —
 nearest first when an area is held, A–Z when none is. The state stays the only state, because a
 profile still cannot be committed without an area; the step now reaches one even after a refusal,
 through a picked club.
@@ -558,7 +558,7 @@ this player, from the next read, and the two initials over a generated poster.
 >   request.* under the title, the design system's switch (6.12) on the right.
 > - **How the update happens.** At once, with no *Save*, as a new event on the Player profile's
 >   stream; `GET /players/me/profile` returns it. A failed write puts the switch back and says so.
-> - **What changes.** Turned off, the player leaves Home's *Same competitive level*, *New in Raketa*
+> - **What changes.** Turned off, the player leaves Home's *Same competitive level*, *New in Rakieta*
 >   and *Same vibe* rows on everybody else's Home, and their See all screens; anyone who shares no
 >   group, game or friendship with them reads *This record isn't available* and can't send a request.
 >   **The ranking is untouched**: they keep their true place in General, Friends and Top 10, and their
@@ -590,7 +590,7 @@ player. The player still sees their own place, on Rankings and on Home's trophy.
 | Alerts and notification preferences | No push channel exists in the app (no `expo-notifications`, no token route). A row of switches that switch nothing is a lie the design system already forbids (*no coming soon*). |
 | A games history | *A history surface, on You* is on the loop's fog map; `GET /games` exists but what a finished game's tail should be is undecided. Not a preference. |
 | Default sport, default mode, language, city | No such facts exist. Play remembers its segment and the sport last picked, per account on the phone (ADR-0188); language was struck as a nationality proxy; there is no city — only a cell (ADR-0174 §1). |
-| Rankings | **Retired 2026-11-07.** Raketa ranks players, one ranking per sport sorted by the level itself, in its own spec set ([ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md), [`docs/specs/rankings/`](../rankings/README.md)). It is a page opened from Home, never a row on You; You gains only its switch (§3.14). |
+| Rankings | **Retired 2026-11-07.** Rakieta ranks players, one ranking per sport sorted by the level itself, in its own spec set ([ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md), [`docs/specs/rankings/`](../rankings/README.md)). It is a page opened from Home, never a row on You; You gains only its switch (§3.14). |
 | Explanatory cards on the read-only screens | *Nobody types a level in*, *what it changes*, *what clears it* were on the first draft and are gone: the passport is the result card and the reliability screen is the record card, and each already says what it is. |
 | Confirms results, Answers challenges, Settles up | Struck or standing down; a row drawn for one would be a nought under a name. |
 

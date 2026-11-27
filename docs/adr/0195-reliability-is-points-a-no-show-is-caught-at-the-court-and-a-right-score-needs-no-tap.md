@@ -101,7 +101,7 @@ Considered and rejected:
   and costs far more: battery, a background-location permission, and a store of where people were.
   One fix, read at the moment somebody makes a claim and never stored, is the least that makes the
   claim checkable.
-- **The club, or Raketa, rules on a tap or a score.** *We will not arbitrate* (ADR-0137 §4) stands.
+- **The club, or Rakieta, rules on a tap or a score.** *We will not arbitrate* (ADR-0137 §4) stands.
   The people on the court decide, and when they disagree about the winner, nothing moves.
 - **Keep the ratio and add a minimum number of games.** A bar hides the figure, but the first event
   past it still sets the whole ratio, and a veteran's no-show still weighs almost nothing. Fixed
@@ -214,7 +214,7 @@ Four new acts on the **Game**, each carrying a verdict on whether its maker is *
   phone or on the server. The courtmate's *They're here* is location-checked too (a call).
 - **Refusals are plain sentences**: not at the club (*You can say so only from Ogrody 33*), location
   off (the phone asks for it and says why), and outside the window.
-- **The permission text** gains the second use: *Raketa uses your location to set the area you play
+- **The permission text** gains the second use: *Rakieta uses your location to set the area you play
   in and, when you say who's at a game, to check you're at the club.* Background location stays off.
   The player app's own rule that location is read once, for the area, is amended to name this use
   (a call).
@@ -340,7 +340,7 @@ of at least **High** reliability*, or *at least **Medium***.
     gain *Played · no score*, and *Uncounted*'s reasons follow the new endings.
   - The notices gain the five kinds and the new destination. Group members carry points and band.
 - **The club document.** The check-in route goes, the Bookings day rows lose the checked-in time, and
-  the Raketa settings lose check-in.
+  the Rakieta settings lose check-in.
 - **The dev document.** The check-in route and situation go. New presses cover the attendance acts,
   as any seeded player, at the club or away ([ADR-0194](0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)).
   The rating press settles what has become final; the console still writes history and never moves
@@ -355,7 +355,7 @@ The local store needn't be reset (a call). These keep decoding, and fold to noth
 - `NoShowReported` and `NoShowDisputed` on the Game. A game that held an old no-show report reads
   *Played · no score*;
 - `PlayerCheckedIn` on the Booking;
-- the check-in field of the club's Raketa settings event.
+- the check-in field of the club's Rakieta settings event.
 
 ### 10. The calls made without a ruling
 
@@ -427,7 +427,7 @@ each is marked *a call* where it stands above:
 - **A tap is an accusation that costs its maker nothing.** A player who is there lifts it with their
   own *I'm here* from the club. But a player whose phone died has only *I was there*, and that needs
   somebody else on the court to confirm it: in doubles one of three, in singles **the very opponent
-  who tapped**. Neither the club nor Raketa rules on it. That is accepted: the tapper had to be at
+  who tapped**. Neither the club nor Rakieta rules on it. That is accepted: the tapper had to be at
   the club in the first half of the game, and the old report needed one person at home.
 - **Push is now load-bearing.** *Isn't here yet* is worth little if it reaches a phone only when its
   owner opens the app. Push needs the Expo project, Firebase, and the Apple Developer Program at 99 USD

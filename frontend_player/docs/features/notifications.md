@@ -308,7 +308,7 @@ always on, because each decides somebody's record or result. Push itself is stil
 on is the set-up ticket's.
 **No notice is about a club's answer — no club confirms a game**
 ([#676](https://github.com/Raketa02/Raketa/issues/676); the backend's #669;
-[ADR-0196](../../../docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+[ADR-0196](../../../docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
 §1, the mechanics Q121; the screens A7.2). Paula's yes completes Marta's Thursday game at Kazimierz
 Padel and it is booked at once, so the four are told _It's a game! · 25 zł held_ like at any club.
 `WAITING_FOR_THE_CLUB` (_It's a game! · Kazimierz Padel answers by 21:15_), `CLUB_CONFIRMED` and

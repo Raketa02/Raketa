@@ -1,6 +1,6 @@
 # Prices, passes and benefit cards — what rivals and Kraków clubs do, and what the law allows
 
-Research for areas 6 (prices) and 10 (benefit sports cards) of the planning map *Raketa becomes the club's
+Research for areas 6 (prices) and 10 (benefit sports cards) of the planning map *Rakieta becomes the club's
 booking software* (decided 2026-10-12): how a club prices a court-hour, sells passes and prepaid value, and takes
 MultiSport, Medicover Sport, FitProfit and PZU Sport, in rival software, at Kraków desks, and under Polish and EU law.
 
@@ -13,7 +13,7 @@ MultiSport, Medicover Sport, FitProfit and PZU Sport, in rival software, at Krak
 dates; everything else was read **2026-10-12**.
 
 **This file decides nothing.** Each feature below is to be decided *Build at launch · Build later · Leave out · Ask a
-real club* in the club-software grilling. Nothing here estimates what Raketa would cost to build.
+real club* in the club-software grilling. Nothing here estimates what Rakieta would cost to build.
 
 **Sources.** Playtomic and MATCHi help pages were read through their public Zendesk API (the HTML answers 403).
 Playmore's and tenis4U's interface text comes from the JavaScript their web apps serve to every visitor
@@ -34,7 +34,7 @@ sources.
 
 - **Every rival keeps one price table keyed by court × day × time band × booking length, with dated changes,** and
   adds a member or category price on top (Playtomic, MATCHi, tenis4U, kluby.org). **No main rival sells
-  demand-based "dynamic" pricing**; MATCHi's price condition *"lead time before booking"* is the closest. Raketa's
+  demand-based "dynamic" pricing**; MATCHi's price condition *"lead time before booking"* is the closest. Rakieta's
   bands (standard + weekday/weekend) are the common core.
 - **Three of the four Kraków squash clubs read run two price lists, online cheaper:** Atras 10 % (15 % with a pass),
   Squash4You 15 zł, Paolo 5 zł; Miazga charges the same. Playmore then adds a 1,48–1,99 zł service fee to online
@@ -53,7 +53,7 @@ sources.
   (art. 59l); Playmore's wallet already pays out on demand.
 - **Stripe lists stored value "issued by anyone other than the seller" as a Restricted Business** (approval needed);
   seller-kept credit *"may be subject to limits"*. Its *customer balance* applies only to invoices. *Reading:* a
-  per-club wallet on a direct-charge account fits Stripe's model; a Raketa-wide credit does not without approval.
+  per-club wallet on a direct-charge account fits Stripe's model; a Rakieta-wide credit does not without approval.
 - **Playmore settles sport cards with a deposit since August 2026:** the player pays the card discount up front and
   gets it back in the Playmore wallet when the desk stamps the card, because *"Klub dostaje pieniądze od operatora
   karty tylko za odbite wejście"* (the club is paid by the card operator only for a stamped entry). Its "automatic
@@ -155,7 +155,7 @@ sources.
   invoices"*; it does not apply to invoices from Checkout Sessions with `invoice_creation`
   ([Customer invoice balance](https://docs.stripe.com/billing/customer/balance)).
   - *Reading:* nothing in Stripe holds a player's wallet for card-present or PaymentIntent bookings; a wallet is a
-    ledger Raketa keeps, with the money already on the seller's Stripe balance.
+    ledger Rakieta keeps, with the money already on the seller's Stripe balance.
 
 ## Area 6 — prices
 
@@ -235,7 +235,7 @@ proposed for next month may carry next season's price. Atras's online 103,50 zł
   PADO and Playmore pages of Garden Padel, Bajada, Padel House, Morelowa 34, Libertów). Garden Padel's Playmore page
   shows desk prices only (*"Online —"*) ([page](https://playmore.pl/klub/garden-padel/cennik/)).
 
-**What it means for the player app.** Every Raketa seat is paid online; *reading:* a squash club with two lists would
+**What it means for the player app.** Every Rakieta seat is paid online; *reading:* a squash club with two lists would
 expect its online column to apply, and the app's share would differ from what the same player pays at the desk.
 
 **Market signal.** Differentiator in Kraków squash, absent in padel and in the platforms' own feature sets.
@@ -274,7 +274,7 @@ and the price follows the player's account.
   placeholder: gardenpadel.pl lists them priced *"IDR 75K /session"* under *"the Padelo community"*
   ([gardenpadel.pl](https://gardenpadel.pl/)). *Reading:* not a real offer.
 
-**What it means for the player app.** A member and a non-member in one Raketa game would pay different shares; MATCHi's
+**What it means for the player app.** A member and a non-member in one Rakieta game would pay different shares; MATCHi's
 MPP is the only rival model for that, and it charges the booker, not each seat.
 
 **Market signal.** Table stakes in the platforms; rare at Kraków padel and squash desks.
@@ -400,7 +400,7 @@ below).
 - **[ABSENT]** A court count pass at any Kraków padel club; Garden Padel *"Karnet / pakiet godzin — do ustalenia"*
   (to be agreed) ([page](https://playmore.pl/klub/garden-padel/cennik/)).
 
-**What it means for the player app.** A pass pays one booker's whole court; Raketa's game splits a court in seats.
+**What it means for the player app.** A pass pays one booker's whole court; Rakieta's game splits a court in seats.
 *Reading:* a pass would need to pay one seat, or the desk keeps passes for its own bookings.
 
 **Market signal.** Table stakes in squash and tennis software; rare in Kraków padel.
@@ -477,7 +477,7 @@ does nothing — the balance is Playmore's.
 
 **What a Kraków desk does today.** Nothing of its own; Playmore clubs' refunds already flow into Playmore's balance.
 
-**What it means for the player app.** *Reading:* a Raketa credit spent at many clubs is Raketa's liability under the
+**What it means for the player app.** *Reading:* a Rakieta credit spent at many clubs is Rakieta's liability under the
 limited-network test and Stripe's restricted list (see *The law*); a per-club wallet is the club's.
 
 **Market signal.** Rare (Playmore in Poland; chains only elsewhere).
@@ -521,7 +521,7 @@ wallet by default (Playmore); no bank refund to chase.
 - **[POLICY]** Squash4You moves a prepaid booking cancelled in time to the next booking rather than refunding it
   (carried, `local-market.md`, read 2026-10-06).
 
-**What it means for the player app.** Raketa refunds to the card in full today; *reading:* a wallet would let a club
+**What it means for the player app.** Rakieta refunds to the card in full today; *reading:* a wallet would let a club
 keep the money, which is what clubs on Playtomic and Playmore choose.
 
 **Market signal.** Differentiator.
@@ -621,7 +621,7 @@ the deposit.
   nieterminowej anulacji Klient nie może posłużyć się kartą partnerską i podlega pełnym opłatom"* (no-show or late
   cancel: no card, full price) ([regulamin §11](https://www.squash4you.pl/regulamin)).
 
-**What it means for the player app.** A seat could carry a declared card. *Reading:* Raketa holds each share until the
+**What it means for the player app.** A seat could carry a declared card. *Reading:* Rakieta holds each share until the
 cut-off and charges it; Playmore's deposit is the same shape — charge the full share, return the card's 15 zł after
 the desk stamps it.
 

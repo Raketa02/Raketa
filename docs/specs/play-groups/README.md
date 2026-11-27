@@ -1,7 +1,7 @@
 # Play › Groups, the club website and the Administrator: the mocks
 
 **What PRD [#500](https://github.com/Raketa02/Raketa/issues/500) is drawn from.** These are the
-product owner's mocks, copied here from `raketa_v2.0/1-play` (62 mocks) and `raketa_v2.0/club` (19
+product owner's mocks, copied here from `rakieta_v2.0/1-play` (62 mocks) and `rakieta_v2.0/club` (19
 mocks, numbered 1–11 and 13–20, with no 12) so that every session can read them. Landed by
 [#501](https://github.com/Raketa02/Raketa/issues/501) on 2026-09-25.
 
@@ -25,8 +25,8 @@ mocks, numbered 1–11 and 13–20, with no 12) so that every session can read t
 3. **Cite a mock by folder and number**: *play 14*, *club 20*. The numbers are the product owner's.
    The file names were only cleaned of typos (`grops`, `freinds`, `administratpr`, and so on) and
    zero-padded so they sort. The [index](#index) gives each original name.
-4. **The mocks say *Rakieta* and show `rakieta.app/g/…` links.** Read the name as **Raketa**
-   (ADR-0187 §8). The link is illustrative: a group link is the configured public site address
+4. **The mocks say *Rakieta* and show `rakieta.app/g/…` links.** The name is the brand as written
+   (ADR-0211). The link is illustrative: a group link is the configured public site address
    followed by `/join/<8-character code>` (ADR-0183 §4).
 
 ## Which mocks draw which area
@@ -99,7 +99,7 @@ everywhere else.
 | every play mock | a three-tab bar: Games · Play · You | **The bar is Home · ⚡ Play · You** (#576); the five-tab bar went with Classic play. The Administrator's side has its own two tabs, **Groups · You** (club 17–19). |
 | club 15, 16 | *Games* of 8 and 9. The feature document beside them also says *Players* excludes the administrator and the rows aren't tappable | ***Games* counts the games booked in the group** — every game its deck filled into a booking, never one two of its members arranged elsewhere (ADR-0183 §11, amended by ADR-0189). *Players* is **the group's member count**, including an Administrator who joined as a player. **Every row is tappable** and opens the Hand over page (#500 story 108, [#524](https://github.com/Raketa02/Raketa/issues/524)), where any official group can be handed over (ADR-0183 §8). |
 | the group page: play 14–17, 39–60 and 62, and the games-and-fill-in mocks [1](../games-and-fill-in/mocks/player/1-games_tap_general_view.png), [9](../games-and-fill-in/mocks/player/9_competitive_forfun_tap.png) and [11](../games-and-fill-in/mocks/player/11_fill_in_tap_general.png) | a tab bar of four, *Games · Fill in · Friends · Info* (play 43, and every mock that shows the bar); Info's content on that fourth tab (play 57–60, 62); and a header that is not a button | **Three tabs: Games · Fill in · Friends.** **Info opens from the header** as its own screen, with the same content: the group's monogram, its name with the official mark and *N members · home club* are one button. **The Owner's count of waiting requests is on the monogram's corner.** The rest is Q125 in the [games-and-fill-in decision log](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log). |
-| every mock | *Rakieta*, `rakieta.app/g/…` | **Raketa**, and `<public site>/join/<code>`. |
+| every mock | *Rakieta*, `rakieta.app/g/…` | **Rakieta**, as drawn (ADR-0211), and `<public site>/join/<code>`. |
 
 ## Index
 

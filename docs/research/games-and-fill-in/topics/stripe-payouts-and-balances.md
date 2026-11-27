@@ -1,13 +1,13 @@
-# Stripe payouts and balances — the way Raketa uses them
+# Stripe payouts and balances — the way Rakieta uses them
 
 What Stripe says about a club's **balance** and its **payouts**, for **this** product, read 2026-10-19 for the
 payments pass on PRD #530 at `9ab0ea5b`. Every share is a **direct charge** on the club's own connected account
 (Accounts v2, full Dashboard, `fees_collector` and `losses_collector` both `stripe`, Poland, złoty —
 `backend/app/modules/payments/infrastructure/stripe_payments.py:317-347`), so the money lands on the **club's**
-balance, never Raketa's. Raketa then decides one **club payout** per club per club day, at the day's close
+balance, never Rakieta's. Rakieta then decides one **club payout** per club per club day, at the day's close
 (23:00 Kraków), of what the club's games over by then left it — shares taken, less what was given back, less the
 real card fee — and makes it from the outbox with `payouts.create` on the club's account under the key
-`raketa-payout-{id}` (`backend/app/modules/payments/domain/club_payout.py:1-30`,
+`rakieta-payout-{id}` (`backend/app/modules/payments/domain/club_payout.py:1-30`,
 `backend/app/modules/payments/application/payouts.py:74-115`,
 `backend/app/modules/payments/application/handlers/send_club_payouts.py:30-85`,
 `stripe_payments.py:411-462`). The Money page lists the account's payouts as Stripe returns them
@@ -22,7 +22,7 @@ recommendation; `[MEASURED]` is read-only through `stripe` (platform `acct_1US89
 **Carried over, not redone** (all under three months old): returned payouts, the reconciliation report,
 `balance_insufficient`, platform controls — [`gaps-CLUBMONEY.md` §1, §4, §5](gaps-CLUBMONEY.md#1-a-payout-the-bank-sends-back-r-clubmoney-20)
 (2026-10-08); Stripe's email on a returned payout — [`gaps-EMAIL.md`](gaps-EMAIL.md#stripe-emails-the-account-holder-when-a-payout-comes-back-up-to-5-business-days-later);
-daily payouts on a new account, losses and Stripe's recovery — [`stripe-connect.md` §1–§3](stripe-connect.md#a-club-account-raketa-opens-starts-on-stripes-automatic-daily-payouts);
+daily payouts on a new account, losses and Stripe's recovery — [`stripe-connect.md` §1–§3](stripe-connect.md#a-club-account-rakieta-opens-starts-on-stripes-automatic-daily-payouts);
 the payout key and the outbox — [`stripe-reliability.md`](stripe-reliability.md#this-products-outbox-asks-again-every-second-with-no-end);
 payout events — [`stripe-webhooks.md`](stripe-webhooks.md#a-clubs-account-its-disconnection-and-its-payouts);
 refunds off the pending balance — [`stripe-refunds-and-disputes.md`](stripe-refunds-and-disputes.md#the-money-comes-off-the-clubs-balance-on-the-sandbox-off-its-pending-balance-at-once);
@@ -56,7 +56,7 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
 - **[DOCS]** "All payments and payouts are processed according to UTC time, except for Asia-Pacific (APAC)
   markets. As a result, the processed date might not be the same as your local time zone."
   [Receive payouts — Payout schedule](https://docs.stripe.com/payouts#payout-schedule) — 2026-10-19
-  - *Reading:* a share becomes payable at 01:00 (winter) or 02:00 (summer) Warsaw time; Raketa's club day closes at
+  - *Reading:* a share becomes payable at 01:00 (winter) or 02:00 (summer) Warsaw time; Rakieta's club day closes at
     23:00 Kraków (`backend/app/modules/clubs/domain/court_hours.py:95-112`).
 
 ### The schedule decides only when available money leaves
@@ -71,13 +71,13 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
   account's balance and is paid out on a daily rolling basis."
   [Payouts to connected accounts](https://docs.stripe.com/connect/payouts-connected-accounts) — 2026-10-19
 
-### A club account Raketa opens is on daily payouts; the test club is on manual
+### A club account Rakieta opens is on daily payouts; the test club is on manual
 
 - **[MEASURED]** v1 retrieve · `stripe` · 2026-10-19: `acct_1USELi5y1DCSZFum` (opened by the code, never
   onboarded) `settings.payouts = {debit_negative_balances: true, schedule: {interval: daily, delay_days: 7}}`;
   the test club `acct_1US95f5y1DMwE3zY` `{debit_negative_balances: true, schedule: {interval: manual, delay_days: 7}}`.
   Who set the test club to manual is not visible through the API. Confirms
-  [`stripe-connect.md`](stripe-connect.md#a-club-account-raketa-opens-starts-on-stripes-automatic-daily-payouts).
+  [`stripe-connect.md`](stripe-connect.md#a-club-account-rakieta-opens-starts-on-stripes-automatic-daily-payouts).
 - **[MEASURED]** `GET /v1/accounts` (the list) · `stripe` · 2026-10-19: the same two accounts come back **without**
   `settings.payouts`; only a retrieve by id carries it.
 - Code: the account is opened with no payout setting (`stripe_payments.py:317-347`), and the code says so: "Until O2
@@ -109,7 +109,7 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
 - **[DOCS]** "Connected accounts can still make manual payouts after you, as the platform, choose to restrict connected
   accounts from updating their own payout schedule." "If you need full control … contact us."
   [Platform controls](https://docs.stripe.com/connect/platform-controls-for-stripe-dashboard-accounts#control-payout-timing) — 2026-10-19
-  - *Reading:* Raketa (Stripe liable, platform controls) may set a club to manual but can't lengthen its delay; a
+  - *Reading:* Rakieta (Stripe liable, platform controls) may set a club to manual but can't lengthen its delay; a
     longer wait is only available as manual payouts.
 
 ### A minimum balance keeps money back from automatic payouts
@@ -136,7 +136,7 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
   pages, `payouts`, `connect/manual-payouts`, `connect/manage-payout-schedule`, the error-codes list, the payout
   schedules FAQ (support.stripe.com, read through WebFetch) — 2026-10-19. Nothing was created to find out (no write
   tool).
-  - *Reading:* on a club account Raketa opens today (daily), Stripe pays the club itself, and Raketa's own payout is
+  - *Reading:* on a club account Rakieta opens today (daily), Stripe pays the club itself, and Rakieta's own payout is
     either refused or finds the balance already paid out; the code catches only `balance_insufficient` and lets any
     other refusal fail the delivery (`stripe_payments.py:441-454`).
 
@@ -151,9 +151,9 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
   Payouts"); in Poland only to a **debit card**, 2,00 zł to 9 999 zł; "If Stripe is liable for a connected account's
   negative balances, Stripe controls eligibility." [Instant payouts for Connect](https://docs.stripe.com/connect/instant-payouts) — 2026-10-19
   - *Reading:* a club on manual payouts can empty its own available balance at any moment from its Dashboard, before
-    Raketa's payout of the same money.
+    Rakieta's payout of the same money.
 
-### Raketa can't pause a v2 or Stripe-liable club's payouts
+### Rakieta can't pause a v2 or Stripe-liable club's payouts
 
 - **[DOCS]** "Accounts v2 not supported — This workflow isn't available when using Accounts v2." "Platforms can pause
   payments or payouts on accounts where they're liable for negative balances." "We don't enforce payment or payout
@@ -200,7 +200,7 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
 - **[DOCS]** `description`, `metadata`, `statement_descriptor` (≤ 22 characters, "Some banks might not display it at
   all"); `automatic` is "`true` if the payout is created by an automated payout schedule".
   [Create a payout](https://docs.stripe.com/api/payouts/create), [object](https://docs.stripe.com/api/payouts/object) — 2026-10-19
-- Code: sends a description and `metadata.raketa_payout` (`send_club_payouts.py:61-67`); reads back only id, amount,
+- Code: sends a description and `metadata.rakieta_payout` (`send_club_payouts.py:61-67`); reads back only id, amount,
   arrival date and status (`stripe_payments.py:393-409`, `backend/app/modules/payments/domain/provider.py:219-225`).
 
 ---
@@ -341,7 +341,7 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
   - *Reading:* on a club's złoty account the debit setting is unlikely to act; a negative balance waits for the next
     shares, and Stripe, as the losses collector, bears what is never recovered.
 
-### Raketa carries no reserve for a club's negative balance
+### Rakieta carries no reserve for a club's negative balance
 
 - **[DOCS]** Platform reserves (`reserve_transaction`, after 180 days `connect_collection_transfer`) cover "negative
   connected account `available` balances that your platform is responsible for"; responsibility is v2
@@ -351,9 +351,9 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
 
 ---
 
-## 6. Raketa's ledger against Stripe's
+## 6. Rakieta's ledger against Stripe's
 
-### Raketa sizes a payout from its own ledger, never from the club's Stripe balance
+### Rakieta sizes a payout from its own ledger, never from the club's Stripe balance
 
 - Code: a game is paid once it is over and every share is settled; what it left is each share's amount, less what was
   given back, less its card fee read from the charge's balance transaction (`backend/app/modules/payments/domain/seat_charge.py:462-473`,
@@ -367,7 +367,7 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
 - Code: the fake pays every positive payout at once, `in_transit`, arriving two days later, and never refuses one for
   balance, schedule, minimum or bank (`backend/app/modules/payments/infrastructure/fake_payments.py:585-620`, `:104`).
 
-### What the club's Stripe balance holds that Raketa's ledger does not
+### What the club's Stripe balance holds that Rakieta's ledger does not
 
 - The club's own sales and refunds in its full Dashboard, BLIK and Klarna among them
   ([`stripe-connect.md`](stripe-connect.md#the-club-switches-its-own-payment-methods-on));
@@ -377,7 +377,7 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
   ([`stripe-refunds-and-disputes.md`](stripe-refunds-and-disputes.md#a-refund-can-fail-up-to-30-days-later-for-seven-reasons-and-the-seller-must-pay-another-way));
 - failed payouts' money back as `payout_failure` (§3); Stripe's service fees as `stripe_fee` (§4);
 - Stripe's own automatic payouts, and any the club makes itself (§1, §2).
-  - *Reading:* the two sums agree only while nothing but Raketa's shares touches the account and nobody else pays it
+  - *Reading:* the two sums agree only while nothing but Rakieta's shares touches the account and nobody else pays it
     out.
 
 ### Stripe's tools for tying a payout to its games
@@ -385,7 +385,7 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
 - **[DOCS]** For automatic payouts: list balance transactions by `payout` with `expand[]=data.source` to reach each
   charge's `metadata` ([reconciliation](https://docs.stripe.com/payouts/reconciliation)); the report's Itemized CSV can
   carry "custom metadata" ([report](https://docs.stripe.com/reports/payout-reconciliation)) — 2026-10-19.
-- Code: Raketa keeps each payout's games (`club_payout.py:92-110`) and tags it `raketa_payout`
+- Code: Rakieta keeps each payout's games (`club_payout.py:92-110`) and tags it `rakieta_payout`
   (`send_club_payouts.py:65`); the Money page lists every payout on the account without that tag (`stripe_payments.py:393-409`).
 
 ---
@@ -393,23 +393,23 @@ the test club's manual schedule — [`stripe-sandbox.md` D3](stripe-sandbox.md#d
 ## Pitfalls
 
 ### P1 · Building on manual payouts while the club account is on Stripe's daily schedule
-Raketa opens every club on Stripe's default — daily, measured — and sets no schedule (`stripe_payments.py:420-425`).
+Rakieta opens every club on Stripe's default — daily, measured — and sets no schedule (`stripe_payments.py:420-425`).
 Stripe then pays the club itself, 7 calendar days after each capture at first and 3 business days after later
 ([payouts](https://docs.stripe.com/payouts#settlement-timing)), and a standard manual payout needs `manual`
-([embedded payouts](https://docs.stripe.com/connect/supported-embedded-components/payouts?platform=web)). Raketa's own
+([embedded payouts](https://docs.stripe.com/connect/supported-embedded-components/payouts?platform=web)). Rakieta's own
 payout is then refused or finds nothing left, the delivery retries every second, *A payout was sent* never goes, and the
 club is paid on Stripe's clock instead of "after the game".
 
-### P2 · Assuming *manual* means Raketa alone pays the club
+### P2 · Assuming *manual* means Rakieta alone pays the club
 "Connected accounts can still make manual payouts" after the platform restricts the schedule, and full control means
 contacting Stripe ([platform controls](https://docs.stripe.com/connect/platform-controls-for-stripe-dashboard-accounts#control-payout-timing));
 a manual account can also take instant payouts to a Polish debit card ([instant payouts](https://docs.stripe.com/connect/instant-payouts)).
-A club that pays itself first leaves Raketa's payout `balance_insufficient`, and Raketa's ledger still owes it.
+A club that pays itself first leaves Rakieta's payout `balance_insufficient`, and Rakieta's ledger still owes it.
 
 ### P3 · Treating `paid` as final, and not hearing `payout.failed`
 A payout can read `paid` and turn `failed` within 5 business days; the money returns as `payout_failure` and the bank
 account is switched off ([payout object](https://docs.stripe.com/api/payouts/object),
-[connected payouts](https://docs.stripe.com/connect/payouts-connected-accounts)). Raketa marks the games *paid out* when
+[connected payouts](https://docs.stripe.com/connect/payouts-connected-accounts)). Rakieta marks the games *paid out* when
 Stripe takes the payout and never re-reads it, so the bookings keep saying paid while the money sits on the club's
 balance, and on a manual schedule nothing pays it again ([gaps-CLUBMONEY](gaps-CLUBMONEY.md#on-manual-payouts-nothing-says-stripe-sends-it-again)).
 
@@ -417,10 +417,10 @@ balance, and on a manual schedule nothing pays it again ([gaps-CLUBMONEY](gaps-C
 "You can't create payouts for greater than the aggregate available balance"; "you're responsible for reconciling
 payouts you create" ([manual payouts](https://docs.stripe.com/connect/manual-payouts),
 [reconciliation](https://docs.stripe.com/payouts/reconciliation)). After a dispute or a failed or outside refund the same
-payout is refused day after day; money the ledger doesn't know is never paid out by Raketa.
+payout is refused day after day; money the ledger doesn't know is never paid out by Rakieta.
 
 ### P5 · Paying out below 5 zł
-The Polish minimum is 5 PLN ([payouts](https://docs.stripe.com/payouts#minimum-payout-amounts)); Raketa pays any
+The Polish minimum is 5 PLN ([payouts](https://docs.stripe.com/payouts#minimum-payout-amounts)); Rakieta pays any
 positive day (`club_payout.py:86-88`). A day that nets, say, 3 zł is asked of Stripe and refused (error unverified), and
 under a fixed key it is refused again for ever.
 
@@ -433,7 +433,7 @@ A saved `400` is replayed for 24 hours, and the outbox asks again each second wi
 `reconciliation_status` is `not_applicable` for manual payouts, the `payout` filter works "for automatic Stripe payouts
 only", and the reconciliation report needs automatic payouts ([payout object](https://docs.stripe.com/api/payouts/object),
 [list](https://docs.stripe.com/api/balance_transactions/list), [report](https://docs.stripe.com/reports/payout-reconciliation)).
-Only Raketa's own record ties a payout to its games; the Money page's list doesn't show which payouts are Raketa's.
+Only Rakieta's own record ties a payout to its games; the Money page's list doesn't show which payouts are Rakieta's.
 
 ### P8 · Counting availability in Warsaw time and business days
 Stripe processes in UTC; the sandbox's shares became available at 00:00 UTC seven calendar days on (measured); Stripe's
@@ -448,13 +448,13 @@ the setting reads `true` on every club account (measured). While the balance is 
 ### P10 · Holding money past 90 days, or with no clear release
 "You must pay out the funds within … 90 days"; hold "only when there's a clear purpose"
 ([manual payouts](https://docs.stripe.com/connect/manual-payouts), [holding funds](https://docs.stripe.com/connect/account-balances#holding-funds)).
-A game never *over*, weeks of negative days, or a club leaving Raketa leave money nobody pays out.
+A game never *over*, weeks of negative days, or a club leaving Rakieta leave money nobody pays out.
 
 ### P11 · Planning to pause a club's payouts, or to set its delay
 Pausing is "not supported" for Accounts v2 and Stripe-liable accounts; the delay is editable only "where you own fraud
 and dispute liability" ([pause](https://docs.stripe.com/connect/pausing-payments-or-payouts-on-connected-accounts),
 [schedule](https://docs.stripe.com/connect/manage-payout-schedule)); removal resets payout timing
-([`stripe-connect.md`](stripe-connect.md#removing-a-club-ends-every-api-call-raketa-can-make-for-it)).
+([`stripe-connect.md`](stripe-connect.md#removing-a-club-ends-every-api-call-rakieta-can-make-for-it)).
 
 ### P12 · Reading payout settings from the account list
 The list omits `settings.payouts` (measured); for v2, Stripe keeps them in Balance Settings
@@ -468,26 +468,26 @@ IBANs do ([test payouts](https://docs.stripe.com/payouts#test-payouts)).
 
 ## Checks
 
-1. Which payout schedule does each club account Raketa opens actually carry, who sets it, and when? If it is Stripe's
-   daily schedule, does any rule still promise the club is paid by Raketa, after the game?
-2. Before Raketa asks for a payout, does it compare its figure with the club's **available** balance — and when they
+1. Which payout schedule does each club account Rakieta opens actually carry, who sets it, and when? If it is Stripe's
+   daily schedule, does any rule still promise the club is paid by Rakieta, after the game?
+2. Before Rakieta asks for a payout, does it compare its figure with the club's **available** balance — and when they
    differ, who is told, and does the money still reach the club?
 3. When Stripe refuses a payout for anything but money not yet available (automatic schedule, payouts disabled, a
-   negative balance, below 5 zł), does the retry stop, and does the club or Raketa learn why?
+   negative balance, below 5 zł), does the retry stop, and does the club or Rakieta learn why?
 4. When a payout comes back from the bank (`payout.failed`, up to 5 business days after *paid*), do the club's bookings
    stop reading *paid out*, is the desk told, and is the money paid again once the bank details are fixed?
 5. Does anything hear `payout.*`, `account.external_account.updated` or `balance.available` on the Connect endpoint, or
    does the product only read the list when the Money page opens?
-6. Can the club pay itself out (in its Dashboard, or instantly to a debit card) before Raketa does, and what does
-   Raketa's ledger do with a game whose money the club already took?
+6. Can the club pay itself out (in its Dashboard, or instantly to a debit card) before Rakieta does, and what does
+   Rakieta's ledger do with a game whose money the club already took?
 7. Is every payout at least 5 zł, and is a smaller remainder carried to the next day rather than asked of Stripe?
 8. Is money on a manual account paid out within 90 days in every case — a game never *over*, a long run of negative
-   days, a club pausing or leaving Raketa — and is everything paid out before the account is removed?
+   days, a club pausing or leaving Rakieta — and is everything paid out before the account is removed?
 9. When a dispute, a failed refund or the club's own refund lowers the balance, does the next payout account for it,
    and does a negative balance stop payout attempts until it is positive?
 10. Are *available* and *arrives* dates computed as Stripe does — UTC, 7 calendar days for the first payout, then the
     default — and does the payout email use Stripe's `arrival_date`?
-11. Does the Money page tell Raketa's payouts (`automatic: false`, `metadata.raketa_payout`) from Stripe's automatic ones
+11. Does the Money page tell Rakieta's payouts (`automatic: false`, `metadata.rakieta_payout`) from Stripe's automatic ones
     and the club's own, and show a failed one with its reason?
 12. Can a club's accountant trace each payout to its games and to each share's charge, refund and fee on the club's
     balance?

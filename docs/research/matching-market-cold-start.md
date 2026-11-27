@@ -74,7 +74,7 @@ marketplace needs: **thickness** — attracting enough participants ready to tra
 **overcoming congestion** — giving participants enough time, or fast enough transactions, to
 consider enough alternatives to reach satisfactory ones; and **safety** — making it safe to
 participate straightforwardly rather than strategically or outside the market. This is the most
-useful frame available for Raketa, because it says the failure modes are *symmetric*: a market
+useful frame available for Rakieta, because it says the failure modes are *symmetric*: a market
 can fail by being too thin **and** by being thick but unevaluable. The quality floor is a
 congestion device as much as a quality device — it is what stops a dense city from becoming an
 unevaluable list. *(The PDF returns as compressed binary and could not be quoted verbatim; the
@@ -122,7 +122,7 @@ not a finding.
 **[ANECDOTE]** Sarah Tavel's *Hierarchy of Marketplaces* and *"minimum viable happiness"*
 ([Level 1](https://sarahtavel.medium.com/the-hierarchy-of-marketplaces-introduction-and-level-1-983995aa218e),
 [Happy GMV](https://sarahtavel.medium.com/measuring-happy-gmv-and-why-im-over-net-promoter-score-47a5748611bc))
-is the closest thing in the VC literature to Raketa's own conviction: the metric to chase is not
+is the closest thing in the VC literature to Rakieta's own conviction: the metric to chase is not
 transaction volume but the share of transactions that made someone happy, and aggregate volume is
 a vanity metric that leads you down the wrong path. **Argued, not measured** — but it is §19.1's
 argument arriving from an independent direction, which is worth recording.
@@ -198,7 +198,7 @@ concierge seed, disclosed, again unmeasured.
 **[ANECDOTE]** **Strava's Local Legends** solved sparse leaderboards *structurally*, by redefining
 the prize as most-frequent-in-90-days on a segment rather than fastest overall, so a quiet segment
 still has a winner ([Strava Engineering](https://medium.com/strava-engineering/building-local-legends-290879265c83)).
-Worth recording as a fourth option Raketa has not considered: **change what the screen is *for* in
+Worth recording as a fourth option Rakieta has not considered: **change what the screen is *for* in
 a thin pool**, rather than changing what clears the bar. Not evidence — a design move with no
 published outcome.
 
@@ -489,7 +489,7 @@ Reread §1's dynamic-matching results in this light. Standing search is, formall
 can identify who is about to depart**; Bäumler et al. say instantaneous matching is near-optimal
 even in thin, sparse markets under mild conditions.
 
-**Raketa cannot see departures.** A player who gives up does not emit an event; §7.1's signals do
+**Rakieta cannot see departures.** A player who gives up does not emit an event; §7.1's signals do
 not include intent to churn. **On the best available theory, the value of holding a search open
 rather than matching as soon as somebody clears the floor is unproven, and conditional on
 information this product does not have.**
@@ -531,7 +531,7 @@ single paper coins "diagnostic metric"; it is convergent vocabulary. Airbnb's *D
 Experimentation Guardrails* post exists and returned 403.
 
 **This settles half of item 6: §19.1's move is standard practice with standard vocabulary.**
-Raketa's empty-result rate is, in Kohavi/Spotify terms, a **diagnostic**; the return rate is the
+Rakieta's empty-result rate is, in Kohavi/Spotify terms, a **diagnostic**; the return rate is the
 **OEC**. Saying so in those words makes the position defensible to anyone who has run experiments
 professionally, and it is a two-line edit to §19.1.
 
@@ -556,7 +556,7 @@ it at all. It is about ad load rather than a matching quality floor — but the 
 **[EVIDENCE]** Athey, Chetty, Imbens & Kang, *"The Surrogate Index"*, NBER w26463 (2019)
 ([NBER](https://www.nber.org/papers/w26463)) — a weighted index of short-run proxies can be shown
 empirically to track a long-run outcome. Worth noting that **return-rate-within-60-days is itself
-already a surrogate** for the retention Raketa actually cares about; §19.1 is one level into this
+already a surrogate** for the retention Rakieta actually cares about; §19.1 is one level into this
 literature whether it knows it or not.
 
 ### The exact analogue — and somebody already ran the experiment
@@ -581,7 +581,7 @@ Two further pieces from the same team make the contrast:
 
 **The lesson for §19.1, stated as it actually is:** lowering the bar to cut the empty-result number
 did not even buy the short-term win it was designed to buy. **The productive move on an empty-result
-number is to attack its causes, not its threshold.** In Raketa's terms: thin pools are fixed by more
+number is to attack its causes, not its threshold.** In Rakieta's terms: thin pools are fixed by more
 players and better availability overlap, not by a lower `QUALITY_FLOOR`.
 
 **[ANECDOTE, expert]** Daniel Tunkelang (ex-LinkedIn, ex-Endeca), *"Making Sense of Null and Low

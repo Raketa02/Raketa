@@ -1,6 +1,6 @@
 # ADR-0199 — A player is known by their nickname
 
-- **Status:** Accepted — **its *Context*'s *"there is no friendship in Raketa"* superseded
+- **Status:** Accepted — **its *Context*'s *"there is no friendship in Rakieta"* superseded
   2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)**: players have
   friends, held across their groups. The alternative that line argued against, *keep the name, show
   it to friends only*, stays rejected: the Name is retired, and a friend reads the nickname everybody
@@ -49,8 +49,8 @@ say *Ania Kowalska*: Kuba's deck, the chat, *It's a game!*, his notifications, M
 Bookings page and join requests, and the payment emails.
 
 **Players don't expect that.** The name feels private and isn't. What players expect is what
-Instagram does: one handle is who you are, and it is what everybody sees. A real name Raketa shows
-to strangers is a real name Raketa holds, and Raketa has no privacy policy yet
+Instagram does: one handle is who you are, and it is what everybody sees. A real name Rakieta shows
+to strangers is a real name Rakieta holds, and Rakieta has no privacy policy yet
 ([#735](https://github.com/Raketa02/Raketa/issues/735)).
 
 **The naming is also one more field between sign-up and Home.** *How should people see you?* asks
@@ -72,12 +72,12 @@ second. PRD #722 cuts onboarding to eight screens, and this is one of them.
 
 - **Keep the name, say the nickname.** The name would then be held and shown nowhere: data kept
   for nothing, about a real person, which is the opposite of what a newcomer expects.
-- **Keep the name, show it to friends only.** There is no friendship in Raketa (the Friends tab is
+- **Keep the name, show it to friends only.** There is no friendship in Rakieta (the Friends tab is
   out of scope), so this is a privacy setting to build and explain before anybody needs it.
   *(Superseded 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md): there is now friendship. The alternative stays
   rejected, since the Name is retired.)*
 - **Write the nickname with an @** (*@ania.k put a score up*). The @ is a chat app's mention mark.
-  Raketa has no mentions, and inside a sentence it reads as markup (Q23).
+  Rakieta has no mentions, and inside a sentence it reads as markup (Q23).
 
 ## Decision
 
@@ -175,7 +175,7 @@ ADR-0185 §4's *the step shows only the nickname field*) keep their text, read t
 
 - **One identity.** A player chooses one handle, sees it everywhere, and nothing they typed appears
   somewhere they didn't expect.
-- **Raketa holds no player's real name.** That is one less thing to explain in the privacy policy
+- **Rakieta holds no player's real name.** That is one less thing to explain in the privacy policy
   #735 will write.
 - **The naming is one field**, and the club's desk sees the same handle the players do.
 

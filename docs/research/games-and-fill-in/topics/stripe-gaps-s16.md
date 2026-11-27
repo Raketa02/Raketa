@@ -292,7 +292,7 @@ sandbox.
   - Under *Set a dynamic suffix for connected account charges*: "Dynamic suffixes are supported only for card
     charges by using the PaymentIntents `statement_descriptor_suffix` parameter." The example creates the
     PaymentIntent with `-H "Stripe-Account: {{CONNECTEDACCOUNT_ID}}"` and `statement_descriptor_suffix=Custom suffix`.
-    That is a direct charge, as Raketa makes them.
+    That is a direct charge, as Rakieta makes them.
   - A recommendation: "If you use a dynamic suffix on a charge that uses the connected account's static descriptor,
     we recommend setting a prefix to on the connected account so the complete statement descriptor appears as
     intended." The typo is Stripe's.
@@ -301,7 +301,7 @@ sandbox.
       settings."
     - The platform may update the descriptor and prefix only "After onboarding an account that doesn't have access
       to the full Stripe Dashboard".
-    - So a full-Dashboard club owns its prefix, and Raketa only adds the suffix.
+    - So a full-Dashboard club owns its prefix, and Rakieta only adds the suffix.
   - "Only the first 22 characters of the full statement descriptor are sent for card payments."
   - "For card payments, you can't specify the `statement_descriptor`. You can only specify the
     `statement_descriptor_suffix`."
@@ -372,8 +372,8 @@ sandbox.
     review. There are account-level twins as well.
   - No default rule counts repeats.
   - Custom rules apply only "If your Radar plan supports this feature".
-  - On a direct charge the club's rules run, not Raketa's
-    ([`stripe-connect.md`](stripe-connect.md#the-club-writes-its-own-radar-rules-raketas-rules-dont-reach-its-payments)).
+  - On a direct charge the club's rules run, not Rakieta's
+    ([`stripe-connect.md`](stripe-connect.md#the-club-writes-its-own-radar-rules-rakietas-rules-dont-reach-its-payments)).
 - **[DOCS]** The same page says how Radar groups retries for a rule's traffic allocation: "For card payments, Radar
   groups retry attempts using the following signals, in order of priority: 1. The same invoice. 2. The same customer
   and amount, if no invoice is present. 3. The same card and amount, if no customer is present."

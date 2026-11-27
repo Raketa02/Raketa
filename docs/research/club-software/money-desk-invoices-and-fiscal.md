@@ -1,6 +1,6 @@
 # Money at the club: online, at the desk, invoices and the cash register
 
-Research for area 11 (money) of the planning map *Raketa becomes the club's booking software*. It
+Research for area 11 (money) of the planning map *Rakieta becomes the club's booking software*. It
 covers what a Kraków club needs from one system to take, record, refund and pay out every złoty, and
 what Polish tax law asks of each sale.
 
@@ -246,7 +246,7 @@ if installed. MATCHi requires a logged-in, matching customer; tenis4U sends it t
 - **[ABSENT]** Any expiry time on a Payment Link: the create and update references have no expiry
   parameter.
 - *Reading:* a 60-minute desk link maps to a Checkout Session with `expires_at` = now + 60 min,
-  created on the club's connected account. A Payment Link would need Raketa to switch it off itself.
+  created on the club's connected account. A Payment Link would need Rakieta to switch it off itself.
 
 ---
 

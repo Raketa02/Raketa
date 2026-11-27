@@ -69,13 +69,13 @@ there she taps through sign-up; *How should people see you?*; *Let's set you up*
 questions ahead, then three cards headed **Value**, **Mission** and **Vision**); *Which sports do
 you play?*; between 6 and 9 questions for padel, two taps each; *Check your answers* and a
 calculating screen; *Your rating*; *Your starting ratings*, the same numbers again; six profile
-steps; and *What Raketa keeps*, eight cards about data. With tennis as well, it is 28–36 screens.
+steps; and *What Rakieta keeps*, eight cards about data. With tennis as well, it is 28–36 screens.
 
 **Most of it isn't needed when she signs up:**
 
 - **A rating is read only where play happens**: a group's Games, Fill in and Friends tabs, Post a
   game, and Members. Joining a group, the chat and You read none.
-- ***Let's set you up* and *What Raketa keeps* record nothing.** *Start playing* calls nothing, and
+- ***Let's set you up* and *What Rakieta keeps* record nothing.** *Start playing* calls nothing, and
   no document says the data screen is legally required.
 - ***Your starting ratings*** repeats *Your rating*. *Your rating* itself shows three numbers
   (**2,71**, **1,87–3,55**, **30%**), each with an ⓘ she has to find and press herself.
@@ -89,7 +89,7 @@ steps; and *What Raketa keeps*, eight cards about data. With tennis as well, it 
 first game drives newcomers away. ADR-0094 built on that order, and ADR-0090's gate enforced it.
 
 **Moving it, as the app works today, would strand people.** A player rated in nothing who opens a
-player group sees all three tabs blank, with no sport chip. She is never dealt a game, so Raketa
+player group sees all three tabs blank, with no sport chip. She is never dealt a game, so Rakieta
 never tells her anything. She is missing from Kuba's Members list. And an unfinished questionnaire
 takes over every launch until she finishes it, because the gate's first branch resumes it.
 
@@ -121,7 +121,7 @@ Onboarding is **sign-up, the naming (ADR-0199) and the six profile steps**, and 
 > want to play with?* → Home.
 
 The steps count *Step N of 6*, and *Finish* on the last lands on Home. ***Let's set you up***,
-***Your starting ratings*** and ***What Raketa keeps*** go, with their routes and their words. The
+***Your starting ratings*** and ***What Rakieta keeps*** go, with their routes and their words. The
 questionnaire's own screens stay, and are reached from where play begins (§2–§7).
 
 **The entry gate** reads the account's profiles first (ADR-0185 §3), then *no nickname* → the
@@ -220,7 +220,7 @@ A player who holds any rating sees neither.
    ***1 of 3***, ***Next*** and ***Skip***.
 2. *Next* moves the spotlight to **the likely range** (*2 of 3*).
 3. Then to **the confidence** (*3 of 3*, ***Got it***). Its bubble keeps *"The questionnaire can
-   provide up to 30% confidence"*, so a 30% does not read as Raketa doubting her (Q7).
+   provide up to 30% confidence"*, so a 30% does not read as Rakieta doubting her (Q7).
 
 A tap on the dimmed area counts as *Next*, and nothing underneath can be pressed while the guide is
 open. The device's back button counts as *Skip* *(a call made in the spec, not grilled)*. It shows
@@ -245,13 +245,13 @@ never truncates it.
 
 ### 10. Location stays required, and a refusal can pick a club
 
-**The step tells the truth**: *"Raketa shows how far each club is and lists the nearest first. Your
+**The step tells the truth**: *"Rakieta shows how far each club is and lists the nearest first. Your
 area is rounded to about a kilometre and never shown to other players."* Its button is ***Use my
 location***, and *Continue* appears only once an area is set. Every line about *nearby players* or
 *matching* goes.
 
 **A player who refuses** (permission denied, blocked, or no fix) is offered ***Pick a club near
-where you play***. It searches Raketa's clubs by name or district, A–Z because she has no area yet.
+where you play***. It searches Rakieta's clubs by name or district, A–Z because she has no area yet.
 **The pick becomes her area**: that club's point on the map, rounded to the cell like any reading.
 
 - **Both writes take either a reading or a club**: the profile commit and the location change
@@ -284,7 +284,7 @@ eyebrow. Nothing on it finds players any more.
 **Harder**
 
 - **A player can stay in groups unrated, indefinitely.** One card on Home and one notice ever are
-  the only nudges. After that Raketa says nothing. *N members* counts her, and Members doesn't list
+  the only nudges. After that Rakieta says nothing. *N members* counts her, and Members doesn't list
   her.
 - **A Player profile with no rating is now the common shape.** ADR-0090 called it representable and
   never produced. Every surface that assumed a rating now meets the empty case: the chip, the You
@@ -308,7 +308,7 @@ eyebrow. Nothing on it finds players any more.
 
 - The questionnaire, its engine, the 30% ceiling, the review and the assessment routes are
   unchanged, and so is every refusal an unrated player meets.
-- *What Raketa keeps* goes, and nothing said it was legally required. A privacy policy is a
+- *What Rakieta keeps* goes, and nothing said it was legally required. A privacy policy is a
   lawyer's to-do, #735.
 - ADR-0094's decision stands without its ordering argument. Intent lives in its own aggregate, and
   is asked on the deck for a sport without one, as it already was.

@@ -7,7 +7,7 @@
   - The mocks lead on design and theming. Where an ADR, a spec or the design system disagrees, the docs are changed to match the mocks.
   - Data in the mocks is only data. It is never hardcoded and decides nothing.
   - "Your games" is out of scope. The one exception is a copy line (§4.3).
-  - The brand is **Raketa** in every UI string. A mock's "Rakieta" is read as Raketa (ADR-0187 §8).
+  - The brand is **Rakieta** in every UI string, as the mocks spell it. *(Updated 2026-11-27 for ADR-0211, which superseded ADR-0187 §8. At the grilling, the brand was the old spelling and a mock's was read as it.)*
 
 ---
 
@@ -87,7 +87,7 @@ The backend gains totals on four row reads, every sport level on a friend reques
   - It shows the face, the title "{nickname} wants to be your friend" and the **reliability tag** (`PlayerScoreTag`, ✦ 98).
   - It shows a **sport-levels line**: every sport the sender holds a published level in, drawn as elsewhere ("● Padel 3,40 · ● Tennis 2,10"), with mono numbers, at most 2 lines. The line is omitted when they hold none.
   - Buttons: "Not now" and "Accept".
-  - **Removed:** the where-line ("With you in {group}") and every found-by line ("Invited you to Raketa", "Found you in the padel ranking", …). The mock still draws the old subtitle; the document's text wins.
+  - **Removed:** the where-line ("With you in {group}") and every found-by line ("Invited you to Rakieta", "Found you in the padel ranking", …). The mock still draws the old subtitle; the document's text wins.
 - **Asked for a level:**
   - Faces and the title only. The subtitle is removed, including "You're on question 5.".
   - Buttons are unchanged. The button still says "Carry on" for a questionnaire left halfway.
@@ -131,7 +131,7 @@ The backend gains totals on four row reads, every sport level on a friend reques
 |---|---|---|---|
 | 1 | **Groups heating up** | Hottest groups | yes |
 | 2 | **Players at your level** | Same competitive level players | yes |
-| 3 | **New in Raketa** | New in Raketa | yes |
+| 3 | **New in Rakieta** | New in Rakieta | yes |
 | 4 | **Players with your vibe** | Same vibe players | yes |
 | 5 | **Top 10** | Top 10 | none |
 
@@ -140,14 +140,14 @@ The backend gains totals on four row reads, every sport level on a friend reques
 - **Each total counts the pool the line draws from**, with that line's own exclusions (the reader, blocks either way, the "Show me to new people" switch, accounts that don't play):
   - **Groups heating up:** every group with at least 3 players, which is every group the new page lists.
   - **Players at your level:** the distinct players holding a level in any sport the reader plays, each counted once.
-  - **New in Raketa:** everyone who joined in the last 30 days.
+  - **New in Rakieta:** everyone who joined in the last 30 days.
   - **Players with your vibe:** everyone sharing at least one tag with the reader.
 - **The number means "how many you could explore"**, not "how many are a good match". Counting good matches would mean scoring every candidate, which is the expensive path. In a busy city the two people lines will usually read "99+", and that is accepted.
 - **"See all N ›"** on the three people lines carries the same number, even though their See all screens show one sport at a time.
 - **Refresh:** "live" means the existing re-read schedule (return to Home after 30 s, focus, pull to refresh, push, write invalidations). There is no new polling.
 - **Cost check** (an agent read the code; none of this is measured yet). Each row is its own request, so a cost lands only on that row.
   - **Groups heating up:** free. The read's `crowds` query already counts every group, so the total is that count with no new query.
-  - **New in Raketa:** one cheap COUNT on `ix_discovery_players_joined_at` over the 30-day range.
+  - **New in Rakieta:** one cheap COUNT on `ix_discovery_players_joined_at` over the 30-day range.
   - **Players with your vibe:** near free when folded into the existing full pass (`count(*) OVER ()`, or a materialized CTE). Never run it as a second pass.
   - **Players at your level:** an uncapped total would scan the whole pool (estimated 10–30 ms on a row that takes 67 ms at 50,000 players). Capped at 100, it is cheap, and usually free from the candidates the windows already read; otherwise it is one `EXISTS … LIMIT 101`.
   - **Never build a total** by draining the widening windows or the vibe batches, or by counting players at 70% or more.
@@ -179,7 +179,7 @@ The backend gains totals on four row reads, every sport level on a friend reques
   - **Removed:** the heat bar, "+N this month" and the sport line (dots and names).
   - **The group's bottom sheet is unchanged** and keeps all its details.
 - **Players at your level** (mock 7): unchanged, except that the footer text "{x} below you / {x} above you / Same level" is removed.
-- **New in Raketa, Players with your vibe, Top 10:** tiles unchanged.
+- **New in Rakieta, Players with your vibe, Top 10:** tiles unchanged.
 
 ### 5.6 Footers (source document, Q18, Q19, Q37)
 - The "See all" links move from the heading to the **bottom of the open content, on the right**:
@@ -271,7 +271,7 @@ The design system is locked: `theme.ts`, `design-system.md` and the audit change
   - **Tests first,** in the repo's existing style.
   - **Backend slices** pass `make check`.
   - **Player app slices** pass `pnpm check`, run with the known Windows line-endings workaround so the result is real.
-  - **The existing Home tests are rewritten, not deleted:** `friends.test.tsx`, `levelAsks.test.tsx`, `friendsGames.test.tsx`, `homeAndBookedGame.test.tsx`, `hottestGroups.test.tsx`, `sameLevel.test.tsx`, `newInRaketa.test.tsx`, `sameVibe.test.tsx`, `topTen.test.tsx`, `rankings.test.tsx`, `notifications.test.tsx`, `theShell.test.tsx`, `ShellScreen.test.tsx`, `HomeRow.test.tsx`, `RowSportPill.test.tsx` and `anotherSportAndTheHomeCard.test.tsx`.
+  - **The existing Home tests are rewritten, not deleted:** `friends.test.tsx`, `levelAsks.test.tsx`, `friendsGames.test.tsx`, `homeAndBookedGame.test.tsx`, `hottestGroups.test.tsx`, `sameLevel.test.tsx`, `newInRakieta.test.tsx`, `sameVibe.test.tsx`, `topTen.test.tsx`, `rankings.test.tsx`, `notifications.test.tsx`, `theShell.test.tsx`, `ShellScreen.test.tsx`, `HomeRow.test.tsx`, `RowSportPill.test.tsx` and `anotherSportAndTheHomeCard.test.tsx`.
   - **The ADR and the specs change in the same slice** as the behaviour they describe.
 
 ---
@@ -281,7 +281,7 @@ The design system is locked: `theme.ts`, `design-system.md` and the audit change
 **Home screen**
 - **Where it is drawn:** `frontend_player/src/features/shell/components/tabScreens.tsx:108-147`.
   - The header's right slot (:116-121) draws `RankingTrophy`, then `NoticeBell`.
-  - The body (:131-144) draws, in order: HomeLevelCard, FriendsGamesRow, PaymentsToConfirm, HomeFriendRows (FriendRequestsRow and LevelAsksRow), HomeRail, HottestGroupsRow, SameLevelRow, NewInRaketaRow, SameVibeRow, TopTenRow.
+  - The body (:131-144) draws, in order: HomeLevelCard, FriendsGamesRow, PaymentsToConfirm, HomeFriendRows (FriendRequestsRow and LevelAsksRow), HomeRail, HottestGroupsRow, SameLevelRow, NewInRakietaRow, SameVibeRow, TopTenRow.
 - **Row frame:** `shared/ui/HomeRow.tsx`.
   - `HomeRow` (:125-147): the heading, a `control`, a `link` and an `over` layer.
   - `HomeRowRail` (:187-264): peeking at 0.74, scrolling freely, with `snap` only on the paging rail. Since #809 it draws the first cards in the first frame and the rest a frame later.
@@ -302,7 +302,7 @@ The design system is locked: `theme.ts`, `design-system.md` and the audit change
 - **The rule that blocks animating height:** `frontend_player/CLAUDE.md:227-232`. Animate only `transform` and `opacity` per frame, and use a layout transition for size.
 - **Sheets:** the custom `shared/ui/BottomSheet.tsx` on `ModalStage`, with an 88% cap and reduced-motion support. No navigation hook is allowed inside a sheet.
 - **Groups list route:** `/play` lists only the player's own groups. No screen lists every group today.
-- **Brand:** UI copy is always "Raketa" (`discoveryCopy.ts:74-75`).
+- **Brand:** UI copy is always "Rakieta" (`discoveryCopy.ts:74-75`).
 
 ## Appendix B — Question index
 
@@ -327,7 +327,7 @@ The design system is locked: `theme.ts`, `design-system.md` and the audit change
 | 17 | Real totals |
 | 18 | New Groups heating up page |
 | 19 | Top 10 footer: switcher on the left, opening right; "Open the rankings ›" on the right |
-| 20 | New titles on screen only; Raketa |
+| 20 | New titles on screen only; Rakieta |
 | 21 | Empty, loading and failed lines are hidden; FOR YOU hidden when all are |
 | 22 | Groups tile drops the heat bar, "+N this month" and the sport line |
 | 23 | All lines load at start; tiles drawn only while open; on-screen counting only while open |

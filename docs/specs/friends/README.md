@@ -1,7 +1,7 @@
 # Friends: the spec set
 
 **What PRD [#743](https://github.com/Raketa02/Raketa/issues/743) is drawn from.** The product owner's
-Friends brief and its twelve mocks, copied here from `raketa_v2.0/4-features/3-Friends` so that every
+Friends brief and its twelve mocks, copied here from `rakieta_v2.0/4-features/3-Friends` so that every
 session can read them, then grilled on 2026-11-05/06 (Q1–Q46 there, the
 [games and fill-in mechanics' Q128](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log)).
 Landed by [#744](https://github.com/Raketa02/Raketa/issues/744) on 2026-11-06.
@@ -11,7 +11,7 @@ Landed by [#744](https://github.com/Raketa02/Raketa/issues/744) on 2026-11-06.
 | [the-mechanics.md](the-mechanics.md) | What happens: friendship, the link, asking for a level, official groups' courts hour by hour, the friends game, its money, its empty seats and its leaving, with every number |
 | [the-screens.md](the-screens.md) | How each screen looks and behaves, and which mock draws it |
 | [`mocks/`](mocks/) | The twelve mocks, renamed (the [index](#index) gives each original name) |
-| [friends_feature.md](friends_feature.md) | The product owner's brief, verbatim. Its paths point at the product owner's desktop: read `…/3-Friends/N_….png` as `mocks/NN_….png`. Where the brief and these documents disagree, these documents win: they carry the grilling's rulings |
+| [friends_feature.md](friends_feature.md) | The product owner's brief, verbatim but for the brand's spelling ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md) §6). Its paths point at the product owner's desktop: read `…/3-Friends/N_….png` as `mocks/NN_….png`. Where the brief and these documents disagree, these documents win: they carry the grilling's rulings |
 
 **The decision** is [ADR-0202](../../adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md).
 The terms are in the root [`CONTEXT.md`](../../../CONTEXT.md), under **Friends**, and under
@@ -33,10 +33,9 @@ other game — the cut-off, holding, rescues, leaving after the cut-off — are 
    - a player is named by their **nickname**, never with an @
      ([ADR-0199](../../adr/0199-a-player-is-known-by-their-nickname.md)), so *Karol T.* reads as a
      nickname;
-   - the mocks say *Rakieta* and show `rakieta.app/…`: read **Raketa**, and the configured public
-     site's address
+   - the mocks show `rakieta.app/…`: read the configured public site's address
      ([ADR-0187](../../adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
-     §8);
+     §7). Their *Rakieta* is the brand as written ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md));
    - a group page has **three tabs, Games · Fill in · Friends**, and the header opens Info (Q125);
    - the bottom bar is **Home · ⚡ Play · You** (#576), as every mock already draws.
 4. **Cite a mock by number**: *friends 7*. The numbers are the product owner's.

@@ -10,4 +10,4 @@
   - 9. Small apps: `#swipe-decks-deal-people-not-games` · `#a-balance-figure-or-suggested-sides`
   - 10. Other platforms checked: `#eversports` · `#ligapadla-anolla-and-dead-ends` · `#no-club-confirms-booking-mode-anywhere` · `#no-platform-shows-a-club-the-player-groups-that-play-at-it`
   - 11. WhatsApp and Facebook groups: `#whatsapp-groups-polls-events-and-1024-members` · `#operators-and-booking-systems-lean-on-whatsapp` · `#kraków-groups-could-not-be-read`
-  - 12. Summary table (when a player pays, a short game, a late leaver, who is paid and when, fees — per platform and Raketa)
+  - 12. Summary table (when a player pays, a short game, a late leaver, who is paid and when, fees — per platform and Rakieta)

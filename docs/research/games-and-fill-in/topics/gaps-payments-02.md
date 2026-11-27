@@ -415,7 +415,7 @@ would accept a refund for an hour already being played.
     automated read.
 - *Reading:* the bound tightens from Findex's "about 19 % used no debit card"
   (`gaps-PAY.md#how-many-poles-use-a-card-at-all-and-pay-online`) to **at most 13,3 % with no card at all** (NBP 2023).
-  Online shoppers are likelier to hold one, so the share of Raketa's newcomers who cannot save any card is below that.
+  Online shoppers are likelier to hold one, so the share of Rakieta's newcomers who cannot save any card is below that.
   The share who own a card but would rather not use it online is not bounded: 57 % of online shoppers did not pay by
   card in the year.
 

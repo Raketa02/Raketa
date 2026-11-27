@@ -98,8 +98,8 @@ Lines marked *Reading* are interpretation, not sources.
 *Reading:*
 
 - Playtomic warns a live club while Stripe is still *asking*, in the app, before anything stops.
-- Raketa's desk hears only once payments have stopped (R-CLUBMONEY-8).
-- Playtomic sends the club to Stripe's Express pages for the rest; Raketa's clubs have the full Stripe Dashboard
+- Rakieta's desk hears only once payments have stopped (R-CLUBMONEY-8).
+- Playtomic sends the club to Stripe's Express pages for the rest; Rakieta's clubs have the full Stripe Dashboard
   instead.
 - Neither product gives a separate "Stripe is checking" state. On R-CLUBMONEY-5 the two are level.
 
@@ -116,7 +116,7 @@ Lines marked *Reading* are interpretation, not sources.
   [Notification banner](https://docs.stripe.com/connect/supported-embedded-components/notification-banner) — read
   2026-10-20; part of the page was served in Spanish, and the sentences quoted are its English ones.
 - *Reading:* Stripe gives a platform a ready way to show a club "in review" without a status of its own. Neither
-  Playtomic nor Raketa uses it. Stripe's own reading of a check in progress is carried in
+  Playtomic nor Rakieta uses it. Stripe's own reading of a check in progress is carried in
   `stripe-gaps-04.md#r-clubmoney-5--what-the-v1-read-shows-while-the-accounts-v2-capabilities-are-pending`.
 
 **Przelewy24 and Tpay (the status quo).**
@@ -257,10 +257,10 @@ Lines marked *Reading* are interpretation, not sources.
 
 *Reading:*
 
-- Against Raketa's "No games yet" over "Post the first game", Playmore's empty board makes the same offer ("Załóż
+- Against Rakieta's "No games yet" over "Post the first game", Playmore's empty board makes the same offer ("Załóż
   grę"). It adds two things: a one-tap way to be told when a game appears, and, for someone arriving by a link, what
   happened to the game they were sent and other games at the same place.
-- Raketa's empty Fill in shows the group's starting card "whatever games the group holds". Playmore's team found that
+- Rakieta's empty Fill in shows the group's starting card "whatever games the group holds". Playmore's team found that
   showing a link's recipient an unexplained feed lost them, and changed it.
 
 ---
@@ -378,7 +378,7 @@ Lines marked *Reading* are interpretation, not sources.
 
 ---
 
-### R-RESCUE-24 — How often a refused rescuer fixes the card within 30 minutes: still only Raketa's data; two nearby figures
+### R-RESCUE-24 — How often a refused rescuer fixes the card within 30 minutes: still only Rakieta's data; two nearby figures
 
 - Carried: Airbnb blocks the dates for 24 hours while a guest fixes a failed payment
   (`gaps-RESCUE.md#airbnb-blocks-the-dates-for-24-hours-while-the-guest-fixes-a-failed-payment`).
@@ -397,7 +397,7 @@ Lines marked *Reading* are interpretation, not sources.
   purchase after experiencing a decline."
   [PayPal: What you should know about retrying a payment](https://www.paypal.com/us/brc/article/retry-payment-or-not-retry)
   — read 2026-10-20
-- **[ABSENT]** A rate of a declined payer fixing the card within 30 minutes, at any app or provider. Only Raketa's own
+- **[ABSENT]** A rate of a declined payer fixing the card within 30 minutes, at any app or provider. Only Rakieta's own
   live data can give it. Read 2026-10-20.
 - *Reading:*
   - Those who do recover at a checkout do it in about two minutes, and a fifth of them with another card.
@@ -447,10 +447,10 @@ Lines marked *Reading* are interpretation, not sources.
   for open games ("Ktoś się wypisał — w składzie zwolniło się miejsce."), and none is for a held seat returning.
   Read 2026-10-20.
 - *Reading:*
-  - Against R-RESCUE-50, Playmore tells the others the seat is *held* and *until when*, not that it was taken. Raketa
+  - Against R-RESCUE-50, Playmore tells the others the seat is *held* and *until when*, not that it was taken. Rakieta
     says "Someone just took this seat".
-  - Like Raketa, Playmore was not found to alert anyone when the seat returns. It asks them to check back.
-  - Its hold is 10 minutes, against Raketa's 30.
+  - Like Rakieta, Playmore was not found to alert anyone when the seat returns. It asks them to check back.
+  - Its hold is 10 minutes, against Rakieta's 30.
 
 ---
 
@@ -479,7 +479,7 @@ Lines marked *Reading* are interpretation, not sources.
   (updated 2026-09-10) — read 2026-10-20
 - **[ABSENT]** What Playtomic tells a player whose refund failed after it was shown as made. Not in that article, nor
   in the help search results for "refund failed" (31 articles, none on a failed refund). Read 2026-10-20.
-- *Reading:* the local rival names a failed refund to the payer in its own words and points to help. Raketa keeps
+- *Reading:* the local rival names a failed refund to the payer in its own words and points to help. Rakieta keeps
   saying "refunded" (R-RESCUE-47). Stripe's side of when a refund waits or fails is in
   `stripe-gaps-05.md#r-rescue-47--a-refund-made-before-the-clubs-money-is-available-stripes-refunds-page-says-it-waits-a-support-page-says-only-a-negative-balance-makes-it-wait-and-the-sandbox-nets-it`.
 
@@ -518,7 +518,7 @@ Lines marked *Reading* are interpretation, not sources.
 - **[POLICY]** *(code)* Update to the carried Playmore entry: its whole-waitlist-at-once switch is "Od 10.10.2026 na
   100% we wszystkich klubach z grami", to be made permanent after the read due 23 Oct 2026 "chyba że odczyt każe
   wycofać". [BlUiZcxz.js](https://playmore.pl/assets/BlUiZcxz.js) (entry `open-game-waitlist`) — read 2026-10-20
-- The speed comparison can only come from Raketa's own data.
+- The speed comparison can only come from Rakieta's own data.
 
 ---
 

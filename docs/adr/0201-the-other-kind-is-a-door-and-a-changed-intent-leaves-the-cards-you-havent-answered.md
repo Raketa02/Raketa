@@ -76,7 +76,7 @@ rule read in two places.
 
 **The alternatives:**
 
-- **Split the two.** Ania stays Competitive, but can open For fun at any time. Raketa then has to put
+- **Split the two.** Ania stays Competitive, but can open For fun at any time. Rakieta then has to put
   her in for-fun games all the time, because a card she is shown is a game she is on. That costs
   four things:
   - **Stalled cards.** Kuba's for-fun cards wait on her while she never opens that tab.
@@ -87,7 +87,7 @@ rule read in two places.
 
   Every variant has the same shape and was rejected with it: a private search, a *just this week*
   widening, browsing other people's posts of the other kind (Q1).
-- **A `+ For fun` tab.** The plus says Raketa adds games on its own, when the choice is the player's
+- **A `+ For fun` tab.** The plus says Rakieta adds games on its own, when the choice is the player's
   (Q4).
 - **Send the player to the You tab.** That is where the change is made today, and it is the
   problem (Q2).
@@ -125,7 +125,7 @@ that a gone name frees its seat (§3).
 - **A tap opens a panel in place, on the group page.** It is an overlay inside the deck's area, not a
   new route and never a trip to the You tab:
 
-  > **You play padel competitively, so Raketa only puts you in competitive games.**
+  > **You play padel competitively, so Rakieta only puts you in competitive games.**
   > Want for-fun games too?
   >
   > **Either suits me** — *Keep your 7 competitive cards and get for-fun ones too.*
@@ -139,7 +139,7 @@ that a gone name frees its seat (§3).
   - An answer changes **this sport only**. It sends `PUT /play-intents/{sport}` with the `DECK`
     surface, and she lands on the kind she tapped.
   - *Keep competitive* closes the panel and sends nothing.
-  - Kuba's panel is the mirror: *You play padel for fun, so Raketa only puts you in for-fun games.
+  - Kuba's panel is the mirror: *You play padel for fun, so Rakieta only puts you in for-fun games.
     Want competitive games too?*
 - **An *Either suits me* player narrows on the You tab only** (Q7).
 - **Untouched:** the Friends tab's switch, Post a game's Kind step and the first-time question's
@@ -194,7 +194,7 @@ no yes back, and so does a changed intent.
 
 Right after any intent answer on Games, from the door's panel or the first-time question:
 
-1. The phone sends the `PUT`, then asks Raketa to deal that group now (§5).
+1. The phone sends the `PUT`, then asks Rakieta to deal that group now (§5).
 2. While that request is in flight, the tab reads ***Finding for-fun games for you…***, or
    ***Finding games for you…*** after *Either suits me* on the first-time question.
 3. Then the phone re-reads the deck. It shows her cards, or *Nothing picked right now* with **Post a

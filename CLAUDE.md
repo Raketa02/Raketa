@@ -1,4 +1,4 @@
-# Raketa — Monorepo
+# Rakieta — Monorepo
 
 A racket-sport platform. **Today, end to end:** a player signs up, picks a nickname, joins
 groups, answers a questionnaire for a Skill rating in a sport where a group first asks for one,

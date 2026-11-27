@@ -157,7 +157,7 @@ regulator's documents; `[COMPLAINT]` one person's account; `[ABSENT]` looked for
 - **[DOCS]** Business types: `individual`, `company`, `non_profit`, and "`government_entity` (available for US connected
   accounts only)". The business-structure tables cover AU, CA, DE, SG, TH, AE, GB, HK and US; Poland is not among them.
   [Stripe: Identity verification for connected accounts](https://docs.stripe.com/connect/identity-verification) — read 2026-10-08
-- **[POLICY]** Raketa opens every club as `entity_type: "company"` in Poland (`backend/app/modules/payments/infrastructure/stripe_payments.py:310`).
+- **[POLICY]** Rakieta opens every club as `entity_type: "company"` in Poland (`backend/app/modules/payments/infrastructure/stripe_payments.py:310`).
 
 ### KSOS is a school sports centre run by the City of Kraków
 
@@ -179,7 +179,7 @@ regulator's documents; `[COMPLAINT]` one person's account; `[ABSENT]` looked for
   We will provide you with materials to help communicate with players". [Go live and start accepting online reservations](https://helpmanager.playtomic.com/hc/en-gb/articles/20535378377745-Go-live-and-start-accepting-online-reservations) (updated 2026-09-17) — read 2026-10-08
 - **[ABSENT]** A go-live email at tenis4U or kluby.org: neither the panel nor the changelog has one. — read 2026-10-08
 
-## 10. Stripe's own emails to Raketa's clubs (R-CLUBSETUP-35, -11)
+## 10. Stripe's own emails to Rakieta's clubs (R-CLUBSETUP-35, -11)
 
 ### With a Stripe-built dashboard, Stripe contacts the account itself
 
@@ -187,9 +187,9 @@ regulator's documents; `[COMPLAINT]` one person's account; `[ABSENT]` looked for
   collect information about your accounts whenever requirements change"; the platform's FAQ for its accounts starts "I
   just received an email from Stripe. Who is Stripe? Is this email real?" and tells them to "Follow the link from
   Stripe's email". [Stripe support: Communicating updates to verification requirements for connected accounts that have access to a dashboard built by Stripe](https://support.stripe.com/questions/communicating-updates-to-verification-requirements-for-connected-accounts-that-have-access-to-a-dashboard-built-by-stripe) — read 2026-10-08
-- **[POLICY]** Raketa opens clubs with `"dashboard": "full"` (Stripe's own dashboard) and Stripe as fees and losses collector
+- **[POLICY]** Rakieta opens clubs with `"dashboard": "full"` (Stripe's own dashboard) and Stripe as fees and losses collector
   (`backend/app/modules/payments/infrastructure/stripe_payments.py:309`, `:316-319`).
-- *reading:* Stripe's compliance emails reach a Raketa club directly, whatever the platform's email settings; the
+- *reading:* Stripe's compliance emails reach a Rakieta club directly, whatever the platform's email settings; the
   club's `=` on both rules holds.
 
 ## 11. How far ahead Kraków groups settle a game (R-CLUBSETUP-13, -39)

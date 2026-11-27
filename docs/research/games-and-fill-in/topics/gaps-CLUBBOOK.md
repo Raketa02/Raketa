@@ -274,7 +274,7 @@ lines compare; they are not sources.
 
   | How the 160 zł was paid | What the club is left short |
   |---|---|
-  | Raketa: four 40 zł shares on Stripe | 6,40 zł |
+  | Rakieta: four 40 zł shares on Stripe | 6,40 zł |
   | Przelewy24: four 40 zł payments | ≈ 3,26 zł (commission kept, refund free) |
   | Przelewy24: one 160 zł payment | ≈ 2,36 zł |
   | Tpay Starter: four 40 zł card payments | ≈ 8,21 zł (4 × 1,03 commission + 4 × 1,03 refund) |
@@ -463,7 +463,7 @@ lines compare; they are not sources.
 
 - **[POLICY]** "a secure, read-only interface that allows clubs to access their booking data", for the
   Champion or Master plans. [Playtomic API: Complete Guide](https://helpmanager.playtomic.com/hc/en-gb/articles/38836515997073-Playtomic-API-Complete-Guide) (updated 2026-08-17) — read 2026-10-08
-- *Reading:* none of the systems a Kraków club runs can take a Raketa game into its calendar except
+- *Reading:* none of the systems a Kraków club runs can take a Rakieta game into its calendar except
   by a person typing it.
 
 ---

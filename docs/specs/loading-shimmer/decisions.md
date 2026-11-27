@@ -66,7 +66,7 @@ The request, in the user's words:
   - **YOUR GAMES** (`HomeRail.tsx:72-126`) is fed by `['proposals','home']`.
     - **It is deliberately drawn before its read lands**: *"Your games · 0"* and the two empty sentences (`:36-40`, `:78-99`).
     - A refused read with no data draws a coral `Note`.
-  - **FOR YOU** (`tabScreens.tsx:143-182`) has five lines: Groups heating up, Players at your level, New in Raketa, Players with your vibe and Top 10. Each line is hidden while its read is in flight, empty or failed. The whole block, heading included, is `null` until one line exists (`:160`).
+  - **FOR YOU** (`tabScreens.tsx:143-182`) has five lines: Groups heating up, Players at your level, New in Rakieta, Players with your vibe and Top 10. Each line is hidden while its read is in flight, empty or failed. The whole block, heading included, is `null` until one line exists (`:160`).
 - **Top 10 waits for three other reads.** It is `skipToken` until `useOpeningSport` knows a sport from the ratings, the deck sport and Home's ranking (`useTopTen.ts:59-70`).
 - **So the final layout cannot be known in advance.**
 - **Pull to refresh** (`ShellScreen.tsx:98-106`, `:191-234`; `tabScreens.tsx:119-126`) invalidates four groups of reads. Content already drawn stays.
@@ -97,11 +97,11 @@ The request, in the user's words:
 
 ### 2.6 See all and the group page
 
-- **The four See all screens** are New in Raketa, Same level and Same vibe (on `SeeAllScreen.tsx`) and Hottest groups (`HottestGroupsScreen.tsx`).
+- **The four See all screens** are New in Rakieta, Same level and Same vibe (on `SeeAllScreen.tsx`) and Hottest groups (`HottestGroupsScreen.tsx`).
   - The real header is drawn first. Then a muted `ActivityIndicator` sits at the top of a padded body (`SeeAllScreen.tsx:138-146`, `:195`; `HottestGroupsScreen.tsx:91-95`).
   - Each is an infinite FlatList, 20 per page, with pull to refresh.
   - **The shapes are fixed:**
-    - two-column tiles at `portraitTile.gridAspect` 1.125 (New in Raketa);
+    - two-column tiles at `portraitTile.gridAspect` 1.125 (New in Rakieta);
     - Same vibe's tiles (face 36, % circle 30);
     - Same level's cards (44 pt face);
     - Hottest groups' full-width cards.
@@ -255,7 +255,7 @@ The user's idea: *"start asking for the data in the background while the splash 
 
 - **Both get the shimmer** (Q19). Their layouts are known (`architecture.md:825`). The blank group page is exactly the frozen look. A tap from a shimmering Home to a spinner would feel inconsistent.
 - **See all**, on all four screens: the real header, then **that screen's own tiles or cards in grey, at their real grid and sizes**, filling the screen.
-  - New in Raketa and Same vibe: two-column tiles.
+  - New in Rakieta and Same vibe: two-column tiles.
   - Same level and Hottest groups: full-width cards.
   - Later pages keep today's footer behaviour.
 - **The group page:** a monogram circle and a name bar, the tab bar's shape, and the active tab's body:
@@ -356,7 +356,7 @@ The user's idea: *"start asking for the data in the background while the splash 
   - skipped for non-tabs destinations and when known offline;
   - Home's hooks find the reads fresh (no second request).
 - **The group page:** `groupGames.test.tsx`, `joinGroup.test.tsx` and the board suites, including the offline note.
-- **See all:** `newInRaketa.test.tsx`, `sameLevel.test.tsx`, `sameVibe.test.tsx` and the Hottest groups suite.
+- **See all:** `newInRakieta.test.tsx`, `sameLevel.test.tsx`, `sameVibe.test.tsx` and the Hottest groups suite.
 
 ## 16. For the user to check on a phone
 

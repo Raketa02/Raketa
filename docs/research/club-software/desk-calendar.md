@@ -1,6 +1,6 @@
 # The desk calendar — what rivals and Kraków desks do
 
-Research for area 1 of the planning map *Raketa becomes the club's booking software*: the one calendar a
+Research for area 1 of the planning map *Rakieta becomes the club's booking software*: the one calendar a
 club's desk works in all day — the grid, adding a booking, lengths, desk payments, moves, cancels, the log
 and the day's other acts. It follows the founder's decision of 2026-10-12 on
 [#609](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776).
@@ -199,7 +199,7 @@ from it, and the court-side staff who mark arrivals.
 
 **What a Kraków desk does today.** **[ABSENT]** What device Kraków desks use. No club rule or photo says.
 
-**What it means for the player app.** *Reading:* none directly. Raketa's player app is native React
+**What it means for the player app.** *Reading:* none directly. Rakieta's player app is native React
 Native, while the club website is web — and Tap to Pay (§9) needs native.
 
 **Market signal.** A responsive web grid: table stakes. A restricted desk or guard role: rare (Playmore).
@@ -316,7 +316,7 @@ because the desk calls and texts.
 - **[POLICY]** KSOS books online and takes payment "w kasie Administratora" — at the administrator's till
   ([KSOS rules][ksos-reg]).
 
-**What it means for the player app.** *Reading:* a desk booking for someone with a Raketa account appears
+**What it means for the player app.** *Reading:* a desk booking for someone with a Rakieta account appears
 in their app as theirs, as at MATCHi ("show up in the customer's own booking history") and Playtomic. A
 guest's booking has no app to land in, only the phone the desk typed.
 
@@ -598,7 +598,7 @@ systems integrates one.
 
 **What it means for the player app.** *Reading:* the same club account receives the app's shares and a
 desk card payment only if the desk charges through Stripe. Tap to Pay would have to live in a native app
-(Raketa's is React Native), not in the club website.
+(Rakieta's is React Native), not in the club website.
 
 **Market signal.** Rare: one rival, in the US only.
 
@@ -705,7 +705,7 @@ the player; and refunds started from the desk.
 
 **What it means for the player app.** *Reading:* a desk cancel has to reach every seat-holder and say
 where the money goes. Playmore's split — the club refunds money it took, Stripe refunds online — is the
-one Raketa's direct charges would face.
+one Rakieta's direct charges would face.
 
 **Market signal.** Cancel with or without refund: table stakes. A suggested on-time or late status, and a
 reason in the log: a differentiator.
@@ -771,7 +771,7 @@ fall back on a fresh move or a remove-and-re-add.
   [2020][kl-2020]).
 - **CourtReserve [POLICY]:** waitlist activity appears "on the audit log" ([Court Waitlisting][cr-wait]).
 
-**The desk's day with it.** *Reading:* with one shared login per club (Raketa today), every line says
+**The desk's day with it.** *Reading:* with one shared login per club (Rakieta today), every line says
 "the club". The rivals name the employee: Playtomic's admins are separate (carried) and Playmore's
 reports watch staff.
 
@@ -887,7 +887,7 @@ handled.
   — fixed slots by arrangement ([regulamin 4][garden-reg]).
 
 **What it means for the player app.** *Reading:* fixed slots take the prime hours. The Games deck sees
-them only as taken hours — unless a fixed group's game is to be played by Raketa's players.
+them only as taken hours — unless a fixed group's game is to be played by Rakieta's players.
 
 **Market signal.** Table stakes. Rolling "until cancelled": a differentiator (Playmore). Make-up of
 cancelled dates: rare (tenis4U, kluby.org).
@@ -924,7 +924,7 @@ and "termin ten będzie również widoczny w grafiku on-line dla wszystkich Klie
 online as free ([regulamin 5c][s4y-reg]).
 
 **What it means for the player app.** *Reading:* a freed hour already goes back to sale everywhere. A
-queue adds a push to whoever waited — the same "first to tap wins" shape as Raketa's Fill in.
+queue adds a push to whoever waited — the same "first to tap wins" shape as Rakieta's Fill in.
 
 **Market signal.** Rare for courts (CourtReserve, Playmore's watch, kluby.org). Common for classes.
 

@@ -19,7 +19,7 @@
 
 ## Context
 
-Raketa is three deployables: a FastAPI backend, a React Native (Expo) player app, and a
+Rakieta is three deployables: a FastAPI backend, a React Native (Expo) player app, and a
 Next.js club web app. They are built **in parallel, largely by AI agents**, and that
 changes which risks matter.
 

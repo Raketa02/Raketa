@@ -68,9 +68,9 @@ marked *reading* are comparisons, not sources.
   ES, 2023-05-05).
   [App Store GB feed](https://itunes.apple.com/gb/rss/customerreviews/page=1/id=1242321076/sortBy=mostRecent/json),
   [App Store ES feed](https://itunes.apple.com/es/rss/customerreviews/page=1/id=1242321076/sortBy=mostRecent/json) — read 2026-10-08
-- *Reading:* neither rival changes a list on screen. Raketa reads the deck again on return to the
+- *Reading:* neither rival changes a list on screen. Rakieta reads the deck again on return to the
   front and after 30 s away, which Playmore's open-games page does not. No rival offers a
-  pull-to-refresh that Raketa lacks on this list.
+  pull-to-refresh that Rakieta lacks on this list.
 
 ---
 
@@ -107,7 +107,7 @@ marked *reading* are comparisons, not sources.
   create or join are promoted as Golden Matches". The Premium help's image shows two gold cards,
   14:30 then 17:00. [Legal Conditions](https://playtomic.com/legal-conditions), [Premium Plan: Unlimited](https://playerhelp.playtomic.com/hc/en-gb/articles/19831696399633-Premium-Plan-Unlimited) ([image](../shots/gaps-DECK-playtomic-golden-matches-list.png)) — read 2026-10-08
 - *Reading:* one image cannot tell whether the gold promotion or the fuller line-up lifted the 17:00
-  card. Paid promotion is a ranking factor, the case P2B Art. 5(3) names (below). Raketa's
+  card. Paid promotion is a ranking factor, the case P2B Art. 5(3) names (below). Rakieta's
   fewest-seats-first order is close to Playtomic's "Number of players" sort, made the default and
   free of payment.
 
@@ -137,10 +137,10 @@ marked *reading* are comparisons, not sources.
 - **[ABSENT]** A published statement of ranking parameters for clubs by Playtomic or Playmore. Playtomic's
   player Legal Conditions contain none; its club contract is not public. Playmore's partner terms were
   read for money only (`topics/platforms.md#playmore--the-clubs-money-passes-through-reservise`). — read 2026-10-08
-- *Reading:* Raketa contracts with clubs, and players book those clubs' hours through it, so a club is a
+- *Reading:* Rakieta contracts with clubs, and players book those clubs' hours through it, so a club is a
   "business user". The deck's order (seats open after your yes, card type, deadline, forecast) decides
   the relative prominence of the club's hours. The P2B rule therefore wants those parameters, and why
-  they weigh as they do, in the club terms. This holds even though the deck is a feed and Raketa is
+  they weigh as they do, in the club terms. This holds even though the deck is a feed and Rakieta is
   small. The consumer-side duty (`areas/DECK.md` §4) is separate.
 
 ---
@@ -168,7 +168,7 @@ marked *reading* are comparisons, not sources.
   [Hitch](https://apps.apple.com/gb/app/find-doubles-partners-hitch/id6670320911), [RallyRally](https://apps.apple.com/gb/app/rallyrally/id6758130721),
   [CourtSync](https://apps.apple.com/gb/app/courtsync-padel-matches/id6764694179), [Matchup Sport](https://apps.apple.com/de/app/matchup-sport/id6782085896) — read 2026-10-08
 - *Reading:* in dating apps an undo is a paid extra that covers the last no only, never a yes. A free
-  Undo after a no would be ahead of every deck found; with no undo, Raketa is level with the racket
+  Undo after a no would be ahead of every deck found; with no undo, Rakieta is level with the racket
   decks.
 
 ---
@@ -198,7 +198,7 @@ marked *reading* are comparisons, not sources.
 - **[ABSENT]** What happens to open games already published when a club turns open games off. No
   string or error covers it. — read 2026-10-08
 - *Reading:* the one platform that says anything keeps games already made and stops new ones. That is
-  Raketa's rule for a paused club, whose filling cards stay until their book-by.
+  Rakieta's rule for a paused club, whose filling cards stay until their book-by.
 
 ---
 
@@ -224,7 +224,7 @@ marked *reading* are comparisons, not sources.
   `market.md` §7.7. [Android 6.93.2 strings](../shots/gaps-DECK-playtomic-android-6.93.2-strings.txt) — read 2026-10-08
 - *Reading:* for R-DECK-11, never dealing a card at an hour the player has taken is ahead of both. For
   R-DECK-14, letting two filling games at one hour both take a yes matches Playmore. Playmore then
-  charges both joins at once, where Raketa books the first to fill and withdraws the other yes.
+  charges both joins at once, where Rakieta books the first to fill and withdraws the other yes.
 
 ---
 
@@ -359,7 +359,7 @@ marked *reading* are comparisons, not sources.
   zapełniła" / "Ta gra została odwołana" / "Ta gra już się odbyła" / "Nie udało się sprawdzić tej
   gry". It then offers "Zobacz inne gry w {venue} w najbliższych dniach." and "Inne gry w {venue}".
   [DM7ksFDa.js](https://playmore.pl/assets/DM7ksFDa.js), [D8YZN20W.js](https://playmore.pl/assets/D8YZN20W.js), [Ct1XsxUt.js](https://playmore.pl/assets/Ct1XsxUt.js) — read 2026-10-08
-- *Reading:* Raketa's "card on top while it is still dealt" is level with Playmore's focus. Both rivals
+- *Reading:* Rakieta's "card on top while it is still dealt" is level with Playmore's focus. Both rivals
   say why a game or hour is gone; a notice that lands with no word on a card no longer dealt would be
   behind them.
 

@@ -3,7 +3,7 @@
 - **Status:** Accepted — **§1 amended below** (2026-10-10: a hold's last moment, the real fee at
   capture, an exact refund, and a cancel that costs nothing — Q113)
 - **Date:** 2026-09-30
-- **The 2026-10-10 amendment's holds, amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)**
+- **The 2026-10-10 amendment's holds, amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)**
   §1–§2: a share is held at the fill, at its holding time or at a rescue, and never at a club's yes,
   because *On request* is removed and no club gives one. A club's cancel that a free court of the same
   club absorbs moves the game and calls nothing on the port. The port itself is unchanged.
@@ -46,7 +46,7 @@ Four questions were left open, and each has an obvious answer that is wrong here
 
 ### 1. The provider is a port in the Payments context, and the fake is held to Stripe's demands
 
-`PaymentProvider` lives in `payments/domain/provider.py` and speaks Raketa's words — a setup, a
+`PaymentProvider` lives in `payments/domain/provider.py` and speaks Rakieta's words — a setup, a
 card on file, an authorised payment, a refund with the fee withheld, a club account's three
 states — never Stripe's objects. It covers what the later tickets need (#537 onboarding and
 account status, #541 authorise / capture / cancel, #545 charge now, #548 refunds and payouts),
@@ -201,7 +201,7 @@ production uses.
 
 The build is [#636](https://github.com/Raketa02/Raketa/issues/636).
 
-> **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2.** The holds above were placed at the fill or,
+> **Amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2.** The holds above were placed at the fill or,
 > through ADR-0189's amendment of the same day, at an On request club's yes. With *On request*
 > removed, a share is held at the fill, at its holding time or at a rescue, and nowhere else. A
 > club's cancel still lets every hold go before the cut-off and refunds in full after it when it

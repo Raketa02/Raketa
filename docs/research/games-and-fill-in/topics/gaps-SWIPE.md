@@ -88,7 +88,7 @@ price · `[LAW]` a statute or a court ruling · `[DOCS]` a provider's or regulat
 - The same finding, read from the list loader itself, is in
   `topics/gaps-PLATFORM.md#playmores-open-game-list-is-not-refreshed-while-it-is-on-screen` and
   `topics/gaps-RESCUE.md#playmore-reads-its-open-games-list-when-the-page-opens-and-after-the-players-own-actions`.
-- *Reading for R-SWIPE-14:* the rivals refresh on open, on return and on a pull, which is where Raketa
+- *Reading for R-SWIPE-14:* the rivals refresh on open, on return and on a pull, which is where Rakieta
   is today; a tile turning In as it happens would be ahead of them, and level with a WhatsApp poll.
 
 ## 2. A no, and taking an answer back (R-SWIPE-9)
@@ -206,7 +206,7 @@ price · `[LAW]` a statute or a court ruling · `[DOCS]` a provider's or regulat
   `topics/gaps-FILL.md#whatsapp-queues-a-message-typed-offline-and-sends-it-on-reconnect` and
   `topics/gaps-FILL.md#no-consumer-booking-or-payment-app-keeps-a-join-made-offline`). — read 2026-10-08
 - *Reading for R-SWIPE-31:* the one rival that decided this (Playmore) refuses the tap offline and says
-  so; Raketa's held answer is closer to a WhatsApp message waiting to send, and Google classes an
+  so; Rakieta's held answer is closer to a WhatsApp message waiting to send, and Google classes an
   answer that may charge money with bank transfers (online-only), not with queued writes.
 
 ## 6. What the club sees of a game forming at its courts (R-SWIPE-1)
@@ -375,6 +375,6 @@ price · `[LAW]` a statute or a court ruling · `[DOCS]` a provider's or regulat
 - **[POLICY]** Playmore's club "community" is a list of outside links (WhatsApp, Facebook, Instagram,
   Telegram, Discord) under "Dołącz do naszej społeczności!". [strings](https://playmore.pl/assets/93jAIRDY.js) — read 2026-10-08
 - **[ABSENT]** Any rival where leaving a group takes back a seat or a pending answer: on all three a
-  match is joined and paid by the player, so leaving a group touches nothing. How long Raketa's own
+  match is joined and paid by the player, so leaving a group touches nothing. How long Rakieta's own
   passing-on of a leaving takes is a code fact, not a market one; no measurement in practice was
   found. — read 2026-10-08

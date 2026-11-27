@@ -117,7 +117,7 @@ rest by anchor.
   - whether Stripe accepts the update on an account where Stripe holds the losses and the club has a full Dashboard;
   - whether the club can then lower or remove the minimum from its own Payout settings.
 - *Reading:* a minimum balance holds money back only from Stripe's **automatic** payouts. No page says it limits a
-  manual payout Raketa makes, which may take up to the available balance.
+  manual payout Rakieta makes, which may take up to the available balance.
 
 ### R-CLUBMONEY-2 · The fee on a partial reversal, how soon "shortly" is, and a reversal on the sandbox
 
@@ -156,7 +156,7 @@ rest by anchor.
 ### R-CLUBMONEY-9 · Capturing a held share, or refunding, once `charges_enabled` is false or the account is removed
 
 **Answer:** answered for **removal** and still undocumented for **charges disabled**.
-- After removal Raketa can make no call at all for the club.
+- After removal Rakieta can make no call at all for the club.
 - The club, still a normal Stripe account, keeps its own Dashboard.
 
 - **[DOCS]** "A removed account no longer appears in your connected accounts list, and **you can't process payments or
@@ -169,7 +169,7 @@ rest by anchor.
 - Carried **[MEASURED]**, the closest stand-in: an account the key can't reach (`acct_fake_breakerclubmoney0001`)
   answers a read, a list and a payout with `403 PermissionError`: "does not have access to account … Application
   access may have been revoked" (CLUBMONEY breaker S6).
-  - *Reading:* after removal, Raketa's capture at the cut-off, its cancel and its refunds would all meet this.
+  - *Reading:* after removal, Rakieta's capture at the cut-off, its cancel and its refunds would all meet this.
   - The held shares lapse on their own after 7 days unless the club captures or cancels them in its own Dashboard.
   - A refund owed can then only be made by the club.
 - **[DOCS]** The closest page for charges disabled is [Pause payments and payouts](https://docs.stripe.com/connect/pausing-payments-or-payouts-on-connected-accounts) — 2026-10-20. It only partly applies:
@@ -185,7 +185,7 @@ rest by anchor.
   - It can't be staged: the test club can't be restricted, and sandboxes enforce neither pauses nor some
     capabilities.
 
-### R-CLUBMONEY-9 · The refusal Raketa's payout meets on an account whose payouts are disabled
+### R-CLUBMONEY-9 · The refusal Rakieta's payout meets on an account whose payouts are disabled
 
 **Answer:**
 - Stripe documents `payouts_not_allowed`.
@@ -243,8 +243,8 @@ rest by anchor.
   The marketplace page adds: "Your existing connected accounts fire both v1 and v2 events, so your integration can
   manage them by listening for `v1.account.updated` v2 events instead of `account.updated` v1 events."
   [Onboard (marketplace)](https://docs.stripe.com/connect/marketplace/tasks/onboard) — 2026-10-20
-- *Reading:* the migrate page says what Stripe sends. The SaaS page, whose shape is Raketa's (merchant configuration,
-  full Dashboard, direct charges), says what Stripe would have Raketa listen to. Its wording ("instead of") is a
+- *Reading:* the migrate page says what Stripe sends. The SaaS page, whose shape is Rakieta's (merchant configuration,
+  full Dashboard, direct charges), says what Stripe would have Rakieta listen to. Its wording ("instead of") is a
   recommendation, not a statement that v1 stops.
 - **[MEASURED]** The test club had 32 v1 `account.updated` events (all `api_version 2026-09-30.endive`, read with
   `Stripe-Account`) and 48 v2 events (read through the platform with no `Stripe-Account`, so in the *Your account*
@@ -310,7 +310,7 @@ rest by anchor.
 
 **Answer:**
 - The v2 marketplace page is the odd one out.
-- The v2 SaaS page, whose shape is Raketa's, and the v1 hosted-onboarding page both allow HTTP in testing, and the
+- The v2 SaaS page, whose shape is Rakieta's, and the v1 hosted-onboarding page both allow HTTP in testing, and the
   sandbox accepted it twice.
 - All three agree that live mode accepts HTTPS only.
 
@@ -363,7 +363,7 @@ rest by anchor.
 
 **Answer:**
 - Still not documented.
-- What Raketa sets is now measured: the v2 contact email is the desk's address, and the account's preferred
+- What Rakieta sets is now measured: the v2 contact email is the desk's address, and the account's preferred
   language is Polish. No Stripe page says its emails follow either.
 
 - Carried, [`gaps-CLUBMONEY.md` §2](gaps-CLUBMONEY.md#2-which-inbox-stripes-emails-reach-r-clubmoney-8-r-clubmoney-20):
@@ -382,8 +382,8 @@ rest by anchor.
   email address". Exporting it "from a sandbox results in an error".
   [Connected account email configuration](https://docs.stripe.com/connect/account-emails-config) — 2026-10-20
 - **[MEASURED]** On the test club:
-  - the v1 `email` equals the v2 `contact_email`, which is the address Raketa sends (`stripe_payments.py:323`);
-  - v2 `defaults.locales` reads `['pl-PL']`, which Raketa sets (`:329`);
+  - the v1 `email` equals the v2 `contact_email`, which is the address Rakieta sends (`stripe_payments.py:323`);
+  - v2 `defaults.locales` reads `['pl-PL']`, which Rakieta sets (`:329`);
   - `business_profile.support_email` is unset.
 - **[ABSENT]** Looked in teams, user roles, account-emails-config, the v2 Account object and create references, and a
   support search — 2026-10-20. Not found:
@@ -412,7 +412,7 @@ rest by anchor.
     2,30 zł (CLUBMONEY breaker S1, S3, S4).
   - There are no network-cost lines.
 - *Reading:* for an IC+ club the balance transaction's `fee` is not the whole cost of the share. Because the balance
-  transaction still exists, `charge.updated` (which announces it) would still come, but Raketa would record a fee that
+  transaction still exists, `charge.updated` (which announces it) would still come, but Rakieta would record a fee that
   is too low or nil. Unverified.
 - **[ABSENT]** Looked in expand/use-cases, the support IC+ pages and a docs search — 2026-10-20. Not found:
   - what an IC+ club's charge balance transaction carries in `fee`: nothing, only Stripe's part, or the whole cost;
@@ -420,12 +420,12 @@ rest by anchor.
 
   A sandbox club can't be put on IC+. A question for Stripe support.
 
-### R-CLUBMONEY-20 · Whether Stripe sends a failed manual payout again, and what Raketa's next payout meets while the bank account is disabled
+### R-CLUBMONEY-20 · Whether Stripe sends a failed manual payout again, and what Rakieta's next payout meets while the bank account is disabled
 
 **Answer:**
 - Nothing re-sends a failed manual payout: Stripe's retry is tied to "the next scheduled payout interval".
 - While the bank account is disabled, Stripe says no payout, automatic or manual, can be processed.
-- The exact answer to Raketa's next payout is still unmeasured.
+- The exact answer to Rakieta's next payout is still unmeasured.
 
 - **[DOCS]** From [Receive payouts — Payout failures](https://docs.stripe.com/payouts?locale=en-US#payout-failures) — 2026-10-20:
   - "If a payout fails, make sure your bank account details are correct by re-entering them. Stripe then reattempts
@@ -435,8 +435,8 @@ rest by anchor.
   processed until the external account is updated**." [Connect webhooks](https://docs.stripe.com/connect/webhooks) — 2026-10-20
 - *Reading:*
   - A manual account has no scheduled interval, so the returned money stays on the club's balance
-    (`failure_balance_transaction`) until somebody asks for a payout again: Raketa, or the club from its Dashboard.
-  - Raketa's next payout can't go through until the club fixes its bank account in its own Dashboard.
+    (`failure_balance_transaction`) until somebody asks for a payout again: Rakieta, or the club from its Dashboard.
+  - Rakieta's next payout can't go through until the club fixes its bank account in its own Dashboard.
 - **[MEASURED]** The test club has one payout, `po_1USPGD5y1DMwE3zY2VJcHrmh`, which is `paid`. Its bank account pays to
   the succeeding test IBAN, so no failure has happened on the sandbox.
 - **[ABSENT]** What `payouts.create` answers while the account's only bank account is disabled: a refusal
@@ -516,5 +516,5 @@ rest by anchor.
   ([`stripe-payouts-and-balances.md`](stripe-payouts-and-balances.md#money-held-on-manual-payouts-must-leave-within-90-days)).
 - *Reading:*
   - On a manual account no payout leaves by itself, so the few złoty wait on the available balance.
-  - They leave with a later payout of 5 zł or more, whether Raketa's or the club's own from its Dashboard.
+  - They leave with a later payout of 5 zł or more, whether Rakieta's or the club's own from its Dashboard.
 - **[ABSENT]** What Stripe does with money still on a manual account after 90 days (carried, same anchor) — 2026-10-20.

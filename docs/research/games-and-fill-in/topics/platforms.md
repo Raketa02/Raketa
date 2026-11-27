@@ -1,6 +1,6 @@
 # Other platforms in the market
 
-The platforms around Raketa other than Playtomic, the main competitor: the booking systems Kraków clubs
+The platforms around Rakieta other than Playtomic, the main competitor: the booking systems Kraków clubs
 already run (tenis4U, Playmore/Reservise, kluby.org), the Polish aggregators and matchmakers (PADO,
 Planeta Padla), the European ones (MATCHi, Padel Mates, Eversports), small apps that deal decks, and
 WhatsApp/Facebook groups as a platform.
@@ -59,7 +59,7 @@ not found, with where. Lines marked *reading* are not sources.
 ### Playmore — open games: each player pays at join
 - **[POLICY]** *Gry otwarte* (in the app since v6.10.13, 10 Jul 2026): the organiser picks a free court and hour, sets the player limit, publishes and **pays his share first**; each joiner pays at once (wallet or online, BLIK named); the court cost is split equally ("17,50 zł / os."). [Playmore: Gry otwarte](https://join.playmore.pl/gry-otwarte/), [strings: reservations](https://playmore.pl/assets/93jAIRDY.js) — read 2026-10-06/07
 - **[POLICY]** All or nothing: "Komplet graczy – gra potwierdzona, kort opłacony w całości. Brak kompletu przed startem – rezerwacja cofnięta i pełny zwrot dla wszystkich." [Gry otwarte](https://join.playmore.pl/gry-otwarte/) — read 2026-10-06
-- *Reading:* the outcome matches Raketa's; the money moves earlier — Raketa charges nobody until the last yes.
+- *Reading:* the outcome matches Rakieta's; the money moves earlier — Rakieta charges nobody until the last yes.
 
 ### Playmore — the court is held from publication
 - **[POLICY]** "Rezerwujesz kort, piszesz kogo szukasz"; button "Utwórz i zapłać wpisowe ({fee})"; a clash: "Ktoś właśnie zajął ten termin. Wybierz inny slot." The court is freed only when the game is called off ("odwołujemy grę i kort", "kort się zwolni"). A full game is confirmed only at the cut-off: "Skład pełny · potwierdzimy o {time}". [strings: reservations](https://playmore.pl/assets/93jAIRDY.js) — read 2026-10-07
@@ -283,4 +283,4 @@ not found, with where. Lines marked *reading* are not sources.
 | MATCHi public match | Holder pays all; split on acceptance | Holder's problem | Holder liable | as above | as above |
 | Padel Mates | In app | — | Full refund to 24 h; or a replacement via link | Club's Stripe | Free for players |
 | WhatsApp groups | Organiser collects | Organiser's problem | None | Organiser | None |
-| Raketa (spec) | Nobody until the last yes | Called off at cut-off, full refund | Minus card fee before cut-off; after, only if the seat is taken | The club, after the game | None |
+| Rakieta (spec) | Nobody until the last yes | Called off at cut-off, full refund | Minus card fee before cut-off; after, only if the seat is taken | The club, after the game | None |

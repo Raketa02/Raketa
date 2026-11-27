@@ -15,7 +15,7 @@
 
 ## Context
 
-Most of what makes Raketa a product rather than a booking form is computation, not CRUD.
+Most of what makes Rakieta a product rather than a booking form is computation, not CRUD.
 The player app is specified around a skill-rating engine, a Match Fit score, a balance
 forecast and a replacement cascade; the club console around an availability oracle, a hold
 ladder, a fill-probability model and a twelve-stage eligibility pipeline. The first of

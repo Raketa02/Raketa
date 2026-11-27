@@ -1,6 +1,10 @@
 # ADR-0209 — A drawn splash opens the app, and startup runs behind it
 
-- **Status:** Accepted
+- **Status:** Accepted — **§5 superseded 2026-11-27 by
+  [ADR-0211](0211-the-brand-is-rakieta-everywhere.md)** (PRD
+  [#889](https://github.com/Raketa02/Raketa/issues/889)): the brand is **Rakieta** everywhere, so
+  the splash's wordmark is no longer an exception. This line, the amendment below, §5 and the *two
+  spellings* consequence keep the old spelling as a quote.
 - **Date:** 2026-11-23
 - **Amends [ADR-0187](0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
   §8, *"The brand is Raketa, everywhere"***, with one exception: the splash's drawn wordmark reads
@@ -222,7 +226,7 @@ shows no spinner and no word about why. **The fade** is the opacity of the whole
 word and dot together. It is linear and takes 0.5 s, after which the splash unmounts. A normal
 launch is interactive at 3.1 s, or 1.4 s under reduced motion.
 
-- **A startup failure is just the first screen.** Bad configuration (*Raketa could not start*) is
+- **A startup failure is just the first screen.** Bad configuration (*Rakieta could not start*) is
   drawn underneath and revealed by the same fade, never hidden behind a held splash. So is an
   unanswered launch check (*We couldn't pick up where you left off*).
 - **Normally the hold ends a little after 5 s**: the `launch` budget, counted from when the check
@@ -271,6 +275,11 @@ the same table, with 0.9 s in place of 2.6 s.
 
 ### 5. *Rakieta* is the splash's wordmark, and nothing else's
 
+> **Superseded 2026-11-27 by [ADR-0211](0211-the-brand-is-rakieta-everywhere.md): the brand is
+> *Rakieta* everywhere.** The splash's wordmark, the launcher's name, the startup failure screen
+> and every string spell it alike. This section keeps the old spelling as a quote, so it reads as it
+> was decided.
+
 **Only the splash's drawn wordmark reads *Rakieta*.** It is the one exception to ADR-0187 §8:
 
 - the launcher's display name stays **Raketa**;
@@ -305,7 +314,8 @@ of its own (ADR-0198). So no sentence anywhere names the app *Rakieta*.
   only while *pending*. A second user is a review question, not a lint rule.
 - **The brand has two spellings.** *Rakieta* is on the first frame, and *Raketa* is on the
   launcher label the player just tapped and everywhere after. ADR-0187 §8 now has an exception to
-  police, and a future rename touches both.
+  police, and a future rename touches both. *(Resolved 2026-11-27 by
+  [ADR-0211](0211-the-brand-is-rakieta-everywhere.md): one spelling, Rakieta, on every frame.)*
 - **The design system's one dark screen becomes two.** *It's a game!* gains a sibling in Part 16,
   with two fenced colours and a fenced type role. Each fence is narrow, but the case for a third
   dark surface is easier to make.

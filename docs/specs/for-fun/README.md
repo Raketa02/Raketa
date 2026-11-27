@@ -50,9 +50,8 @@ the Forecast) and **Social tag** (Player profile).
    4/5*. The player tickets, #836 on, cite this folder's numbers.
 4. **A face is today's face**, the photo or the generated court poster, **with no letters**: the
    headers of mocks 3 and 5 draw initials over the faces.
-5. **The brief's *Rakieta* reads Raketa**
-   ([ADR-0187](../../adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
-   §8).
+5. **The brief's *Rakieta* is the brand as written**
+   ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md)).
 
 ## Which mock shows what
 

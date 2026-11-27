@@ -1,7 +1,7 @@
 # Moving a club in — what it can take out, how rivals bring it across, and the law
 
-Research for area 16 (moving in) and the market side of area 18 (moving today's Raketa clubs to the full calendar) of
-the planning map *Raketa becomes the club's booking software* (decided 2026-10-12: one calendar for desk, phone,
+Research for area 16 (moving in) and the market side of area 18 (moving today's Rakieta clubs to the full calendar) of
+the planning map *Rakieta becomes the club's booking software* (decided 2026-10-12: one calendar for desk, phone,
 walk-ins, season bookings, online bookings and the Games deck, replacing tenis4U, Playmore and kluby.org).
 
 **Extends** [`integration.md`](integration.md),
@@ -15,7 +15,7 @@ clubs say), [`topics/platforms.md`](../games-and-fill-in/topics/platforms.md),
 dates; everything else was read **2026-10-12**.
 
 **This file decides nothing.** Each block below is for the club-software grilling to mark *Build at launch · Build
-later · Leave out · Ask a real club*. Nothing here estimates Raketa's build cost.
+later · Leave out · Ask a real club*. Nothing here estimates Rakieta's build cost.
 
 **Sources.** tenis4U's club-side text comes from the JavaScript its public demo panel serves to every visitor
 ([test-panel.tenis4u.pl](https://test-panel.tenis4u.pl/), bundle `main.2b865c996e568707.js`; every string quoted
@@ -163,7 +163,7 @@ desks in Playmore or old Reservise ([`integration.md`](integration.md) §4). *Re
 club can carry out is who its customers are and how to reach them.
 
 **What it means for the player app.** *Reading:* a player's past games at a tenis4U club will not arrive with them, so
-their history at that club in Raketa starts on the switch day.
+their history at that club in Rakieta starts on the switch day.
 
 **Market signal.** Playtomic and MATCHi give a club the most to take away, tenis4U the least. Playmore keeps its club
 panel private and does migrations with its own staff.
@@ -251,7 +251,7 @@ their own ("Na ile godzin przed rozpoczęciem można anulować rezerwację stał
 ([demo panel bundle](https://test-panel.tenis4u.pl/main.2b865c996e568707.js)). Fame Sport sells "stałe rezerwacje
 kortów na okres 12 tygodni, sezon letni, sezon zimowy" paid up front (carried, 2026-10-06).
 
-**What it means for the player app.** *Reading:* a player whose Tuesday 19:00 slot is missing in Raketa on day one
+**What it means for the player app.** *Reading:* a player whose Tuesday 19:00 slot is missing in Rakieta on day one
 will think it was sold. The slot has to land under the account they will claim (block I).
 
 **Market signal.** Vendors that own both ends (Playmore from Reservise, Eversports from USC, Twój Tenis old to new)
@@ -356,7 +356,7 @@ pay by Przelewy24 or Tpay (carried, [`integration.md`](integration.md) §5). The
 are Medicover cards ("Karty Medicover zostały zarejestrowane"); no saved payment card was seen
 ([app bundle](https://app.tenis4u.pl/main.cf446af5e9523413.js)).
 
-**What it means for the player app.** *Reading:* every migrated player meets Raketa's card or BLIK step at their first
+**What it means for the player app.** *Reading:* every migrated player meets Rakieta's card or BLIK step at their first
 payment, as a new player does.
 
 **Market signal.** Card portability exists only between big processors under PCI. No court-booking rival offers it.
@@ -432,7 +432,7 @@ means the desk closes every sale in both.
 **What a Kraków desk does today.** *Reading:* desk, phone and app write into one tenis4U calendar
 ([`integration.md`](integration.md) §5), so all three doors have to move on the same day.
 
-**What it means for the player app.** *Reading:* there is a date from which the club's hours are bookable in Raketa;
+**What it means for the player app.** *Reading:* there is a date from which the club's hours are bookable in Rakieta;
 before it the player books in the old app. Twój Tenis shows that date beside each club.
 
 **Market signal.** A hard date, with the old system's booking horizon cut at that date, is the common pattern. Nobody
@@ -553,9 +553,9 @@ what customers must be told.
   answered 500; web search of the site found only the general guidance above).
 
 **The desk/owner's day with it.** *Reading:*
-- The owner signs a processing contract (umowa powierzenia) with Raketa and asks the old vendor to return or delete
+- The owner signs a processing contract (umowa powierzenia) with Rakieta and asks the old vendor to return or delete
   the data.
-- The privacy notice needs Raketa among its recipients, unless a category such as a booking-system provider already
+- The privacy notice needs Rakieta among its recipients, unless a category such as a booking-system provider already
   covers it.
 - Customers get one dedicated message about the change, not mixed with promotion.
 
@@ -565,12 +565,12 @@ consent under art. 7(1), so the imported list serves bookings and service messag
 in again. A Playtomic club's export carries the flag.
 
 **What it means for the player app.** *Reading:*
-- If Raketa used a club's imported list to create Raketa accounts or to market for itself, art. 28(10) would make it a
+- If Rakieta used a club's imported list to create Rakieta accounts or to market for itself, art. 28(10) would make it a
   controller of that processing.
 - Records that stay the club's until the player claims them keep the club as controller.
 - Whether an "install the new app" invitation is commercial information under PKE art. 398 is unanswered (see Gaps).
 
-**Market signal.** All three Polish systems already split controller and processor the way Raketa would. Playmore's
+**Market signal.** All three Polish systems already split controller and processor the way Rakieta would. Playmore's
 contract is the one published model (return or delete, notice before a new sub-processor).
 
 ## K. Getting out of the old contract
@@ -618,7 +618,7 @@ contract.
 ## L. Area 18, market side: a vendor moving its own clubs to its new product
 
 **What it covers.** How vendors moved clubs already on their older product onto a new one. This is the parallel for
-moving today's *Only Raketa* clubs to the full calendar.
+moving today's *Only Rakieta* clubs to the full calendar.
 
 **Who has it**
 - **[POLICY] Playmore, Reservise to Playmore:**
@@ -645,8 +645,8 @@ moving today's *Only Raketa* clubs to the full calendar.
 **The desk/owner's day with it.** *Reading:* one switch date per club, agreed around its calendar. Whatever was booked
 and paid before that date runs to the end on the rules it was sold under.
 
-**What a Kraków desk does today.** Not applicable: no real club runs on Raketa
-([`what-raketa-has-and-build-cost.md`](what-raketa-has-and-build-cost.md) §18).
+**What a Kraków desk does today.** Not applicable: no real club runs on Rakieta
+([`what-rakieta-has-and-build-cost.md`](what-rakieta-has-and-build-cost.md) §18).
 
 **What it means for the player app.** *Reading:* for a while a player may see clubs on both ways of working. Playmore
 labels which system a pass or booking comes from.
@@ -680,7 +680,7 @@ Cards: no system lets a club take saved cards away; Stripe's import needs the ol
 - **Cards:** whether Przelewy24 or Tpay ever release card references to another processor, and whether Stripe imports
   into a Connect connected account. Neither seems to matter for Kraków, where saved cards were not seen.
 - **Law:** whether an email or SMS inviting a club's customers to install a new app is "informacja handlowa" under
-  PKE art. 398; whether creating player accounts from a club's list makes Raketa a controller; what a privacy notice
+  PKE art. 398; whether creating player accounts from a club's list makes Rakieta a controller; what a privacy notice
   must say when the processor changes. These are questions for a lawyer. No UODO guidance on changing processors was
   found.
 - **Market:** no first-hand complaint of double bookings during a switch, no published migration plan for the

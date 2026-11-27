@@ -18,12 +18,12 @@ The code compared is the run's copy at `9ab0ea5b`.
 
 | Gap | Rule | Status |
 |---|---|---|
-| How players read *Booking in 10 s* | R-FILL-1 | **Partly.** Two banking apps hold a transfer behind a timed *Undo*. Monzo found 10 s too fast in its own testing, and its customers catch a mistake in about 9 s. Their users read the timer two ways. A study of Raketa's words: *not found* |
-| Whether a free leave before the cut-off is the "alternative that does not rely on a timer" | R-FILL-1 | **Answered: W3C's test is found.** The test is "the same function" by other means. W3C's technique for purchases is a stated time to cancel. Whether Raketa's leave passes depends on what leaving undoes |
+| How players read *Booking in 10 s* | R-FILL-1 | **Partly.** Two banking apps hold a transfer behind a timed *Undo*. Monzo found 10 s too fast in its own testing, and its customers catch a mistake in about 9 s. Their users read the timer two ways. A study of Rakieta's words: *not found* |
+| Whether a free leave before the cut-off is the "alternative that does not rely on a timer" | R-FILL-1 | **Answered: W3C's test is found.** The test is "the same function" by other means. W3C's technique for purchases is a stated time to cancel. Whether Rakieta's leave passes depends on what leaving undoes |
 | An *Undo* confirmed in words or aloud | R-FILL-64 | **Partly.** Wealthsimple shows a cancellation confirmation screen. Gmail's web says "Sending undone" (third-party guide). WCAG 4.1.3 asks for such a result to reach a screen reader. A spoken confirmation: *not found* |
 | A swipe, *I'm in*, or a price beside it as the control that binds | R-DECK-34, R-FILL-7 | ***Not found*** (carried, searched today). The EU's Digital Fairness Act is still not proposed |
 | What a Polish bank app prints beside a pending hold on a direct charge | R-FILL-10 | ***Not found.*** New: Stripe sends the club's contact details with each charge, and says some banks show the name wrongly or not at all |
-| Whether Visa's stored-card agreement list applies to terms accepted once on Raketa for every club | R-FILL-11 | **Answered from Visa's text.** The duty is each seller's, the list has no platform variant, and the seller's location and contact are on it. Stripe's view: *not found* |
+| Whether Visa's stored-card agreement list applies to terms accepted once on Rakieta for every club | R-FILL-11 | **Answered from Visa's text.** The duty is each seller's, the list has no platform variant, and the seller's location and contact are on it. Stripe's view: *not found* |
 | How soon a bank drops a full-share check; whether the networks treat it as an "erroneous amount" | R-FILL-59 | **Networks, partly:** Visa's 2026 Core Rules found, Mastercard's 60 minutes carried. **Banks' timing: *not found*** |
 | How Playtomic's *Find a match* refreshes | R-DECK-42 | **Answered for Android 6.94.0, from its code.** The list is read when it opens and when the player changes it. There is no pull-to-refresh and no re-read on return |
 
@@ -106,7 +106,7 @@ can undo it." once, as the toast arrives (`frontend_player/src/features/proposal
   confirmation screen). Both say that nothing has left yet. Their users still read it two ways: held, or taken back.
 - Both start at 15 s, and both let the person choose 10 to 60 s or turn the timer off.
 - Monzo found 10 s too fast in its own testing. Its customers' typical catch, nine seconds, sits just inside ten.
-- Only testing with players can say how Raketa's word, "Booking", reads.
+- Only testing with players can say how Rakieta's word, "Booking", reads.
 
 ### R-FILL-1 · Whether a free leave before the cut-off is W3C's "alternative that does not rely on a timer": the test is the same function by other means, and W3C's technique for purchases is a stated time to cancel
 
@@ -162,13 +162,13 @@ can undo it." once, as the toast arrives (`frontend_player/src/features/proposal
 - **[ABSENT]** A W3C note, an EN 301 549 note or a published audit applying 2.2.1's "alternative" to a booking or
   payment *Undo*. Searched W3C's *Understanding* 2.2.1 and 3.3.4 and technique G164. Read 2026-10-20.
 
-**What the leave is, in Raketa's own terms.** "Leave before the cut-off and nothing is taken."
+**What the leave is, in Rakieta's own terms.** "Leave before the cut-off and nothing is taken."
 (`gaps-payments-01.md#r-fill-11-r-fill-60--the-terms-in-force-since-2026-10-10-say-held-at-the-fill-checked-when-a-hold-wouldnt-last-held-four-days-before-the-cut-off-taken-at-the-cut-off`).
 
 **Reading.**
 
 - W3C's test is whether the person can do "the same function" without the timer. A free leave before the club's
-  cut-off is the nearest thing Raketa has. It is G164's stated time to cancel, the sufficient technique for 3.3.4 on a
+  cut-off is the nearest thing Rakieta has. It is G164's stated time to cancel, the sufficient technique for 3.3.4 on a
   purchase.
 - It counts as 2.2.1's alternative only if it undoes the same thing, at no cost, just as easily:
   - Before the ten seconds end, *Undo* leaves no trace.
@@ -276,7 +276,7 @@ can undo it." once, as the toast arrives (`frontend_player/src/features/proposal
 - No bank's row for a pending card hold is described
   (`gaps-payments-01.md#r-fill-13---the-name-beside-a-pending-card-hold-still-not-found-for-any-of-the-five-banks`).
 - From the Stripe lens, today:
-  - the test club's charges read `calculated_statement_descriptor: "ROBER CLUB"`, and Raketa sends no suffix;
+  - the test club's charges read `calculated_statement_descriptor: "ROBER CLUB"`, and Rakieta sends no suffix;
   - whether a suffix sent with the hold shows on the pending line is unknown
   - (`stripe-gaps-s16.md#8--r-fill-11--statement_descriptor_suffix-on-a-direct-charge-on-an-accounts-v2-club-with-its-own-full-dashboard`).
 
@@ -308,11 +308,11 @@ can undo it." once, as the toast arrives (`frontend_player/src/features/proposal
 
 - On a Visa card the pending line carries the same merchant data as the payment. On a direct charge that is the club's
   descriptor ("ROBER CLUB" on the test club). Where a bank shows them, it is also the club's support contacts, or
-  Raketa's where the club set none.
-- Whether that raw name or a name the bank maps shows is each bank's own choice. Raketa's name appears only through
+  Rakieta's where the club set none.
+- Whether that raw name or a name the bank maps shows is each bank's own choice. Rakieta's name appears only through
   the contacts Stripe falls back to.
 
-### R-FILL-11 · Visa's stored-card agreement and terms a player accepts once on Raketa for every club: the duty is each seller's, and Visa has no platform variant
+### R-FILL-11 · Visa's stored-card agreement and terms a player accepts once on Rakieta for every club: the duty is each seller's, and Visa has no platform variant
 
 **Carried.**
 
@@ -360,18 +360,18 @@ can undo it." once, as the toast arrives (`frontend_player/src/features/proposal
   - Stripe's *Share payment methods across accounts*, which has no word on consent
     ([Stripe](https://docs.stripe.com/connect/direct-charges-multiple-accounts)).
 
-  Whether Stripe, as the clubs' acquirer, accepts Raketa's one agreement is a question for Stripe support. Read
+  Whether Stripe, as the clubs' acquirer, accepts Rakieta's one agreement is a question for Stripe support. Read
   2026-10-20.
 
 **Reading.**
 
-- On a direct charge the club is the seller and Raketa keeps the card for it. By Visa's wording Raketa stores it as
-  the clubs' agent, and the agreement is each club's. Raketa is not a Visa Marketplace, because the money settles to
-  the club and not through Raketa. It runs no wallet either.
+- On a direct charge the club is the seller and Rakieta keeps the card for it. By Visa's wording Rakieta stores it as
+  the clubs' agent, and the agreement is each club's. Rakieta is not a Visa Marketplace, because the money settles to
+  the club and not through Rakieta. It runs no wallet either.
 - The whole list applies. Only "timing and frequency" gives way, to the event, for unscheduled charges.
 - The merchant items, the club's location and its contact details, can't be filled when the card is saved, because the
   club isn't known yet. "The club it is played at" names the event, not the merchant.
-- The exceptions cover one purchase, such as a hotel's no-show charge. Raketa uses the card for every future game at
+- The exceptions cover one purchase, such as a hotel's no-show charge. Rakieta uses the card for every future game at
   any club, so they don't apply.
 - Stripe's word that permission travels with the copy answers the bank's check (SCA). It doesn't answer what Visa
   wants the agreement to say.
@@ -432,7 +432,7 @@ read 2026-10-20.
   Account Verification that starts no purchase, and every authorisation must be one of six kinds.
 - A full-share authorisation made only to check, and let go at once, is none of the six in substance. It is a check
   made with an amount.
-- Raketa's check asks more than validity: whether the share's money is there. A zero-amount check can't answer that,
+- Rakieta's check asks more than validity: whether the share's money is there. A zero-amount check can't answer that,
   because the bank says only "balance greater than zero", or nothing.
 - Visa's text never names a check of funds. So the nearest rule is against it, but it is not a ruling on it.
 - The reversal itself sits well inside Visa's 24 hours, since the check is let go within seconds (measured). On

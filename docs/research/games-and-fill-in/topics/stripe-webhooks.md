@@ -1,6 +1,6 @@
 # Stripe webhooks — signatures, delivery, scopes and the events this product needs
 
-What Stripe documents about webhooks for the way Raketa uses it: **direct charges** on each club's **Accounts v2**
+What Stripe documents about webhooks for the way Rakieta uses it: **direct charges** on each club's **Accounts v2**
 connected account (full Dashboard, Stripe collects fees and covers losses), a card saved on the **platform** and
 cloned onto the club's account per share, shares **held** off-session with manual capture, then **taken** or
 **released**, exact refunds, payouts on demand, złoty, Poland. Read 2026-10-19 from docs.stripe.com (fetched as
@@ -42,7 +42,7 @@ scope (`#no-webhook-endpoint-and-no-event-destination`, D1); the SDK pins `2026-
   Using a tolerance value of `0` disables the recency check entirely." [webhooks](https://docs.stripe.com/webhooks)
   (*Preventing replay attacks*) — read 2026-10-19
 - *Code:* stripe-python 15.6.1's `verify_header` defaults `tolerance=None` and checks only the past:
-  `if tolerance and timestamp < time.time() - tolerance` (SDK `stripe/_webhook.py:132-195`); Raketa passes 300
+  `if tolerance and timestamp < time.time() - tolerance` (SDK `stripe/_webhook.py:132-195`); Rakieta passes 300
   (`backend/app/modules/payments/infrastructure/stripe_notices.py:52`, `:86-88`).
 
 ### A retry is signed afresh
@@ -313,7 +313,7 @@ scope (`#no-webhook-endpoint-and-no-event-destination`, D1); the SDK pins `2026-
 
 - **[DOCS]** `account.updated` "Allows you to monitor changes to connected account requirements and status changes";
   `account.application.deauthorized` "Occurs when a connected account disconnects from your platform … Available for
-  connected accounts with access to the Stripe Dashboard" (Raketa's clubs have the full Dashboard). [Connect webhooks](https://docs.stripe.com/connect/webhooks) — read 2026-10-19
+  connected accounts with access to the Stripe Dashboard" (Rakieta's clubs have the full Dashboard). [Connect webhooks](https://docs.stripe.com/connect/webhooks) — read 2026-10-19
 - **[DOCS]** Payouts: `payout.created`, `.updated`, `.paid` ("*expected* to be available … If the payout fails, a
   `payout.failed` notification is also sent, at a later time"), `.failed` — "Stripe also sends an
   `account.external_account.updated` event because the failed external account is disabled", and "no automatic or manual
@@ -406,7 +406,7 @@ scope (`#no-webhook-endpoint-and-no-event-destination`, D1); the SDK pins `2026-
 7. When a refund recorded as given fails, does the player learn it, and does the club's Money stop counting it?
 8. When a share is disputed, does the seat charge, the club or the player see it, and whose balance pays?
 9. When a payout fails or the bank account is disabled, does the club website say so before the next payout?
-10. When a club disconnects, does Raketa stop proposing games there?
+10. When a club disconnects, does Rakieta stop proposing games there?
 11. Can a test-mode notice on a live Connect endpoint move anything for a real club's `acct_…`?
 12. After an outage longer than Stripe's retries, does a job re-read what only a notice moves (a hold confirmed on the
     bank's page, an account becoming ready)?

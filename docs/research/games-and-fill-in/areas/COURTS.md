@@ -64,7 +64,7 @@ contract) are internal and no market fact touches them. Written 2026-10-08 from 
 - **Platforms (R-COURTS-26).** [POLICY] Playmore's organiser picks a free court and hour, held from publishing — `topics/platforms.md#playmore--the-court-is-held-from-publication`.
 - **Platforms (R-COURTS-27).** [ABSENT] A system writing bookings into another's calendar; no public tenis4U or kluby.org booking API — `topics/platforms.md#no-system-writes-bookings-into-another`.
 - **Status quo (R-COURTS-27).** [POLICY] Kraków padel runs on tenis4U, with phone and desk at every club — `topics/platforms.md#kraków-padel-clubs-sit-on-tenis4u`, `topics/local-market.md#which-booking-systems-kraków-clubs-run`.
-- *Reading (R-COURTS-27):* an Instant club on tenis4U closes each hour Raketa sells by hand, or two systems sell it (`topics/platforms.md#no-system-writes-bookings-into-another`).
+- *Reading (R-COURTS-27):* an Instant club on tenis4U closes each hour Rakieta sells by hand, or two systems sell it (`topics/platforms.md#no-system-writes-bookings-into-another`).
 - **Competitor (R-COURTS-29).** [POLICY] "Users always receive emails and in-app notifications about any changes to their reservations" — `topics/competitor-club.md#what-a-manager-may-and-may-not-change`.
 - **Competitor (R-COURTS-28).** [POLICY] Many admins edit with per-menu rights; [ABSENT] what two saving at once do — `topics/competitor-club.md#staff-logins-roles-and-who-gets-booking-emails`.
 

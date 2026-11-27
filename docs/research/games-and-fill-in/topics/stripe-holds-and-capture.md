@@ -1,6 +1,6 @@
 # Stripe — holds and capture
 
-What Stripe says about holding a card and taking the money later, for the way Raketa uses it at
+What Stripe says about holding a card and taking the money later, for the way Rakieta uses it at
 `9ab0ea5b`: a **direct charge on the club's connected account** (Accounts v2, full Dashboard, Stripe
 collects the fees), in **złoty**, made **off-session** with **manual capture** on a single-use copy
 of the player's saved card. A share is held at the fill and **kept until the club's cut-off**, then
@@ -43,7 +43,7 @@ Amounts are złoty; Stripe stores grosze.
   the connected account's balance, not in your platform's balance." "Refunds and chargebacks reduce
   the connected account's balance." [Connect charges](https://docs.stripe.com/connect/charges) — read 2026-10-19
 - **[MEASURED]** Carried: every share on the test club is `capture_method: manual`, `currency: pln`,
-  `customer: null`, statement descriptor `ROBER CLUB` (the club's, not Raketa's) —
+  `customer: null`, statement descriptor `ROBER CLUB` (the club's, not Rakieta's) —
   [`stripe-sandbox.md#payments-on-the-test-club-manual-capture-off-session-on-a-single-use-copy-of-the-card`](stripe-sandbox.md#payments-on-the-test-club-manual-capture-off-session-on-a-single-use-copy-of-the-card),
   read 2026-10-19
 
@@ -334,8 +334,8 @@ Amounts are złoty; Stripe stores grosze.
   `amount_refunded: 0`, `refunded: false`, `balance_transaction: null`. Each cancel emitted
   `payment_intent.canceled` with the request's idempotency key (`evt_3USA7x5y1DMwE3zY0eJ7qzbS` and
   two more) · read 2026-10-19
-- *reading:* a hold Raketa let go and a hold Stripe dropped are told apart only by
-  `cancellation_reason` (null against one of Stripe's own) and by the event's `request` (Raketa's
+- *reading:* a hold Rakieta let go and a hold Stripe dropped are told apart only by
+  `cancellation_reason` (null against one of Stripe's own) and by the event's `request` (Rakieta's
   cancel carries its key).
 
 ### What the player sees when a hold is let go is the bank's to decide
@@ -449,7 +449,7 @@ Amounts are złoty; Stripe stores grosze.
 11. **Forgetting the club can act on the hold.** A full-Dashboard club can press **Capture** or
     **Cancel** on an uncaptured payment
     ([place a hold](https://docs.stripe.com/payments/place-a-hold-on-a-payment-method?locale=en-US),
-    [refunds](https://docs.stripe.com/refunds?locale=en-US#cancel-payment)); Raketa then hears a capture or a
+    [refunds](https://docs.stripe.com/refunds?locale=en-US#cancel-payment)); Rakieta then hears a capture or a
     cancel it did not ask for.
 12. **A full-share check let go at once.** "Card networks may also restrict 1 USD authorizations you
     don't intend to capture"; Visa wants account verification for validating a card (carried). The
@@ -482,7 +482,7 @@ Amounts are złoty; Stripe stores grosze.
    than captured whole and refunded? If larger, is a new hold made?
 9. Does any rule rely on extended, incremental, multicapture or overcapture? Each needs IC+ pricing,
    and none fits an off-session share of known price at a Polish club.
-10. If the club presses **Capture** or **Cancel** in its own Dashboard, does Raketa's record of the
+10. If the club presses **Capture** or **Cancel** in its own Dashboard, does Rakieta's record of the
     share follow, and is anyone told?
 11. When a share is let go, do the player's words match Stripe ("releases any held funds") and leave the
     timing to the bank?

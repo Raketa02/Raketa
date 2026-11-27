@@ -1348,7 +1348,7 @@ fake server judging it by distance, as the backend does. **Not seen on a device.
 
 **No club confirms a game: a full game is simply booked**
 ([#676](https://github.com/Raketa02/Raketa/issues/676); the backend's #669;
-[ADR-0196](../../../docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+[ADR-0196](../../../docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
 §1, the mechanics Q121; story S-01E's F-REQUEST-3.1, F-REQUEST-23.1). Paula's yes completes Marta's
 Thursday game at Kazimierz Padel: _It's a game!_ with nothing under the word, and Home and the details
 read it _Booked_, each player's 25 zł held until the cut-off. **Why**: no court platform makes a club

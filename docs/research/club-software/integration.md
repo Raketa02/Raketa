@@ -1,8 +1,8 @@
-# How rivals get a club's courts — and what that means for Raketa
+# How rivals get a club's courts — and what that means for Rakieta
 
 Research for the grilling of story S-01E ([#609](https://github.com/Raketa02/Raketa/issues/609)), whose
 decisions of 2026-10-12 ([comment](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776))
-removed *On request* and *Instant* and set Raketa on the path to becoming the club's booking software.
+removed *On request* and *Instant* and set Rakieta on the path to becoming the club's booking software.
 It is the starting point for the club-software grilling that follows.
 
 **Extends** [`../games-and-fill-in/topics/platforms.md`](../games-and-fill-in/topics/platforms.md),
@@ -32,12 +32,12 @@ Nobody signed in, booked or paid, and no endpoint was called.
   tenis4U, Playmore, kluby.org), or a marketplace writes into the club's software through the vendor's
   API and that software refuses a taken hour (Anybuddy, MATCHi←Matchable, ClassPass, Urban Sports Club,
   Reserve with Google).
-- **Nobody relies on a desk closing hours by hand**, which is what Raketa's *Instant* asked.
+- **Nobody relies on a desk closing hours by hand**, which is what Rakieta's *Instant* asked.
 - **Kraków runs on tenis4U (padel, tennis) and Playmore (squash).** Neither, nor kluby.org, has a
   public API, feed or calendar export; nobody writes bookings into them; tenis4U's terms forbid
   automated reading; and tenis4U is building open sparring, shared bookings and split payments itself.
 - *Reading:* a link to a Kraków club's own system needs a vendor with every reason to refuse; becoming
-  the club's calendar is the only path Raketa controls.
+  the club's calendar is the only path Rakieta controls.
 
 ## 1. How rivals get court inventory
 
@@ -272,7 +272,7 @@ Nobody signed in, booked or paid, and no endpoint was called.
 - **[ABSENT]** The clubs' own contract with tenis4U, or any clause letting a club authorise a third
   party.
 
-### It is building what Raketa builds
+### It is building what Rakieta builds
 - **[POLICY]** Its player app contains "Otwarte sparingi", "Rezerwacje współdzielone", "Zaloguj się, aby
   dołączyć do sparingu", join links, payments split per player, and an ELO ranking switched off in the
   code.
@@ -300,9 +300,9 @@ Nobody signed in, booked or paid, and no endpoint was called.
 
 | Way | The club's work | Double-booking risk | Who does it |
 | --- | --- | --- | --- |
-| Raketa writes into the club's software | none per booking | about none: the software refuses a taken hour | Anybuddy, MATCHi←Matchable, ClassPass — needs the vendor's yes; none in Poland |
-| Raketa is the club's software | a move in, then none | none: one calendar | Playtomic, Playmore, tenis4U, kluby.org |
-| A block of hours handed to Raketa (*Only Raketa*) | set once, and block the same hours in its own system | low, if the club blocks them | hotel allotments; Anybuddy's chosen slots |
+| Rakieta writes into the club's software | none per booking | about none: the software refuses a taken hour | Anybuddy, MATCHi←Matchable, ClassPass — needs the vendor's yes; none in Poland |
+| Rakieta is the club's software | a move in, then none | none: one calendar | Playtomic, Playmore, tenis4U, kluby.org |
+| A block of hours handed to Rakieta (*Only Rakieta*) | set once, and block the same hours in its own system | low, if the club blocks them | hotel allotments; Anybuddy's chosen slots |
 | The club confirms each game (*On request*, removed) | every booking, on a clock | none | CourtReserve's opt-in vetting only |
 | Both sell, the desk closes hours by hand (*Instant*, removed) | every sale, both ways, for ever | highest: no sync at all | nobody |
 

@@ -34,9 +34,9 @@ First, I will show you how the overall screen looks like with those rows for you
 
 ->mock reference:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/1_home_rows_general_1.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/1_home_rows_general_1.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/2_homre_rows_general_2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/2_homre_rows_general_2.png`
 
 ## 1-Row Hottest groups
 
@@ -47,7 +47,7 @@ Here very important action point for you is to determine the rules for tagging a
 
 ->mock reference of the row. Take into account that the last element is cut because the row is scrollable:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/21-club_row.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/21-club_row.png`
 
 **Each card.**
 
@@ -61,13 +61,13 @@ Here very important action point for you is to determine the rules for tagging a
 
 -.mock references of the card items for hottest groups:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/3_hottest_groups_tile_1.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/3_hottest_groups_tile_1.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/3.2_hottest_groups_tile_1.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/3.2_hottest_groups_tile_1.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/4_hottest_groups_tile2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/4_hottest_groups_tile2.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/5_hottest_groups_tile3.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/5_hottest_groups_tile3.png`
 
 **Group sheet (bottom sheet).**
 
@@ -81,7 +81,7 @@ Obviously the data from the mocks is just mock data. SO don’t hardcode those v
 
 ->mock reference of the bottom sheet for hottest groups tile:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/6_hottest_groups_bottom_sheet.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/6_hottest_groups_bottom_sheet.png`
 
 ## 2- Row Same competitive level players
 
@@ -89,7 +89,7 @@ Obviously the data from the mocks is just mock data. SO don’t hardcode those v
 
 **How it presents.** A sideways row of ten cards. For each player the app looks at every sport you both play and keeps the one where the match is most even, then sorts everyone by that evenness. The row takes the first ten, so once the close matches run out it continues with players further from your level rather than stopping short. The header reads Same competitive level players with See all ›.
 
-->mock reference of the row. Take into account that the last element is cut because the row is scrollable:: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/7_same_comptetitve_level_players_row.png`
+->mock reference of the row. Take into account that the last element is cut because the row is scrollable:: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/7_same_comptetitve_level_players_row.png`
 
 **Each card (dark).**
 
@@ -105,13 +105,13 @@ Obviously the data from the mocks is just mock data. SO don’t hardcode those v
 
 ->mock references of different cards representing all the components and their states, particulary the round button:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/8_competiive_players_card.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/8_competiive_players_card.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/10_competitive_players_card2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/10_competitive_players_card2.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/10.2_competitive_row_card.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/10.2_competitive_row_card.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/10.3_competitve_card_3.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/10.3_competitve_card_3.png`
 
 Since it is possible that players might share more than one sport, you have to determine hoe they are shorted by competitive level of which sport. It can be an overall computation of all the sports you both share or by sport. Is it up to you to determine the best way logic to sort the players by best competitive fit. And you have also to determine if the level of confidence should be also taken into account.
 
@@ -120,8 +120,8 @@ Since it is possible that players might share more than one sport, you have to d
 - If you tap on the round button with the +, you are requesting that player to be a friend. While the request is pending the button inside will hold three dots to show the pending request status (…) with a brown color
 - If you tap on the N sports › it opens the compare bottom sheet.
   ->mock references of the bottom sheet:
-  `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/9_competiive_players_bottom_sheet2.png`
-  `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/11_competitive_players_bottom_sheet2.png`
+  `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/9_competiive_players_bottom_sheet2.png`
+  `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/11_competitive_players_bottom_sheet2.png`
 - If you tap on the see all > it navigates to the see all screen, where all the players list is visible.
 - If you tap on the player profile photo square it opens the current player record.
 - The round button has the same states as in the new in rakieta row tiles
@@ -134,25 +134,25 @@ Since it is possible that players might share more than one sport, you have to d
 Same mock references as before:
 ->mock references of the bottom sheet:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/9_competiive_players_bottom_sheet2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/9_competiive_players_bottom_sheet2.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/11_competitive_players_bottom_sheet2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/11_competitive_players_bottom_sheet2.png`
 
 **See all screen — Same competitive level players.** Back arrow, title, and the sliding sport pill in the header. On All every player is shown in their most even shared sport; pick a sport and every card re-compares you in that sport, with only sports you actually share with someone offered as chips. The body is one full-width card per row, best fit first. Every card keeps its N sports › link.
 
 ->mock reference for the overall screen:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/12_se_all_competitve_screen.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/12_se_all_competitve_screen.png`
 
 ->mock reference that shows some cards:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/13_se_all_competitive_card.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/13_se_all_competitive_card.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/14_se_all_competitive_card2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/14_se_all_competitive_card2.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/15_se_all_competitive_card3.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/15_se_all_competitive_card3.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/16_se_all_competitive_card4.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/16_se_all_competitive_card4.png`
 
 ## 3- New in Rakieta
 
@@ -162,9 +162,9 @@ Same mock references as before:
 
 ->mock reference of the row. Consider that the last element is cut because the row is scrollable:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/17_row_new_in_raketa.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/17_row_new_in_rakieta.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/17_row_new_in_raketa2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/17_row_new_in_rakieta2.png`
 
 **Each tile.**
 
@@ -175,11 +175,11 @@ Same mock references as before:
 
 ->mock references of tiles:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/18_new_players_card1.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/18_new_players_card1.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/18.2_new_players_card2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/18.2_new_players_card2.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/18.3_new_players_card3.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/18.3_new_players_card3.png`
 
 **Actions.** The round button, as above. Tapping anywhere else on the tile opens the player record.
 
@@ -187,9 +187,9 @@ Same mock references as before:
 
 ->mock reference:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/19_new_in_rakieta_screen_list.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/19_new_in_rakieta_screen_list.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/19.2_new_in_rakieta_screen_list2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/19.2_new_in_rakieta_screen_list2.png`
 
 ## 4.Same vibe players
 
@@ -199,9 +199,9 @@ Same mock references as before:
 
 ->mock references of the rows. Consider that the last element is cut because the row is scrollable:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/20_same_vibe_row.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/20_same_vibe_row.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/20.1_same_vibe_row2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/20.1_same_vibe_row2.png`
 
 **Each tile.**
 
@@ -213,13 +213,13 @@ Same mock references as before:
 
 ->mock references of the tiles:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/22_same_vibe_card.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/22_same_vibe_card.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/22.1_same_vibe_card1.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/22.1_same_vibe_card1.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/22.2_same_vibe_card2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/22.2_same_vibe_card2.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/22.3_same_vibe_card3.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/22.3_same_vibe_card3.png`
 
 **Actions.** The round button; tapping anywhere else on the tile opens the vibe sheet.
 
@@ -233,11 +233,11 @@ Same mock references as before:
 
 ->mock reference:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/23.same_vibe_bottom_sheet.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/23.same_vibe_bottom_sheet.png`
 
 **See all screen — Same vibe players.** Back arrow and title; the same tiles in a two-column grid, everyone who shares at least one tag with you, most in common first. Every tile opens the same sheet. The chip selector by sport type it is also available.
 
-->mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/24.same_vibe_screen_list.png`
+->mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/24.same_vibe_screen_list.png`
 
 ## 5. Top 10
 
@@ -247,13 +247,13 @@ Same mock references as before:
 
 ->mock reference of the row. Consider that the last element is cut because the row is scrollable:
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/25_row_top_players.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/25_row_top_players.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/25.1_row_top_players1.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/25.1_row_top_players1.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/25.2_row_top_players2.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/25.2_row_top_players2.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/25.3_row_top_players3.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/25.3_row_top_players3.png`
 
 **Each card.**
 
@@ -263,12 +263,12 @@ Same mock references as before:
 
 ->mock references of the card. I am showing you only two example because above you have all of the cards from 1 to 10 in the row.
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/26_row_top_card.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/26_row_top_card.png`
 
-`/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/26.1_row_top_card1.png`
+`/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/26.1_row_top_card1.png`
 
 **Dynamics.** Order and ratings come straight from the ranking by level. Tapping the sport pill slides out the other sports — only those with a ranked field of at least three players — and picking one swaps all ten cards. But only that row gets updated so there is no loading blinking on the other rows.; the row opens on your main sport.
 
-->mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/raketa_v2.0/4-features/6-home_improve/27_top_players_sport_seletor.png`
+->mock reference: `/Users/Robert.Dinescu/Desktop/rkta_dev/rakieta_v2.0/4-features/6-home_improve/27_top_players_sport_seletor.png`
 
 **Actions.** Tap a card → the player record is shown. Tap on Rankings › → the full Rankings page for the selected sport is open. No separate See all: the Rankings page that is already built.

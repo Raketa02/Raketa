@@ -1,12 +1,12 @@
-# Stripe Connect — the way Raketa uses it
+# Stripe Connect — the way Rakieta uses it
 
 What Stripe says about Connect for **this** product, read 2026-10-19 for the payments pass on PRD #530 at
-`9ab0ea5b`. Raketa is a Polish Connect platform. Each club is a connected account opened with **Accounts v2**:
+`9ab0ea5b`. Rakieta is a Polish Connect platform. Each club is a connected account opened with **Accounts v2**:
 the `merchant` configuration with `card_payments`, the **full Dashboard**, `fees_collector` and `losses_collector`
 both `stripe`, country `pl`, entity type `company`, złoty (`backend/app/modules/payments/infrastructure/stripe_payments.py:317-347`).
 Every share is a **direct charge** on the club's account with a single-use clone of the player's platform card,
 held with manual capture, off-session (`:466-542`). The club onboards on Stripe-hosted pages through a v2 Account
-Link (`:349-369`); *ready* means the v1 read says charges **and** payouts enabled (`:371-391`); Raketa hears about the
+Link (`:349-369`); *ready* means the v1 read says charges **and** payouts enabled (`:371-391`); Rakieta hears about the
 account only through v1 `account.updated` on its Connected-accounts endpoint (`stripe_notices.py:130-133`).
 
 `[DOCS]` is Stripe's documentation, quoted where the words make it a requirement ("must") or a recommendation
@@ -17,7 +17,7 @@ account only through v1 `account.updated` on its Connected-accounts endpoint (`s
 supplies, fees, the 90 zł dispute fee, refunds out of the club's balance, payouts and receipts in Poland —
 [`local-market.md#stripe-connect-in-poland`](local-market.md#stripe-connect-in-poland) (2026-10-06/08); Stripe's
 emails to a full-Dashboard club, signing in, platform controls for payouts —
-[`gaps-CLUBMONEY.md` §2, §3, §5](gaps-CLUBMONEY.md#5-a-payout-raketa-asks-of-stripe-r-clubmoney-19) (2026-10-08);
+[`gaps-CLUBMONEY.md` §2, §3, §5](gaps-CLUBMONEY.md#5-a-payout-rakieta-asks-of-stripe-r-clubmoney-19) (2026-10-08);
 who pays the fee —
 [`gaps-S-01A-leave-fee.md#with-fees-collected-by-stripe-the-club-pays-the-fee-and-funds-every-refund`](gaps-S-01A-leave-fee.md#with-fees-collected-by-stripe-the-club-pays-the-fee-and-funds-every-refund)
 (2026-10-10); the sandbox's configuration and the code's calls —
@@ -73,7 +73,7 @@ who pays the fee —
   methods in public or private preview". v2 calls "return … null for other properties" unless asked with `include`.
   [Accounts v2](https://docs.stripe.com/connect/accounts-v2) — 2026-10-19
 
-### Through v1, a club's v2 account reads as a Standard account Raketa controls
+### Through v1, a club's v2 account reads as a Standard account Rakieta controls
 
 - **[MEASURED]** `stripe` · `GET /v1/accounts/acct_1USELi5y1DCSZFum` · 2026-10-19: `type: standard`,
   `controller: {type: application, is_controller: true, fees.payer: account, losses.payments: stripe,
@@ -82,7 +82,7 @@ who pays the fee —
 - **[MEASURED]** Same read of the test club `acct_1US95f5y1DMwE3zY`: same controller, `mcc: "7299"`,
   `statement_descriptor: "ROBER CLUB"`, `dashboard.timezone: "Etc/UTC"`.
 
-### A club account Raketa opens starts on Stripe's automatic daily payouts
+### A club account Rakieta opens starts on Stripe's automatic daily payouts
 
 - **[MEASURED]** v1 read of `acct_1USELi5y1DCSZFum` · 2026-10-19: `payouts.schedule = {interval: daily, delay_days: 7}`,
   `debit_negative_balances: true`. The code sets no schedule (`stripe_payments.py:420-425`); the test club reads
@@ -110,18 +110,18 @@ who pays the fee —
 - **[MEASURED]** The test club holds ten active capabilities, BLIK among them —
   [`stripe-sandbox.md#the-test-clubs-capabilities-card-payments-and-nine-more`](stripe-sandbox.md#the-test-clubs-capabilities-card-payments-and-nine-more).
 
-### The club writes its own Radar rules; Raketa's rules don't reach its payments
+### The club writes its own Radar rules; Rakieta's rules don't reach its payments
 
 - **[DOCS]** "**Your platform Radar rules don't apply to direct charges made on your connected accounts.**"
   [Integration recommendations](https://docs.stripe.com/connect/integration-recommendations) — 2026-10-19
 
-### A club Raketa opened can't disconnect itself; only Raketa can remove it
+### A club Rakieta opened can't disconnect itself; only Rakieta can remove it
 
 - **[DOCS]** Under platform controls: "You cannot disconnect the platform that administers your account." The account
   asks the platform. [Support: Platform controls](https://support.stripe.com/questions/platform-controls-for-connected-accounts) — 2026-10-19 (undated page)
 - **[MEASURED]** Both club accounts read `controller.is_controller: true` (§1).
 
-### Removing a club ends every API call Raketa can make for it
+### Removing a club ends every API call Rakieta can make for it
 
 - **[DOCS]** "A removed account … **you can't process payments or make API calls for it.** You also permanently lose any
   platform-controlled settings … even if the account reconnects later." [Manage individual accounts](https://docs.stripe.com/connect/dashboard/managing-individual-accounts) — 2026-10-19;
@@ -132,7 +132,7 @@ who pays the fee —
 
 ## 3. Who pays the fees, and who bears the losses
 
-### The club pays Stripe's fees, disputes included; Raketa pays no Connect fee
+### The club pays Stripe's fees, disputes included; Rakieta pays no Connect fee
 
 - Carried: [`local-market.md#who-pays-stripes-fees`](local-market.md#who-pays-stripes-fees) (2026-10-06),
   [`gaps-S-01A-leave-fee.md#pricing-tools-cost-passthrough-and-application-fees-cannot-move-the-fee`](gaps-S-01A-leave-fee.md#pricing-tools-cost-passthrough-and-application-fees-cannot-move-the-fee) (2026-10-10).
@@ -155,7 +155,7 @@ who pays the fee —
   account is on manual payouts." [Account balances](https://docs.stripe.com/connect/account-balances) — 2026-10-19
 - **[MEASURED]** `debit_negative_balances: true` on both club accounts (§1).
 
-### With Stripe liable, Raketa can't pause a club's payments or payouts
+### With Stripe liable, Rakieta can't pause a club's payments or payouts
 
 - **[DOCS]** "**You can't pause payments or payouts for your connected accounts.**" "You can't directly debit connected
   account balances." Stripe "directly contacts your connected accounts … and in some cases can take action against
@@ -252,7 +252,7 @@ who pays the fee —
 - Code prefills `country: pl`, `entity_type: company`, the desk's email and the club's name (`stripe_payments.py:321-331`).
   Whether "any pre-filled information" includes the v2 `entity_type` is not stated (unverified).
 
-### Raketa collects only what is due now; later requirements arrive while games are booked
+### Rakieta collects only what is due now; later requirements arrive while games are booked
 
 - **[DOCS]** "If you don't specify `collection_options`, the default value is `currently_due`."
   [Changelog](https://docs.stripe.com/changelog/basil/2025-07-30/enable-v2-account-links-api-for-connect) — 2026-10-19;
@@ -270,7 +270,7 @@ who pays the fee —
   product description. [Verification with the API](https://docs.stripe.com/connect/handling-api-verification) — 2026-10-19
 - Carried: Polish entity types, no government type — [`local-market.md#what-a-polish-club-must-supply-to-stripe`](local-market.md#what-a-polish-club-must-supply-to-stripe).
 
-### Hosted onboarding needs Raketa's Connect branding, and a real browser
+### Hosted onboarding needs Rakieta's Connect branding, and a real browser
 
 - **[DOCS]** Brand name, colour and icon: "**Stripe-hosted onboarding requires this information.**" "You can't use it
   in embedded web views." [Hosted onboarding](https://docs.stripe.com/connect/hosted-onboarding) — 2026-10-19
@@ -351,9 +351,9 @@ who pays the fee —
 
 ---
 
-## 7. Disconnection, and a club Raketa can no longer reach
+## 7. Disconnection, and a club Rakieta can no longer reach
 
-### A disconnected club makes Raketa's key fail for it
+### A disconnected club makes Rakieta's key fail for it
 
 - **[DOCS]** `platform_api_key_expired`: "This occurs if your platform has generated a new key **or the connected
   account has been disconnected from the platform.**" `account_invalid`: the `Stripe-Account` ID "isn't valid";
@@ -362,7 +362,7 @@ who pays the fee —
   (`stripe_payments.py:71-77`, `:641-654`; `backend/app/modules/payments/domain/errors.py:15-25`);
   `account.application.deauthorized` is dropped (`stripe_notices.py:134`).
 
-### Not found: what becomes of a hold or refund on a club Raketa can't reach
+### Not found: what becomes of a hold or refund on a club Rakieta can't reach
 
 - **[ABSENT]** Whether an uncaptured PaymentIntent on a removed account can still be captured or cancelled, or just
   lapses; whether a refund can still be made. Looked in managing-individual-accounts, platform-controls, connect/webhooks,
@@ -391,7 +391,7 @@ refunds and payouts are asked again indefinitely (unverified how often the outbo
 ### P2 · Calling the club ready from the return URL or a stale read
 
 "It doesn't mean that all information has been collected" ([onboard](https://docs.stripe.com/connect/saas/tasks/onboard)).
-Raketa reads after every link and notice; a lost notice is caught only when the desk next asks for a link
+Rakieta reads after every link and notice; a lost notice is caught only when the desk next asks for a link
 (`payments_account.py:84-98`).
 
 ### P3 · Collecting only what is due now, then losing payouts mid-season
@@ -404,13 +404,13 @@ decks while its holds still stand on its account.
 ### P4 · Listening for the club's account in the wrong scope
 
 v2 account events go to **Your account** ([migrate](https://docs.stripe.com/connect/accounts-v2/migrate-integration));
-a v2 subscription under Connected accounts receives nothing. Raketa relies on v1 `account.updated` alone, which one
+a v2 subscription under Connected accounts receives nothing. Rakieta relies on v1 `account.updated` alone, which one
 Stripe guide says not to use for v2 accounts ([billing + Connect](https://docs.stripe.com/connect/integrate-billing-connect)).
 
 ### P5 · Forgetting the club has a full Dashboard of its own
 
 The club can refund, cancel or capture a hold, answer disputes, enable payment methods and add Radar rules on
-Raketa's payments ([Dashboard](https://docs.stripe.com/connect/stripe-dashboard),
+Rakieta's payments ([Dashboard](https://docs.stripe.com/connect/stripe-dashboard),
 [capabilities](https://docs.stripe.com/connect/account-capabilities?accounts-namespace=v2),
 [recommendations](https://docs.stripe.com/connect/integration-recommendations)); the code drops refund and dispute
 events ([`stripe-sandbox.md` D6](stripe-sandbox.md#differences)).
@@ -418,7 +418,7 @@ events ([`stripe-sandbox.md` D6](stripe-sandbox.md#differences)).
 ### P6 · Planning to hold a club's payouts on a Stripe-liable account
 
 "You can't pause payments or payouts" ([risk](https://docs.stripe.com/connect/risk-management)); the club can still pay
-itself out ([`gaps-CLUBMONEY.md` §5](gaps-CLUBMONEY.md#5-a-payout-raketa-asks-of-stripe-r-clubmoney-19)); a new
+itself out ([`gaps-CLUBMONEY.md` §5](gaps-CLUBMONEY.md#5-a-payout-rakieta-asks-of-stripe-r-clubmoney-19)); a new
 account pays out **daily** (§1). The club is paid before the game unless something changes it.
 
 ### P7 · Choosing the configuration after the first live club
@@ -429,7 +429,7 @@ Responsibilities and the Dashboard type can't change ([configuration](https://do
 ### P8 · Handing out, or letting something preview, an onboarding link
 
 Single use, never by email or text; a preview spends it ([hosted onboarding](https://docs.stripe.com/connect/hosted-onboarding)).
-Raketa emails its own `/payments/continue` — keep it that way.
+Rakieta emails its own `/payments/continue` — keep it that way.
 
 ### P9 · Trusting a sandbox proof about a capability
 
@@ -438,7 +438,7 @@ Raketa emails its own `/payments/continue` — keep it that way.
 ### P10 · Mixing live and test notices on the live endpoint
 
 Production Connect endpoints get test events too; check `livemode` ([Connect webhooks](https://docs.stripe.com/connect/webhooks)).
-Raketa never reads it; what each handler does with a test account's notice under live keys is unverified.
+Rakieta never reads it; what each handler does with a test account's notice under live keys is unverified.
 
 ### P11 · Going live without the platform's Connect switches
 
@@ -448,9 +448,9 @@ The sandbox platform reads `charges_enabled: false` ([`stripe-sandbox.md#the-pla
 
 ### P12 · Prefilling the wrong kind of business
 
-Raketa prefills `company` (`stripe_payments.py:326`), so REGON, owners and a representative follow (§5). Many venues
+Rakieta prefills `company` (`stripe_payments.py:326`), so REGON, owners and a representative follow (§5). Many venues
 are sole traders, associations or city units ([`local-market.md#what-a-polish-club-must-supply-to-stripe`](local-market.md#what-a-polish-club-must-supply-to-stripe));
-after the first link Raketa can't rewrite it ([hosted onboarding](https://docs.stripe.com/connect/hosted-onboarding)).
+after the first link Rakieta can't rewrite it ([hosted onboarding](https://docs.stripe.com/connect/hosted-onboarding)).
 
 ---
 
@@ -460,14 +460,14 @@ after the first link Raketa can't rewrite it ([hosted onboarding](https://docs.s
 - **K2** Is *ready* read from Stripe after every return and every notice, never from the return URL?
 - **K3** When a ready club stops being ready, what happens to its held shares, and who is told? Are *payouts stopped*
   and *charges stopped* treated apart?
-- **K4** When Raketa removes a club or Stripe rejects it, does the club leave the decks, do its calls stop being retried
+- **K4** When Rakieta removes a club or Stripe rejects it, does the club leave the decks, do its calls stop being retried
   as an outage, and is it said what becomes of holds and refunds owed?
 - **K5** Is every read and write of a share made on the club's account, and does the phone confirm with `stripeAccountId`?
 - **K6** Does the rule survive the club acting in its own Dashboard: a refund, a cancelled or taken hold, a dispute
   answer, BLIK switched on, a Radar rule?
 - **K7** When a refund or dispute exceeds the club's balance, does the rule say the club pays, as Stripe does, and what
   the player sees meanwhile?
-- **K8** Does any rule promise to hold or time the club's payouts? Raketa can't pause them, and new accounts pay daily.
+- **K8** Does any rule promise to hold or time the club's payouts? Rakieta can't pause them, and new accounts pay daily.
 - **K9** Is the onboarding link minted only for the signed-in desk, never sent, and replaced through the refresh URL?
 - **K10** Are requirements collected up front, and does the rule plan for a deadline that lands while games are booked?
 - **K11** Does the Connected-accounts endpoint subscribe to every event the rule needs — `account.updated`,
@@ -476,4 +476,4 @@ after the first link Raketa can't rewrite it ([hosted onboarding](https://docs.s
 - **K12** In live mode, are test notices recognised by `livemode` and kept from moving anything?
 - **K13** Before the first live club: v2 enabled on the live platform, branding set, HTTPS URLs, platform activated?
 - **K14** Does any sandbox proof depend on a capability that isn't active yet?
-- **K15** Can a club that isn't a company finish onboarding, given that Raketa prefills *company*?
+- **K15** Can a club that isn't a company finish onboarding, given that Rakieta prefills *company*?

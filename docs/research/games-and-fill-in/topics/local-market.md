@@ -159,7 +159,7 @@ tax authority's document, or a published survey · [MEASURED] seen on a site (no
 
 ### What the player must see before being bound
 
-- **[LAW]** Art. 12: the service, the **seller's identity and address** (the club's, when Raketa concludes for it — ust. 2), the total price, how and when payment is taken, and that there is no withdrawal right — "najpóźniej w chwili wyrażenia przez konsumenta woli związania się umową". Art. 21: a confirmation on a durable medium before the service. Art. 22: that information is part of the contract. [Dz.U. 2026 poz. 1244](https://api.sejm.gov.pl/eli/acts/DU/2026/1244/text.pdf) — read 2026-10-06
+- **[LAW]** Art. 12: the service, the **seller's identity and address** (the club's, when Rakieta concludes for it — ust. 2), the total price, how and when payment is taken, and that there is no withdrawal right — "najpóźniej w chwili wyrażenia przez konsumenta woli związania się umową". Art. 21: a confirmation on a durable medium before the service. Art. 22: that information is part of the contract. [Dz.U. 2026 poz. 1244](https://api.sejm.gov.pl/eli/acts/DU/2026/1244/text.pdf) — read 2026-10-06
 - **[LAW]** Art. 12a (online marketplace): the main ranking parameters, whether the seller is a trader, and how duties are split between the seller and the platform. [Dz.U. 2026 poz. 1244](https://api.sejm.gov.pl/eli/acts/DU/2026/1244/text.pdf) — read 2026-10-06
 
 ### The order button and a yes that charges later

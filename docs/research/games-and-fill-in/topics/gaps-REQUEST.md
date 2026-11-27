@@ -155,7 +155,7 @@ researcher's inference from the facts above it, not a source.
 - **[DOCS]** Its partner API refuses a late answer: "The Rtb request is expired, so status cannot be updated"
   (`RTB_STATUS_CAN_NOT_CHANGE`). The answer window is not stated on the page.
   [Booking.com Connectivity: Modifying booking requests](https://developers.booking.com/connectivity/docs/request-to-book/modifying-booking-requests) — read 2026-10-08
-  - *Reading:* Booking.com, like Raketa, refuses an answer after the deadline; Airbnb lets the guest send the request
+  - *Reading:* Booking.com, like Rakieta, refuses an answer after the deadline; Airbnb lets the guest send the request
     again.
 
 ### Fresha, TheFork and OpenTable: not found
@@ -199,7 +199,7 @@ researcher's inference from the facts above it, not a source.
 - **[DOCS]** The property's rejection reason (`rejectionReasonText`): "This information is private and is not shared
   with the guest"; it "is kept private and is only used to improve the overall experience."
   [Booking.com Connectivity: Modifying booking requests](https://developers.booking.com/connectivity/docs/request-to-book/modifying-booking-requests) — read 2026-10-08
-  - *Reading:* both models exist: Booking.com keeps the reason private, as Raketa does, but the host's own message can
+  - *Reading:* both models exist: Booking.com keeps the reason private, as Rakieta does, but the host's own message can
     still reach an Airbnb guest; both platforms tell a refusal from a timeout.
 
 ---

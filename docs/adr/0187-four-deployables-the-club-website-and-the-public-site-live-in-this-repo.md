@@ -1,6 +1,10 @@
 # ADR-0187 — Four deployables: the club website and the public site live in this repo
 
-- **Status:** Accepted — **§8 amended 2026-11-23 by
+- **Status:** Accepted — **§8 superseded 2026-11-27 by
+  [ADR-0211](0211-the-brand-is-rakieta-everywhere.md)** (PRD
+  [#889](https://github.com/Raketa02/Raketa/issues/889)): the brand is **Rakieta**, everywhere, and
+  the mocks' *Rakieta* is read as written. §8 and this line keep the old spelling as a quote.
+  Before that, **§8 was amended 2026-11-23 by
   [ADR-0209](0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)** (PRD
   [#852](https://github.com/Raketa02/Raketa/issues/852)), with one exception to *"The brand is
   Raketa, everywhere"*: the player app's drawn splash spells its wordmark **Rakieta**. The
@@ -47,7 +51,7 @@ PRD #500 needs three new places a person can stand:
   on a phone, next to WhatsApp.
 - **A stranger who tapped a link without the app installed.** It may be a group link in WhatsApp, an
   invitation email opened on a laptop, or a password reset opened on a phone that doesn't have
-  Raketa. They need a page that shows the group, or lets them set a password, and hands them to the
+  Rakieta. They need a page that shows the group, or lets them set a password, and hands them to the
   stores. WhatsApp needs server-rendered preview tags to draw a card for the link.
 
 The product owner's document proposed two folders, `frontend_club` and
@@ -112,12 +116,12 @@ preview tags (title, description, image) without running JavaScript. It serves:
 - **`/join/<code>`**: the group page. It shows the monogram, name, club and district, sport dots and
   member count. It **never says who the members are**.
 - **`/invite/<token>`**: the invitation page. It greets the person, offers the store buttons, shows
-  the code with *after you install, open Raketa and enter this code*, and has **Set your password
+  the code with *after you install, open Rakieta and enter this code*, and has **Set your password
   here**.
 - **`/reset/<token>`**: *Set a new password* for players and administrators.
 - **Apple's association file and Android's asset links** at their well-known paths, generated from
   settings.
-- **Open in Raketa** on every page, using the app's scheme, for phones where the tap-to-open link
+- **Open in Rakieta** on every page, using the app's scheme, for phones where the tap-to-open link
   didn't fire.
 
 **The clubs' *Set a new password* page lives on the club website**, not here, because clubs already
@@ -217,6 +221,10 @@ live only once a domain exists. Locally, links use the app's own scheme. Links t
 the backend.
 
 ### 8. The brand is Raketa, everywhere
+
+> **Superseded 2026-11-27 by [ADR-0211](0211-the-brand-is-rakieta-everywhere.md): the brand is
+> *Rakieta*, everywhere.** This section keeps the old spelling as a quote, so it reads as it was
+> decided. The copy rule it states stands, and the app it names is *Rakieta*.
 
 "Raketa for Clubs", every email, every page and every line of copy say **Raketa**. The mocks'
 *Rakieta* is read as Raketa. The copy deck's rule against naming the app inside a sentence gives way

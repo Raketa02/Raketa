@@ -1,7 +1,7 @@
 # Stripe reliability — idempotency, unknown outcomes, versions, rate limits
 
 What Stripe says about asking twice, asking and not hearing back, which API version a request
-speaks, upgrading the SDK, and how fast it may be asked — for the way Raketa uses Stripe at
+speaks, upgrading the SDK, and how fast it may be asked — for the way Rakieta uses Stripe at
 `9ab0ea5b`: direct charges on each club's connected account (`Stripe-Account`), holds with manual
 capture made without the player, refunds and manual payouts on the club's account, v1 Customers
 and SetupIntents on the platform, v2 Accounts and Account Links for clubs, in złoty, through
@@ -82,18 +82,18 @@ previously-saved response … even if it was an error." Here, v2 is `v2.core.acc
 
 | Call (account) | Key | Hour? | Where |
 |---|---|---|---|
-| `customers.create` (platform) | `raketa-customer-{player}-{YYYYMMDDHH}` | yes | `application/setup.py:75-76` |
-| `setup_intents.create` (platform) | `raketa-setup-{player}-{ordinal}-{hour}` | yes | `setup.py:79-80` |
-| `setup_intents.cancel` (platform) | `raketa-cancel-{setup}` | no | `application/handlers/release_methods.py:29-30` |
-| `payment_methods.detach` (platform) | `raketa-release-{method}` | no | `release_methods.py:25-26` |
-| `v2.core.accounts.create` (platform) | `raketa-club-account-{club}-{hour}` | yes | `setup.py:83-87`, `infrastructure/club_accounts.py:43-53` |
+| `customers.create` (platform) | `rakieta-customer-{player}-{YYYYMMDDHH}` | yes | `application/setup.py:75-76` |
+| `setup_intents.create` (platform) | `rakieta-setup-{player}-{ordinal}-{hour}` | yes | `setup.py:79-80` |
+| `setup_intents.cancel` (platform) | `rakieta-cancel-{setup}` | no | `application/handlers/release_methods.py:29-30` |
+| `payment_methods.detach` (platform) | `rakieta-release-{method}` | no | `release_methods.py:25-26` |
+| `v2.core.accounts.create` (platform) | `rakieta-club-account-{club}-{hour}` | yes | `setup.py:83-87`, `infrastructure/club_accounts.py:43-53` |
 | `v2.core.account_links.create` | none; the SDK adds a random one per call | — | `stripe_payments.py:349-369` |
 | `payment_methods.create`, the clone (club) | `{hold key}-clone` | yes | `application/seat_charges.py:433-438` |
-| hold, fill or rescue (club) | `raketa-{seat\|rescue}-{game}-{player}-{attempt}-{hour}`, attempt = proposal/game version | yes | `seat_charges.py:161-169`; `proposals/application/fill.py:216` |
-| hold, the holding job (club) | `raketa-holding-{charge}-{charge version}-{hour}` | yes | `seat_charges.py:502-507` |
-| capture / release / check let go (club) | `raketa-capture-{charge}` / `raketa-cancel-seat-{charge}` / `raketa-cancel-check-{charge}` | no | `application/handlers/settle_seat_charges.py:53-64` |
-| `refunds.create` (club) | `raketa-refund-{charge}` | no | `settle_seat_charges.py:67-70` |
-| `payouts.create` (club) | `raketa-payout-{payout}` | no | `application/handlers/send_club_payouts.py:30-33` |
+| hold, fill or rescue (club) | `rakieta-{seat\|rescue}-{game}-{player}-{attempt}-{hour}`, attempt = proposal/game version | yes | `seat_charges.py:161-169`; `proposals/application/fill.py:216` |
+| hold, the holding job (club) | `rakieta-holding-{charge}-{charge version}-{hour}` | yes | `seat_charges.py:502-507` |
+| capture / release / check let go (club) | `rakieta-capture-{charge}` / `rakieta-cancel-seat-{charge}` / `rakieta-cancel-check-{charge}` | no | `application/handlers/settle_seat_charges.py:53-64` |
+| `refunds.create` (club) | `rakieta-refund-{charge}` | no | `settle_seat_charges.py:67-70` |
+| `payouts.create` (club) | `rakieta-payout-{payout}` | no | `application/handlers/send_club_payouts.py:30-33` |
 
 A hold's parameters include the club's name in `description` (`seat_charges.py:265`, `:597`) and
 `metadata` `game_id`, `player_id` (`stripe_payments.py:508-509`). The longest key is about 110
@@ -109,7 +109,7 @@ use the same rule; `seat_charges.py:36-44`: "A hold made and then orphaned by a 
 committed is not cancelled by anybody: the next attempt in the hour is answered it again, and
 otherwise the provider lets it lapse untaken". ADR-0190 §4 weighs only "an orphaned customer or setup
 … which nothing can charge". The mechanics spec: "Idempotency keys may be forgotten after 24 h:
-Raketa's own records must prevent duplicates" (`docs/specs/games-and-fill-in/the-mechanics.md:1899`).
+Rakieta's own records must prevent duplicates" (`docs/specs/games-and-fill-in/the-mechanics.md:1899`).
 
 ### stripe-python adds a random key to every keyless POST and keeps it across its own retries
 
@@ -547,7 +547,7 @@ product meets it. Seeds for the Breakers.
 
 The questions a grader asks of a product rule here. The Stripe lens uses them.
 
-1. Is each write's key derived from Raketa's own record of the act, the same on every attempt of it —
+1. Is each write's key derived from Rakieta's own record of the act, the same on every attempt of it —
    across SDK calls, redeliveries and restarts — and different for a different act?
 2. Can an attempt of an unresolved v1 write come more than 24 hours after the first? If so, what reads
    the object at Stripe before asking again?
@@ -555,7 +555,7 @@ The questions a grader asks of a product rule here. The Stripe lens uses them.
    version)? What settles the first outcome before the new key is used?
 4. After a timeout or `500` on a hold, can a player hold twice for one seat? Who lets the orphan go,
    and how long is the money unusable?
-5. When a notice names a PaymentIntent no charge records but whose metadata names a Raketa game and
+5. When a notice names a PaymentIntent no charge records but whose metadata names a Rakieta game and
    player, is it cancelled, linked, or dropped?
 6. Does each answer go to the right next step — same key again (connection error, `409`, lock timeout,
    `5xx`); a new key only once the first outcome is known (`400`); a person, not a retry (`401`,

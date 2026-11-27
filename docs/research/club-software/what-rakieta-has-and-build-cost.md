@@ -1,11 +1,11 @@
-# What Raketa has, and what becoming the club's booking software would cost
+# What Rakieta has, and what becoming the club's booking software would cost
 
-Research for the club-software grilling that follows the founder's decision of 2026-10-12: **Raketa
+Research for the club-software grilling that follows the founder's decision of 2026-10-12: **Rakieta
 becomes the club's whole booking software** — one calendar for the desk, the phone, walk-ins, season
 bookings, players booking online and the Games deck — replacing tenis4U, Playmore and kluby.org
 ([#609 decisions](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776),
 [#667](https://github.com/Raketa02/Raketa/issues/667)). For each of eighteen feature areas it says what
-the code **has today** and what Raketa's version would **cost**, so a product owner can weigh *Build
+the code **has today** and what Rakieta's version would **cost**, so a product owner can weigh *Build
 at launch / Build later / Leave out*.
 
 **Companion to** [`integration.md`](integration.md), which holds the market (how tenis4U, Playmore,
@@ -29,16 +29,16 @@ ticket, **M** ≈ 2–4, **L** ≈ 5–10, **XL** > 10.
 
 ## Read this first
 
-- **What exists is a Raketa-only slice of club software, not a calendar.** A club has courts, a weekly
-  *allotment* of one-hour cells it hands Raketa, exceptions, per-sport prices, a few settings, a day
-  *list* of Raketa bookings with Move and Cancel, and money for Raketa shares with payouts. Nothing a
+- **What exists is a Rakieta-only slice of club software, not a calendar.** A club has courts, a weekly
+  *allotment* of one-hour cells it hands Rakieta, exceptions, per-sport prices, a few settings, a day
+  *list* of Rakieta bookings with Move and Cancel, and money for Rakieta shares with payouts. Nothing a
   desk makes itself — a guest, a phone call, a walk-in, a season slot — has anywhere to live.
 - **Two assumptions sit under almost every area, and each is a prerequisite of its own.** (1) **A
   Booking is a filled proposal**: its id is the card's, and it cannot exist without a pool, two full
   sides, a per-seat share and a Game. (2) **Every court hour is exactly one hour on a 07:00–23:00
   hourly grid**: hardcoded in 15 backend module files, the club's grid and the phone, and guarded
   against double booking by a unique index on *(court, start)* that cannot see an overlap.
-- **Club hours are the player's own Weekly hours type.** The club's Raketa hours reuse
+- **Club hours are the player's own Weekly hours type.** The club's Rakieta hours reuse
   `WeeklyHours` from the player profile, so the club's grid cannot get finer without the two being
   pulled apart.
 - **The five prerequisites together** — court time that is not a filled proposal, court time of any
@@ -53,10 +53,10 @@ ticket, **M** ≈ 2–4, **L** ≈ 5–10, **XL** > 10.
 - **Dearest:** coaches, lessons and classes (XL), leagues and tournaments (XL), the desk calendar
   itself (XL with its prerequisites), players booking a court directly (L), money at the desk with
   invoices and fiscal receipts (L), unmanned hours (L, with hardware), production (L, mostly human).
-- **Raketa has no revenue line, by decision.** ADR-0189 §4 says Raketa takes no fee; the code charges
+- **Rakieta has no revenue line, by decision.** ADR-0189 §4 says Rakieta takes no fee; the code charges
   none. Becoming the club's whole software adds production, support and on-call cost against that.
 - **Only `local` has ever run.** No domain, a dormant deploy pipeline, no Stripe test account, no mail
-  relay, no push credentials. A desk whose whole day runs on Raketa stops when Raketa does.
+  relay, no push credentials. A desk whose whole day runs on Rakieta stops when Rakieta does.
 - **Sequencing:** [#668](https://github.com/Raketa02/Raketa/issues/668)–[#677](https://github.com/Raketa02/Raketa/issues/677)
   are all open. [#670](https://github.com/Raketa02/Raketa/issues/670) deletes the *minimum notice*
   (a book-by close to the start); a deck inside one calendar would likely want that rule back,
@@ -100,18 +100,18 @@ ticket, **M** ≈ 2–4, **L** ≈ 5–10, **XL** > 10.
 - **[CODE]** What a club can no longer sell is `CourtBookings.taken`, read from the bookings table
   (`backend/app/modules/bookings/infrastructure/club_courts.py`; `event_sourced_booking_repository.py:341-358`).
 - **Cost** (*reading*): a new event-sourced aggregate that owns a stretch of court time — the glossary
-  has to name it, since *Booking* is taken and *reservation* is avoided — with Raketa's Booking becoming
+  has to name it, since *Booking* is taken and *reservation* is avoided — with Rakieta's Booking becoming
   one kind of occupant. The occupancy read becomes the union of all occupants, and the club's day read
   follows. Root 1 (ADR, glossary), backend 3. New streams and tables, through a migration; re-keying
-  Raketa bookings onto it means a local store reset (the precedent is #667's *clean cut*). Contract:
+  Rakieta bookings onto it means a local store reset (the precedent is #667's *clean cut*). Contract:
   the club document.
 
-### P2. Court time of any length, on a finer grid — M (≈4), L if Raketa games change length too
+### P2. Court time of any length, on a finer grid — M (≈4), L if Rakieta games change length too
 
 - **[DOC]** *"Every game is one hour"* (ADR-0189 §3, `docs/adr/0189-…md:109`; glossary *Court hour*,
-  `CONTEXT.md:1343`). Raketa hours are *"seven days by sixteen one-hour cells from 07:00 to 23:00"*
+  `CONTEXT.md:1343`). Rakieta hours are *"seven days by sixteen one-hour cells from 07:00 to 23:00"*
   (`CONTEXT.md:1327-1330`); *"a club whose own grid runs in 90-minute slots publishes 1-hour slots for
-  Raketa"* (the mechanics §16.5, line 1155-1157).
+  Rakieta"* (the mechanics §16.5, line 1155-1157).
 - **[CODE]** The club's hours are the **player's** type: `WeeklyHours` imported from
   `player_profile` (`backend/app/modules/clubs/domain/courts.py:26`, `club_courts.py:60`), whose cells
   start 07–22 (`backend/app/modules/player_profile/domain/weekly_hours.py:91,95`). The club day is
@@ -141,12 +141,12 @@ ticket, **M** ≈ 2–4, **L** ≈ 5–10, **XL** > 10.
 - **[CODE]** Dormant: the sport registry already lists durations — padel 60/90/120, tennis 60/90,
   squash 45/60/90, badminton 60/90 (`backend/app/kernel/sports.py:46-49`), served by `/sports`. Nothing
   that books reads them.
-- **Cost** (*reading*): **keep Raketa games one hour** and make only the calendar minute-based:
+- **Cost** (*reading*): **keep Rakieta games one hour** and make only the calendar minute-based:
   occupancy, opening hours, blocks and desk bookings, with the club's hours pulled apart from the
-  player's `WeeklyHours`. Root 1, backend 2, club website 1 → M. Making Raketa's own games 90 minutes as
+  player's `WeeklyHours`. Root 1, backend 2, club website 1 → M. Making Rakieta's own games 90 minutes as
   well is L: Games' windows (the attendance tap window is *"the first half of a one-hour game"*,
   `games/domain/windows.py:55-60`), the deck's *one game per hour*, the emails, the player's
-  Weekly-hours grid and the phone. `RaketaHoursSet` stores hour codes, so either an upcaster or a
+  Weekly-hours grid and the phone. `RakietaHoursSet` stores hour codes, so either an upcaster or a
   store reset.
 
 ### P3. A customer who is not a User — M (≈3)
@@ -190,7 +190,7 @@ ticket, **M** ≈ 2–4, **L** ≈ 5–10, **XL** > 10.
 - **[ABSENT]** A whole-court charge, a payment recorded at the desk (cash, card terminal), a payment
   link, a refund by hand — in `backend/app/modules/payments/` and the club document's 36 paths.
 - **Cost** (*reading*): a charge for a stretch of court time — the whole price by one payer, or split
-  among named payers; a desk payment recorded where no money moves through Raketa; a refund by hand;
+  among named payers; a desk payment recorded where no money moves through Rakieta; a refund by hand;
   payouts and the Money page over all of it. Backend 3, club website 1–2. Stripe stays behind the
   port (ADR-0190); a payment link would be a new port call.
 
@@ -203,8 +203,8 @@ See area 17.
 ### Root — revenue and billing to the club
 
 **Exists today**
-- **[DOC]** *"Raketa takes no fee and pays none"* (ADR-0189 §4, `docs/adr/0189-…md:116`); out of
-  scope: *"Any Raketa revenue: no fee, no subscription"*, Playtomic's player fee read as Raketa's
+- **[DOC]** *"Rakieta takes no fee and pays none"* (ADR-0189 §4, `docs/adr/0189-…md:116`); out of
+  scope: *"Any Rakieta revenue: no fee, no subscription"*, Playtomic's player fee read as Rakieta's
   advantage (the mechanics §20, line 1569); [#667](https://github.com/Raketa02/Raketa/issues/667)
   repeats it under *Out of Scope*.
 - **[CODE]** Charges are direct charges on the club's account, which pays Stripe's fees while Stripe
@@ -214,24 +214,24 @@ See area 17.
   and `frontend_club/src/`.
 - **[DOC]** What rivals charge: tenis4U 49–149 zł a month; Playmore from 299 zł and 1.79 % of online
   payments; kluby.org 50–79 zł and 2 % ([`integration.md`](integration.md) §4).
-- **Assumption it breaks:** Raketa takes no fee.
+- **Assumption it breaks:** Rakieta takes no fee.
 
 **Cost to build** (*reading*)
 - **A fee on each online payment** — backend and club website, M (≈3): an ADR amending ADR-0189 §4 and
   ADR-0190; the port's charge carries the fee; a Seat charge's net and the payouts subtract it; Money
   shows it. Whether Stripe takes an application fee on accounts set up this way is unverified (Gaps).
 - **A monthly subscription** — backend and club website, M (≈3–4): a billing record per club, a billing
-  integration (not researched), a billing page, and Raketa's own VAT invoices to its clubs.
+  integration (not researched), a billing page, and Rakieta's own VAT invoices to its clubs.
 - No migration. The club document grows; the player document doesn't.
 
 **What it changes in the player app**
-- Nothing, unless players pay a service fee — which the spec counts as Raketa's advantage not to.
+- Nothing, unless players pay a service fee — which the spec counts as Rakieta's advantage not to.
 
 ### 1. The desk calendar
 
 **Exists today**
-- **[CODE]** The club's **Bookings** is one day at a time, a *table* of Raketa bookings only: an empty
-  day reads *"No Raketa bookings on this day."* (`frontend_club/src/features/bookings/copy.ts:107`,
+- **[CODE]** The club's **Bookings** is one day at a time, a *table* of Rakieta bookings only: an empty
+  day reads *"No Rakieta bookings on this day."* (`frontend_club/src/features/bookings/copy.ts:107`,
   `components/BookingsTable.tsx`), read by `GET /api/v1/club/bookings`
   (`backend/app/modules/proposals/application/club_bookings.py`).
 - **[CODE]** **Move** goes to another free court of the sport at the same hour; **Cancel** takes a
@@ -259,7 +259,7 @@ See area 17.
   document grows a calendar family.
 
 **What it changes in the player app**
-- Nothing is required. A desk's Move or Cancel of a Raketa game is told as *Game moved* or a cancel
+- Nothing is required. A desk's Move or Cancel of a Rakieta game is told as *Game moved* or a cancel
   notice ([#677](https://github.com/Raketa02/Raketa/issues/677), open).
 
 ### 2. Players booking a court directly, in the app and without it
@@ -291,12 +291,12 @@ See area 17.
   - player app 3 — a club page with free courts by day and length; the booking and payment flow; a
     court booking's row on Home and its details; the split invitation;
   - club website 1 — the limits in its settings;
-  - public site 1 — a club's free-hours page with *Open in Raketa*. Booking there **without the app**
+  - public site 1 — a club's free-hours page with *Open in Rakieta*. Booking there **without the app**
     is 2 more: a customer who is not a User (P3), a payment with no saved card, and an ADR reversing
     *no session* (ADR-0187);
   - root 1.
 - **L (≈8–10)**, on P1, P2 and P5. Contract changes on the player, club and public documents.
-- Open question: whether a direct booking with named Raketa players opens a Game, and so feeds results
+- Open question: whether a direct booking with named Rakieta players opens a Game, and so feeds results
   and Levels.
 
 **What it changes in the player app**
@@ -306,15 +306,15 @@ See area 17.
 ### 3. The Games deck inside one calendar
 
 **Exists today**
-- **[CODE]** **Sellable court hours** are the Raketa hours, less exceptions, less what bookings hold,
+- **[CODE]** **Sellable court hours** are the Rakieta hours, less exceptions, less what bookings hold,
   less every hour past its book-by, for a live club only, each priced by its band
   (`backend/app/modules/clubs/domain/sellable.py:1-20,87,124`), published through the
   `SellableCourtHours` port (`backend/app/modules/clubs/domain/ports.py:278`).
-- **[CODE]** Book-by is the start less the release lead at an Only Raketa club, or less the minimum
-  notice otherwise (`backend/app/modules/clubs/domain/raketa_terms.py:109-123`); the lead is 1–13 days
+- **[CODE]** Book-by is the start less the release lead at an Only Rakieta club, or less the minimum
+  notice otherwise (`backend/app/modules/clubs/domain/rakieta_terms.py:109-123`); the lead is 1–13 days
   (`:43`).
 - **[ISSUE]** [#670](https://github.com/Raketa02/Raketa/issues/670) (open) keeps only the release
-  lead, and [#667](https://github.com/Raketa02/Raketa/issues/667) records the consequence: *"No Raketa
+  lead, and [#667](https://github.com/Raketa02/Raketa/issues/667) records the consequence: *"No Rakieta
   game can fill later than a day before its start"*.
 - **[CODE]** A yes holds no court. The court is the first free one of the sport, picked at the fill
   (`backend/app/modules/bookings/infrastructure/club_courts.py`). Of two cards filling at once, the
@@ -323,8 +323,8 @@ See area 17.
 - **[CODE]** When the last court at an hour goes, its cards lose it — *"Its court went to another game
   before it filled again"* (`backend/app/modules/notifications/application/words.py:447`). The proposer
   sweeps every 300 s, and re-deals pools a change made due every 5 s (`backend/app/core/config.py:548-550`).
-- **Assumptions it breaks:** Raketa hours are an **allotment** the club hands over; a book-by at least a
-  day ahead; only Raketa bookings take a court.
+- **Assumptions it breaks:** Rakieta hours are an **allotment** the club hands over; a book-by at least a
+  day ahead; only Rakieta bookings take a court.
 
 **Cost to build** (*reading*)
 - Apps: backend, club website; the player app hardly.
@@ -382,7 +382,7 @@ See area 17.
   out-of-order-now flag, and courts that share a floor.
 - **[DOC]** tenis4U has weekly recurring blocks, *"Blokada wzajemna"*, closed dates and *"Ustawić status
   zalany?"* ([`integration.md`](integration.md) §5).
-- **Assumptions it breaks:** whole hours from 07:00 to 23:00; only Raketa bookings stand in a block's
+- **Assumptions it breaks:** whole hours from 07:00 to 23:00; only Rakieta bookings stand in a block's
   way.
 
 **Cost to build** (*reading*)
@@ -416,7 +416,7 @@ See area 17.
 - The price shown is the one that applies to that player and length. Passes and a balance live in
   You › Payments.
 
-### 7. The club's customers without Raketa accounts: notes, bans, no-shows
+### 7. The club's customers without Rakieta accounts: notes, bans, no-shows
 
 **Exists today**
 - **[DOC] [CODE]** Names and held or taken, and nothing else (P3).
@@ -497,7 +497,7 @@ See area 17.
   the seller (`CONTEXT.md:1612-1613`).
 - **[CODE] [DOC]** A share is checked, held, taken at the cut-off, released, refunded by an exact
   amount, or refused, with time to fix the card or time to pay (`CONTEXT.md:1614-1655`).
-- **[CODE]** Payouts are released by Raketa after each club day closes
+- **[CODE]** Payouts are released by Rakieta after each club day closes
   (`backend/app/modules/payments/domain/club_payout.py`). The Money page shows a month: collected,
   refunded, card fees, net, totals and payouts, with a link to the club's Stripe dashboard
   (`backend/app/modules/proposals/application/club_money.py`; the screens B7).
@@ -507,7 +507,7 @@ See area 17.
 - **[DOC]** BLIK waits (O1); receipts and invoices are the club's, and open (O5).
 - **[ABSENT]** Desk sales, payment links, refunds by hand, whole-court charges (P5), invoices and any
   fiscal printer.
-- **Assumption it breaks:** money is a seat's share of a Raketa booking.
+- **Assumption it breaks:** money is a seat's share of a Rakieta booking.
 
 **Cost to build** (*reading*)
 - P5 (M–L), plus:
@@ -589,7 +589,7 @@ See area 17.
 - **[DOC]** Overview shows the setup checklist, then what waits for an answer; *"The statistics that will
   live here later are out of scope"* (the mechanics §16.1, line 1100). #674 (open) replaces the waiting
   list with *live* and a link to today's bookings.
-- **[CODE]** Money is a month of Raketa bookings, with totals and payouts
+- **[CODE]** Money is a month of Rakieta bookings, with totals and payouts
   (`frontend_club/src/features/money/`); Groups shows each official group's Games figure (the screens B8).
 - **[ABSENT]** Occupancy, revenue by court or hour, customers, cancellations, and any CSV export, in
   `frontend_club/src/features/` and the club document.
@@ -612,7 +612,7 @@ See area 17.
   console exists only in `local` (ADR-0194 §1). Both are test tools, not a way in.
 - **[DOC]** tenis4U exports CSV. Playmore moves a Reservise club's *"rezerwacje, bazę klientów, cennik
   i całą historię"* ([`integration.md`](integration.md) §4, §5).
-- **Assumption it breaks:** every record is born by a use case inside Raketa.
+- **Assumption it breaks:** every record is born by a use case inside Rakieta.
 
 **Cost to build** (*reading*)
 - Apps: backend 1–2 (an import of customers, season series and future bookings, through the real use
@@ -642,7 +642,7 @@ See area 17.
   ([#533](https://github.com/Raketa02/Raketa/issues/533), open), a mail relay, a map-tile provider, a
   geocoder, store listings (`docs/environments.md` *Turning on a remote environment*). Reactivating
   deployment needs an ADR superseding ADR-0010 (step 1 there).
-- **Assumption it breaks:** none in code. *Reading:* today an outage costs a club only its Raketa
+- **Assumption it breaks:** none in code. *Reading:* today an outage costs a club only its Rakieta
   hours; as its calendar, an outage stops its desk.
 
 **Cost to build** (*reading*)
@@ -653,7 +653,7 @@ See area 17.
 **What it changes in the player app**
 - Store publication, a production API address, and the Expo project (O6, #665).
 
-### 18. Moving today's Raketa clubs from Only Raketa to the full calendar
+### 18. Moving today's Rakieta clubs from Only Rakieta to the full calendar
 
 **Exists today**
 - **[DOC]** *"Only `local` has ever run"* (#667, *The store and the migration*; `docs/environments.md:17`),
@@ -662,17 +662,17 @@ See area 17.
   (`backend/app/seeds/club_courts.py:186-310`).
 - **[CODE]** What a club holds today:
   - the **Club** (name, district, city, sports, map point) and its **Club account**;
-  - **Club courts**: courts (one sport, indoor or outdoor, on or off), Raketa hours per court,
+  - **Club courts**: courts (one sport, indoor or outdoor, on or off), Rakieta hours per court,
     exceptions, prices per sport with bands, the way of working ([#670](https://github.com/Raketa02/Raketa/issues/670)
     removes it), the release lead, the cut-off, other clubs' courts, paused, and the payments account
     (`backend/app/modules/clubs/domain/club_courts.py`);
   - **Bookings**, **Seat charges** and **Club payouts**; its **Official groups** and **Administrators**.
 - **Conversions:**
-  - Raketa hours become the deck's rule, or opening hours;
+  - Rakieta hours become the deck's rule, or opening hours;
   - a per-sport price becomes per court and per length;
   - exceptions become blocks;
-  - Raketa bookings become one kind of occupant (P1).
-- **Assumption it breaks:** Raketa hours are an allotment, stored as the player's `WeeklyHours`.
+  - Rakieta bookings become one kind of occupant (P1).
+- **Assumption it breaks:** Rakieta hours are an allotment, stored as the player's `WeeklyHours`.
 
 **Cost to build** (*reading*)
 - **S** — a clean cut: reset the local store and re-seed, as #667 does.
@@ -686,10 +686,10 @@ See area 17.
 
 | Area | Exists today | Apps | Size | Biggest assumption it breaks |
 | --- | --- | --- | --- | --- |
-| Root · revenue | Nothing; no fee, by decision | backend, club | M | Raketa takes no fee (ADR-0189 §4) |
-| 1 · Desk calendar | A day list of Raketa bookings; Move; Cancel | backend, club | L · XL with P1–P5 | A Booking is a filled proposal |
+| Root · revenue | Nothing; no fee, by decision | backend, club | M | Rakieta takes no fee (ADR-0189 §4) |
+| 1 · Desk calendar | A day list of Rakieta bookings; Move; Cancel | backend, club | L · XL with P1–P5 | A Booking is a filled proposal |
 | 2 · Booking directly | Post a game, which books only when every seat says yes | backend, player, public, club | L | A game is made only by filling; the public site has no session |
-| 3 · Deck in one calendar | Sellable hours, book-by, a court lost and re-dealt, a race guard | backend, club | M | Raketa hours are an allotment; book-by ≥ a day |
+| 3 · Deck in one calendar | Sellable hours, book-by, a court lost and re-dealt, a race guard | backend, club | M | Rakieta hours are an allotment; book-by ≥ a day |
 | 4 · Season bookings | Nothing | backend, club | M–L | A Booking is a filled proposal |
 | 5 · Blocks, closures | Exceptions, a court off, Pause; move-by-cancel planned (#672) | backend, club | M | Whole hours, 07:00–23:00 |
 | 6 · Prices | A standard price and weekday or weekend bands, per sport | backend, club, player | M · L with passes or a wallet | A price splits into whole grosze by seats, per sport |
@@ -697,14 +697,14 @@ See area 17.
 | 8 · Coaches, lessons | Nothing | all four | XL | Only players and one club login exist |
 | 9 · Leagues, tournaments | Nothing | all four | XL | A Game is opened only by a booking |
 | 10 · Benefit cards | Nothing | backend, club, player | M · L with Medicover's API | Every booking is paid by card through Stripe |
-| 11 · Money | The port; direct charges; held and taken; refunds; payouts; Money | backend, club, player | L | Money is a seat's share of a Raketa booking |
+| 11 · Money | The port; direct charges; held and taken; refunds; payouts; Money | backend, club, player | L | Money is a seat's share of a Rakieta booking |
 | 12 · Unmanned hours | Nothing | backend, club, player, hardware | L | — (all new) |
 | 13 · Staff | One shared club login | backend, club | M | One login per club |
 | 14 · Telling players | Notices, email; push built and gated off; no SMS | backend, club, player | M | The club never messages players; everybody has the app |
 | 15 · Reports | Money's month; payouts; the Groups figure | backend, club | M | Statistics out of scope |
-| 16 · Moving in | Nothing (the seed and the console are test tools) | backend, club | M | Every record is born inside Raketa |
+| 16 · Moving in | Nothing (the seed and the console are test tools) | backend, club | M | Every record is born inside Rakieta |
 | 17 · Trust | Only `local` runs; deploy dormant | all four, infra | L | — (a human's work, mostly) |
-| 18 · Moving today's clubs | Eight seeded clubs, no real ones | backend | S | Raketa hours are an allotment |
+| 18 · Moving today's clubs | Eight seeded clubs, no real ones | backend | S | Rakieta hours are an allotment |
 | **P1** Court time not a filled proposal | — | backend, root | M | |
 | **P2** Any length, finer grid | Durations in the sport registry, unread | backend, club, root | M · L if games change length | |
 | **P3** A customer who is not a User | — | backend, club, root | M | |

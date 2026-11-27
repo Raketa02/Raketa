@@ -22,7 +22,7 @@ Rules R-REQUEST-1 to R-REQUEST-44. Digest written 2026-10-08 from the topic file
 
 - **Competitor.** [POLICY] Playtomic books the court at four players "immediately"; private reservations beat open matches that aren't full; it avoids a desk double sale by being the club's only calendar — `topics/competitor-organiser.md#the-court-is-held-in-stages`, `market.md#how-the-club-handles-the-hard-cases`.
 - **Platforms.** [POLICY] Playmore holds the court from publication and frees it only when the game is called off; a clash reads "Ktoś właśnie zajął ten termin" — `topics/platforms.md#playmore--the-court-is-held-from-publication`.
-- **Situation (R-REQUEST-2).** *opinion* The club's own system doesn't know of a Raketa request, so the desk can sell the held hour by phone and must then refuse — `situations.md` SIT-35, SIT-34.
+- **Situation (R-REQUEST-2).** *opinion* The club's own system doesn't know of a Rakieta request, so the desk can sell the held hour by phone and must then refuse — `situations.md` SIT-35, SIT-34.
 - **Complaints (organiser).** [COMPLAINT] A half-built game's court "can be taken by later bookings with four players"; a reviewer asks for "approval by the first booker" — `topics/competitor-organiser.md#a-half-built-game-loses-its-court`, `topics/complaints.md#a-held-court-is-taken-by-strangers-or-bumped-by-a-full-booking`.
 - **Complaints (joiner).** [COMPLAINT] "the court was doubled booked"; Playmore: "zarezerwowane, a wcale nie jest" — `topics/complaints.md#paid-but-the-court-was-not-there-double-booked-wrong-venue-nobody-on-site`.
 
@@ -112,4 +112,4 @@ Rules R-REQUEST-1 to R-REQUEST-44. Digest written 2026-10-08 from the topic file
 
 ## Gaps answered 2026-10-10 (after the S-01B refresh)
 
-- **R-REQUEST-55 (R-REQUEST-14, R-REQUEST-52).** [MEASURED] tenis4U desks already type bookings made elsewhere (lessons, a standing Monday group, leagues, events) into their grid as named blocks, so the tool to keep a Raketa hour from being sold twice exists; whether a desk will use it for Raketa needs a real desk [ABSENT] — `topics/gaps-S-01B.md#tenis4u-desks-already-type-bookings-made-elsewhere-into-their-grid-as-named-blocks`
+- **R-REQUEST-55 (R-REQUEST-14, R-REQUEST-52).** [MEASURED] tenis4U desks already type bookings made elsewhere (lessons, a standing Monday group, leagues, events) into their grid as named blocks, so the tool to keep a Rakieta hour from being sold twice exists; whether a desk will use it for Rakieta needs a real desk [ABSENT] — `topics/gaps-S-01B.md#tenis4u-desks-already-type-bookings-made-elsewhere-into-their-grid-as-named-blocks`

@@ -49,7 +49,7 @@ and it has no page.
   the connected account’s `Account` ID." Each request names its own account.
 
 **For the rule:** cite the restricted-keys page together with the access-policies section. Between them, they show
-that the only per-club guard is Raketa's own check of the desk's club.
+that the only per-club guard is Rakieta's own check of the desk's club.
 
 ### R-SECURITY-1 — Nothing is deployed yet, and the deployment runbook admits every address
 
@@ -89,13 +89,13 @@ build it on AWS was not read)*.
   connected account sandboxes."
 - https://docs.stripe.com/connect/webhooks: "You must define separate webhook endpoints for your sandbox accounts to
   receive events for those accounts."
-- **Every club account Raketa opens lives in the mode of the key that opened it.** Raketa opens every club account
+- **Every club account Rakieta opens lives in the mode of the key that opened it.** Rakieta opens every club account
   itself, with `POST /v2/core/accounts` (`stripe_payments.py:317-347`), and never connects one through OAuth. The
   sandbox is `acct_1US89K5y1DB8chHb` ([SB](stripe-sandbox.md)).
 
 [ABSENT] Whether a live connected account can carry the same `acct_` id as a test one. This is the OAuth case, where
-an existing account is connected in both modes. No page read states it. Raketa never connects accounts through OAuth,
-so for Raketa the case does not arise.
+an existing account is connected in both modes. No page read states it. Rakieta never connects accounts through OAuth,
+so for Rakieta the case does not arise.
 
 [DOCS] https://docs.stripe.com/webhooks (read 2026-10-20) says three things about signing secrets:
 - "Stripe generates a unique secret key for each endpoint. If you use the same endpoint for both test and live API
@@ -108,10 +108,10 @@ so for Raketa the case does not arise.
 a test-mode one. It is not on webhooks, connect/webhooks, keys, sandboxes or testing-use-cases (2026-10-20). A
 question for Stripe support.
 
-**What each case means for Raketa.** The Connect route checks against one secret only,
+**What each case means for Rakieta.** The Connect route checks against one secret only,
 `STRIPE_CONNECT_WEBHOOK_SECRET` (`webhook_routes.py:53-64`).
 - If test events come signed with a different secret, they fail verification with a 400 and change nothing.
-- If they come signed with the live endpoint's secret, they pass, and only `livemode` would tell them apart. Raketa
+- If they come signed with the live endpoint's secret, they pass, and only `livemode` would tell them apart. Rakieta
   never reads it.
 
 ### R-SECURITY-4 — A padded key: Stripe never promises to trim it; HTTP's own rules explain three of the four cases
@@ -140,7 +140,7 @@ answered `GET /v1/accounts/acct_1US95f5y1DMwE3zY`. Together with BR S2 (the aioh
 tab), Stripe accepted every padding tried.
 
 **Answer:** Stripe promises nothing. Three of the cases rest on HTTP itself; the leading tab rests on leniency that no
-page promises. Raketa's key refusals remain the only guard of its own.
+page promises. Rakieta's key refusals remain the only guard of its own.
 
 ### R-SECURITY-4 — An organisation key needs `Stripe-Context` on every account call; the adapter never sends it
 
@@ -239,7 +239,7 @@ production use, but `debug` is also available for more verbosity."
 The supported control is the level. Setting `logging.getLogger('stripe').setLevel(logging.INFO)`, the README's third
 switch, keeps both DEBUG lines out. The INFO lines carry only the method, URL, path and status (`:765`, `:797`).
 
-**In Raketa:**
+**In Rakieta:**
 - The root logger's level comes from `LOG_LEVEL`: DEBUG in `local` and `development`, INFO in `staging` and
   `production` (`config.py:134-143`, `logging.py:50`).
 - Nothing sets the `stripe` logger's own level: a grep finds no `getLogger("stripe")`.
@@ -350,7 +350,7 @@ supports it", https://docs.stripe.com/disputes/prevention/card-testing, *(transl
   Dashboard", the "Connected account Dashboard" is "✓ Supported" and the "Platform account Dashboard Connect page" is
   "❌ Unsupported".
 
-Raketa's clubs have `dashboard: full` (`stripe_payments.py:325`). **Answer: no.** A full-Dashboard club's Radar is
+Rakieta's clubs have `dashboard: full` (`stripe_payments.py:325`). **Answer: no.** A full-Dashboard club's Radar is
 configured only by the club.
 
 ### R-SECURITY-13 — After a burst: the club is emailed; Stripe may pause or hold a reserve; the platform sees it in its Dashboard only
@@ -359,7 +359,7 @@ configured only by the club.
 - **Stripe's automatic blocks.** https://docs.stripe.com/disputes/prevention/card-testing *(translated)*: "If you use
   the latest version of the Stripe Payment Element or Checkout … When we detect that you're experiencing a card
   testing attack, we dynamically choose interventions … You'll see these payments marked as `Blocked by Stripe`."
-  Raketa uses `CardField` and `confirmPayment` ([SEC §4](stripe-security.md#4-the-phone-the-connected-account-and-pci-scope)),
+  Rakieta uses `CardField` and `confirmPayment` ([SEC §4](stripe-security.md#4-the-phone-the-connected-account-and-pci-scope)),
   not the Payment Element, so the page does not promise these to it.
 - **The club is told.** https://docs.stripe.com/radar/analytics/fraud-alerts (en-US): "When Stripe detects a potential
   fraud attack on your account, we notify you with: **Email notification** … **Dashboard notification**". A direct
@@ -394,15 +394,15 @@ risk-settings, managed-risk, connect/radar, or https://support.stripe.com/questi
 
 **The code.** `@stripe/stripe-react-native` 0.38.6 sets the confirm's `return_url` to `<urlScheme>://safepay`, both
 on iOS (`ios/Mappers.swift:769-771`, used at `ios/StripeSdk.swift:294` for setups and `:883` for payments) and on
-Android (`android/src/main/java/com/reactnativestripesdk/utils/Mappers.kt:62-67`). Raketa's scheme is `raketa`
+Android (`android/src/main/java/com/reactnativestripesdk/utils/Mappers.kt:62-67`). Rakieta's scheme is `rakieta`
 ([AU §4](stripe-authentication.md#the-way-back-from-the-banks-own-app)).
 
 **What the return would carry.** Stripe documents that its redirect appends the payment's id and its client secret,
 and does not say the mobile return differs. The way back would then read
-`raketa://safepay?payment_intent=pi_…&payment_intent_client_secret=…` *(unverified: inferred from the web wording,
+`rakieta://safepay?payment_intent=pi_…&payment_intent_client_secret=…` *(unverified: inferred from the web wording,
 not measured, because the bank's page needs a browser, SB §2)*.
 
-What another app that claims `raketa` could do with it, adding the publishable key and the club's account id:
+What another app that claims `rakieta` could do with it, adding the publishable key and the club's account id:
 - read the payment's status, amount and currency (the secret "lets the client access … status, amount, currency",
   [SEC §3](stripe-security.md#a-client-secret-can-complete-the-payment-so-only-its-customer-may-hold-it));
 - confirm it with another card while it waits for a card, since `confirmation_method` is automatic (same anchor).
@@ -421,11 +421,11 @@ neither change its amount nor capture it (BR S6).
 [ABSENT] Whether the mobile SDK's way back, as opposed to the web redirect, carries the query parameters. It is not on
 the pages read, and can be measured only on a device with a challenge card.
 
-### R-SECURITY-27 — The Accounts v2 guide for Raketa's case allows HTTP while testing; only the marketplace guide says creation fails
+### R-SECURITY-27 — The Accounts v2 guide for Rakieta's case allows HTTP while testing; only the marketplace guide says creation fails
 
 [DOCS] Accounts v2 pages that create links with `POST /v2/core/account_links`, read on 2026-10-20:
 - **SaaS** (https://docs.stripe.com/connect/saas/tasks/onboard): a platform whose clubs are merchants taking direct
-  charges, which is Raketa's case. "You can use HTTP for your `refresh_url` and `return_url` while you’re in a testing
+  charges, which is Rakieta's case. "You can use HTTP for your `refresh_url` and `return_url` while you’re in a testing
   environment (for example, to test locally), but live mode only accepts HTTPS. You must update any testing URLs to
   HTTPS URLs before you go live."
 - **Marketplace** (https://docs.stripe.com/connect/marketplace/tasks/onboard): a recipient configuration. "You must use
@@ -438,12 +438,12 @@ the pages read, and can be measured only on a device with a challenge card.
 - **The older guide** (https://docs.stripe.com/connect/hosted-onboarding): it shows only `/v1/account_links`, even with
   `accounts-namespace=v2`, and carries the same "HTTP … while you’re in a testing environment" sentence.
 
-**The code.** Raketa's link asks for `configurations: ["merchant"]` (`stripe_payments.py:349-369`), on an account
+**The code.** Rakieta's link asks for `configurations: ["merchant"]` (`stripe_payments.py:349-369`), on an account
 opened with the merchant configuration (`:337-341`). That is the SaaS guide's case.
 
-**Answer:** the page that governs Raketa's case allows HTTP in a testing environment. That matches BR S4 and S5,
+**Answer:** the page that governs Rakieta's case allows HTTP in a testing environment. That matches BR S4 and S5,
 measured on 2026-10-20: links were made with `http://localhost` ways back for `acct_1US95f5y1DMwE3zY` and for the new
-v2 account `acct_1USPFh5y1DXbCdOQ`. The marketplace guide's "fails" is the outlier, written for a configuration Raketa
+v2 account `acct_1USPFh5y1DXbCdOQ`. The marketplace guide's "fails" is the outlier, written for a configuration Rakieta
 doesn't use. Deployed environments already require `https://` (`config.py:857`).
 
 [ABSENT] A promise that the sandbox will keep accepting HTTP. The SaaS guide's sentence is the only statement, and no

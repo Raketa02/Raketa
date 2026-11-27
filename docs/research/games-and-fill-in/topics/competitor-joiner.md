@@ -254,22 +254,22 @@ account · `[ABSENT]` looked for, not found. *reading* lines are not sources.
 ### Support is a bot
 - **[COMPLAINT]** Trustpilot 1.3/5 over 132 reviews; nearly every 2026 review names the AI chat bot. [Trustpilot: Playtomic](https://www.trustpilot.com/review/playtomic.io) — read 2026-10-06
 
-## 9. Reading: the joiner at Playtomic and at Raketa
+## 9. Reading: the joiner at Playtomic and at Rakieta
 
 Not a source. Each line sets facts above against `state.json`'s prices and the spec as
 `games-and-fill-in-market.md` §1.2 summarises it.
 
 ### Reading on money at the moment of joining
-- *reading:* Ivan pays Playtomic 43,99 zł the moment he joins a 40 zł spot ([fee](#the-polish-service-fee-on-an-open-match-spot)); at Raketa his yes is free, and every card is charged 40 zł only at the last yes.
+- *reading:* Ivan pays Playtomic 43,99 zł the moment he joins a 40 zł spot ([fee](#the-polish-service-fee-on-an-open-match-spot)); at Rakieta his yes is free, and every card is charged 40 zł only at the last yes.
 
 ### Reading on leaving in time
-- *reading:* Playtomic gives a timely leaver everything back, fee included, and lets him leave a not-full match up to the start ([leaving](#a-match-not-yet-full-can-be-left-any-time-before-it-starts)); Raketa keeps 1,60 zł of a 40 zł share from a player who leaves before the cut-off.
+- *reading:* Playtomic gives a timely leaver everything back, fee included, and lets him leave a not-full match up to the start ([leaving](#a-match-not-yet-full-can-be-left-any-time-before-it-starts)); Rakieta keeps 1,60 zł of a 40 zł share from a player who leaves before the cut-off.
 
 ### Reading on the late leaver
-- *reading:* Inside 24 h of a full match Playtomic keeps both the seat and the money unless the club relents; the complaint above asks for "lose the money, reopen the seat" ([complaint](#a-late-leaver-blocks-the-seat-in-a-full-match)), which is the shape of Raketa's Fill in.
+- *reading:* Inside 24 h of a full match Playtomic keeps both the seat and the money unless the club relents; the complaint above asks for "lose the money, reopen the seat" ([complaint](#a-late-leaver-blocks-the-seat-in-a-full-match)), which is the shape of Rakieta's Fill in.
 
 ### Reading on a game that doesn't fill
-- *reading:* Playtomic takes each joiner's money and refunds it when the match is short about an hour before; Raketa charges nobody until the game is full, and an unfilled card expires.
+- *reading:* Playtomic takes each joiner's money and refunds it when the match is short about an hour before; Rakieta charges nobody until the game is full, and an unfilled card expires.
 
 ### Reading on no-shows
-- *reading:* Playtomic's no-show is a support report within 7 days and before a result, charged as a debt; Raketa records it in the result, with 24 h to dispute.
+- *reading:* Playtomic's no-show is a support report within 7 days and before a result, charged as a debt; Rakieta records it in the result, with 24 h to dispute.

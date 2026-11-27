@@ -14,7 +14,7 @@ Answers to sixteen `stripe:` gaps: two CLUBMONEY, fourteen RESCUE. Each `### ` h
 
 ### R-CLUBMONEY-23 · A Polish club can be paid out in euros, and each payout then reads in its own currency
 
-**Answer.** Yes. A club on the full Stripe Dashboard adds a settlement currency itself, without Raketa. A payout in
+**Answer.** Yes. A club on the full Stripe Dashboard adds a settlement currency itself, without Rakieta. A payout in
 that currency is listed with its own `currency`, which the adapter ignores.
 
 - **[DOCS]** "Connected accounts with access to the full Stripe Dashboard have automatic access to multi-currency
@@ -103,7 +103,7 @@ Fully won, the 40,00 zł comes back; otherwise only the refunded 38,40 zł comes
 
 - **One way:** "doesn't withhold any fees for payment reversals" gives the club its 1,60 zł back, and Bonarka Arena
   holds 1,60 zł kept from Ivan that it never paid.
-- **The other way:** only IC+ users are named as seeing a cost difference, so on standard pricing (Raketa's clubs) the
+- **The other way:** only IC+ users are named as seeing a cost difference, so on standard pricing (Rakieta's clubs) the
   fee stays with Stripe and the sentence means no extra fee for the reversal. Sibling files take this reading,
   unverified: [`stripe-gaps-02.md`](stripe-gaps-02.md#r-leave-6--whether-a-reversal-gives-the-club-its-original-fee-back),
   [`stripe-gaps-04.md`](stripe-gaps-04.md#r-clubmoney-2--the-fee-on-a-partial-reversal-how-soon-shortly-is-and-a-reversal-on-the-sandbox).
@@ -325,7 +325,7 @@ eight retries.
 
 **Answer.** Stripe's changelog answers it from `2025-03-31.basil`, earlier than both versions the product speaks: a
 lapsed hold is cancelled with `cancellation_reason: expired` (replacing `automatic`), `charge.expired` and
-`payment_intent.canceled` are still sent, and no Refund is made. Raketa's own cancels read `null`, as did Stripe's
+`payment_intent.canceled` are still sent, and no Refund is made. Rakieta's own cancels read `null`, as did Stripe's
 too-many-confirmations cancel above.
 
 - **[DOCS]** "A new `cancellation_reason` value called `expired` … represents payments canceled because of
@@ -369,7 +369,7 @@ which fits the sandbox netting it against pending money. If it waits, it fails a
   `pending`, with 0,00 zł available ([`stripe-refunds-and-disputes.md`](stripe-refunds-and-disputes.md#the-money-comes-off-the-clubs-balance-on-the-sandbox-off-its-pending-balance-at-once)).
   Now: none of 34 refunds is `pending`; four are `failed` (`expired_or_canceled_card`): `re_3USPJm5y1DMwE3zY1S3GJVRF`,
   `re_3USPIG5y1DMwE3zY1laOFgA7`, `re_3USPCn5y1DMwE3zY1f6MP6cg`, `re_3USOki5y1DMwE3zY1vMVdEMD` — unheard by the product.
-- *Reading:* a club Raketa opens pays out daily ([`stripe-payouts-and-balances.md`](stripe-payouts-and-balances.md#a-club-account-raketa-opens-is-on-daily-payouts-the-test-club-is-on-manual)),
+- *Reading:* a club Rakieta opens pays out daily ([`stripe-payouts-and-balances.md`](stripe-payouts-and-balances.md#a-club-account-rakieta-opens-is-on-daily-payouts-the-test-club-is-on-manual)),
   and a share taken at the cut-off is available 3 business days later, 7 calendar days on a new account
   ([`stripe-payouts-and-balances.md`](stripe-payouts-and-balances.md#a-polish-accounts-first-money-is-available-7-calendar-days-after-capture-later-money-3-business-days-after)).
   On the refunds page's rule a seat-taken refund will often wait.

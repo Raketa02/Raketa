@@ -136,7 +136,7 @@ looked for and not found, with where. Lines marked *reading* are not sources.
 - **[DOCS]** On a direct charge the dispute is answered from the connected account and its balance is debited; with `fees_collector = stripe` the dispute fee falls on the connected account too. [Stripe: Disputes on Connect platforms](https://docs.stripe.com/connect/disputes) — read 2026-10-08
 - **[DOCS]** Carried: "We notify you of a dispute through … Your email address, The Stripe Dashboard, A `charge.dispute.created` event …, A push notification" (`gaps-EMAIL.md#stripe-tells-the-account-holder-by-email-dashboard-event-and-push`); "Stripe will still notify the individual Standard or Express connected accounts directly" about requirements, with a grace period "typically 7 to 30 days" before a capability is degraded (`gaps-EMAIL.md#stripe-writes-to-a-full-dashboard-club-itself-when-requirements-change`).
 - **[ABSENT]** Whether the per-user dispute email can be off by default for a new team member: Stripe's pages do not say. — read 2026-10-08
-- *Reading:* Raketa opens each club with `dashboard: full` and both collectors `stripe` (`backend/app/modules/payments/infrastructure/stripe_payments.py:305`), the Standard-like set-up, so the club's owner has Stripe's own channel; Express and no-Dashboard accounts would not.
+- *Reading:* Rakieta opens each club with `dashboard: full` and both collectors `stripe` (`backend/app/modules/payments/infrastructure/stripe_payments.py:305`), the Standard-like set-up, so the club's owner has Stripe's own channel; Express and no-Dashboard accounts would not.
 
 ## 11. A 24-hour cut-off over a clock change, in Kraków clubs' rules (R-PLATFORM-16)
 

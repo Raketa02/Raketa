@@ -200,7 +200,7 @@ regulator's documents and data; `[COMPLAINT]`; `[ABSENT]` looked for and not fou
   statement, refund or service-fee articles — read 2026-10-08
 - *reading:* both platforms give the players everything back and take back their own fee or commission; neither says
   the club recovers the card cost. At MATCHi the venue's fee line stands unless stated otherwise, the same shape as
-  Raketa's club absorbing the card fee.
+  Rakieta's club absorbing the card fee.
 
 ## R-LEAVE-25: telling the club of an automatic call-off
 

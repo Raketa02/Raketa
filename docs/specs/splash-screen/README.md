@@ -12,7 +12,7 @@ session can read them. Landed by [#853](https://github.com/Raketa02/Raketa/issue
 | File | What it holds |
 | --- | --- |
 | [splash_screen.md](splash_screen.md) | The product owner's brief, verbatim. Its sizes say *px*: read them as points, which already absorb pixel density (the log's Q7). Its last line points at their own folder: read that path by the [index](#index)'s original name |
-| [decisions.md](decisions.md) | The grilling's decision log, verbatim: every ruling with its reason, the facts it rests on (§2, with `file` paths as of 2026-11-23), and the tests and delivery. Its status line and its delivery section (§11) predate PRD #852. Its §9 puts the design-system Part 16 rows in the first ticket; the tickets moved them to [#854](https://github.com/Raketa02/Raketa/issues/854) and [#855](https://github.com/Raketa02/Raketa/issues/855), which draw what they fence |
+| [decisions.md](decisions.md) | The grilling's decision log, verbatim but for the brand's spelling ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md) §6), whose notes on the two spellings keep the old one as a quote: every ruling with its reason, the facts it rests on (§2, with `file` paths as of 2026-11-23), and the tests and delivery. Its status line and its delivery section (§11) predate PRD #852. Its §9 puts the design-system Part 16 rows in the first ticket; the tickets moved them to [#854](https://github.com/Raketa02/Raketa/issues/854) and [#855](https://github.com/Raketa02/Raketa/issues/855), which draw what they fence |
 | [`mocks/`](mocks/) | The one mock, renamed for what it shows (the [index](#index) gives its original name) |
 
 **The decision is
@@ -20,7 +20,7 @@ session can read them. Landed by [#853](https://github.com/Raketa02/Raketa/issue
 launch window is a plain night field released on the splash's first layout, startup runs behind the
 splash and is never held, the fade waits for the first screen but never for data, a launch that
 already knows it has no internet doesn't send the launch check, and *Rakieta* is the splash's
-wordmark and nothing else's. Where the brief or the log and ADR-0209 or PRD #852 disagree, ADR-0209
+wordmark and nothing else's (until [ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md) made Rakieta the brand everywhere). Where the brief or the log and ADR-0209 or PRD #852 disagree, ADR-0209
 and PRD #852 win. ADR-0209 makes two of them precise:
 
 - **The letters' font.** The log (§6) and the PRD say the letters wait for Archivo 800, *"long before
@@ -62,7 +62,7 @@ everywhere else.
 | 1 | The first landing is **292 pt left** of the dot, and the path's other sideways distances are as its table gives them | **The sideways path is scaled** so the first landing sits at **10 % of the width**: every sideways distance, the impact nudges included, is multiplied by `k = (dotX − 0.10·W) / 292`. The heights stay as written: 150, 62 and 16 pt above the floor, 2 pt pressed into it (Q4) | At 42 pt the lockup is about 150 pt wide, so 292 pt left of the dot is **off-screen on every phone from 360 to 430 pt**: −44 pt on 360, −29 on 390, −18 on 411, −9 on 430. **The mock draws about 0.8× the brief** sideways, and every height as written. On a 390 pt phone *k* ≈ 0.77, which is the mock |
 | 2 | The ball starts **460 pt above** its resting place | **The ball starts just above the top edge** on every phone, fully hidden, straight above the first landing, and still takes 0.39 s to fall (Q5) | The floor is at `H/2 + 14`, so 460 pt above it **is on screen on any phone taller than about 880 pt**. On the A32 (about 411 × 914 pt) the ball would start 11 pt below the top edge |
 | 3 | **The word** is centred horizontally and vertically, and the dot sits after it | **The word and its dot are centred together**: the word, the 9 pt gap and the 12 pt dot, as one lockup, on the full physical screen (Q6) | **It is the mock's composition.** Centring the word alone pushes the lockup right by half the dot and its gap |
-| 4 | The wordmark reads **Rakieta** | **Rakieta is kept**, on the splash's drawn wordmark only. The launcher's name and every string stay *Raketa* (Q1) | The product owner's choice, **against ADR-0187 §8**, *"The brand is Raketa, everywhere"*. It is recorded as that rule's one exception, by ADR-0209 §5, not bent around it |
+| 4 | The wordmark reads **Rakieta** | **Rakieta is kept**, on the splash's drawn wordmark only. The launcher's name and every string stay *Raketa* (Q1) | The product owner's choice, **against ADR-0187 §8**, *"The brand is Raketa, everywhere"*. It is recorded as that rule's one exception, by ADR-0209 §5, not bent around it. *(Superseded 2026-11-27 by [ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md): the brand is Rakieta everywhere, so the wordmark is no exception.)* |
 
 ## Index
 

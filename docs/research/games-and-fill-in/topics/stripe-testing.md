@@ -88,8 +88,8 @@ Apple Pay's merchant ID and real card
   "No matter which version of Radar you use, it might block a charge … The response is the same as what you get when a
   charge fails." [Testing](https://docs.stripe.com/testing?locale=en-GB);
   [Testing use cases](https://docs.stripe.com/testing-use-cases?locale=en-GB) — 2026-10-19
-- On a direct charge the club's Radar rules run, not Raketa's —
-  [`stripe-saving-cards.md#a-direct-charge-follows-the-clubs-radar-rules-not-raketas`](stripe-saving-cards.md#a-direct-charge-follows-the-clubs-radar-rules-not-raketas).
+- On a direct charge the club's Radar rules run, not Rakieta's —
+  [`stripe-saving-cards.md#a-direct-charge-follows-the-clubs-radar-rules-not-rakietas`](stripe-saving-cards.md#a-direct-charge-follows-the-clubs-radar-rules-not-rakietas).
 
 ---
 
@@ -439,7 +439,7 @@ Apple Pay's merchant ID and real card
 - **[DOCS]** In a sandbox "Identity doesn't perform any verification checks. Also, Connect account objects don't
   return sensitive fields." Delete test data: "Developers > Overview … **Review test data** … **Delete test data** …
   You can't undo"; "Sandboxes are temporarily unusable while the deletion process occurs." Same page — 2026-10-19
-- Which kind the Raketa sandbox is was not established: `livemode: false` "doesn't distinguish" them
+- Which kind the Rakieta sandbox is was not established: `livemode: false` "doesn't distinguish" them
   ([`stripe-security.md#general-sandboxes-isolate-settings-the-test-mode-sandbox-shares-some-with-live`](stripe-security.md#general-sandboxes-isolate-settings-the-test-mode-sandbox-shares-some-with-live));
   the product's v2 account calls succeeded on it ([`stripe-sandbox.md#the-test-club-account-full-dashboard-the-club-pays-the-fees-stripe-covers-losses`](stripe-sandbox.md#the-test-club-account-full-dashboard-the-club-pays-the-fees-stripe-covers-losses)).
 
@@ -532,6 +532,6 @@ Apple Pay's merchant ID and real card
 13. Is each independent scene given its own card, so one test's card state can't leak into the next?
 14. Is a wallet scene walked on the physical Android phone with a real card in Google Wallet, and the iPhone's Apple
     Pay left waiting on the merchant ID?
-15. Is it known whether the Raketa sandbox is a general sandbox or the test mode sandbox, given that the latter only
+15. Is it known whether the Rakieta sandbox is a general sandbox or the test mode sandbox, given that the latter only
     partially supports v2 accounts?
 16. Before the walk, has an administrator enabled CLI access, and is `stripe listen` forwarding both scopes?

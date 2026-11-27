@@ -47,7 +47,7 @@
 Until now, an account has meant a player. PRD #500 adds a second way to be here, the **Administrator**
 ([ADR-0184](0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)),
 and many administrators already play. Tomek plays padel, and Ogrody 33 wants him to run its padel
-WhatsApp group. Marta runs two clubs' groups and has never played on Raketa.
+WhatsApp group. Marta runs two clubs' groups and has never played on Rakieta.
 
 The forces:
 

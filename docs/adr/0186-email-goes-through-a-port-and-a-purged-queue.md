@@ -104,7 +104,7 @@ and the invitation's *Set your password* already sets a password for exactly tha
 third page would say the same thing in different words. The credential still expires at 72 hours,
 the invitation's own lifetime.
 
-Every message is **plain text and HTML**, carries **a button**, and is written by **Raketa**. Every
+Every message is **plain text and HTML**, carries **a button**, and is written by **Rakieta**. Every
 message that carries a credential also carries **its code**, which is all of them except the
 existing-account invitation. The brand is the same everywhere
 ([ADR-0187](0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md) §8).

@@ -136,7 +136,7 @@ the ten seconds), F-FILL-64.1's spoken *Undo*, and the two paused design-system 
   one action that moves money. A slow screen-reader user can book a court and hold four shares
   before reaching *Undo*, and the only way back is a leave, which is not the same act: the court is
   booked and the others are told.
-- **The European accessibility law reaches the app once Raketa stops being a microenterprise.**
+- **The European accessibility law reaches the app once Rakieta stops being a microenterprise.**
   Directive (EU) 2019/882 covers e-commerce services, mobile apps included, from 28 June 2025.
   Poland's act (Dz.U. 2024 poz. 731) does the same and asks for compatibility with assistive tools.
   Both exempt a microenterprise's services: fewer than 10 staff, and at most €2 million in annual

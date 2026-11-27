@@ -1,4 +1,4 @@
-# Raketa — Context Map
+# Rakieta — Context Map
 
 A **polyglot monorepo** of **four independently deployable apps** that realize the
 **same** bounded contexts
@@ -56,9 +56,9 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > Proposals, Bookings, Payments, Notifications, and courts in Clubs — the player app got the group deck, Fill in and an Account group on You, and
 > the club website got Bookings, Check in (its removal decided by
 > [ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)),
-> Courts & prices, Money and Raketa settings (*On request*'s answers and *Instant* removed by
-> [ADR-0196](docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md),
-> which leaves *Only Raketa* until Raketa is the club's booking software). Stripe is an
+> Courts & prices, Money and Rakieta settings (*On request*'s answers and *Instant* removed by
+> [ADR-0196](docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md),
+> which leaves *Only Rakieta* until Rakieta is the club's booking software). Stripe is an
 > outside service behind a port, not a deployable, and its webhooks are on no client's contract
 > ([ADR-0190](docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md)). The terms
 > are in `CONTEXT.md` under those contexts; the spec set is `docs/specs/games-and-fill-in/`.
@@ -87,7 +87,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md),
 > PRD [#789](https://github.com/Raketa02/Raketa/issues/789); built). Home gains five
 > rows below *Your games*. The backend grows a **Discovery** context for the three people rows — *Same
-> competitive level*, *New in Raketa* and *Same vibe* — with three stored tables, the stated exceptions
+> competitive level*, *New in Rakieta* and *Same vibe* — with three stored tables, the stated exceptions
 > to *derived, never stored*: a player directory fed by the profile's and the user's events, every
 > player's current level per sport fed by the rating's, and a per-viewer rest count, reaching Friends,
 > Blocks, the Forecast, the profile, the user
@@ -138,9 +138,8 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > PRD [#852](https://github.com/Raketa02/Raketa/issues/852); decided, not yet built). On every cold
 > open a volt ball bounces into the **Rakieta** wordmark, and startup runs behind it instead of
 > holding the native splash. A launch that already knows it has no internet doesn't send the launch
-> check. Only the player app changes: no backend change and no contract change. *Rakieta* is the
-> splash's drawn wordmark only; the launcher's name and every string stay **Raketa** (ADR-0187 §8,
-> amended).
+> check. Only the player app changes: no backend change and no contract change. Since ADR-0211 the
+> splash's drawn wordmark, the launcher's name and every string spell the brand alike: **Rakieta**.
 > The brief, the decision log and the mock are `docs/specs/splash-screen/`.
 >
 > **The tab menu touches no context** (PRD [#859](https://github.com/Raketa02/Raketa/issues/859);
@@ -159,6 +158,14 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > marker** travels to the lit tab. What each tab opens doesn't change. Only the player app changes:
 > no backend change and no contract change. The brief, the decision log and the mocks, which lead
 > on design but give no number, are `docs/specs/tab-bar-dock/`.
+>
+> **The brand's new name touches no context**
+> ([ADR-0211](docs/adr/0211-the-brand-is-rakieta-everywhere.md), PRD
+> [#889](https://github.com/Raketa02/Raketa/issues/889); decided, being built). The brand is
+> **Rakieta**, everywhere. The glossary's terms that carry it (*Rakieta hours*, *Rakieta settings*,
+> *Only Rakieta*, *Rakieta sells them alone*, *New in Rakieta*) change their brand word and nothing
+> else, and no concept, context or fence changes. Every app changes, and so
+> does the contract: its paths, schemas, operation ids and titles say Rakieta.
 >
 > **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
 > radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
@@ -188,11 +195,11 @@ own **technical** vocabulary:
 
 | File | Scope | Owns |
 | --- | --- | --- |
-| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Player, Authority, Email, Sport, SportSpec, Assessment, Skill rating, Level, Band, Confidence, statuses, domain events, Audience, Signing out everywhere, Player profile, Social tag, Weekly hours, Gender preference, Play intent, Block, Mode, Ruleset, Level window, Newcomer window, Forecast, Split, Game, Line-up, Departure, Result, Score, Played · no score, Disputed, Isn't here yet, Arrival, On time · Came late · Didn't come, I was there, Standing, Counted game, Conversation, Member, System line, Typing, Player Score, Points, Played through, Reliability band, New, Results left in dispute, Reliability filter, Run of form, At stake, On-court check, Sportsmanship, Stars, The card, Club, Club account, Home club, Club courts, Court, Kind of court, Raketa hours, Exception, Price, Share, Court hour, Only Raketa, Raketa settings, Cut-off, Book-by, Paused, Setup checklist, Group, Player group, Official group, Owner, Group member, Join policy, Join request, Group link, WhatsApp group size, Handover, Administrator, Invitation, Booking, Leaver, Rescue, Fill in, Move by cancel, Payment method, Setup, Payment terms, Payment provider, Seat charge, Pool, Proposal, Version, Yes, In, Withdraw, Live yes, Post, Fills, Group deck, Owed card, Games & money, Home, It's a game!, Ranking, General, Friends (the view), Place, Listed, the chip, Top 10, Show me to new people, Hottest groups, Heat, HOTTEST, GROWING, People rows, Same competitive level players, % even, New in Raketa, Same vibe players, Vibe %, Good match, Fresh, Gap, Rest, On screen… |
+| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Player, Authority, Email, Sport, SportSpec, Assessment, Skill rating, Level, Band, Confidence, statuses, domain events, Audience, Signing out everywhere, Player profile, Social tag, Weekly hours, Gender preference, Play intent, Block, Mode, Ruleset, Level window, Newcomer window, Forecast, Split, Game, Line-up, Departure, Result, Score, Played · no score, Disputed, Isn't here yet, Arrival, On time · Came late · Didn't come, I was there, Standing, Counted game, Conversation, Member, System line, Typing, Player Score, Points, Played through, Reliability band, New, Results left in dispute, Reliability filter, Run of form, At stake, On-court check, Sportsmanship, Stars, The card, Club, Club account, Home club, Club courts, Court, Kind of court, Rakieta hours, Exception, Price, Share, Court hour, Only Rakieta, Rakieta settings, Cut-off, Book-by, Paused, Setup checklist, Group, Player group, Official group, Owner, Group member, Join policy, Join request, Group link, WhatsApp group size, Handover, Administrator, Invitation, Booking, Leaver, Rescue, Fill in, Move by cancel, Payment method, Setup, Payment terms, Payment provider, Seat charge, Pool, Proposal, Version, Yes, In, Withdraw, Live yes, Post, Fills, Group deck, Owed card, Games & money, Home, It's a game!, Ranking, General, Friends (the view), Place, Listed, the chip, Top 10, Show me to new people, Hottest groups, Heat, HOTTEST, GROWING, People rows, Same competitive level players, % even, New in Rakieta, Same vibe players, Vibe %, Good match, Fresh, Gap, Rest, On screen… |
 | **`backend/CONTEXT.md`** | Backend technical vocab only | event-sourced aggregate, outbox, event store, port/adapter, UoW… |
 | **`frontend_player/CONTEXT.md`** | Player-app technical vocab only | feature, use-case, mapper, wire type vs DTO, screen, secure store, query/mutation, presentation module, copy deck… |
 | **`frontend_club/CONTEXT.md`** | Club-website technical vocab only | server layer, cookie session, recovery cookie, single flight, server action, view model, stub backend… |
-| **`frontend_public/CONTEXT.md`** | Public-site technical vocab only | dead link, untrusted route input, preview tags, preview image, tile, link state, setting by link, the way in, Open in Raketa, app-link files, stub backend… |
+| **`frontend_public/CONTEXT.md`** | Public-site technical vocab only | dead link, untrusted route input, preview tags, preview image, tile, link state, setting by link, the way in, Open in Rakieta, app-link files, stub backend… |
 
 An app `CONTEXT.md` must **never redefine** a domain term — it points back to the root
 glossary. Three words collide across that line and are settled at the root: the app's

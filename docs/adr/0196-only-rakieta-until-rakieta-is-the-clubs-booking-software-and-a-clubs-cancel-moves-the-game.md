@@ -1,4 +1,4 @@
-# ADR-0196 — Only Raketa until Raketa is the club's booking software, and a club's cancel moves the game when nothing changes
+# ADR-0196 — Only Rakieta until Rakieta is the club's booking software, and a club's cancel moves the game when nothing changes
 
 - **Status:** Accepted — **its §3's *an official group stays at its home club*, and §1's *What
   stays*' *the official group's other clubs' courts*, amended 2026-11-06 by
@@ -9,7 +9,7 @@
   whenever its club has no free court at that hour and the switch is on.
 - **Date:** 2026-10-12
 - **Amends [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)** in six places:
-  - **§3's three ways of working.** **Only Raketa is the one way** until Raketa is the club's
+  - **§3's three ways of working.** **Only Rakieta is the one way** until Rakieta is the club's
     booking software. *Instant* and *On request* are removed, with the choice itself (§1).
   - **§2's book-by.** It is **always the release time**. *The start minus its minimum notice* goes
     with the minimum notice (§1).
@@ -44,7 +44,7 @@
   them down*, which the On request build (#543) wrote for a refusal and the club's bookings build
   (#547) applied to a cancel (§3).
 - **Replaces** PRD [#530](https://github.com/Raketa02/Raketa/issues/530)'s out-of-scope line *a live
-  link to a club's own booking system — the Instant way, automated, later*. **Raketa will become the
+  link to a club's own booking system — the Instant way, automated, later*. **Rakieta will become the
   club's booking software** instead, and a later ADR decides its shape (§1).
 - Decided in the grilling of story S-01E's findings F-REQUEST-3.1, F-REQUEST-23.1 and
   F-REQUEST-22.1, with F-REQUEST-44.1 and 45.1, on 2026-10-12, and confirmed by the product owner
@@ -73,9 +73,9 @@ and Marta starts the WhatsApp round again. The desk, for its part, must watch a 
 because every request has a countdown measured in minutes.
 
 **Instant asks the desk to keep two calendars true by hand, in both directions, for ever.** Bonarka
-Arena charges 160 zł a weekday court-hour and sells the same hours at its desk and on Raketa. It
-must close in Raketa every hour it sells by phone, at the desk or in its own system, and type every
-Raketa game into its own system. One missed entry is a double booking, the club cancels, and four
+Arena charges 160 zł a weekday court-hour and sells the same hours at its desk and on Rakieta. It
+must close in Rakieta every hour it sells by phone, at the desk or in its own system, and type every
+Rakieta game into its own system. One missed entry is a double booking, the club cancels, and four
 players lose their game.
 
 **The market does neither.** Research of 6 and 12 October 2026, read from the platforms' own help
@@ -104,11 +104,11 @@ pages, terms and interface text:
   by software, *"do automatycznego lub ręcznego pobierania fragmentów lub całości strony"*, or for
   *"data miningu', 'parsowania'"* ([regulamin §7](https://tenis4u.pl/regulamin/)), and its own player
   app already carries *"Otwarte sparingi"* and *"Rezerwacje współdzielone"*: it is building what
-  Raketa builds.
+  Rakieta builds.
 
-So the product owner decided that **Raketa will become the club's booking software**, the one
+So the product owner decided that **Rakieta will become the club's booking software**, the one
 calendar for the desk, the phone, walk-ins, season bookings, players' own bookings and the Games
-deck. That work gets its own grilling. Until it ships, **Only Raketa**, where the club hands Raketa a
+deck. That work gets its own grilling. Until it ships, **Only Rakieta**, where the club hands Rakieta a
 block of hours, is the one way that works without the desk.
 
 **A club's cancel threw a game away even when another court was free.** On Thursday at 15:00 the
@@ -132,11 +132,11 @@ Considered and rejected:
 - **Keep Instant, with a one-click close for an hour sold at the desk.** It is still two calendars
   kept true by hand, for ever, and one missed click is four players' cancelled game. Nobody in the
   market relies on it.
-- **Read a club's own system for its free hours**, or write Raketa's games into it. No Kraków system
+- **Read a club's own system for its free hours**, or write Rakieta's games into it. No Kraków system
   offers a way, tenis4U's terms forbid reading its site, and a vendor building open sparring of its
   own has every reason to refuse a deal. A link of that kind is out of scope, and is not a path
-  Raketa controls.
-- **A release lead in hours, down to 2 hours,** so that a club keeps Raketa's hours for Raketa until
+  Rakieta controls.
+- **A release lead in hours, down to 2 hours,** so that a club keeps Rakieta's hours for Rakieta until
   shortly before the game and a game for tonight can still fill. It is a one-line change if
   last-minute games matter more. The range stays as decided (call 1, §7).
 - **Move a cancelled game to any free court, or to another club or hour, without asking.** A court of
@@ -153,11 +153,11 @@ Considered and rejected:
 
 ## Decision
 
-### 1. One way of working: Only Raketa, until Raketa is the club's booking software
+### 1. One way of working: Only Rakieta, until Rakieta is the club's booking software
 
-**Only Raketa is the one way.** A club hands Raketa a block of hours: the courts and hours it offers,
-which Raketa sells alone until the **release lead** before each game. After that, unsold hours go
-back to the club. **Raketa becomes the club's booking software** later; a later ADR decides its
+**Only Rakieta is the one way.** A club hands Rakieta a block of hours: the courts and hours it offers,
+which Rakieta sells alone until the **release lead** before each game. After that, unsold hours go
+back to the club. **Rakieta becomes the club's booking software** later; a later ADR decides its
 shape, and its features and business model get their own grilling.
 
 **What goes**, everywhere: the club website, the player app, the backend, the test console, the seed
@@ -193,9 +193,9 @@ and these documents.
   cancellation*). Only a club whose cut-off is longer than its release lead still deals one.
 - **Setup is four steps**: connect payments, add courts, set hours and prices, and check the
   settings. A club is **live** when the four are done.
-- **Raketa settings** are the release lead, the cut-off, other clubs' courts for the club's groups,
+- **Rakieta settings** are the release lead, the cut-off, other clubs' courts for the club's groups,
   and the pause.
-- **The Overview, once live,** says the club is live on Raketa and links to today's Bookings (call
+- **The Overview, once live,** says the club is live on Rakieta and links to today's Bookings (call
   13). The statistics stay out of scope.
 - **The payment wait is the fill's alone.** A player whose card is refused when their game fills
   still has their **time to fix the card** before the cut-off, or **time to pay** after it, and the
@@ -215,7 +215,7 @@ and these documents.
   *(Amended 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §7: the official group's other
   clubs' courts are read hour by hour, and the switch is on by default.)*
 
-**Every seeded club works Only Raketa** (call 16). Each keeps a release lead that leaves its seeded
+**Every seeded club works Only Rakieta** (call 16). Each keeps a release lead that leaves its seeded
 games fillable, and at least one has indoor and outdoor courts of one sport at the same hours.
 
 **A clean cut** (call 15). The removed events, fields and values leave the code without decoders.
@@ -231,7 +231,7 @@ notices' *until* column and the *club cancelled* flag stay, because other featur
 
 ### 2. A club's cancel is absorbed by a free court of the same club when nothing changes
 
-When a club cancels a booked game, Raketa **first looks at the same club** for another court that is
+When a club cancels a booked game, Rakieta **first looks at the same club** for another court that is
 free and has all of these:
 
 - the same **sport**, **day** and **hour**;
@@ -369,14 +369,14 @@ The games test console (ADR-0194) follows:
 - **Goes:** the *needs her yes at an On request club* situation; the Accept and Refuse presses; the
   request-timeout job's *Run it now*; the board's *club answer due* column; the club pane's *confirms
   each game*, the game pane's *waiting for the club* and the booking pane's *answer by*.
-- **The hours finder** loses its *on request* filter. The situations that used it find Only Raketa
+- **The hours finder** loses its *on request* filter. The situations that used it find Only Rakieta
   hours instead.
 - **Comes**, acting as a club: a cancel with a reason, which moves the game when a court absorbs it;
   *Cancel the game anyway*; and a move to a chosen court.
 - Its rules stand: it acts only as seed accounts, every press runs the club's own use case, and it
   writes history, never time. Its guard test still fails a registered job with no press.
 
-The seed changes every club to Only Raketa: Kazimierz Padel and Prądnik Tennis (On request), and
+The seed changes every club to Only Rakieta: Kazimierz Padel and Prądnik Tennis (On request), and
 Ogrody 33, Bonarka Arena, Nowa Huta Squash and the other Instant clubs. Marta's game at Kazimierz
 Padel is booked when it fills. The seed's own assertions that all three ways are seeded go. Seeding
 stays fixture-only, through the real use cases (ADR-0029).
@@ -408,7 +408,7 @@ each is marked *a call* where it stands: in the mechanics, or, for the store and
 14. ***Double booking* stays** as a cancel reason (§1).
 15. **A clean cut**, with the local store reset and a migration that drops only what requests alone
     used (§1).
-16. **Every seeded club works Only Raketa**, with a release lead that keeps its seeded games
+16. **Every seeded club works Only Rakieta**, with a release lead that keeps its seeded games
     fillable, and at least one club has indoor and outdoor courts of one sport at the same hours
     (§6).
 

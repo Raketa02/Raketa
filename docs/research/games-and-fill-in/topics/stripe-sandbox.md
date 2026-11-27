@@ -1,6 +1,6 @@
 # Stripe sandbox — what it actually holds
 
-What the Raketa sandbox holds on 2026-10-19, read through the two Stripe servers after running the
+What the Rakieta sandbox holds on 2026-10-19, read through the two Stripe servers after running the
 provider contract tests against it, compared with what the code at `9ab0ea5b` expects. Every
 `[MEASURED]` line names the object, the server it was read through (`stripe` = the platform,
 `stripe-club` = the test club's connected account) and the date. Amounts are in złoty; Stripe
@@ -13,10 +13,10 @@ write tool was used.
 
 ## 1. Mode
 
-### The platform server is the Raketa sandbox, in test mode
+### The platform server is the Rakieta sandbox, in test mode
 
 [MEASURED] `stripe` · `list_available_accounts_or_orgs` → one account, `acct_1US89K5y1DB8chHb`,
-"Raketa sandbox", `livemode: false` · 2026-10-19.
+"Rakieta sandbox", `livemode: false` · 2026-10-19.
 
 ### The seller server is the test club's account, in test mode
 
@@ -66,7 +66,7 @@ fake (`:817-821`), so the skip does not test its own stated condition. See *Diff
 
 [MEASURED] `stripe` · `GET /v1/customers?created[gte]=1792407700` → 26 customers made by the run,
 `cus_VTAgWG7DcHmZqh` … `cus_VTAi7A6VcGRw6Q`; each has `email: null`, `name: null`, `phone: null`,
-`test_clock: null`, and `metadata.raketa_player_id` only · 2026-10-19. Matches
+`test_clock: null`, and `metadata.rakieta_player_id` only · 2026-10-19. Matches
 `backend/app/modules/payments/infrastructure/stripe_payments.py:192-201` ("Nothing about the person
 but their id").
 
@@ -231,7 +231,7 @@ version. Stripe uses that version to structure the event payloads it sends to th
 display name "Robert Club"), `charges_enabled: true`, `payouts_enabled: true`,
 `details_submitted: true`, requirements and future requirements empty, `controller.fees.payer:
 account`, `controller.losses.payments: stripe`, `controller.requirement_collection: stripe`,
-`controller.stripe_dashboard.type: full`, `metadata.raketa_club_id:
+`controller.stripe_dashboard.type: full`, `metadata.rakieta_club_id:
 9b98e746-368a-4a9f-b3ee-3efc83f1900a` (opened by the product's `open_club_account`, then
 onboarded by hand). `GET /v2/core/accounts/acct_1US95f5y1DMwE3zY?include=defaults,requirements`:
 `applied_configurations: ["merchant"]`, `dashboard: full`, `defaults.currency: pln`,
@@ -369,4 +369,4 @@ requests only `card_payments` (`stripe_payments.py:337-341`), creates every paym
 `payment_method_types: ["card"]`, and says BLIK "waits on Stripe (open item O1)" (`:211-212`). The
 onboarded club holds ten active capabilities, `blik_payments` among them. The capability does not
 answer O1 (saving BLIK for a later off-session hold), but the club's own full Dashboard can already
-take BLIK, Klarna and others outside Raketa.
+take BLIK, Klarna and others outside Rakieta.

@@ -90,7 +90,7 @@ a migration or a seed run — not only for a process serving HTTP.
 | club | any of `APP_ENV`, `API_URL`, `SESSION_SECRET`, `MAP_TILE_URL`, `MAP_START` or `GEOCODER_URL` missing, blank or malformed | `src/instrumentation.ts` validates them before the server takes a request and **exits** naming each. Next alone would log the error and serve 500s. `SESSION_SECRET` is at least 32 characters, because iron-session refuses a shorter one at the first seal — a refused sign-in instead of a refused start. |
 | club | a deployed `MAP_TILE_URL` that is not `https://` | The browser fetches the tiles. The scheme rule, below. |
 | public | any of `APP_ENV`, `API_URL`, `PUBLIC_SITE_URL`, `APP_STORE_URL`, `GOOGLE_PLAY_URL`, `APP_SCHEME`, `APPLE_TEAM_ID`, `IOS_BUNDLE_ID`, `ANDROID_PACKAGE` or `ANDROID_CERT_FINGERPRINTS` missing, blank or malformed | The same exit at start, for the same reason. The last four are what the app-link files are made from, so a malformed one would publish an association no phone accepts. |
-| public | an `APP_SCHEME` that is a web or script scheme (`http`, `https`, `javascript`, `data`, `vbscript`, `file`, `blob`) | *Open in Raketa* goes to `<APP_SCHEME>://<route>`, and from one of those it would open a page or run a script instead of the app. |
+| public | an `APP_SCHEME` that is a web or script scheme (`http`, `https`, `javascript`, `data`, `vbscript`, `file`, `blob`) | *Open in Rakieta* goes to `<APP_SCHEME>://<route>`, and from one of those it would open a page or run a script instead of the app. |
 | public | a deployed `PUBLIC_SITE_URL`, `APP_STORE_URL` or `GOOGLE_PLAY_URL` that is not `https://` | A browser or a messenger opens each. The scheme rule, below. |
 
 **Two constraints on every refusal message, in all four apps.** It **names the offending
@@ -196,7 +196,7 @@ where it says they are, so three settings have to agree across apps.
 | --- | --- | --- | --- |
 | `PUBLIC_SITE_URL` | backend **and** `frontend_public`, the same value in both | every group link, `<PUBLIC_SITE_URL>/join/<code>`; the invitation link, `/invite/<token>`; a player's or an administrator's reset link, `/reset/<token>`. The public site makes its preview's image and address absolute from its own copy, so a messenger fetches from the address people reach. | `http://localhost:3001`, the public site's `pnpm dev` |
 | `CLUB_WEBSITE_URL` | backend | a club's reset link, `<CLUB_WEBSITE_URL>/reset/<token>`: the club website's own *Set a new password* page | `http://localhost:3000`, the club website's `pnpm dev` |
-| `APP_SCHEME` | backend **and** `frontend_public`, equal to the scheme `frontend_player`'s `app.config.ts` declares | the button in the email an existing account is invited by, `<APP_SCHEME>://`; the public site's *Open in Raketa*, `<APP_SCHEME>://<route>` | `raketa`, at every environment |
+| `APP_SCHEME` | backend **and** `frontend_public`, equal to the scheme `frontend_player`'s `app.config.ts` declares | the button in the email an existing account is invited by, `<APP_SCHEME>://`; the public site's *Open in Rakieta*, `<APP_SCHEME>://<route>` | `rakieta`, at every environment |
 
 **Changing `PUBLIC_SITE_URL` re-addresses every link served from then on, and none already
 posted.** A group link pasted into WhatsApp keeps the domain it was printed with, which is why
@@ -481,7 +481,7 @@ The day a domain is registered, this is a configuration task rather than a redes
      natively, since it becomes iOS's associated domain and Android's verified intent filter.
      The Android fingerprints are the release key's, plus the store's re-signing key once there
      is one.
-   - **Store URLs.** `APP_STORE_URL` and `GOOGLE_PLAY_URL` are Raketa's listings, which exist
+   - **Store URLs.** `APP_STORE_URL` and `GOOGLE_PLAY_URL` are Rakieta's listings, which exist
      only once the app is published.
    - **A production email sender**: a relay that sends from an address on the domain, set in
      step 3. Deliverability arrives with it: SPF, DKIM, DMARC, bounces, complaints and a

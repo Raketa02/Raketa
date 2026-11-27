@@ -1,4 +1,4 @@
-# Raketa
+# Rakieta
 
 A racket-sport platform. **Today it does one thing end to end:** a player signs up, signs
 in, and answers a questionnaire that gives them a Skill rating per sport.

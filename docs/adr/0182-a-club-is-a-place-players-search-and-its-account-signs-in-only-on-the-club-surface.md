@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-25
-- **§8's *a club isn't a court* superseded 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: a club lists courts, hours and prices and sells them through Raketa in one of three ways of working. A plan's *where* in the Classic play loop is unchanged.
+- **§8's *a club isn't a court* superseded 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: a club lists courts, hours and prices and sells them through Rakieta in one of three ways of working. A plan's *where* in the Classic play loop is unchanged.
 - **Answers [ADR-0002](0002-event-sourced-user-aggregate.md)'s per-context question for Clubs:**
   *event-sourced*, with a synchronous search projection.
 - **Narrows ADR-0144's** *"there
@@ -35,7 +35,7 @@ was planned under it. The glossary has had no club vocabulary since.
 PRD #500 needs one, for three reasons:
 
 - **A group has a home club, and it's required** ([ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)).
-  A player creating a group searches every club in Raketa by name or district, nearest first. A
+  A player creating a group searches every club in Rakieta by name or district, nearest first. A
   player joining one searches the same clubs and sees their groups inside them.
 - **A club signs up on its own website**, invites the people who run its WhatsApp groups
   ([ADR-0184](0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)),
@@ -54,7 +54,7 @@ Rejected on the way:
   account, reachable on the player surface, and it would collide with the `ADMIN` authority
   that already means something else. It would also force the email to be unique across clubs and
   players, which is false: a café owner's personal address can also be the club's.
-- **Clubs as catalog rows loaded by an admin.** Raketa would then have to know every club before
+- **Clubs as catalog rows loaded by an admin.** Rakieta would then have to know every club before
   the club did. That contradicts *a club exists because it signed up*, and it leaves no history of
   who changed what.
 - **The club's credentials on the club's own stream.** It's simpler, and it puts a password hash
@@ -157,7 +157,7 @@ own cost, and it gets its own record.
 
 - A group can require a home club, and search has one table to read, in one transaction's
   freshness.
-- The desk owns its own facts and fixes its own mistakes. Nobody at Raketa is on the path.
+- The desk owns its own facts and fixes its own mistakes. Nobody at Rakieta is on the path.
 - The kernel stays free of tenant data. The club data now has a context that owns it.
 - The club account and the `User` never meet. A bug in one sign-in can't hand anyone the other.
 

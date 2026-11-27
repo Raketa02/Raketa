@@ -116,7 +116,7 @@ not a source.
   Only the email from a real booking settles it — read 2026-10-09
 - *Reading:* Playtomic describes its confirmation email as a summary: who, when, where, what was paid and how to reach
   the club, plus whatever the club writes. Leaving words reach the email only if a club writes them into its own
-  message. Nothing found shows Playtomic's email giving a leave-by time or a sum back. Raketa's booking email names
+  message. Nothing found shows Playtomic's email giving a leave-by time or a sum back. Rakieta's booking email names
   both, so on this evidence it is ahead. An inbox copy would turn this into a certainty.
 
 ---

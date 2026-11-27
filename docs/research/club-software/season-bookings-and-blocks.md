@@ -1,8 +1,8 @@
 # Season bookings, blocks and closures — how rivals and Kraków clubs run them
 
-Research for areas 4 (season and fixed bookings) and 5 (blocks and closures) of the planning map *Raketa becomes
+Research for areas 4 (season and fixed bookings) and 5 (blocks and closures) of the planning map *Rakieta becomes
 the club's booking software* (decided 2026-10-12: one calendar for desk, phone, walk-ins, season bookings, online
-bookings and the Games deck; a game the club cancels is moved by Raketa to another free court at the same club,
+bookings and the Games deck; a game the club cancels is moved by Rakieta to another free court at the same club,
 same day, hour and price).
 
 **Extends** [`integration.md`](integration.md) (§5 tenis4U close up),
@@ -14,7 +14,7 @@ same day, hour and price).
 their dates; everything else was read **2026-10-12**.
 
 **This file decides nothing.** Each feature below is for the club-software grilling to mark *Build at launch ·
-Build later · Leave out · Ask a real club*. Nothing here estimates Raketa's build cost.
+Build later · Leave out · Ask a real club*. Nothing here estimates Rakieta's build cost.
 
 **Sources.** tenis4U's interface text comes from the JavaScript its public demo panel
 ([test-panel.tenis4u.pl](https://test-panel.tenis4u.pl/), bundle `main.2b865c996e568707.js`) and its player web app
@@ -753,7 +753,7 @@ giving "wyłącznie dla kontrahenta konsumenta jednostronne uprawnienie do zmian
 *Reading:* whether a court number is an "istotna cecha" is untested here; the two Kraków rules name a reason
 (comparable conditions) for the change.
 
-**What it means for the player app.** *Reading:* Raketa's auto-move of 2026-10-12 would be the only automatic one
+**What it means for the player app.** *Reading:* Rakieta's auto-move of 2026-10-12 would be the only automatic one
 found; the nearest models are CourtReserve's per-booking reschedule and the Kraków rules' "inny kort lub termin".
 
 **Market signal.** Differentiator — no rival moves bookings out of a block; refusing (MATCHi) and choosing

@@ -31,7 +31,7 @@ didn't create.
 to them in the app, on a sheet over whichever profile they are in (#518). That sheet reads
 `/users/me`, which the app re-reads only when it comes back to the foreground. So anything new
 appeared only after a background-and-return or a relaunch. The QA walk is full of *"wait 30
-seconds, press Home, open Raketa again"* for exactly that reason.
+seconds, press Home, open Rakieta again"* for exactly that reason.
 
 Considered and rejected:
 
@@ -94,7 +94,7 @@ dismiss* would throw away the one thing the person most likely wants next, which
 - **It is mounted where the invitation sheet is**: over the player's app and over every
   administrator area. **It waits while an invitation is on offer**, because that sheet asks for a
   decision and this one only tells.
-- **The club website's *Hand over* question says so**: *"Raketa tells [name] in the app."*
+- **The club website's *Hand over* question says so**: *"Rakieta tells [name] in the app."*
 
 ### 3. The app follows the account while it administers a club
 

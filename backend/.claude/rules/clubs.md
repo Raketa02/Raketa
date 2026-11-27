@@ -46,7 +46,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   payments account (#537); **no projection of courts is written beside it** — the one row is
   which club a payments account is. Five things are load-bearing. **One way of working: Only
   Raketa, until Raketa is the club's booking software**
-  ([ADR-0196](../../../docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+  ([ADR-0196](../../../docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
   §1, #670): the club hands Raketa its Raketa hours, which Raketa sells alone until each
   one's **release time** — the release lead before it, 1–13 days, 3 by default — so the
   **book-by is always the release time** and no game fills later than a day before its

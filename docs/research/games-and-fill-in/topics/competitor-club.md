@@ -344,9 +344,9 @@ account, a rival vendor's claim included · **[ABSENT]** looked for, not found, 
 
 ---
 
-## Against Raketa's club side (summary, no new facts)
+## Against Rakieta's club side (summary, no new facts)
 
-Raketa's side as the spec and `state.json` state it; each line points to a heading above.
+Rakieta's side as the spec and `state.json` state it; each line points to a heading above.
 
 - **On request:** none at Playtomic, every booking is instant → *No booking that waits for the club to confirm*
 - **Minimum notice, timed release:** neither → *No minimum notice*, *No timed release*

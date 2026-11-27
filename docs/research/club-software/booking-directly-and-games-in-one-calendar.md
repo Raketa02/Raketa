@@ -1,6 +1,6 @@
 # Players booking a court directly, and the Games deck in one calendar
 
-Research for the club-software grilling ("Raketa becomes the club's booking software"), areas 2 and 3: what
+Research for the club-software grilling ("Rakieta becomes the club's booking software"), areas 2 and 3: what
 rivals let a player do when booking a court directly (in their app, on the club's website, or with no app at
 all), and how rivals let open matches and private bookings share one calendar, so each feature can be
 decided Build at launch · Build later · Leave out · Ask a real club.
@@ -15,7 +15,7 @@ decided Build at launch · Build later · Leave out · Ask a real club.
 [`topics/gaps-COURTS.md`](../games-and-fill-in/topics/gaps-COURTS.md). Facts carried from there say
 "carried" and keep their read date; everything else was read **2026-10-12**.
 
-**This file decides nothing.** It does not estimate what anything would cost Raketa to build.
+**This file decides nothing.** It does not estimate what anything would cost Rakieta to build.
 
 **Sources.** Playtomic's and MATCHi's help centres were read through their public Zendesk API (the HTML
 answers 403); the dates in brackets are each article's own "updated" date. Playmore's and tenis4U's interface
@@ -31,9 +31,9 @@ booked or paid, and no endpoint was called.
 one person's account · `[ABSENT]` looked for and not found, saying where. Lines marked *reading* are
 inferences, not sources.
 
-**Raketa today, for comparison.** The player app books a court only through the Games deck: a game is one
+**Rakieta today, for comparison.** The player app books a court only through the Games deck: a game is one
 hour, up to 14 days ahead, the last yes books the court at once and holds each share on the card until the
-club's cut-off (default 24 h). A club hands Raketa a weekly block ("Only Raketa") released back N days before.
+club's cut-off (default 24 h). A club hands Rakieta a weekly block ("Only Rakieta") released back N days before.
 
 ## Read this first
 
@@ -50,7 +50,7 @@ club's cut-off (default 24 h). A club hands Raketa a weekly block ("Only Raketa"
   per-day limit, active-bookings limit, minimum length. Kraków's Playmore squash clubs all run 14 days ahead
   and 24 h cancellation (§2.4, §2.7, §2.8).
 - **Members booking earlier is standard in club software**, and MATCHi has the closest analogue yet to
-  Raketa's release lead: a *booking restriction* that keeps chosen hours for a group of customers "until
+  Rakieta's release lead: a *booking restriction* that keeps chosen hours for a group of customers "until
   72 hours before the slot starts", after which "anyone can book the slot" (§2.10, §3.11).
 - **People without the app reach the club through a link or a widget.** Playtomic (iframe), MATCHi (booking
   widget), Eversports (widget) and Playmore (club-branded booking page) offer one; tenis4U and kluby.org only a
@@ -112,8 +112,8 @@ Atras: "osobiście w recepcji klubu lub za pomocą systemu rezerwacji on-line po
 oraz za pomocą aplikacji" ([regulamin](https://www.atrassquash.pl/regulamin/)). Squash4You adds "telefonicznie"
 ([regulamin 5a](https://www.squash4you.pl/regulamin)).
 
-**What it means for the player app.** *Reading:* this is the one booking path every rival has and Raketa does
-not; without it a Raketa club's players need a second app to book a court for four friends.
+**What it means for the player app.** *Reading:* this is the one booking path every rival has and Rakieta does
+not; without it a Rakieta club's players need a second app to book a court for four friends.
 
 **Market signal.** Table stakes.
 
@@ -161,7 +161,7 @@ it); at Playtomic a desk must mark at-the-club shares paid within 2 h of the end
 (Fame Sport, carried); Squash4You charges "osoba na którą widnieje rezerwacja"
 ([regulamin 5d](https://www.squash4you.pl/regulamin)).
 
-**What it means for the player app.** *Reading:* Raketa's deck already splits a court four ways with each
+**What it means for the player app.** *Reading:* Rakieta's deck already splits a court four ways with each
 share held until the cut-off; a direct booking could reuse the share, but rivals all name one person who
 answers for the whole court, which the deck does not.
 
@@ -183,7 +183,7 @@ answers for the whole court, which the deck does not.
 **What a Kraków desk does today.** **[ABSENT]** in the regulaminy read (Garden Padel, Fame Sport, Atras,
 Squash4You): none mentions inviting.
 
-**What it means for the player app.** *Reading:* Raketa's group already is the invite list; a direct booking
+**What it means for the player app.** *Reading:* Rakieta's group already is the invite list; a direct booking
 would need a way to name the three others, from the group or by link.
 
 **Market signal.** Table stakes.
@@ -218,7 +218,7 @@ withdrawal "od umowy zawartej przez Internet", lost once the service is used
 ([regulamin](https://www.atrassquash.pl/regulamin/)) — more than the law requires (art. 38 pkt 12 excludes
 dated sport services, carried).
 
-**What it means for the player app.** *Reading:* Raketa's cut-off (default 24 h) already matches the city; a
+**What it means for the player app.** *Reading:* Rakieta's cut-off (default 24 h) already matches the city; a
 direct booking would need the same number shown before paying.
 
 **Market signal.** Table stakes; a partial late refund (MATCHi) is rare.
@@ -256,8 +256,8 @@ do korzystania z kortów jest opłacenie rezerwacji przed wejściem na kort"
 ([3](https://www.squash4you.pl/regulamin)); Paolo prices online 5 zł lower ("Rezerwuj online — zawsze 5 zł
 taniej", [page data](https://playmore.pl/klub/paolo-squash-club/)); Atras 10 % lower (carried).
 
-**What it means for the player app.** *Reading:* Raketa takes every share online; pay-at-the-club for a
-direct booking would be the first booking Raketa does not hold money for.
+**What it means for the player app.** *Reading:* Rakieta takes every share online; pay-at-the-club for a
+direct booking would be the first booking Rakieta does not hold money for.
 
 **Market signal.** Table stakes in Poland (every Polish system offers both, club's choice).
 
@@ -279,7 +279,7 @@ direct booking would be the first booking Raketa does not hold money for.
 **The desk's day with it.** **[POLICY]** Playmore's pitch: unpaid bookings "znikają z grafiku" and at Vera
 Sport fell "z ponad 200" a month ([dla klubów squasha](https://join.playmore.pl/dla-klubow-squasha/)).
 
-**What it means for the player app.** *Reading:* Raketa never has an unpaid player booking (a share is held
+**What it means for the player app.** *Reading:* Rakieta never has an unpaid player booking (a share is held
 or the game is not booked); a lapse rule matters only if pay-later or pay-at-the-club is allowed.
 
 **Market signal.** Table stakes in Poland.
@@ -304,7 +304,7 @@ regulamin: "Pojedynczej rezerwacji można dokonywać tylko i wyłącznie na 14 d
 ([5g](https://www.squash4you.pl/regulamin)). **[ABSENT]** a days-ahead figure in the regulaminy of Garden Padel
 and Fame Sport; Padel House's and Bajada's could not be found.
 
-**What it means for the player app.** *Reading:* Raketa's 14 days equals the Kraków squash clubs' window;
+**What it means for the player app.** *Reading:* Rakieta's 14 days equals the Kraków squash clubs' window;
 a club that sells 30 days ahead to the desk would see the deck stop at 14.
 
 **Market signal.** Table stakes.
@@ -382,7 +382,7 @@ prices exist (carried, [gaps-COURTS §7](../games-and-fill-in/topics/gaps-COURTS
 
 **What it means for the player app.** *Reading:* membership windows collide with open play at Playtomic, which
 refuses them for open matches "because the match needs to be available for all players to join"
-([player help, 2026-09-30](https://playerhelp.playtomic.com/hc/en-gb/articles/47312414385169)); a Raketa group's
+([player help, 2026-09-30](https://playerhelp.playtomic.com/hc/en-gb/articles/47312414385169)); a Rakieta group's
 game is private to the group, so that reason does not carry over.
 
 **Market signal.** Table stakes in club software; MATCHi's expiring slot restriction is rare.
@@ -399,7 +399,7 @@ lokalizacja nie przyjmuje jeszcze rezerwacji przez internet … Kort zarezerwuje
 ([§4](https://gardenpadel.pl/regulamin/)); Fame Sport "może przeznaczyć określone korty lub godziny" for its
 own classes and events ([I.11](https://famesport.pl/wp-content/uploads/2026/08/Regulamin_Fame_Sport_Club_2026_Aktualny.pdf)).
 
-**What it means for the player app.** *Reading:* "Only Raketa" is the inverse switch: hours sold only through
+**What it means for the player app.** *Reading:* "Only Rakieta" is the inverse switch: hours sold only through
 the deck. One calendar needs both, per court and per hour.
 
 **Market signal.** Table stakes.
@@ -420,7 +420,7 @@ the deck. One calendar needs both, per court and per hour.
 **The desk's day with it.** *Reading:* the phone is how a Polish desk finds a player; a verified one lets a
 phone booking and an app account be the same person.
 
-**What it means for the player app.** *Reading:* Raketa signs up by email today; every Polish rival keys the
+**What it means for the player app.** *Reading:* Rakieta signs up by email today; every Polish rival keys the
 player on a verified phone.
 
 **Market signal.** Table stakes in Poland.
@@ -459,7 +459,7 @@ recepcję klubu", "Otwórz formularz online", "Pokaż numer telefonu" ([strings]
 **What a Kraków desk does today.** Garden Padel's and Fame Sport's "Rezerwacje" buttons link to tenis4U (carried).
 
 **What it means for the player app.** *Reading:* the link opens a web page, so a link-only path still needs
-Raketa to book on the web, not only in the app.
+Rakieta to book on the web, not only in the app.
 
 **Market signal.** Table stakes.
 
@@ -525,7 +525,7 @@ number plus a code, which is also an account.
 without Maps scraping).
 
 **What it means for the player app.** *Reading:* a "Book" button on Google is a plain link a club adds
-itself; becoming a Reserve with Google partner would put Raketa ahead of every court platform read.
+itself; becoming a Reserve with Google partner would put Rakieta ahead of every court platform read.
 
 **Market signal.** Booking link: table stakes and free. Reserve with Google: absent among court platforms.
 
@@ -577,7 +577,7 @@ tenis4U's desk sees and toggles it on the booking: "Publiczny sparing włączony
 sparingi", or any Kraków Playmore club has *Gry otwarte* on (Playmore's open-games pages render only in the
 browser; club page data carries no flag).
 
-**What it means for the player app.** *Reading:* Raketa sits with Playmore and MATCHi — nothing is booked until
+**What it means for the player app.** *Reading:* Rakieta sits with Playmore and MATCHi — nothing is booked until
 the last yes, and then the court is booked at once — but nothing is held before that, so in one calendar
 the deck's proposals are like Playtomic's one-player matches: visible to players, invisible to the desk.
 
@@ -599,7 +599,7 @@ Playtomic and its copier only.
 - **[ABSENT]** A per-hour switch at Playtomic, MATCHi or tenis4U (help and strings above; tenis4U's panel shows
   only the per-booking public toggle and the shared-booking auto-cancel).
 
-**What it means for the player app.** *Reading:* Raketa's "Only Raketa" block is a per-hour switch already;
+**What it means for the player app.** *Reading:* Rakieta's "Only Rakieta" block is a per-hour switch already;
 Playmore is the only rival that lets the club say which hours open play may use.
 
 **Market signal.** Per sport: table stakes. Per hour: rare (Playmore).
@@ -618,7 +618,7 @@ Padel Mates sources above).
 ([dla klubów padla](https://join.playmore.pl/dla-klubow-padla/)).
 
 **What it means for the player app.** *Reading:* a per-player cap on deck games (removed in Q97) is the one
-cap rivals use; a club-funded off-peak price is a lever Raketa's club side has no equivalent for.
+cap rivals use; a club-funded off-peak price is a lever Rakieta's club side has no equivalent for.
 
 **Market signal.** Rare.
 
@@ -633,7 +633,7 @@ cap rivals use; a club-funded off-peak price is a lever Raketa's club side has n
   komplet mniej więcej 3 razy częściej"; under 24 h: "Mało czasu"
   ([strings](https://playmore.pl/assets/93jAIRDY.js)).
 
-**What it means for the player app.** *Reading:* Raketa deals 14 days ahead and has a cut-off; Playmore's
+**What it means for the player app.** *Reading:* Rakieta deals 14 days ahead and has a cut-off; Playmore's
 "too close to start" is the same idea applied at creation.
 
 **Market signal.** Window: table stakes. Minimum lead at creation: rare (Playmore).
@@ -644,7 +644,7 @@ cap rivals use; a club-funded off-peak price is a lever Raketa's club side has n
 Poland) one player holds it "until 48 hours before" (§3.1, carried). Playmore, MATCHi, tenis4U: one paying
 organiser holds it (§3.1).
 
-**What it means for the player app.** *Reading:* Raketa holds nothing until four (or two) say yes; it is the
+**What it means for the player app.** *Reading:* Rakieta holds nothing until four (or two) say yes; it is the
 strictest of all, and the only one where no player money is at risk before the game is full.
 
 **Market signal.** Differentiator either way; no common rule.
@@ -661,7 +661,7 @@ strictest of all, and the only one where no player money is at risk before the g
 - **[POLICY] tenis4U:** "Auto-anulowanie rezerwacji współdzielonych przed terminem"
   ([panel](https://panel.tenis4u.pl/main.333e76605ded56e6.js)); its unit is not shown.
 
-**What it means for the player app.** *Reading:* Raketa's club cut-off is the same lever as Playmore's.
+**What it means for the player app.** *Reading:* Rakieta's club cut-off is the same lever as Playmore's.
 
 **Market signal.** Table stakes where clubs run open play.
 
@@ -695,7 +695,7 @@ fencing hours (Playmore) or courts (Playtomic's unexplained field).
   dołącz … Jedna pełna gra jest lepsza niż dwie w połowie puste" ([strings](https://playmore.pl/assets/93jAIRDY.js)).
 - **[ABSENT]** A warning to a Playtomic desk booking over a gathering match (carried).
 
-**What it means for the player app.** *Reading:* at Raketa the race is between a proposal and anyone else
+**What it means for the player app.** *Reading:* at Rakieta the race is between a proposal and anyone else
 until the last yes, and the yes can fail at the last moment; Playtomic tells the loser by cancelling with a
 full refund, Playmore by refusing the slot before payment.
 
@@ -734,7 +734,7 @@ toggle, usable by the organiser and by the desk
 ([panel](https://panel.tenis4u.pl/main.333e76605ded56e6.js)).
 
 **What it means for the player app.** *Reading:* the reverse of the deck: a booked court looking for players.
-Raketa's Fill in (a freed seat offered on) is the nearest thing.
+Rakieta's Fill in (a freed seat offered on) is the nearest thing.
 
 **Market signal.** Table stakes among platforms with open play.
 
@@ -750,7 +750,7 @@ Hotel allotments, ClassPass SmartSpot, Urban Sports Club's aggregator cap and An
   a date range; "A restriction is automatically removed once a qualifying booking is made"; "Venue admins are
   never blocked"; "A restriction can never revert to 'restricted' once it's expired"
   ([Booking restrictions, 2026-09-08](https://matchi.zendesk.com/hc/en-gb/articles/34085754893469)).
-  - *Reading:* the same shape as Only Raketa + release lead, with a customer group in place of a channel, and
+  - *Reading:* the same shape as Only Rakieta + release lead, with a customer group in place of a channel, and
     the desk still able to book inside it.
 - **[POLICY] Playtomic's one-player hold** releases a match's court "until 48 hours before" in 20 countries
   (carried) — a release lead attached to one game rather than a block.

@@ -4,7 +4,7 @@ Digest of R-PAY-1 to 48 (PRD #530), 2026-10-08, from this folder's topics and si
 Cites: CO/CJ/CN/CC = `topics/competitor-organiser|joiner|newcomer|club.md`, PF = `topics/platforms.md`, LM = `topics/local-market.md`, CP = `topics/complaints.md`, SIT = `situations.md`, GP = `topics/gaps-PAY.md`; the part after # is the heading anchor.
 Competitor: Playtomic, no club in Kraków, no Polish method `LM#no-blik-no-przelewy24-no-polish-sport-cards`. Status quo: one booker prepays the club online or at the desk and collects shares by BLIK `LM#the-organiser-books-and-carries-the-court`.
 
-## 1. The club is the seller; Raketa takes no fee (R-PAY-1, 41)
+## 1. The club is the seller; Rakieta takes no fee (R-PAY-1, 41)
 
 - **Playtomic:** under its current model "payments are now processed directly between the player and your club", net of a per-contract commission `CC#nbm-the-club-sells-and-is-paid-weekly-by-payment-date-before-the-game` `CC#a-commission-on-every-online-payment-per-contract`
 - **Playtomic:** the player adds a fee on an open-match spot (20 %, 1,24–3,99 zł: 43,99 zł for a 40 zł spot), refunded if she leaves in time `CJ#the-polish-service-fee-on-an-open-match-spot`
@@ -120,7 +120,7 @@ Competitor: Playtomic, no club in Kraków, no Polish method `LM#no-blik-no-przel
 
 ## Gaps answered 2026-10-09 (after S-01)
 
-- **R-PAY-1.** [MEASURED] Of next fortnight's Mon–Thu 17:00–22:00 padel hours, already taken 3–13 days ahead: Padel House 100%, Fame Sport 79%, PADEL LOUNGE 61%, Bajada 48%, Garden Padel 46% (whole day 20–84%) — so outside Padel House a filled Raketa game is mostly a sale the club would not otherwise make — `topics/gaps-S-01.md#five-kraków-padel-clubs-how-much-of-the-next-two-weeks-weekday-hours-is-already-taken`. [DOCS] British clubs run near 85% at peak; [ABSENT] any Polish figure — `topics/gaps-S-01.md#published-occupancy-british-peak-hours-near-85-per-cent-nothing-for-poland`.
+- **R-PAY-1.** [MEASURED] Of next fortnight's Mon–Thu 17:00–22:00 padel hours, already taken 3–13 days ahead: Padel House 100%, Fame Sport 79%, PADEL LOUNGE 61%, Bajada 48%, Garden Padel 46% (whole day 20–84%) — so outside Padel House a filled Rakieta game is mostly a sale the club would not otherwise make — `topics/gaps-S-01.md#five-kraków-padel-clubs-how-much-of-the-next-two-weeks-weekday-hours-is-already-taken`. [DOCS] British clubs run near 85% at peak; [ABSENT] any Polish figure — `topics/gaps-S-01.md#published-occupancy-british-peak-hours-near-85-per-cent-nothing-for-poland`.
 
 ## Gaps answered 2026-10-10 (after the S-01B refresh)
 

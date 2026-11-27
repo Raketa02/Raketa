@@ -2,6 +2,7 @@
 
 - **Date:** 2026-11-23
 - **Source:** `splash_screen.md` (the brief) and `rakieta-splash-sequence.png` (the mock), both in this folder.
+- **Superseded in part 2026-11-27 by [ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md)**: the brand is **Rakieta**, everywhere. This log's notes on the two spellings (§2's brand rule, Q1 and §9's rule 1) keep the old spelling as a quote.
 - **Status:** every branch settled in a grilling session, Q1–Q21 over three rounds (the third on a launch with no connection), with every "settled unless you object" list confirmed. This file is the input for `to-spec` / `to-tickets`. Nothing has been written to the repo and no issue has been opened.
 - **Ground rules:**
   - **The brief leads on design.** Its timeline (times, squash percentages, letter timings, the 10 pt rise and overshoot, the 0.5 s fade) stands as written. This log changes only what the brief could not get right on every screen (§4) and what the repo forced a choice on (§2).
@@ -18,7 +19,7 @@ On every cold open, the first thing the player sees is a dark teal field with a 
 
 ## 2. What the investigation found
 
-- **The brand rule.** ADR-0187 §8, *"The brand is Raketa, everywhere"*, says *"The mocks' Rakieta is read as Raketa"*. `docs/specs/home-refactor/decisions.md` and `frontend_player/docs/features/auth.md` apply it. The launcher name is **Raketa** (`src/shared/config/appIdentity.ts`).
+- **The brand rule.** ADR-0187 §8, *"The brand is Raketa, everywhere"*, says *"The mocks' Rakieta is read as Raketa"*. `docs/specs/home-refactor/decisions.md` and `frontend_player/docs/features/auth.md` apply it. The launcher name is **Raketa** (`src/shared/config/appIdentity.ts`). *(Superseded 2026-11-27 by ADR-0211: the brand is Rakieta, everywhere.)*
 - **Startup today.** `src/shared/lib/bootstrap/BootstrapGate.tsx` calls `preventAutoHideAsync()` at module scope. It holds the native splash until `bootstrapApp` resolves:
   - The sequence is: reporting → config → focus/online → keychain → **session restore, which asks the server who this is** → install referrer (not awaited) → fonts.
   - The gate renders `null` while bootstrapping and hides the splash on the tree's first layout.
@@ -58,7 +59,7 @@ On every cold open, the first thing the player sees is a dark teal field with a 
   - **Rak** after the first landing: R 0.42 s, a 0.46 s, k 0.50 s.
   - **ie** after the second: i 1.00 s, e 1.04 s.
   - **ta** after the third: t 1.42 s, a 1.46 s.
-- This is a named exception to ADR-0187 §8 (see §9 below). Every other string, the launcher name and the startup failure screen stay **Raketa**. Nothing speaks the splash's word (ADR-0198).
+- This is a named exception to ADR-0187 §8 (see §9 below). Every other string, the launcher name and the startup failure screen stay **Raketa**. *(Superseded 2026-11-27 by ADR-0211: they say Rakieta too.)* Nothing speaks the splash's word (ADR-0198).
 
 ---
 
@@ -108,7 +109,7 @@ All values are in points. **W × H** is the full physical screen.
     - The one longer stretch is not new: a check answered with a 401 whose refresh then hangs, which takes the 15 s `request` budget. Today's native splash waits through it too.
   - "Laid out" means the screen is drawn with its own placeholders. It never means its data has arrived.
   - "The first screen" means the entry gate has **answered**: a destination, or one of its two unavailable screens. Its blank *pending* state never counts, because revealing it would be the blank frame the brief forbids.
-- **A startup failure is just the first screen.** Bad config ("Raketa could not start") and an unreachable server ("We couldn't pick up where you left off") are drawn underneath and revealed by the same fade.
+- **A startup failure is just the first screen.** Bad config ("Rakieta could not start") and an unreachable server ("We couldn't pick up where you left off") are drawn underneath and revealed by the same fade.
 - **Q17 — The first screen loads its own data under the splash, and nothing more.** The tree mounts under the splash the moment startup finishes, so Home's own requests start about 2 s before the reveal. No other tab is warmed, and the fade never waits for data.
 
 ---
@@ -158,7 +159,7 @@ All values are in points. **W × H** is the full physical screen.
 
 These four accepted rules are amended, not worked around:
 
-1. **ADR-0187 §8, "The brand is Raketa, everywhere".** The splash's drawn wordmark, **Rakieta**, becomes its one exception.
+1. **ADR-0187 §8, "The brand is Raketa, everywhere".** The splash's drawn wordmark, **Rakieta**, becomes its one exception. *(Superseded 2026-11-27 by ADR-0211: one spelling, Rakieta, and no exception.)*
 2. **`frontend_player/docs/architecture.md` Part 3 and `frontend_player/CONTEXT.md` "Splash gate".** These said that startup holds the native splash. Now startup is never held: the drawn splash covers it and fades on max(2.6 s, first screen laid out).
 3. **`frontend_player/docs/design-system.md` Part 16.** It gains a second dark surface, two fenced colours (`splashGroundCentre`, `splashGroundEdge`) and one fenced type role (`splashWord`). `theme.ts` changes in the same commit.
 4. **`frontend_player/docs/features/auth.md`, the launch paragraph (2026-11-07).** It said the check is sent with `networkMode: 'always'`. Now it is still sent that way, **unless the phone already reports no internet**, in which case it is not sent and the session is kept (Q20). `restoreSession.ts`'s doc comment changes with it.

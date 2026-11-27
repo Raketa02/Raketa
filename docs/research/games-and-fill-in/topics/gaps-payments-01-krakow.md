@@ -77,7 +77,7 @@ into their grid as named blocks (`gaps-S-01B.md#tenis4u-desks-already-type-booki
   clubs' grids, Playmore's directory code, kluby.org's terms and changelog (2014–2026), tenis4U's terms — read 2026-10-20
   - *Reading:* in Kraków the "outside platforms" that list these clubs (Playmore, PADO) do not hold hours of their own:
     they show tenis4U's grid and send the booker to it, so there is one calendar per club and nothing to keep apart.
-    A Raketa booking would be the first one not made in that calendar.
+    A Rakieta booking would be the first one not made in that calendar.
 
 ---
 
@@ -271,7 +271,7 @@ one free weekend hour in ten sold over a day (`gaps-S-02.md#over-the-last-day-ab
   matches, private, academy, leagues — no Poland), indoor against outdoor availability and prices, and no figure for how
   often an open match fills, when, or how fast a freed court resells. [Global Padel Report 2025 (PDF via Padel Addict)](https://www.padeladdict.com/wp-content/uploads/2025/07/PLAYTOMIC_GLOBAL-_PADEL_REPORT_2025.pdf) — read 2026-10-20
 - **[ABSENT]** Kraków's own late-fill and resale rates: still not found; what would answer them is unchanged (reads of a
-  club's grid and open games at 48, 24 and 2 hours before each start, or Raketa's own fills once live) — read 2026-10-20
+  club's grid and open games at 48, 24 and 2 hours before each start, or Rakieta's own fills once live) — read 2026-10-20
 
 ---
 

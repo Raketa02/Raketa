@@ -14,7 +14,7 @@
   ranking ladder. A rating exists to make matches balanced, not to be climbed."*
   ([Part 16](../specs/player-app/rakieta-player-app-documentation-v37.md)) and the You spec's
   *"Nothing on this platform ranks players against each other"*
-  ([§4](../specs/you/the-you-screen.md#4-considered-and-left-out)) now point here. Raketa ranks
+  ([§4](../specs/you/the-you-screen.md#4-considered-and-left-out)) now point here. Rakieta ranks
   players, by the number it already shows (§1).
 - **Amends [ADR-0159](0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)
   §3's admission** with a new strand, *the subject is listed on General in at least one sport and not
@@ -82,7 +82,7 @@
 Kraków. After every confirmed result his level moves, and it reads *2,71* on his Skill passport and
 on every card the deck deals Tomek. **Karol** plays at 2,75, **Zofia** at 2,69, **Inés** at 3,40. No
 screen tells Tomek that Karol sits just above, that one win would pass Karol, or how Tomek compares
-with the friends Raketa now has.
+with the friends Rakieta now has.
 
 - **Nothing pulls Tomek back between games.** A level moves by hundredths and is seen only on its own
   passport, so a win changes nothing Tomek can show or chase. The product owner's brief asks for a
@@ -105,7 +105,7 @@ with the friends Raketa now has.
   international padel federation FIP, and both Polish federations.
 - **A leaderboard sorted by a rating always limits who appears.** Lichess requires 30 rated games, one
   in the last week, and a settled rating. Chess.com requires 20 games, one in the last 90 days.
-- **Raketa's engine is already a rating.** A padel win moves a player with about 10 games by about
+- **Rakieta's engine is already a rating.** A padel win moves a player with about 10 games by about
   0,03, and a seasoned one by about 0,01. A padel level takes about 42–44 games to be called
   settled, and a tennis level about 26. After 5 padel games, 56% of a level still comes from the
   questionnaire. A player who claims 3,80 but plays like 2,70 is still at 3,28 after 20 padel games.
@@ -153,7 +153,7 @@ with the friends Raketa now has.
 
 ### 2. Two views: General and Friends
 
-- **General** is everybody in Raketa listed in that sport. A player is **listed after 5 results** in
+- **General** is everybody in Rakieta listed in that sport. A player is **listed after 5 results** in
   the sport (Q17).
 - **Friends** is the reader and the reader's friends, each **listed from their first result** (Q26).
 - **Both views drop a player 90 days after their last result in the sport settled** (Q18). The next

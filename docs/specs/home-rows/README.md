@@ -1,18 +1,18 @@
 # Home rows: the spec set
 
 **What PRD [#789](https://github.com/Raketa02/Raketa/issues/789) is drawn from.** The product owner's
-brief *new rows home* and its mocks, copied here from `raketa_v2.0/4-features/5-login_signup_refactir`
-(the brief) and `raketa_v2.0/4-features/6-home_improve` (the mocks) so that every session can read
+brief *new rows home* and its mocks, copied here from `rakieta_v2.0/4-features/5-login_signup_refactir`
+(the brief) and `rakieta_v2.0/4-features/6-home_improve` (the mocks) so that every session can read
 them, then grilled on 2026-11-13/14 (Q1–Q37 there, the
 [games and fill-in mechanics' Q131](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log)).
 Landed by [#790](https://github.com/Raketa02/Raketa/issues/790) on 2026-11-14.
 
 | File | What it holds |
 | --- | --- |
-| [the-mechanics.md](the-mechanics.md) | What happens: Home's order, who sees whom, each row's rules (heat and its tags, the % even, New in Raketa's 30 days, the vibe %), fresh, gaps and rest, Top 10, the friend button and where a request was found, with every number |
+| [the-mechanics.md](the-mechanics.md) | What happens: Home's order, who sees whom, each row's rules (heat and its tags, the % even, New in Rakieta's 30 days, the vibe %), fresh, gaps and rest, Top 10, the friend button and where a request was found, with every number |
 | [the-screens.md](the-screens.md) | Each row, card, sheet and See all with every state, and which mock draws it |
 | [`mocks/`](mocks/) | The 42 mocks, renamed (the [index](#index) gives each original name). PRD #789 says 44; the folder holds 42, and a PDF of the brief that isn't copied |
-| [home_rows_feature.md](home_rows_feature.md) | The product owner's brief, verbatim. Its paths point at the product owner's desktop: read `…/6-home_improve/N_….png` as the index's file. Where the brief and these documents disagree, these documents win: they carry the grilling's rulings |
+| [home_rows_feature.md](home_rows_feature.md) | The product owner's brief, verbatim but for the brand's spelling ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md) §6). Its paths point at the product owner's desktop: read `…/6-home_improve/N_….png` as the index's file. Where the brief and these documents disagree, these documents win: they carry the grilling's rulings |
 
 **The decision** is [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md).
 The terms are in the root [`CONTEXT.md`](../../../CONTEXT.md), under **Discovery** (the people rows,
@@ -37,12 +37,12 @@ people*), **Player record**, **Blocks** and **Friends**. Every sentence a player
    - a player is named by their **nickname**, never with an @
      ([ADR-0199](../../adr/0199-a-player-is-known-by-their-nickname.md)), so *Zofia B.* reads as
      *zofia.b*, and *You vs Zofia B.* as *You vs zofia.b*;
-   - the app is **Raketa** ([ADR-0187](../../adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md) §8), so *Rakieta* reads as *Raketa*;
+   - the app is **Rakieta** ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md)), so the mocks' *Rakieta* reads as written;
    - the bottom bar is **Home · ⚡ Play · You** (#576), with Home lit, as every full-screen mock draws
      it.
 4. **Cite a mock by its number**: *home rows 22.1*. The numbers are the product owner's, decimals
    included. The second of two files both numbered 17 is **17.2**. The file names were cleaned of
-   typos (`homre`, `competiive`, `se_all`, `rakieta`) and zero-padded so they sort.
+   typos (`homre`, `competiive`, `se_all`) and zero-padded so they sort.
 5. **No mock draws Home's top**: mocks 1 and 2 start at *HOTTEST GROUPS*. The header, today's rows and
    *Your games* stand above it, unchanged ([the screens §1](the-screens.md#1-home-top-to-bottom)).
 
@@ -50,8 +50,8 @@ people*), **Player record**, **Blocks** and **Friends**. Every sentence a player
 
 | # | Mock | What leads | What doesn't |
 | --- | --- | --- | --- |
-| 1 | Home, the first rows | The rows' order and spacing, the headings in grey caps with *See all ›* in ink, the card sizes and how each row is cut at the right edge | The data and names (notes 1–2); the friend leading Same level (note 7); *Joined on Monday* (note 6); *Rakieta* (note 4); no header above it (note 5 of *How to read*) |
-| 2 | Home, the last rows | New in Raketa, Same vibe and Top 10 in that order, Top 10's header with the pill and *Rankings ›* | *▼1* on place 1 (note 1); the friend leading Same vibe (note 7); the names |
+| 1 | Home, the first rows | The rows' order and spacing, the headings in grey caps with *See all ›* in ink, the card sizes and how each row is cut at the right edge | The data and names (notes 1–2); the friend leading Same level (note 7); *Joined on Monday* (note 6); no header above it (note 5 of *How to read*) |
+| 2 | Home, the last rows | New in Rakieta, Same vibe and Top 10 in that order, Top 10's header with the pill and *Rankings ›* | *▼1* on place 1 (note 1); the friend leading Same vibe (note 7); the names |
 | 3 | A group card, HOTTEST | The striped band in the group's colour, the shield badge overlapping it, *▲ HOTTEST* top-right, the name, the dots and sports (cut with an ellipsis), the two figures, the green *+3 this month*, the heat bar, four faces, the black *Ask to join* | The faces' letters (note 3) |
 | 3.2 | A group card, Asked | The white outlined *Asked* chip | Nothing |
 | 4 | A group card, GROWING | *+ GROWING*, the green *+4 this month*, the outlined *You're in* | The bar's length (note 1: it is the heat over the HOTTEST card's) |
@@ -65,9 +65,9 @@ people*), **Player record**, **Blocks** and **Friends**. Every sentence a player
 | 11 | The comparison sheet, a stranger | *+ Add friend* as a black pill, two sport blocks | *81% even* in grey and *54% even* in amber (note 1: green, and red) |
 | 12 | Same level, See all | ‹, the two-line title, the pill *● All ‹* with a two-tone dot, one full-width card per row, the lit Home tab | The data |
 | 13–16 | See all cards | The full-width card; red at 54% (15), amber at 59% (16) | The data |
-| 17, 17.2 | The New in Raketa row | Tall portrait tiles, the volt *NEW*, the round button top-right, the dark fade, the sport lines one per line with dots | *Joined on Monday* (note 6); *Rakieta*; names |
+| 17, 17.2 | The New in Rakieta row | Tall portrait tiles, the volt *NEW*, the round button top-right, the dark fade, the sport lines one per line with dots | *Joined on Monday* (note 6); names |
 | 18, 18.2, 18.3 | New tiles | The volt envelope, the white **+**, the green ✓ | Nothing |
-| 19, 19.2 | New in Raketa, See all | The two-column grid, two sports to a line where they fit, the pill and how it slides open over the title, *All* last with *›* | *New in Rakieta*; *Joined on Monday* |
+| 19, 19.2 | New in Rakieta, See all | The two-column grid, two sports to a line where they fit, the pill and how it slides open over the title, *All* last with *›* | *Joined on Monday* |
 | 20, 20.1 | The Same vibe row | The pale tile tinted in the face's colour, the % in a white circle, the face, name, *N things in common*, the green chips, the dashed *+N more*, the round button bottom-right | Where *+2 more* breaks (note 8); Karol, a friend, first (note 7) |
 | 21 | The Hottest groups row | The row: no *See all*, the second card cut | Nothing (the file is named *club row*; it draws Hottest groups) |
 | 22–22.3 | Vibe tiles | The tile, each in its tint; the envelope; the green ✓ | *77%* for 2 tags (note 1: 75%); the black **+** (note 9) |
@@ -100,7 +100,7 @@ mock is correct everywhere else.
 | 1 | every mock | Sample names, levels, %, counts, tags and chips, some that can't happen: *▼1* on place 1 (2, 25, 26), chips that contradict each other (25.1–25.3), *77%* for 2 tags (22.2, 24), *51%* and *54% even* in amber and *81% even* in grey (9, 11), a questionnaire-only newcomer at 79% (10.3), a bar longer than its heat share (4) | **The mock data is sample only.** The backend sends every figure, and the rules are [the mechanics](the-mechanics.md)': the vibe % is 50/75/88/94/97/98 (§8.2), the colours green ≥ 70, amber 55–69, red < 55 (§6.2), the bar the heat over the HOTTEST card's (§5.5), and a chip is the rankings mechanics' |
 | 2 | every person | *Zofia*, *Bartek L.*, *Kuba W.*, *You vs Zofia B.*, *You and Karol* | **Nicknames**, never with an @ (ADR-0199, Q4): *zofia.b*, *You vs zofia.b*, *You and karol.t*. The reader is *You* |
 | 3 | every face | Two white initials over a court picture | **Today's faces** (Q4): the photo, or the generated court poster, **with no letters**. A group's badge keeps its monogram letters (ADR-0183 §5) |
-| 4 | 1, 2, 9, 17, 17.2, 19, 19.2 | *NEW IN RAKIETA*, *New in Rakieta* | **Raketa** |
+| 4 | 1, 2, 9, 17, 17.2, 19, 19.2 | *NEW IN RAKIETA*, *New in Rakieta* | **As drawn.** Not an override since [ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md): the mocks spell the brand as it is built. The row keeps its number |
 | 5 | 23 | *6 things in common · Kazimierz* | **A distance, never a district** (Q28): *6 things in common · In your area · 0,6 km*, or the kilometres alone, or nothing, as the record writes it |
 | 6 | 1, 2, 17, 19 | *Joined on Monday* | **The ladder, with no weekday** (a call made while writing PRD #789): *Joined today* … *Joined 6 days ago*, *Joined last week*, *Joined 2 weeks ago* … *Joined 4 weeks ago* ([the mechanics §7.3](the-mechanics.md#73-joined-)) |
 | 7 | 1, 2, 7, 20 | A friend first on a row (Zofia on Same level, Karol on Same vibe) | **Fresh good matches first, gaps at the right** (Q33): a friend is a gap, after every fresh match ([the mechanics §9](the-mechanics.md#9-keeping-the-rows-alive)). See all lists friends where they fall, as mock 12 does |
@@ -136,8 +136,8 @@ mock is correct everywhere else.
 | 14 | [`14_same_level_see_all_card_2.png`](mocks/14_same_level_see_all_card_2.png) | `14_se_all_competitive_card2.png` |
 | 15 | [`15_same_level_see_all_card_3.png`](mocks/15_same_level_see_all_card_3.png) | `15_se_all_competitive_card3.png` |
 | 16 | [`16_same_level_see_all_card_4.png`](mocks/16_same_level_see_all_card_4.png) | `16_se_all_competitive_card4.png` |
-| 17 | [`17_new_row_1.png`](mocks/17_new_row_1.png) | `17_row_new_in_raketa.png` |
-| 17.2 | [`17.2_new_row_2.png`](mocks/17.2_new_row_2.png) | `17_row_new_in_raketa2.png` |
+| 17 | [`17_new_row_1.png`](mocks/17_new_row_1.png) | `17_row_new_in_rakieta.png` |
+| 17.2 | [`17.2_new_row_2.png`](mocks/17.2_new_row_2.png) | `17_row_new_in_rakieta2.png` |
 | 18 | [`18_new_tile_1.png`](mocks/18_new_tile_1.png) | `18_new_players_card1.png` |
 | 18.2 | [`18.2_new_tile_2.png`](mocks/18.2_new_tile_2.png) | `18.2_new_players_card2.png` |
 | 18.3 | [`18.3_new_tile_3.png`](mocks/18.3_new_tile_3.png) | `18.3_new_players_card3.png` |

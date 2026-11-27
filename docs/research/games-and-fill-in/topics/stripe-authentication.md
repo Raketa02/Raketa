@@ -105,7 +105,7 @@ setup and payment (`stripe-sandbox.md#setup-intents-off-session-cards-only`; on
 Payments created directly on the connected account are subject to the connected account's rules."
 
 **Fit:**
-- The SetupIntent lives on the platform, so Raketa's Radar rules apply when a card is saved.
+- The SetupIntent lives on the platform, so Rakieta's Radar rules apply when a card is saved.
 - Every share's PaymentIntent lives on the club's account. The club has the full Dashboard
   (`stripe-sandbox.md#the-test-club-account-full-dashboard-the-club-pays-the-fees-stripe-covers-losses`),
   so its own rules apply there.
@@ -172,7 +172,7 @@ it, card `4000 0025 0000 3155`, skips (`stripe-sandbox.md#four-demands-skipped-t
 - `status: requires_action`, `usage: off_session`;
 - `payment_method_options.card.request_three_d_secure: automatic`;
 - `next_action.type: redirect_to_url`, with the `return_url` the demand passed
-  (`https://raketa.example/return`), because the demand confirmed on the server;
+  (`https://rakieta.example/return`), because the demand confirmed on the server;
 - its attempt `setatt_1USEMO5y1DB8chHbKmngZSIS` at `requires_action`, with
   `payment_method_details.card.three_d_secure: null`, since nobody answered the check;
 - `mandate: null`.
@@ -394,7 +394,7 @@ universal links." *(translated)* The two pages disagree about universal links; t
 custom scheme.
 
 **Code:**
-- **The scheme.** `urlScheme: APP_SCHEME` (`'raketa'`, `frontend_player/src/shared/config/appLinks.ts:25`).
+- **The scheme.** `urlScheme: APP_SCHEME` (`'rakieta'`, `frontend_player/src/shared/config/appLinks.ts:25`).
 - **Who passes the return to Stripe.** A `Linking` listener hands it to `handleURLCallback`, only
   while a confirmation runs (`payments.tsx:232-242`).
 - **Any other time.** The router ignores an address it doesn't know.
@@ -575,7 +575,7 @@ Seeds for the Breakers: what goes wrong, and the Stripe source that says so.
     (https://docs.stripe.com/payments/3d-secure/authentication-flow).
 12. **Forgetting whose Radar rules apply.** Direct charges "are subject to the connected account's
     rules" (https://docs.stripe.com/strong-customer-authentication/connect-platforms): a club with
-    the full Dashboard can add rules that block or challenge Raketa's holds; the platform's rules
+    the full Dashboard can add rules that block or challenge Rakieta's holds; the platform's rules
     govern only the setup.
 13. **A deadline shorter than the bank's check.** The 3-D Secure timeout "must be at least 5
     minutes" (https://docs.stripe.com/payments/3d-secure/authentication-flow), and a bank's own app

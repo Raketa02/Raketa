@@ -221,7 +221,7 @@ public data its web app shows a visitor; the extract is saved under `../shots/`)
   particular order"; "The first person to book the spot gets it"; "This approach is designed to quickly fill spots that
   often become available on short notice." [Bruce help: Waitlist](https://help.bruce.app/en/articles/10166414-waitlist)
   (dated 2024-12-13) — read 2026-10-10
-- *Reading:* a staggered alert chosen for speed, as Raketa's three cards come before the open board, but with no figure
+- *Reading:* a staggered alert chosen for speed, as Rakieta's three cards come before the open board, but with no figure
   behind the choice.
 
 ### Playmore tells its whole waitlist at once and will judge it by the share refilled, not against another order

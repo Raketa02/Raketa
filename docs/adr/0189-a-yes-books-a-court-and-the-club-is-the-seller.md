@@ -15,8 +15,8 @@
 - **§3's three ways of working, §2's book-by, §5's way of working and *waiting for the club*, §7's
   Accept / Refuse and Overview, the *Consequences*' Instant and On request, and the 2026-10-09 and
   2026-10-10 amendments where they speak of a club's yes, amended 2026-10-12 by
-  [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)**
-  §1–§4. **Only Raketa is the one way** until Raketa is the club's booking software: *Instant* and
+  [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)**
+  §1–§4. **Only Rakieta is the one way** until Rakieta is the club's booking software: *Instant* and
   *On request* are removed, the book-by is always the release time, and a full game books the moment
   it fills, at every club. **A club's cancel first moves the game** to a free court of the same club
   when nothing about it changes, and otherwise calls it off as before, its players owed a card that
@@ -70,7 +70,7 @@ and a plan is **where · day · hour agreed in a chat** (0144,
 
 The product owner's market work says the refusals were the gap, not the protection. In a club's
 WhatsApp group somebody assembles four people, somebody books, somebody chases the money. The
-feature Raketa is for is doing all three at once: the app proposes the game **with a court**, a
+feature Rakieta is for is doing all three at once: the app proposes the game **with a court**, a
 swipe is the answer, and the last yes **books and pays**. A plan agreed in a chat and never
 booked is exactly what players already have.
 
@@ -114,7 +114,7 @@ game, card, yes and post belongs to a pool, and the group is one kind of it.
   *(Amended 2026-11-06 by [ADR-0202](0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md) §5: a friends game is
   booked at its send, before anybody else says yes. The deck's games still book on their last
   yes.)*
-- There is **no clock of Raketa's own**. A card lives until its court's **book-by** (the
+- There is **no clock of Rakieta's own**. A card lives until its court's **book-by** (the
   club's release time, or the start minus its minimum notice) and then disappears; nobody paid.
 - **Fill in offers only rescues**: open seats of *booked* games. Games still filling are offered
   only in decks; Fill in lists your own yeses on them, under *You're In*.
@@ -123,23 +123,23 @@ game, card, yes and post belongs to a pool, and the group is one kind of it.
   only the rescues. A change of layout, specified in
   [`docs/specs/games-and-fill-in/`](../specs/games-and-fill-in/); nothing here moves.)*
 
-> **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1.** The book-by is
+> **Amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1.** The book-by is
 > always the club's release time: *the start minus its minimum notice* went with *Instant*, *On
 > request* and the minimum notice. So no card can fill later than a day before its game, and by
-> default three. *No clock of Raketa's own* stands.
+> default three. *No clock of Rakieta's own* stands.
 
-### 3. A club has courts, hours and prices, and chooses how it works with Raketa
+### 3. A club has courts, hours and prices, and chooses how it works with Rakieta
 
-A club lists its **courts** (one sport each), the **hours** it offers Raketa (a weekly pattern
+A club lists its **courts** (one sport each), the **hours** it offers Rakieta (a weekly pattern
 in one-hour slots, plus exceptions) and **prices** per court-hour, and chooses **one way of
-working**: **Only Raketa** (Raketa sells those hours alone until a release lead the club sets),
-**Instant** (both sell; Raketa's booking is final and the club closes what it sells elsewhere)
+working**: **Only Rakieta** (Rakieta sells those hours alone until a release lead the club sets),
+**Instant** (both sell; Rakieta's booking is final and the club closes what it sells elsewhere)
 or **On request** (the club confirms each full game within a time it sets; nobody pays until
 it does). A card promises *a court at a club at an hour*; the court number is given at booking.
 Every game is **one hour**.
 
-> **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1.**
-> A club no longer chooses. **Only Raketa is the one way** until Raketa is the club's booking
+> **Amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1.**
+> A club no longer chooses. **Only Rakieta is the one way** until Rakieta is the club's booking
 > software: *Instant* and *On request* are removed, with the minimum notice and the time to confirm,
 > and §2's book-by is always the release time. A full game books the moment its last yes lands, at
 > every club, so §5's Booking is born *booked* and §7's Bookings has no Accept or Refuse. The courts,
@@ -150,7 +150,7 @@ Every game is **one hour**.
 
 - Payments go through **Stripe Connect with direct charges on the club's account**
   (`fees_collector = stripe`, `losses_collector = stripe`): the club is the merchant of record,
-  named on every receipt and statement, and pays the card fee as at its own terminal. Raketa
+  named on every receipt and statement, and pays the card fee as at its own terminal. Rakieta
   takes no fee and pays none. A player's card is saved once on the platform (a SetupIntent,
   after accepting terms that name the club as the one charging) and copied to the club's
   account for each charge.
@@ -173,20 +173,20 @@ backend does, and chosen per context rather than inherited:
 
 | Context | Aggregate (one stream per…) | Holds |
 | --- | --- | --- |
-| **Clubs** (grows) | **Club courts** — per club | courts, weekly Raketa hours, exceptions, price bands, the way of working and its settings, the Stripe account link, pause |
+| **Clubs** (grows) | **Club courts** — per club | courts, weekly Rakieta hours, exceptions, price bands, the way of working and its settings, the Stripe account link, pause |
 | **Proposals** (new) | **Proposal** — per proposed game | pool, sport, kind, origin (the engine's pick or a member's post), the court hour at a club, the share, the versions dealt, the yeses, the book-by; ends *filled*, *expired* or *withdrawn* |
 | **Bookings** (new) | **Booking** — per filled proposal | the court and its number, the seats and their sides, the club's answer (On request), the cut-off, leavers and rescues, check-ins; *waiting for the club*, *booked*, *seat open*, *called off*, *played* |
 | **Games** (grows) | **Game** — today's, unchanged in kind | opened by a booking, as a completed line-up opens one today: the result, its confirmation, the stars, the record, and the no-show report |
 | **Payments** (new) | **Payment method** — per player; **Seat charge** — per seat per booking | the saved method and the consent record; authorised, captured, refunded, failed — Stripe's identifiers and outcome, folded idempotently from its webhooks |
 | **Notifications** (new) | **Notification preferences** — per player | the three optional alerts; deliveries go through ports (push, email via [0186](0186-email-goes-through-a-port-and-a-purged-queue.md)'s mailer, in-app) |
 
-> **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2.** Club courts no
+> **Amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2.** Club courts no
 > longer holds *the way of working*, or the minimum notice and time to confirm among its settings.
 > The Booking no longer holds *the club's answer (On request)* or the state *waiting for the club*:
 > it is born *booked*. Its court move now also records the new court's kind and, when a club's
 > cancel moved it, the cancel's reason.
 
-Stripe is the ledger of record for money; a Seat charge is Raketa's account of it. **After the
+Stripe is the ledger of record for money; a Seat charge is Rakieta's account of it. **After the
 fill, everything that happens to a game today — the result, the stars, the record — happens to
 it unchanged** (Q6): a Booking opens an ordinary Game, which is why the after-game path needs
 no second model. A card, a deck, Fill in and the club's Bookings page are **projections**,
@@ -210,11 +210,11 @@ offline gates are regenerated with it.
 ### 7. The club website
 
 It gains **Bookings** (Accept / Refuse for On request, Move, Cancel), **Check in** (a QR or a
-short code, optional per club), **Courts & prices**, **Money** and **Raketa settings**, and an
+short code, optional per club), **Courts & prices**, **Money** and **Rakieta settings**, and an
 Overview that shows the setup checklist until the club is live and, after that, only what is
 waiting for its answer.
 
-> **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2.**
+> **Amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2.**
 > Bookings has no Accept or Refuse: nothing waits for the club's answer. *Cancel* shows where the
 > game would move and offers *Cancel the game anyway*, and *Move* keeps the court's kind and tells
 > the players. The Overview, once the club is live, says so and links to today's Bookings.
@@ -239,7 +239,7 @@ waiting for its answer.
 
 ## Consequences
 
-- **Raketa now touches real money, and carries what that means.** Stripe Connect onboarding for
+- **Rakieta now touches real money, and carries what that means.** Stripe Connect onboarding for
   every club, a legally reviewed consent text, card data only ever in Stripe's own fields,
   webhooks that arrive twice and out of order, and a cut-off job whose correctness decides who
   is refunded. None of this existed; all of it is new code that must be right the first time a
@@ -250,11 +250,11 @@ waiting for its answer.
 - **The club carries the fees**, including those on refunds it did not cause (a called-off
   game, its own cancellation). A refunded leaver bears their own. Clubs must be told this
   plainly during setup.
-- **Clubs on Instant can double-sell**, because Raketa cannot see their desk. The remedy is a
+- **Clubs on Instant can double-sell**, because Rakieta cannot see their desk. The remedy is a
   cancellation with full refunds, which players will feel. On request trades that risk for a
   wait the club sets (half an hour by default).
 
-  > **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2.**
+  > **Amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2.**
   > Neither way exists any more, so neither its double sale nor its wait does. A club that sells a
   > handed-over hour at its own desk by mistake still cancels with *double booking*, and a free
   > court of the same club now absorbs that cancel when nothing about the game changes. Otherwise
@@ -331,7 +331,7 @@ mechanics §11–§17 and the screens A2.4, A4.2, A7–A9, B4, B9 and C3.
   in time, the game books on the kept holds, and neither anybody's bank nor the desk is asked again.
   Lapsed, the holds are let go and the seat is offered as before. This is the one clock a game
   gets after it fills besides the club's time to confirm. It is one player's, and never outlasts
-  the book-by, so §2's *no clock of Raketa's own* still holds for a card.
+  the book-by, so §2's *no clock of Rakieta's own* still holds for a card.
 
 Where the bell's number and the kept holds live among §5's aggregates is left to their builds,
 [#621](https://github.com/Raketa02/Raketa/issues/621),
@@ -357,7 +357,7 @@ The same rulings keep a full game that falls back to filling on its players' Hom
 only what touches them (Q108), and announce the new card owed after a no (Q107). A card that never
 filled still ends silently, and the record (§4's leaving rules, the mechanics §15.4) is unchanged.
 
-> **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1 and §3,
+> **Amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1 and §3,
 > where this amendment speaks of a club's yes.** With On request removed there is no club's yes:
 > *It's a game!* never waits on a club or says when it answers (Q103's club half), the club's no and
 > silence are never told or emailed (Q105), and time to pay keeps no club's yes or court, because
@@ -447,7 +447,7 @@ empty* stand, as do the record's rules and the club's payout after the game. The
 Seat charge's states and the holding job live is theirs to record here when they land, as the
 2026-09-30 amendment recorded Games & money.
 
-> **Amended 2026-10-12 by [ADR-0196](0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2,
+> **Amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2,
 > where this amendment speaks of a club's yes.** No club gives one any more, so a share is held at
 > the fill, at its holding time or at a rescue, and *a club's yes after* the cut-off no longer takes
 > money at once. A refused card at the fill keeps its time to fix the card, or time to pay, as

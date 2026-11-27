@@ -18,7 +18,7 @@ theme, a primary source, or a measurement still owed. None was picked by taste.
 
 | File | What it holds |
 | --- | --- |
-| [decisions.md](decisions.md) | The grilling's decision log, verbatim. It holds every ruling with its reason, and the facts the rulings rest on (§2, with `file:line` positions as of 2026-11-24). It also holds the research behind the reveal (§2.7, Q11), with Facebook Shimmer's defaults read from its source, plus the tests the work reaches (§15), the checks owed on a phone (§16) and the question index Q1–Q27. Its status line and its delivery section (§14) predate PRD #867. Its §2.4 and §13 find ADR-0209's first 2026-11-24 amendment uncommitted; #868 committed that amendment before adding its own. Its §12 lists three calls made while writing, and PRD #867 takes up all three |
+| [decisions.md](decisions.md) | The grilling's decision log, verbatim but for the brand's spelling ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md) §6). It holds every ruling with its reason, and the facts the rulings rest on (§2, with `file:line` positions as of 2026-11-24). It also holds the research behind the reveal (§2.7, Q11), with Facebook Shimmer's defaults read from its source, plus the tests the work reaches (§15), the checks owed on a phone (§16) and the question index Q1–Q27. Its status line and its delivery section (§14) predate PRD #867. Its §2.4 and §13 find ADR-0209's first 2026-11-24 amendment uncommitted; #868 committed that amendment before adding its own. Its §12 lists three calls made while writing, and PRD #867 takes up all three |
 
 **What it changes in the records:**
 

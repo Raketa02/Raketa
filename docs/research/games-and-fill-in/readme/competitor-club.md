@@ -95,5 +95,5 @@
 - Clubs leaving over data and control
 - Payouts and double bookings: no first-hand complaint
 
-**Against Raketa's club side (summary, no new facts)**
+**Against Rakieta's club side (summary, no new facts)**
 

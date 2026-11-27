@@ -193,7 +193,7 @@ One row per listed player the reader can see, best first, on one white card:
 ### 7. Home's request card (designed, no mock)
 
 The friends screens' [§6.2](../friends/the-screens.md#62-friend-requests--n-friends-5) card, with
-***Found you in the padel ranking*** in place of the group line, as a link's *Invited you to Raketa*
+***Found you in the padel ranking*** in place of the group line, as a link's *Invited you to Rakieta*
 stands. The notice's body reads the same.
 
 ### 8. You — Show me in General (designed, no mock)

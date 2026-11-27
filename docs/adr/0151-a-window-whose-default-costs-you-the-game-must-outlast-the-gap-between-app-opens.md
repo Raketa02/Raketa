@@ -25,7 +25,7 @@ supplied.
 **What forced the question.** [How an invitee finds out](https://github.com/Raketa02/Raketa/issues/326)
 ruled push out of scope — there is no `expo-notifications`, no device-token context, and nothing
 in this repository reaches a phone its owner is not holding — and affirmed `CHALLENGE_SENT`'s
-*"they'll see it the next time they open Raketa"* as literally true. It then proved a cost it
+*"they'll see it the next time they open Rakieta"* as literally true. It then proved a cost it
 could not pay: **a seat invited at 19:00 Monday and read at 20:00 Tuesday is already lapsed.**
 The invitee never had a turn, and [ADR-0142](0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
 established that `answering_for` prices them for the silence regardless. A player who opens the
