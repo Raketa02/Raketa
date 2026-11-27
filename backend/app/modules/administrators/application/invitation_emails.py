@@ -13,7 +13,7 @@ Three messages, one per way in:
   sets a password for exactly that state.
 
 A resend is the same message again. The words are the backend's
-(``docs/adr/0186`` §4); every one is signed *Raketa*.
+(``docs/adr/0186`` §4); every one is signed *Rakieta*.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ CLUB_RESET_KIND: Final = "administrator_invitation.club_reset"
 
 #: The two labels are the sign-in screen's own, and what the person looks for.
 _CODE_LINE: Final = (
-    "Or open the Raketa app, tap ",
+    "Or open the Rakieta app, tap ",
     OnScreen("Have an invitation code?"),
     " under ",
     OnScreen("Sign in"),
@@ -45,10 +45,10 @@ def new_person_email(
         ButtonEmail(
             kind=NEW_PERSON_KIND,
             to=to,
-            subject=f"{club_name} invited you to run its groups on Raketa",
-            heading=f"Hi {name}, {club_name} invited you to Raketa",
+            subject=f"{club_name} invited you to run its groups on Rakieta",
+            heading=f"Hi {name}, {club_name} invited you to Rakieta",
             lines=(
-                f"{club_name} wants you to run its groups on Raketa as an "
+                f"{club_name} wants you to run its groups on Rakieta as an "
                 f"administrator. Set a password to get started.",
                 "The button and the code below work for 72 hours, and each works once.",
             ),
@@ -74,13 +74,13 @@ def existing_account_email(
             subject=f"{club_name} wants to make you an administrator",
             heading=f"{club_name} wants to make you an administrator",
             lines=(
-                f"{club_name} wants you to run its groups on Raketa. "
-                f"Open Raketa, signed in as {to}, and accept the invitation "
+                f"{club_name} wants you to run its groups on Rakieta. "
+                f"Open Rakieta, signed in as {to}, and accept the invitation "
                 f"there.",
                 "No new password is needed: it is added to the account you "
                 "already have. The invitation is open for 72 hours.",
             ),
-            button_label="Open Raketa",
+            button_label="Open Rakieta",
             button_url=app_link,
             footer=(
                 "If you weren't expecting this, you can ignore this email. "
@@ -97,10 +97,10 @@ def club_reset_email(
         ButtonEmail(
             kind=CLUB_RESET_KIND,
             to=to,
-            subject=f"{club_name} reset your Raketa password",
+            subject=f"{club_name} reset your Rakieta password",
             heading=f"Hi {name}, set a new password",
             lines=(
-                f"{club_name} reset the password of your Raketa administrator "
+                f"{club_name} reset the password of your Rakieta administrator "
                 f"account and signed it out everywhere.",
                 "Set a new one with the button or the code below within 72 "
                 "hours. Each works once.",

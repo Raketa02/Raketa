@@ -1,4 +1,4 @@
-"""The clubs' courts: what each seeded club offers Raketa, and how (#535).
+"""The clubs' courts: what each seeded club offers Rakieta, and how (#535).
 
 **A seeded court is a court a desk added** (``docs/adr/0029``): every write
 here is the use case the club website's Courts & prices and Rakieta settings
@@ -9,7 +9,7 @@ desk would have left, and nothing opens a table.
 **The eight are arranged across every state the club website draws**
 (the screens B2–B5, the mechanics §16):
 
-- **every club works Only Raketa**, the one way (#670; ``docs/adr/0196`` §1):
+- **every club works Only Rakieta**, the one way (#670; ``docs/adr/0196`` §1):
   Ogrody 33, Bonarka Arena and Nowa Huta Squash worked Instant, and Kazimierz
   Padel and Prądnik Tennis On request, until both were removed (#669, #670).
   **Each keeps a release lead that leaves its seeded games fillable**: the
@@ -17,7 +17,7 @@ desk would have left, and nothing opens a table.
   Kazimierz Padel, where her next week's game is, and Ogrody 33, whose played
   history is filled two days ahead — release their hours **a day ahead**, the
   shortest lead, as Prądnik Tennis does, so every hour from tomorrow is
-  Raketa's to sell and a card dealt there outlives a day of developing
+  Rakieta's to sell and a card dealt there outlives a day of developing
   against it; Centrum Ruchu keeps two days, and Nowa Huta Squash and Zabłocie
   Sport the default three;
 - **courts per sport**, indoor and outdoor, a weekly pattern of Rakieta hours on
@@ -180,7 +180,7 @@ class SeedClubCourts:
     exception: SeedException | None = None
     #: The settings the desk confirms — the defaults but for the release
     #: lead, **a day ahead** unless a club says otherwise: the shortest, so the
-    #: most of its hours stay Raketa's to sell.
+    #: most of its hours stay Rakieta's to sell.
     settings: RakietaSettings = field(
         default_factory=lambda: RakietaSettings(release_lead_days=1)
     )

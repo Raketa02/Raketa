@@ -44,7 +44,7 @@ async def _a_captured_share(fake: FakePayments, *, account: str) -> str:
 
 
 async def test_a_share_another_process_took_is_refunded_for_what_it_was():
-    """Given back as a payment taken, since Raketa refunds only a share it
+    """Given back as a payment taken, since Rakieta refunds only a share it
     recorded paid — and never more than its id says it was for."""
     account = "acct_fake_club"
     payment_id = await _a_captured_share(FakePayments(), account=account)

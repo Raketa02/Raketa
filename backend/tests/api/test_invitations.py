@@ -1,6 +1,6 @@
 """Marta and Tomek get in, on the player surface (``docs/adr/0184`` §2).
 
-Marta is new to Raketa. Her email has a button and a code; she sets her
+Marta is new to Rakieta. Her email has a button and a code; she sets her
 password with either one, and her account is created under the name the club
 typed, already an administrator. Tomek already plays: there is no password step
 for him — his app finds the pending invitation on ``/users/me`` and he accepts

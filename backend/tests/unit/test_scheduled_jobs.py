@@ -439,7 +439,7 @@ async def test_the_mail_worker_sends_through_the_configured_mailer(
     message = OutgoingMessage(
         kind="forgot_password.player",
         to="tomek@example.com",
-        subject="Set a new Raketa password",
+        subject="Set a new Rakieta password",
         text="text",
         html="<p>html</p>",
     )

@@ -186,7 +186,7 @@ AGGREGATE_WRITERS = {
     # runs — which is why the layer needs both, and nothing else.
     "build_club_repository": "clubs",
     "build_club_account_repository": "clubs",
-    # What each club offers Raketa — courts, hours, an exception, prices and
+    # What each club offers Rakieta — courts, hours, an exception, prices and
     # how it works — written by the use cases the club website's Courts &
     # prices and Rakieta settings run (#535), one stream per club.
     "build_club_courts_repository": "clubs",

@@ -1600,7 +1600,7 @@ class HomeFriendRequestSchema(BaseModel):
     asked_at: datetime
     by_link: bool = Field(
         description=(
-            "Made by their Friend link: draw *Invited you to Raketa* in place of "
+            "Made by their Friend link: draw *Invited you to Rakieta* in place of "
             "the group line."
         )
     )

@@ -18,7 +18,7 @@ PlayerId = NewType("PlayerId", UUID)
 # A Skill rating stream is keyed by (player, sport). A deterministic id derived
 # from that pair means the pair has exactly one stream, found without a lookup
 # table — every sport is fully isolated, so there is nothing to coordinate.
-_RATING_NAMESPACE = uuid5(NAMESPACE_URL, "raketa/skill-rating")
+_RATING_NAMESPACE = uuid5(NAMESPACE_URL, "rakieta/skill-rating")
 
 
 def skill_rating_id(player_id: UUID, sport: Sport) -> UUID:
@@ -38,7 +38,7 @@ def skill_rating_id(player_id: UUID, sport: Sport) -> UUID:
 # ``uq_event_store_stream_version`` rejects the loser. With a random id each call
 # minted its own stream, there was nothing for them to collide on, and both
 # succeeded (#35).
-_ASSESSMENT_NAMESPACE = uuid5(NAMESPACE_URL, "raketa/assessment")
+_ASSESSMENT_NAMESPACE = uuid5(NAMESPACE_URL, "rakieta/assessment")
 
 
 def assessment_stream_id(player_id: UUID, sport: Sport, attempt: int) -> UUID:

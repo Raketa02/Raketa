@@ -232,7 +232,7 @@ class SearchText:
     twice still finds the name it sits in.
 
     **A blank field is not a search**: the form says *start typing* there, and a
-    list of every club in Raketa is not what an empty field asked for.
+    list of every club in Rakieta is not what an empty field asked for.
     """
 
     value: str

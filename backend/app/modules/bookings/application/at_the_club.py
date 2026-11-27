@@ -6,7 +6,7 @@ proposal's — every act on a game locks its proposal's row first — and
 **nothing here commits**:
 
 - **the free courts** — every other court of the game's sport the club still
-  has for Raketa at its hour, in the club's order, **of a kind the players would
+  has for Rakieta at its hour, in the club's order, **of a kind the players would
   accept**: the same kind, or an indoor court for an outdoor game — never
   outdoors from indoors (#671; the mechanics §16.4, Q122) — each with its kind;
 - **moved** — the game is on one of them, and the players read its number and

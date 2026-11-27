@@ -213,7 +213,7 @@ async def test_a_player_who_refused_the_phone_commits_with_a_club_she_picked(
         assert precise not in created.payload.values(), precise
 
 
-async def test_a_club_that_is_not_in_raketa_is_refused_and_nothing_is_stored(client):
+async def test_a_club_that_is_not_in_rakieta_is_refused_and_nothing_is_stored(client):
     headers = await auth_headers(client)
 
     response = await commit(client, headers, a_body(location={"club_id": str(uuid4())}))

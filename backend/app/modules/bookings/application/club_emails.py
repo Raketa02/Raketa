@@ -142,7 +142,7 @@ def new_bookings_email(
             subject="New bookings today",
             heading="New bookings today",
             lines=(
-                f"Raketa players booked {games} at {club} in the day to "
+                f"Rakieta players booked {games} at {club} in the day to "
                 f"{day:%A} {day.day} {day:%B}, {_wall(day_closes_at(day)):%H:%M}:",
                 *(
                     f"{_day_and_time(one.starts_at)} · {one.court} · "

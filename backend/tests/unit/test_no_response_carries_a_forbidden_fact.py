@@ -205,7 +205,7 @@ def schemas_reachable_from_responses(spec: dict) -> dict[str, dict]:
 
 
 def _spec() -> dict:
-    return build_surface_spec("Raketa Player API", player_api_router)
+    return build_surface_spec("Rakieta Player API", player_api_router)
 
 
 def _properties(spec: dict | None = None) -> list[tuple[str, str]]:

@@ -26,7 +26,7 @@ taken. Nothing here opens a table.
   leaves this week's cards in her deck. Kazimierz, a kilometre from Bonarka and
   so one of the clubs her group plays at, worked On request until it was
   removed (#669): its full game waited for the desk's yes. Now it is **booked
-  the moment its last yes lands**, as at any club; it hands Raketa its hours a
+  the moment its last yes lands**, as at any club; it hands Rakieta its hours a
   day ahead, so next week's first is always on sale.
 
 **Out of the other layers' way**: neither hour is one of her answered picks'

@@ -42,7 +42,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 READY = ("Ogrody 33", "Prądnik Tennis", "Zabłocie Sport")
 
-PAGES = OnboardingPages("https://club.raketa.example")
+PAGES = OnboardingPages("https://club.rakieta.example")
 
 NOW = instant(datetime(2026, 10, 20, 9, tzinfo=timezone.utc))
 
@@ -223,14 +223,14 @@ async def test_an_account_that_cannot_take_a_share_is_refused():
     ready = await fake.open_club_account(
         club_id=uuid4(),
         name="Ogrody 33",
-        email="desk@raketa.example",
+        email="desk@rakieta.example",
         idempotency_key="a",
     )
     fake.club_account_is(ready, ClubAccountStatus.READY)
     unfinished = await fake.open_club_account(
         club_id=uuid4(),
         name="Prądnik Tennis",
-        email="desk@raketa.example",
+        email="desk@rakieta.example",
         idempotency_key="b",
     )
     fake.club_account_is(unfinished, ClubAccountStatus.NEEDS_DETAILS)
@@ -259,7 +259,7 @@ async def test_a_club_a_person_onboarded_opens_that_account_and_asks_for_no_othe
     )
 
     opened = await accounts.open(
-        club_id=uuid4(), name="Ogrody 33", email="desk@raketa.example", asked_at=NOW
+        club_id=uuid4(), name="Ogrody 33", email="desk@rakieta.example", asked_at=NOW
     )
     link = await accounts.onboarding_link(opened, pages=PAGES)
 
@@ -276,7 +276,7 @@ async def test_any_other_club_opens_its_own_and_every_account_is_read_as_it_stan
     club_id = uuid4()
 
     opened = await accounts.open(
-        club_id=club_id, name="Wisła Park", email="desk@raketa.example", asked_at=NOW
+        club_id=club_id, name="Wisła Park", email="desk@rakieta.example", asked_at=NOW
     )
     link = await accounts.onboarding_link(opened, pages=PAGES)
 

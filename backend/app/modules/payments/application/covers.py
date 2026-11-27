@@ -125,7 +125,7 @@ def send_key(
     so a request retried is answered the same holds and the next send after a
     refusal asks afresh."""
 
-    return f"raketa-send-{game_id}-{payer}-{seat}-{attempt}-{key_hour(at)}"
+    return f"rakieta-send-{game_id}-{payer}-{seat}-{attempt}-{key_hour(at)}"
 
 
 @final

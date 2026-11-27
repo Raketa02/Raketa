@@ -156,8 +156,8 @@ DEFAULT_JWT_SECRET_KEY = "change-me-in-production"
 #: The shipped object-store credentials. They are the MinIO container's, written in
 #: `docker-compose-local.yml` and in both templates, so they are as public as the JWT
 #: default above — and they unlock every photo the platform holds.
-DEFAULT_PHOTO_STORAGE_ACCESS_KEY = "raketa_photos"
-DEFAULT_PHOTO_STORAGE_SECRET_KEY = "raketa_photos_pwd"
+DEFAULT_PHOTO_STORAGE_ACCESS_KEY = "rakieta_photos"
+DEFAULT_PHOTO_STORAGE_SECRET_KEY = "rakieta_photos_pwd"
 
 #: The shipped ephemeral-store address. `redis` is the service name in
 #: `docker-compose-local.yml`, so this default resolves on a laptop running the dev
@@ -186,7 +186,7 @@ DEFAULT_SMTP_PORT = 1025
 
 #: Who a local email is from. The reserved ``.example`` domain, because no domain
 #: is registered and a deployed environment must name a real sender.
-DEFAULT_MAIL_SENDER = "Raketa <no-reply@raketa.example>"
+DEFAULT_MAIL_SENDER = "Rakieta <no-reply@rakieta.example>"
 
 #: The work factor every stored password and refresh token is hashed at in production,
 #: and the floor for everything deployed. bcrypt's own default, so a deployed
@@ -214,8 +214,8 @@ CORS_WILDCARD = "*"
 
 class Settings(BaseSettings):
     # --- app metadata
-    TITLE: str = "Raketa API"
-    DESCRIPTION: str = "Production-ready Raketa backend with auth"
+    TITLE: str = "Rakieta API"
+    DESCRIPTION: str = "Production-ready Rakieta backend with auth"
     VERSION: str = "1.0.0"
 
     # --- environment
@@ -234,7 +234,7 @@ class Settings(BaseSettings):
 
     # --- database
     WRITER_DB_URL: str = (
-        "postgresql+asyncpg://raketa_user:raketa_pwd@db:5432/raketa"
+        "postgresql+asyncpg://rakieta_user:rakieta_pwd@db:5432/rakieta"
     )
     READER_DB_URL: Optional[str] = None
     DB_ECHO: bool = False
@@ -250,7 +250,7 @@ class Settings(BaseSettings):
     # --- JWT
     JWT_SECRET_KEY: str = DEFAULT_JWT_SECRET_KEY
     JWT_ALGORITHM: str = "HS256"
-    JWT_ISSUER: str = "raketa"
+    JWT_ISSUER: str = "rakieta"
     ACCESS_TOKEN_EXPIRE_SECONDS: int = 900
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 86400
 
@@ -349,7 +349,7 @@ class Settings(BaseSettings):
     # is the whole of the adapter swap.
     PHOTO_STORAGE_ENDPOINT_URL: Optional[str] = "http://minio:9000"
     PHOTO_STORAGE_PUBLIC_ENDPOINT_URL: Optional[str] = None
-    PHOTO_STORAGE_BUCKET: str = "raketa-player-photos"
+    PHOTO_STORAGE_BUCKET: str = "rakieta-player-photos"
     PHOTO_STORAGE_REGION: str = "us-east-1"
     PHOTO_STORAGE_ACCESS_KEY: str = DEFAULT_PHOTO_STORAGE_ACCESS_KEY
     PHOTO_STORAGE_SECRET_KEY: str = DEFAULT_PHOTO_STORAGE_SECRET_KEY

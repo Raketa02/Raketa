@@ -1,4 +1,4 @@
-"""**The club runs its Raketa bookings** (#547; the mechanics §15, §16.7–§16.10,
+"""**The club runs its Rakieta bookings** (#547; the mechanics §15, §16.7–§16.10,
 §16.14, §19; the screens B4, B6).
 
 The club's desk reads its bookings **by day**, filtered, each with its players

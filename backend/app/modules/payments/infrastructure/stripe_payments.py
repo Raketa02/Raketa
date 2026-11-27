@@ -4,7 +4,7 @@
 account opened with **Accounts v2** — the ``merchant`` configuration, the club
 paying Stripe's fees and Stripe covering its losses (``fees_collector`` and
 ``losses_collector`` both ``stripe``), so the club is the merchant of record and
-Raketa pays no Connect fee. A player is a **v1 Customer** on the platform, the
+Rakieta pays no Connect fee. A player is a **v1 Customer** on the platform, the
 only kind the phone's payment fields accept; their card is saved there once, in
 a SetupIntent for off-session use, and **cloned onto the club's account** for
 each charge — a clone is single use, and every PaymentIntent is created on the
@@ -191,10 +191,10 @@ class StripePayments:
 
     async def open_customer(self, *, player_id: UUID, idempotency_key: str) -> str:
         # Nothing about the person but their id: Stripe needs no name or email
-        # to hold a card, and Raketa sends none it does not need.
+        # to hold a card, and Rakieta sends none it does not need.
         customer = await self._call(
             self._client.v1.customers.create_async(
-                params={"metadata": {"raketa_player_id": str(player_id)}},
+                params={"metadata": {"rakieta_player_id": str(player_id)}},
                 options={"idempotency_key": idempotency_key},
             )
         )
@@ -211,7 +211,7 @@ class StripePayments:
                     # Cards and the wallets, which save cards. BLIK waits on
                     # Stripe (open item O1) and Przelewy24 cannot be saved.
                     "payment_method_types": ["card"],
-                    "metadata": {"raketa_player_id": str(player_id)},
+                    "metadata": {"rakieta_player_id": str(player_id)},
                 },
                 options={"idempotency_key": idempotency_key},
             )
@@ -339,7 +339,7 @@ class StripePayments:
                             "capabilities": {"card_payments": {"requested": True}}
                         }
                     },
-                    "metadata": {"raketa_club_id": str(club_id)},
+                    "metadata": {"rakieta_club_id": str(club_id)},
                 },
                 options={"idempotency_key": idempotency_key},
             )

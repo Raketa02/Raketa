@@ -362,7 +362,7 @@ class InvitationPageResponse(BaseModel):
     code: Optional[str] = Field(
         description=(
             "The 8-character code the email carries under its button, for *after "
-            "you install, open Raketa and enter this code* — **only while "
+            "you install, open Rakieta and enter this code* — **only while "
             "`valid`**, `null` otherwise."
         )
     )

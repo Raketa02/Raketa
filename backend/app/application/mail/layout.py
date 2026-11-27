@@ -1,4 +1,4 @@
-"""The one shape every Raketa email takes: a heading, a few lines, a button, and
+"""The one shape every Rakieta email takes: a heading, a few lines, a button, and
 — when the email opens something — its code. **A notice has no button**: an
 email that only tells somebody what happened, and asks nothing of them, leads
 nowhere (``docs/adr/0191`` §5).
@@ -25,8 +25,8 @@ from typing import Optional, TypeAlias, final
 from app.application.ports.mail import OutgoingMessage
 from app.kernel import invariant
 
-#: Who signs every email. The brand is Raketa everywhere (``docs/adr/0187`` §8).
-SIGNATURE = "Raketa"
+#: Who signs every email. The brand is Rakieta everywhere (``docs/adr/0211``).
+SIGNATURE = "Rakieta"
 
 #: The button's colour: the player app's ``coralInk``, because white text on its
 #: ``coral`` fails contrast and white on this passes (5.89:1). Spelled here rather

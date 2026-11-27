@@ -107,7 +107,7 @@ def build_surface_spec(title: str, router: APIRouter) -> dict:
 def write_contracts(root: Path = _BACKEND_ROOT) -> list[Path]:
     written: list[Path] = []
     for surface, router in SURFACES.items():
-        spec = build_surface_spec(f"Raketa {surface.capitalize()} API", router)
+        spec = build_surface_spec(f"Rakieta {surface.capitalize()} API", router)
         path = root / f"openapi.{surface}.json"
         path.write_text(json.dumps(spec, indent=2) + "\n")
         written.append(path)

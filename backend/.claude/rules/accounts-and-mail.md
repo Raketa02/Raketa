@@ -59,7 +59,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   player's are `/api/v1/invitations/{claim,password,by-token,{id}/acceptance}` and
   `POST /api/v1/users/me/adult-attestation`. `APP_SCHEME` is where the existing account's
   button opens the app, and every money email's button too. Seeded by `app/seeds/administrators.py`: at Ogrody 33, the
-  administrator-only `administrator-only@raketa.example`, `rated-in-every-sport` who also plays,
+  administrator-only `administrator-only@rakieta.example`, `rated-in-every-sport` who also plays,
   and `the-one-sport-player`'s pending invitation, resent by a run that finds it expired.
 - **Signing out everywhere is one instant per account**
   ([ADR-0185](../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)

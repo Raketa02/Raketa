@@ -1,19 +1,19 @@
 # ----------------------------------------------------------------------------
-# Raketa backend — developer & deployment helpers.
+# Rakieta backend — developer & deployment helpers.
 # Run every target from `backend/`. Repo-wide helpers live in ../Makefile.
 # Override any variable on the command line:
 #   make ecr-push AWS_REGION=us-east-1 ECR_REPOSITORY=my-repo
 # ----------------------------------------------------------------------------
 COMPOSE_LOCAL ?= docker compose -f docker-compose-local.yml
-IMAGE_NAME  ?= raketa_api
+IMAGE_NAME  ?= rakieta_api
 TAG         ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
 AWS_REGION       ?= eu-north-1
 AWS_ACCOUNT_ID   ?= $(shell aws sts get-caller-identity --query Account --output text 2>/dev/null)
-ECR_REPOSITORY   ?= raketa-api
+ECR_REPOSITORY   ?= rakieta-api
 ECR_URI          ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_REPOSITORY)
-ECS_CLUSTER      ?= raketa-cluster
-ECS_SERVICE      ?= raketa-service
+ECS_CLUSTER      ?= rakieta-cluster
+ECS_SERVICE      ?= rakieta-service
 
 .PHONY: help install test test-affected test-group test-durations split-partition coverage lint lint-imports format typecheck check test-gates openapi \
         gen-cohort \

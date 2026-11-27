@@ -4,7 +4,7 @@ level** and **Same vibe** are here, and **the on-screen report** that rests a
 card the reader keeps scrolling past.
 
 **They tell nobody anything** (the mechanics §14): no push, bell line or email
-is about somebody joining Raketa, reading as even, sharing a tag or resting. A
+is about somebody joining Rakieta, reading as even, sharing a tag or resting. A
 request sent from a card is an ordinary friend request, `made_from`
 `NEW_PLAYERS`, `SAME_LEVEL` or `SAME_VIBE`. The report is the one write, and
 only the reader's own rows read it.

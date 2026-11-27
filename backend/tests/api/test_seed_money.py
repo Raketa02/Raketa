@@ -49,10 +49,10 @@ from tests.api.test_seed_proposals import seeded_world
 #: second run within it the danger: each must have been asked, or the proof
 #: below proves nothing about it.
 KEYS_OF_THE_HOUR = (
-    "raketa-customer-",
-    "raketa-setup-",
-    "raketa-club-account-",
-    "raketa-seat-",
+    "rakieta-customer-",
+    "rakieta-setup-",
+    "rakieta-club-account-",
+    "rakieta-seat-",
 )
 
 

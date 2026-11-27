@@ -267,7 +267,7 @@ class WherePoolsPlay(Protocol):
 @final
 @dataclass(frozen=True, slots=True)
 class OfferedCourtHour:
-    """A court hour a club sells through Raketa: at least one court of the
+    """A court hour a club sells through Rakieta: at least one court of the
     sport is free then, at this share, until this book-by."""
 
     club_id: UUID
@@ -311,7 +311,7 @@ class CourtHours(Protocol):
         self, club_ids: Collection[UUID], *, start: Instant, end: Instant
     ) -> Collection[tuple[UUID, Sport, Instant]]:
         """Every club, sport and hour from ``start`` until ``end`` at which these
-        clubs still have a court for Raketa — **whatever deadline their settings
+        clubs still have a court for Rakieta — **whatever deadline their settings
         now give it**, since a card keeps the book-by it was made with. What a
         card loses its court hour by: an hour booked, closed or no longer
         offered is absent, and so is every hour of a club that is not live; a
@@ -331,7 +331,7 @@ class CourtKinds(Protocol):
 
     async def of(self, hours: Collection[CourtHourKey]) -> Mapping[CourtHourKey, bool]:
         """For each club, sport and hour asked, whether the free courts of the
-        sport the club still has for Raketa then are **all indoor** (``True``)
+        sport the club still has for Rakieta then are **all indoor** (``True``)
         or **all outdoor** (``False``) — read as ``CourtHours.held`` reads
         them, before any deadline, since a card keeps the court hour it was
         made with. **Absent** where the free courts are of mixed kinds, and
@@ -494,7 +494,7 @@ class HomeRequestLevel:
 class HomeFriendRequest:
     """One card in Home's *FRIEND REQUESTS* (``docs/adr/0202`` §1): who asked,
     and where — *With you in Kazimierz crew · Padel 3,40 · ✦ 98*, *Invited
-    you to Raketa* for a link's, *Found you in the padel ranking* for the
+    you to Rakieta* for a link's, *Found you in the padel ranking* for the
     ranking's (#773), *Found you among new players* for New in Rakieta's
     (#793), *Your level in padel · 91% even* for Same competitive level's
     (#794), or *6 things in common* for Same vibe's (#795)."""
@@ -735,7 +735,7 @@ class ClubTerms(Protocol):
     async def of(
         self, club_ids: Collection[UUID], *, now: Instant
     ) -> Mapping[UUID, SellingTerms]:
-        """Each of these clubs **selling through Raketa at ``now``** — live, and
+        """Each of these clubs **selling through Rakieta at ``now``** — live, and
         answered while paused, since a paused club's cards keep their court —
         with its cut-off. A club that does not sell is absent: its courts reach
         nobody's deck (the mechanics §16.2)."""
@@ -1545,7 +1545,7 @@ class ClubBookings(Protocol):
         ...
 
     async def free_courts(self, booking_id: UUID) -> Sequence[CourtToMoveTo]:
-        """Every other court of the game's sport the club still has for Raketa
+        """Every other court of the game's sport the club still has for Rakieta
         at its hour, in the club's order, **of a kind the players would
         accept** — the same kind, or indoor for an outdoor game (#671, Q122) —
         each with its kind."""

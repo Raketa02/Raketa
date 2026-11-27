@@ -91,13 +91,13 @@ class CourtResponse(BaseModel):
     indoor: bool
     offered: bool = Field(
         description=(
-            "Offered to Raketa, or switched off — kept, with its hours, and "
+            "Offered to Rakieta, or switched off — kept, with its hours, and "
             "selling nothing."
         )
     )
     hours: list[WeeklyHourResource] = Field(
         description=(
-            "The hours of an ordinary week this court is offered to Raketa, "
+            "The hours of an ordinary week this court is offered to Rakieta, "
             "Monday-first and in the grid's order. Empty until they are painted."
         )
     )
@@ -346,7 +346,7 @@ class RakietaSettingsRequest(BaseModel):
     release_lead_days: int = Field(
         description=(
             "Days before a game unsold hours return to the club — the latest a "
-            "Raketa game can fill, its book-by. 1–13, default 3."
+            "Rakieta game can fill, its book-by. 1–13, default 3."
         )
     )
     cut_off_hours: int = Field(

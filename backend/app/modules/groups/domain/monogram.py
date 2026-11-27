@@ -42,7 +42,7 @@ def monogram_of(group_id: UUID, name: GroupName) -> Monogram:
 
 def letters_of(name: GroupName) -> str:
     """The first character of each of the first two words, or the first two
-    characters of a one-word name — **as typed**, so *my raketa group* is ``mr``
+    characters of a one-word name — **as typed**, so *my rakieta group* is ``mr``
     and *Ogrody 33 Club* is ``O3``.
 
     A *character* is what a reader sees as one: a letter with its accents, an

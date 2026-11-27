@@ -111,7 +111,7 @@ IdempotencyKeyDep = Annotated[
                 "Refused before anything is stored; the client says what to "
                 "change and the server never says what it matched.\n\n"
                 "`location_club_unknown` — the club picked in place of a "
-                "reading is no club in Raketa (`details.field` `club_id`): it "
+                "reading is no club in Rakieta (`details.field` `club_id`): it "
                 "stopped existing between the search and the tap, or the client "
                 "invented it."
             ),

@@ -1,7 +1,7 @@
 """The kernel's time vocabulary, and the four DST behaviours it exists for.
 
 Everything here is tested against ``Europe/Warsaw``, because that is where
-Raketa operates and because a timezone that does not observe DST tests none of
+Rakieta operates and because a timezone that does not observe DST tests none of
 the interesting half. The two 2026 transitions:
 
 * **2026-03-29** — 01:00 UTC, clocks go 02:00 CET → 03:00 CEST. That local day

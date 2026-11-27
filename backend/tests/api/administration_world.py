@@ -1,4 +1,4 @@
-"""Ogrody 33's desk, Marta who is new to Raketa, and Tomek who already plays —
+"""Ogrody 33's desk, Marta who is new to Rakieta, and Tomek who already plays —
 the people ``docs/adr/0184`` is told through, and the few moves every test of
 administrators and invitations makes.
 

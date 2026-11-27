@@ -1,6 +1,6 @@
 """the club runs its bookings: move, cancel, check-in
 
-**The club moves, cancels and checks in its Raketa bookings**
+**The club moves, cancels and checks in its Rakieta bookings**
 ([#547](https://github.com/Raketa02/Raketa/issues/547); the mechanics §15,
 §16.7–§16.10; ADR-0189 §5). The Booking stream records each act; its
 projections need one thing more:

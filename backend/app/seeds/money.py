@@ -91,7 +91,7 @@ SANDBOX_HOLD_LASTS: Final = timedelta(days=7)
 
 #: Where the bank's check would send a phone back to. Never followed: a check
 #: needs a browser, so a card the bank checks cannot be seeded on either path.
-_RETURN_URL: Final = "https://raketa.example/return"
+_RETURN_URL: Final = "https://rakieta.example/return"
 
 
 class SeedMoneyRefused(RuntimeError):

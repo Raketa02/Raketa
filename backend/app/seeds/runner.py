@@ -1263,7 +1263,7 @@ class SeedReport:
     #: The clubs, each signed up by its own desk. ``None`` on the callers that
     #: drive the populations without the layers above them.
     clubs: SeededClubs | None = None
-    #: What each of those clubs offers Raketa, and how. ``None`` on the same
+    #: What each of those clubs offers Rakieta, and how. ``None`` on the same
     #: callers and for the same reason.
     club_courts: SeededCourts | None = None
     #: The player groups at those clubs, and who is in each. ``None`` on the same

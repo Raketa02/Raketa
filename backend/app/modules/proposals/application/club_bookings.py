@@ -1,4 +1,4 @@
-"""**The club runs its Raketa bookings** (#547; the mechanics §16.7, §16.9,
+"""**The club runs its Rakieta bookings** (#547; the mechanics §16.7, §16.9,
 §16.14, §16.16; the screens B4, B6).
 
 Two acts and three reads on the club surface, each for the desk's own club:
@@ -8,7 +8,7 @@ Two acts and three reads on the club surface, each for the desk's own club:
   (the court's price, what was collected, what was refunded) and the group it
   came from;
 - **the free courts** — where a game may be moved: every other court of its sport
-  the club still has for Raketa at its hour;
+  the club still has for Rakieta at its hour;
 - **Move** — onto one of them; the players read the new number;
 - **Cancel**, with the club's reason — **first a move by cancel** (#672; the
   mechanics §16.9, Q122): when a free court of the club's absorbs it — the

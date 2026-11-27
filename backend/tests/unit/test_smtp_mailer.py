@@ -16,15 +16,15 @@ from app.application.ports.mail import MailerUnavailable, OutgoingMessage
 from app.core.config import SmtpSecurity
 from app.infrastructure.mail.smtp_mailer import SmtpMailer, compose
 
-SENDER = "Raketa <no-reply@raketa.example>"
+SENDER = "Rakieta <no-reply@rakieta.example>"
 #: The queue row's id, which the email is sent under.
 MAIL_ID = UUID("0b6f3c1e-8f4a-4a8e-9a57-2f1d6c0e9b41")
 MESSAGE = OutgoingMessage(
     kind="forgot_password.player",
     to="tomek@example.com",
-    subject="Set a new Raketa password",
-    text="Set a new password:\nhttps://raketa.example/reset/abc\n\nK7M4QX2P\n",
-    html='<p><a href="https://raketa.example/reset/abc">Set</a></p><p>K7M4QX2P</p>',
+    subject="Set a new Rakieta password",
+    text="Set a new password:\nhttps://rakieta.example/reset/abc\n\nK7M4QX2P\n",
+    html='<p><a href="https://rakieta.example/reset/abc">Set</a></p><p>K7M4QX2P</p>',
 )
 
 
@@ -84,14 +84,14 @@ def test_a_message_is_plain_text_with_the_html_as_its_alternative() -> None:
 
     assert email["From"] == SENDER
     assert email["To"] == "tomek@example.com"
-    assert email["Subject"] == "Set a new Raketa password"
-    assert email["Message-ID"] == f"<{MAIL_ID}@raketa.example>"
+    assert email["Subject"] == "Set a new Rakieta password"
+    assert email["Message-ID"] == f"<{MAIL_ID}@rakieta.example>"
     assert email.get_content_type() == "multipart/alternative"
     text, html = email.iter_parts()
     assert text.get_content_type() == "text/plain"
     assert "K7M4QX2P" in text.get_content()
     assert html.get_content_type() == "text/html"
-    assert 'href="https://raketa.example/reset/abc"' in html.get_content()
+    assert 'href="https://rakieta.example/reset/abc"' in html.get_content()
 
 
 async def test_the_local_catcher_is_spoken_to_in_the_clear_and_anonymously() -> None:
@@ -105,11 +105,11 @@ async def test_the_local_catcher_is_spoken_to_in_the_clear_and_anonymously() -> 
 
 async def test_a_relay_is_upgraded_to_tls_before_anybody_signs_in() -> None:
     await mailer(
-        security=SmtpSecurity.STARTTLS, username="raketa", password="relay-pwd"
+        security=SmtpSecurity.STARTTLS, username="rakieta", password="relay-pwd"
     ).send(MESSAGE, mail_id=MAIL_ID)
 
     (relay,) = StandInRelay.conversations
-    assert relay.steps == ["starttls", "login raketa", "send", "quit"]
+    assert relay.steps == ["starttls", "login rakieta", "send", "quit"]
 
 
 @pytest.mark.parametrize(

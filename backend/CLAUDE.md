@@ -1,4 +1,4 @@
-# Raketa Backend
+# Rakieta Backend
 
 FastAPI on Clean Architecture (hexagonal ports & adapters) with DDD aggregates, event
 sourcing, and a transactional outbox. Python 3.11, Poetry.

@@ -3,7 +3,7 @@ site's read of a code (``docs/adr/0202`` §1–§2; the mechanics §4; #748).
 
 **Opening a link never makes friends by itself** (Q37). As a signed-in player it
 records **the owner's request to the opener**, made by ``LINK`` — *Invited you to
-Raketa* on the opener's Home, with Accept and Not now, like any request — for a
+Rakieta* on the opener's Home, with Accept and Not now, like any request — for a
 new player who signed up through it and for one who already had the app alike.
 A request by link is **the one way in from outside your groups**, so it asks for
 no group in common. Unless:

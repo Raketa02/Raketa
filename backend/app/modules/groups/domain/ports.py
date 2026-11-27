@@ -217,7 +217,7 @@ class HomeClub:
 
 @runtime_checkable
 class HomeClubs(Protocol):
-    """Every club in Raketa, as somewhere a group can live."""
+    """Every club in Rakieta, as somewhere a group can live."""
 
     async def by_id(self, club_ids: Collection[UUID]) -> Mapping[UUID, HomeClub]:
         """Each of these clubs. A club that does not exist is absent."""

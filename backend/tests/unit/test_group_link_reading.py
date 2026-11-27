@@ -21,14 +21,14 @@ CODE = GroupCode("ab3de7fg")
 @pytest.mark.parametrize(
     "pasted",
     [
-        "https://raketa.app/join/ab3de7fg",
-        "raketa.app/join/ab3de7fg",
+        "https://rakieta.app/join/ab3de7fg",
+        "rakieta.app/join/ab3de7fg",
         "/join/ab3de7fg",
-        "Join Ogrody 33 Club on Raketa: https://raketa.app/join/ab3de7fg — do it",
+        "Join Ogrody 33 Club on Rakieta: https://rakieta.app/join/ab3de7fg — do it",
         "http://localhost:3001/join/ab3de7fg?utm_source=whatsapp",
-        "https://raketa.app/join/ab3de7fg.",
-        "https://raketa.app/join/ab3de7fg/",
-        "HTTPS://RAKETA.APP/JOIN/AB3DE7FG",
+        "https://rakieta.app/join/ab3de7fg.",
+        "https://rakieta.app/join/ab3de7fg/",
+        "HTTPS://RAKIETA.APP/JOIN/AB3DE7FG",
     ],
 )
 def test_a_link_anywhere_in_the_text_is_read_as_its_code(pasted):
@@ -36,18 +36,18 @@ def test_a_link_anywhere_in_the_text_is_read_as_its_code(pasted):
 
 
 def test_the_link_a_group_is_given_reads_back_as_its_code():
-    assert link_in(group_link("https://raketa.app/", CODE)) == PastedLink(code=CODE)
+    assert link_in(group_link("https://rakieta.app/", CODE)) == PastedLink(code=CODE)
 
 
 @pytest.mark.parametrize(
     "pasted",
     [
-        "raketa.app/join/",
-        "raketa.app/join/ab3",
-        "raketa.app/join/ab3de7fgh",
-        "raketa.app/join/ab3de7f0",
-        "raketa.app/join/ab3de7fl",
-        "raketa.app/join/ab3de-7fg",
+        "rakieta.app/join/",
+        "rakieta.app/join/ab3",
+        "rakieta.app/join/ab3de7fgh",
+        "rakieta.app/join/ab3de7f0",
+        "rakieta.app/join/ab3de7fl",
+        "rakieta.app/join/ab3de-7fg",
     ],
 )
 def test_a_link_whose_code_could_be_nobody_s_leads_nowhere(pasted):
@@ -56,7 +56,7 @@ def test_a_link_whose_code_could_be_nobody_s_leads_nowhere(pasted):
 
 @pytest.mark.parametrize(
     "typed",
-    ["ogrody", "join", "raketa.app/g/ab3de7fg", "joinab3de7fg", "join/ab3de7fg"],
+    ["ogrody", "join", "rakieta.app/g/ab3de7fg", "joinab3de7fg", "join/ab3de7fg"],
 )
 def test_text_without_slash_join_slash_is_not_a_link(typed):
     assert link_in(typed) is None

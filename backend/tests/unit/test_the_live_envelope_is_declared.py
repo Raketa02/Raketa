@@ -18,7 +18,7 @@ STREAM = "/api/v1/conversations/{conversation_id}/stream"
 
 
 def _the_stream_operation() -> tuple[dict, dict]:
-    spec = build_surface_spec("Raketa Player API", SURFACES["player"])
+    spec = build_surface_spec("Rakieta Player API", SURFACES["player"])
     return spec, spec["paths"][STREAM]["get"]
 
 

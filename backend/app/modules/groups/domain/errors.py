@@ -27,9 +27,9 @@ class GroupNameInvalid(BadRequestError):
 
 
 class HomeClubUnknown(BadRequestError):
-    """The home club named is no club in Raketa.
+    """The home club named is no club in Rakieta.
 
-    A group's home club is **required** and chosen from every club in Raketa
+    A group's home club is **required** and chosen from every club in Rakieta
     (``docs/adr/0183`` §2), so an id that names none is a field to correct — the
     form only offers clubs that exist, and this is reached by a club that stopped
     existing between the search and the tap, or by a client that invented one.
@@ -39,7 +39,7 @@ class HomeClubUnknown(BadRequestError):
 
     def __init__(self) -> None:
         super().__init__(
-            "only a club in Raketa can be a home club",
+            "only a club in Rakieta can be a home club",
             details={"field": "home_club_id"},
         )
 

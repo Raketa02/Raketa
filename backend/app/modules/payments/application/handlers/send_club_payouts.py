@@ -30,7 +30,7 @@ from app.modules.payments.domain.provider import PaymentProvider
 def payout_key(payout_id: UUID) -> str:
     """One payout per decision, ever: a retry is the same request."""
 
-    return f"raketa-payout-{payout_id}"
+    return f"rakieta-payout-{payout_id}"
 
 
 @final
@@ -61,8 +61,8 @@ class SendClubPayout:
         sent = await self._provider.pay_out(
             payout.account_id,
             amount_grosze=payout.amount_grosze,
-            description=f"Raketa · games over by {payout.day.day} {payout.day:%B %Y}",
-            metadata={"raketa_payout": str(payout.payout_id)},
+            description=f"Rakieta · games over by {payout.day.day} {payout.day:%B %Y}",
+            metadata={"rakieta_payout": str(payout.payout_id)},
             idempotency_key=payout_key(payout.payout_id),
         )
         now = instant(self._clock.now())

@@ -30,7 +30,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport
 
-_PICK_NAMESPACE = uuid5(NAMESPACE_URL, "raketa/proposal/pick")
+_PICK_NAMESPACE = uuid5(NAMESPACE_URL, "rakieta/proposal/pick")
 
 
 def pick_id(

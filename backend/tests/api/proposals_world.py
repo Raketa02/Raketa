@@ -101,7 +101,7 @@ async def a_club_and_its_desk(
     changes what the club sells afterwards. The desk signs in at ``email``, or
     at an address made of the club's name.
 
-    It works Only Raketa, the one way (#670), and **hands Raketa its hours a
+    It works Only Rakieta, the one way (#670), and **hands Rakieta its hours a
     day ahead** unless told otherwise — the shortest release lead, so a game
     fills until the day before it."""
 

@@ -1,7 +1,7 @@
 """Dealing one group now, at a player's request (#739; ``docs/adr/0201`` §5,
 Q127; the screens A2.1's *Finding* state).
 
-Right after an intent answer on the Games tab, the phone asks Raketa to deal
+Right after an intent answer on the Games tab, the phone asks Rakieta to deal
 that group's games now — ``POST /pools/{id}/deal`` — and waits for the answer,
 so *Finding for-fun games for you…* lasts exactly as long as the dealing. **The
 route never makes a card itself**: it runs the proposer's own batch for the

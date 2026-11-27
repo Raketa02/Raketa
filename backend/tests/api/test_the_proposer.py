@@ -353,7 +353,7 @@ async def test_a_club_lengthening_its_release_lead_takes_no_card_s_court(
 async def test_a_card_at_a_three_day_club_is_never_dealt_for_the_day_after_tomorrow(
     client, session_factory, payments, clock
 ):
-    """Only Raketa is the one way (#670; ``docs/adr/0196`` §1), so a game's
+    """Only Rakieta is the one way (#670; ``docs/adr/0196`` §1), so a game's
     book-by is always its release time: three days before it, at a club that
     keeps the default. On Monday morning, Tuesday's and Wednesday's 18:00 have
     gone back to the club, and the first card is Thursday's, open until Monday

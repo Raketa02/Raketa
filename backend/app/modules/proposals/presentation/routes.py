@@ -375,7 +375,7 @@ async def read_group_deck(
     },
     summary="Deal my group now",
     description=(
-        "Right after an intent answer on the **Games** tab (Q127): Raketa deals "
+        "Right after an intent answer on the **Games** tab (Q127): Rakieta deals "
         "this group's games now — the proposer's own batch for its pool, in every "
         "sport it plays, the one the jobs run — and answers once it has been "
         "applied, so the phone can show *Finding for-fun games for you…* for as "

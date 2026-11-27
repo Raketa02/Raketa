@@ -137,7 +137,7 @@ SEED_CLUBS: Final[tuple[SeedClub, ...]] = (
 
 def desk_email(club: SeedClub) -> str:
     """The desk's address, **derived from the club's name** so the two cannot
-    drift: ``Zabłocie Sport`` signs in as ``desk.zablocie-sport@raketa.example``,
+    drift: ``Zabłocie Sport`` signs in as ``desk.zablocie-sport@rakieta.example``,
     on the TLD no registry will sell."""
 
     slug = re.sub(r"[^a-z0-9]+", "-", fold(club.name)).strip("-")

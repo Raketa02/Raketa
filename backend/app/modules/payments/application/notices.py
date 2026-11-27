@@ -4,7 +4,7 @@
 either read and acted on or neither — and a second delivery finds the row and
 does nothing. A notice about a customer nobody here opened, a setup that is not
 the one open, a card that is not the saved one, or an account no club holds is
-read and changes nothing: the provider has told Raketa something Raketa has no
+read and changes nothing: the provider has told Rakieta something Rakieta has no
 stake in, and a retry would tell it again for three days.
 
 **A club's account is the club's to record** (#537): the notice that one

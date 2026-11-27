@@ -337,7 +337,7 @@ async def test_a_bank_that_wants_the_player_asks_them_to_confirm_the_same_paymen
     assert body["amount_grosze"] == 30_00
     assert body["club"]["name"] == "Bonarka Arena"
     assert body["to_confirm"]["connected_account_id"].startswith("acct_")
-    assert body["to_confirm"]["publishable_key"] == "pk_fake_raketa"
+    assert body["to_confirm"]["publishable_key"] == "pk_fake_rakieta"
     [email] = await mailbox.to("tomek2@example.com")
     # Before the cut-off it is a hold, never a payment (#638).
     assert "confirm the 30 zł hold" in email.text
@@ -935,7 +935,7 @@ THURSDAY_SEVEN = warsaw(8, 19)
 async def test_kazimierz_padel_books_marta_s_game_the_moment_paula_s_yes_fills_it(
     client, session_factory, clock, payments, mailbox
 ):
-    """Kazimierz Padel sells padel at 100 zł a court-hour and hands Raketa its
+    """Kazimierz Padel sells padel at 100 zł a court-hour and hands Rakieta its
     hours until a day before. On Wednesday at 10:15 Paula's yes fills Marta's
     Thursday 19:00: **it is booked at once**, every 25 zł share held until the
     club's cut-off — and nothing waits on the desk: no email asks it anything,

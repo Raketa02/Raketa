@@ -1,7 +1,7 @@
 """The source of a pool's courts, hour by hour (``docs/adr/0202`` §7; the friends
 mechanics §6; #746).
 
-**Ogrody 33 gives Raketa its hours, Saturday 10:00 is fully booked, and Tuesday
+**Ogrody 33 gives Rakieta its hours, Saturday 10:00 is fully booked, and Tuesday
 21:00 still has a court.** Wisła Park is 4 km away and sells both hours; Tenis
 Katowice is 15 km away and sells both too.
 

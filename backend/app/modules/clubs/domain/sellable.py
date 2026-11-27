@@ -1,9 +1,9 @@
-"""The court hours a club can sell through Raketa — **derived, never stored
+"""The court hours a club can sell through Rakieta — **derived, never stored
 hour by hour** (``docs/adr/0189`` §5, the glossary's *Court hour*).
 
 Its weekly pattern, **less** its exceptions, **less** what bookings hold, and
 **less** every hour whose book-by has passed — which is what *after the release
-time, unsold hours return to the club* and *the latest a Raketa game can book*
+time, unsold hours return to the club* and *the latest a Rakieta game can book*
 both mean for an hour (the mechanics §5.4, §16.3). Each hour is priced by the
 band that holds it or the standard price, and carries its share and its
 book-by, so whoever deals it reads both from here rather than re-deriving them.
@@ -38,7 +38,7 @@ from app.modules.player_profile.domain.weekly_hours import HOURS_OF_THE_DAY
 @final
 @dataclass(frozen=True, slots=True)
 class SellableCourtHour:
-    """One court for one hour that Raketa may sell: its court, when it
+    """One court for one hour that Rakieta may sell: its court, when it
     starts, what it costs, the share one player pays, and the latest moment a
     game on it can still fill."""
 
@@ -55,7 +55,7 @@ class SellableCourtHour:
 @final
 @dataclass(frozen=True, slots=True)
 class ClubOffer:
-    """What one live club sells through Raketa in a window, and on what terms."""
+    """What one live club sells through Rakieta in a window, and on what terms."""
 
     club_id: UUID
     settings: RakietaSettings

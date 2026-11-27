@@ -75,11 +75,11 @@ def _operations(spec: dict) -> set[str]:
 def test_the_committed_club_document_is_the_one_the_surface_produces():
     on_disk = json.loads((BACKEND_ROOT / "openapi.club.json").read_text())
 
-    assert on_disk == build_surface_spec("Raketa Club API", SURFACES["club"])
+    assert on_disk == build_surface_spec("Rakieta Club API", SURFACES["club"])
 
 
 def test_the_club_document_holds_the_club_s_routes_and_only_under_its_prefix():
-    spec = build_surface_spec("Raketa Club API", SURFACES["club"])
+    spec = build_surface_spec("Rakieta Club API", SURFACES["club"])
 
     assert _operations(spec) == CLUB_OPERATIONS
     assert all(path.startswith("/api/v1/club/") for path in spec["paths"])

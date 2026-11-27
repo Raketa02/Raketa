@@ -1,8 +1,8 @@
-"""A club lists its courts and the hours each offers Raketa, on the club surface
+"""A club lists its courts and the hours each offers Rakieta, on the club surface
 (#535, the mechanics §16.4–§16.5, the screens B3).
 
 A court has a name as the club uses it, **one sport** from the club's own, and
-is indoor or outdoor. It can be switched off — kept, but not offered to Raketa —
+is indoor or outdoor. It can be switched off — kept, but not offered to Rakieta —
 and deleted, except while it has bookings ahead of it. Its Rakieta hours are the
 player's own grid, seven days by sixteen hours from 07:00, because an hour
 outside it could never match anybody.

@@ -86,12 +86,12 @@ from app.modules.users.domain.value_objects import (
 RESERVED_TLD = ".example"
 
 #: Unregistrable, and visibly not a real address.
-SEED_EMAIL_DOMAIN = f"raketa{RESERVED_TLD}"
+SEED_EMAIL_DOMAIN = f"rakieta{RESERVED_TLD}"
 
 #: One password for every seeded account, so a developer signing in as any of
 #: them types the same thing. It is public by construction — it is in this file
 #: — which is the whole reason `app/seeds/guard.py` exists.
-SEED_PASSWORD = "raketa-seed1"
+SEED_PASSWORD = "rakieta-seed1"
 
 # The four band names the rating vocabulary prints (root `CONTEXT.md`). Written
 # here as the strings a *result* carries rather than imported from an engine's

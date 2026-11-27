@@ -82,7 +82,7 @@ async def ogrody(client):
 
 @pytest.fixture
 async def marta(client, ogrody, mailbox):
-    """Marta, new to Raketa, whom the desk made an administrator; she set her
+    """Marta, new to Rakieta, whom the desk made an administrator; she set her
     password by the invitation's link and is signed in."""
 
     row = await invites(client, ogrody["desk"], name="Marta Wójcik", email=MARTA)

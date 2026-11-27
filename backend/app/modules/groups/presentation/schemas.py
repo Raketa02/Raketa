@@ -98,7 +98,7 @@ class CreatePlayerGroupRequest(BaseModel):
     )
     home_club_id: UUID = Field(
         description=(
-            "A club from home-club search — **required**. A club Raketa does not "
+            "A club from home-club search — **required**. A club Rakieta does not "
             "have is `home_club_unknown`, `details.field` `home_club_id`."
         )
     )
@@ -135,7 +135,7 @@ class MonogramSchema(BaseModel):
     letters: str = Field(
         description=(
             "The first character of each of the first two words, as typed, or "
-            "the first two characters of a one-word name: *my raketa group* is "
+            "the first two characters of a one-word name: *my rakieta group* is "
             "`mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes — never change "
             "its case."
         )

@@ -74,7 +74,7 @@ def card_brand(value: str) -> str:
 
 
 def last_four(value: str) -> str:
-    """The card number's last four digits — all of it Raketa ever holds."""
+    """The card number's last four digits — all of it Rakieta ever holds."""
 
     invariant(bool(_LAST_FOUR.match(value)), f"last four digits: {value!r}")
     return value

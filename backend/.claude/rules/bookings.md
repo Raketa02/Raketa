@@ -314,7 +314,7 @@ unregistered and the local store reset, so the last yes books the game at every 
   `SeatCharge.refund`): `SeatChargeRefundDecided` (withhold the fee, or not) in the leaving's
   or the call-off's transaction; `SettleSeatCharges` captures first if the capture's own
   delivery has not run yet, then refunds **exactly** the share or the share less the fee kept
-  on that payment (#636) under `raketa-refund-<charge>` and records `SeatChargeRefunded` with
+  on that payment (#636) under `rakieta-refund-<charge>` and records `SeatChargeRefunded` with
   the amount and what was kept — a fee not yet known makes the refund wait. A receipt's refund row
   is dated from the decision (`refund_decided_at`), not the provider's answer. **The fake's
   payment ids carry their amount** (`pi_fake_3000g_…`) so a fake in another process — a seed
@@ -358,7 +358,7 @@ unregistered and the local store reset, so the last yes books the game at every 
   row first, so two joiners for the last seat are one after the other and **the second reads
   it gone** (`seat_just_taken`) **before its bank is asked**. Then the money is the fill's own
   all-or-nothing for one seat (`SeatCharges.charge` with `rescue=True`: its holds keyed
-  `raketa-rescue-…`, the attempt the booking's version) — **held until the cut-off like every
+  `rakieta-rescue-…`, the attempt the booking's version) — **held until the cut-off like every
   seat it joins, or taken in the act after it** (#637) — **or, far ahead of the cut-off,
   checked and held at its Holding time**, by the reach rule the fill's seats follow (#639,
   #640) — so a crash leaves a hold that lapses rather than money taken for no seat; the
@@ -552,7 +552,7 @@ unregistered and the local store reset, so the last yes books the game at every 
   **then the money**; a refused card rolls the claim back and records the same answers
   — the same keys, so the provider answers the same — as nothing booked
   (`SendersCourts.refused`); then the sender's other yeses (`Fill.other_yeses`). **Accepting** is refused for a game at the hour or a full week, holds the
-  friend's own share with *Split* (`GameToCharge.accepting`: keyed `raketa-accept-…`, the
+  friend's own share with *Split* (`GameToCharge.accepting`: keyed `rakieta-accept-…`, the
   refusal *to take the seat* by their invitation's end — the seat stays theirs to retry,
   nothing recorded on the booking), holds nothing with *Whole court*, and withdraws their
   other yeses at the hour. A refused share confirmed in the app is the accept again

@@ -4,17 +4,17 @@
 # and the loser is whichever stack starts second: Postgres applies POSTGRES_USER and
 # POSTGRES_PASSWORD only when it initialises an *empty* data directory, so an existing
 # volume keeps the other project's roles and the API dies on "password authentication
-# failed for user raketa_user" — with a healthy database sitting right next to it.
-name: raketa
+# failed for user rakieta_user" — with a healthy database sitting right next to it.
+name: rakieta
 
 services:
   db:
     image: postgres:17
     restart: unless-stopped
     environment:
-      POSTGRES_DB: raketa
-      POSTGRES_USER: raketa_user
-      POSTGRES_PASSWORD: raketa_pwd
+      POSTGRES_DB: rakieta
+      POSTGRES_USER: rakieta_user
+      POSTGRES_PASSWORD: rakieta_pwd
     ports:
       - "5432:5432"
     networks:
@@ -22,7 +22,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U raketa_user -d raketa"]
+      test: ["CMD-SHELL", "pg_isready -U rakieta_user -d rakieta"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -31,15 +31,15 @@ services:
     build:
       context: .
       dockerfile: docker/api/Dockerfile.dev
-    image: raketa_api:dev
-    container_name: raketa_api
+    image: rakieta_api:dev
+    container_name: rakieta_api
     restart: unless-stopped
     env_file:
       - .env.docker
     environment:
       # Compose overrides — keep DB url consistent with the postgres service above.
-      WRITER_DB_URL: postgresql+asyncpg://raketa_user:raketa_pwd@db:5432/raketa
-      READER_DB_URL: postgresql+asyncpg://raketa_user:raketa_pwd@db:5432/raketa
+      WRITER_DB_URL: postgresql+asyncpg://rakieta_user:rakieta_pwd@db:5432/rakieta
+      READER_DB_URL: postgresql+asyncpg://rakieta_user:rakieta_pwd@db:5432/rakieta
       DB_SSL_MODE: disable
       APP_HOST: 0.0.0.0
       APP_PORT: 8000
@@ -56,9 +56,9 @@ services:
       # the same reason, as EXPO_PUBLIC_API_URL in the player app.
       PHOTO_STORAGE_ENDPOINT_URL: http://minio:9000
       PHOTO_STORAGE_PUBLIC_ENDPOINT_URL: http://192.168.0.204:9000
-      PHOTO_STORAGE_BUCKET: raketa-player-photos
-      PHOTO_STORAGE_ACCESS_KEY: raketa_photos
-      PHOTO_STORAGE_SECRET_KEY: raketa_photos_pwd
+      PHOTO_STORAGE_BUCKET: rakieta-player-photos
+      PHOTO_STORAGE_ACCESS_KEY: rakieta_photos
+      PHOTO_STORAGE_SECRET_KEY: rakieta_photos_pwd
       # The on-court photo check — keep in step with the `photo-review` service
       # below. A server-to-server URL: no phone and no browser ever opens it.
       PHOTO_REVIEW_ENDPOINT_URL: http://photo-review:8000
@@ -118,8 +118,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: raketa_photos
-      MINIO_ROOT_PASSWORD: raketa_photos_pwd
+      MINIO_ROOT_USER: rakieta_photos
+      MINIO_ROOT_PASSWORD: rakieta_photos_pwd
     ports:
       # 9000 is the S3 API — the port a presigned URL is opened on.
       # 9001 is the browser console, for looking at what got stored.
@@ -150,9 +150,9 @@ services:
       - /bin/sh
       - -c
       - |
-        mc alias set local http://minio:9000 raketa_photos raketa_photos_pwd &&
-        mc mb --ignore-existing local/raketa-player-photos &&
-        mc anonymous set none local/raketa-player-photos
+        mc alias set local http://minio:9000 rakieta_photos rakieta_photos_pwd &&
+        mc mb --ignore-existing local/rakieta-player-photos &&
+        mc anonymous set none local/rakieta-player-photos
     restart: "no"
 
   # The on-court photo check: a CLIP model behind one HTTP route
@@ -172,8 +172,8 @@ services:
   photo-review:
     build:
       context: ./docker/photo-review
-    image: raketa_photo_review:dev
-    container_name: raketa_photo_review
+    image: rakieta_photo_review:dev
+    container_name: rakieta_photo_review
     restart: unless-stopped
     networks:
       - backend

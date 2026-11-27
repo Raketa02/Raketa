@@ -2,7 +2,7 @@
 Games deck and Post a game (``docs/adr/0202`` §7; the friends mechanics §6;
 #746).
 
-**Ogrody 33 gives Raketa two padel hours a week: Saturday 10:00 and Tuesday
+**Ogrody 33 gives Rakieta two padel hours a week: Saturday 10:00 and Tuesday
 21:00, one court each.** This Saturday at 10:00 is fully booked, by four players
 who got there first. Wisła Park, 4 km north, sells the same two hours. Marta runs
 *Ogrody 33 Club*, Ogrody 33's official group, and the club never touched its

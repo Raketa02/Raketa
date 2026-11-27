@@ -8,7 +8,7 @@ look-alikes**: no ``0``/``O``, no ``1``/``I``/``L``.
 
 **The code is a function of the token**, not a second random draw. The public
 invitation page shows the code to whoever opened its link
-(``docs/adr/0186`` §3: *after you install, open Raketa and enter this code*),
+(``docs/adr/0186`` §3: *after you install, open Rakieta and enter this code*),
 and both are stored only as hashes — so the one way to show a code the server
 cannot read back is to recompute it from the token the reader is holding. That
 costs nothing it protects: whoever holds the token can already use it, and the
@@ -35,7 +35,7 @@ CODE_ALPHABET: Final = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 #: lifetime of hours bound for any single guesser (``docs/adr/0184``, *Harder*).
 CODE_LENGTH: Final = 8
 
-_DERIVATION: Final = b"raketa/one-time-code/v1:"
+_DERIVATION: Final = b"rakieta/one-time-code/v1:"
 
 
 def code_for(token: str) -> str:

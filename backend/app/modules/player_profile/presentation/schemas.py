@@ -376,7 +376,7 @@ class PickedClubRequest(BaseModel):
 
     The club's point on the map, rounded to the cell exactly as a reading is,
     becomes the Location area — so the phone never needs a club's coordinates.
-    An id that names no club in Raketa is `location_club_unknown`. **Nothing
+    An id that names no club in Rakieta is `location_club_unknown`. **Nothing
     else rides along**: a body that also carries a reading is refused.
     """
 
@@ -385,7 +385,7 @@ class PickedClubRequest(BaseModel):
     club_id: UUID = Field(
         ...,
         description=(
-            "A club from Raketa's clubs, as `GET /home-clubs` answers it — by "
+            "A club from Rakieta's clubs, as `GET /home-clubs` answers it — by "
             "name or district, A–Z for a player with no area yet."
         ),
     )
@@ -453,7 +453,7 @@ class CommitPlayerProfileRequest(BaseModel):
             "refused, **a club they pick** (`club_id`) — exactly one of the two "
             "(`docs/adr/0200` §10). Either is rounded to the cell about a "
             "kilometre across before anything is recorded, and the cell comes "
-            "back as `location`. A club that is not in Raketa is "
+            "back as `location`. A club that is not in Rakieta is "
             "`location_club_unknown`."
         ),
     )

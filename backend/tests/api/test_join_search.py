@@ -69,7 +69,7 @@ async def test_a_club_matched_by_name_or_district_carries_all_its_groups(client,
 
 
 async def test_a_matching_club_with_no_groups_is_a_card_with_none(client):
-    """*No groups here yet* — the club is in Raketa, and empty."""
+    """*No groups here yet* — the club is in Rakieta, and empty."""
 
     tomek = await a_located_player(client, "tomek")
     await krakow(client)
@@ -163,9 +163,9 @@ async def test_matching_groups_inside_a_card_come_biggest_crowd_first(client):
     "pasted",
     [
         "{link}",
-        "Join Ogrody 33 Club on Raketa: {link} — see you there!",
-        "raketa.app/join/{code}",
-        "https://staging.raketa.example/join/{code}?utm_source=whatsapp",
+        "Join Ogrody 33 Club on Rakieta: {link} — see you there!",
+        "rakieta.app/join/{code}",
+        "https://staging.rakieta.example/join/{code}?utm_source=whatsapp",
         "/join/{code}.",
     ],
 )
@@ -206,13 +206,13 @@ async def test_a_link_is_read_whoever_s_domain_printed_it(client):
     "dead",
     [
         # The right shape, and nobody's code.
-        "https://raketa.app/join/abcdefgh",
-        "look: raketa.app/join/zzzz2222 !",
+        "https://rakieta.app/join/abcdefgh",
+        "look: rakieta.app/join/zzzz2222 !",
         # Not a code at all: too short, too long, or a look-alike in it.
-        "raketa.app/join/abc",
-        "raketa.app/join/abcdefghj",
-        "raketa.app/join/abcdefg0",
-        "raketa.app/join/",
+        "rakieta.app/join/abc",
+        "rakieta.app/join/abcdefghj",
+        "rakieta.app/join/abcdefg0",
+        "rakieta.app/join/",
     ],
 )
 async def test_a_link_that_leads_nowhere_says_so_rather_than_no_match(client, dead):

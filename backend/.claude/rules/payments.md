@@ -16,7 +16,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   [ADR-0190](../../../docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md), #536).
   `app/modules/payments/` holds the **Payment method** — event-sourced, one stream per player
   under the player's own id, born by being used — and **`PaymentProvider`**
-  (`domain/provider.py`), the one port every movement of money goes through, in Raketa's words:
+  (`domain/provider.py`), the one port every movement of money goes through, in Rakieta's words:
   a setup, a card on file, an authorised payment and its hold's **last moment**, a capture and
   the **real fee** kept on it, an **exact refund**, a club account's three states. It covers
   what #537, #541 and #545 needed, **#548 widened it twice** — `pay_out` (a club's money
@@ -117,7 +117,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   never configuration; a hold whose last moment the provider did not say reaches). One that
   does not is a **Card check** (`SeatCharge.check`, `SeatChargeChecked` with `hold_at`, status
   `CHECKED`): let go at once — the settler cancels the check's own payment under
-  `raketa-cancel-check-<charge>` and records nothing — and **held again at its Holding
+  `rakieta-cancel-check-<charge>` and records nothing — and **held again at its Holding
   time**, `HOLDING_LEAD` (four days) before the cut-off, on a **new payment on the same
   stream** (`HoldTheCheckedShares`, `SeatChargeHeldAgain`; the projection's `payment_id`
   follows it, and `hold_at` is the holding job's read, migration 0056). A share is **one
@@ -165,7 +165,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   payer, marked `cover` (`SeatChargeAuthorised.cover`, `SeatChargeFailed.cover`, defaulted
   `False`, no version change). **At send, `HoldTheCourt`** authorises the sender's share and
   one cover per other seat **all or nothing, with the sender present** — keyed
-  `raketa-send-<game>-<payer>-<seat>-<attempt>-<hour>`, the attempt the number of charges
+  `rakieta-send-<game>-<payer>-<seat>-<attempt>-<hour>`, the attempt the number of charges
   already on the game — then keeps each until the cut-off (checked far ahead and held at its
   Holding time, as any share), records **`payments.maximum_agreed`** on the sender's Payment
   method stream (the whole court, under the terms version in force — art. 49b's consent), and
@@ -239,7 +239,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   refund is: `ClubPayoutDecided` (the games — `club_payout_games`, a game carried **once**,
   its primary key a conflict — and the amount) commits in the job's transaction, and
   `SendClubPayout` (`handlers/send_club_payouts.py`, subscribed per delivery run over its
-  session and provider) calls `pay_out` under `raketa-payout-<id>` and records
+  session and provider) calls `pay_out` under `rakieta-payout-<id>` and records
   `ClubPayoutSent` with the desk's email *A payout was sent* (`payout_emails.py`; the desk is
   `Seller.email`, the club's one sign-in); a provider that cannot take it yet
   (`PaymentsUnavailable` — Stripe's `balance_insufficient` too) fails the delivery, which the

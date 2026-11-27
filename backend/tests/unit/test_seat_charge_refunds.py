@@ -1,6 +1,6 @@
 """A paid share given back (#544; the mechanics §12.3; ``docs/adr/0190`` §4).
 
-**Raketa decides, the provider acts** — as with a capture: the refund is
+**Rakieta decides, the provider acts** — as with a capture: the refund is
 decided in the act that causes it (a leaving before the cut-off, the minus the
 card fee; a game called off at its cut-off, in full), and made at the provider
 after the commit, which answers what it gave back and **the fee it withheld**.

@@ -1,4 +1,4 @@
-"""What the payment provider tells Raketa on its own, after the fact.
+"""What the payment provider tells Rakieta on its own, after the fact.
 
 A provider **notifies** — Stripe by webhook — about things that happened on its
 side: a setup that succeeded while the app was closed, a card its bank replaced.
@@ -16,7 +16,7 @@ A notice arrives signed, **twice** as often as not, and **out of order**
   it should not.
 
 **Translated at the edge.** ``PaymentNotices`` reads the provider's own shape
-and answers one of the notices below, in Raketa's words; a kind nothing here
+and answers one of the notices below, in Rakieta's words; a kind nothing here
 listens to is ``Unheeded`` and is acknowledged all the same.
 
 **Two endpoints, one reading.** The platform's notices — a setup, a card — and

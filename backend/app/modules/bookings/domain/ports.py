@@ -10,7 +10,7 @@ summaries of each club's day of new bookings, sent once (#548).
 (#544), which the Player Score reads.
 
 **Three are demands on contexts it does not write**: which courts a club still
-has for Raketa at an hour, and its cut-off (``clubs``, over what it sells); the
+has for Rakieta at an hour, and its cut-off (``clubs``, over what it sells); the
 ordinary Game a booking opens (``games``, over the use case a completed line-up
 opens one with); and whom a club's email is addressed to and what the club is
 called (``clubs``, over its own account and details). A club's cancel also
@@ -244,13 +244,13 @@ class CourtForTheGame:
 
 @runtime_checkable
 class ClubCourtsAtTheHour(Protocol):
-    """**A demand of the Club context**: the courts a club still has for Raketa
+    """**A demand of the Club context**: the courts a club still has for Rakieta
     at an hour."""
 
     async def first_free(
         self, club_id: UUID, *, sport: Sport, start: Instant
     ) -> CourtForTheGame | None:
-        """The first court of ``sport`` the club still has for Raketa from
+        """The first court of ``sport`` the club still has for Rakieta from
         ``start`` — **whatever deadline its settings now give the hour**, since
         a card keeps the book-by it was made with — and its cut-off. ``None``
         when every court of the sport then is booked, closed or no longer
@@ -260,7 +260,7 @@ class ClubCourtsAtTheHour(Protocol):
     async def free_courts(
         self, club_id: UUID, *, sport: Sport, start: Instant
     ) -> Sequence[FreeCourt]:
-        """Every court of ``sport`` the club still has for Raketa from
+        """Every court of ``sport`` the club still has for Rakieta from
         ``start``, read as ``first_free`` reads it — **in the club's own
         order** — where a booked game may be moved to (#547), each with the
         share one player pays for it at that hour, which a club's cancel asks

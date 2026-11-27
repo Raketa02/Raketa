@@ -21,8 +21,8 @@ RESET_EMAIL_KINDS: Final = {
 }
 
 _WHERE_THE_CODE_GOES: Final = {
-    Audience.PLAYER_APP: "in the Raketa app",
-    Audience.CLUB: "on the Raketa for Clubs sign-in page",
+    Audience.PLAYER_APP: "in the Rakieta app",
+    Audience.CLUB: "on the Rakieta for Clubs sign-in page",
 }
 
 
@@ -33,7 +33,7 @@ def reset_email(
         ButtonEmail(
             kind=RESET_EMAIL_KINDS[audience],
             to=to,
-            subject="Set a new Raketa password",
+            subject="Set a new Rakieta password",
             heading="Set a new password",
             lines=(
                 f"Somebody asked to set a new password for {to}. If it was you, "

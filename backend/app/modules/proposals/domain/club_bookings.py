@@ -1,7 +1,7 @@
 """The club's Bookings page — the rules that need no I/O (#547; the mechanics
 §16.7–§16.9, §16.14; the screens B4, B6).
 
-**One day at a time**, every Raketa booking at the club, each with one status
+**One day at a time**, every Rakieta booking at the club, each with one status
 **folded on every read** from the booking and the clock — never stored:
 
 - *booked* — full and paid, its hour still to come;

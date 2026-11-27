@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 #: Values no legitimate refusal message has any reason to repeat.
 POISON_PASSWORD = "hunter2-do-not-log-me"
-POISON_DB_URL = f"postgresql+asyncpg://u:{POISON_PASSWORD}@db.example:5432/raketa"
+POISON_DB_URL = f"postgresql+asyncpg://u:{POISON_PASSWORD}@db.example:5432/rakieta"
 POISON_SECRET = "s3cret-do-not-log-me"
 POISON_REDIS_URL = f"redis://:{POISON_PASSWORD}@redis.example:6379/0"
 
@@ -86,18 +86,18 @@ def production(**overrides) -> Settings:
         APP_HOST="10.0.0.1",
         WRITER_DB_URL=POISON_DB_URL,
         REDIS_URL=POISON_REDIS_URL,
-        PUBLIC_SITE_URL="https://raketa.example",
-        CLUB_WEBSITE_URL="https://clubs.raketa.example",
-        SMTP_HOST="smtp.raketa.example",
+        PUBLIC_SITE_URL="https://rakieta.example",
+        CLUB_WEBSITE_URL="https://clubs.rakieta.example",
+        SMTP_HOST="smtp.rakieta.example",
         SMTP_SECURITY="starttls",
-        MAIL_SENDER="Raketa <no-reply@raketa.example>",
+        MAIL_SENDER="Rakieta <no-reply@rakieta.example>",
         PAYMENTS_PROVIDER="stripe",
         STRIPE_SECRET_KEY="sk_guard_suite",
         STRIPE_PUBLISHABLE_KEY="pk_guard_suite",
         STRIPE_WEBHOOK_SECRET="whsec_guard_suite",
         STRIPE_CONNECT_WEBHOOK_SECRET="whsec_guard_suite_connect",
         DB_SSL_MODE="require",
-        ALLOW_ORIGINS=["https://raketa.example"],
+        ALLOW_ORIGINS=["https://rakieta.example"],
         **overrides,
     )
 
@@ -130,11 +130,11 @@ def test_the_deployed_environments_are_refused_too(clean_env, environment):
         APP_HOST="127.0.0.1",
         WRITER_DB_URL=POISON_DB_URL,
         REDIS_URL=POISON_REDIS_URL,
-        PUBLIC_SITE_URL="https://raketa.example",
-        CLUB_WEBSITE_URL="https://clubs.raketa.example",
-        SMTP_HOST="smtp.raketa.example",
+        PUBLIC_SITE_URL="https://rakieta.example",
+        CLUB_WEBSITE_URL="https://clubs.rakieta.example",
+        SMTP_HOST="smtp.rakieta.example",
         SMTP_SECURITY="starttls",
-        MAIL_SENDER="Raketa <no-reply@raketa.example>",
+        MAIL_SENDER="Rakieta <no-reply@rakieta.example>",
         PAYMENTS_PROVIDER="stripe",
         STRIPE_SECRET_KEY="sk_guard_suite",
         STRIPE_PUBLISHABLE_KEY="pk_guard_suite",
@@ -238,11 +238,11 @@ PRODUCTION_ENV = {
     "APP_HOST": "10.0.0.1",
     "WRITER_DB_URL": UNREACHABLE_DB_URL,
     "REDIS_URL": POISON_REDIS_URL,
-    "PUBLIC_SITE_URL": "https://raketa.example",
-    "CLUB_WEBSITE_URL": "https://clubs.raketa.example",
-    "SMTP_HOST": "smtp.raketa.example",
+    "PUBLIC_SITE_URL": "https://rakieta.example",
+    "CLUB_WEBSITE_URL": "https://clubs.rakieta.example",
+    "SMTP_HOST": "smtp.rakieta.example",
     "SMTP_SECURITY": "starttls",
-    "MAIL_SENDER": "Raketa <no-reply@raketa.example>",
+    "MAIL_SENDER": "Rakieta <no-reply@rakieta.example>",
     "PAYMENTS_PROVIDER": "stripe",
     "STRIPE_SECRET_KEY": "sk_guard_suite",
     "STRIPE_PUBLISHABLE_KEY": "pk_guard_suite",

@@ -47,7 +47,7 @@ async def create(client, player: dict, club: dict, **overrides):
     return await client.post(
         GROUPS,
         json={
-            "name": "my raketa group",
+            "name": "my rakieta group",
             "home_club_id": club["id"],
             "join_policy": "ANYONE",
             **overrides,
@@ -89,7 +89,7 @@ async def test_the_creator_owns_the_group_and_is_its_first_member(client):
 
     group = await a_group(client, tomek, bonarka)
 
-    assert group["name"] == "my raketa group"
+    assert group["name"] == "my rakieta group"
     assert group["member_count"] == 1
     assert group["is_owner"] is True
     assert group["join_policy"] == "ANYONE"
@@ -157,7 +157,7 @@ async def test_forty_characters_is_a_name_once_trimmed(client):
     assert group["name"] == "z" * 40
 
 
-async def test_a_home_club_that_is_not_in_raketa_is_refused_under_its_field(client):
+async def test_a_home_club_that_is_not_in_rakieta_is_refused_under_its_field(client):
     tomek = await a_player(client, "tomek")
 
     refused = await create(client, tomek, {"id": str(uuid4())})
@@ -200,7 +200,7 @@ async def test_creating_a_group_needs_a_player(client):
 @pytest.mark.parametrize(
     ("name", "letters"),
     [
-        ("my raketa group", "mr"),
+        ("my rakieta group", "mr"),
         ("Ogrody 33 Club", "O3"),
         ("Ogrody open play", "Oo"),
         ("Padel", "Pa"),

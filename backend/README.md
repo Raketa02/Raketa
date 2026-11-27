@@ -1,6 +1,6 @@
-# Raketa
+# Rakieta
 
-Raketa is a production-oriented FastAPI service for user registration,
+Rakieta is a production-oriented FastAPI service for user registration,
 authentication, refresh-token rotation, and current-user resolution. The codebase
 is structured around Clean Architecture and ports-and-adapters boundaries, with a
 domain-event pipeline that combines an append-only event store and a transactional
@@ -370,7 +370,7 @@ docker compose -f docker-compose-local.yml exec api alembic check
 The production image is built from `docker/api/Dockerfile.prod`.
 
 ```bash
-docker build -f docker/api/Dockerfile.prod -t raketa_api:prod .
+docker build -f docker/api/Dockerfile.prod -t rakieta_api:prod .
 ```
 
 The image uses:
@@ -419,7 +419,7 @@ container start.
 
 **Reset the local store and seed it again after On request's and Instant's removal**
 (#669, #670; ADR-0196 §1): no club confirms a game now, and every club works **Only
-Raketa** — the one way of working until Raketa is the club's booking software — so a
+Rakieta** — the one way of working until Rakieta is the club's booking software — so a
 game's book-by is always its club's release time, a day or more before it. The seven
 booking events and the proposal event that recorded requests, and the club's
 `clubs.way_of_working_chosen`, left the code without decoders, and
@@ -436,26 +436,26 @@ ADR-0211): `clubs.rakieta_settings_changed`, `clubs.rakieta_hours_set`,
 then, with no alias kept, so a store from before fails on the first read of a club's
 courts.
 
-Every address is `<state>@raketa.example`, and the state is what the name says. The
+Every address is `<state>@rakieta.example`, and the state is what the name says. The
 catalog is a list of **edges**, not of people: nothing yet, exactly one, the maximum, the
 failed case. A hundred average players is one scenario a hundred times, and no screen
 breaks on it.
 
 | Address | State |
 | --- | --- |
-| `brand-new-player@raketa.example` | Registered and nothing else — every empty state at once |
-| `assessment-in-progress@raketa.example` | Padel assessment open at its first question, no rating |
-| `assessment-abandoned@raketa.example` | Padel run ended without a rating; the sport is free to start again |
-| `assessment-completed@raketa.example` | One completed run and the rating it produced, band **New** |
-| `rating-barely-established@raketa.example` | Padel Level just inside **Established**, its range still reaching into Developing |
-| `rating-well-established@raketa.example` | Padel Level well inside **Established**, clear of the lower edge |
-| `rated-in-every-sport@raketa.example` | All four sports rated, one per band — the longest ratings list there is |
-| `the-populated-player@raketa.example` | **The default protagonist.** Padel and tennis rated, settled, at the centre of every ring — every Play screen is developed signed in as this one |
-| `the-newcomer@raketa.example` | The same answers and a profile committed inside ADR-0113's fourteen days — the widened gate from the newcomer's own side |
-| `the-one-sport-player@raketa.example` | Padel and no tennis at all — a second sport's absence, refused rather than emptied |
-| `the-blank-week-player@raketa.example` | A week committed and then cleared — the availability term stands down rather than scoring a nought |
+| `brand-new-player@rakieta.example` | Registered and nothing else — every empty state at once |
+| `assessment-in-progress@rakieta.example` | Padel assessment open at its first question, no rating |
+| `assessment-abandoned@rakieta.example` | Padel run ended without a rating; the sport is free to start again |
+| `assessment-completed@rakieta.example` | One completed run and the rating it produced, band **New** |
+| `rating-barely-established@rakieta.example` | Padel Level just inside **Established**, its range still reaching into Developing |
+| `rating-well-established@rakieta.example` | Padel Level well inside **Established**, clear of the lower edge |
+| `rated-in-every-sport@rakieta.example` | All four sports rated, one per band — the longest ratings list there is |
+| `the-populated-player@rakieta.example` | **The default protagonist.** Padel and tennis rated, settled, at the centre of every ring — every Play screen is developed signed in as this one |
+| `the-newcomer@rakieta.example` | The same answers and a profile committed inside ADR-0113's fourteen days — the widened gate from the newcomer's own side |
+| `the-one-sport-player@rakieta.example` | Padel and no tennis at all — a second sport's absence, refused rather than emptied |
+| `the-blank-week-player@rakieta.example` | A week committed and then cleared — the availability term stands down rather than scoring a nought |
 
-The password for every seeded account is `raketa-seed1`, and it is public by
+The password for every seeded account is `rakieta-seed1`, and it is public by
 construction — it is written in `app/seeds/catalog.py`.
 
 Behind those eleven state-named addresses is the **cohort**: a population of `cohort-<ring>-<nn>`
@@ -602,7 +602,7 @@ signed in as the protagonist (an address from the roster, and the one seed passw
   Needs her yes* puts enough people In on one of the protagonist's cards that her yes on the
   phone fills it — and books it, at any club, since no club confirms a game (*3*, which put
   a game to an On request club, went with it, #669); and *4 · Card declines at the fill* is
-  2 with her card set to decline. **Every club works Only Raketa** (#670), so a situation
+  2 with her card set to decline. **Every club works Only Rakieta** (#670), so a situation
   that books its own game writes it **as if earlier**, an hour before the hour's release
   time — and *11 · Club day close* writes one game played that day, booked before it, and
   one booked inside it, since no game can be both. Pressed again and again they meet the

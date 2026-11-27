@@ -737,7 +737,7 @@ async def test_the_next_reading_in_another_cell_replaces_a_picked_club(
     assert (moved.payload["latitude"], moved.payload["longitude"]) == (51.51, -0.13)
 
 
-async def test_a_club_that_is_not_in_raketa_moves_nothing(client, session_factory):
+async def test_a_club_that_is_not_in_rakieta_moves_nothing(client, session_factory):
     player_id, headers = await a_player(client)
     before = await stream_length(session_factory, player_id)
 

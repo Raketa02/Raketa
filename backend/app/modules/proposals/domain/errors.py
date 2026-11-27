@@ -149,7 +149,7 @@ class VersionDoesNotFit(ConflictError):
 
 
 class CourtHourNotForSale(ConflictError):
-    """The club sells no court of this sport at this hour through Raketa — it
+    """The club sells no court of this sport at this hour through Rakieta — it
     is not live, it is paused, the hour is not in its pattern or is closed, or
     the hour's book-by has passed. Nothing was proposed."""
 

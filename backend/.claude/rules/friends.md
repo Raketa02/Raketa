@@ -139,7 +139,7 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5; the rank
   card names it only while both are still in it. **A ranking's request reads *Found you in
   the padel ranking*** on the Home card (`from_ranking`, Proposals' `HomeFriendRequest`) and in
   its notice (`reason` `FROM_THE_RANKING`), in place of the group line, as a link's *Invited you
-  to Raketa* stands — a group-mate's from the ranking too. **New in Rakieta's** (#793,
+  to Rakieta* stands — a group-mate's from the ranking too. **New in Rakieta's** (#793,
   `NEW_PLAYERS`, its row or a record opened from it) **names no group and no sport** —
   `pressed_on` drops either sent — and reads *Found you among new players* (`from_new_players`, `reason`
   `FROM_NEW_PLAYERS`; `discovery.md`). **Same competitive level's** (#794, `SAME_LEVEL`, its
@@ -169,7 +169,7 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5; the rank
 - **Two notices about a friendship, both always on, pushed and in the bell**
   (`notifications.md`; the asks for a level have two more, below):
   `FRIEND_REQUEST` — *{nickname} wants to be your friend* / *With you in {group} · {Sport}*
-  (*Invited you to Raketa* by link, `reason` `BY_LINK`; *Answer it on Home.* from a screen with no
+  (*Invited you to Rakieta* by link, `reason` `BY_LINK`; *Answer it on Home.* from a screen with no
   group — a call)
   — to the person asked, **once per request** (keyed by the delivered event) and **only while
   its card is on their Home at delivery**, so a request cancelled, answered or set aside before
@@ -225,7 +225,7 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5; the rank
   reused**, and the primary key is the guard behind it. A first read writes; two that race
   are `concurrent_modification`, and the retry reads the winner's code.
 - **Opening a link records the owner's request to the opener** (`OpenAFriendLink`), made by
-  `LINK`, **asking for no group in common** — Home's *Invited you to Raketa*, its notice
+  `LINK`, **asking for no group in common** — Home's *Invited you to Rakieta*, its notice
   `BY_LINK`. It answers **the opener's relation to the owner** (`OpenedFriendLinkResponse`):
   - **your own link**: `NONE`, nothing recorded;
   - **a friend's**: `FRIEND`, nothing;

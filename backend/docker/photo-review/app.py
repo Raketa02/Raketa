@@ -100,7 +100,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="Raketa photo review", docs_url=None, redoc_url=None, lifespan=lifespan
+    title="Rakieta photo review", docs_url=None, redoc_url=None, lifespan=lifespan
 )
 
 

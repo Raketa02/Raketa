@@ -1,7 +1,7 @@
 """**The club sees its money, and is paid after the game** (#548; the mechanics
 §12.6, §16.11, §16.12; the screens B7, B9).
 
-The desk reads a **month** of its Raketa money, booking by booking — what the
+The desk reads a **month** of its Rakieta money, booking by booking — what the
 players paid, what was given back, the card fees, and what is the club's — and
 the **payouts** that carried it to its bank. **Nothing is paid out before the
 game is played**: the club's money waits on its account, where a refund before
@@ -207,7 +207,7 @@ async def test_the_club_is_paid_a_day_s_games_once_the_day_closes(
     _, desk = club
     await the_cut_off_comes(session_factory, clock)
     await mailbox.drain()
-    # The last Raketa hour of Saturday has ended.
+    # The last Rakieta hour of Saturday has ended.
     clock.at = at(10, 23)
 
     await pays_out(session_factory, clock, mailbox)

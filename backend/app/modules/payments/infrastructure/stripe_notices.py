@@ -1,4 +1,4 @@
-"""Stripe's webhook, verified and read as a notice in Raketa's words.
+"""Stripe's webhook, verified and read as a notice in Rakieta's words.
 
 **Verified before a byte of it is read.** A notice is signed with the platform
 endpoint's secret — ``Stripe-Signature: t=…,v1=…``, an HMAC-SHA256 over the

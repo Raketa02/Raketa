@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "raketa"
+name = "rakieta"
 version = "0.1.0"
-description = "Raketa backend service"
+description = "Rakieta backend service"
 authors = ["robert <robert.constantindinescu@gmail.com>"]
 packages = [{ include = "app" }]
 

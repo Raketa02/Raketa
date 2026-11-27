@@ -233,7 +233,7 @@ def _chunk(name: bytes, payload: bytes) -> bytes:
 #: The photograph the probe below asks about. **Nobody's, and nothing wrote
 #: it**, so the store's honest answer is *no* — which is what makes the question
 #: *can you answer at all* rather than *is this here*.
-NOBODY: Final = uuid5(NAMESPACE_URL, "https://raketa.example/seeds/no-such-photo")
+NOBODY: Final = uuid5(NAMESPACE_URL, "https://rakieta.example/seeds/no-such-photo")
 
 
 async def the_store_answers(photos: PhotoStorage) -> bool:

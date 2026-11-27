@@ -247,7 +247,7 @@ async def set_weekly_hours(
             "model": ErrorResponse,
             "description": (
                 "`location_club_unknown` — the club picked in place of a "
-                "reading is no club in Raketa (`details.field` `club_id`). "
+                "reading is no club in Rakieta (`details.field` `club_id`). "
                 "Nothing moves."
             ),
         },

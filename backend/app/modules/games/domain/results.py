@@ -1,7 +1,7 @@
 """A score, and what it says about the person reading it.
 
 **A score names a winner, and that invariant is the contract.** *Last 5* is *win
-or loss*, and none of the four sports Raketa rates produces a draw — a set that
+or loss*, and none of the four sports Rakieta rates produces a draw — a set that
 is level has not finished, and a match that is level has not been played to its
 end. A score that named nobody would be a row on that card the client could not
 draw.

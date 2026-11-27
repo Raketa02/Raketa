@@ -23,11 +23,11 @@ from app.modules.payments.domain.provider import PaymentProvider, SetupStatus
 
 
 def release_key(method_id: str) -> str:
-    return f"raketa-release-{method_id}"
+    return f"rakieta-release-{method_id}"
 
 
 def cancel_key(setup_id: str) -> str:
-    return f"raketa-cancel-{setup_id}"
+    return f"rakieta-cancel-{setup_id}"
 
 
 class ReleaseMethodAtProvider:

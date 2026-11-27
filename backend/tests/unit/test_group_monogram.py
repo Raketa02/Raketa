@@ -26,7 +26,7 @@ E_ACUTE_DECOMPOSED = "é"  # e and a combining acute
 @pytest.mark.parametrize(
     ("name", "letters"),
     [
-        ("my raketa group", "mr"),
+        ("my rakieta group", "mr"),
         ("Ogrody 33 Club", "O3"),
         ("  padel   kraków ", "pk"),
         ("Padel", "Pa"),

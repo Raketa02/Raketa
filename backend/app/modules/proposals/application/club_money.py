@@ -1,7 +1,7 @@
 """**The club's Money page** (#548; the mechanics §16.11; the screens B7).
 
 **A month at a time**, by the day each game is played on at the club: every
-Raketa booking that took money from its players, soonest first — the day and
+Rakieta booking that took money from its players, soonest first — the day and
 the court, what was collected, what was refunded, the card fees the club pays
 on it, and what is the club's — with the month's totals, and whether a payout
 has carried each one's money to the club's bank. A booking that took nothing —

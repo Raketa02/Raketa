@@ -2,7 +2,7 @@
 somebody's (``docs/adr/0202`` §1; the mechanics §4; #748).
 
 **Opening a link never makes friends by itself**: it puts the owner's request on
-your Home, *Invited you to Raketa*, to accept or set aside like any request. The
+your Home, *Invited you to Rakieta*, to accept or set aside like any request. The
 code is in the path, as a group's is: it is the link a chat was sent, and no
 secret.
 """
@@ -46,7 +46,7 @@ _RACED: dict[int | str, dict[str, Any]] = {
     responses=_RACED,
     summary="Your friend link",
     description=(
-        "The Add friends sheet's *Not on Raketa yet?* card: `<public site>/f/"
+        "The Add friends sheet's *Not on Rakieta yet?* card: `<public site>/f/"
         "<code>`, **made the first time you read it** and the same on every read "
         "after, until you take a New link. Somebody who opens it finds your "
         "request on their Home."
@@ -103,7 +103,7 @@ async def replace_your_friend_link(
     description=(
         "`code` is what follows `/f/` in the link, read in any case. **The "
         "owner's request lands on your Home**, *{nickname} wants to be your "
-        "friend · Invited you to Raketa*, with Accept and Not now — whether or "
+        "friend · Invited you to Rakieta*, with Accept and Not now — whether or "
         "not you share a group. Opened again, it makes no second request, and a "
         "request of theirs you set aside comes back to Home.\n\n"
         "**Nothing happens** for your own link (`NONE`) or a friend's "

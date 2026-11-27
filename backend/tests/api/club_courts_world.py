@@ -1,4 +1,4 @@
-"""Ogrody 33's desk setting its club up to sell through Raketa — the few moves
+"""Ogrody 33's desk setting its club up to sell through Rakieta — the few moves
 every test of courts, hours, exceptions, prices and settings makes (#535, the
 mechanics §16, the screens B2–B5).
 

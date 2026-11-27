@@ -375,7 +375,7 @@ async def test_a_row_per_seeded_member_with_name_photo_and_level(
     # Piotr is a member, and not an account the seed created: no row.
     assert set(rows) == {"marta", "kuba", "zofia", "marek", "ewa"}
     assert rows["kuba"]["player_id"] == str(world.kuba["id"])
-    assert rows["kuba"]["email"] == "kuba@raketa.example"
+    assert rows["kuba"]["email"] == "kuba@rakieta.example"
     assert rows["kuba"]["level"] == 2.5
     assert rows["kuba"]["photo_url"] is None
     assert board["group"]["other_members"] == 1

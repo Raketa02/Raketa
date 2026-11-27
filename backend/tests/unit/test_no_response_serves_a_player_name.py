@@ -72,7 +72,7 @@ DRAWS_A_PERSON = (
 
 
 def _spec() -> dict:
-    return build_surface_spec("Raketa Player API", player_api_router)
+    return build_surface_spec("Rakieta Player API", player_api_router)
 
 
 def test_every_name_a_response_reaches_names_something_that_is_not_a_player() -> None:
@@ -157,7 +157,7 @@ CLUB_DRAWS_A_PLAYER = ("ClubBookingPlayerSchema", "ClubJoinRequestSchema")
 
 
 def _club_spec() -> dict:
-    return build_surface_spec("Raketa Club API", SURFACES["club"])
+    return build_surface_spec("Rakieta Club API", SURFACES["club"])
 
 
 def test_every_name_the_club_reads_names_something_that_is_not_a_player() -> None:

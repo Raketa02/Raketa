@@ -54,12 +54,12 @@ def minio() -> S3PhotoStorage:
     """How `local` is wired: an internal endpoint and a different public one."""
 
     return S3PhotoStorage(
-        bucket="raketa-player-photos",
+        bucket="rakieta-player-photos",
         endpoint_url="http://minio:9000",
         public_endpoint_url="http://localhost:9000",
         region_name="us-east-1",
-        access_key_id="raketa_photos",
-        secret_access_key="raketa_photos_pwd",
+        access_key_id="rakieta_photos",
+        secret_access_key="rakieta_photos_pwd",
     )
 
 
@@ -67,7 +67,7 @@ def aws() -> S3PhotoStorage:
     """How a deployed environment is wired: no endpoint override at all."""
 
     return S3PhotoStorage(
-        bucket="raketa-player-photos",
+        bucket="rakieta-player-photos",
         endpoint_url=None,
         public_endpoint_url=None,
         region_name="eu-north-1",
@@ -155,15 +155,15 @@ async def test_the_secret_is_never_in_the_url() -> None:
     # itself must not be in it.
     url = await minio().presigned_read_url(REF, valid_for_seconds=300)
 
-    assert "raketa_photos_pwd" not in url
+    assert "rakieta_photos_pwd" not in url
 
 
 async def test_path_style_addressing_keeps_the_bucket_out_of_the_hostname() -> None:
-    # Virtual-host style would resolve `raketa-player-photos.minio`, which is
+    # Virtual-host style would resolve `rakieta-player-photos.minio`, which is
     # not a name anything on the compose network answers to.
     url = await minio().presigned_read_url(REF, valid_for_seconds=300)
 
-    assert urlparse(url).path.startswith("/raketa-player-photos/")
+    assert urlparse(url).path.startswith("/rakieta-player-photos/")
 
 
 # ---------------------------------------------------------------------------
@@ -182,8 +182,8 @@ async def the_signer_this_replaced(
     from botocore.client import Config
 
     session = aioboto3.Session(
-        aws_access_key_id="raketa_photos",
-        aws_secret_access_key="raketa_photos_pwd",
+        aws_access_key_id="rakieta_photos",
+        aws_secret_access_key="rakieta_photos_pwd",
         region_name="us-east-1",
     )
     async with session.client(
@@ -194,7 +194,7 @@ async def the_signer_this_replaced(
         url: str = await s3.generate_presigned_url(
             "get_object",
             Params={
-                "Bucket": "raketa-player-photos",
+                "Bucket": "rakieta-player-photos",
                 "Key": object_key_for(ref.owner_id, ref.photo_id),
             },
             ExpiresIn=seconds,

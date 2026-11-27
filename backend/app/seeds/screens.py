@@ -179,7 +179,7 @@ async def assert_the_club_bookings(
         )
     where = f"Bookings · {GAMES_CLUB.name} · {day.day.isoformat()}"
     if not day.rows:
-        raise ScreenIsEmpty(f"{where} lists no Raketa booking")
+        raise ScreenIsEmpty(f"{where} lists no Rakieta booking")
     paid = sum(len(row.takings.paid) for row in day.rows)
     return f"{where}: {len(day.rows)} booking(s), {paid} share(s) paid"
 

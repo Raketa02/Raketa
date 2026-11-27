@@ -303,7 +303,7 @@ class ReliabilityMinimumNotOffered(BadRequestError):
 
 
 class LocationClubUnknown(BadRequestError):
-    """The club picked for a Location area is no club in Raketa.
+    """The club picked for a Location area is no club in Rakieta.
 
     A player who refuses the phone's location **picks a club near where they
     play**, and that club's point on the map, rounded to the cell, becomes their
@@ -317,6 +317,6 @@ class LocationClubUnknown(BadRequestError):
 
     def __init__(self) -> None:
         super().__init__(
-            "Only a club in Raketa can stand in for a location.",
+            "Only a club in Rakieta can stand in for a location.",
             details={"field": "club_id"},
         )

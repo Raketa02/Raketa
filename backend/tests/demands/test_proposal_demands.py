@@ -1460,7 +1460,7 @@ async def test_every_hour_a_club_sells_counts_and_names_its_free_courts_in_order
 ):
     """One row per club, sport and hour, its courts counted — and, for the
     friends card (#750), named in the club's own order, the first being the
-    one a booking then is given. A court the desk takes off Raketa is neither."""
+    one a booking then is given. A court the desk takes off Rakieta is neither."""
 
     club_id, desk = await a_club_and_its_desk(client)
     outdoor = await adds_a_court(

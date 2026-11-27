@@ -19,7 +19,7 @@ provider; the deadline is run by its job, as the scheduler runs it.
 
 The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the game is
 **Saturday 10 October, 17:00**, padel at 160 zł — 40 zł a seat — at Bonarka
-Arena. It hands Raketa its hours until a day before — the book-by, **Friday
+Arena. It hands Rakieta its hours until a day before — the book-by, **Friday
 17:00** — and players leave free until two days before — the cut-off,
 **Thursday 17:00** — so every refusal on Monday is a card to fix, and a game
 can still fill past its cut-off: only a club whose cut-off is longer than its

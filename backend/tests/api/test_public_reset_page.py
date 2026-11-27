@@ -5,7 +5,7 @@
 still works, and sets the new password by **the same rules as Forgot
 password** — the password rule, the four refusals, and every phone signed out —
 but signs nobody in: the public site holds no session (``docs/adr/0187`` §4),
-so Tomek then signs in to Raketa with the new password.
+so Tomek then signs in to Rakieta with the new password.
 
 The refusals are asserted **on both surfaces at once**, parametrised, so the
 claim that they are the same rules is a claim a test makes rather than a

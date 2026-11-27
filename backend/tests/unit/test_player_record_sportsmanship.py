@@ -126,7 +126,7 @@ def test_no_search_result_card_carries_what_players_said():
     )
 
     schemas = schemas_reachable_from_responses(
-        build_surface_spec("Raketa Player API", player_api_router)
+        build_surface_spec("Rakieta Player API", player_api_router)
     )
     assert schemas, "the walk found no schemas, so it would pass for ever"
 
@@ -153,7 +153,7 @@ def test_the_band_is_on_no_response_shape_in_the_emitted_document():
     from app.api.contract import build_surface_spec
     from app.api.v1.player import player_api_router
 
-    document = build_surface_spec("Raketa Player API", player_api_router)
+    document = build_surface_spec("Rakieta Player API", player_api_router)
     schemas = document["components"]["schemas"]
     assert schemas, "the walk found no schemas, so it would pass for ever"
 

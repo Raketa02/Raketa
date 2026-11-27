@@ -1,7 +1,7 @@
 """The Seat charge aggregate — event-sourced, one stream per payment for one
 player's share of one game (``docs/adr/0189`` §5; the mechanics §12.2).
 
-**Raketa's account of a payment; the provider is the ledger of record.** A
+**Rakieta's account of a payment; the provider is the ledger of record.** A
 charge is born at the fill and never before — a yes moves no money — either
 **held** on the player's card or **refused**, and is then moved by two kinds of
 fact. Three rules shape it.

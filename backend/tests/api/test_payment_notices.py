@@ -1,4 +1,4 @@
-"""The provider's platform webhook: verified, read once, and in Raketa's words.
+"""The provider's platform webhook: verified, read once, and in Rakieta's words.
 
 ``POST /api/v1/webhooks/stripe`` (#536). Stripe signs every notice with the
 endpoint's secret and sends it **twice as often as not, and out of order**

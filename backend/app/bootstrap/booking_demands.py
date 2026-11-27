@@ -3,7 +3,7 @@ each demand (#543).
 
 **A register of its own**, on the rule every register here states: a new
 consumer gets a new register, not a row in somebody else's. **Five rows, and the
-tuple is what is asserted over**: which court a club still has for Raketa at an
+tuple is what is asserted over**: which court a club still has for Rakieta at an
 hour, with its cut-off, the court a club's cancel closes for its hour
 (``CourtClosures``, #673), and whom an email to a club is addressed to — all the
 Club context's — and the ordinary Game a booking opens (``GameOpening``, #541,

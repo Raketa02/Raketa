@@ -31,7 +31,7 @@ from __future__ import annotations
 
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-_BLOCK_NAMESPACE = uuid5(NAMESPACE_URL, "raketa/block")
+_BLOCK_NAMESPACE = uuid5(NAMESPACE_URL, "rakieta/block")
 
 
 def block_id(blocker_id: UUID, blocked_id: UUID) -> UUID:

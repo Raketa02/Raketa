@@ -1,7 +1,7 @@
 """The fake provider's controls for the games test console (#591;
 ``docs/adr/0194`` §2).
 
-**The notices it would have sent.** Stripe tells Raketa that a payment moved by
+**The notices it would have sent.** Stripe tells Rakieta that a payment moved by
 webhook, and the fake moves payments without one — so it records, in order, the
 notice Stripe would have sent for every move: what the console replays, twice or
 out of order, through the webhook's own handling.

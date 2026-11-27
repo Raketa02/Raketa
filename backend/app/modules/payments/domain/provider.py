@@ -6,7 +6,7 @@ is configuration, chosen once in the composition root, and nothing that calls
 this port can tell them apart — which is why the **demands** in
 ``tests/demands/test_payments_demands.py`` run against both.
 
-**It speaks in Raketa's words, never in Stripe's objects.** A saved card is a
+**It speaks in Rakieta's words, never in Stripe's objects.** A saved card is a
 ``CardOnFile``, a hold is an ``AUTHORISED`` payment and a SetupIntent is a
 *setup*; the Stripe adapter translates at its own edge. Money is **integer
 grosze** in and out (``docs/value-formatting.md``) and always złoty, so no
@@ -24,7 +24,7 @@ currency crosses.
 
 **Every write takes an idempotency key**, and the caller derives it from its own
 record, because a provider forgets a key after a day (the mechanics Appendix A:
-*Raketa's own records must prevent duplicates*). The same key twice answers the
+*Rakieta's own records must prevent duplicates*). The same key twice answers the
 first call's result and does nothing again; the same key with different
 arguments is a bug, and refused. **One write takes none**: an onboarding link is
 single use, and a key would hand back a link already spent.
@@ -58,11 +58,11 @@ class Wallet(StrEnum):
 @final
 @dataclass(frozen=True, slots=True)
 class CardOnFile:
-    """A method saved at the provider, as far as Raketa needs to know it.
+    """A method saved at the provider, as far as Rakieta needs to know it.
 
     ``brand`` is the card network **as the provider names it**, lower case —
     ``visa``, ``mastercard`` — an open set a client draws a badge from, so a new
-    network never fails a read. The number itself never reaches Raketa: only the
+    network never fails a read. The number itself never reaches Rakieta: only the
     last four digits, which every receipt prints."""
 
     method_id: str
@@ -93,7 +93,7 @@ class SetupStatus(StrEnum):
 @final
 @dataclass(frozen=True, slots=True)
 class StartedSetup:
-    """A setup the provider opened: its id, which Raketa records, and the
+    """A setup the provider opened: its id, which Rakieta records, and the
     secret the phone confirms it with, which it never does."""
 
     setup_id: str
@@ -305,7 +305,7 @@ class PaymentProvider(Protocol):
         """Send ``amount_grosze`` of the club's money on its account to its
         bank, now (#548). **The club is paid after the game is played**
         (the mechanics §12.6): until then its money waits on its account, where
-        a refund before the start can come out of it — so it is Raketa that
+        a refund before the start can come out of it — so it is Rakieta that
         releases a payout, never the provider's own schedule. *How* the
         provider is kept from paying out on its own is open item O2; the fake
         pays out nothing it is not asked to. A balance that cannot cover it

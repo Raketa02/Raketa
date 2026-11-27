@@ -122,7 +122,7 @@ _OWNER_ONLY: dict[int | str, dict[str, Any]] = {
                 "A field the player has to correct, named by `details.field`, "
                 "checked in the form's order: `group_name_invalid` (`name`) — "
                 "1–40 characters once trimmed; `home_club_unknown` "
-                "(`home_club_id`) — only a club in Raketa can be a home club. "
+                "(`home_club_id`) — only a club in Rakieta can be a home club. "
                 "Nothing was recorded."
             ),
         },
@@ -480,7 +480,7 @@ async def decline_join_request(
     "",
     response_model=HomeClubPageResponse,
     status_code=status.HTTP_200_OK,
-    summary="Search every club in Raketa for a group's home club",
+    summary="Search every club in Rakieta for a group's home club",
     description=(
         "Clubs whose name or district contains `q` anywhere, ignoring case and "
         "accents (*debniki* finds *Dębniki*). **Nearest first** from the "

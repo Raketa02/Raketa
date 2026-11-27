@@ -416,7 +416,7 @@ def confirm_payment_email(
             subject=subject,
             heading=subject,
             lines=lines,
-            button_label="Open Raketa",
+            button_label="Open Rakieta",
             button_url=app_link,
         )
     )
@@ -476,7 +476,7 @@ def left_the_game_email(
                     f"{_let_go(share_grosze, on_the_card=on_the_card)}. "
                     "Your seat is offered to others.",
                 ),
-                button_label="Open Raketa",
+                button_label="Open Rakieta",
                 button_url=app_link,
             )
         )
@@ -492,7 +492,7 @@ def left_the_game_email(
                 f"{club}. Your seat is offered to others.",
                 _REFUNDS_TAKE,
             ),
-            button_label="Open Raketa",
+            button_label="Open Rakieta",
             button_url=app_link,
         )
     )
@@ -536,7 +536,7 @@ def left_after_the_cut_off_email(
                 f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)}.",
                 offered,
             ),
-            button_label="Open Raketa",
+            button_label="Open Rakieta",
             button_url=app_link,
         )
     )
@@ -584,7 +584,7 @@ def game_called_off_email(
             subject=subject,
             heading="Game called off",
             lines=lines,
-            button_label="Open Raketa",
+            button_label="Open Rakieta",
             button_url=app_link,
         )
     )
@@ -661,7 +661,7 @@ def game_cancelled_email(
             subject=subject,
             heading="Game cancelled",
             lines=lines,
-            button_label="Open Raketa",
+            button_label="Open Rakieta",
             button_url=app_link,
         )
     )
@@ -717,7 +717,7 @@ def game_you_left_cancelled_email(
                 + ("." if reason is None else f" {reason}."),
                 *money,
             ),
-            button_label="Open Raketa",
+            button_label="Open Rakieta",
             button_url=app_link,
         )
     )
@@ -762,7 +762,7 @@ def seat_taken_email(
                 "your payment).",
                 _REFUNDS_TAKE,
             ),
-            button_label="Open Raketa",
+            button_label="Open Rakieta",
             button_url=app_link,
         )
     )
@@ -798,7 +798,7 @@ def seat_taken_nothing_taken_email(
                 f"The {zloty(share_grosze)} hold on your card is let go: "
                 "nothing was taken.",
             ),
-            button_label="Open Raketa",
+            button_label="Open Rakieta",
             button_url=app_link,
         )
     )

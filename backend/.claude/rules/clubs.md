@@ -31,7 +31,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `SessionHolders` for its own accounts, and a `refresh_tokens` row records whose it is by
   filling **exactly one** of `user_id` and `club_account_id` (a check constraint). Seeded by
   `app/seeds/clubs.py` — eight Kraków clubs placed as offsets from the seed centre, each
-  signed up through `SignUpClub`, each desk at `desk.<name>@raketa.example` on the seed
+  signed up through `SignUpClub`, each desk at `desk.<name>@rakieta.example` on the seed
   password.
 - **A club's courts are one stream per club, and what it can sell is derived**
   ([ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §3, §5, #535).
@@ -85,13 +85,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   checklist is read, never stored** (`domain/setup.py`): *locked* is the backend's rule, and
   **live is all four steps** — connect payments, add courts, set hours and prices, check
   the settings; hours and prices wait for a court, and the settings wait for nothing since
-  *Choose how you work with Raketa* went (#670) — payments done only while the provider
+  *Choose how you work with Rakieta* went (#670) — payments done only while the provider
   says the club's account is **ready** (#537), so a club Stripe stops is live no longer, and
   its courts leave the decks with it (`PaymentsStatusChanged` makes the proposer due). A club
   cannot untick a sport one of its courts plays (`club_sport_has_courts`), asked before the
   official groups are. Every hour is wall clock in `CLUB_ZONE` — one zone for every club, a
   locale assumption until the first club somewhere else — through `slot_start`.
-  Seeded by `app/seeds/club_courts.py`: every club Only Raketa (#670), each with a release
+  Seeded by `app/seeds/club_courts.py`: every club Only Rakieta (#670), each with a release
   lead that keeps its seeded games fillable — a day ahead at all but Centrum Ruchu (two),
   Nowa Huta Squash and Zabłocie Sport (the default three) — Wisła Park half set up (its
   courts and its settings, two steps of four) and not live, Zabłocie Sport paused, and a run

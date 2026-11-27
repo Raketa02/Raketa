@@ -40,7 +40,7 @@ def _operations(spec: dict) -> set[str]:
 
 
 def _spec() -> dict:
-    return build_surface_spec("Raketa Public API", SURFACES["public"])
+    return build_surface_spec("Rakieta Public API", SURFACES["public"])
 
 
 def test_the_committed_public_document_is_the_one_the_surface_produces():

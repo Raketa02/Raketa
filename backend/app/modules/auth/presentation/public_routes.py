@@ -2,7 +2,7 @@
 
 *Forgot password?* in the app emails a button to the public site's
 ``/reset/<token>``, for a player or an administrator. Opened on a phone without
-Raketa or on a laptop, that page reads here whether the link still works, and
+Rakieta or on a laptop, that page reads here whether the link still works, and
 sets the new password.
 
 Mounted under ``/api/v1/public``, and **no route here takes a session**.
@@ -87,7 +87,7 @@ async def reset_page(
         "password?***: the password rule, the link spent, and **every session "
         "signed out** — every access token issued before this moment is "
         "refused (`access_token_revoked`) and every refresh token revoked. "
-        "**Nobody is signed in**: the page then says to open Raketa and sign in "
+        "**Nobody is signed in**: the page then says to open Rakieta and sign in "
         "with the new password."
     ),
 )

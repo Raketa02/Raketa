@@ -1,6 +1,6 @@
 """The Club courts aggregate — event-sourced, one stream per club.
 
-Everything a club offers Raketa and how it sells it (``docs/adr/0189`` §3, §5;
+Everything a club offers Rakieta and how it sells it (``docs/adr/0189`` §3, §5;
 the mechanics §16): its **courts** and the **Rakieta hours** each is offered for.
 
 **Born by being used.** ``unwritten`` is a club that has done nothing here yet
@@ -367,7 +367,7 @@ class ClubCourts:
         return self.payments.status
 
     def open_payments_account(self, account_id: str, *, occurred_at: datetime) -> None:
-        """Raketa opened the club's account at the provider. **Once**: a club
+        """Rakieta opened the club's account at the provider. **Once**: a club
         with an account continues it, and opening a second is a bug in the
         caller."""
 

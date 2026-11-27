@@ -268,7 +268,7 @@ class SetNewPasswordWithoutSigningIn:
     """The new password, set by the link **on the public site's reset page**:
     the same rules and the same results as :class:`SetNewPassword` — every
     session on this surface ended — and **no session opened**, because the
-    site holds none (``docs/adr/0187`` §4). The person signs in to Raketa with
+    site holds none (``docs/adr/0187`` §4). The person signs in to Rakieta with
     the password they have just chosen."""
 
     def __init__(

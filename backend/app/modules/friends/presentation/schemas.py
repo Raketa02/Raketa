@@ -261,7 +261,7 @@ class AskForALevelRequest(BaseModel):
 
 
 class FriendLinkResponse(BaseModel):
-    """Your Friend link, as the Add friends sheet's *Not on Raketa yet?* card
+    """Your Friend link, as the Add friends sheet's *Not on Rakieta yet?* card
     shows it (#748)."""
 
     code: str = Field(
@@ -283,7 +283,7 @@ class OpenedFriendLinkResponse(BaseModel):
     relation: FriendRelation = Field(
         description=(
             "Your relation to the link's owner once it is opened. `ASKED_YOU` — "
-            "their request is on your Home, *Invited you to Raketa*: land there. "
+            "their request is on your Home, *Invited you to Rakieta*: land there. "
             "`FRIEND` — you were friends already, or you had asked them and the "
             "requests crossed. `NONE` — the link is your own, and nothing "
             "happened."
@@ -294,7 +294,7 @@ class OpenedFriendLinkResponse(BaseModel):
 class LinkedFriendResponse(BaseModel):
     """A Friend link's owner as the public site's `/f/<code>` page draws them for
     somebody who has not signed in — *{nickname} invited you to play on
-    Raketa* — **and nothing else about them**."""
+    Rakieta* — **and nothing else about them**."""
 
     nickname: str
     photo_url: str | None = Field(

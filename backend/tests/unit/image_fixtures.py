@@ -58,7 +58,7 @@ def jpeg_with_gps_and_orientation(
 
     exif = Image.Exif()
     exif[ExifTags.Base.Orientation] = orientation
-    exif[ExifTags.Base.Make] = "RaketaPhone"
+    exif[ExifTags.Base.Make] = "RakietaPhone"
     exif[ExifTags.Base.Model] = "Court 1"
     gps = exif.get_ifd(ExifTags.IFD.GPSInfo)
     gps[ExifTags.GPS.GPSLatitudeRef] = "N"

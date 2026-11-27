@@ -24,8 +24,8 @@ from __future__ import annotations
 
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-_FRIENDSHIP_NAMESPACE = uuid5(NAMESPACE_URL, "raketa/friendship")
-_FRIEND_LINK_NAMESPACE = uuid5(NAMESPACE_URL, "raketa/friend-link")
+_FRIENDSHIP_NAMESPACE = uuid5(NAMESPACE_URL, "rakieta/friendship")
+_FRIEND_LINK_NAMESPACE = uuid5(NAMESPACE_URL, "rakieta/friend-link")
 
 
 def ordered_pair(first: UUID, second: UUID) -> tuple[UUID, UUID]:

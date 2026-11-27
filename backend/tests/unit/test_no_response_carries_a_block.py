@@ -86,7 +86,7 @@ def _operations_reaching(spec: dict, schema: str) -> set[str]:
 
 
 def _spec() -> dict:
-    return build_surface_spec("Raketa Player API", player_api_router)
+    return build_surface_spec("Rakieta Player API", player_api_router)
 
 
 def test_the_walk_reaches_the_response_schemas_it_is_meant_to_check():

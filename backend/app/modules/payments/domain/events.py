@@ -6,7 +6,7 @@ the You tab's *Not set up* says (``docs/adr/0189`` §5).
 
 **No secret is on it** (``docs/adr/0184`` §4): the secret a phone confirms a
 setup with is asked of the provider when it is needed and never recorded, and a
-card number never reaches Raketa at all — only its brand and last four digits,
+card number never reaches Rakieta at all — only its brand and last four digits,
 which every receipt prints. What is here is the provider's **ids** for the
 player's customer, each setup and each saved card, and the **consent**: which
 terms, when, and from which address.
@@ -141,7 +141,7 @@ class MaximumAgreed:
 # Two kinds of event, and the difference is load-bearing. **What the provider
 # said** — ``Authorised``, ``Failed``, ``Confirmed``, ``Captured``,
 # ``Cancelled`` — is read off the provider, by the fill or from a notice. **What
-# Raketa decided** — ``Taken`` and ``Released`` — is the fill's verdict on the
+# Rakieta decided** — ``Taken`` and ``Released`` — is the fill's verdict on the
 # hold, recorded in the transaction that books the game or does not, and acted
 # on at the provider **after** the commit by a subscriber, retried until it
 # lands (``docs/adr/0190`` §4).
@@ -225,7 +225,7 @@ class SeatChargeConfirmed:
 class SeatChargeKept:
     """**The game booked on this hold, which is kept on the card until the
     club's cut-off** (#637; ADR-0189's 2026-10-10 amendment) — and taken then.
-    Raketa's decision, recorded with the booking; nothing moves at the
+    Rakieta's decision, recorded with the booking; nothing moves at the
     provider. Not paid: leaving before ``until`` lets it go, and nothing is
     taken."""
 
@@ -247,7 +247,7 @@ class SeatChargeChecked:
     hold before its club's cut-off, and the hold would not last until it — its
     last moment less than six hours past the cut-off. It is **let go at once**,
     which proves the money was there that day, and the share is held again at
-    ``hold_at``, its Holding time, to stay until ``until``, the cut-off. Raketa's
+    ``hold_at``, its Holding time, to stay until ``until``, the cut-off. Rakieta's
     decision, recorded with the booking; ``payment_id`` — the check's — is
     cancelled at the provider after the commit. Nothing was taken."""
 
@@ -301,7 +301,7 @@ class SeatChargeHoldingRefused:
 
 @dataclass(frozen=True)
 class SeatChargeTaken:
-    """**The share is taken.** Raketa's decision — the game booked after its
+    """**The share is taken.** Rakieta's decision — the game booked after its
     cut-off, or the cut-off came — recorded in that act's transaction; captured
     at the provider after the commit."""
 
@@ -320,7 +320,7 @@ class SeatChargeReleased:
     """**The hold is let go** — the game did not book on it (another seat
     failed, or somebody else took this one), or a share held for the booked
     game is given up before the cut-off: a leave, a game short at it, the
-    club's cancel (#637). Raketa's decision; cancelled at the provider after
+    club's cancel (#637). Rakieta's decision; cancelled at the provider after
     the commit, which costs nothing."""
 
     charge_id: UUID
@@ -373,7 +373,7 @@ class SeatChargeCancelled:
 class SeatChargeRefundDecided:
     """**The share is to be given back** (#544; the mechanics §12.3) — the
     player left before the club's cut-off, and the card fee is withheld; or the
-    game was called off at its cut-off, and nothing is. Raketa's decision,
+    game was called off at its cut-off, and nothing is. Rakieta's decision,
     recorded with the act that caused it; refunded at the provider after the
     commit, which says what it gave back."""
 
@@ -395,7 +395,7 @@ class SeatChargeRefundDecided:
 class SeatChargeRefunded:
     """The provider gave the share back: ``amount_grosze`` to the player, and
     ``fee_withheld_grosze`` kept — the fee kept on that payment, nought on a
-    refund in full. Raketa asked for exactly that amount."""
+    refund in full. Rakieta asked for exactly that amount."""
 
     charge_id: UUID
     player_id: UUID
@@ -413,7 +413,7 @@ class SeatChargeRefunded:
 # Its share of every game waits on its account at the provider — a refund before
 # the start comes out of it — until the close of a day, when everything its
 # games over and settled left it is **paid out** to its bank in one payout.
-# Two events, the same two kinds as a refund's: **what Raketa decided**
+# Two events, the same two kinds as a refund's: **what Rakieta decided**
 # (``Decided``: the games and the amount, recorded in the job's transaction)
 # and **what the provider said** (``Sent``: its payout, on its way — made from
 # the outbox after the commit, as a refund is).

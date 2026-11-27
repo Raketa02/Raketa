@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Raketa Player API",
+    "title": "Rakieta Player API",
     "version": "1.0.0"
   },
   "paths": {
@@ -976,7 +976,7 @@
             }
           },
           "400": {
-            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`weekly_hours_empty` \u2014 nothing ticked on the week. At least one of its 112 hours; the minimum is exactly one and is not served.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over 250 characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.\n\n`location_club_unknown` \u2014 the club picked in place of a reading is no club in Raketa (`details.field` `club_id`): it stopped existing between the search and the tap, or the client invented it.",
+            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`weekly_hours_empty` \u2014 nothing ticked on the week. At least one of its 112 hours; the minimum is exactly one and is not served.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over 250 characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.\n\n`location_club_unknown` \u2014 the club picked in place of a reading is no club in Rakieta (`details.field` `club_id`): it stopped existing between the search and the tap, or the client invented it.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1153,7 +1153,7 @@
             "description": "Successful Response"
           },
           "400": {
-            "description": "`location_club_unknown` \u2014 the club picked in place of a reading is no club in Raketa (`details.field` `club_id`). Nothing moves.",
+            "description": "`location_club_unknown` \u2014 the club picked in place of a reading is no club in Rakieta (`details.field` `club_id`). Nothing moves.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1981,7 +1981,7 @@
           "friends"
         ],
         "summary": "Your friend link",
-        "description": "The Add friends sheet's *Not on Raketa yet?* card: `<public site>/f/<code>`, **made the first time you read it** and the same on every read after, until you take a New link. Somebody who opens it finds your request on their Home.",
+        "description": "The Add friends sheet's *Not on Rakieta yet?* card: `<public site>/f/<code>`, **made the first time you read it** and the same on every read after, until you take a New link. Somebody who opens it finds your request on their Home.",
         "operationId": "read_your_friend_link_api_v1_friends_link_get",
         "responses": {
           "200": {
@@ -2055,7 +2055,7 @@
           "friends"
         ],
         "summary": "Open a friend link",
-        "description": "`code` is what follows `/f/` in the link, read in any case. **The owner's request lands on your Home**, *{nickname} wants to be your friend \u00b7 Invited you to Raketa*, with Accept and Not now \u2014 whether or not you share a group. Opened again, it makes no second request, and a request of theirs you set aside comes back to Home.\n\n**Nothing happens** for your own link (`NONE`) or a friend's (`FRIEND`). **If you had asked them, the requests cross**: you are friends at once (`FRIEND`).",
+        "description": "`code` is what follows `/f/` in the link, read in any case. **The owner's request lands on your Home**, *{nickname} wants to be your friend \u00b7 Invited you to Rakieta*, with Accept and Not now \u2014 whether or not you share a group. Opened again, it makes no second request, and a request of theirs you set aside comes back to Home.\n\n**Nothing happens** for your own link (`NONE`) or a friend's (`FRIEND`). **If you had asked them, the requests cross**: you are friends at once (`FRIEND`).",
         "operationId": "open_a_friend_link_api_v1_friends_links__code__opening_post",
         "security": [
           {
@@ -3951,10 +3951,10 @@
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/RankingView",
-              "description": "Which list: `GENERAL`, everybody in Raketa listed in the sport; `FRIENDS`, you and your friends, from the first result.",
+              "description": "Which list: `GENERAL`, everybody in Rakieta listed in the sport; `FRIENDS`, you and your friends, from the first result.",
               "default": "GENERAL"
             },
-            "description": "Which list: `GENERAL`, everybody in Raketa listed in the sport; `FRIENDS`, you and your friends, from the first result."
+            "description": "Which list: `GENERAL`, everybody in Rakieta listed in the sport; `FRIENDS`, you and your friends, from the first result."
           }
         ],
         "responses": {
@@ -4140,7 +4140,7 @@
             }
           },
           "400": {
-            "description": "A field the player has to correct, named by `details.field`, checked in the form's order: `group_name_invalid` (`name`) \u2014 1\u201340 characters once trimmed; `home_club_unknown` (`home_club_id`) \u2014 only a club in Raketa can be a home club. Nothing was recorded.",
+            "description": "A field the player has to correct, named by `details.field`, checked in the form's order: `group_name_invalid` (`name`) \u2014 1\u201340 characters once trimmed; `home_club_unknown` (`home_club_id`) \u2014 only a club in Rakieta can be a home club. Nothing was recorded.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4833,7 +4833,7 @@
         "tags": [
           "groups"
         ],
-        "summary": "Search every club in Raketa for a group's home club",
+        "summary": "Search every club in Rakieta for a group's home club",
         "description": "Clubs whose name or district contains `q` anywhere, ignoring case and accents (*debniki* finds *D\u0119bniki*). **Nearest first** from the caller's Location area, then by name, twenty to a page; a caller with no Location area gets A\u2013Z and no distance. A blank `q` finds nothing. Each club carries every group at it and what each is to the caller.",
         "operationId": "search_home_clubs_api_v1_home_clubs_get",
         "security": [
@@ -7446,7 +7446,7 @@
           "proposals"
         ],
         "summary": "Deal my group now",
-        "description": "Right after an intent answer on the **Games** tab (Q127): Raketa deals this group's games now \u2014 the proposer's own batch for its pool, in every sport it plays, the one the jobs run \u2014 and answers once it has been applied, so the phone can show *Finding for-fun games for you\u2026* for as long as it takes and then read the deck. It never makes a card itself: what it deals is exactly what the jobs would have, a moment later. Safe beside the jobs and beside itself \u2014 a repeat deals nothing new \u2014 and what it records is told as the jobs' is (*Your new game* among it). No body.",
+        "description": "Right after an intent answer on the **Games** tab (Q127): Rakieta deals this group's games now \u2014 the proposer's own batch for its pool, in every sport it plays, the one the jobs run \u2014 and answers once it has been applied, so the phone can show *Finding for-fun games for you\u2026* for as long as it takes and then read the deck. It never makes a card itself: what it deals is exactly what the jobs would have, a moment later. Safe beside the jobs and beside itself \u2014 a repeat deals nothing new \u2014 and what it records is told as the jobs' is (*Your new game* among it). No body.",
         "operationId": "deal_the_pool_now_api_v1_pools__pool_id__deal_post",
         "security": [
           {
@@ -10863,7 +10863,7 @@
               }
             ],
             "title": "Location",
-            "description": "Where this player plays: **a reading of the phone** (`latitude` and `longitude`), or, when the phone's location is refused, **a club they pick** (`club_id`) \u2014 exactly one of the two (`docs/adr/0200` \u00a710). Either is rounded to the cell about a kilometre across before anything is recorded, and the cell comes back as `location`. A club that is not in Raketa is `location_club_unknown`."
+            "description": "Where this player plays: **a reading of the phone** (`latitude` and `longitude`), or, when the phone's location is refused, **a club they pick** (`club_id`) \u2014 exactly one of the two (`docs/adr/0200` \u00a710). Either is rounded to the cell about a kilometre across before anything is recorded, and the cell comes back as `location`. A club that is not in Rakieta is `location_club_unknown`."
           },
           "gender": {
             "$ref": "#/components/schemas/Gender",
@@ -11263,7 +11263,7 @@
             "type": "string",
             "format": "uuid",
             "title": "Home Club Id",
-            "description": "A club from home-club search \u2014 **required**. A club Raketa does not have is `home_club_unknown`, `details.field` `home_club_id`."
+            "description": "A club from home-club search \u2014 **required**. A club Rakieta does not have is `home_club_unknown`, `details.field` `home_club_id`."
           },
           "join_policy": {
             "$ref": "#/components/schemas/JoinPolicy",
@@ -12175,7 +12175,7 @@
           "link"
         ],
         "title": "FriendLinkResponse",
-        "description": "Your Friend link, as the Add friends sheet's *Not on Raketa yet?* card\nshows it (#748)."
+        "description": "Your Friend link, as the Add friends sheet's *Not on Rakieta yet?* card\nshows it (#748)."
       },
       "FriendRelation": {
         "type": "string",
@@ -14233,7 +14233,7 @@
           "by_link": {
             "type": "boolean",
             "title": "By Link",
-            "description": "Made by their Friend link: draw *Invited you to Raketa* in place of the group line."
+            "description": "Made by their Friend link: draw *Invited you to Rakieta* in place of the group line."
           },
           "from_ranking": {
             "type": "boolean",
@@ -15803,7 +15803,7 @@
           "letters": {
             "type": "string",
             "title": "Letters",
-            "description": "The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my raketa group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes \u2014 never change its case."
+            "description": "The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my rakieta group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes \u2014 never change its case."
           },
           "colour": {
             "type": "integer",
@@ -16507,7 +16507,7 @@
         "properties": {
           "relation": {
             "$ref": "#/components/schemas/FriendRelation",
-            "description": "Your relation to the link's owner once it is opened. `ASKED_YOU` \u2014 their request is on your Home, *Invited you to Raketa*: land there. `FRIEND` \u2014 you were friends already, or you had asked them and the requests crossed. `NONE` \u2014 the link is your own, and nothing happened."
+            "description": "Your relation to the link's owner once it is opened. `ASKED_YOU` \u2014 their request is on your Home, *Invited you to Rakieta*: land there. `FRIEND` \u2014 you were friends already, or you had asked them and the requests crossed. `NONE` \u2014 the link is your own, and nothing happened."
           }
         },
         "type": "object",
@@ -16877,7 +16877,7 @@
             "type": "string",
             "format": "uuid",
             "title": "Club Id",
-            "description": "A club from Raketa's clubs, as `GET /home-clubs` answers it \u2014 by name or district, A\u2013Z for a player with no area yet."
+            "description": "A club from Rakieta's clubs, as `GET /home-clubs` answers it \u2014 by name or district, A\u2013Z for a player with no area yet."
           }
         },
         "additionalProperties": false,
@@ -16886,7 +16886,7 @@
           "club_id"
         ],
         "title": "PickedClubRequest",
-        "description": "**A Club they pick** in place of a reading, when the phone's location\nis refused (``docs/adr/0200`` \u00a710): *Pick a club near where you play*.\n\nThe club's point on the map, rounded to the cell exactly as a reading is,\nbecomes the Location area \u2014 so the phone never needs a club's coordinates.\nAn id that names no club in Raketa is `location_club_unknown`. **Nothing\nelse rides along**: a body that also carries a reading is refused."
+        "description": "**A Club they pick** in place of a reading, when the phone's location\nis refused (``docs/adr/0200`` \u00a710): *Pick a club near where you play*.\n\nThe club's point on the map, rounded to the cell exactly as a reading is,\nbecomes the Location area \u2014 so the phone never needs a club's coordinates.\nAn id that names no club in Rakieta is `location_club_unknown`. **Nothing\nelse rides along**: a body that also carries a reading is refused."
       },
       "PlaceCardSchema": {
         "properties": {
@@ -18248,7 +18248,7 @@
           "FRIENDS"
         ],
         "title": "RankingView",
-        "description": "Which list a ranking is read in (``docs/adr/0203`` \u00a73). **General** is\neverybody in Raketa listed in the sport; **Friends** is the reader and their\nfriends, worked out on each read (#771). Both drop a player 90 days after\ntheir last result, and both order and place them alike."
+        "description": "Which list a ranking is read in (``docs/adr/0203`` \u00a73). **General** is\neverybody in Rakieta listed in the sport; **Friends** is the reader and their\nfriends, worked out on each read (#771). Both drop a player 90 days after\ntheir last result, and both order and place them alike."
       },
       "RatingResponse": {
         "properties": {
@@ -19944,7 +19944,7 @@
           "BADMINTON"
         ],
         "title": "Sport",
-        "description": "The four sports Raketa rates, as a closed enum."
+        "description": "The four sports Rakieta rates, as a closed enum."
       },
       "SportLevelSchema": {
         "properties": {

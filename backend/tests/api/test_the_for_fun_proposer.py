@@ -157,7 +157,7 @@ async def test_the_best_company_keeps_the_newcomer_s_window_and_stands_evenest(
     client, session_factory, payments, clock, club, mailbox
 ):
     """Everybody shares everything. Kuba at 3,2 is inside For fun's window
-    of each of them — but they are all new to Raketa, and a pair holding a
+    of each of them — but they are all new to Rakieta, and a pair holding a
     newcomer takes the competitive window, which Ola at 2,5 and Ania at 2,6
     are outside of him. So there is one four, and it is not his."""
 

@@ -112,7 +112,7 @@ class StripeTestPhone:
                 setup_id,
                 params={
                     "payment_method": STRIPE_TEST_METHODS[card],
-                    "return_url": "https://raketa.example/return",
+                    "return_url": "https://rakieta.example/return",
                 },
             )
         except stripe.CardError:
@@ -170,7 +170,7 @@ def _key() -> str:
     """A fresh idempotency key: a provider remembers a key for a day, so a key
     reused across two runs of this suite would answer the last run's object."""
 
-    return f"raketa-demands-{new_uuid()}"
+    return f"rakieta-demands-{new_uuid()}"
 
 
 async def _saved(provider: PaymentProvider, phone: Phone, card: EnteredCard):
@@ -382,20 +382,20 @@ async def test_a_new_club_account_is_not_ready_and_has_an_onboarding_link(provid
     account = await provider.open_club_account(
         club_id=club,
         name="Bonarka Arena",
-        email="desk@raketa.example",
+        email="desk@rakieta.example",
         idempotency_key=key,
     )
     again = await provider.open_club_account(
         club_id=club,
         name="Bonarka Arena",
-        email="desk@raketa.example",
+        email="desk@rakieta.example",
         idempotency_key=key,
     )
     reading = await provider.read_club_account(account)
     link = await provider.onboarding_link(
         account,
-        refresh_url="https://club.raketa.example/payments/refresh",
-        return_url="https://club.raketa.example/payments/return",
+        refresh_url="https://club.rakieta.example/payments/refresh",
+        return_url="https://club.rakieta.example/payments/return",
     )
     payouts = await provider.payouts(account, limit=10)
 
@@ -421,7 +421,7 @@ async def club_account(provider) -> str:
         account = await provider.open_club_account(
             club_id=new_uuid(),
             name="Bonarka Arena",
-            email="desk@raketa.example",
+            email="desk@rakieta.example",
             idempotency_key=_key(),
         )
         provider.club_account_is(account, ClubAccountStatus.READY)
@@ -813,7 +813,7 @@ async def test_a_club_is_paid_out_what_it_is_asked_once_per_key(
     provider, club_account
 ):
     """**The club is paid after the game is played** (the mechanics §12.6): a
-    payout is made when Raketa releases one — what it was asked for, once
+    payout is made when Rakieta releases one — what it was asked for, once
     whatever the retries — and is on the account's list of payouts."""
 
     if not isinstance(provider, FakePayments):
@@ -823,8 +823,8 @@ async def test_a_club_is_paid_out_what_it_is_asked_once_per_key(
         )
     asked = dict(
         amount_grosze=114_20,
-        description="Raketa · games over by 10 October 2026",
-        metadata={"raketa_payout": "demands"},
+        description="Rakieta · games over by 10 October 2026",
+        metadata={"rakieta_payout": "demands"},
         idempotency_key=_key(),
     )
 

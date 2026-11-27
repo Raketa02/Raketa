@@ -36,7 +36,7 @@ def test_every_dev_path_is_under_dev_and_the_page_is_not_one():
     fetch an HTML file is not something anything generates types from — and
     every route it presses is in the document, which still has no client."""
 
-    spec = build_surface_spec("Raketa Dev API", SURFACES["dev"])
+    spec = build_surface_spec("Rakieta Dev API", SURFACES["dev"])
 
     assert spec["paths"]
     assert all(path.startswith("/dev/") for path in spec["paths"])
@@ -49,7 +49,7 @@ def test_every_press_names_the_account_it_acts_as():
     a press acts as the account in its path, and nothing else. A route under
     `/dev/as/` that did not name one would be acting as nobody in particular."""
 
-    spec = build_surface_spec("Raketa Dev API", SURFACES["dev"])
+    spec = build_surface_spec("Rakieta Dev API", SURFACES["dev"])
 
     acting = [path for path in spec["paths"] if path.startswith("/dev/as/")]
     assert acting
@@ -69,7 +69,7 @@ def test_the_committed_dev_document_is_the_one_the_surface_produces():
 
     on_disk = json.loads((BACKEND_ROOT / "openapi.dev.json").read_text())
 
-    assert on_disk == build_surface_spec("Raketa Dev API", SURFACES["dev"])
+    assert on_disk == build_surface_spec("Rakieta Dev API", SURFACES["dev"])
 
 
 def test_the_player_contract_carries_no_dev_path():
@@ -119,14 +119,14 @@ def test_every_named_seed_account_is_a_seed_account():
         # `.test` is reserved by the same RFC sentence and is deliberately not
         # this predicate's answer: `EmailStr` refuses it, so no account can hold
         # one (`app/seeds/catalog.py`'s `RESERVED_TLD`).
-        "alice@raketa.test",
+        "alice@rakieta.test",
         # Total rather than raising: a string with no `@` is not a seed
         # account. `nonsense.example` is the one that has to be written down —
         # `rpartition` hands back the whole string when there is no separator,
         # so a predicate that only looked at the suffix would call it one.
         "nonsense.example",
         "nonsense",
-        "@raketa.example",
+        "@rakieta.example",
         "",
     ],
 )
@@ -138,4 +138,4 @@ def test_the_predicate_ignores_case():
     """Addresses are stored as the boundary normalised them; the roster's SQL
     filter is an `ILIKE`, so the Python predicate has to agree with it."""
 
-    assert is_seed_account(f"Alice@RAKETA{RESERVED_TLD.upper()}")
+    assert is_seed_account(f"Alice@RAKIETA{RESERVED_TLD.upper()}")

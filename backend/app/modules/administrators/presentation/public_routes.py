@@ -1,14 +1,14 @@
 """The invitation page, on the public surface (``docs/adr/0187`` §4–§5).
 
 A new person's invitation email has a button to the public site's
-``/invite/<token>``. Opened on a phone without Raketa or on a laptop, that page
+``/invite/<token>``. Opened on a phone without Rakieta or on a laptop, that page
 reads the link here — whom to greet, for which club, whether it still works,
 and the code while it does — and can set the password right there.
 
 Mounted under ``/api/v1/public``, and **no route here takes a session**.
 Setting the password follows exactly the rules the app's *Set your password*
 follows and leaves exactly its results, but **signs nobody in**: the site holds
-no session, so the person then opens Raketa and signs in. The link's token is in
+no session, so the person then opens Rakieta and signs in. The link's token is in
 the body, never the path, so it is in no access log.
 """
 
@@ -82,7 +82,7 @@ async def invitation_page(
         "nickname, no Adult attestation — or an account the club "
         "reset gets its password back, and either way the administrator is "
         "active and the link is spent. **Nobody is signed in**: the page then "
-        "says to open Raketa and sign in with this email and password."
+        "says to open Rakieta and sign in with this email and password."
     ),
 )
 async def set_password_on_the_invitation_page(

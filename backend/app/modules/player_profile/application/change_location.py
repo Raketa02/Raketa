@@ -50,7 +50,7 @@ class ChangeLocation:
         # here on only the cell exists. The bounds are the schema's to refuse;
         # the value object's invariant behind it is a backstop and not a
         # refusal. A picked club is asked where it is, and one that is not in
-        # Raketa is refused here.
+        # Rakieta is refused here.
         area = await area_of(command.location, self._clubs)
 
         profile = await self._profiles.load(command.player_id)

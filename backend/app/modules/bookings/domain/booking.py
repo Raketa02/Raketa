@@ -282,7 +282,7 @@ class CancelReason(StrEnum):
     WEATHER = "WEATHER"
     REPAIR = "REPAIR"
     #: The desk sold a handed-over hour too, by mistake (§16.3, §16.16). It
-    #: stays with Only Raketa the one way (#670; ``docs/adr/0196`` §1).
+    #: stays with Only Rakieta the one way (#670; ``docs/adr/0196`` §1).
     DOUBLE_BOOKING = "DOUBLE_BOOKING"
     OTHER = "OTHER"
 

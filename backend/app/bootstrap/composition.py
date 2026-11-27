@@ -1860,7 +1860,7 @@ def build_club_terms(
     runtime: EventRuntime | None = None,
     event_store: DomainEventStore | None = None,
 ) -> ClubTerms:
-    """Which clubs sell through Raketa now, and each one's cut-off — off the
+    """Which clubs sell through Rakieta now, and each one's cut-off — off the
     offer the Club context publishes. ``event_store`` as ``_own_or`` reads it."""
     return SellableClubTerms(
         build_sellable_court_hours(session, runtime=runtime, event_store=event_store)
@@ -3534,7 +3534,7 @@ def build_read_proposal_details(
 def build_club_courts_at_the_hour(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> ClubCourtsAtTheHour:
-    """The courts a club still has for Raketa at an hour, off what the Club
+    """The courts a club still has for Rakieta at an hour, off what the Club
     context publishes it sells."""
     return SellableClubCourts(build_sellable_court_hours(session, runtime=runtime))
 

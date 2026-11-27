@@ -45,25 +45,25 @@ GitHub Actions ──build──▶ ECR (image)
 1. **ECR repository**
    ```bash
    aws ecr create-repository \
-     --repository-name raketa-api \
+     --repository-name rakieta-api \
      --image-scanning-configuration scanOnPush=true \
      --region $AWS_REGION
    ```
 
 2. **CloudWatch log group**
    ```bash
-   aws logs create-log-group --log-group-name /ecs/raketa --region $AWS_REGION
-   aws logs put-retention-policy --log-group-name /ecs/raketa --retention-in-days 30 --region $AWS_REGION
+   aws logs create-log-group --log-group-name /ecs/rakieta --region $AWS_REGION
+   aws logs put-retention-policy --log-group-name /ecs/rakieta --retention-in-days 30 --region $AWS_REGION
    ```
 
 3. **IAM roles**
    - `ecsTaskExecutionRole` — attach `AmazonECSTaskExecutionRolePolicy` *and* `SecretsManagerReadWrite` (or a tighter scoped policy that allows `secretsmanager:GetSecretValue` on the prod secret ARN).
-   - `raketa-task-role` — attaches whatever the application itself needs at runtime (S3 access, SES, etc.). For now it can be empty.
+   - `rakieta-task-role` — attaches whatever the application itself needs at runtime (S3 access, SES, etc.). For now it can be empty.
 
 4. **Secrets Manager secret** (JSON-shaped so the task definition can reference individual keys via the `:KEY::` suffix):
    ```bash
    aws secretsmanager create-secret \
-     --name raketa/prod \
+     --name rakieta/prod \
      --secret-string '{
         "JWT_SECRET_KEY":"<generate-with-openssl-rand>",
         "WRITER_DB_URL":"postgresql+asyncpg://<user>:<pwd>@<rds-endpoint>:5432/<db>",
@@ -130,9 +130,9 @@ GitHub Actions ──build──▶ ECR (image)
 8. **Create the ECS service** (one-time)
    ```bash
    aws ecs create-service \
-     --cluster raketa-cluster \
-     --service-name raketa-service \
-     --task-definition raketa-task \
+     --cluster rakieta-cluster \
+     --service-name rakieta-service \
+     --task-definition rakieta-task5 \
      --desired-count 2 \
      --launch-type FARGATE \
      --network-configuration "awsvpcConfiguration={subnets=[subnet-…],securityGroups=[sg-…],assignPublicIp=DISABLED}" \
@@ -154,11 +154,11 @@ The `.github/workflows/deploy-ecs.yml` workflow expects:
 
 | Type | Name | Example |
 |---|---|---|
-| Secret | `AWS_OIDC_ROLE_ARN` | `arn:aws:iam::123456789012:role/github-actions-raketa` |
+| Secret | `AWS_OIDC_ROLE_ARN` | `arn:aws:iam::123456789012:role/github-actions-rakieta` |
 | Variable | `AWS_REGION` | `eu-north-1` |
-| Variable | `ECR_REPOSITORY` | `raketa-api` |
-| Variable | `ECS_CLUSTER` | `raketa-cluster` |
-| Variable | `ECS_SERVICE` | `raketa-service` |
+| Variable | `ECR_REPOSITORY` | `rakieta-api` |
+| Variable | `ECS_CLUSTER` | `rakieta-cluster` |
+| Variable | `ECS_SERVICE` | `rakieta-service` |
 | Variable | `ECS_CONTAINER_NAME` | `api` |
 
 OIDC trust policy on the IAM role should restrict by repo + branch — e.g.
@@ -172,8 +172,8 @@ We do **not** run Alembic from inside the long-running API container by default
 - **One-shot ECS RunTask** before the service update:
   ```bash
   aws ecs run-task \
-    --cluster raketa-cluster \
-    --task-definition raketa-migrate \
+    --cluster rakieta-cluster \
+    --task-definition rakieta-migrate \
     --launch-type FARGATE \
     --overrides '{"containerOverrides":[{"name":"api","command":["alembic","-c","/home/app/alembic.ini","upgrade","head"]}]}' \
     --network-configuration "..."
@@ -299,7 +299,7 @@ ALB Mutual TLS (released GA late 2023) supports two modes:
 For verify mode:
 ```bash
 aws elbv2 create-trust-store \
-  --name raketa-clients \
+  --name rakieta-clients \
   --ca-certificates-bundle-s3-bucket my-bucket \
   --ca-certificates-bundle-s3-key clients-ca.pem
 # Attach it to the listener

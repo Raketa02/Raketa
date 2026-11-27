@@ -248,7 +248,7 @@ class SetInvitationPasswordWithoutSigningIn:
     """Set a password by the email's link **on the public site's invitation
     page**: the same rules and the same results as the app's, and **no session
     at all** — the site holds none (``docs/adr/0187`` §4), so the person opens
-    Raketa and signs in with the password they have just chosen."""
+    Rakieta and signs in with the password they have just chosen."""
 
     def __init__(
         self,
@@ -284,7 +284,7 @@ class OpenedInvitation:
     the code its email carries, recomputed from the link (``code_for``) because
     the server keeps only the code's hash. Whoever holds the link can already
     use it; the code is what the public page prints for *after you install,
-    open Raketa and enter this code* (``docs/adr/0187`` §4)."""
+    open Rakieta and enter this code* (``docs/adr/0187`` §4)."""
 
     email: str
     name: str

@@ -22,7 +22,7 @@ club's games left it.
 **Its id is the club and the day**, so a second process deciding the same day
 collides on the stream and is stepped over — the job needs no lock.
 
-**Raketa decides, the provider acts** — the same two kinds of fact as a refund's:
+**Rakieta decides, the provider acts** — the same two kinds of fact as a refund's:
 the payout is decided in the job's transaction, and made at the provider from
 the outbox after the commit, under the payout's own key — so a provider that
 cannot take it yet leaves a decision that delivery retries, never money sent

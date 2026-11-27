@@ -1,7 +1,7 @@
 """The Payments context's ports, in its own words.
 
 The payment provider — the port onto the outside world — is in ``provider.py``,
-and what it tells Raketa unprompted is in ``notices.py``. What is here is what
+and what it tells Rakieta unprompted is in ``notices.py``. What is here is what
 this context keeps and what it asks of the rest of the platform.
 """
 
@@ -75,7 +75,7 @@ class NoticeInbox(Protocol):
 
 @runtime_checkable
 class ConnectedAccounts(Protocol):
-    """**The clubs Raketa sells for, by their accounts at the provider** — told
+    """**The clubs Rakieta sells for, by their accounts at the provider** — told
     when the provider says one changed (#537). A club is the seller, so its
     account is the Club context's to record; this context holds the provider
     and hears its notices, and passes this one on. Answered in

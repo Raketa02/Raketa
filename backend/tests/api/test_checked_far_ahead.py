@@ -252,7 +252,7 @@ async def test_a_week_ahead_fill_checks_a_visa_seat_and_holds_a_mastercard_one(
     # Every seat held, all or nothing — and Ivan's let go at once: a check.
     assert len(payments.called("authorise")) == 4
     [cancelled] = payments.called("cancel")
-    assert cancelled.arguments["key"].startswith("raketa-cancel-check-")
+    assert cancelled.arguments["key"].startswith("rakieta-cancel-check-")
     assert payments.called("capture") == []
     ivan = await card_of(client, four["ivan"])
     assert ivan["status"] == "BOOKED"

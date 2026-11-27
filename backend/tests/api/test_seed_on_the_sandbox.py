@@ -149,12 +149,12 @@ async def test_the_phone_types_stripe_s_test_card_for_what_the_card_does(
     provider = sandbox.provider()
     player = new_uuid()
     customer = await provider.open_customer(
-        player_id=player, idempotency_key=f"raketa-seed-test-{new_uuid()}"
+        player_id=player, idempotency_key=f"rakieta-seed-test-{new_uuid()}"
     )
     setup = await provider.start_setup(
         customer_id=customer,
         player_id=player,
-        idempotency_key=f"raketa-seed-test-{new_uuid()}",
+        idempotency_key=f"rakieta-seed-test-{new_uuid()}",
     )
 
     await sandbox.phone().enters(setup.setup_id, card)
@@ -240,8 +240,8 @@ async def test_an_account_nobody_onboarded_is_refused_by_name(sandbox):
     unfinished = await provider.open_club_account(
         club_id=new_uuid(),
         name="Ogrody 33",
-        email="desk@raketa.example",
-        idempotency_key=f"raketa-seed-test-{new_uuid()}",
+        email="desk@rakieta.example",
+        idempotency_key=f"rakieta-seed-test-{new_uuid()}",
     )
 
     with pytest.raises(SeedMoneyRefused) as refused:

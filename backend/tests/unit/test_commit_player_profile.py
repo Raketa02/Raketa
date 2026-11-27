@@ -166,7 +166,7 @@ async def test_a_picked_club_s_point_is_rounded_to_the_cell_as_a_reading_is(
     assert (created.latitude, created.longitude) == (50.06, 19.94)
 
 
-async def test_a_club_that_is_not_in_raketa_is_refused_and_nothing_is_stored(
+async def test_a_club_that_is_not_in_rakieta_is_refused_and_nothing_is_stored(
     harness: Harness,
 ):
     with pytest.raises(LocationClubUnknown) as refused:

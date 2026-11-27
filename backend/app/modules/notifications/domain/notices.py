@@ -202,7 +202,7 @@ class NoticeReason(StrEnum):
     COUNTERED = "COUNTERED"
     #: Two friend requests crossed: nobody said yes (#745).
     CROSSED = "CROSSED"
-    #: A friend request made by the requester's link: *Invited you to Raketa*
+    #: A friend request made by the requester's link: *Invited you to Rakieta*
     #: (#745, #748).
     BY_LINK = "BY_LINK"
     #: A friend request made from a record opened on the Rankings page: *Found

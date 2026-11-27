@@ -2,7 +2,7 @@
 
 Hand-written against the ``Protocol``, as every port stub here is
 (``tests/unit/test_resolve_current_user.py``). A club absent from the map is a
-club that is not in Raketa — the one answer ``DirectoryClubPoints`` gives for an
+club that is not in Rakieta — the one answer ``DirectoryClubPoints`` gives for an
 id the directory does not list, which ``tests/demands/`` holds it to.
 """
 

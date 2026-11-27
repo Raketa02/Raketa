@@ -43,7 +43,7 @@ ASKER = uuid4()
 EVENTS = [
     PlayerGroupCreated(
         group_id=GROUP,
-        name="my raketa group",
+        name="my rakieta group",
         home_club_id=uuid4(),
         join_policy="ANYONE",
         owner_id=OWNER,

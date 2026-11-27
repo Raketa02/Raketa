@@ -79,7 +79,7 @@ async def register(
     one word is the address's local part and the nickname alike, so an
     assertion reading a seat's ``nickname`` finds what the test registered.
     ``domain`` is where they
-    are addressed — ``raketa.example``, the seed system's reserved TLD, makes an
+    are addressed — ``rakieta.example``, the seed system's reserved TLD, makes an
     account the games test console may act as (``docs/adr/0194`` §2).
     """
 

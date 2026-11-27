@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Raketa Dev API",
+    "title": "Rakieta Dev API",
     "version": "1.0.0"
   },
   "paths": {
@@ -5715,7 +5715,7 @@
             },
             "type": "array",
             "title": "Courts",
-            "description": "Every other court of the game's sport you still have for Raketa at its hour **that keeps the game's kind** \u2014 the same kind, or an indoor court for an outdoor game, never outdoors from indoors \u2014 in your own order, each with its kind. Empty: there is none \u2014 **Cancel** with *repair* if the court cannot be played."
+            "description": "Every other court of the game's sport you still have for Rakieta at its hour **that keeps the game's kind** \u2014 the same kind, or an indoor court for an outdoor game, never outdoors from indoors \u2014 in your own order, each with its kind. Empty: there is none \u2014 **Cancel** with *repair* if the court cannot be played."
           }
         },
         "type": "object",
@@ -6875,7 +6875,7 @@
           "read": {
             "type": "boolean",
             "title": "Read",
-            "description": "Raketa has read it \u2014 delivering it again is a no-op."
+            "description": "Rakieta has read it \u2014 delivering it again is a no-op."
           }
         },
         "type": "object",
@@ -9059,7 +9059,7 @@
           "BADMINTON"
         ],
         "title": "Sport",
-        "description": "The four sports Raketa rates, as a closed enum."
+        "description": "The four sports Rakieta rates, as a closed enum."
       },
       "Standing": {
         "type": "string",

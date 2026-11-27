@@ -247,7 +247,7 @@ def test_the_intro_reaches_the_record_and_its_author_and_nowhere_else() -> None:
     )
 
     schemas = schemas_reachable_from_responses(
-        build_surface_spec("Raketa Player API", player_api_router)
+        build_surface_spec("Rakieta Player API", player_api_router)
     )
     assert schemas, "the walk found no schemas, so it would pass for ever"
 

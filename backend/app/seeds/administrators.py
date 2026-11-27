@@ -1,4 +1,4 @@
-"""The administrators: Ogrody 33 names three people — one who is new to Raketa,
+"""The administrators: Ogrody 33 names three people — one who is new to Rakieta,
 one who already plays, and one who has not answered yet (``docs/adr/0184``).
 
 **A seeded administrator is an invitation somebody took up**
@@ -18,7 +18,7 @@ password with is the one the email carries.
 
 **The three are arranged for the screens the later tickets draw.**
 
-- ``administrator-only@raketa.example`` — *Marta Wójcik* — is an account an
+- ``administrator-only@rakieta.example`` — *Marta Wójcik* — is an account an
   invitation opened and nothing else: no nickname, no player name, no Adult
   attestation, no player profile. She signs in with the seed password and lands
   in the administrator area; the club website draws *Reset password* on her row.

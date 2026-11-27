@@ -38,7 +38,7 @@ def _code_of(response) -> str:
 @pytest.mark.parametrize("surface", sorted(SURFACES))
 def test_no_api_document_mentions_check_in(surface):
     document = json.dumps(
-        build_surface_spec(f"Raketa {surface} API", SURFACES[surface])
+        build_surface_spec(f"Rakieta {surface} API", SURFACES[surface])
     )
 
     assert _CHECK_IN.findall(document) == []

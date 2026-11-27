@@ -2,11 +2,11 @@
 
 The page greets her by the name the club typed — whole, never a first name cut
 out of it (``docs/adr/0171`` §4) — names the club, says whether the link still
-works and — while it does — shows her code, for *after you install, open Raketa
+works and — while it does — shows her code, for *after you install, open Rakieta
 and enter this code* (``docs/adr/0187`` §4–§5). And she can **set her password
 right there**, by exactly the rules the app's *Set your password* follows, with
 exactly the same results — but the page signs nobody in: the public site holds
-no session (§4), so she then opens Raketa and signs in with it.
+no session (§4), so she then opens Rakieta and signs in with it.
 
 The refusals are asserted **on both surfaces at once**, parametrised, so the
 claim that they are the same rules is a claim a test makes rather than a
@@ -204,7 +204,7 @@ async def test_setting_it_on_the_page_opens_her_account_and_signs_nobody_in(
 
     assert set_.status_code == 204, set_.text
     assert set_.content == b""
-    # She opens Raketa and signs in with it, and is what the app's own *Set
+    # She opens Rakieta and signs in with it, and is what the app's own *Set
     # your password* would have made her: the name the club typed, and the
     # club's administrator.
     session = await signs_in(client, MARTA, MARTA_PASSWORD)

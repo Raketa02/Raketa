@@ -29,7 +29,7 @@ def payments_need_attention_email(*, to: str, club: str, link: str) -> OutgoingM
             lines=(
                 f"Stripe needs more details about {club} before it can take "
                 f"payments for you and pay them out again.",
-                "Until then, your courts aren't offered to Raketa players. "
+                "Until then, your courts aren't offered to Rakieta players. "
                 "Games already booked go ahead as booked.",
             ),
             button_label="Continue with Stripe",

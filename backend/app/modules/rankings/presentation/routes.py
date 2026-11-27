@@ -52,7 +52,7 @@ async def read_ranking(
     view: RankingView = Query(
         default=RankingView.GENERAL,
         description=(
-            "Which list: `GENERAL`, everybody in Raketa listed in the sport; "
+            "Which list: `GENERAL`, everybody in Rakieta listed in the sport; "
             "`FRIENDS`, you and your friends, from the first result."
         ),
     ),

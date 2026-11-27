@@ -3,7 +3,7 @@ the friends mechanics §7.3–§7.6).
 
 **A fixed line-up, and every court it could take.** On a group's Friends tab
 the reader seats friends beside them — three in doubles, one in singles — and
-Raketa answers the card: the sides, how even they are, and a court. Nothing is
+Rakieta answers the card: the sides, how even they are, and a court. Nothing is
 dealt and nothing is recorded: it is the deck's card for people who chose each
 other, built from **the deck's own parts** and no second scoring.
 

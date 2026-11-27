@@ -1,4 +1,4 @@
-"""The court hours a club can sell through Raketa — **derived, never stored**:
+"""The court hours a club can sell through Rakieta — **derived, never stored**:
 its weekly pattern, less its exceptions, less what bookings hold (#535,
 ``docs/adr/0189`` §5, the mechanics §5.4 and §16).
 
@@ -87,8 +87,8 @@ async def a_live_club(
     client, *, name: str = "Bonarka Arena", release_lead_days: int = 1, **settings
 ) -> tuple[str, dict, dict]:
     """A club selling one padel court on Tuesday 18:00–20:00 and Saturday 09:00
-    — its id, its desk, and the court. It hands Raketa its hours a day ahead
-    unless told otherwise, so Tuesday's are still Raketa's on Monday morning."""
+    — its id, its desk, and the court. It hands Rakieta its hours a day ahead
+    unless told otherwise, so Tuesday's are still Rakieta's on Monday morning."""
 
     club_id, desk = await a_desk(
         client, name=name, email=f"desk@{name.split()[0].lower()}.pl", sports=("PADEL",)
@@ -228,7 +228,7 @@ async def test_an_hour_past_its_book_by_is_no_longer_sold(
     club_id, _, _ = await a_live_club(client)
 
     # Monday 18:30: Tuesday 18:00 went back to the club at 18:00, a day before
-    # it; 19:00 is Raketa's until 19:00.
+    # it; 19:00 is Rakieta's until 19:00.
     offer = (
         await sellable(
             session_factory, [club_id], now=warsaw(5, 18) + timedelta(minutes=30)
@@ -240,7 +240,7 @@ async def test_an_hour_past_its_book_by_is_no_longer_sold(
 
 
 async def test_a_club_sells_until_its_release_lead(client, clock, session_factory):
-    """Only Raketa is the one way (#670): unsold hours go back to the club the
+    """Only Rakieta is the one way (#670): unsold hours go back to the club the
     release lead before the game — three days by default, so on Monday
     morning Tuesday's hours are already the club's."""
 

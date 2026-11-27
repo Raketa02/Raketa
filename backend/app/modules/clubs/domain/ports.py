@@ -4,7 +4,7 @@ publishes to it.
 **Two published reads.** ``ClubDirectory`` (#504): the clubs as the search
 projection holds them, for home-club search, join search and anything that names
 a group's home club. ``SellableCourtHours`` (#535): the court hours each club can
-sell through Raketa, derived and never stored. A consumer reads them and never a
+sell through Rakieta, derived and never stored. A consumer reads them and never a
 table or a stream, and never gets an aggregate back.
 
 **Three demands on contexts it does not write**: what the official groups at a
@@ -277,7 +277,7 @@ class PaymentsAccounts(Protocol):
 @runtime_checkable
 class SellableCourtHours(Protocol):
     """**What this context publishes about courts**: the court hours each club
-    can sell through Raketa, derived from its pattern, its exceptions and what
+    can sell through Rakieta, derived from its pattern, its exceptions and what
     bookings hold — never stored hour by hour (``docs/adr/0189`` §5). The
     proposer, posting and the fill read it here rather than a court or a
     stream, so a card and the club cannot disagree about what is for sale.

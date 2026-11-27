@@ -1,6 +1,6 @@
 """a group at a home club, and its members
 
-Raketa gets groups ([#504](https://github.com/Raketa02/Raketa/issues/504),
+Rakieta gets groups ([#504](https://github.com/Raketa02/Raketa/issues/504),
 [ADR-0183](../../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)).
 Both new tables are **projections**, written beside the group's events in the same
 transaction; the streams live in ``event_store`` beside everybody else's.

@@ -6,7 +6,7 @@ The cast:
 
 - **Tomek** shares ``rakieta.app/f/<code>``. **Zofia** signs up through it and
   shares no group with him; **Ania**, in his group already, opens it too. Each
-  finds *Tomek wants to be your friend · Invited you to Raketa* on Home.
+  finds *Tomek wants to be your friend · Invited you to Rakieta* on Home.
 - Tomek's link leaks into a big chat, so he takes a **New link**: the old code
   reads as not found, in the app and on the public site.
 - **Michał**, whom Tomek blocked, opens it and finds nothing on Home — the one
@@ -190,7 +190,7 @@ async def test_a_new_player_who_opens_it_finds_his_request_on_home(
     [notice] = (await bell_of(client, mailbox, zofia))["notices"]
     assert notice["kind"] == "FRIEND_REQUEST"
     assert notice["title"] == "tomek wants to be your friend"
-    assert notice["body"] == "Invited you to Raketa"
+    assert notice["body"] == "Invited you to Rakieta"
     assert notice["player_id"] == str(tomek["id"])
     # His side: the request is his, as if he had pressed + Add.
     [sent] = await requests_of(client, tomek, "YOU_ASKED")

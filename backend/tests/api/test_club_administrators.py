@@ -1,6 +1,6 @@
 """Ogrody 33 makes people administrators, on the club surface (``docs/adr/0184``).
 
-The desk invites Marta, who is new to Raketa, and Tomek, who already plays. It
+The desk invites Marta, who is new to Rakieta, and Tomek, who already plays. It
 watches each of them go from *invited* to *active*, resends, resets Marta's
 password — only because her account holds nothing but administrator profiles —
 and removes either of them. Every route here is the club website's, under
@@ -132,7 +132,7 @@ async def test_an_invitation_says_groups_and_never_whatsapp(client, desk, mailbo
 
     for address in (MARTA, TOMEK):
         email = await the_email_to(mailbox, address)
-        assert "run its groups on Raketa" in email.text
+        assert "run its groups on Rakieta" in email.text
         assert "WhatsApp" not in email.text
         assert "WhatsApp" not in email.html
 
@@ -508,8 +508,8 @@ async def test_removing_an_administrator_emails_them_to_say_so(client, desk, mai
     email = await the_email_to(mailbox, MARTA)
     assert email.subject == "Ogrody 33 removed you as an administrator"
     assert "Hi Marta Wójcik" in email.text
-    assert "You no longer run Ogrody 33's groups on Raketa" in email.text
-    assert "Your Raketa account stays" in email.text
+    assert "You no longer run Ogrody 33's groups on Rakieta" in email.text
+    assert "Your Rakieta account stays" in email.text
     assert "ask Ogrody 33 about it" in email.text
     # Nothing to open and nothing to type: it tells, and asks for nothing.
     assert "http" not in email.text
@@ -558,7 +558,7 @@ async def test_removing_an_invited_person_tells_them_the_invitation_is_withdrawn
     email = await the_email_to(mailbox, MARTA)
     assert email.subject == "Ogrody 33 withdrew its invitation"
     assert "Hi Marta Wójcik" in email.text
-    assert "no longer wants you to run its groups on Raketa" in email.text
+    assert "no longer wants you to run its groups on Rakieta" in email.text
     assert "The invitation it sent you no longer works." in email.text
     assert "http" not in email.text
     assert CODE.search(email.text) is None

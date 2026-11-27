@@ -1,4 +1,4 @@
-"""The Club courts stream: what a club offers Raketa, and on what terms.
+"""The Club courts stream: what a club offers Rakieta, and on what terms.
 
 **One stream per club, filed under the club's own id** (``docs/adr/0189`` §5),
 so *this club's courts* is a stream read and a second stream for one club is not
@@ -55,7 +55,7 @@ class CourtChanged:
 
 @dataclass(frozen=True)
 class CourtSwitchedOff:
-    """The court is no longer offered to Raketa. It keeps its name and hours,
+    """The court is no longer offered to Rakieta. It keeps its name and hours,
     and a game already booked on it is played as booked."""
 
     club_id: UUID
@@ -65,7 +65,7 @@ class CourtSwitchedOff:
 
 @dataclass(frozen=True)
 class CourtSwitchedOn:
-    """The court is offered to Raketa again, on the hours it kept."""
+    """The court is offered to Rakieta again, on the hours it kept."""
 
     club_id: UUID
     court_id: UUID
@@ -84,7 +84,7 @@ class CourtRemoved:
 
 @dataclass(frozen=True)
 class RakietaHoursSet:
-    """The hours of an ordinary week this court is offered to Raketa, **as they
+    """The hours of an ordinary week this court is offered to Rakieta, **as they
     now stand** — the player's grid, each cell as its durable code
     (``"2:19"``), in the week's own order. Empty is a court offering nothing."""
 
@@ -210,7 +210,7 @@ class RakietaResumed:
 
 @dataclass(frozen=True)
 class PaymentsAccountOpened:
-    """Raketa opened the club's account at the payment provider, where the club
+    """Rakieta opened the club's account at the payment provider, where the club
     is paid as the seller (#537). **Once, for ever**: every later link continues
     this account. It is born not started — the club has filled in nothing."""
 

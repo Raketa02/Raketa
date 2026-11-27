@@ -14,7 +14,7 @@ class Name:
     *Marta Wójcik* and *Marta W.* are both names. The club's own pages and the
     Administrator's own emails use it, and one player surface reads it: *"… runs
     this group"*, for an Administrator with no nickname yet. A player has no
-    Name in Raketa, only a nickname.
+    Name in Rakieta, only a nickname.
 
     It lived in ``users`` until ADR-0199 retired the player's Name, and moved
     here with the one holder it has left.

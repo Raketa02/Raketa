@@ -29,7 +29,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 
 from app.kernel import Sport
 
-_PLAY_INTENT_NAMESPACE = uuid5(NAMESPACE_URL, "raketa/play-intent-declaration")
+_PLAY_INTENT_NAMESPACE = uuid5(NAMESPACE_URL, "rakieta/play-intent-declaration")
 
 
 def play_intent_declaration_id(player_id: UUID, sport: Sport) -> UUID:

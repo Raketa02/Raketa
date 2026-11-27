@@ -1,4 +1,4 @@
-"""**Discovery** — the people rows on Home: who is around the reader in Raketa
+"""**Discovery** — the people rows on Home: who is around the reader in Rakieta
 (``docs/adr/0204`` §10; ``docs/specs/home-rows/``).
 
 A new bounded context that owns **the three people rows** — *Same competitive

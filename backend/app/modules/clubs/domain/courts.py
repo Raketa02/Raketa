@@ -1,8 +1,8 @@
-"""A court: one physical court at a club, as the club lists it for Raketa.
+"""A court: one physical court at a club, as the club lists it for Rakieta.
 
 A **name** the club uses (*Court 2*, *Kort centralny*), **one sport**, and
 indoor or outdoor — shown on a card, because it matters to players (the
-mechanics §16.4). It is **offered** to Raketa or switched off, and switching it
+mechanics §16.4). It is **offered** to Rakieta or switched off, and switching it
 off keeps it, its hours and its name. Players never pick one: a card promises a
 court at a club at an hour, and the number is given at booking.
 

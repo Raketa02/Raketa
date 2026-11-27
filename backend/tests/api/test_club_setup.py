@@ -4,7 +4,7 @@ is live (#535, #537, #670, the mechanics §16.2, the screens B2).
 A step is **done**, **to do** or **locked** behind the one it needs — hours and
 prices behind a court. The club is live when all four are done, payments
 included: how the payments step moves is ``test_club_payments.py``'s. *Choose
-how you work with Raketa* was the second of five until Only Raketa became the
+how you work with Rakieta* was the second of five until Only Rakieta became the
 one way (#670; ``docs/adr/0196`` §1).
 """
 

@@ -1,4 +1,4 @@
-# Raketa Backend — Technical Vocabulary
+# Rakieta Backend — Technical Vocabulary
 
 This file holds **backend-only technical vocabulary**. It does **not** define domain
 language — those terms (User, Authority, Email, Sport, Assessment, Skill rating,
@@ -211,7 +211,7 @@ there; they are not repeated here.
 
 - **Seed account** — a deterministic development account created by `app/seeds/`, named
   for the **state it represents** rather than for a person: signing in as
-  `assessment-in-progress@raketa.example` is a statement about what you expect to see.
+  `assessment-in-progress@rakieta.example` is a statement about what you expect to see.
   The address is *derived* from that name, so an account cannot be called one thing and
   reachable at another, and it is on a TLD RFC 2606 reserves so it can never become
   somebody's real mailbox. **`.example` rather than `.test`**, though the same sentence of
@@ -708,7 +708,7 @@ there; they are not repeated here.
   `because_home_is_full(hour)` is the mark on such a row, true only of an hour `offered`
   answered. **One source for every reader**: the proposer (picks and the owed card) and
   Post a game's grid and slot sheet, and the friends card with *Find a court* (#750), so a group
-  never has two court rules. *No free court* is read off what Raketa may sell now: booked
+  never has two court rules. *No free court* is read off what Rakieta may sell now: booked
   out, closed, outside the club's Rakieta hours, past its book-by, or the club paused — the
   notion the old refusal's *an hour at home* used too. _Avoid_: a refusal per set of players
   (the old *no shared hour at home in 14 days*), and filtering hours on sale in a reader of

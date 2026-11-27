@@ -18,7 +18,7 @@ signed with the endpoint's secret.
 **Verified, then read once** (``domain/notices.py``). An unverifiable notice is a
 ``400`` and nothing is read; a notice read before, or about something nobody
 here holds, is acknowledged with a ``204`` and changes nothing — the provider
-retries anything but a success for three days, and a retry of a notice Raketa
+retries anything but a success for three days, and a retry of a notice Rakieta
 has no stake in is noise. Only a failure to act on one it does is an error, so
 that the provider sends it again.
 """

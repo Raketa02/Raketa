@@ -179,7 +179,7 @@ def hold_key(
     invited friend's accept apart from both (#751)."""
 
     kind = "accept" if accepting else "rescue" if rescue else "seat"
-    return f"raketa-{kind}-{game_id}-{player_id}-{attempt}-{key_hour(at)}"
+    return f"rakieta-{kind}-{game_id}-{player_id}-{attempt}-{key_hour(at)}"
 
 
 def _refusal_of(payment: Payment) -> FailureReason:
@@ -537,7 +537,7 @@ def holding_key(charge: SeatCharge, *, at: Instant) -> str:
     attempt — its stream version, so a holding asked again after the terms
     were fixed asks afresh — and the hour (#639)."""
 
-    return f"raketa-holding-{charge.charge_id}-{charge.version}-{key_hour(at)}"
+    return f"rakieta-holding-{charge.charge_id}-{charge.version}-{key_hour(at)}"
 
 
 @final

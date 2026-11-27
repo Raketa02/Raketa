@@ -3,14 +3,14 @@ mechanics §16.2, the screens B2).
 
 **The club is the seller** (``docs/adr/0189`` §4): every share is charged on the
 club's own account at the payment provider, so nothing can be sold until that
-account can take a payment and pay it out. Raketa opens the account; the club
+account can take a payment and pay it out. Rakieta opens the account; the club
 fills in the provider's own hosted pages — company, representative, bank — and
 comes back; **the provider decides when it is ready**, and may later decide it
 is not.
 
 **Three states, in the words the Overview draws them** — not started, *Stripe
 needs more details*, ready — and the provider's own detail stays the
-provider's: a club's page is where it answers, never Raketa's.
+provider's: a club's page is where it answers, never Rakieta's.
 
 **Recorded on the Club courts stream** (``docs/adr/0189`` §5, *the Stripe account
 link*), because the setup checklist is a fold over that one stream and *live*

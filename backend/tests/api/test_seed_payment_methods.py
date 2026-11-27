@@ -25,7 +25,7 @@ from app.seeds.payments import write_the_payment_methods
 from app.seeds.runner import seed
 
 A_COHORT_MEMBER = {
-    "email": "cohort-member@raketa.example",
+    "email": "cohort-member@rakieta.example",
     "password1": SEED_PASSWORD,
     "password2": SEED_PASSWORD,
     "adult_attested": True,

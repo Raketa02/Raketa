@@ -1,11 +1,11 @@
 {
-  "family": "raketa-task5",
+  "family": "rakieta-task5",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
   "memory": "1024",
   "executionRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/raketa-task-role",
+  "taskRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/rakieta-task-role",
   "runtimePlatform": {
     "cpuArchitecture": "X86_64",
     "operatingSystemFamily": "LINUX"
@@ -36,22 +36,22 @@
         { "name": "SMTP_HOST", "value": "<SMTP_RELAY_HOST>" },
         { "name": "SMTP_PORT", "value": "587" },
         { "name": "SMTP_SECURITY", "value": "starttls" },
-        { "name": "MAIL_SENDER", "value": "Raketa <no-reply@<PUBLIC_SITE_DOMAIN>>" },
+        { "name": "MAIL_SENDER", "value": "Rakieta <no-reply@<PUBLIC_SITE_DOMAIN>>" },
         { "name": "RUN_MIGRATIONS_ON_STARTUP", "value": "true" },
         { "name": "PAYMENTS_PROVIDER", "value": "stripe" }
       ],
       "secrets": [
-        { "name": "JWT_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:JWT_SECRET_KEY::" },
-        { "name": "WRITER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:WRITER_DB_URL::" },
-        { "name": "READER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:READER_DB_URL::" },
-        { "name": "REDIS_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:REDIS_URL::" },
-        { "name": "PHOTO_STORAGE_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:PHOTO_STORAGE_SECRET_KEY::" },
-        { "name": "SMTP_USERNAME", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:SMTP_USERNAME::" },
-        { "name": "SMTP_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:SMTP_PASSWORD::" },
-        { "name": "STRIPE_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_SECRET_KEY::" },
-        { "name": "STRIPE_PUBLISHABLE_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_PUBLISHABLE_KEY::" },
-        { "name": "STRIPE_WEBHOOK_SECRET", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_WEBHOOK_SECRET::" },
-        { "name": "STRIPE_CONNECT_WEBHOOK_SECRET", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:STRIPE_CONNECT_WEBHOOK_SECRET::" }
+        { "name": "JWT_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:rakieta/prod-<SECRET_SUFFIX>:JWT_SECRET_KEY::" },
+        { "name": "WRITER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:rakieta/prod-<SECRET_SUFFIX>:WRITER_DB_URL::" },
+        { "name": "READER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:rakieta/prod-<SECRET_SUFFIX>:READER_DB_URL::" },
+        { "name": "REDIS_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:rakieta/prod-<SECRET_SUFFIX>:REDIS_URL::" },
+        { "name": "PHOTO_STORAGE_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:rakieta/prod-<SECRET_SUFFIX>:PHOTO_STORAGE_SECRET_KEY::" },
+        { "name": "SMTP_USERNAME", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:rakieta/prod-<SECRET_SUFFIX>:SMTP_USERNAME::" },
+        { "name": "SMTP_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:rakieta/prod-<SECRET_SUFFIX>:SMTP_PASSWORD::" },
+        { "name": "STRIPE_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:rakieta/prod-<SECRET_SUFFIX>:STRIPE_SECRET_KEY::" },
+        { "name": "STRIPE_PUBLISHABLE_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:rakieta/prod-<SECRET_SUFFIX>:STRIPE_PUBLISHABLE_KEY::" },
+        { "name": "STRIPE_WEBHOOK_SECRET", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:rakieta/prod-<SECRET_SUFFIX>:STRIPE_WEBHOOK_SECRET::" },
+        { "name": "STRIPE_CONNECT_WEBHOOK_SECRET", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:rakieta/prod-<SECRET_SUFFIX>:STRIPE_CONNECT_WEBHOOK_SECRET::" }
       ],
       "healthCheck": {
         "command": ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"],
@@ -63,7 +63,7 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/raketa",
+          "awslogs-group": "/ecs/rakieta",
           "awslogs-region": "eu-central-1",
           "awslogs-stream-prefix": "api"
         }

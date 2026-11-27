@@ -252,7 +252,7 @@ class CourtOnSale:
 @final
 @dataclass(frozen=True, slots=True)
 class CourtHourOnSale:
-    """An hour a club sells through Raketa in the sport: how many of its courts
+    """An hour a club sells through Rakieta in the sport: how many of its courts
     are free then, the share fixed on a card made now, and its book-by."""
 
     club_id: UUID
@@ -305,7 +305,7 @@ class PoolClubs:
         at, in their own order: **a free court** — at a club the pool plays at,
         taking new cards, before its book-by — and, for an official group,
         another club's **only at an hour where the home club has no free court
-        of the sport**. *None* is read off what Raketa may sell now, as every
+        of the sport**. *None* is read off what Rakieta may sell now, as every
         free court here is: an hour booked out, closed, outside the club's
         Rakieta hours, past its book-by or while the club is paused all leave
         the home club nothing to sell then (a call, #746)."""

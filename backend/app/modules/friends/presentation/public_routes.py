@@ -3,7 +3,7 @@
 
 Mounted under ``/api/v1/public``, which only the public site consumes, and **no
 route here takes a session**: the page ``/f/<code>`` opens is for somebody who
-has not installed the app — *Tomek invited you to play on Raketa*. It answers
+has not installed the app — *Tomek invited you to play on Rakieta*. It answers
 the owner's nickname and face, **and nothing else about them**.
 """
 

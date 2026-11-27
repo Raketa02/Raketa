@@ -40,16 +40,16 @@ from tests.unit.bcrypt_cost import BCRYPT_MINIMUM_ROUNDS, cost_of
 
 #: A password no legitimate message has any reason to contain.
 POISON_PASSWORD = "hunter2-do-not-log-me"
-POISON_DB_URL = f"postgresql+asyncpg://u:{POISON_PASSWORD}@db.example:5432/raketa"
+POISON_DB_URL = f"postgresql+asyncpg://u:{POISON_PASSWORD}@db.example:5432/rakieta"
 POISON_SECRET = "s3cret-do-not-log-me"
 POISON_PHOTO_SECRET = "photo-s3cret-do-not-log-me"
 POISON_REDIS_URL = f"redis://:{POISON_PASSWORD}@redis.example:6379/0"
 #: A public site on a host nobody should read in a crash report.
-POISON_PUBLIC_SITE_URL = f"https://{POISON_PASSWORD}.raketa.example"
+POISON_PUBLIC_SITE_URL = f"https://{POISON_PASSWORD}.rakieta.example"
 #: And the club website, the mail relay and the sender, likewise.
-POISON_CLUB_WEBSITE_URL = f"https://{POISON_PASSWORD}.clubs.raketa.example"
+POISON_CLUB_WEBSITE_URL = f"https://{POISON_PASSWORD}.clubs.rakieta.example"
 POISON_SMTP_HOST = f"{POISON_PASSWORD}.smtp.example"
-POISON_MAIL_SENDER = f"Raketa <no-reply@{POISON_PASSWORD}.example>"
+POISON_MAIL_SENDER = f"Rakieta <no-reply@{POISON_PASSWORD}.example>"
 #: Stripe keys, each carrying the poison: a test key a laptop and a rehearsal
 #: hold, the live key only production may, and the publishable and webhook
 #: secrets beside them.
@@ -127,7 +127,7 @@ def settings_for(env, **overrides) -> Settings:
             "JWT_SECRET_KEY": POISON_SECRET,
             "PHOTO_STORAGE_SECRET_KEY": POISON_PHOTO_SECRET,
             "DB_SSL_MODE": "require",
-            "ALLOW_ORIGINS": ["https://club.raketa.example"],
+            "ALLOW_ORIGINS": ["https://club.rakieta.example"],
             "ALLOW_CREDENTIALS": True,
         }
     return build(**{**base, **overrides})
@@ -385,7 +385,7 @@ def test_a_deployed_environment_refuses_a_plaintext_browser_origin(
     clean_env, env: str
 ) -> None:
     with pytest.raises(ConfigurationError) as exc:
-        settings_for(env, ALLOW_ORIGINS=["http://club.raketa.example"])
+        settings_for(env, ALLOW_ORIGINS=["http://club.rakieta.example"])
     assert "ALLOW_ORIGINS" in str(exc.value)
 
 
@@ -394,20 +394,20 @@ def test_a_deployed_environment_accepts_https_browser_origins(
     clean_env, env: str
 ) -> None:
     """The other half. A guard that fires on everything is not a guard."""
-    origins = ["https://club.raketa.example", "https://admin.raketa.example"]
+    origins = ["https://club.rakieta.example", "https://admin.rakieta.example"]
     assert settings_for(env, ALLOW_ORIGINS=origins).ALLOW_ORIGINS == origins
 
 
 @pytest.mark.parametrize("env", DEPLOYED_NAMES)
 def test_a_deployed_environment_refuses_a_plaintext_public_site(clean_env, env) -> None:
     with pytest.raises(ConfigurationError) as exc:
-        settings_for(env, PUBLIC_SITE_URL="http://raketa.example")
+        settings_for(env, PUBLIC_SITE_URL="http://rakieta.example")
     assert "PUBLIC_SITE_URL" in str(exc.value)
 
 
 @pytest.mark.parametrize("env", DEPLOYED_NAMES)
 def test_a_deployed_environment_accepts_an_https_public_site(clean_env, env) -> None:
-    site = "https://raketa.example"
+    site = "https://rakieta.example"
     assert settings_for(env, PUBLIC_SITE_URL=site).PUBLIC_SITE_URL == site
 
 
@@ -428,7 +428,7 @@ def test_a_deployed_environment_refuses_a_plaintext_club_website(
     """A club's reset link is printed under it and opened over a public network."""
 
     with pytest.raises(ConfigurationError) as exc:
-        settings_for(env, CLUB_WEBSITE_URL="http://clubs.raketa.example")
+        settings_for(env, CLUB_WEBSITE_URL="http://clubs.rakieta.example")
     assert "CLUB_WEBSITE_URL" in str(exc.value)
 
 
@@ -479,8 +479,8 @@ def test_one_plaintext_origin_among_several_is_enough_to_refuse(clean_env) -> No
     with pytest.raises(ConfigurationError) as exc:
         production(
             ALLOW_ORIGINS=[
-                "https://club.raketa.example",
-                "http://staging-box.raketa.example",
+                "https://club.rakieta.example",
+                "http://staging-box.rakieta.example",
             ]
         )
     assert "ALLOW_ORIGINS" in str(exc.value)
@@ -511,7 +511,7 @@ def test_the_scheme_refusal_does_not_echo_the_origin(clean_env) -> None:
     """It reports how many are wrong, never which. An origin can carry a hostname an
     operator would rather not have in a public crash report, and the rule the whole
     module follows is that a refusal names the variable, never the value."""
-    origin = "http://internal-box.raketa.example:8443"
+    origin = "http://internal-box.rakieta.example:8443"
 
     with pytest.raises(ConfigurationError) as exc:
         production(ALLOW_ORIGINS=[origin])
@@ -933,7 +933,7 @@ def test_every_structured_log_record_carries_its_environment(
 
     formatter = logging.getLogger().handlers[0].formatter
     record = logging.LogRecord(
-        name="raketa.test",
+        name="rakieta.test",
         level=logging.INFO,
         pathname=__file__,
         lineno=1,

@@ -1,4 +1,4 @@
-"""The club's courts, as the desk lists them for Raketa (#535, the mechanics
+"""The club's courts, as the desk lists them for Rakieta (#535, the mechanics
 §16.4–§16.5, the screens B3).
 
 Every act loads the club's one stream, records through the aggregate and saves

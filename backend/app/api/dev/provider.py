@@ -246,7 +246,7 @@ class NoticeRow(BaseModel):
     charge_id: UUID
     player: PersonRef
     read: bool = Field(
-        description="Raketa has read it — delivering it again is a no-op."
+        description="Rakieta has read it — delivering it again is a no-op."
     )
 
 
@@ -526,7 +526,7 @@ async def deliver_a_refund(
 
 
 async def _read_already(db: AsyncSession, notice_ids: Collection[str]) -> set[str]:
-    """Which of these notices Raketa has read — the inbox's own rows."""
+    """Which of these notices Rakieta has read — the inbox's own rows."""
 
     if not notice_ids:
         return set()

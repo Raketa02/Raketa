@@ -179,7 +179,7 @@ async def test_the_first_link_opens_the_club_s_account_and_sends_it_to_the_provi
     assert opened.arguments["club_id"] == UUID(club_id)
     assert opened.arguments["name"] == "Ogrody 33"
     assert opened.arguments["email"] == DESK
-    assert url == f"https://connect.payments.raketa.example/onboarding/{account}"
+    assert url == f"https://connect.payments.rakieta.example/onboarding/{account}"
     assert linked.arguments["return_url"] == f"{club_website}/overview"
     assert linked.arguments["refresh_url"] == f"{club_website}/payments/continue"
     assert await payments_of(client, desk) == ("NOT_STARTED", "TO_DO")

@@ -29,7 +29,7 @@ errors included, so a key that never changed would keep one passing outage
 between a player and their card for a day, where this keeps it to the hour. What
 an hour boundary can cost is an orphan — a customer or a setup opened twice, one
 of them recorded — and neither can be charged (the mechanics Appendix A:
-*Raketa's own records must prevent duplicates*).
+*Rakieta's own records must prevent duplicates*).
 """
 
 from __future__ import annotations
@@ -73,18 +73,18 @@ def key_hour(at: Instant) -> str:
 
 
 def customer_key(player_id: UUID, *, at: Instant) -> str:
-    return f"raketa-customer-{player_id}-{key_hour(at)}"
+    return f"rakieta-customer-{player_id}-{key_hour(at)}"
 
 
 def setup_key(player_id: UUID, ordinal: int, *, at: Instant) -> str:
-    return f"raketa-setup-{player_id}-{ordinal}-{key_hour(at)}"
+    return f"rakieta-setup-{player_id}-{ordinal}-{key_hour(at)}"
 
 
 def club_account_key(club_id: UUID, *, at: Instant) -> str:
     """A club's account at the provider: opened once, so the club and the hour
     are the whole key (#537)."""
 
-    return f"raketa-club-account-{club_id}-{key_hour(at)}"
+    return f"rakieta-club-account-{club_id}-{key_hour(at)}"
 
 
 class StartPaymentSetup:

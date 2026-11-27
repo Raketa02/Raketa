@@ -51,23 +51,23 @@ from app.modules.payments.domain.seat_charge import SeatChargeStatus
 
 
 def capture_key(charge_id: object) -> str:
-    return f"raketa-capture-{charge_id}"
+    return f"rakieta-capture-{charge_id}"
 
 
 def cancel_seat_key(charge_id: object) -> str:
-    return f"raketa-cancel-seat-{charge_id}"
+    return f"rakieta-cancel-seat-{charge_id}"
 
 
 def cancel_check_key(charge_id: object) -> str:
     """One check per charge, ever: its hold is let go once (#639)."""
 
-    return f"raketa-cancel-check-{charge_id}"
+    return f"rakieta-cancel-check-{charge_id}"
 
 
 def refund_key(charge_id: object) -> str:
     """One refund per charge, ever: a share is given back once."""
 
-    return f"raketa-refund-{charge_id}"
+    return f"rakieta-refund-{charge_id}"
 
 
 @final

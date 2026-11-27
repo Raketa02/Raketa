@@ -11,7 +11,7 @@ with the pages that change it.
 comparison, so it is the backend's (``docs/adr/0021``): hours and prices wait
 for a court. Which step is *next* is the first one to do, which a client reads
 off the order. The settings wait on nothing: they were locked behind *Choose
-how you work with Raketa*, the second of five steps until Only Raketa became
+how you work with Rakieta*, the second of five steps until Only Rakieta became
 the one way (#670; ``docs/adr/0196`` §1).
 
 **Live is all four** (#537): the club is the seller, so a club whose payments

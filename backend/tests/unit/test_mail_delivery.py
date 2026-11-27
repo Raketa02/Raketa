@@ -36,7 +36,7 @@ def a_message(to: str = "tomek@example.com") -> OutgoingMessage:
     return OutgoingMessage(
         kind="forgot_password.player",
         to=to,
-        subject="Set a new Raketa password",
+        subject="Set a new Rakieta password",
         text=f"Your code:\n\n{SECRET}\n",
         html=f"<p>{SECRET}</p>",
     )

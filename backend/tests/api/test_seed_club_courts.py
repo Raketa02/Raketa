@@ -69,7 +69,7 @@ async def read(client, desk: dict, path: str) -> dict:
 
 
 async def test_one_club_is_not_live_and_one_is_paused(client, clock, session_factory):
-    """Every club works Only Raketa, the one way (#670): there is no way to
+    """Every club works Only Rakieta, the one way (#670): there is no way to
     read, and each club's release lead is its own."""
 
     report = await seeded(session_factory)

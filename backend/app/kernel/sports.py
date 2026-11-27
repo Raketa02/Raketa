@@ -24,7 +24,7 @@ from typing import Mapping
 
 
 class Sport(str, Enum):
-    """The four sports Raketa rates, as a closed enum."""
+    """The four sports Rakieta rates, as a closed enum."""
 
     PADEL = "PADEL"
     TENNIS = "TENNIS"

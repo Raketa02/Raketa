@@ -110,11 +110,11 @@ async def test_the_roster_is_ordered_by_address(client, seeded):
 
 
 #: Addresses on both sides of the line, registered through the ordinary signup
-#: route. `raketa.test` is deliberately absent: `EmailStr` refuses the other TLD
+#: route. `rakieta.test` is deliberately absent: `EmailStr` refuses the other TLD
 #: RFC 2606 reserves, which is why the seed system is on `.example` at all.
 BOTH_SIDES = (
-    ("on-the-seed-tld@raketa.example", "console-a"),
-    ("deeper@sub.raketa.example", "console-b"),
+    ("on-the-seed-tld@rakieta.example", "console-a"),
+    ("deeper@sub.rakieta.example", "console-b"),
     # The trap. `example.com` is a real, registrable domain and is what this
     # suite's own fixtures sign up with; reading the predicate as "contains
     # example" would put every test account on the roster.

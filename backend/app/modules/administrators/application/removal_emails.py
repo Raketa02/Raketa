@@ -13,7 +13,7 @@ it asks nothing and opens nothing, so it carries no button and no code.
   link would otherwise read *expired — ask the club to send a new one*, and
   the club is who withdrew it.
 
-The words are the backend's (``docs/adr/0186`` §4), signed *Raketa*.
+The words are the backend's (``docs/adr/0186`` §4), signed *Rakieta*.
 """
 
 from __future__ import annotations
@@ -36,9 +36,9 @@ def removed_email(*, to: str, name: str, club_name: str) -> OutgoingMessage:
             subject=f"{club_name} removed you as an administrator",
             heading=f"Hi {name}, {club_name} removed you as an administrator",
             lines=(
-                f"You no longer run {club_name}'s groups on Raketa, and they no "
+                f"You no longer run {club_name}'s groups on Rakieta, and they no "
                 f"longer show in the app. The groups stay with {club_name}.",
-                "Your Raketa account stays, and so does anything you do on it as "
+                "Your Rakieta account stays, and so does anything you do on it as "
                 "a player.",
             ),
             footer=f"If this is a surprise, ask {club_name} about it.",
@@ -54,7 +54,7 @@ def withdrawn_email(*, to: str, name: str, club_name: str) -> OutgoingMessage:
             subject=f"{club_name} withdrew its invitation",
             heading=f"Hi {name}, {club_name} withdrew its invitation",
             lines=(
-                f"{club_name} no longer wants you to run its groups on Raketa as "
+                f"{club_name} no longer wants you to run its groups on Rakieta as "
                 f"an administrator.",
                 "The invitation it sent you no longer works.",
             ),

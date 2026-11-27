@@ -31,7 +31,7 @@ told its fee after the capture — *not yet known* until ``reports_fee``. A fake
 with no clock says no last moment and lets nothing lapse.
 
 **It pays a club out only when asked** (#548) — the club's money is held until
-after the game, which is what Raketa asks it for — and dates the payout's
+after the game, which is what Rakieta asks it for — and dates the payout's
 arrival two days after its ``clock``'s now; a fake with no clock cannot date
 one, and refuses.
 
@@ -47,7 +47,7 @@ one.
 **A payment it never made is taken or let go as a hold** (``_on_account``): a
 seed run fills games through its own fake, and a laptop's server reloads, so the
 outbox that captures a seat may reach a fake that never held it — **or given
-back as a payment taken** (#544), since Raketa refunds only a share it recorded
+back as a payment taken** (#544), since Rakieta refunds only a share it recorded
 paid. **A fake's payment id carries its amount** (``pi_fake_3000g_…``), so a
 fake in another process adopts one for what it was made for.
 
@@ -165,7 +165,7 @@ FEE_READY_KIND = "charge.updated"
 @final
 @dataclass(frozen=True, slots=True)
 class SentNotice:
-    """The notice Stripe would have sent when a payment moved: what Raketa reads
+    """The notice Stripe would have sent when a payment moved: what Rakieta reads
     off the wire, the kind it came as, and the status the move left — which the
     notice itself never carries, since a notice is read as a prompt."""
 
@@ -435,7 +435,7 @@ class FakePayments:
     # -------------------------------------------------------------------- port
 
     def publishable_key(self) -> str:
-        return "pk_fake_raketa"
+        return "pk_fake_rakieta"
 
     async def open_customer(self, *, player_id: UUID, idempotency_key: str) -> str:
         self._record("open_customer", player_id=player_id, key=idempotency_key)
@@ -562,7 +562,7 @@ class FakePayments:
             # link is finishing it, and it lands where the real one would.
             self._accounts[account_id] = ClubAccountStatus.READY
             return return_url
-        return f"https://connect.payments.raketa.example/onboarding/{account_id}"
+        return f"https://connect.payments.rakieta.example/onboarding/{account_id}"
 
     async def read_club_account(self, account_id: str) -> ClubAccountReading:
         self._record("read_club_account", account_id=account_id)
@@ -732,7 +732,7 @@ class FakePayments:
             self._refunds_let_through.discard(payment_id)
             payment = self._on_account(payment_id, account_id)
             if payment.adopted and payment.status is PaymentStatus.AUTHORISED:
-                # Raketa gives back only a share it recorded paid: the process
+                # Rakieta gives back only a share it recorded paid: the process
                 # that held this one took it, too.
                 payment.status = PaymentStatus.CAPTURED
             if payment.status is not PaymentStatus.CAPTURED:

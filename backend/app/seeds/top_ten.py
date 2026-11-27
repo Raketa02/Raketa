@@ -105,7 +105,7 @@ from app.seeds.rankings import EMPTY_SPORT, RANKED_SPORT
 
 #: The sport this layer lists two in.
 PAIRED_SPORT: Final = Sport.SQUASH
-#: Where they play: a club that sells squash and keeps its hours Raketa's
+#: Where they play: a club that sells squash and keeps its hours Rakieta's
 #: until a day before — past the two days ahead a history game is made.
 SQUASH_CLUB: Final = next(club for club in SEED_CLUBS if club.name == "Prądnik Tennis")
 #: Their group there, run by the first of them.

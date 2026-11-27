@@ -66,7 +66,7 @@ _HUNDREDTHS: Final = 100
 
 class RankingView(StrEnum):
     """Which list a ranking is read in (``docs/adr/0203`` §3). **General** is
-    everybody in Raketa listed in the sport; **Friends** is the reader and their
+    everybody in Rakieta listed in the sport; **Friends** is the reader and their
     friends, worked out on each read (#771). Both drop a player 90 days after
     their last result, and both order and place them alike."""
 

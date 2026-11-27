@@ -10,7 +10,7 @@ They are here, beside the port, rather than inside the fake because they are the
 Stripe's test mode is confirmed with the matching test PaymentMethod
 (``tests/demands/test_payments_demands.py``), and a seed says which one each of
 its players typed (``app/seeds/payments.py``). A card number never reaches the
-backend in any mode; this is the part of one a provider tells Raketa about,
+backend in any mode; this is the part of one a provider tells Rakieta about,
 plus how it will behave.
 
 **And the kind of card it is** (ADR-0190's 2026-10-10 amendment): what Stripe
