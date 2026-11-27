@@ -82,7 +82,7 @@ export type PhonePreference =
 export type SeenRowsPreference = `seenRows.${string}`;
 
 /** Every key this module writes starts with this, and nothing else's does. */
-const PREFIX = 'raketa.phone-preferences.';
+const PREFIX = 'rakieta.phone-preferences.';
 
 /** One entry per account per value — a read never has to parse what it did not ask for. */
 function keyFor(account: string, preference: PhonePreference): string {
@@ -130,7 +130,7 @@ export async function savePhonePreference(
  */
 export type PhoneFlag = 'ratingGuideShown';
 
-const FLAG_PREFIX = 'raketa.phone-flags.';
+const FLAG_PREFIX = 'rakieta.phone-flags.';
 
 /** One entry per account per flag, as a value's is. */
 function flagKeyFor(account: string, flag: PhoneFlag): string {
@@ -170,11 +170,11 @@ export async function raisePhoneFlag(account: string, flag: PhoneFlag): Promise<
  *
  * **A read that fails reads as raised**, unlike an account's flag: the one flag here guards a link
  * being acted on, and acting on a stale one on every launch is the worse of the two mistakes — the
- * person who loses the referrer still has the site's *Open in Raketa*.
+ * person who loses the referrer still has the site's *Open in Rakieta*.
  */
 export type PhoneWideFlag = 'installReferrerRead';
 
-const PHONE_WIDE_PREFIX = 'raketa.phone-wide-flags.';
+const PHONE_WIDE_PREFIX = 'rakieta.phone-wide-flags.';
 
 /** One entry per flag, under no account. */
 function phoneWideKeyFor(flag: PhoneWideFlag): string {

@@ -39,7 +39,7 @@ describe('the live lines', () => {
   });
 
   it('names the area’s one state, because a profile cannot be committed without one', () => {
-    expect(AREA_LINE).toBe('Area set · updates when you open Raketa');
+    expect(AREA_LINE).toBe('Area set · updates when you open Rakieta');
   });
 
   it('lists each rated sport with its answer, and says not set where there is none', () => {

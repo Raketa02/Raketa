@@ -95,7 +95,7 @@ const EnvFields = z.object({
     errorMap: () => ({ message: `must be one of ${ENVIRONMENT_NAMES}` }),
   }),
   /**
-   * **The web domain the app's links live on** — `raketa.app`, bare — or nothing, which is every
+   * **The web domain the app's links live on** — `rakieta.app`, bare — or nothing, which is every
    * environment today ([#520](https://github.com/Raketa02/Raketa/issues/520), ADR-0187 §7). While it
    * is empty the links open the app by its own scheme only. `appLinks.ts` reads it for this file and
    * for `app.config.ts` alike, once each, in one wording — which, like every refusal here, never

@@ -69,7 +69,7 @@ const TENNIS = rating('TENNIS', 3.1);
 const SQUASH = rating('SQUASH', 2.3);
 const BADMINTON = rating('BADMINTON', 2.05);
 
-const LINK = 'https://raketa.app/join/K7PQ2MXA';
+const LINK = 'https://rakieta.app/join/K7PQ2MXA';
 
 /** Tomek, as the group serves his face — the reader. */
 const TOMEK: Wire['GroupPersonSchema'] = { player_id: GATE_USER.id, nickname: 'Tomek Kowal' };
@@ -86,10 +86,10 @@ function roster(
   return { sport, rated_count: ratedCount, first_rated: [...firstRated] };
 }
 
-const MY_RAKETA_GROUP: Wire['MyGroupSchema'] = {
+const MY_RAKIETA_GROUP: Wire['MyGroupSchema'] = {
   id: 'a0000000-0000-4000-8000-000000000011',
   kind: 'PLAYER',
-  name: 'my raketa group',
+  name: 'my rakieta group',
   monogram: { letters: 'mr', colour: 5 },
   sports: [],
   member_count: 1,
@@ -188,7 +188,7 @@ async function enter(group: Wire['MyGroupSchema']) {
 }
 
 async function openGroup(
-  group: Wire['MyGroupSchema'] = MY_RAKETA_GROUP,
+  group: Wire['MyGroupSchema'] = MY_RAKIETA_GROUP,
   page: Wire['GroupResponse'] = pageOf(group),
 ) {
   await openGroups([group, page]);
@@ -365,7 +365,7 @@ describe('the fast filter', () => {
     act(() => router.push('/play/join'));
     await waitFor(() => expect(screen).toHavePathname('/play/join'));
     act(() => router.back());
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}`));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKIETA_GROUP.id}`));
 
     expect(await pill('Padel')).toBeTruthy();
     expect(screen.queryByTestId('sport-bar')).toBeNull();
@@ -388,10 +388,10 @@ describe('the fast filter', () => {
 
   it('opens every group on the sport last picked, even after the app is closed', async () => {
     await openGroups(
-      [MY_RAKETA_GROUP, pageOf(MY_RAKETA_GROUP)],
+      [MY_RAKIETA_GROUP, pageOf(MY_RAKIETA_GROUP)],
       [KAZIMIERZ_CREW, pageOf(KAZIMIERZ_CREW)],
     );
-    await enter(MY_RAKETA_GROUP);
+    await enter(MY_RAKIETA_GROUP);
     await unfold('Padel');
     fireEvent.press(
       within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'Tennis' }),
@@ -433,13 +433,13 @@ describe('the tab bar', () => {
 });
 
 describe('the header', () => {
-  const INFO_PATH = `/play/group/${MY_RAKETA_GROUP.id}/info`;
+  const INFO_PATH = `/play/group/${MY_RAKIETA_GROUP.id}/info`;
   /** The page's header, by what it opens — the list's card under the page is named by the group too. */
   const header = () => screen.findByHintText(COPY.group.openInfo);
 
   async function backFromInfo() {
     fireEvent.press(await screen.findByRole('button', { name: COPY.info.back }));
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}`));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKIETA_GROUP.id}`));
   }
 
   it('is one button, named by the group and the line under it', async () => {
@@ -447,7 +447,7 @@ describe('the header', () => {
 
     const named = await header();
     expect(named.props.accessibilityRole).toBe('button');
-    expect(within(named).getByText(MY_RAKETA_GROUP.name)).toBeTruthy();
+    expect(within(named).getByText(MY_RAKIETA_GROUP.name)).toBeTruthy();
     expect(within(named).getByText('1 member · Bonarka Arena')).toBeTruthy();
   });
 
@@ -456,7 +456,7 @@ describe('the header', () => {
     ['the tile', () => screen.getByTestId('group-header-tile')],
     [
       'the name',
-      () => within(screen.getByHintText(COPY.group.openInfo)).getByText('my raketa group'),
+      () => within(screen.getByHintText(COPY.group.openInfo)).getByText('my rakieta group'),
     ],
     [
       'the line under it',
@@ -475,7 +475,7 @@ describe('the header', () => {
     await openGroup();
 
     await unfold('Padel');
-    expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}`);
+    expect(screen).toHavePathname(`/play/group/${MY_RAKIETA_GROUP.id}`);
     fireEvent.press(within(screen.getByTestId('sport-bar')).getByRole('button', { name: 'Padel' }));
 
     fireEvent.press(screen.getByRole('button', { name: COPY.group.back }));
@@ -492,7 +492,7 @@ describe('the header', () => {
     fireEvent.press(screen.getByTestId('sport-filter-backdrop', { includeHiddenElements: true }));
 
     expect(screen.queryByTestId('sport-bar')).toBeNull();
-    expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}`);
+    expect(screen).toHavePathname(`/play/group/${MY_RAKIETA_GROUP.id}`);
   });
 
   it('brings the player back from Info to the tab they left', async () => {
@@ -533,8 +533,8 @@ describe('Games', () => {
 
   it('counts the ones who play the sport against the seats, their faces in joining order', async () => {
     await openGroup(
-      MY_RAKETA_GROUP,
-      pageOf(MY_RAKETA_GROUP, {
+      MY_RAKIETA_GROUP,
+      pageOf(MY_RAKIETA_GROUP, {
         member_count: 4,
         rated_by_sport: [roster('PADEL', 3, [TOMEK, member(2), member(3)]), roster('TENNIS', 1)],
       }),
@@ -552,8 +552,8 @@ describe('Games', () => {
 
   it('says nothing is picked once the seats could be filled', async () => {
     await openGroup(
-      MY_RAKETA_GROUP,
-      pageOf(MY_RAKETA_GROUP, {
+      MY_RAKIETA_GROUP,
+      pageOf(MY_RAKIETA_GROUP, {
         member_count: 6,
         rated_by_sport: [
           roster('PADEL', 5, [TOMEK, member(2), member(3), member(4)]),
@@ -574,7 +574,9 @@ describe('Games', () => {
 
     fireEvent.press(await screen.findByRole('button', { name: COPY.link.share }));
 
-    await waitFor(() => expect(share.shared).toEqual([`Join my raketa group on Raketa: ${LINK}`]));
+    await waitFor(() =>
+      expect(share.shared).toEqual([`Join my rakieta group on Rakieta: ${LINK}`]),
+    );
   });
 
   it('copies the link, and says so', async () => {
@@ -625,7 +627,7 @@ describe('You’re in, with nothing on it or on Fill in (#847)', () => {
   });
 
   it('drops “just you” once others have joined', async () => {
-    await openGroup(MY_RAKETA_GROUP, pageOf(MY_RAKETA_GROUP, { member_count: 3 }));
+    await openGroup(MY_RAKIETA_GROUP, pageOf(MY_RAKIETA_GROUP, { member_count: 3 }));
 
     await openTab('You’re in');
 
@@ -658,7 +660,7 @@ describe('Friends', () => {
 
     fireEvent.press(screen.getByRole('button', { name: COPY.group.back }));
     await waitFor(() => expect(screen).toHavePathname('/play'));
-    await enter(MY_RAKETA_GROUP);
+    await enter(MY_RAKIETA_GROUP);
     await openTab('Friends');
 
     expect(await tab('Friends, For fun', true)).toBeTruthy();
@@ -706,8 +708,8 @@ describe('Friends', () => {
     const photo = 'https://photos.test/tomek.jpg';
     stubOwnRecord(transport, { ...OWN_RECORD_SERVED, photo_id: 'f1', photo_url: photo });
     await openGroup(
-      MY_RAKETA_GROUP,
-      pageOf(MY_RAKETA_GROUP, {
+      MY_RAKIETA_GROUP,
+      pageOf(MY_RAKIETA_GROUP, {
         member_count: 6,
         rated_by_sport: [
           roster('PADEL', 5, [member(2), member(3), member(4), member(5)]),
@@ -732,11 +734,13 @@ describe('Friends', () => {
 
     fireEvent.press((await screen.findAllByRole('button', { name: /, empty$/ }))[0]!);
 
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}/friends`));
+    await waitFor(() =>
+      expect(screen).toHavePathname(`/play/group/${MY_RAKIETA_GROUP.id}/friends`),
+    );
     expect(await screen.findByRole('header', { name: COPY.friends.title })).toBeTruthy();
     expect(await screen.findByText(COPY.friends.nobody)).toBeTruthy();
     expect(
-      screen.getByText('Friends who join my raketa group with the link show up on this page.'),
+      screen.getByText('Friends who join my rakieta group with the link show up on this page.'),
     ).toBeTruthy();
   });
 
@@ -760,12 +764,14 @@ describe('Friends', () => {
     await screen.findByText(COPY.friends.nobody);
 
     fireEvent.press(screen.getByRole('button', { name: COPY.link.share }));
-    await waitFor(() => expect(share.shared).toEqual([`Join my raketa group on Raketa: ${LINK}`]));
+    await waitFor(() =>
+      expect(share.shared).toEqual([`Join my rakieta group on Rakieta: ${LINK}`]),
+    );
     fireEvent.press(screen.getByRole('button', { name: COPY.link.copy }));
     await waitFor(() => expect(clipboard.text).toBe(LINK));
 
     fireEvent.press(screen.getByRole('button', { name: 'Back' }));
-    await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKETA_GROUP.id}`));
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${MY_RAKIETA_GROUP.id}`));
     expect(await tab('Friends, Competitive', true)).toBeTruthy();
   });
 });

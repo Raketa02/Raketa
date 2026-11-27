@@ -25,7 +25,7 @@ function charge(extra: Partial<Wire['SeatChargeResponse']> = {}): Wire['SeatChar
     to_confirm: {
       client_secret: 'pi_1_secret_abc',
       connected_account_id: 'acct_club',
-      publishable_key: 'pk_test_raketa',
+      publishable_key: 'pk_test_rakieta',
     },
     ...extra,
   };
@@ -55,7 +55,7 @@ describe('a seat charge', () => {
 
   it('hands the press the key, the club’s account and the secret — or nothing once it no longer waits', () => {
     expect(toPaymentToConfirm(charge())).toEqual({
-      publishableKey: 'pk_test_raketa',
+      publishableKey: 'pk_test_rakieta',
       accountId: 'acct_club',
       clientSecret: 'pi_1_secret_abc',
     });

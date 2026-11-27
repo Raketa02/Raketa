@@ -267,7 +267,7 @@ describe('an invitation that ran out while the sheet was up', () => {
     fireEvent.press(screen.getByRole('button', { name: COPY.accept }));
 
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.accept })).toBeTruthy();
   });

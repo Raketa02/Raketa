@@ -3,8 +3,8 @@
  * and every name a control is spoken by. The fixed sentences are `groupsCopy.ts`, re-exported
  * here; copy is code, and nothing is inlined in a component.
  *
- * Taken from the mocks (play 1, 3–17, 23–55), with the mocks' *Rakieta* read as **Raketa**
- * (ADR-0187 §8). Two rules sit over it:
+ * Taken from the mocks (play 1, 3–17, 23–55), their *Rakieta* read as written (ADR-0211). Two
+ * rules sit over it:
  *
  * - **A nickname is said whole, never with an @.** The *approves joins* line carries the Owner's or
  *   the Administrator's whole nickname — the Administrator's club-typed name until they have one
@@ -130,7 +130,7 @@ export function actionLabel(action: GroupAction, groupName: string): string {
  */
 export const CREATE_REFUSALS = {
   group_name_invalid: `Give the group a name of up to ${GROUP_NAME_MAX} characters.`,
-  home_club_unknown: 'That club isn’t in Raketa any more. Pick another home club.',
+  home_club_unknown: 'That club isn’t in Rakieta any more. Pick another home club.',
 } as const satisfies Readonly<Record<string, string>>;
 
 /** A card on the Groups list, spoken: name, *official* where it is, size, sports and home club. */
@@ -302,18 +302,18 @@ export function seatMoreLine(open: number): string {
   return `Seat ${counted(open, 'more friend', 'more friends')}`;
 }
 
-/** *Friends who join my raketa group with the link show up on this page.* (play 55) */
+/** *Friends who join my rakieta group with the link show up on this page.* (play 55) */
 export function friendsLine(groupName: string): string {
   return `Friends who join ${groupName} with the link show up on this page.`;
 }
 
 /**
- * *Join my raketa group on Raketa: https://…* — what Share the link hands the sheet. The link is
+ * *Join my rakieta group on Rakieta: https://…* — what Share the link hands the sheet. The link is
  * the whole of what has to arrive; the sentence says what it is to whoever it lands with, in the
  * words the Administrator's WhatsApp post uses (story 128).
  */
 export function shareMessage(groupName: string, link: string): string {
-  return `Join ${groupName} on Raketa: ${link}`;
+  return `Join ${groupName} on Rakieta: ${link}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -321,7 +321,7 @@ export function shareMessage(groupName: string, link: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * *raketa.app/join/K7PQ2MXA* — the link as Info's card draws it (play 57, 60): the address
+ * *rakieta.app/join/K7PQ2MXA* — the link as Info's card draws it (play 57, 60): the address
  * without its scheme, which the mocks never print. Spoken, copied and shared whole. The drawing is
  * `shared/formatting`'s since a friend link's card is its third caller (#756).
  */
@@ -329,7 +329,7 @@ export function linkShown(link: string): string {
   return linkWithoutScheme(link);
 }
 
-/** *Group link, raketa.app/join/K7PQ2MXA* — the card's link, spoken. */
+/** *Group link, rakieta.app/join/K7PQ2MXA* — the card's link, spoken. */
 export function linkLabel(link: string): string {
   return `Group link, ${linkShown(link)}`;
 }

@@ -14,8 +14,8 @@ above them in every state. **New group**, **Join a group** and **a group's page*
 under `/play/…` — `play/new-group`, `play/join`, `play/group/[groupId]` — so the Play column
 stays lit and _back_ is the list. Creating a group **replaces** New group with the group's page,
 so _back_ from a new group is the list too, never the form. The words are the mocks' (play 1,
-3–13, 23–40), with _Rakieta_ read as Raketa, in `components/groupsPresentation.ts`; the mocks
-live in [`docs/specs/play-groups/`](../../../docs/specs/play-groups/README.md).
+3–13, 23–40), with _Rakieta_ read as written (ADR-0211), in `components/groupsPresentation.ts`;
+the mocks live in [`docs/specs/play-groups/`](../../../docs/specs/play-groups/README.md).
 
 **Nothing about a group is computed on the phone.** The monogram's two letters and its colour
 key are cut by the backend (ADR-0183 §5) — drawn as they come, never re-cased — and the sport
@@ -85,7 +85,7 @@ the disabled **Create the group** already says. The home club (`HomeClubPicker`)
 state and draws five: **empty** (the field alone), **searching** (**a raised card per club** —
 name over district · distance · sports and a _Set as home_ pill, the whole head the tap; the
 distance is back, the mocks overriding #512, and absent as ever for a reader with no Location
-area), **no match** (_No club called "…"_ and that only clubs in Raketa can be one), **a club with
+area), **no match** (_No club called "…"_ and that only clubs in Rakieta can be one), **a club with
 groups** (the same card, its groups on a recessed `paper3` band to the card's edges, each with its
 dots, its count, the official mark on an official group, and its action — the player can join from
 inside the form, and can still choose the club, because a second group at one club is allowed),
@@ -185,7 +185,7 @@ nowhere; Q125). Games, Fill in, You’re in and Friends are each drawn for the f
 screen, opened from the header (below). **Every starting
 tab has one dark card whose remedy is the link** (`LinkCard`): a headline, what the app is waiting
 for, and **Share the link** (volt) beside **Copy link** (`onDark`). Share hands the phone's own
-sheet one sentence — _Join my raketa group on Raketa: <link>_, the administrator's WhatsApp words
+sheet one sentence — _Join my rakieta group on Rakieta: <link>_, the administrator's WhatsApp words
 (story 128) — through the new **share port**; closing the sheet is an answer, never an error. Copy
 puts the bare link on the clipboard, which learned to write (`writeText`), and says _Link copied_
 in `ok`, or _Couldn't copy the link_ in `bad`, so a tap never passes silently.

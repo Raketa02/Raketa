@@ -5,7 +5,7 @@
  * **It carries the number of notices since the list was last opened** (#627; Q101): the server's
  * count, the same on every phone, drawn up to 99 and *99+* above it, and nothing at nought. Opening
  * the list clears it. It is the session's read of the list, so the minute's read, a push and a
- * return to the app all move it — and **what was told while Raketa was closed is in it**, since
+ * return to the app all move it — and **what was told while Rakieta was closed is in it**, since
  * nothing comes down as a banner at launch.
  *
  * **The tab bar's badge in `ink`** (10.2, 7.29): `shared/ui`'s `CountBadge`, the same mark out of

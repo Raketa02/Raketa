@@ -96,12 +96,12 @@ export const NOTIFICATIONS_COPY = {
    */
   permission: {
     ask: {
-      line: 'Your phone doesn’t show Raketa’s notifications yet — a game filling, a seat to rescue, a refund.',
+      line: 'Your phone doesn’t show Rakieta’s notifications yet — a game filling, a seat to rescue, a refund.',
       button: 'Allow notifications',
       busy: 'Asking…',
     },
     blocked: {
-      line: 'Notifications for Raketa are switched off in your phone’s settings.',
+      line: 'Notifications for Rakieta are switched off in your phone’s settings.',
       button: 'Open settings',
     },
   },

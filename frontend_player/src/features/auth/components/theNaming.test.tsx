@@ -375,7 +375,7 @@ describe('submitting the naming', () => {
     // read, and the re-read is one — so the sentence arrives after the backoff has run out.
     expect(
       await screen.findByText(
-        "We couldn't reach Raketa. Check your connection and try again.",
+        "We couldn't reach Rakieta. Check your connection and try again.",
         {},
         { timeout: 15_000 },
       ),
@@ -400,7 +400,7 @@ describe('submitting the naming', () => {
 
     // A refusal against no field is the banner's, above the form.
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
     ).toBeTruthy();
     expect(screen).toHavePathname('/name');
     expect(screen.getByLabelText(NICKNAME_LABEL).props.value).toBe('ania.k');

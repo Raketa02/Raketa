@@ -105,7 +105,7 @@ describe('the two searches', () => {
   });
 
   it('keeps what join search read the text as', () => {
-    const link = 'https://raketa.app/join/ZZZZZZZZ';
+    const link = 'https://rakieta.app/join/ZZZZZZZZ';
 
     expect(toJoinSearch(link, { clubs: [], next_page: null, read_as: 'LINK' })).toEqual({
       text: link,
@@ -123,7 +123,7 @@ describe('the reader’s groups and a group’s page', () => {
         {
           id: 'b0000000-0000-4000-8000-000000000001',
           kind: 'PLAYER',
-          name: 'my raketa group',
+          name: 'my rakieta group',
           monogram: { letters: 'mr', colour: 5 },
           sports: [],
           member_count: 1,
@@ -140,12 +140,12 @@ describe('the reader’s groups and a group’s page', () => {
       toGroup({
         id: 'b0000000-0000-4000-8000-000000000001',
         kind: 'PLAYER',
-        name: 'My raketa group',
+        name: 'My rakieta group',
         monogram: { letters: 'Mr', colour: 3 },
         sports: ['PADEL'],
         member_count: 1,
         home_club: { id: OGRODY.id, name: 'Ogrody 33' },
-        link: 'https://raketa.app/join/ABCDEFGH',
+        link: 'https://rakieta.app/join/ABCDEFGH',
         join_policy: 'ANYONE',
         is_owner: true,
         rated_by_sport: [],
@@ -157,7 +157,7 @@ describe('the reader’s groups and a group’s page', () => {
       kind: 'PLAYER',
       memberCount: 1,
       homeClub: { name: 'Ogrody 33' },
-      link: 'https://raketa.app/join/ABCDEFGH',
+      link: 'https://rakieta.app/join/ABCDEFGH',
       isOwner: true,
     });
   });
@@ -215,12 +215,12 @@ describe('the reader’s groups and a group’s page', () => {
     const page: Wire['GroupResponse'] = {
       id: 'b0000000-0000-4000-8000-000000000001',
       kind: 'PLAYER',
-      name: 'My raketa group',
+      name: 'My rakieta group',
       monogram: { letters: 'Mr', colour: 3 },
       sports: ['PADEL'],
       member_count: 3,
       home_club: { id: OGRODY.id, name: 'Ogrody 33' },
-      link: 'https://raketa.app/join/ABCDEFGH',
+      link: 'https://rakieta.app/join/ABCDEFGH',
       join_policy: 'ANYONE',
       is_owner: true,
       administrator_nickname: null,
@@ -263,12 +263,12 @@ describe('the reader’s groups and a group’s page', () => {
     const page = {
       id: 'b0000000-0000-4000-8000-000000000001',
       kind: 'PLAYER',
-      name: 'My raketa group',
+      name: 'My rakieta group',
       monogram: { letters: 'Mr', colour: 3 },
       sports: [],
       member_count: 1,
       home_club: { id: OGRODY.id, name: 'Ogrody 33' },
-      link: 'https://raketa.app/join/ABCDEFGH',
+      link: 'https://rakieta.app/join/ABCDEFGH',
       join_policy: 'ANYONE',
       is_owner: true,
       rated_by_sport: [{ sport: 'PICKLEBALL', rated_count: 1, first_rated: [] }],
@@ -287,7 +287,7 @@ const PAGE: Wire['GroupResponse'] = {
   sports: ['PADEL'],
   member_count: 8,
   home_club: { id: OGRODY.id, name: 'Centrum Ruchu' },
-  link: 'https://raketa.app/join/ABCDEFGH',
+  link: 'https://rakieta.app/join/ABCDEFGH',
   join_policy: 'PEOPLE_I_APPROVE',
   is_owner: true,
   administrator_nickname: null,

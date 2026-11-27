@@ -53,7 +53,7 @@ screen does, never in state a render could print.
 
 **The three setup writes are made online or not at all** (`networkMode: 'always'`), the one place the
 app's paused-and-resumed mutations are not wanted besides challenges': a press in a flow the player is
-standing in, with Stripe's native half between the writes, should say _couldn't reach Raketa_ now
+standing in, with Stripe's native half between the writes, should say _couldn't reach Rakieta_ now
 rather than resume a setup minutes later.
 
 **The terms are evidence.** `PAYMENT_TERMS` (version `2026-09-29`, the backend's, until #642 put
@@ -90,7 +90,7 @@ It is the key that decides, never the environment's name.
 **Stripe's fields are one row, where the mock draws three boxes.** `CardField` is Stripe's
 single-line field (number, then expiry and CVC as it scrolls), and the SDK draws no separate boxes;
 it is styled with the text field's surface, border and radius and the number in the mono face. The
-alternative, `CardForm`, draws a country and postcode Raketa does not need. Part 16.
+alternative, `CardForm`, draws a country and postcode Rakieta does not need. Part 16.
 
 **The deck hosts the setup as a sheet** ([#555](https://github.com/Raketa02/Raketa/issues/555)):
 `PaymentSetupSheet` is the same checklist over a line, titled _Before your first yes_, opened by the

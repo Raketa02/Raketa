@@ -19,14 +19,14 @@ const KUBA = { yours: 'forFun', tapped: 'competitive' } as const;
 describe('what the panel says the player declared', () => {
   it('names the sport inside the sentence, and the kind they play', () => {
     expect(doorTitle(ANIA, 'padel')).toBe(
-      'You play padel competitively, so Raketa only puts you in competitive games.',
+      'You play padel competitively, so Rakieta only puts you in competitive games.',
     );
     expect(doorQuestion(ANIA)).toBe('Want for-fun games too?');
   });
 
   it('is the mirror for a for-fun player', () => {
     expect(doorTitle(KUBA, 'tennis')).toBe(
-      'You play tennis for fun, so Raketa only puts you in for-fun games.',
+      'You play tennis for fun, so Rakieta only puts you in for-fun games.',
     );
     expect(doorQuestion(KUBA)).toBe('Want competitive games too?');
   });
@@ -66,12 +66,12 @@ describe('what each answer costs', () => {
     );
   });
 
-  it('says Raketa stops dealing the kind when there is no card to let go', () => {
+  it('says Rakieta stops dealing the kind when there is no card to let go', () => {
     expect(dropCost({ ...ANIA, count: 0 })).toBe(
-      'Raketa stops dealing you competitive games. Games you’re In on stay.',
+      'Rakieta stops dealing you competitive games. Games you’re In on stay.',
     );
     expect(dropCost({ ...KUBA, count: 0 })).toBe(
-      'Raketa stops dealing you for-fun games. Games you’re In on stay.',
+      'Rakieta stops dealing you for-fun games. Games you’re In on stay.',
     );
   });
 });

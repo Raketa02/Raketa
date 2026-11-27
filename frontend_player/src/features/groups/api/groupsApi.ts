@@ -206,7 +206,7 @@ function pageQuery(text: string, page: number): string {
   return `q=${encodeURIComponent(text)}&page=${page}`;
 }
 
-/** Every club in Raketa whose name or district holds `text`, nearest first, twenty to a page. */
+/** Every club in Rakieta whose name or district holds `text`, nearest first, twenty to a page. */
 export function getHomeClubs(
   text: string,
   page: number,

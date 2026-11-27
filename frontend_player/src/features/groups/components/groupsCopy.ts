@@ -25,7 +25,7 @@ export const GROUPS_COPY = {
     namePlaceholder: 'Give it any name…',
     homeClub: 'Home club',
     homeClubPlaceholder: 'Search clubs by name…',
-    noClubNote: 'Only clubs in Raketa can be a home club.',
+    noClubNote: 'Only clubs in Rakieta can be a home club.',
     setAsHome: 'Set as home',
     change: 'Change',
     changeLabel: 'Change the home club',

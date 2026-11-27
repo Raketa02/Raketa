@@ -1516,7 +1516,7 @@ device** (#866).
 
 **After an intent answer on Games, the tab is finding** ([#741](https://github.com/Raketa02/Raketa/issues/741),
 [ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
-§4, the screens A2.1 state 5). The deck read straight after an answer used to come before Raketa had
+§4, the screens A2.1 state 5). The deck read straight after an answer used to come before Rakieta had
 dealt anything for it, so a new player and Ania both landed on a false _Nothing picked right now_.
 Now the door's panel and the first-time question both hand their landed answer to
 **`useFindGames`**. It sends `POST /pools/{id}/deal`, then marks the group's reads stale, re-reads

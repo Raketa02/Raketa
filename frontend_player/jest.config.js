@@ -9,11 +9,11 @@
 //
 // These are config, never secrets: the app deliberately refuses to boot without them, and
 // CI has no .env file (nor may an agent create one).
-process.env.EXPO_PUBLIC_API_URL = 'https://api.test.raketa.invalid';
+process.env.EXPO_PUBLIC_API_URL = 'https://api.test.rakieta.invalid';
 // A second host, so a datafile request can never be mistaken for an API one: the fake socket
 // strips the host from both, and `/development/featurevisor-player.json` is the path that is
 // left (ADR-0206 §4).
-process.env.EXPO_PUBLIC_FEATURES_URL = 'https://features.test.raketa.invalid';
+process.env.EXPO_PUBLIC_FEATURES_URL = 'https://features.test.rakieta.invalid';
 process.env.EXPO_PUBLIC_ENV = 'development';
 
 module.exports = {

@@ -240,7 +240,7 @@ change because it waits on no query — whichever way the session ended. It judg
 owning feature turns a stale one into its default, and `phonePreferenceKeys` spells the Query key
 every owner holds its value under, so the three owners share one root. **A per-phone flag joined
 it with [#732](https://github.com/Raketa02/Raketa/issues/732)** (ADR-0200 §8): `readPhoneFlag` /
-`raisePhoneFlag` keep _the guide on Your rating was shown_ under `raketa.phone-flags.`, a prefix
+`raisePhoneFlag` keep _the guide on Your rating was shown_ under `rakieta.phone-flags.`, a prefix
 `forgetPhonePreferences` never lists, so it outlives the session — `phonePreferenceKeys.flag` is
 its Query key, with no account in it. `shared/lib/platform/clipboard.ts` is the fifth
 port, **read-only and one verb wide** at #512 (`readText`, never rejecting — #513 gave it a second), for Join a group's **Paste**;

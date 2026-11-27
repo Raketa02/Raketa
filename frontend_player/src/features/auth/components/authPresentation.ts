@@ -12,13 +12,13 @@
  * Over the title of every auth screen that keeps today's frame (`AuthFrame`). Uppercased by the
  * eyebrow's style, never by the copy. Sign-in has none: the stage's wordmark replaces it.
  */
-export const AUTH_EYEBROW = 'Raketa';
+export const AUTH_EYEBROW = 'Rakieta';
 
 /**
- * **The stage's wordmark** — the volt dot, then this, in the hero's top-left corner (#784). The
- * mocks draw *Rakieta*; the product is **Raketa** (ADR-0187 §8).
+ * **The stage's wordmark** — the volt dot, then this, in the hero's top-left corner (#784): the
+ * mocks' *Rakieta*, read as written (ADR-0211).
  */
-export const STAGE_WORDMARK = 'Raketa';
+export const STAGE_WORDMARK = 'Rakieta';
 
 /** What the stage's email box holds while it is empty — it opens empty, for the keychain's autofill. */
 export const EMAIL_PLACEHOLDER = 'you@example.com';
@@ -43,7 +43,7 @@ export const SIGN_IN_COPY = {
   submitting: 'Signing in…',
   /** The thin rule between signing in and the other way in. */
   or: 'or',
-  newHere: 'New to Raketa?',
+  newHere: 'New to Rakieta?',
   createAccount: 'Create an account',
 } as const;
 

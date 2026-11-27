@@ -534,7 +534,7 @@ describe('the fade', () => {
     await settle();
     clockTo(STILL);
 
-    expect(screen.getByText('Raketa could not start', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.getByText('Rakieta could not start', HIDDEN_TOO)).toBeTruthy();
     expect(screen.getByText(/EXPO_PUBLIC_API_URL/, HIDDEN_TOO)).toBeTruthy();
     expect(screen.queryByText('the app', HIDDEN_TOO)).toBeNull();
     expect(splashIsUp()).toBe(true);
@@ -546,7 +546,7 @@ describe('the fade', () => {
 
     clockTo(FADE_AT + FADE);
     expect(splashIsUp()).toBe(false);
-    expect(screen.getByText('Raketa could not start')).toBeTruthy();
+    expect(screen.getByText('Rakieta could not start')).toBeTruthy();
   });
 
   it('plays once: nothing the tree does afterwards brings it back', async () => {

@@ -1,4 +1,4 @@
-# Raketa Player App — Production Architecture
+# Rakieta Player App — Production Architecture
 
 **Status: adopted.** This is the player app's runtime and engineering contract, the
 counterpart to the [design system](design-system.md). The design system says what a
@@ -1120,9 +1120,9 @@ is reached from a phone, and a datafile read in the clear is one somebody on the
 rewrite. Nothing is hosted yet, so off a developer's machine every feature is at its code default.
 
 `EXPO_PUBLIC_LINK_DOMAIN` is the one **optional** value: the web domain the app's links live on
-(`raketa.app`, bare), and **empty in every environment today**
+(`rakieta.app`, bare), and **empty in every environment today**
 ([#520](https://github.com/Raketa02/Raketa/issues/520), ADR-0187 §7). Set, `app.config.ts` gives iOS
-an associated domain and Android a verified intent filter for the three link paths; empty, the links
+an associated domain and Android a verified intent filter for the four link paths; empty, the links
 use the app's scheme alone. The native document and the runtime read it through one pure function,
 `src/shared/config/appLinks.ts`, so the binary and the running app cannot disagree about which links
 are the app's.

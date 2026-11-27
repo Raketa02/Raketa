@@ -116,7 +116,7 @@ export const MISSING_ANSWER_COPY: Readonly<Record<AnswerAskedBehind, MissingAnsw
   },
   location: {
     title: 'We still need the area you play in',
-    body: 'Raketa measures how far each club is from the area you play in, so setting up cannot finish without one — from your phone, or a club you pick.',
+    body: 'Rakieta measures how far each club is from the area you play in, so setting up cannot finish without one — from your phone, or a club you pick.',
     label: 'Set the area you play in',
     finishHint: 'Set the area you play in to finish',
   },

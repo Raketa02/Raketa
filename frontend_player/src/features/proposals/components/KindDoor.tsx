@@ -6,7 +6,7 @@
  *
  * Ania is Competitive in padel and taps `For fun`:
  *
- * > **You play padel competitively, so Raketa only puts you in competitive games.**
+ * > **You play padel competitively, so Rakieta only puts you in competitive games.**
  * > Want for-fun games too?
  * >
  * > **Either suits me** — *Keep your 7 competitive cards and get for-fun ones too.*

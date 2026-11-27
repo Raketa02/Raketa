@@ -49,9 +49,9 @@ describe('what an answer on You costs', () => {
   });
 
   /** PRD #736, call 4: a zero drops the number rather than saying *your 0 cards*. */
-  it('says Raketa stops dealing the kind when none of its cards is held', () => {
+  it('says Rakieta stops dealing the kind when none of its cards is held', () => {
     expect(intentCostLine({ change: 'drops', kind: 'competitive', count: 0 })).toBe(
-      'Raketa stops dealing you competitive games. Games you’re In on stay.',
+      'Rakieta stops dealing you competitive games. Games you’re In on stay.',
     );
   });
 

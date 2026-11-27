@@ -153,8 +153,8 @@ export const PAYMENTS_COPY = {
     'One-time 3-D Secure check — it lets the club hold and take your share later without you present.',
   askTheBank: 'Open the bank app · confirm',
   asking: 'Waiting for your bank…',
-  /** The merchant the wallet's own sheet names — Raketa keeps the card; the clubs hold and take it. */
-  walletSheet: 'Raketa',
+  /** The merchant the wallet's own sheet names — Rakieta keeps the card; the clubs hold and take it. */
+  walletSheet: 'Rakieta',
   chooseAgain: 'Change how you pay',
   /** What the open step says went wrong — every failure but a refusal the server named itself. */
   failures: {
@@ -165,7 +165,7 @@ export const PAYMENTS_COPY = {
     BANK_FAILED: 'We couldn’t hear back from your bank. Try again.',
     BANK_NOT_DONE: 'Your bank hasn’t finished its check yet. Try again in a moment.',
     SETUP_GONE: 'That setup expired. Start again from the first step.',
-    TERMS_OUTDATED: 'These terms have changed. Update Raketa to read the new ones first.',
+    TERMS_OUTDATED: 'These terms have changed. Update Rakieta to read the new ones first.',
   } satisfies Readonly<Record<Exclude<SetupFailure['kind'], 'SAY_SO'>, string>>,
   /** A refused write, by its code — anything else is the recovery's own sentence. */
   refusals: {

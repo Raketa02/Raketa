@@ -137,7 +137,7 @@ const CREW: Wire['MyGroupSchema'] = {
 /** Ten of the crew rated in padel and four in tennis — mock 16's *Padel 10 · Tennis 4*. */
 const PAGE: Wire['GroupResponse'] = {
   ...CREW,
-  link: 'https://raketa.app/join/K7PQ2MXA',
+  link: 'https://rakieta.app/join/K7PQ2MXA',
   join_policy: 'ANYONE',
   is_owner: false,
   rated_by_sport: [
@@ -1327,7 +1327,7 @@ describe('Post — you’re In (mock 33, A5.4)', () => {
       json<Wire['PaymentSetupResponse']>(
         {
           setup_id: 'seti_1',
-          publishable_key: 'pk_test_raketa',
+          publishable_key: 'pk_test_rakieta',
           terms_version: PAYMENT_TERMS_IN_FORCE,
         },
         201,

@@ -5,7 +5,7 @@
  *
  * **A new frame beside `AuthFrame`, not a change to it.** The eight other auth screens — the
  * *Forgot password?* flow, the invitation's, *Set your password* and the two links — keep today's
- * paper frame and its *RAKETA* eyebrow: a short recovery task is not crowded by a hero. Here the
+ * paper frame and its *RAKIETA* eyebrow: a short recovery task is not crowded by a hero. Here the
  * hero's wordmark replaces the eyebrow, so the sheet opens on the title alone.
  *
  * ## The sheet is the scrolling part, and the hero stays put
@@ -35,7 +35,7 @@
  * So a band of the ground the status bar's height is drawn over the scroll, and the sheet slides
  * under it as it would under a header. At rest it is the hero's own top, the same colour.
  *
- * The footer — *New to Raketa? Create an account*, *Already have an account? Sign in* — sits at the
+ * The footer — *New to Rakieta? Create an account*, *Already have an account? Sign in* — sits at the
  * foot of the sheet, however tall the screen, and above the home indicator.
  */
 

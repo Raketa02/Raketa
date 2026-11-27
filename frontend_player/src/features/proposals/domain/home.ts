@@ -278,7 +278,7 @@ export function withoutLevelAsksIn(home: Home, sports: readonly Sport[]): Home {
  *
  * | `kind` | Line |
  * | --- | --- |
- * | `link` | *Invited you to Raketa* — made by their Friend link |
+ * | `link` | *Invited you to Rakieta* — made by their Friend link |
  * | `ranking` | *Found you in the padel ranking* — the reader's record on the Rankings page, `sport`'s (#779) |
  * | `newInRakieta` | *Found you among new players* — Home's New in Rakieta, or a record it opened (#801) |
  * | `sameLevel` | *Your level in padel · 91% even* — Home's Same competitive level, or a record it opened, in `sport` (#802): **today's** %, absent once either holds no level there — *Found you at your padel level* |

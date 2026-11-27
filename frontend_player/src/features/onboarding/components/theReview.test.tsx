@@ -487,7 +487,7 @@ describe('submitting the reviewed answers', () => {
     // The wait ends where it started: the screen it was waiting for cannot arrive, so the
     // message takes its place beside the control that retries it.
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
     ).toBeTruthy();
     expect(screen).toHavePathname(`/review/${ASSESSMENT_ID}`);
     expect(screen.getByText('Have you played padel before?')).toBeTruthy();

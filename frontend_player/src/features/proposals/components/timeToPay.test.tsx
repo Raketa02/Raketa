@@ -122,7 +122,7 @@ const CREW: Wire['MyGroupSchema'] = {
 };
 const CREW_PAGE: Wire['GroupResponse'] = {
   ...CREW,
-  link: 'https://raketa.app/join/K7PQ2MXA',
+  link: 'https://rakieta.app/join/K7PQ2MXA',
   join_policy: 'ANYONE',
   is_owner: false,
   rated_by_sport: [{ sport: 'PADEL', rated_count: 5, first_rated: [] }],
@@ -183,7 +183,7 @@ function seatCharge(extra: Partial<Wire['SeatChargeResponse']> = {}): Wire['Seat
     to_confirm: {
       client_secret: 'pi_1_secret_abc',
       connected_account_id: 'acct_bonarka',
-      publishable_key: 'pk_test_raketa',
+      publishable_key: 'pk_test_rakieta',
     },
     ...extra,
   };

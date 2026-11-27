@@ -1,6 +1,6 @@
 /**
  * **Your friend link, and New link** ([#756](https://github.com/Raketa02/Raketa/issues/756); the
- * friends mechanics §4.1) — the Add friends sheet's *Not on Raketa yet?* card.
+ * friends mechanics §4.1) — the Add friends sheet's *Not on Rakieta yet?* card.
  *
  * **The read is made when the sheet opens**, as the groups above it are, and **its first read
  * writes**: the server makes the code then. Two first reads can race, and the loser is refused with

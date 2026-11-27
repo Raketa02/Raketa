@@ -8,7 +8,7 @@ const valid = {
 } as const;
 
 /** Where a deployed environment's datafiles would be served — an https bucket, never a laptop. */
-const DEPLOYED_FEATURES_URL = 'https://features.raketa.example';
+const DEPLOYED_FEATURES_URL = 'https://features.rakieta.example';
 
 /** The three deployed environments. None is provisioned — no domain is registered yet. */
 const DEPLOYED: readonly AppEnvironment[] = ['development', 'staging', 'production'];
@@ -18,7 +18,7 @@ function wellFormedFor(environment: AppEnvironment) {
   return environment === 'local'
     ? valid
     : {
-        EXPO_PUBLIC_API_URL: 'https://api.raketa.example',
+        EXPO_PUBLIC_API_URL: 'https://api.rakieta.example',
         EXPO_PUBLIC_FEATURES_URL: DEPLOYED_FEATURES_URL,
         EXPO_PUBLIC_ENV: environment,
       };
@@ -92,7 +92,8 @@ describe('the environment names', () => {
   });
 
   it.each(ENVIRONMENTS)('accepts %s', (environment) => {
-    const apiUrl = environment === 'local' ? 'http://localhost:8000' : 'https://api.raketa.example';
+    const apiUrl =
+      environment === 'local' ? 'http://localhost:8000' : 'https://api.rakieta.example';
     const featuresUrl = environment === 'local' ? 'http://localhost:3040' : DEPLOYED_FEATURES_URL;
 
     expect(
@@ -173,12 +174,12 @@ describe('the per-environment URL scheme rule', () => {
   it.each(DEPLOYED)('accepts an https:// URL in %s', (environment) => {
     expect(
       parseEnv({
-        EXPO_PUBLIC_API_URL: 'https://api.raketa.example',
+        EXPO_PUBLIC_API_URL: 'https://api.rakieta.example',
         EXPO_PUBLIC_FEATURES_URL: DEPLOYED_FEATURES_URL,
         EXPO_PUBLIC_ENV: environment,
       }),
     ).toEqual({
-      apiUrl: 'https://api.raketa.example',
+      apiUrl: 'https://api.rakieta.example',
       featuresUrl: DEPLOYED_FEATURES_URL,
       environment,
       linkDomain: null,
@@ -240,7 +241,7 @@ describe('the per-environment URL scheme rule', () => {
 
   it.each(ENVIRONMENTS)('rejects a scheme that is neither http nor https in %s', (environment) => {
     expect(() =>
-      parseEnv({ ...wellFormedFor(environment), EXPO_PUBLIC_API_URL: 'ftp://api.raketa.example' }),
+      parseEnv({ ...wellFormedFor(environment), EXPO_PUBLIC_API_URL: 'ftp://api.rakieta.example' }),
     ).toThrow(/EXPO_PUBLIC_API_URL/);
   });
 });
@@ -263,7 +264,7 @@ describe('the features URL', () => {
   it.each(DEPLOYED)('rejects an http:// features URL in %s, naming both variables', (env) => {
     try {
       parseEnv({
-        EXPO_PUBLIC_API_URL: 'https://api.raketa.example',
+        EXPO_PUBLIC_API_URL: 'https://api.rakieta.example',
         EXPO_PUBLIC_FEATURES_URL: 'http://192.168.0.204:3040',
         EXPO_PUBLIC_ENV: env,
       });
@@ -318,7 +319,7 @@ describe('one complaint per typo', () => {
     expect(
       complaints({
         ...wellFormedFor(environment),
-        EXPO_PUBLIC_API_URL: 'ftp://api.raketa.example',
+        EXPO_PUBLIC_API_URL: 'ftp://api.rakieta.example',
       }),
     ).toHaveLength(1);
   });
@@ -375,13 +376,13 @@ describe('the link domain', () => {
   });
 
   it('is the host once one is set, in any environment', () => {
-    expect(parseEnv({ ...valid, EXPO_PUBLIC_LINK_DOMAIN: 'raketa.app' }).linkDomain).toBe(
-      'raketa.app',
+    expect(parseEnv({ ...valid, EXPO_PUBLIC_LINK_DOMAIN: 'rakieta.app' }).linkDomain).toBe(
+      'rakieta.app',
     );
     expect(
-      parseEnv({ ...wellFormedFor('production'), EXPO_PUBLIC_LINK_DOMAIN: 'raketa.app' })
+      parseEnv({ ...wellFormedFor('production'), EXPO_PUBLIC_LINK_DOMAIN: 'rakieta.app' })
         .linkDomain,
-    ).toBe('raketa.app');
+    ).toBe('rakieta.app');
   });
 
   it('refuses a URL where a host belongs, naming the variable and not the value', () => {

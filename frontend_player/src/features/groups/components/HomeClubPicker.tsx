@@ -7,7 +7,7 @@
  * | --- | --- |
  * | empty | the field, and nothing under it |
  * | searching | the field, and **a raised card per club** (`ClubCard`): name over district · distance · sports, a *Set as home* pill, the whole head the tap |
- * | no match | *No club called "…"*, and that only clubs in Raketa can be one |
+ * | no match | *No club called "…"*, and that only clubs in Rakieta can be one |
  * | a club with groups | the same card, its groups on a recessed `paper3` band under the head, each with what the reader can do about it (stories 20–22) |
  * | chosen | the field gone; the club on `mintSoft` with its distance and **Change**, and nothing under it |
  *

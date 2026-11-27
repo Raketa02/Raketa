@@ -32,7 +32,7 @@
  * `SkeletonGround` under the header, so one band crosses the switch's place and the view's.
  *
  * **A pull reads the page again** — every page drawn, the main read with them: places move whenever a
- * result settles anywhere in Raketa. A refused read says why with *Try again*, and a read waiting for
+ * result settles anywhere in Rakieta. A refused read says why with *Try again*, and a read waiting for
  * a connection says so, each in the skeleton's place; a read refused once and asked again is still on
  * its way, so the skeleton stays through Query's retries rather than a blank page, and *Try again* or
  * the connection back stands it again until the page is in. **Another sport is another page**, read

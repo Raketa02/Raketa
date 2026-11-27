@@ -118,7 +118,7 @@ confirmation (`/forgot-password/sent`), the email and the code (`/forgot-passwor
 _Set a new password_ — by a claimed code at `/forgot-password/new-password`, or by the email's
 link at `/reset/<token>`, the path the email's button names and the one #520 opens from an
 incoming link. **Nothing is drawn twice**: the sign-in screen was taken apart into `AuthFrame` (the
-paper, the scroll that keeps a form reachable over the keyboard, _RAKETA_ over the title, and an optional `lead`),
+paper, the scroll that keeps a form reachable over the keyboard, _RAKIETA_ over the title, and an optional `lead`),
 `EmailField` (the five props that make a box an email box), `AuthLink` (the 44pt text link, by
 `href` or by `onPress`) and `PasswordPairFields` (sign-up's two revealable boxes and the rule), and
 sign-in, sign-up and the four new screens are each those pieces asking one thing. The route paths
@@ -192,7 +192,7 @@ half is missing, and `PasswordPairFields`, so **sign-up draws the rule line unde
 too**. The server's `password_too_weak` says the rule itself, under the box.
 
 **Not seen on a device**: the four new screens, the `lead` line under a title, the _Forgot
-password?_ link's place between _Sign in_ and _New to Raketa?_, and sign-up's new rule line.
+password?_ link's place between _Sign in_ and _New to Rakieta?_, and sign-up's new rule line.
 
 **The signed-in player carries the account's profiles** ([#516](https://github.com/Raketa02/Raketa/issues/516),
 ADR-0185 §2). `GET /users/me` answers `MeResponse` since #508, and `me()` reads it: `AuthenticatedUser`
@@ -351,16 +351,16 @@ answered. **Not seen on a device.**
 
 **Sign-in is drawn on the stage, and nothing it does changed**
 ([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783; design system 12.2). A dark hero
-over the top four tenths of the window — the _Raketa_ wordmark in its top-left corner and _Your next
+over the top four tenths of the window — the _Rakieta_ wordmark in its top-left corner and _Your next
 game is only one swipe away._ at its foot, the deck dealt between them since #786 — and a paper
 sheet with rounded top corners over it, holding the form. Every control keeps its target and what it
 carries, the refusals keep their sentences and their sources, and **Sign in** still fires on the
-button and on Go and reads _Signing in…_ while busy. The mocks' _Rakieta_ is read as **Raketa**
-(ADR-0187 §8). Design only: no request, schema, use-case or route changed.
+button and on Go and reads _Signing in…_ while busy. The mocks' _Rakieta_ is read as written
+(ADR-0211). Design only: no request, schema, use-case or route changed.
 
 **The stage is a new frame beside `AuthFrame`, not a change to it** (`AuthStage`, `StageHero`,
 `StageGround`; the keyboard props #529 put on the scroll are `FORM_SCROLL`, shared by both frames). The eight other auth screens — the _Forgot password?_ flow, _Have an invitation
-code?_, _Set your password_ and the two links — keep the paper frame and its _RAKETA_ eyebrow,
+code?_, _Set your password_ and the two links — keep the paper frame and its _RAKIETA_ eyebrow,
 because a short recovery task is not crowded by a hero. On the stage the hero's wordmark replaces the
 eyebrow, so the sheet opens on the title alone. Sign-up moved onto it with #785, below.
 
@@ -397,7 +397,7 @@ offers the saved address; _Password_ with **Show**/**Hide** inside the box; **_F
 quiet and right-aligned straight under the password box** (`AuthLink`'s `quiet`: `muted`, at the end
 of its row) — where the problem is, rather than under the button; **Sign in**, the full-width primary
 button at the boxes' own height; a thin _or_ rule; **_I have an invitation code_**, a white
-outlined box with a small coral dot; and _New to Raketa? Create an account_ at the sheet's foot.
+outlined box with a small coral dot; and _New to Rakieta? Create an account_ at the sheet's foot.
 
 **_I have an invitation code_ is a statement on a link drawn as a button**: 6.1's `secondary`
 button at the stage's height with `Button`'s two new options, **`role="link"`** and a coral **`dot`** before its

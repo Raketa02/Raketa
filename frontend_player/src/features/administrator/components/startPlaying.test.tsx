@@ -48,7 +48,7 @@ const NAMING_PATH = '/api/v1/users/me/name';
 const COMMIT_PATH = '/api/v1/players/me/profile';
 
 /** The sentence under the box when it is not ticked — sign-up's own. */
-const NOT_ATTESTED = 'Confirm that you are 18 or over — Raketa is for adults only.';
+const NOT_ATTESTED = 'Confirm that you are 18 or over — Rakieta is for adults only.';
 
 const OGRODY: Wire['AdministeredClubSchema'] = { club_id: CLUB_ID, club_name: CLUB.name };
 
@@ -239,7 +239,7 @@ describe('the Adult attestation', () => {
     expect(screen.getByRole('button', { name: /^Start playing,/ })).toBeTruthy();
   });
 
-  it('says it could not reach Raketa and stays, ticked, when the attestation is not recorded', async () => {
+  it('says it could not reach Rakieta and stays, ticked, when the attestation is not recorded', async () => {
     await startPlaying();
     transport.on('POST', ATTESTATION_PATH, () => errorResponse(503, 'service_unavailable'));
 
@@ -247,7 +247,7 @@ describe('the Adult attestation', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
 
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
     ).toBeTruthy();
     expect(screen).toHavePathname(`${YOU}/start-playing`);
     expect(

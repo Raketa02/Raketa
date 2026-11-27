@@ -1,4 +1,4 @@
-# Raketa — Player app (iOS + Android)
+# Rakieta — Player app (iOS + Android)
 
 The native app players use to find courts, book slots and organise matches.
 React Native + Expo + TypeScript, rendering with real platform components — not a
@@ -54,7 +54,7 @@ pnpm check        # lint + format check + typecheck + test — the local gate
 
 ## Running on a real phone
 
-`pnpm ios --device` and `pnpm android --device` build the development build (`Raketa local`),
+`pnpm ios --device` and `pnpm android --device` build the development build (`Rakieta local`),
 install it over USB and serve it from Metro on 8081. What has stopped them:
 
 - **A Metro already listening on 8081 is reused, however old.** `expo run:*` finds this project's
@@ -98,8 +98,8 @@ name is a startup failure naming both variables. See [`../docs/environments.md`]
 The environment also decides what the app calls itself. `app.config.ts` is a **function**
 of it — not a static `app.json` — and delegates the one decision to
 `src/shared/config/appIdentity.ts`: outside `production` the app is named for its
-environment (`Raketa local`) and wears an amber badge over every screen; `production` is
-`Raketa`, unbadged. There is one installable variant — one bundle identifier, one URL
+environment (`Rakieta local`) and wears an amber badge over every screen; `production` is
+`Rakieta`, unbadged. There is one installable variant — one bundle identifier, one URL
 scheme — so today all four resolve to the same app pointed at the same laptop. That is
 the point: the machinery is exercised in the only environment that runs, so it will not
 be wrong the first time it matters.

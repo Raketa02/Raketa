@@ -1,6 +1,6 @@
 /**
  * **The sign-in screen's chrome, as a piece** — the paper, the scroll that keeps a form reachable
- * over the keyboard and at large text, and the header: *RAKETA* over the screen's title.
+ * over the keyboard and at large text, and the header: *RAKIETA* over the screen's title.
  *
  * It was drawn twice, once by sign-in and once by sign-up, with two copies of one style sheet.
  * *Forgot password?* added four screens that are the same screen asking something else

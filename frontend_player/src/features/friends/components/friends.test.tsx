@@ -119,7 +119,7 @@ const CREW: Wire['MyGroupSchema'] = {
 
 const PAGE: Wire['GroupResponse'] = {
   ...CREW,
-  link: 'https://raketa.app/join/K7PQ2MXA',
+  link: 'https://rakieta.app/join/K7PQ2MXA',
   join_policy: 'ANYONE',
   is_owner: false,
   rated_by_sport: [{ sport: 'PADEL', rated_count: 6, first_rated: [] }],
@@ -715,7 +715,7 @@ describe('FRIEND REQUESTS in Needs your answer', () => {
     expect(tileWidth(INES)).toBeCloseTo(content() * theme.size.requestCardRatio);
     // Neither where they were found nor the sport they were asked from (ADR-0205 §1): the request's
     // own `sport` and `level` are an older app's, and only `levels` is drawn (#818).
-    expect(screen.queryByText('Invited you to Raketa')).toBeNull();
+    expect(screen.queryByText('Invited you to Rakieta')).toBeNull();
     expect(screen.queryByText('Found you in the padel ranking')).toBeNull();
     expect(screen.queryByText(/Padel 3,40/)).toBeNull();
   });

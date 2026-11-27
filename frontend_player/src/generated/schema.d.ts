@@ -817,7 +817,7 @@ export interface paths {
         };
         /**
          * Your friend link
-         * @description The Add friends sheet's *Not on Raketa yet?* card: `<public site>/f/<code>`, **made the first time you read it** and the same on every read after, until you take a New link. Somebody who opens it finds your request on their Home.
+         * @description The Add friends sheet's *Not on Rakieta yet?* card: `<public site>/f/<code>`, **made the first time you read it** and the same on every read after, until you take a New link. Somebody who opens it finds your request on their Home.
          */
         get: operations["read_your_friend_link_api_v1_friends_link_get"];
         put?: never;
@@ -859,7 +859,7 @@ export interface paths {
         put?: never;
         /**
          * Open a friend link
-         * @description `code` is what follows `/f/` in the link, read in any case. **The owner's request lands on your Home**, *{nickname} wants to be your friend · Invited you to Raketa*, with Accept and Not now — whether or not you share a group. Opened again, it makes no second request, and a request of theirs you set aside comes back to Home.
+         * @description `code` is what follows `/f/` in the link, read in any case. **The owner's request lands on your Home**, *{nickname} wants to be your friend · Invited you to Rakieta*, with Accept and Not now — whether or not you share a group. Opened again, it makes no second request, and a request of theirs you set aside comes back to Home.
          *
          *     **Nothing happens** for your own link (`NONE`) or a friend's (`FRIEND`). **If you had asked them, the requests cross**: you are friends at once (`FRIEND`).
          */
@@ -1775,7 +1775,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Search every club in Raketa for a group's home club
+         * Search every club in Rakieta for a group's home club
          * @description Clubs whose name or district contains `q` anywhere, ignoring case and accents (*debniki* finds *Dębniki*). **Nearest first** from the caller's Location area, then by name, twenty to a page; a caller with no Location area gets A–Z and no distance. A blank `q` finds nothing. Each club carries every group at it and what each is to the caller.
          */
         get: operations["search_home_clubs_api_v1_home_clubs_get"];
@@ -2606,7 +2606,7 @@ export interface paths {
         put?: never;
         /**
          * Deal my group now
-         * @description Right after an intent answer on the **Games** tab (Q127): Raketa deals this group's games now — the proposer's own batch for its pool, in every sport it plays, the one the jobs run — and answers once it has been applied, so the phone can show *Finding for-fun games for you…* for as long as it takes and then read the deck. It never makes a card itself: what it deals is exactly what the jobs would have, a moment later. Safe beside the jobs and beside itself — a repeat deals nothing new — and what it records is told as the jobs' is (*Your new game* among it). No body.
+         * @description Right after an intent answer on the **Games** tab (Q127): Rakieta deals this group's games now — the proposer's own batch for its pool, in every sport it plays, the one the jobs run — and answers once it has been applied, so the phone can show *Finding for-fun games for you…* for as long as it takes and then read the deck. It never makes a card itself: what it deals is exactly what the jobs would have, a moment later. Safe beside the jobs and beside itself — a repeat deals nothing new — and what it records is told as the jobs' is (*Your new game* among it). No body.
          */
         post: operations["deal_the_pool_now_api_v1_pools__pool_id__deal_post"];
         delete?: never;
@@ -3974,7 +3974,7 @@ export interface components {
             weekly_hours: components["schemas"]["WeeklyHourResource"][];
             /**
              * Location
-             * @description Where this player plays: **a reading of the phone** (`latitude` and `longitude`), or, when the phone's location is refused, **a club they pick** (`club_id`) — exactly one of the two (`docs/adr/0200` §10). Either is rounded to the cell about a kilometre across before anything is recorded, and the cell comes back as `location`. A club that is not in Raketa is `location_club_unknown`.
+             * @description Where this player plays: **a reading of the phone** (`latitude` and `longitude`), or, when the phone's location is refused, **a club they pick** (`club_id`) — exactly one of the two (`docs/adr/0200` §10). Either is rounded to the cell about a kilometre across before anything is recorded, and the cell comes back as `location`. A club that is not in Rakieta is `location_club_unknown`.
              */
             location: components["schemas"]["PhoneReadingRequest"] | components["schemas"]["PickedClubRequest"];
             /** @description The player's own answer, asked once. Required — `PREFER_NOT_TO_SAY` is a first-class answer and is what a player who does not want to say sends; there is no way to send nothing. It matches only unconstrained preferences, which costs its holder reach, and the client is what says so at the moment of asking. */
@@ -4232,7 +4232,7 @@ export interface components {
             /**
              * Home Club Id
              * Format: uuid
-             * @description A club from home-club search — **required**. A club Raketa does not have is `home_club_unknown`, `details.field` `home_club_id`.
+             * @description A club from home-club search — **required**. A club Rakieta does not have is `home_club_unknown`, `details.field` `home_club_id`.
              */
             home_club_id: string;
             /** @description `ANYONE` (the form's default) or `PEOPLE_I_APPROVE`. */
@@ -4773,7 +4773,7 @@ export interface components {
         };
         /**
          * FriendLinkResponse
-         * @description Your Friend link, as the Add friends sheet's *Not on Raketa yet?* card
+         * @description Your Friend link, as the Add friends sheet's *Not on Rakieta yet?* card
          *     shows it (#748).
          */
         FriendLinkResponse: {
@@ -6034,7 +6034,7 @@ export interface components {
             asked_at: string;
             /**
              * By Link
-             * @description Made by their Friend link: draw *Invited you to Raketa* in place of the group line.
+             * @description Made by their Friend link: draw *Invited you to Rakieta* in place of the group line.
              */
             by_link: boolean;
             /**
@@ -6955,7 +6955,7 @@ export interface components {
         MonogramSchema: {
             /**
              * Letters
-             * @description The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my raketa group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes — never change its case.
+             * @description The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my rakieta group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes — never change its case.
              */
             letters: string;
             /**
@@ -7371,7 +7371,7 @@ export interface components {
         };
         /** OpenedFriendLinkResponse */
         OpenedFriendLinkResponse: {
-            /** @description Your relation to the link's owner once it is opened. `ASKED_YOU` — their request is on your Home, *Invited you to Raketa*: land there. `FRIEND` — you were friends already, or you had asked them and the requests crossed. `NONE` — the link is your own, and nothing happened. */
+            /** @description Your relation to the link's owner once it is opened. `ASKED_YOU` — their request is on your Home, *Invited you to Rakieta*: land there. `FRIEND` — you were friends already, or you had asked them and the requests crossed. `NONE` — the link is your own, and nothing happened. */
             relation: components["schemas"]["FriendRelation"];
         };
         /**
@@ -7688,14 +7688,14 @@ export interface components {
          *
          *     The club's point on the map, rounded to the cell exactly as a reading is,
          *     becomes the Location area — so the phone never needs a club's coordinates.
-         *     An id that names no club in Raketa is `location_club_unknown`. **Nothing
+         *     An id that names no club in Rakieta is `location_club_unknown`. **Nothing
          *     else rides along**: a body that also carries a reading is refused.
          */
         PickedClubRequest: {
             /**
              * Club Id
              * Format: uuid
-             * @description A club from Raketa's clubs, as `GET /home-clubs` answers it — by name or district, A–Z for a player with no area yet.
+             * @description A club from Rakieta's clubs, as `GET /home-clubs` answers it — by name or district, A–Z for a player with no area yet.
              */
             club_id: string;
         };
@@ -8631,7 +8631,7 @@ export interface components {
         /**
          * RankingView
          * @description Which list a ranking is read in (``docs/adr/0203`` §3). **General** is
-         *     everybody in Raketa listed in the sport; **Friends** is the reader and their
+         *     everybody in Rakieta listed in the sport; **Friends** is the reader and their
          *     friends, worked out on each read (#771). Both drop a player 90 days after
          *     their last result, and both order and place them alike.
          * @enum {string}
@@ -9719,7 +9719,7 @@ export interface components {
         };
         /**
          * Sport
-         * @description The four sports Raketa rates, as a closed enum.
+         * @description The four sports Rakieta rates, as a closed enum.
          * @enum {string}
          */
         Sport: "PADEL" | "TENNIS" | "SQUASH" | "BADMINTON";
@@ -11130,7 +11130,7 @@ export interface operations {
              *
              *     `intro_not_admitted` — the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over 250 characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.
              *
-             *     `location_club_unknown` — the club picked in place of a reading is no club in Raketa (`details.field` `club_id`): it stopped existing between the search and the tap, or the client invented it.
+             *     `location_club_unknown` — the club picked in place of a reading is no club in Rakieta (`details.field` `club_id`): it stopped existing between the search and the tap, or the client invented it.
              */
             400: {
                 headers: {
@@ -11253,7 +11253,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `location_club_unknown` — the club picked in place of a reading is no club in Raketa (`details.field` `club_id`). Nothing moves. */
+            /** @description `location_club_unknown` — the club picked in place of a reading is no club in Rakieta (`details.field` `club_id`). Nothing moves. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -13365,7 +13365,7 @@ export interface operations {
     read_ranking_api_v1_rankings__sport__get: {
         parameters: {
             query?: {
-                /** @description Which list: `GENERAL`, everybody in Raketa listed in the sport; `FRIENDS`, you and your friends, from the first result. */
+                /** @description Which list: `GENERAL`, everybody in Rakieta listed in the sport; `FRIENDS`, you and your friends, from the first result. */
                 view?: components["schemas"]["RankingView"];
             };
             header?: never;
@@ -13485,7 +13485,7 @@ export interface operations {
                     "application/json": components["schemas"]["GroupResponse"];
                 };
             };
-            /** @description A field the player has to correct, named by `details.field`, checked in the form's order: `group_name_invalid` (`name`) — 1–40 characters once trimmed; `home_club_unknown` (`home_club_id`) — only a club in Raketa can be a home club. Nothing was recorded. */
+            /** @description A field the player has to correct, named by `details.field`, checked in the form's order: `group_name_invalid` (`name`) — 1–40 characters once trimmed; `home_club_unknown` (`home_club_id`) — only a club in Rakieta can be a home club. Nothing was recorded. */
             400: {
                 headers: {
                     [name: string]: unknown;

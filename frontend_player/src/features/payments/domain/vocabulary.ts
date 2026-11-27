@@ -22,7 +22,7 @@ export function isWallet(payWith: PayWith): payWith is Wallet {
   return payWith === 'APPLE_PAY' || payWith === 'GOOGLE_PAY';
 }
 
-/** The method the clubs charge — never the number, only what the provider tells Raketa of it. */
+/** The method the clubs charge — never the number, only what the provider tells Rakieta of it. */
 export interface SavedMethod {
   /** The card network as the provider names it, lower case — an open set (`visa`, `mastercard`…). */
   readonly brand: string;

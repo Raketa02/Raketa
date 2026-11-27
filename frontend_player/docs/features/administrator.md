@@ -16,8 +16,8 @@ group** (`…/new-group`) and **a group's page** (`…/group/<id>`) pushed over 
 **Members** (`…/group/<id>/members`) over its page. **The club is in
 the path** because every screen is one Administrator's at one club, and a person running two clubs'
 groups is two Administrators (ADR-0184 §1). The words are club 8–11 and 17–20's, with _Rakieta_
-read as Raketa, in `components/administratorCopy.ts` and `administratorPresentation.ts`; the mocks
-live in [`docs/specs/play-groups/`](../../../docs/specs/play-groups/README.md).
+read as written (ADR-0211), in `components/administratorCopy.ts` and `administratorPresentation.ts`;
+the mocks live in [`docs/specs/play-groups/`](../../../docs/specs/play-groups/README.md).
 
 **The gate sends an account that only administers straight to its area, and never into
 onboarding** (ADR-0185 §3). `GET /users/me` now answers the account's **profiles** — whether it acts
@@ -99,7 +99,7 @@ no door out of the group: running it is not membership, and only the club moves 
 the page again** (#529, 2026-10-02), as the Groups tab's does, so somebody who asked or arrived on
 another phone is on it when the spinner stops, where they waited for a return to it.
 
-**Share link hands the phone's share sheet the group's sentence** — _Join Ogrody 33 Club on Raketa:
+**Share link hands the phone's share sheet the group's sentence** — _Join Ogrody 33 Club on Rakieta:
 <link>_, the group page's own — so the link goes out through whatever the Administrator's crowd
 gathers in, a WhatsApp group among them (#529). It was club 11's _Post this in the WhatsApp group.
 Everybody who taps it lands here._ over **Post to WhatsApp**, which opened WhatsApp by its scheme

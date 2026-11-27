@@ -1302,7 +1302,7 @@ export function stubFriends(
   );
   // Your link, for a suite that opens the Add friends sheet without saying (#756).
   transport.on('GET', FRIEND_LINK_PATH, () =>
-    json<Wire['FriendLinkResponse']>({ code: 'tk4m9q2z', link: 'https://raketa.app/f/tk4m9q2z' }),
+    json<Wire['FriendLinkResponse']>({ code: 'tk4m9q2z', link: 'https://rakieta.app/f/tk4m9q2z' }),
   );
   transport.on('GET', FRIEND_REQUESTS_PATH, (request) => {
     const direction: Wire['Direction'] = request.path.includes('direction=YOU_ASKED')

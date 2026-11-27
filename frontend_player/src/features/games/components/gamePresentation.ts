@@ -469,9 +469,9 @@ export function resultBody(
     case 'both-stand':
       // **It names the exit, and both ways it ends without one** (#654): the closer score where
       // both name the same winner, no Level where they name different ones.
-      return 'Raketa doesn’t decide between them. If one of you agrees with the other’s score, that settles it at once. If nobody does by then: when both scores name the same winner, the closer one counts; when they name different winners, no Level moves.';
+      return 'Rakieta doesn’t decide between them. If one of you agrees with the other’s score, that settles it at once. If nobody does by then: when both scores name the same winner, the closer one counts; when they name different winners, no Level moves.';
     case 'disputed':
-      return 'Each side said a different side won, and neither agreed with the other’s score in time. Raketa doesn’t decide who won.';
+      return 'Each side said a different side won, and neither agreed with the other’s score in time. Rakieta doesn’t decide who won.';
     case 'started-short':
       // The mechanics §14.1: *it cannot take a result … no levels move, and nothing goes on the
       // record of the players who stayed*.
@@ -882,12 +882,12 @@ export const I_WAS_THERE_LABEL = 'I was there';
  */
 export const LOCATION_AT_THE_TAP: Readonly<Record<LocationRefusal, string>> = {
   refused:
-    'Raketa needs your location to check you’re at the club. Allow it when your phone asks, then tap again.',
+    'Rakieta needs your location to check you’re at the club. Allow it when your phone asks, then tap again.',
   blocked:
-    'Location is off for Raketa, so it can’t check you’re at the club. Turn it on in Settings — it’s read only when you tap.',
+    'Location is off for Rakieta, so it can’t check you’re at the club. Turn it on in Settings — it’s read only when you tap.',
   'no-fix': 'Your phone couldn’t tell where you are. Try again in a moment.',
   rough:
-    'Your phone could only tell roughly where you are, so Raketa couldn’t check you’re at the club. Turn on Precise Location for Raketa in Settings, or try again in a moment.',
+    'Your phone could only tell roughly where you are, so Rakieta couldn’t check you’re at the club. Turn on Precise Location for Rakieta in Settings, or try again in a moment.',
 };
 
 /** The remedy beside a permission refused for good, and beside a rough fix. */

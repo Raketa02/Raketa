@@ -504,7 +504,7 @@ describe('an official group’s page', () => {
   it('draws the link card with Share link and Copy link, and never a posted tag', async () => {
     await openGroup(O3_CLUB_GROUP);
 
-    expect(screen.getByLabelText('Group link, raketa.app/join/K7PQ2MXA')).toBeTruthy();
+    expect(screen.getByLabelText('Group link, rakieta.app/join/K7PQ2MXA')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Share link' })).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.group.copy })).toBeTruthy();
     // The link goes out through any app now, so the card names none (#529).
@@ -520,7 +520,7 @@ describe('an official group’s page', () => {
 
     await waitFor(() =>
       expect(share.shared).toEqual([
-        'Join Ogrody 33 Club on Raketa: https://raketa.app/join/K7PQ2MXA',
+        'Join Ogrody 33 Club on Rakieta: https://rakieta.app/join/K7PQ2MXA',
       ]),
     );
   });
@@ -530,7 +530,7 @@ describe('an official group’s page', () => {
 
     fireEvent.press(screen.getByRole('button', { name: COPY.group.copy }));
 
-    await waitFor(() => expect(clipboard.text).toBe('https://raketa.app/join/K7PQ2MXA'));
+    await waitFor(() => expect(clipboard.text).toBe('https://rakieta.app/join/K7PQ2MXA'));
     await waitFor(() => expect(toasts()).toEqual([['Link copied', 'ok']]));
   });
 

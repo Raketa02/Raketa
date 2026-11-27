@@ -170,7 +170,7 @@ describe('a group link, on a phone that is signed in', () => {
     // configured hosts, and the search was for the link the app spelled itself.
     expect(searched()).toEqual([LINK]);
     for (const request of transport.requests) {
-      expect(request.url).toMatch(/^https:\/\/(api|features)\.test\.raketa\.invalid\//);
+      expect(request.url).toMatch(/^https:\/\/(api|features)\.test\.rakieta\.invalid\//);
     }
   });
 });
@@ -302,7 +302,7 @@ describe('a group link carried through an Android install', () => {
   it('opens Join a group on the first launch, its group found', async () => {
     serve(KUBA);
 
-    await readTheInstallReferrerOnce(fakeInstallReferrer(`https://raketa.app/join/${CODE}`));
+    await readTheInstallReferrerOnce(fakeInstallReferrer(`https://rakieta.app/join/${CODE}`));
     await launchSignedIn();
 
     await expectTheGroupOnJoin();

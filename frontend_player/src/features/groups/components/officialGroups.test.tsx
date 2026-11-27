@@ -69,7 +69,7 @@ const TENNIS = rating('TENNIS', 3.1);
 const SQUASH = rating('SQUASH', 2.3);
 
 const OGRODY_ID = 'c0000000-0000-4000-8000-000000000003';
-const LINK = 'https://raketa.app/join/K7PQ2MXA';
+const LINK = 'https://rakieta.app/join/K7PQ2MXA';
 
 /** The club's group, run by Marta: it plays padel, and Marta approves joins. */
 /** The official marks drawn — hidden from a screen reader, so found among hidden elements. */

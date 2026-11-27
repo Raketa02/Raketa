@@ -9,7 +9,7 @@
  */
 
 /** The eyebrow over the title: the same word the sign-up form and the sports picker open with. */
-export const NAMING_EYEBROW = 'Raketa';
+export const NAMING_EYEBROW = 'Rakieta';
 
 /**
  * The step's title, and **the question it is** — asked in the second person, because the

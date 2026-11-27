@@ -283,7 +283,7 @@ describe('Add a sport', () => {
     fireEvent.press(screen.getByLabelText(rateSportChip('badminton')));
 
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
     ).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
     // Still on the passport, chip pressable: a failed start began nothing.

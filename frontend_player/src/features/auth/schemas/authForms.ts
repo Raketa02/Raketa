@@ -56,7 +56,7 @@ export const ADULT_LABEL = 'I am 18 or over';
  * copies of it would be two sentences to keep in step. `authErrorMessage` reads this one.
  */
 export const ADULT_ATTESTATION_MISSING =
-  'Confirm that you are 18 or over — Raketa is for adults only.';
+  'Confirm that you are 18 or over — Rakieta is for adults only.';
 
 /**
  * **The one password rule** — 8 to 128 characters, with at least one letter and one digit — which

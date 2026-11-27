@@ -1,7 +1,7 @@
 > **Archived measurement — not the rules.**
 > This is the verbatim audit of the v34 HTML prototype
-> (`raketa-player-app-prototype-v34.html`, cross-checked against
-> `raketa-player-deck-v34.html`), preserved because the reason a value was chosen is
+> (`rakieta-player-app-prototype-v34.html`, cross-checked against
+> `rakieta-player-deck-v34.html`), preserved because the reason a value was chosen is
 > itself information. It is **descriptive**: it records the prototype including its
 > inconsistencies (Part 20) and its accessibility gaps (Part 21).
 >
@@ -14,10 +14,10 @@
 
 ---
 
-# Raketa — Design System, Theming and Visual Specification
+# Rakieta — Design System, Theming and Visual Specification
 
-_Derived from `raketa-player-app-prototype-v34.html`, cross-checked against
-`raketa-player-deck-v34.html`. Every token, class and measurement in this document is read
+_Derived from `rakieta-player-app-prototype-v34.html`, cross-checked against
+`rakieta-player-deck-v34.html`. Every token, class and measurement in this document is read
 from the implementation. Where the prototype and the deck differ, the prototype wins and the
 difference is noted._
 

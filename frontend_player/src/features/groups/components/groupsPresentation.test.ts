@@ -205,8 +205,8 @@ describe('the group page’s sentences', () => {
   });
 
   it('shares the link inside one sentence naming the group', () => {
-    expect(shareMessage('my raketa group', 'https://raketa.app/join/K7PQ2MXA')).toBe(
-      'Join my raketa group on Raketa: https://raketa.app/join/K7PQ2MXA',
+    expect(shareMessage('my rakieta group', 'https://rakieta.app/join/K7PQ2MXA')).toBe(
+      'Join my rakieta group on Rakieta: https://rakieta.app/join/K7PQ2MXA',
     );
   });
 });
@@ -248,7 +248,7 @@ describe('a group’s header, spoken', () => {
 
 describe('Info', () => {
   it('shows the link without its scheme', () => {
-    expect(linkShown('https://raketa.app/join/K7PQ2MXA')).toBe('raketa.app/join/K7PQ2MXA');
+    expect(linkShown('https://rakieta.app/join/K7PQ2MXA')).toBe('rakieta.app/join/K7PQ2MXA');
     expect(linkShown('http://localhost:3000/join/K7PQ2MXA')).toBe('localhost:3000/join/K7PQ2MXA');
   });
 

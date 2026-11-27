@@ -105,7 +105,7 @@ describe('the hero', () => {
 });
 
 describe('the form', () => {
-  it('reads top to bottom as the mock draws it, with no RAKETA over the title', () => {
+  it('reads top to bottom as the mock draws it, with no RAKIETA over the title', () => {
     drawSignIn();
 
     const sheet = [
@@ -121,7 +121,7 @@ describe('the form', () => {
     ];
     expect(inOrder(sheet)).toEqual(sheet);
     // The hero's wordmark replaces the eyebrow, so the title stands alone.
-    expect(screen.queryByText('Raketa')).toBeNull();
+    expect(screen.queryByText('Rakieta')).toBeNull();
   });
 
   /** Empty, so the keychain's autofill still offers the saved address (story 11). */

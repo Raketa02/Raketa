@@ -136,7 +136,7 @@ does; a failed write is silence, and the next cold start writes again. A player 
 onboarding is never refreshed — the location step is where their area is being asked for, with
 a prompt and a sentence, and the step's own read, its re-read on foreground and its tests are
 untouched. **You** carries the one written trace, `AreaUpdatesNote` — `the-words.md`
-§26's _Your area updates each time you open Raketa; it is never finer than about a kilometre._,
+§26's _Your area updates each time you open Rakieta; it is never finer than about a kilometre._,
 static, `tiny` in `muted`, under the profile block and above the account panel — because silent
 motion with no written trace is the one thing that would surprise a careful player, and the
 kilometre in the same breath is what keeps _updates each time you open_ from reading as
@@ -361,12 +361,12 @@ _Choose an answer about you to finish_). The gender answer is that screen's ques
 opt-in was (`ASKED_ON_THE_LAST_STEP` in `domain/profileCommit`, held to the step order by a
 test), so `answerStillWanted` leaves it out and `MISSING_ANSWER_COPY` lost its entry along with
 the radius's. **The control says _Finish_**: _Finish — show me players_ named a Players deck
-that no longer exists, and what follows the commit is _What Raketa keeps_ and then the app. **The consent
+that no longer exists, and what follows the commit is _What Rakieta keeps_ and then the app. **The consent
 copy went with the question** — `optInPresentation` and its three versions, `OptInPromises`,
 `domain/proposalsOptIn` (`ConsentSurface`, `RecordedProposalsOptIn`), `useAnswerProposalsOptIn`
 — and so did the radius's pieces: `domain/searchRadius`, `radiusPresentation`,
 `SearchRadiusControl`, `useChangeSearchRadius`. `GET /player-profile/options` serves the tags
-alone and the profile read lost both fields. Onboarding's _What Raketa keeps_ lost _how far you
+alone and the profile read lost both fields. Onboarding's _What Rakieta keeps_ lost _how far you
 will travel_ and its card about suggestions, and **does not list the gender answer in their
 place**: its card says what lets another player see who they would be playing, and the gender
 step promises that answer is never shown or shared. The paragraph that stood near the top of this
@@ -375,7 +375,7 @@ record — _the consent step's copy is frozen and versioned_ — is gone with th
 caller. **Not seen on a device**: the finish's notes stacked under the gender step's two groups.
 
 **_Finish_ lands on Home** ([#730](https://github.com/Raketa02/Raketa/issues/730), ADR-0200 §1).
-`ProfileFinish`'s `AFTER_THE_PART` is `/`: _What Raketa keeps_ recorded nothing and went, and the
+`ProfileFinish`'s `AFTER_THE_PART` is `/`: _What Rakieta keeps_ recorded nothing and went, and the
 commit marks the profile on the player read, so the gate lets her through to the app's root. The
 six steps are all of onboarding after the naming now — the questionnaire left it — so step one is
 entered straight from _How should people see you?_, and no rating is read on the way.
@@ -396,7 +396,7 @@ the keyboard on a small phone.
 
 **_Where do you play?_ tells the truth, waits for an area, and answers a refusal with a club**
 ([#733](https://github.com/Raketa02/Raketa/issues/733), ADR-0200 §10, Apple 5.1.1(iv)). The
-note is ADR-0200 §10's sentence — _Raketa shows how far each club is and lists the nearest first.
+note is ADR-0200 §10's sentence — _Rakieta shows how far each club is and lists the nearest first.
 Your area is rounded to about a kilometre and never shown to other players._ — and every line
 about nearby players or matching went: _Continue without matching_, the cost clause about
 finishing without an area, and the commit's _Finding players near you…_. **_Continue_ is drawn
@@ -430,7 +430,7 @@ other land in that order. Its
 control is _Use my location_ — _Read my area again_ retired — and its eyebrow is _Your games_
 (shell's rename). **Calls made here, not in the ADR**: the field drawn at once rather than behind
 a button; _Pick_ as the pill's word; _More clubs_; the step keeps the refusal note up after a pick;
-the tab's _Your area updates each time you open Raketa_ is kept although a club-picked area does
+the tab's _Your area updates each time you open Rakieta_ is kept although a club-picked area does
 not move until the phone may be read. **Not seen on a device**: the picker on the step under the
 keyboard, and the chosen card beside _Use my location_.
 
@@ -444,7 +444,7 @@ answer that changes something, below its gloss, which stays. **Which line goes w
 `intentChangeCost`'s**, in the deck's own `GameKind` (a Mode, never a Play intent with a value
 taken out — the glossary keeps them separate types): to a single kind, from the other or from
 _Either suits me_, the other kind goes and is counted — _Your 7 competitive cards in your groups
-go. Games you’re In on stay._, _Your 1 … card in your groups goes._, and at zero _Raketa stops
+go. Games you’re In on stay._, _Your 1 … card in your groups goes._, and at zero _Rakieta stops
 dealing you competitive games._; to _Either suits me_, _Keep your competitive cards and get
 for-fun ones too._, with no count. The answer held, and every answer to an undeclared sport, says
 nothing, and the undeclared footnote stays. **A count not in hand is not zero**: while it loads,

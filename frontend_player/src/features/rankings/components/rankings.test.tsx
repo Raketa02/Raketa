@@ -2256,7 +2256,7 @@ describe('the Friends view (#777)', () => {
 
     expect(await screen.findByRole('header', { name: 'Add friends' })).toBeTruthy();
     expect(await screen.findByText('8 members · 2 to add')).toBeTruthy();
-    expect(await screen.findByText('raketa.app/f/tk4m9q2z')).toBeTruthy();
+    expect(await screen.findByText('rakieta.app/f/tk4m9q2z')).toBeTruthy();
     // A group opens its Members, the sheet closing first.
     fireEvent.press(screen.getByTestId(`add-from-${OGRODY.id}`));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${OGRODY.id}/members`));

@@ -321,7 +321,7 @@ describe('isn’t here yet, from the court', () => {
 
     expect(
       await screen.findByText(
-        'Raketa needs your location to check you’re at the club. Allow it when your phone asks, then tap again.',
+        'Rakieta needs your location to check you’re at the club. Allow it when your phone asks, then tap again.',
       ),
     ).toBeTruthy();
     expect(phone.preciseReads).toBe(0);
@@ -336,7 +336,7 @@ describe('isn’t here yet, from the court', () => {
 
     fireEvent.press(await screen.findByRole('button', { name: 'piotr.s isn’t here yet' }));
 
-    expect(await screen.findByText(/Location is off for Raketa/)).toBeTruthy();
+    expect(await screen.findByText(/Location is off for Rakieta/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open Settings' })).toBeTruthy();
     expect(phone.preciseReads).toBe(0);
     expect(transport.requestsTo('POST', NOT_HERE_YET_PATH)).toHaveLength(0);

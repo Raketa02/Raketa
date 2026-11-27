@@ -110,7 +110,7 @@ function useClubSearch(
   };
 }
 
-/** Every club in Raketa whose name or district holds the text — New group's home club field. */
+/** Every club in Rakieta whose name or district holds the text — New group's home club field. */
 export function useHomeClubSearch(typed: string): ClubSearchState {
   return useClubSearch(groupKeys.homeClubs, searchHomeClubs, typed);
 }

@@ -224,7 +224,7 @@ describe('the verdict', () => {
     // The note used to be the engine's `confidence_reason`, which explained *why this
     // Confidence and not another* — a true sentence answering a question a player meeting
     // their first rating is not asking. What they need said is that the number is a starting
-    // point and that matches are what settle it, which is a claim about how Raketa works and
+    // point and that matches are what settle it, which is a claim about how Rakieta works and
     // so is the client's to make — for every rating, not only the ones the engine sent a
     // reason with.
     expect(await screen.findByText('This is a starting point, not a verdict')).toBeTruthy();
@@ -418,7 +418,7 @@ describe('the information marks', () => {
     // screen root is hidden from assistive technology and the popover is its sibling.
     expect(
       await screen.findByText(
-        /Shows how confident Raketa is about your level, not how good you are/,
+        /Shows how confident Rakieta is about your level, not how good you are/,
       ),
     ).toBeTruthy();
     expect(screen.queryByText('2,71')).toBeNull();
@@ -426,7 +426,7 @@ describe('the information marks', () => {
     fireEvent.press(screen.getByLabelText('Close Confidence'));
 
     await waitFor(() => expect(screen.getByText('2,71')).toBeTruthy());
-    expect(screen.queryByText(/Shows how confident Raketa is about your level/)).toBeNull();
+    expect(screen.queryByText(/Shows how confident Rakieta is about your level/)).toBeNull();
   });
 
   it('moves accessibility focus into the popover, and back to the mark on close', async () => {
@@ -468,7 +468,7 @@ describe('the information marks', () => {
 
     expect(
       await screen.findByText(
-        /Shows how confident Raketa is about your level, not how good you are/,
+        /Shows how confident Rakieta is about your level, not how good you are/,
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/can provide up to/)).toBeNull();

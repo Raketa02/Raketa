@@ -12,13 +12,13 @@ const BONARKA: SearchedClub = {
 };
 
 function form(overrides: Partial<NewGroupForm> = {}): NewGroupForm {
-  return { name: 'My raketa group', homeClub: BONARKA, joinPolicy: 'ANYONE', ...overrides };
+  return { name: 'My rakieta group', homeClub: BONARKA, joinPolicy: 'ANYONE', ...overrides };
 }
 
 describe('the group a New group form creates', () => {
   it('is the name, the home club and who can join', () => {
     expect(newGroupFrom(form({ joinPolicy: 'PEOPLE_I_APPROVE' }))).toEqual({
-      name: 'My raketa group',
+      name: 'My rakieta group',
       homeClubId: BONARKA.id,
       joinPolicy: 'PEOPLE_I_APPROVE',
     });

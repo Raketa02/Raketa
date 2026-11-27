@@ -52,7 +52,7 @@ export function photosEyebrow(): string {
 export const PHOTO_RULE_TITLE = 'Rackets mandatory, faces optional';
 
 export const PHOTO_RULE_BODY =
-  'Photos on Raketa follow one simple rule: keep it about the racket sports. Show yourself ' +
+  'Photos on Rakieta follow one simple rule: keep it about the racket sports. Show yourself ' +
   'on court or in a racket-sport setting — no casual selfies, party photos, or gym mirrors. ' +
   "Showing your face is optional. The sport context isn't.";
 
@@ -220,13 +220,13 @@ export const POSTER_LABEL =
   'A generated court poster, not a photograph — what other players see until you add one.';
 
 export const ACCESS_TITLE: Readonly<Record<Exclude<PhotoAccess, 'granted'>, string>> = {
-  refused: 'Raketa has no access to your photos',
+  refused: 'Rakieta has no access to your photos',
   blocked: 'Photo access is turned off',
 };
 
 export const ACCESS_BODY: Readonly<Record<Exclude<PhotoAccess, 'granted'>, string>> = {
   refused: `Press ${ADD_CONTROL_WORD} again to allow it. Or carry on without any — you get a court poster of your own either way.`,
-  blocked: `Turn it on for Raketa in Settings, then press ${ADD_CONTROL_WORD} again. Or carry on without any — you get a court poster of your own either way.`,
+  blocked: `Turn it on for Rakieta in Settings, then press ${ADD_CONTROL_WORD} again. Or carry on without any — you get a court poster of your own either way.`,
 };
 
 /**

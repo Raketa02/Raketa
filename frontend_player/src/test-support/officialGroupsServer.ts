@@ -38,7 +38,7 @@ export const GROUPS_PATH = `${CLUB_PATH}/groups`;
 /** Where one official group's settings are saved. */
 export const settingsPath = (groupId: string) => `${GROUPS_PATH}/${groupId}/settings`;
 
-/** Marta runs Ogrody 33's WhatsApp groups and has never played on Raketa. */
+/** Marta runs Ogrody 33's WhatsApp groups and has never played on Rakieta. */
 export const ADMINISTRATOR_ONLY: Wire['AccountProfilesSchema'] = {
   acts_as_player: false,
   administers: [{ club_id: CLUB_ID, club_name: CLUB.name }],
@@ -93,9 +93,9 @@ export const OPEN_PLAY_ID = 'a0000000-0000-4000-8000-000000000002';
 /** The id the fake server gives the one group a walk creates. */
 export const CREATED_ID = 'a0000000-0000-4000-8000-000000000100';
 export const LINK_OF: Readonly<Record<string, string>> = {
-  [O3_CLUB_ID]: 'https://raketa.app/join/K7PQ2MXA',
-  [OPEN_PLAY_ID]: 'https://raketa.app/join/R4TW9ZHB',
-  [CREATED_ID]: 'https://raketa.app/join/G4H3JK2M',
+  [O3_CLUB_ID]: 'https://rakieta.app/join/K7PQ2MXA',
+  [OPEN_PLAY_ID]: 'https://rakieta.app/join/R4TW9ZHB',
+  [CREATED_ID]: 'https://rakieta.app/join/G4H3JK2M',
 };
 
 /** *Ogrody 33 Club* as club 17 and 18 draw it: players, and Michał waiting. */
@@ -194,7 +194,7 @@ export function club(setups: readonly GroupSetup[] = []) {
     sports: group.sports,
     member_count: group.players.length,
     home_club: { ...CLUB, sports: [...CLUB.sports] },
-    link: LINK_OF[group.id] ?? 'https://raketa.app/join/UNKNOWN0',
+    link: LINK_OF[group.id] ?? 'https://rakieta.app/join/UNKNOWN0',
     join_policy: group.policy,
     whatsapp_size: group.size,
     players: group.players.map(({ who, joinedAt }) => ({

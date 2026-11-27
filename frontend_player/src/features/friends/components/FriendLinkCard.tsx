@@ -1,13 +1,13 @@
 /**
- * **Not on Raketa yet?** — the Add friends sheet's second card
+ * **Not on Rakieta yet?** — the Add friends sheet's second card
  * ([#756](https://github.com/Raketa02/Raketa/issues/756); the friends screens §5; friends 4; the
  * words §29.3).
  *
  * ```
  * ┌───────────────────────────────────────────┐
- * │ Not on Raketa yet?                        │
+ * │ Not on Rakieta yet?                       │
  * │ ┌───────────────────────────┐ ┌────────┐  │
- * │ │ raketa.app/f/tk4m9q2z     │ │  Copy  │  │
+ * │ │ rakieta.app/f/tk4m9q2z    │ │  Copy  │  │
  * │ └───────────────────────────┘ └────────┘  │
  * │ [New link]                                │
  * └───────────────────────────────────────────┘

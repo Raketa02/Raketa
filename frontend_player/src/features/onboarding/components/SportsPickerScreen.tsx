@@ -46,7 +46,7 @@ import { useStartAssessment } from '../hooks/useStartAssessment';
 
 import { OnboardingChrome } from './OnboardingChrome';
 import { onboardingErrorMessage } from './onboardingErrorMessage';
-import { PICKER_TITLE } from './pickerPresentation';
+import { PICKER_EYEBROW, PICKER_TITLE } from './pickerPresentation';
 import { sportColour, sportLabel } from './sportPresentation';
 import { STARTING_LABEL } from './startPresentation';
 
@@ -112,7 +112,7 @@ export function SportsPickerScreen({ origin, offer }: SportsPickerScreenProps) {
 
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-      <OnboardingChrome eyebrow="Raketa" title={PICKER_TITLE} onBack={turnBack} />
+      <OnboardingChrome eyebrow={PICKER_EYEBROW} title={PICKER_TITLE} onBack={turnBack} />
 
       <ScrollView contentContainerStyle={s.content}>
         {/* Paused, not loading: `networkMode: 'online'` holds a query rather than

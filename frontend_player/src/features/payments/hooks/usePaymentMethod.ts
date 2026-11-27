@@ -74,7 +74,7 @@ export function useRemovePaymentMethod() {
 /**
  * *Accept the terms* again, for the card already saved — no setup, nothing to confirm. Made online
  * or not at all, as the setup's own acceptance is (`usePaymentSetup`): one press the player waits
- * on, which should say *couldn't reach Raketa* now rather than land minutes later.
+ * on, which should say *couldn't reach Rakieta* now rather than land minutes later.
  */
 export function useAcceptTermsAgain() {
   const client = useQueryClient();

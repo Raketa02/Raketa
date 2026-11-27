@@ -118,7 +118,7 @@ function stubTheSetupRoutes(
     json<Wire['PaymentSetupResponse']>(
       {
         setup_id: 'seti_1',
-        publishable_key: 'pk_test_raketa',
+        publishable_key: 'pk_test_rakieta',
         terms_version: PAYMENT_TERMS_IN_FORCE,
       },
       201,
@@ -239,7 +239,7 @@ describe('state A — a numbered checklist, in the order Q82 set', () => {
     press(PAYMENTS_COPY.continue);
 
     expect(await screen.findByLabelText(FAKE_CARD_NUMBER)).toBeTruthy();
-    expect(phone.prepared).toEqual(['pk_test_raketa']);
+    expect(phone.prepared).toEqual(['pk_test_rakieta']);
   });
 
   it('says the card could not be taken, in the sheet, when the provider throws rather than answers', async () => {
@@ -298,7 +298,7 @@ describe('state A — a numbered checklist, in the order Q82 set', () => {
     expect(phone.confirmed).toEqual([SECRET]);
     expect(phone.checks).toBe(0);
     // The provider was opened with the key the setup answered, for the card and for the bank.
-    expect(phone.keys).toEqual(['pk_test_raketa', 'pk_test_raketa']);
+    expect(phone.keys).toEqual(['pk_test_rakieta', 'pk_test_rakieta']);
     expect(transport.requestsTo('POST', CONFIRMATION_PATH)).toHaveLength(1);
     // One setup for the whole walk — the card-testing guard counts them.
     expect(transport.requestsTo('POST', SETUP_PATH)).toHaveLength(1);
@@ -351,7 +351,7 @@ describe('state A — a numbered checklist, in the order Q82 set', () => {
     stubTheSetupRoutes();
     transport.on('POST', SETUP_PATH, () =>
       json<Wire['PaymentSetupResponse']>(
-        { setup_id: 'seti_1', publishable_key: 'pk_test_raketa', terms_version: '2026-10-15' },
+        { setup_id: 'seti_1', publishable_key: 'pk_test_rakieta', terms_version: '2026-10-15' },
         201,
       ),
     );

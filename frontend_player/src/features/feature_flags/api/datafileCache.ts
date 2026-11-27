@@ -33,7 +33,7 @@ import type { Datafile } from '../domain/featureFlags';
  * feature flags as its own.
  */
 function keyFor(environment: AppEnvironment): string {
-  return `raketa.feature-flags.datafile.${environment}`;
+  return `rakieta.feature-flags.datafile.${environment}`;
 }
 
 /** What was saved last, parsed but **unchecked** — `schemas/` decides whether it is a datafile. */

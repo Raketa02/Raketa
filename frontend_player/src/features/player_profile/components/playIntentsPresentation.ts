@@ -101,7 +101,7 @@ export function intentCostLine(cost: IntentChangeCost): string {
   }
   const kind = BEFORE_A_NOUN[cost.kind];
   if (cost.count === undefined) return `Your ${kind} cards in your groups go. ${STAY}`;
-  if (cost.count === 0) return `Raketa stops dealing you ${kind} games. ${STAY}`;
+  if (cost.count === 0) return `Rakieta stops dealing you ${kind} games. ${STAY}`;
   const cards = counted(
     cost.count,
     `${kind} card in your groups goes`,

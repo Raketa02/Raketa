@@ -18,7 +18,7 @@ afterEach(() => useHeldLinkStore.getState().reset());
 
 describe('the install referrer', () => {
   it('holds a friend link it carried', async () => {
-    const play = fakeInstallReferrer('https://raketa.app/f/tk4m9q2z');
+    const play = fakeInstallReferrer('https://rakieta.app/f/tk4m9q2z');
 
     await readTheInstallReferrerOnce(play);
 
@@ -26,13 +26,13 @@ describe('the install referrer', () => {
   });
 
   it('holds a group link it carried', async () => {
-    await readTheInstallReferrerOnce(fakeInstallReferrer('https://raketa.app/join/k7pq2mxa'));
+    await readTheInstallReferrerOnce(fakeInstallReferrer('https://rakieta.app/join/k7pq2mxa'));
 
     expect(held()).toEqual({ kind: 'join', code: 'k7pq2mxa' });
   });
 
   it('is read on the first launch and never again', async () => {
-    const play = fakeInstallReferrer('https://raketa.app/f/tk4m9q2z');
+    const play = fakeInstallReferrer('https://rakieta.app/f/tk4m9q2z');
     await readTheInstallReferrerOnce(play);
     useHeldLinkStore.getState().reset();
 
@@ -66,7 +66,7 @@ describe('the install referrer', () => {
 
   /** A link the phone opened while the first launch read Play is the newer, and is kept. */
   it('never replaces a link that arrived while it was being read', async () => {
-    const play = fakeInstallReferrer('https://raketa.app/f/tk4m9q2z');
+    const play = fakeInstallReferrer('https://rakieta.app/f/tk4m9q2z');
     play.whileReading = () => useHeldLinkStore.getState().hold({ kind: 'join', code: 'k7pq2mxa' });
 
     await readTheInstallReferrerOnce(play);

@@ -45,7 +45,7 @@ export type GameStanding =
   | 'CONFIRMED'
   /**
    * Two scores named **different winners** and neither side agreed with the other's before the later
-   * one's answer window closed (#654; ADR-0195 §5): no Level moves. Raketa does not decide who won.
+   * one's answer window closed (#654; ADR-0195 §5): no Level moves. Rakieta does not decide who won.
    */
   | 'DISPUTED'
   | 'CALLED_OFF'

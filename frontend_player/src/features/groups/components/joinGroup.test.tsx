@@ -96,8 +96,8 @@ const ATLANTIC: Wire['ClubCardSchema'] = {
   groups: [],
 };
 
-const LINK = 'https://raketa.app/join/K7PQ2MXA';
-const DEAD_LINK = 'https://raketa.app/join/ZZZZZZZZ';
+const LINK = 'https://rakieta.app/join/K7PQ2MXA';
+const DEAD_LINK = 'https://rakieta.app/join/ZZZZZZZZ';
 
 const JOIN_SEARCH = '/api/v1/join-search';
 

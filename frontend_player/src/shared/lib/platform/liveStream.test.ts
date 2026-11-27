@@ -27,7 +27,7 @@ import {
 } from './liveStream';
 
 const ROOM = 'eeeeeeee-0000-4000-8000-000000000005';
-const STREAM_URL = `https://api.test.raketa.invalid/api/v1/conversations/${ROOM}/stream`;
+const STREAM_URL = `https://api.test.rakieta.invalid/api/v1/conversations/${ROOM}/stream`;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
 
 /** A nudge, as the route writes one. */

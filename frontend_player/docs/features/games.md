@@ -415,7 +415,7 @@ nothing calls the score _agreed_ (`SCORE_LEAD.result`, `worthLine`'s _its result
 and one corrected.** `PLAYED_NO_SCORE` replaces `NEVER_PLAYED` — _Played · no score_, a full court
 nobody recorded, played for everybody, with nothing said about marks: _Never played_ said _Nobody
 is marked for that_ over a record that marked all four, and the window's refusal said it too — and `DISPUTED` joins — _Disputed_, _The two
-scores named different winners._, and why: Raketa doesn't decide who won. Both end on the fact list
+scores named different winners._, and why: Rakieta doesn't decide who won. Both end on the fact list
 `UNSCORED_FACTS` became, `EVENING_FACTS` (`endsAsAnEvening`), with `unscored`, whose body said _nobody wrote a score
 down_ — false of the two-score games it used to cover — and now says what reaches it since #654: the
 game everybody marked as not coming said they came to. The worth line is said only where a score is
@@ -483,7 +483,7 @@ back._ The claim and its confirmation carry no position and pause like every oth
 refusal the four routes make has a sentence (`attendanceErrorMessage`, keyed by the act where one
 code means two things), and the score's own refusals gain `somebody_is_not_here_yet` and
 `somebody_did_not_come`. **The permission text changed with it** (`app.config.ts`'s
-`locationWhenInUsePermission`): _Raketa uses your location to set the area you play in and, when
+`locationWhenInUsePermission`): _Rakieta uses your location to set the area you play in and, when
 you say who's at a game, to check you're at the club._ It is native configuration — the iOS
 prompt's Info.plist string — so **it needs a new build** to reach a phone; a development build made
 before this change still shows the old sentence. **Not seen on a device.**

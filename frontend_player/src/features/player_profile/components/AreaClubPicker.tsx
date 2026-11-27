@@ -8,7 +8,7 @@
  * | --- | --- |
  * | empty | the field, and nothing under it |
  * | searching | a raised card per club (`ClubCard`), name over *district · sports*, a *Pick* pill, the whole head the tap |
- * | no match | *No club called "…"*, and that only clubs in Raketa can be picked |
+ * | no match | *No club called "…"*, and that only clubs in Rakieta can be picked |
  * | more than a page | *More clubs* under the twentieth |
  * | chosen | the field gone; the club on `mintSoft`, by name and district, with **Change** |
  *

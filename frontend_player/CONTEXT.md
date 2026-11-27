@@ -1,4 +1,4 @@
-# Raketa Player App — Technical Vocabulary
+# Rakieta Player App — Technical Vocabulary
 
 This file holds **player-app-only technical vocabulary**. It does **not** define domain
 language — those terms (User, Authority, Sport, Assessment, Skill rating, statuses,

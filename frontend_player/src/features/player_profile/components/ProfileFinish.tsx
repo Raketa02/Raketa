@@ -62,7 +62,7 @@ import { SOCIAL_STEP_PATH, pathThatAsks } from './socialStepRoutes';
 /**
  * Where the steps lead once the server has it: **Home**
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1,
- * [#730](https://github.com/Raketa02/Raketa/issues/730)). *What Raketa keeps*, which stood here,
+ * [#730](https://github.com/Raketa02/Raketa/issues/730)). *What Rakieta keeps*, which stood here,
  * recorded nothing and went; the commit marks the profile on the player read, so the gate lets
  * her through to the app's root, which is Home.
  *

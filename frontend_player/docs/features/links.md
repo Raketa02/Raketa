@@ -30,7 +30,7 @@ link holds reaches it. Expo Go's `exp://` is refused with the rest; the app runs
 which answers to `rakieta://`.
 
 **The app's bare address, `rakieta://`, is the fourth thing read** — because it is the button of the
-club's email to an account that already exists, which carries no token (ADR-0184 §2: _open Raketa,
+club's email to an account that already exists, which carries no token (ADR-0184 §2: _open Rakieta,
 signed in as you, and accept_). **Tapped while the app runs, it has the invitation sheet offer every
 invitation set aside this launch again** — Tomek pressed _Not now_ earlier, and the button is him
 asking. At a launch it is nothing: a launch from the home screen hands the router the same address,
@@ -108,7 +108,7 @@ no two controls share a name.
 intent filter for `/join/`, `/invite/` and `/reset/` over `https` only when it is set, and the running app
 reads the same variable through the same function, so the binary and the app agree about which links are
 the app's. While it is empty — every environment today — the links use the scheme alone, and the site's
-_Open in Raketa_ (#526) is what opens the app.
+_Open in Rakieta_ (#526) is what opens the app.
 
 **Calls made here, open for the product owner**: a reset link on a signed-in phone asks to sign out
 rather than opening _Set a new password_ over the session; the app's bare address re-offers every

@@ -1,6 +1,6 @@
 # discovery
 
-**Home's people rows and their See all screens** — who is around the reader: new to Raketa (#801), at
+**Home's people rows and their See all screens** — who is around the reader: new to Rakieta (#801), at
 their level (#802), sharing their tags (#803). [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md);
 the spec set is [`docs/specs/home-rows/`](../../../docs/specs/home-rows/README.md), the words §31.
 The backend context of the same name (#793) owns the rows' rules; this feature draws its answers.

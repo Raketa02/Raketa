@@ -68,7 +68,7 @@ and the amber line says so.
 `GET /home`, which `proposals` reads and maps (`useHomeFriendRequests`); this feature draws and
 answers them. One card takes the content width, as friends 5 draws it; two or more are 7.7's peeking
 rail. Each card is the face, _ines.d wants to be your friend_, the where-line (_With you in Kazimierz
-crew · Padel 3,40 ·_, or _Invited you to Raketa_ for a link's, each part only where the wire named
+crew · Padel 3,40 ·_, or _Invited you to Rakieta_ for a link's, each part only where the wire named
 it) with the reliability chip after it, and **Not now** / **Accept**. Either re-reads Home — and the bell, which the server took the
 request's row off (the shell hands `notifications`' re-read in, carried inside the writes since the
 card unmounts once Home has re-read) — and stays busy until the card has left on the server's
@@ -176,9 +176,9 @@ nickname beside _request sent_.
 
 ## The link card, and opening somebody's link (#756)
 
-**_Not on Raketa yet?_ is the Add friends sheet's second card**
+**_Not on Rakieta yet?_ is the Add friends sheet's second card**
 ([#756](https://github.com/Raketa02/Raketa/issues/756); the screens §5; friends 4; the words §29.3):
-your link in a recessed field, without its scheme (`linkShown`, _raketa.app/f/tk4m9q2z_), on one
+your link in a recessed field, without its scheme (`linkShown`, _rakieta.app/f/tk4m9q2z_), on one
 line in mono and cut in the middle so the code stays in view — Info's link card's drawing — with
 **Copy** (coral, the card's one action) beside it and a small **New link** under it. The question is
 the card's `h2`, inside it, as friends 4 draws it. **Read when the sheet opens**, beside the groups
@@ -367,7 +367,7 @@ record's read and the press is who meets it now.
 
 **Home's request card reads _Found you in the padel ranking_** for a request made from the ranking —
 `proposals` maps the wire's `from_ranking` (`fromRanking`) — in place of the whole where-line, as a
-link's _Invited you to Raketa_ stands, with the reliability chip after it and no sport or Level —
+link's _Invited you to Rakieta_ stands, with the reliability chip after it and no sport or Level —
 §29.2's group line is the whole line, and §30.8 puts this one in its place. One whose
 sport this build cannot name draws the chip alone. The notice's body is the server's words.
 
@@ -468,7 +468,7 @@ busy rules and re-reads are unchanged.
   the request card (the screens §6.4), so it takes the same width. **Every tile stands as tall as the
   tallest, its title held to two lines and its buttons at its foot**, so the buttons sit level (Q3).
 - **A request says who and their chip, and no where-line** (Q2): _With you in Kazimierz crew · Padel
-  3,40 ·_, _Invited you to Raketa_, _Found you in the padel ranking_ and the three Home rows' lines are
+  3,40 ·_, _Invited you to Rakieta_, _Found you in the padel ranking_ and the three Home rows' lines are
   gone, and so is `whereLine` with its words. `proposals` still maps `foundBy`, the group and the one
   sport, since the server still serves them; nothing here draws them. #818 adds the sender's sport
   levels (below).

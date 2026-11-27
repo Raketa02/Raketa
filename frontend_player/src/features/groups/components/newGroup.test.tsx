@@ -103,12 +103,12 @@ const OGRODY: Wire['ClubCardSchema'] = {
 const CREATED: Wire['GroupResponse'] = {
   id: 'b0000000-0000-4000-8000-000000000001',
   kind: 'PLAYER',
-  name: 'My raketa group',
+  name: 'My rakieta group',
   monogram: { letters: 'Mr', colour: 3 },
   sports: [],
   member_count: 1,
   home_club: { id: BONARKA.id, name: BONARKA.name },
-  link: 'https://raketa.app/join/ABCDEFGH',
+  link: 'https://rakieta.app/join/ABCDEFGH',
   join_policy: 'ANYONE',
   is_owner: true,
   rated_by_sport: [],
@@ -382,13 +382,13 @@ describe('creating the group', () => {
   it('stays disabled with a name and no home club, and with a home club and no name', async () => {
     await openNewGroup();
 
-    fireEvent.changeText(screen.getByLabelText(COPY.name), 'My raketa group');
+    fireEvent.changeText(screen.getByLabelText(COPY.name), 'My rakieta group');
     expect(isDisabled(createButton())).toBe(true);
 
     await fillIn('   ');
     expect(isDisabled(createButton())).toBe(true);
 
-    fireEvent.changeText(screen.getByLabelText(COPY.name), 'My raketa group');
+    fireEvent.changeText(screen.getByLabelText(COPY.name), 'My rakieta group');
     expect(isDisabled(createButton())).toBe(false);
   });
 
@@ -397,7 +397,7 @@ describe('creating the group', () => {
     transport.on('GET', `/api/v1/groups/${CREATED.id}`, () => json(CREATED));
     stubGroupDeck(transport, CREATED.id);
     await openNewGroup();
-    await fillIn('My raketa group');
+    await fillIn('My rakieta group');
     fireEvent.press(screen.getByRole('button', { name: COPY.peopleIApprove }));
 
     stubMyGroups(transport, [
@@ -414,26 +414,26 @@ describe('creating the group', () => {
     fireEvent.press(createButton());
 
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREATED.id}`));
-    expect(await screen.findByText('My raketa group')).toBeTruthy();
+    expect(await screen.findByText('My rakieta group')).toBeTruthy();
     expect(screen.getByText('1 member · Bonarka Arena')).toBeTruthy();
     expect(useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone])).toEqual([
       [COPY.created, 'ok'],
     ]);
     expect(transport.requestsTo('POST', '/api/v1/groups').map((request) => request.body)).toEqual([
-      { name: 'My raketa group', home_club_id: BONARKA.id, join_policy: 'PEOPLE_I_APPROVE' },
+      { name: 'My rakieta group', home_club_id: BONARKA.id, join_policy: 'PEOPLE_I_APPROVE' },
     ]);
 
     // Back is the Groups list, with the new group on it — never the form it came from.
     fireEvent.press(screen.getByRole('button', { name: GROUPS_COPY.group.back }));
     await waitFor(() => expect(screen).toHavePathname('/play'));
-    const card = await screen.findByRole('button', { name: /^My raketa group/ });
+    const card = await screen.findByRole('button', { name: /^My rakieta group/ });
     expect(within(card).getByText('Bonarka Arena')).toBeTruthy();
   });
 
   it('names a refusal it can say something about', async () => {
     transport.on('POST', '/api/v1/groups', () => errorResponse(400, 'home_club_unknown'));
     await openNewGroup();
-    await fillIn('My raketa group');
+    await fillIn('My rakieta group');
 
     fireEvent.press(createButton());
 

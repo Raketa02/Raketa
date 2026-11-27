@@ -111,7 +111,7 @@ const EVERYBODY = [ME, KAROL, EWA, ZOFIA, ANIA, KUBA, OLA, MAREK, MICHAL, TOMASZ
 
 const GROUP_ID = 'a0000000-0000-4000-8000-000000000005';
 const GROUP_PATH = `/api/v1/groups/${GROUP_ID}`;
-const LINK = 'https://raketa.app/join/K7PQ2MXA';
+const LINK = 'https://rakieta.app/join/K7PQ2MXA';
 const HOME_CLUB = { id: 'c0000000-0000-4000-8000-000000000001', name: 'Centrum Ruchu' };
 
 const WIRE_SPORTS: readonly Wire['Sport'][] = ['PADEL', 'TENNIS', 'SQUASH', 'BADMINTON'];
@@ -413,8 +413,8 @@ describe('the link card', () => {
   it('draws the link in mono without its scheme, with Share and Copy beside it', async () => {
     await openInfo({ members: KAZIMIERZ });
 
-    expect(await screen.findByLabelText('Group link, raketa.app/join/K7PQ2MXA')).toBeTruthy();
-    expect(screen.getByText('raketa.app/join/K7PQ2MXA')).toBeTruthy();
+    expect(await screen.findByLabelText('Group link, rakieta.app/join/K7PQ2MXA')).toBeTruthy();
+    expect(screen.getByText('rakieta.app/join/K7PQ2MXA')).toBeTruthy();
     // Drawn short, spoken whole.
     expect(screen.getByText(COPY.link.shareShort)).toBeTruthy();
     expect(screen.getByText(COPY.link.copyShort)).toBeTruthy();
@@ -424,7 +424,7 @@ describe('the link card', () => {
     await openInfo({ members: KAZIMIERZ });
 
     fireEvent.press(await screen.findByRole('button', { name: COPY.link.share }));
-    await waitFor(() => expect(share.shared).toEqual([`Join Kazimierz crew on Raketa: ${LINK}`]));
+    await waitFor(() => expect(share.shared).toEqual([`Join Kazimierz crew on Rakieta: ${LINK}`]));
 
     fireEvent.press(screen.getByRole('button', { name: COPY.link.copy }));
     await waitFor(() => expect(clipboard.text).toBe(LINK));
@@ -444,7 +444,7 @@ describe('the members row', () => {
   });
 
   it('draws your own face when you are alone, and nothing more', async () => {
-    await openInfo({ name: 'My raketa group', members: [ME] });
+    await openInfo({ name: 'My rakieta group', members: [ME] });
 
     expect(await membersRow(/^1 member, anyone can join$/)).toBeTruthy();
     expect(rowFaces()).toEqual([ME.id]);
@@ -477,9 +477,9 @@ describe('Want to join', () => {
     ).toBeTruthy();
     // Between the link card and the members row.
     const order = screen
-      .getAllByText(/^(raketa\.app\/join\/K7PQ2MXA|Want to join · 2|8 members)$/)
+      .getAllByText(/^(rakieta\.app\/join\/K7PQ2MXA|Want to join · 2|8 members)$/)
       .map((node) => node.props.children as string);
-    expect(order).toEqual(['raketa.app/join/K7PQ2MXA', 'Want to join · 2', '8 members']);
+    expect(order).toEqual(['rakieta.app/join/K7PQ2MXA', 'Want to join · 2', '8 members']);
   });
 
   // #529: four sports ran the row onto three lines. Two short tags, the rest as one +N tag, and
@@ -951,7 +951,7 @@ describe('Edit group', () => {
 
 describe('leaving and deleting', () => {
   const listCard = () =>
-    screen.queryByRole('button', { name: /^Kazimierz crew,|^My raketa group,/ });
+    screen.queryByRole('button', { name: /^Kazimierz crew,|^My rakieta group,/ });
 
   async function confirm(act: string) {
     const sheet = within(await screen.findByTestId('bottom-sheet'));
@@ -961,7 +961,7 @@ describe('leaving and deleting', () => {
   // #529 F1: the way out stands at Info's foot, however long Info is, and never scrolls away.
   it.each([
     ['Leave', { members: KAZIMIERZ }, COPY.info.leave],
-    ['Delete', { name: 'My raketa group', members: [ME] }, COPY.info.delete],
+    ['Delete', { name: 'My rakieta group', members: [ME] }, COPY.info.delete],
   ] as const)('pins %s under Info, outside what scrolls', async (_, setup, door) => {
     await openInfo(setup);
 
@@ -1025,7 +1025,7 @@ describe('leaving and deleting', () => {
   });
 
   it('deletes a group its Owner is alone in, after asking, and lands on the list', async () => {
-    const server = await openInfo({ name: 'My raketa group', members: [ME] });
+    const server = await openInfo({ name: 'My rakieta group', members: [ME] });
 
     fireEvent.press(await screen.findByRole('button', { name: COPY.info.delete }));
     expect(await screen.findByRole('header', { name: COPY.info.deleteTitle })).toBeTruthy();
@@ -1039,7 +1039,7 @@ describe('leaving and deleting', () => {
   });
 
   it('keeps the group when the sheet is closed', async () => {
-    const server = await openInfo({ name: 'My raketa group', members: [ME] });
+    const server = await openInfo({ name: 'My rakieta group', members: [ME] });
 
     fireEvent.press(await screen.findByRole('button', { name: COPY.info.delete }));
     fireEvent.press(await screen.findByRole('button', { name: COPY.info.deleteClose }));
@@ -1083,7 +1083,7 @@ describe('leaving and deleting', () => {
   });
 
   it('offers Delete instead when everybody else left since the page was read', async () => {
-    const server = await openInfo({ name: 'My raketa group', members: [ME, ZOFIA] });
+    const server = await openInfo({ name: 'My rakieta group', members: [ME, ZOFIA] });
     server.leave(ZOFIA);
 
     fireEvent.press(await screen.findByRole('button', { name: COPY.info.leave }));

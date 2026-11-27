@@ -3,7 +3,7 @@
  * ([#787](https://github.com/Raketa02/Raketa/issues/787), PRD #783; design system 12.2, mocks 7–8).
  *
  * ```
- *                 ● Raketa                          the wordmark stays in its corner, over it
+ *                 ● Rakieta                          the wordmark stays in its corner, over it
  *
  *        [KT] [  ]   vs   [AK] [KW]                  the front card's four, You bare
  *             It’s a game!                           yesWord, volt

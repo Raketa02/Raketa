@@ -4,7 +4,7 @@
  * ago* tag and *Post again* are not drawn: PRD #500 overrides them by name, and nothing records a
  * post.
  *
- * **Share link opens the phone's share sheet** with *Join Ogrody 33 Club on Raketa: <link>* in it,
+ * **Share link opens the phone's share sheet** with *Join Ogrody 33 Club on Rakieta: <link>* in it,
  * the group page's own sentence, so the link goes out through whatever the Administrator's crowd
  * gathers in — a WhatsApp group among them, and no longer only one (#529). It was *Post to
  * WhatsApp*, which opened WhatsApp by its scheme, under *Post this in the WhatsApp group. Everybody

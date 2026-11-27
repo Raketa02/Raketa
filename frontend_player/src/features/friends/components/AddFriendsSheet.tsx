@@ -12,8 +12,8 @@
  * │      10 members · nobody to add           │
  * └───────────────────────────────────────────┘
  * ┌───────────────────────────────────────────┐
- * │ Not on Raketa yet?                        │
- * │ [raketa.app/f/tk4m9q2z           ] [Copy] │
+ * │ Not on Rakieta yet?                       │
+ * │ [rakieta.app/f/tk4m9q2z          ] [Copy] │
  * │ [New link]                                │
  * └───────────────────────────────────────────┘
  * ```
@@ -40,7 +40,7 @@
  * ## The link card under it
  *
  * The sheet's body is a column of sections, and the groups are the first. **The link card —
- * *Not on Raketa yet?*, the link, *Copy*, *New link* — is the second** (`FriendLinkCard`, #756),
+ * *Not on Rakieta yet?*, the link, *Copy*, *New link* — is the second** (`FriendLinkCard`, #756),
  * read when the sheet opens as the groups are; nothing about the groups' section assumes it is
  * alone.
  */

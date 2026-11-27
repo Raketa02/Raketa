@@ -408,7 +408,7 @@ describe('answering an invitation in Needs your answer', () => {
         to_confirm: {
           client_secret: 'sc-ewa_secret',
           connected_account_id: 'acct_ogrody',
-          publishable_key: 'pk_test_raketa',
+          publishable_key: 'pk_test_rakieta',
         },
       }),
     );
@@ -479,7 +479,7 @@ describe('answering an invitation in Needs your answer', () => {
         to_confirm: {
           client_secret: 'sc-ewa_secret',
           connected_account_id: 'acct_ogrody',
-          publishable_key: 'pk_test_raketa',
+          publishable_key: 'pk_test_rakieta',
         },
       }),
     );

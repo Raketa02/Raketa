@@ -24,7 +24,7 @@
  *   It used to be the engine's `confidenceReason`, which explained *why this Confidence and
  *   not another* — a true sentence answering a question a player meeting their first rating
  *   is not asking. What they need said, in words, is that the number is provisional and that
- *   matches are what settle it. That is a product claim about how Raketa works, so it is
+ *   matches are what settle it. That is a product claim about how Rakieta works, so it is
  *   client copy, and it is shown for every rating rather than only when the engine happened
  *   to send a reason.
  *

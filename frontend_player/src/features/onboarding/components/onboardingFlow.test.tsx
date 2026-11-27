@@ -513,7 +513,7 @@ describe('where a launch lands', () => {
     await screen.findByText("You're offline. This will load as soon as you're back.");
 
     expect(
-      screen.queryByText("We couldn't reach Raketa. Check your connection and try again."),
+      screen.queryByText("We couldn't reach Rakieta. Check your connection and try again."),
     ).toBeNull();
     expect(screen.queryByLabelText('Try again')).toBeNull();
 

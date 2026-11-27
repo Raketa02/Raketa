@@ -66,7 +66,7 @@ describe('which answer a search draws', () => {
   });
 
   it('says there is nothing at a link that leads nowhere', () => {
-    expect(searchOutcome(search({ text: 'raketa.app/join/ZZZZZZZZ', readAs: 'LINK' }))).toEqual({
+    expect(searchOutcome(search({ text: 'rakieta.app/join/ZZZZZZZZ', readAs: 'LINK' }))).toEqual({
       kind: 'nothing-at-link',
     });
   });

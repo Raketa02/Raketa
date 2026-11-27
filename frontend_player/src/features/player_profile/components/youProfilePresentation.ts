@@ -69,7 +69,7 @@ export function weekLine(week: readonly WeeklyHour[]): string {
 }
 
 /** The one state the area has, and the rule the tab's sentence carries in full behind the row. */
-export const AREA_LINE = 'Area set · updates when you open Raketa';
+export const AREA_LINE = 'Area set · updates when you open Rakieta';
 
 /** A rated sport with no answer, in the line's own register — never *Not set* with a capital. */
 const NOT_SET_IN_LINE = 'not set';

@@ -24,6 +24,6 @@ export const friendKeys = {
   requests: (direction: RequestDirection) => [...friendKeys.all, 'requests', direction] as const,
   /** `GET /friends/groups` — the Add friends sheet's groups. */
   groups: () => [...friendKeys.all, 'groups'] as const,
-  /** `GET /friends/link` — your friend link, the sheet's *Not on Raketa yet?* card (#756). */
+  /** `GET /friends/link` — your friend link, the sheet's *Not on Rakieta yet?* card (#756). */
   link: () => [...friendKeys.all, 'link'] as const,
 };

@@ -10,7 +10,7 @@
  * - **+ Add friends** opens the sheet: *From your groups*, each group's tile, name and *8 members ·
  *   2 to add*, and a tap lands on that group's Members — where a request asked turns up on *You
  *   asked* back on the page.
- * - **The sheet's link card** (#756, friends 4): *Not on Raketa yet?*, your link, **Copy** onto the
+ * - **The sheet's link card** (#756, friends 4): *Not on Rakieta yet?*, your link, **Copy** onto the
  *   clipboard, and a small **New link** that asks first and then kills the old one.
  *
  * **The friends routes are answered by a small fake of the server** (`friendsServer`): an act moves
@@ -112,7 +112,7 @@ const CREW: Wire['MyGroupSchema'] = {
 
 const CREW_PAGE: Wire['GroupResponse'] = {
   ...CREW,
-  link: 'https://raketa.app/join/K7PQ2MXA',
+  link: 'https://rakieta.app/join/K7PQ2MXA',
   join_policy: 'ANYONE',
   is_owner: false,
   rated_by_sport: [{ sport: 'PADEL', rated_count: 10, first_rated: [] }],
@@ -525,7 +525,7 @@ describe('+ Add friends', () => {
 
 describe('the Add friends sheet’s link card', () => {
   const REPLACEMENT_PATH = `${FRIEND_LINK_PATH}/replacement`;
-  const linkAt = (code: string) => `https://raketa.app/f/${code}`;
+  const linkAt = (code: string) => `https://rakieta.app/f/${code}`;
   let clipboard: FakeClipboard;
 
   /** Your link, as `GET /friends/link` answers it — until a New link mints the next code. */
@@ -557,7 +557,7 @@ describe('the Add friends sheet’s link card', () => {
     await openTheCard();
 
     expect(screen.getByText(LINK.title)).toBeTruthy();
-    expect(screen.getByText('raketa.app/f/tk4m9q2z')).toBeTruthy();
+    expect(screen.getByText('rakieta.app/f/tk4m9q2z')).toBeTruthy();
     // Read when the sheet opens, not with the page.
     expect(transport.requestsTo('GET', FRIEND_LINK_PATH)).toHaveLength(1);
   });
@@ -594,7 +594,7 @@ describe('the Add friends sheet’s link card', () => {
       expect(screen.queryByRole('header', { name: LINK.confirm.title })).toBeNull(),
     );
     expect(transport.requestsTo('POST', REPLACEMENT_PATH)).toHaveLength(0);
-    expect(screen.getByText('raketa.app/f/tk4m9q2z')).toBeTruthy();
+    expect(screen.getByText('rakieta.app/f/tk4m9q2z')).toBeTruthy();
     expect(screen.queryByText(LINK.made)).toBeNull();
   });
 
@@ -604,7 +604,7 @@ describe('the Add friends sheet’s link card', () => {
     fireEvent.press(screen.getByRole('button', { name: LINK.newLinkLabel }));
     fireEvent.press(await screen.findByRole('button', { name: LINK.confirm.act }));
 
-    expect(await screen.findByText('raketa.app/f/w8n3r5qa')).toBeTruthy();
+    expect(await screen.findByText('rakieta.app/f/w8n3r5qa')).toBeTruthy();
     expect(screen.getByText(LINK.made)).toBeTruthy();
     expect(screen.queryByRole('header', { name: LINK.confirm.title })).toBeNull();
     expect(transport.requestsTo('POST', REPLACEMENT_PATH)).toHaveLength(1);

@@ -10,7 +10,7 @@ import { OUT_OF_DATE_GAP, orOutOfDate } from './outOfDate';
 
 describe('the gap', () => {
   it('tells the player what to do about it', () => {
-    expect(OUT_OF_DATE_GAP).toBe('This app is too old to read this one — update Raketa.');
+    expect(OUT_OF_DATE_GAP).toBe('This app is too old to read this one — update Rakieta.');
   });
 
   it('names neither the code nor the vocabulary it came from', () => {

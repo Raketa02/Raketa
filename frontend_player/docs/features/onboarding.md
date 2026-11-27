@@ -153,7 +153,7 @@ from the sheet over the app — finds it long settled. A read that began only th
 _pending_ and unmounted the app it was drawing, the sheet with it, which the invitation suite caught. An
 account that does not play never asks the player's reads, whichever club it opens on.
 
-**_What Raketa keeps_ lost the radius and the suggestions consent**
+**_What Rakieta keeps_ lost the radius and the suggestions consent**
 ([#582](https://github.com/Raketa02/Raketa/issues/582)): setting up stopped asking either, so the
 screen keeps no account of them. Why the gender answer did not take the radius's place on the
 card is in [`player_profile.md`](player_profile.md).
@@ -204,7 +204,7 @@ destinations, and `useEntryDecision` its two parallel reads, so a cold launch wa
 A sign-up is eight screens — sign-up, _How should people see you?_, the six steps, Home — and
 the naming's _Continue_ hint says _Next, what kind of player you are_. **Deleted with their
 routes and copy**: _Let's set you up_ (`WelcomeScreen`, `/welcome`), _Your starting ratings_
-(`DoneScreen`, `/done`, with `useRunResults`) and _What Raketa keeps_ (`DataScreen`, `/data`);
+(`DoneScreen`, `/done`, with `useRunResults`) and _What Rakieta keeps_ (`DataScreen`, `/data`);
 `ProfileFinish` replaces to `/`, so _Finish_ lands on Home. **The pass's origins are Home, the
 passport and a group** — `welcome` became `home` (`FROM_HOME`): the picker opened with no group,
 and a run reached by a link with no pass running. A pass ends where it began whatever it
@@ -312,7 +312,7 @@ on the user's iPhone was shown no guide — exactly what ADR-0200 §8 ruled (_a 
 same phone never sees it_), and the user ruled it the other way: a new player is shown it once of
 their own. The flag keeps its two other properties: **kept at sign-out**, so the same account
 signing in again is not shown it twice, and **per phone**, so a new phone shows it again.
-`readPhoneFlag`/`raisePhoneFlag` take the account, its key is `raketa.phone-flags.{account}.{flag}`,
+`readPhoneFlag`/`raisePhoneFlag` take the account, its key is `rakieta.phone-flags.{account}.{flag}`,
 and `phonePreferenceKeys.flag(account, flag)` carries it in memory. `useRatingGuide` **observes**
 `/users/me` (never stale) for the account rather than reading it once from the cache as the other
 preferences do: the questions are up with nothing else holding it, and can outlast the cache's five

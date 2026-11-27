@@ -6,7 +6,7 @@
  * installs from its Google Play button — which carries the page's own link as the **install
  * referrer** (#755). Google Play keeps it for 90 days and hands it to the app through its Install
  * Referrer service, which `expo-application` reads. **An iPhone has no such thing**: its install
- * forgets the link, and the person taps the site's *Open in Raketa* once more. So the platform's
+ * forgets the link, and the person taps the site's *Open in Rakieta* once more. So the platform's
  * difference stays here, as push's does, and the port answers `null` there.
  *
  * It is a port and not a line in the links feature on the other ports' argument: a native module has

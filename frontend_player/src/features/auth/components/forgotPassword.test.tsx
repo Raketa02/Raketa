@@ -179,7 +179,7 @@ describe('asking', () => {
     expect(screen.getByText(RESET_COPY.sent.title)).toBeTruthy();
     expect(
       screen.getByText(
-        "If tomek@example.com has a Raketa account, we've sent it a link and an 8-character code. " +
+        "If tomek@example.com has a Rakieta account, we've sent it a link and an 8-character code. " +
           'Both work for one hour, once.',
       ),
     ).toBeTruthy();
@@ -204,7 +204,7 @@ describe('asking', () => {
     fireEvent.press(screen.getByLabelText(RESET_COPY.ask.send));
 
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
     ).toBeTruthy();
     expect(screen).toHavePathname('/forgot-password');
   });
@@ -465,7 +465,7 @@ describe('setting it, when the code is spent or the line is down', () => {
     await claim();
 
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
     ).toBeTruthy();
     expect(screen).toHavePathname('/forgot-password/code');
   });
@@ -480,7 +480,7 @@ describe('setting it, when the code is spent or the line is down', () => {
     typeNewPassword();
 
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
     ).toBeTruthy();
     expect(getSessionStatus()).toBe('unauthenticated');
     // Nothing was spent that the person can see, so the way back to the code stays.

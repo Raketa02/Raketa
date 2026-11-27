@@ -21,7 +21,7 @@
  * hands the page is `RankingRead`, the shape the Friends table hands it too (#777).
  *
  * **The app's defaults, chosen** (architecture Part 7): a place moves when a result settles anywhere
- * in Raketa and the server keeps a sport's order for at most a minute (the rankings mechanics §15),
+ * in Rakieta and the server keeps a sport's order for at most a minute (the rankings mechanics §15),
  * so the moderate class's 30 seconds is fresh enough while the page is up, foregrounding reads it
  * again, and **opening it always does** (the screens §2–§3: switching sport or view re-reads the page). **A read again is every page drawn**, one after another, each below the fresh one before
  * it — the query's own refetch, so the window stays whole; a reader deep in the list pays a page a
@@ -109,7 +109,7 @@ export function useGeneral(sport: Sport): RankingRead {
   });
 
   const jumpToMe = () => {
-    // Afresh every jump: the reader's place moves whenever a result settles anywhere in Raketa. A
+    // Afresh every jump: the reader's place moves whenever a result settles anywhere in Rakieta. A
     // press while one is out reaches here only after the reader's drag — the busy button takes none.
     void queryClient.resetQueries({ queryKey: rankingKeys.generalAroundMe(sport), exact: true });
     setJumped(true);

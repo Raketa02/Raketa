@@ -17,21 +17,21 @@ describe('the link domain setting', () => {
   });
 
   it('takes a bare host name', () => {
-    expect(readLinkDomain('raketa.app')).toBe('raketa.app');
-    expect(readLinkDomain('links.raketa.co.uk')).toBe('links.raketa.co.uk');
+    expect(readLinkDomain('rakieta.app')).toBe('rakieta.app');
+    expect(readLinkDomain('links.rakieta.co.uk')).toBe('links.rakieta.co.uk');
   });
 
   it.each([
-    'https://raketa.app',
-    'raketa.app/join',
-    'raketa.app:443',
-    'Raketa.app',
+    'https://rakieta.app',
+    'rakieta.app/join',
+    'rakieta.app:443',
+    'Rakieta.app',
     'localhost',
-    'raketa',
+    'rakieta',
     '192.168.1.20',
-    '-raketa.app',
-    'raketa..app',
-    'user@raketa.app',
+    '-rakieta.app',
+    'rakieta..app',
+    'user@rakieta.app',
   ])('refuses %p, naming the variable and not the value', (value) => {
     expect(() => readLinkDomain(value)).toThrow(/EXPO_PUBLIC_LINK_DOMAIN/);
     try {
@@ -48,8 +48,8 @@ describe('what the operating systems are told', () => {
   });
 
   it('associates the domain with the app on iOS', () => {
-    expect(nativeLinkConfig('raketa.app').ios).toEqual({
-      associatedDomains: ['applinks:raketa.app'],
+    expect(nativeLinkConfig('rakieta.app').ios).toEqual({
+      associatedDomains: ['applinks:rakieta.app'],
     });
   });
 
@@ -59,16 +59,16 @@ describe('what the operating systems are told', () => {
    * others.
    */
   it('claims the four pages on Android, verified, over https only', () => {
-    expect(nativeLinkConfig('raketa.app').android).toEqual({
+    expect(nativeLinkConfig('rakieta.app').android).toEqual({
       intentFilters: [
         {
           action: 'VIEW',
           autoVerify: true,
           data: [
-            { scheme: 'https', host: 'raketa.app', pathPrefix: '/join/' },
-            { scheme: 'https', host: 'raketa.app', pathPrefix: '/invite/' },
-            { scheme: 'https', host: 'raketa.app', pathPrefix: '/reset/' },
-            { scheme: 'https', host: 'raketa.app', pathPrefix: '/f/' },
+            { scheme: 'https', host: 'rakieta.app', pathPrefix: '/join/' },
+            { scheme: 'https', host: 'rakieta.app', pathPrefix: '/invite/' },
+            { scheme: 'https', host: 'rakieta.app', pathPrefix: '/reset/' },
+            { scheme: 'https', host: 'rakieta.app', pathPrefix: '/f/' },
           ],
           category: ['BROWSABLE', 'DEFAULT'],
         },
@@ -88,11 +88,11 @@ describe('the address a link is spelled at', () => {
   });
 
   it('is the web domain once there is one', () => {
-    expect(appLinkTo('join', 'k7pq2mxa', 'raketa.app')).toBe('https://raketa.app/join/k7pq2mxa');
+    expect(appLinkTo('join', 'k7pq2mxa', 'rakieta.app')).toBe('https://rakieta.app/join/k7pq2mxa');
   });
 
   it('spells a friend link the same way', () => {
     expect(appLinkTo('f', 'tk4m9q2z', null)).toBe('rakieta://f/tk4m9q2z');
-    expect(appLinkTo('f', 'tk4m9q2z', 'raketa.app')).toBe('https://raketa.app/f/tk4m9q2z');
+    expect(appLinkTo('f', 'tk4m9q2z', 'rakieta.app')).toBe('https://rakieta.app/f/tk4m9q2z');
   });
 });

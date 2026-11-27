@@ -170,7 +170,7 @@ describe('why an upload failed', () => {
     });
 
     expect(photoFailureMessage(unknown)).toBe(
-      "We couldn't reach Raketa. Check your connection and try again.",
+      "We couldn't reach Rakieta. Check your connection and try again.",
     );
   });
 

@@ -94,7 +94,7 @@ const GROUP: Wire['MyGroupSchema'] = {
 
 const PAGE: Wire['GroupResponse'] = {
   ...GROUP,
-  link: 'https://raketa.app/join/K7PQ2MXA',
+  link: 'https://rakieta.app/join/K7PQ2MXA',
   join_policy: 'ANYONE',
   is_owner: false,
   rated_by_sport: [
@@ -1234,7 +1234,7 @@ describe('sending', () => {
           to_confirm: {
             client_secret: `${id}_secret`,
             connected_account_id: 'acct_ogrody',
-            publishable_key: 'pk_test_raketa',
+            publishable_key: 'pk_test_rakieta',
           },
         }),
       );

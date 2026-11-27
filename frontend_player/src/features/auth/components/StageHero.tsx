@@ -1,5 +1,5 @@
 /**
- * **The stage's hero** — the dark top of sign-in and sign-up (#785): the *Raketa* wordmark in its
+ * **The stage's hero** — the dark top of sign-in and sign-up (#785): the *Rakieta* wordmark in its
  * top-left corner, room for the deck (#786) or the podium (#788) in the middle, and the headline at
  * its foot ([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783; design system 12.2).
  *

@@ -1,4 +1,4 @@
-# Raketa Player App (iOS + Android)
+# Rakieta Player App (iOS + Android)
 
 React Native + Expo SDK 52 + TypeScript, pnpm. Real platform components — not a website in a
 WebView. Feature-first Clean Architecture

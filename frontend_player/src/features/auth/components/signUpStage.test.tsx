@@ -113,7 +113,7 @@ describe('the hero', () => {
 });
 
 describe('the form', () => {
-  it('reads top to bottom as mocks 4 and 6 draw it, with no RAKETA over the title', () => {
+  it('reads top to bottom as mocks 4 and 6 draw it, with no RAKIETA over the title', () => {
     drawSignUp();
 
     const sheet = [
@@ -253,7 +253,7 @@ describe('a refusal', () => {
     fillIn();
     press(SIGN_UP_COPY.submit);
 
-    const banner = "We couldn't reach Raketa. Check your connection and try again.";
+    const banner = "We couldn't reach Rakieta. Check your connection and try again.";
     expect(await screen.findByText(banner)).toBeTruthy();
     const order = [`header:${SIGN_UP_COPY.title}`, `alert:${banner}`, `box:${EMAIL_LABEL}`];
     expect(inOrder(order)).toEqual(order);

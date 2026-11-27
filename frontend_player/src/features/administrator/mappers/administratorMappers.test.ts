@@ -73,7 +73,7 @@ describe('an official group’s page', () => {
     sports: ['PADEL'],
     member_count: 2,
     home_club: CLUB,
-    link: 'https://raketa.app/join/K7PQ2MXA',
+    link: 'https://rakieta.app/join/K7PQ2MXA',
     join_policy: 'PEOPLE_I_APPROVE',
     whatsapp_size: 48,
     players: [
@@ -106,7 +106,7 @@ describe('an official group’s page', () => {
       sports: ['padel'],
       memberCount: 2,
       homeClub: { id: CLUB.id, name: 'Ogrody 33', sports: ['padel', 'tennis'] },
-      link: 'https://raketa.app/join/K7PQ2MXA',
+      link: 'https://rakieta.app/join/K7PQ2MXA',
       joinPolicy: 'PEOPLE_I_APPROVE',
       whatsAppSize: 48,
       players: [
@@ -141,7 +141,7 @@ describe('a settings save’s answer', () => {
     sports: ['PADEL'],
     member_count: 4,
     home_club: CLUB,
-    link: 'https://raketa.app/join/K7PQ2MXA',
+    link: 'https://rakieta.app/join/K7PQ2MXA',
     join_policy: 'ANYONE',
     whatsapp_size: 52,
     players: [],

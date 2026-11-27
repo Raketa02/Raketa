@@ -298,7 +298,7 @@ export function intentAnswering(panel: DoorPanel, answer: DoorAnswer): PlayInten
 // ---------------------------------------------------------------------------
 
 /**
- * **What the tab says while Raketa deals the group, and where the deck lands after** (the screens
+ * **What the tab says while Rakieta deals the group, and where the deck lands after** (the screens
  * A2.1 state 5): *Finding for-fun games for you…* names the kind it lands on, and *Finding games for
  * you…* names none — after *Either suits me* on the first-time question, when both kinds arrive.
  */

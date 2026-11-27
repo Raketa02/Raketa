@@ -3,7 +3,7 @@
  * The sentences that compose values (*1 waiting*, *3 members*) are
  * functions in `administratorPresentation.ts`, beside this.
  *
- * Taken from the club mocks (club 8–11, 17–20), with *Rakieta* read as **Raketa** (ADR-0187 §8).
+ * Taken from the club mocks (club 8–11, 17–20), their *Rakieta* read as written (ADR-0211).
  *
  * **This module imports nothing, on purpose** — `groupsCopy.ts`'s reason: the feature barrels form
  * a cycle, and a module with no imports is fully evaluated the moment anything asks for it,

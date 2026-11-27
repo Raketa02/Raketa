@@ -5,7 +5,7 @@
  *
  * ```
  * ‹ Notifications
- * [ Your phone doesn't show Raketa's notifications yet …   (Allow notifications) ]   while it may not
+ * [ Your phone doesn't show Rakieta's notifications yet …   (Allow notifications) ]   while it may not
  * ALWAYS ON
  * ┌ It's a game! · held                             (on) ┐   inert rows, the green tag
  * │ …                                                    │

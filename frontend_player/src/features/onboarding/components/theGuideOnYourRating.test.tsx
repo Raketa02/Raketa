@@ -60,9 +60,9 @@ const stepPath = (id: string) => `${ASSESSMENTS_PATH}/${id}`;
 
 /** The ⓘ marks' words, which are the guide's (ADR-0200 §8). */
 const LEVEL_WORDS = /^Where you sit on the 1,00–5,00 scale for this sport\./;
-const RANGE_WORDS = /^Where Raketa thinks your level most likely sits/;
-const CONFIDENCE_WORDS = /^Shows how confident Raketa is about your level/;
-/** Bubble 3 keeps the ceiling, so a 24 % does not read as Raketa doubting her (Q7). */
+const RANGE_WORDS = /^Where Rakieta thinks your level most likely sits/;
+const CONFIDENCE_WORDS = /^Shows how confident Rakieta is about your level/;
+/** Bubble 3 keeps the ceiling, so a 24 % does not read as Rakieta doubting her (Q7). */
 const CEILING_SENTENCE = /The questionnaire can provide up to 30% confidence\./;
 
 function rating(sport: Wire['Sport'], mu: number): Wire['RatingResponse'] {
@@ -442,7 +442,7 @@ const WEDNESDAY: Wire['MyGroupSchema'] = {
 
 const WEDNESDAY_PAGE: Wire['GroupResponse'] = {
   ...WEDNESDAY,
-  link: 'https://raketa.app/join/K7PQ2MXA',
+  link: 'https://rakieta.app/join/K7PQ2MXA',
   join_policy: 'PEOPLE_I_APPROVE',
   is_owner: false,
   rated_by_sport: [{ sport: 'PADEL', rated_count: 5, first_rated: [] }],

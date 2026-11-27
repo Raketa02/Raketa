@@ -68,7 +68,7 @@ a key the two repositories disagree about — and the use case answers `undefine
 default. The SDK's diagnostics are routed nowhere: its console reporter prints the evaluation
 context, a player id in a device log, and there is no observability module yet. The cache never
 throws: a failed read is no cache and a failed write loses only the next launch's copy. It is keyed
-`raketa.feature-flags.datafile.<environment>`, outside the preferences store's prefix, so sign-out
+`rakieta.feature-flags.datafile.<environment>`, outside the preferences store's prefix, so sign-out
 does not empty it: it is public and names no player.
 
 **The context is `playerId`, `platform`, `appVersion`** (§8, `EvaluationContext`), spelled as the

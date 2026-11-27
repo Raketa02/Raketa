@@ -111,14 +111,14 @@ const toasts = () => useToastQueue.getState().queue.map((toast) => toast.message
 
 /**
  * Home, with Needs your answer already up and Tomek's request in it (#817, ADR-0205 §1): *tomek.k
- * wants to be your friend*, and no *Invited you to Raketa* since #816. Nobody pressed the envelope.
+ * wants to be your friend*, and no *Invited you to Rakieta* since #816. Nobody pressed the envelope.
  */
 async function expectTomeksRequestOnHome() {
   await waitFor(() => expect(screen).toHavePathname('/'));
   expect(await screen.findByRole('header', { name: NEEDS_YOUR_ANSWER_COPY.title })).toBeTruthy();
   const card = within(await screen.findByTestId(`friend-request-${TOMEK.id}`));
   expect(card.getByText(wantsToBeYourFriend(TOMEK.name))).toBeTruthy();
-  expect(screen.queryByText('Invited you to Raketa')).toBeNull();
+  expect(screen.queryByText('Invited you to Rakieta')).toBeNull();
 }
 
 /** Ania, signed in and on her You tab — anywhere but Home. */
@@ -315,7 +315,7 @@ describe('a friend link carried through an Android install', () => {
   it('is opened on the first launch and lands on Home, and is never read again', async () => {
     serve(ANIA);
     serveTheLink('ASKED_YOU');
-    const play = fakeInstallReferrer(`https://raketa.app/f/${CODE}`);
+    const play = fakeInstallReferrer(`https://rakieta.app/f/${CODE}`);
 
     await readTheInstallReferrerOnce(play);
     await launchSignedIn();

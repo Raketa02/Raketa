@@ -56,11 +56,11 @@ describe('a friend link', () => {
   );
 
   it('is read off the web domain once one is set', () => {
-    expect(read('https://raketa.app/f/tk4m9q2z?utm_source=whatsapp', 'raketa.app')).toEqual({
+    expect(read('https://rakieta.app/f/tk4m9q2z?utm_source=whatsapp', 'rakieta.app')).toEqual({
       kind: 'friend',
       code: 'tk4m9q2z',
     });
-    expect(read('https://raketa.app/f/tk4m9q2z')).toBeUndefined();
+    expect(read('https://rakieta.app/f/tk4m9q2z')).toBeUndefined();
   });
 
   it.each(['rakieta://f/tk4m', 'rakieta://f/tk4m-9q2', 'rakieta://f', 'rakieta://F/tk4m9q2z'])(
@@ -73,28 +73,28 @@ describe('a friend link', () => {
 
 describe('the web domain', () => {
   it('is read once it is set', () => {
-    expect(read('https://raketa.app/join/k7pq2mxa', 'raketa.app')).toEqual({
+    expect(read('https://rakieta.app/join/k7pq2mxa', 'rakieta.app')).toEqual({
       kind: 'join',
       code: 'k7pq2mxa',
     });
-    expect(read('https://Raketa.App/invite/' + TOKEN, 'raketa.app')).toEqual({
+    expect(read('https://Rakieta.App/invite/' + TOKEN, 'rakieta.app')).toEqual({
       kind: 'invite',
       token: TOKEN,
     });
   });
 
   it('is no link while no domain is set', () => {
-    expect(read('https://raketa.app/join/k7pq2mxa')).toBeUndefined();
+    expect(read('https://rakieta.app/join/k7pq2mxa')).toBeUndefined();
   });
 
   it.each([
     'https://evil.example/join/k7pq2mxa',
-    'https://raketa.app.evil.example/join/k7pq2mxa',
-    'https://raketa.app@evil.example/join/k7pq2mxa',
-    'https://raketa.app:8443/join/k7pq2mxa',
-    'http://raketa.app/join/k7pq2mxa',
+    'https://rakieta.app.evil.example/join/k7pq2mxa',
+    'https://rakieta.app@evil.example/join/k7pq2mxa',
+    'https://rakieta.app:8443/join/k7pq2mxa',
+    'http://rakieta.app/join/k7pq2mxa',
   ])('is no link from anywhere else: %p', (url) => {
-    expect(read(url, 'raketa.app')).toBeUndefined();
+    expect(read(url, 'rakieta.app')).toBeUndefined();
   });
 });
 
@@ -128,7 +128,7 @@ describe('the app’s bare address', () => {
 
   it('is not a path the router holds, nor the web domain’s home', () => {
     expect(read('/')).toBeUndefined();
-    expect(read('https://raketa.app/', 'raketa.app')).toBeUndefined();
+    expect(read('https://rakieta.app/', 'rakieta.app')).toBeUndefined();
   });
 });
 
@@ -164,17 +164,17 @@ describe('everything else', () => {
  */
 describe('the install referrer', () => {
   it.each([
-    ['https://raketa.app/f/tk4m9q2z', { kind: 'friend', code: 'tk4m9q2z' }],
-    ['https://raketa.app/join/K7PQ2MXA', { kind: 'join', code: 'k7pq2mxa' }],
+    ['https://rakieta.app/f/tk4m9q2z', { kind: 'friend', code: 'tk4m9q2z' }],
+    ['https://rakieta.app/join/K7PQ2MXA', { kind: 'join', code: 'k7pq2mxa' }],
     ['http://localhost:3001/f/tk4m9q2z', { kind: 'friend', code: 'tk4m9q2z' }],
-    ['https://raketa.app/f/tk4m9q2z?utm_source=whatsapp', { kind: 'friend', code: 'tk4m9q2z' }],
+    ['https://rakieta.app/f/tk4m9q2z?utm_source=whatsapp', { kind: 'friend', code: 'tk4m9q2z' }],
   ])('reads %p', (referrer, link) => {
     expect(readReferrerLink(referrer)).toEqual(link);
   });
 
   /** Play hands it back decoded; one encoded once more is read the same. */
   it('reads a link still encoded', () => {
-    expect(readReferrerLink('https%3A%2F%2Fraketa.app%2Ff%2Ftk4m9q2z')).toEqual({
+    expect(readReferrerLink('https%3A%2F%2Frakieta.app%2Ff%2Ftk4m9q2z')).toEqual({
       kind: 'friend',
       code: 'tk4m9q2z',
     });
@@ -182,16 +182,16 @@ describe('the install referrer', () => {
 
   it.each([
     'utm_source=google-play&utm_medium=organic',
-    `https://raketa.app/invite/${TOKEN}`,
-    `https://raketa.app/reset/${TOKEN}`,
-    'https://raketa.app/',
-    'https://raketa.app/play/join/k7pq2mxa',
-    'https://raketa.app/f/tk4m',
+    `https://rakieta.app/invite/${TOKEN}`,
+    `https://rakieta.app/reset/${TOKEN}`,
+    'https://rakieta.app/',
+    'https://rakieta.app/play/join/k7pq2mxa',
+    'https://rakieta.app/f/tk4m',
     'rakieta://f/tk4m9q2z',
     'javascript:alert(1)',
     '%E0%A4%A',
     '',
-    `https://raketa.app/f/tk4m9q2z?${'x'.repeat(10_000)}`,
+    `https://rakieta.app/f/tk4m9q2z?${'x'.repeat(10_000)}`,
   ])('is no link: %p', (referrer) => {
     expect(readReferrerLink(referrer)).toBeUndefined();
   });

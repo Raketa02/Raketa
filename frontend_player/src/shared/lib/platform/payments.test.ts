@@ -43,7 +43,7 @@ describe('whose key it is', () => {
   });
 
   it("is a provider with no phone half for anything else — the laptop's fake among them", () => {
-    expect(isStripeKey('pk_fake_raketa')).toBe(false);
+    expect(isStripeKey('pk_fake_rakieta')).toBe(false);
     expect(isStripeKey('')).toBe(false);
     expect(isStripeKey('sk_test_51abc')).toBe(false);
   });
@@ -78,11 +78,11 @@ describe('what the bank said', () => {
 
 describe("the laptop's provider", () => {
   it('takes the card and saves it without starting Stripe', async () => {
-    const taking = await devicePayments.takeCard('pk_fake_raketa');
+    const taking = await devicePayments.takeCard('pk_fake_rakieta');
     expect(taking).toEqual({ kind: 'taken', card: { reference: null } });
 
     const answer = await devicePayments.confirmSetup({
-      publishableKey: 'pk_fake_raketa',
+      publishableKey: 'pk_fake_rakieta',
       clientSecret: 'seti_fake_secret',
       with: { kind: 'card', card: { reference: null } },
     });
@@ -141,7 +141,7 @@ describe('preparing the provider before its fields are drawn', () => {
   });
 
   it('starts nothing for the laptop’s key', async () => {
-    await expect(devicePayments.prepare('pk_fake_raketa')).resolves.toBe(true);
+    await expect(devicePayments.prepare('pk_fake_rakieta')).resolves.toBe(true);
     expect(stripe.initStripe).not.toHaveBeenCalled();
   });
 });
@@ -231,9 +231,9 @@ describe('starting the provider for the laptop’s placeholder key', () => {
       fresh = jest.requireActual<typeof import('./payments')>('./payments');
     });
 
-    await expect(fresh?.devicePayments.prepare('pk_fake_raketa')).resolves.toBe(true);
+    await expect(fresh?.devicePayments.prepare('pk_fake_rakieta')).resolves.toBe(true);
     expect(sdk.initStripe).toHaveBeenCalledWith(
-      expect.objectContaining({ publishableKey: 'pk_fake_raketa' }),
+      expect.objectContaining({ publishableKey: 'pk_fake_rakieta' }),
     );
   });
 
@@ -247,7 +247,7 @@ describe('starting the provider for the laptop’s placeholder key', () => {
       fresh = jest.requireActual<typeof import('./payments')>('./payments');
     });
 
-    await expect(fresh?.devicePayments.prepare('pk_fake_raketa')).resolves.toBe(true);
+    await expect(fresh?.devicePayments.prepare('pk_fake_rakieta')).resolves.toBe(true);
     expect(sdk.initStripe).not.toHaveBeenCalled();
   });
 });

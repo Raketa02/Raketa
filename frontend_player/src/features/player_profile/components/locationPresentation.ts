@@ -58,7 +58,7 @@ export const WHY_TITLE = 'Why we ask your location';
 
 /** ADR-0200 §10's sentence, verbatim: what the area is for, and what is kept of it. */
 export const WHY_BODY =
-  'Raketa shows how far each club is and lists the nearest first. Your area is rounded to ' +
+  'Rakieta shows how far each club is and lists the nearest first. Your area is rounded to ' +
   'about a kilometre and never shown to other players.';
 
 /** The other way to an area, offered after a refusal on the step and always on the tab. */
@@ -70,8 +70,8 @@ const OR_PICK_A_CLUB = 'or pick a club near where you play';
 type Refusal = Exclude<LocationAccess, 'unasked' | 'granted'>;
 
 export const ACCESS_TITLE: Readonly<Record<Refusal, string>> = {
-  refused: 'Raketa cannot see where you play',
-  blocked: 'Location is turned off for Raketa',
+  refused: 'Rakieta cannot see where you play',
+  blocked: 'Location is turned off for Rakieta',
 };
 
 /**
@@ -81,7 +81,7 @@ export const ACCESS_TITLE: Readonly<Record<Refusal, string>> = {
  */
 export const ACCESS_HOW_TO: Readonly<Record<Refusal, string>> = {
   refused: `Press ${USE_MY_LOCATION} again to allow it, ${OR_PICK_A_CLUB}.`,
-  blocked: `Turn it on for Raketa in Settings and press ${USE_MY_LOCATION} again, ${OR_PICK_A_CLUB}.`,
+  blocked: `Turn it on for Rakieta in Settings and press ${USE_MY_LOCATION} again, ${OR_PICK_A_CLUB}.`,
 };
 
 /** The control that goes where pressing again cannot: the app's own settings page. */
@@ -115,7 +115,7 @@ export const CLUB_SEARCH_PLACEHOLDER = 'Club name or district';
 export const PICK_WORD = 'Pick';
 
 /** Under *No club called "…"*: what can be picked, so the empty answer is not a dead end. */
-export const NO_CLUB_NOTE = 'Only clubs in Raketa can be picked — try a district.';
+export const NO_CLUB_NOTE = 'Only clubs in Rakieta can be picked — try a district.';
 
 /** More of the answer than the first twenty — the search asks a page at a time. */
 export const MORE_CLUBS = 'More clubs';
@@ -134,7 +134,7 @@ export const SAVING_WORD = 'Saving…';
  * what happened and what to do, and the search is back under it.
  */
 export const AREA_WRITE_REFUSAL: Readonly<Record<string, string>> = {
-  location_club_unknown: 'That club is no longer in Raketa — pick another.',
+  location_club_unknown: 'That club is no longer in Rakieta — pick another.',
 };
 
 /** A club's card, spoken — the head is the tap, and its line rides with the name. */
@@ -159,4 +159,4 @@ export function pickedClubLabel(club: PickedClub): string {
  * kilometre is what makes it not.
  */
 export const AREA_UPDATES_LINE =
-  'Your area updates each time you open Raketa; it is never finer than about a kilometre.';
+  'Your area updates each time you open Rakieta; it is never finer than about a kilometre.';

@@ -80,7 +80,7 @@ const OGRODY: Wire['GroupResponse'] = {
   sports: ['PADEL'],
   member_count: 8,
   home_club: { id: 'c0000000-0000-4000-8000-000000000033', name: 'Ogrody 33' },
-  link: 'https://raketa.app/join/K7PQ2MXA',
+  link: 'https://rakieta.app/join/K7PQ2MXA',
   join_policy: 'ANYONE',
   is_owner: false,
   rated_by_sport: [],

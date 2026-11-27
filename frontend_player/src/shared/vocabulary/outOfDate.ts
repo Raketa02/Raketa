@@ -26,7 +26,7 @@
  */
 
 /** The gap's words. Cite this constant; never re-word it at a call site. */
-export const OUT_OF_DATE_GAP = 'This app is too old to read this one — update Raketa.';
+export const OUT_OF_DATE_GAP = 'This app is too old to read this one — update Rakieta.';
 
 /**
  * The words for a code, or the gap when this build has none.

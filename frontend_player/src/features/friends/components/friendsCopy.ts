@@ -41,7 +41,7 @@
  * - **Opening a link of somebody you blocked** (`unblock_them_first`, #748's call): *This link is
  *   from somebody you blocked. Unblock them in Blocked players to see their request.* A dead link
  *   says the public page's *Nothing at that link* (§29.4).
- * - **The spoken names**: *Your friend link, raketa.app/f/tk4m9q2z* for the field, *Copy your
+ * - **The spoken names**: *Your friend link, rakieta.app/f/tk4m9q2z* for the field, *Copy your
  *   friend link* and *Make a new link* for its two buttons.
  *
  * And these, written in by #757:
@@ -84,7 +84,7 @@
 
  * **#816 took the where-line away** (ADR-0205 §1): a friend request in Needs your answer says who
  * and their chip, and an ask for a level its title alone. _With you in Kazimierz crew_, _Invited you
- * to Raketa_, _Found you in the padel ranking_, Home rows' three found-by lines, _A few questions,
+ * to Rakieta_, _Found you in the padel ranking_, Home rows' three found-by lines, _A few questions,
  * and they can add you to a game._ and _You're on question 5._ are no longer drawn, so no longer
  * spelled here.
  *
@@ -203,7 +203,7 @@ export const FRIENDS_COPY = {
    * small **New link** under it, which asks first.
    */
   link: {
-    title: 'Not on Raketa yet?',
+    title: 'Not on Rakieta yet?',
     copy: 'Copy',
     copyLabel: 'Copy your friend link',
     copied: 'Link copied',
@@ -414,7 +414,7 @@ export function linkOpeningMessage(error: AppError): string {
   return codeMessage(FRIENDS_COPY.linkRefused, error);
 }
 
-/** *Your friend link, raketa.app/f/tk4m9q2z* — the card's field, spoken. */
+/** *Your friend link, rakieta.app/f/tk4m9q2z* — the card's field, spoken. */
 export function friendLinkLabel(link: string): string {
   return `Your friend link, ${linkWithoutScheme(link)}`;
 }

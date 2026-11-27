@@ -5,7 +5,7 @@
  *
  * **The confirmation is one sentence for everybody.** The server answers `202` whether or not the
  * address has an account, and whether or not the throttle let an email go; this screen says the
- * same thing in every case, so nothing a person reads tells them who uses Raketa.
+ * same thing in every case, so nothing a person reads tells them who uses Rakieta.
  */
 
 import type { AppError } from '@/shared/errors';
@@ -27,7 +27,7 @@ export const RESET_COPY = {
   sent: {
     title: 'Check your email',
     lead: (email: string) =>
-      `If ${email} has a Raketa account, we've sent it a link and an 8-character code. ` +
+      `If ${email} has a Rakieta account, we've sent it a link and an 8-character code. ` +
       'Both work for one hour, once.',
     enterCode: 'Enter the code',
   },

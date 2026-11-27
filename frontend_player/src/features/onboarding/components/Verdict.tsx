@@ -110,14 +110,14 @@ export function explainers(ceiling: number | undefined): Readonly<Record<Explain
     },
     range: {
       title: 'Your likely range',
-      body: 'Where Raketa thinks your level most likely sits, shown by the thin white bracket. A wider range means we are less certain about your level — not that you are weaker. As you play more, the range narrows and the confidence increases.',
+      body: 'Where Rakieta thinks your level most likely sits, shown by the thin white bracket. A wider range means we are less certain about your level — not that you are weaker. As you play more, the range narrows and the confidence increases.',
     },
     confidence: {
       title: 'Confidence',
       body:
         ceiling === undefined
-          ? 'Shows how confident Raketa is about your level, not how good you are. As you play more, Raketa learns and becomes more certain about your skill level.'
-          : `Shows how confident Raketa is about your level, not how good you are. The questionnaire can provide up to ${ceiling}% confidence. As you play more, Raketa learns and becomes more certain about your skill level.`,
+          ? 'Shows how confident Rakieta is about your level, not how good you are. As you play more, Rakieta learns and becomes more certain about your skill level.'
+          : `Shows how confident Rakieta is about your level, not how good you are. The questionnaire can provide up to ${ceiling}% confidence. As you play more, Rakieta learns and becomes more certain about your skill level.`,
     },
   };
 }
@@ -152,7 +152,7 @@ export function useVerdictSpotlights(): VerdictSpotlights {
 /**
  * **The guide's steps**: the level, the likely range, then the confidence, each in its mark's
  * words — so the third keeps *"The questionnaire can provide up to {ceiling}% confidence"*, and a
- * low number does not read as Raketa doubting her (Q7). Each hole is the figure; each arrow points
+ * low number does not read as Rakieta doubting her (Q7). Each hole is the figure; each arrow points
  * at the figure's ⓘ mark.
  *
  * **The level's bubble stands beside it**, its arrow level with the ⓘ. The level's mark is at the top

@@ -16,7 +16,7 @@
  * keychain's autofill still offers the saved address; *Password*, with **Show** and **Hide** inside the
  * box; ***Forgot password?***, quiet and right-aligned under the box it is about; **Sign in**; the
  * *or* rule; ***I have an invitation code***, the outlined way in a club's invitation opens; and *New
- * to Raketa? Create an account* at the sheet's foot.
+ * to Rakieta? Create an account* at the sheet's foot.
  *
  * **The boxes and buttons are the mock's, not the app's**: both boxes in the shared field's `stage`
  * look (a grey sentence-case label, a 48pt box, a 14pt value, a sentence-case *Show*) and both

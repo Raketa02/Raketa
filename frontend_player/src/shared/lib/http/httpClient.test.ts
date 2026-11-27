@@ -296,7 +296,7 @@ describe('the features host', () => {
 
     await httpGetFromFeaturesHost({ path: DATAFILE });
 
-    expect(transport.requests[0]?.url).toBe(`https://features.test.raketa.invalid${DATAFILE}`);
+    expect(transport.requests[0]?.url).toBe(`https://features.test.rakieta.invalid${DATAFILE}`);
   });
 
   it('returns the decoded document', async () => {

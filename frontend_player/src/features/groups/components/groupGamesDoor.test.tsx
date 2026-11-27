@@ -121,7 +121,7 @@ function person(n: number, name: string): Wire['GroupPersonSchema'] {
 /** Enough rated in each sport for a court, so a deck dealing nothing says *Nothing picked*. */
 const PAGE: Wire['GroupResponse'] = {
   ...GROUP,
-  link: 'https://raketa.app/join/P4PRACY2',
+  link: 'https://rakieta.app/join/P4PRACY2',
   join_policy: 'ANYONE',
   is_owner: false,
   rated_by_sport: [
@@ -468,7 +468,7 @@ describe('the deck never opens on the dimmed kind', () => {
 
       expect(
         await screen.findByText(
-          'You play padel competitively, so Raketa only puts you in competitive games.',
+          'You play padel competitively, so Rakieta only puts you in competitive games.',
         ),
       ).toBeTruthy();
       expect(
@@ -509,7 +509,7 @@ describe('the panel', () => {
 
     expect(
       await screen.findByText(
-        'You play padel competitively, so Raketa only puts you in competitive games.',
+        'You play padel competitively, so Rakieta only puts you in competitive games.',
       ),
     ).toBeTruthy();
     expect(screen.getByText('Want for-fun games too?')).toBeTruthy();
@@ -549,7 +549,7 @@ describe('the panel', () => {
     await openTheDoor('Competitive');
 
     expect(
-      await screen.findByText('You play padel for fun, so Raketa only puts you in for-fun games.'),
+      await screen.findByText('You play padel for fun, so Rakieta only puts you in for-fun games.'),
     ).toBeTruthy();
     expect(screen.getByText('Want competitive games too?')).toBeTruthy();
     expect(
@@ -580,7 +580,7 @@ describe('the panel', () => {
 
     expect(await screen.findByText('Get for-fun games as well as competitive ones.')).toBeTruthy();
     expect(
-      screen.getByText('Raketa stops dealing you competitive games. Games you’re In on stay.'),
+      screen.getByText('Rakieta stops dealing you competitive games. Games you’re In on stay.'),
     ).toBeTruthy();
     expect(screen.getByText('Nothing picked right now', HIDDEN_TOO)).toBeTruthy();
   });

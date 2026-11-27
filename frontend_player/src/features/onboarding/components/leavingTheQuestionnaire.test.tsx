@@ -532,7 +532,7 @@ describe('when abandoning does not go through', () => {
     fireEvent.press(await screen.findByLabelText(/^Stop rating Padel\./));
 
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
     ).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
     // Still on the question, still in the run: a failed abandonment abandons nothing.
@@ -561,7 +561,7 @@ describe('when abandoning does not go through', () => {
     // The abandonment stands — only the departure failed, and the confirm is where the
     // player can see that and try again.
     expect(
-      await screen.findByText("We couldn't reach Raketa. Check your connection and try again."),
+      await screen.findByText("We couldn't reach Rakieta. Check your connection and try again."),
     ).toBeTruthy();
 
     transport.on('POST', '/api/v1/assessments', () => json(TENNIS_OPENING, 201));

@@ -52,7 +52,7 @@
  *
  * ## The way back from the bank's own app
  *
- * A bank that checks in its own app returns to Raketa through the app's scheme, and on iOS Stripe's
+ * A bank that checks in its own app returns to Rakieta through the app's scheme, and on iOS Stripe's
  * SDK needs that address handed to it. The listener lives exactly as long as a confirmation, here,
  * so nothing else in the app hears of it — and `+native-intent` ignores an address it does not know,
  * so the screen underneath stays where it was.
@@ -172,7 +172,7 @@ export interface PaymentsPort {
   readonly confirmPayment: (ask: ConfirmPayment) => Promise<PaymentAnswer>;
 }
 
-/** Poland, in złoty — where every club charging through Raketa sells today. */
+/** Poland, in złoty — where every club charging through Rakieta sells today. */
 const MERCHANT_COUNTRY = 'PL';
 const CURRENCY = 'PLN';
 

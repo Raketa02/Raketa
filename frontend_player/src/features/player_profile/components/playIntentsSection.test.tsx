@@ -290,7 +290,7 @@ describe('what an answer costs, on You', () => {
     expect(await answer('FOR_FUN').findByText(goes)).toBeTruthy();
     expect(
       answer('COMPETITIVE').getByText(
-        'Raketa stops dealing you for-fun games. Games you’re In on stay.',
+        'Rakieta stops dealing you for-fun games. Games you’re In on stay.',
       ),
     ).toBeTruthy();
     expect(answer('NO_PREFERENCE').queryByText(ANY_COST)).toBeNull();

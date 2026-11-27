@@ -35,9 +35,9 @@ const HOW_YOU_PLAY: Readonly<Record<GameKind, string>> = {
 /** The kind the player plays, and the kind they tapped. */
 type DoorKinds = Pick<DoorPanel, 'yours' | 'tapped'>;
 
-/** *You play padel competitively, so Raketa only puts you in competitive games.* */
+/** *You play padel competitively, so Rakieta only puts you in competitive games.* */
 export function doorTitle({ yours }: DoorKinds, sportInLine: string): string {
-  return `You play ${sportInLine} ${HOW_YOU_PLAY[yours]}, so Raketa only puts you in ${BEFORE_A_NOUN[yours]} games.`;
+  return `You play ${sportInLine} ${HOW_YOU_PLAY[yours]}, so Rakieta only puts you in ${BEFORE_A_NOUN[yours]} games.`;
 }
 
 /** *Want for-fun games too?* */
@@ -57,7 +57,7 @@ export function eitherCost({ yours, tapped, count }: DoorPanel): string {
 /** Under the kind tapped: *Your 7 competitive cards go. Games you’re In on stay.* */
 export function dropCost({ yours, count }: DoorPanel): string {
   const stay = 'Games you’re In on stay.';
-  if (count === 0) return `Raketa stops dealing you ${BEFORE_A_NOUN[yours]} games. ${stay}`;
+  if (count === 0) return `Rakieta stops dealing you ${BEFORE_A_NOUN[yours]} games. ${stay}`;
   const cards = counted(
     count,
     `${BEFORE_A_NOUN[yours]} card goes`,

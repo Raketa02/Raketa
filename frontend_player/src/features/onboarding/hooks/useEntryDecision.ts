@@ -54,7 +54,7 @@ import { entryDestinationOf } from '../use-cases/entryDestination';
  *
  * `networkMode: 'online'` *pauses* a query rather than failing it. A paused query attempted
  * nothing, produced no `AppError`, and **resumes itself** the moment the connection is back —
- * so synthesising a failure for it, as this hook did, rendered *"We couldn't reach Raketa.
+ * so synthesising a failure for it, as this hook did, rendered *"We couldn't reach Rakieta.
  * Check your connection and try again"* over a launch where nothing had been tried and there
  * was nothing to try again. Three screens in this app already said the true thing at their own
  * paused queries; this was the one site that converted the state into an error and said the

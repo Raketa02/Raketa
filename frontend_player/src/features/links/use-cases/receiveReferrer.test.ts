@@ -7,11 +7,11 @@ import { receiveReferrer } from './receiveReferrer';
 
 describe('the install referrer arriving', () => {
   it('is a group link or a friend link it carried', () => {
-    expect(receiveReferrer('https://raketa.app/f/tk4m9q2z', null)).toEqual({
+    expect(receiveReferrer('https://rakieta.app/f/tk4m9q2z', null)).toEqual({
       kind: 'friend',
       code: 'tk4m9q2z',
     });
-    expect(receiveReferrer('https://raketa.app/join/k7pq2mxa', null)).toEqual({
+    expect(receiveReferrer('https://rakieta.app/join/k7pq2mxa', null)).toEqual({
       kind: 'join',
       code: 'k7pq2mxa',
     });
@@ -24,7 +24,7 @@ describe('the install referrer arriving', () => {
 
   it('never takes the place of a link already held', () => {
     expect(
-      receiveReferrer('https://raketa.app/f/tk4m9q2z', { kind: 'join', code: 'k7pq2mxa' }),
+      receiveReferrer('https://rakieta.app/f/tk4m9q2z', { kind: 'join', code: 'k7pq2mxa' }),
     ).toBeUndefined();
   });
 });

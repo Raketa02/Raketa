@@ -15,7 +15,7 @@ export const START_PLAYING_EYEBROW = NAMING_EYEBROW;
 export const START_PLAYING_TITLE = 'Start playing';
 
 /** Under the title: why the one question is asked. */
-export const START_PLAYING_SUBLINE = 'Playing on Raketa is for adults only.';
+export const START_PLAYING_SUBLINE = 'Playing on Rakieta is for adults only.';
 
 /** The naming step's *Continue*, promising this step's next one. */
 export const START_PLAYING_CONTINUE = {

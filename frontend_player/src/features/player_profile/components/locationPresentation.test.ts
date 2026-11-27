@@ -45,7 +45,7 @@ describe('the control that reads the device', () => {
 describe('what the step says the area is for', () => {
   it('is ADR-0200 §10’s sentence: club distances, the rounding, and nobody else sees it', () => {
     expect(WHY_BODY).toBe(
-      'Raketa shows how far each club is and lists the nearest first. Your area is rounded to about a kilometre and never shown to other players.',
+      'Rakieta shows how far each club is and lists the nearest first. Your area is rounded to about a kilometre and never shown to other players.',
     );
   });
 
@@ -88,7 +88,7 @@ describe('the one written trace of the cold-start refresh', () => {
    */
   it('says when the area moves and how coarse it is, as the words have it', () => {
     expect(AREA_UPDATES_LINE).toBe(
-      'Your area updates each time you open Raketa; it is never finer than about a kilometre.',
+      'Your area updates each time you open Rakieta; it is never finer than about a kilometre.',
     );
   });
 });

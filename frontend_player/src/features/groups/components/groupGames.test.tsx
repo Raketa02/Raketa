@@ -147,7 +147,7 @@ function person(n: number, name: string): Wire['GroupPersonSchema'] {
 /** Five of the crew rated in padel — enough for a court, so an empty deck says *Nothing picked*. */
 const PAGE: Wire['GroupResponse'] = {
   ...CREW,
-  link: 'https://raketa.app/join/K7PQ2MXA',
+  link: 'https://rakieta.app/join/K7PQ2MXA',
   join_policy: 'ANYONE',
   is_owner: false,
   rated_by_sport: [

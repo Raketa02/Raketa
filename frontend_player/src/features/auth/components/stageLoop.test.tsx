@@ -277,7 +277,7 @@ describe('the splash, per mocks 7–8', () => {
     drawSignIn();
     clockTo(WORD_LANDED_AT + SETTLE);
 
-    expect(screen.getByText('Raketa', HIDDEN_TOO)).toBeTruthy();
+    expect(screen.getByText('Rakieta', HIDDEN_TOO)).toBeTruthy();
     expect(screen.getByRole('header', { name: SIGN_IN_COPY.title })).toBeTruthy();
     expect(screen.queryByText('It’s a game!')).toBeNull();
   });

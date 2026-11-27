@@ -783,7 +783,7 @@ describe('a player who refuses the photo library', () => {
 
     await addPhotos();
 
-    expect(await screen.findByText('Raketa has no access to your photos')).toBeTruthy();
+    expect(await screen.findByText('Rakieta has no access to your photos')).toBeTruthy();
     expect(screen.getByText(/Press Add a photo again to allow it/)).toBeTruthy();
   });
 
@@ -796,7 +796,7 @@ describe('a player who refuses the photo library', () => {
     await addPhotos();
 
     expect(await screen.findByText('Photo access is turned off')).toBeTruthy();
-    expect(screen.getByText(/Turn it on for Raketa in Settings/)).toBeTruthy();
+    expect(screen.getByText(/Turn it on for Rakieta in Settings/)).toBeTruthy();
   });
 
   it('is told nothing at all when they simply backed out of the picker', async () => {

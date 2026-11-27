@@ -220,7 +220,7 @@ describe('what a player lands on', () => {
     }
     expect(asked.filter((path) => path.includes('featurevisor'))).toEqual([DATAFILE_PATH]);
     const [datafile] = transport.requestsTo('GET', DATAFILE_PATH);
-    expect(datafile?.url).toBe(`https://features.test.raketa.invalid${DATAFILE_PATH}`);
+    expect(datafile?.url).toBe(`https://features.test.rakieta.invalid${DATAFILE_PATH}`);
     expect(datafile?.headers.Authorization).toBeUndefined();
   });
 });

@@ -110,7 +110,7 @@ function pageOf(group: Wire['MyGroupSchema']): Wire['GroupResponse'] {
   const official = group.kind === 'OFFICIAL';
   return {
     ...group,
-    link: 'https://raketa.app/join/K7PQ2MXA',
+    link: 'https://rakieta.app/join/K7PQ2MXA',
     join_policy: 'PEOPLE_I_APPROVE',
     is_owner: false,
     ...(official ? { declared_sports: group.sports } : {}),

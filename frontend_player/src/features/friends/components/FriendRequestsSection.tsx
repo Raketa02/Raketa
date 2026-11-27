@@ -31,7 +31,7 @@
  *
  * The face, *ines.d wants to be your friend*, the sport-levels line, and the reliability chip under
  * them. **The where-line and every found-by line are gone** (Q2): *With you in Kazimierz crew · Padel
- * 3,40*, *Invited you to Raketa*, *Found you in the padel ranking*, and Home rows' three. Where a
+ * 3,40*, *Invited you to Rakieta*, *Found you in the padel ranking*, and Home rows' three. Where a
  * request was found is still recorded and served; no tile draws it, nor the request's own `sport` and
  * `level`, which are an older app's.
  *

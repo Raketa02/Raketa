@@ -118,7 +118,7 @@ const CREW: Wire['MyGroupSchema'] = {
 
 const CREW_PAGE: Wire['GroupResponse'] = {
   ...CREW,
-  link: 'https://raketa.app/join/K7PQ2MXA',
+  link: 'https://rakieta.app/join/K7PQ2MXA',
   join_policy: 'ANYONE',
   is_owner: false,
   rated_by_sport: [{ sport: 'PADEL', rated_count: 5, first_rated: [] }],
@@ -630,10 +630,10 @@ describe('a push while the app is open', () => {
     await launchSignedIn();
     await screen.findByLabelText('You');
 
-    act(() => phone.receive({ title: 'Raketa', body: 'Something', data: { opens: '../admin' } }));
+    act(() => phone.receive({ title: 'Rakieta', body: 'Something', data: { opens: '../admin' } }));
 
-    expect(await screen.findByText('Raketa')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Raketa. Something' })).toBeNull();
+    expect(await screen.findByText('Rakieta')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Rakieta. Something' })).toBeNull();
   });
 });
 

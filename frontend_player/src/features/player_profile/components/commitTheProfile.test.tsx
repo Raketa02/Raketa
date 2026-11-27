@@ -477,7 +477,7 @@ describe('a failed commit', () => {
     fireEvent.press(finish());
 
     expect(
-      await screen.findByText(/We couldn't reach Raketa. Check your connection and try again./),
+      await screen.findByText(/We couldn't reach Rakieta. Check your connection and try again./),
     ).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
     // Nothing was lost, and the screen says so — the one question a player who just answered
@@ -607,7 +607,7 @@ describe('once the commit has landed', () => {
   async function commitAndLeave() {
     await reachTheFinish();
     fireEvent.press(finish());
-    // **Home, and nothing between.** *What Raketa keeps* stood here and recorded nothing.
+    // **Home, and nothing between.** *What Rakieta keeps* stood here and recorded nothing.
     expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
   }
 

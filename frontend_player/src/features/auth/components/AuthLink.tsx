@@ -1,5 +1,5 @@
 /**
- * **The sign-in screen's text link, as a piece** — *New to Raketa? Create an account*, and now
+ * **The sign-in screen's text link, as a piece** — *New to Rakieta? Create an account*, and now
  * *Forgot password?* under the button and the way back from each recovery screen.
  *
  * **A real 44pt control rather than a line of text.** A `Link` renders a `Text`, whose reachable
@@ -31,7 +31,7 @@ import { theme } from '@/shared/ui';
 type Target = { readonly href: Href } | { readonly onPress: () => void };
 
 export type AuthLinkProps = Target & {
-  /** Muted words before the link — *New to Raketa?* — or nothing. */
+  /** Muted words before the link — *New to Rakieta?* — or nothing. */
   readonly lead?: string;
   /** What the link says, and its accessible name. */
   readonly label: string;
