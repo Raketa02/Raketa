@@ -134,7 +134,7 @@ expect_exit 2 "an app the check does not know is a usage error" \
 expect_exit 2 "an app with no gen:api script is a usage error" \
   bash "$CHECK" backend
 expect_exit 2 "a path is not an app" \
-  bash "$CHECK" ../raketa/frontend_player
+  bash "$CHECK" ../rakieta/frontend_player
 expect_exit 2 "no app at all is a usage error" \
   bash "$CHECK"
 

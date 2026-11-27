@@ -30,21 +30,21 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: raketa
-          POSTGRES_USER: raketa_user
-          POSTGRES_PASSWORD: raketa_pwd
+          POSTGRES_DB: rakieta
+          POSTGRES_USER: rakieta_user
+          POSTGRES_PASSWORD: rakieta_pwd
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U raketa_user -d raketa"
+          --health-cmd "pg_isready -U rakieta_user -d rakieta"
           --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-backend
       - name: Coverage
         env:
-          WRITER_DB_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
-          EVENT_TEST_DATABASE_URL: postgresql+asyncpg://raketa_user:raketa_pwd@localhost:5432/raketa
+          WRITER_DB_URL: postgresql+asyncpg://rakieta_user:rakieta_pwd@localhost:5432/rakieta
+          EVENT_TEST_DATABASE_URL: postgresql+asyncpg://rakieta_user:rakieta_pwd@localhost:5432/rakieta
           DB_SSL_MODE: disable
           JWT_SECRET_KEY: ci-secret-do-not-use-in-prod
         run: make coverage

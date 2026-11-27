@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AFK agent loop for Raketa, driven by sandbuket.
+"""AFK agent loop for Rakieta, driven by sandbuket.
 
 Usage from the repo root:
 
@@ -49,7 +49,7 @@ asyncio.create_subprocess_exec = _create_subprocess_exec_unbounded  # type: igno
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PROMPT_FILE = REPO_ROOT / ".sandbuket" / "prompt.md"
 COMPLETION_SIGNAL = "<promise>COMPLETE</promise>"
-DEFAULT_IMAGE = "sandbuket:raketa"
+DEFAULT_IMAGE = "sandbuket:rakieta"
 DEFAULT_BRANCH = "agent/afk"
 DEFAULT_MODEL = "claude-opus-5"
 # xhigh is the documented best setting for coding and agentic work, and is the

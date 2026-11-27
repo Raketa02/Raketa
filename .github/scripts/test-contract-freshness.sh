@@ -151,14 +151,14 @@ restore
 # one is invisible to that client's drift check, which regenerates the types
 # FROM it and finds them in perfect agreement — so this is the only gate that
 # sees it.
-edit_doc "$CLUB" "data['info']['title'] = 'Raketa Club API, hand-edited'"
+edit_doc "$CLUB" "data['info']['title'] = 'Rakieta Club API, hand-edited'"
 run_check
 had_exit 1 "a hand-edited openapi.club.json is drift"
 said "backend/openapi.club.json" "the failure names the club website's document"
 said "frontend_club" "the failure names the club website as its client"
 restore
 
-edit_doc "$PUBLIC" "data['info']['title'] = 'Raketa Public API, hand-edited'"
+edit_doc "$PUBLIC" "data['info']['title'] = 'Rakieta Public API, hand-edited'"
 run_check
 had_exit 1 "a hand-edited openapi.public.json is drift"
 said "backend/openapi.public.json" "the failure names the public site's document"

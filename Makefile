@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Raketa monorepo — root helpers.
+# Rakieta monorepo — root helpers.
 #
 # Each app owns its own commands: backend/Makefile, and the pnpm scripts in
 # frontend_player/, frontend_club/ and frontend_public/. Targets here are only
@@ -132,7 +132,7 @@ afk-install:       ## install the AFK tooling into tools/afk
 	poetry -C tools/afk install
 
 afk-build:         ## build the sandbox image (aligned to your UID/GID)
-	docker build -t sandbuket:raketa \
+	docker build -t sandbuket:rakieta \
 	  --build-arg AGENT_UID=$$(id -u) --build-arg AGENT_GID=$$(id -g) \
 	  -f .sandbuket/Dockerfile .sandbuket
 

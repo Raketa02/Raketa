@@ -1,6 +1,6 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# Ownership boundary guard for the Raketa monorepo.
+# Ownership boundary guard for the Rakieta monorepo.
 #
 # The repo holds independently deployable apps (ADR-0005, ADR-0187). An agent working
 # in one of them must not silently edit another — that is how a "small backend fix" quietly

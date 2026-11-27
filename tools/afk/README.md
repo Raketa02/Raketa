@@ -1,6 +1,6 @@
 # AFK Agent Loop (`sandbuket`)
 
-Run AI coding agents away-from-keyboard over the Raketa monorepo — all three
+Run AI coding agents away-from-keyboard over the Rakieta monorepo — all three
 apps, one at a time. An agent works a single issue per iteration and respects the
 ownership boundary, so a task that would cross apps is one to split rather than
 one to reach across.
@@ -49,7 +49,7 @@ poetry -C tools/afk run python afk.py 3 --label ready-for-agent
 ```
 
 Options: `iterations` (default 5), `--branch` (default `agent/afk`),
-`--base-branch` (default current HEAD), `--image` (default `sandbuket:raketa`),
+`--base-branch` (default current HEAD), `--image` (default `sandbuket:rakieta`),
 `--model` (default `claude-opus-5`), `--effort`
 (`low|medium|high|xhigh|max`, default `xhigh`), and `--label` (default
 `ready-for-agent`).
