@@ -313,7 +313,7 @@ async def test_top_ten_reads_ten_in_padel_the_pair_in_squash_and_nobody_in_badmi
     assert badminton == {"sport": "BADMINTON", "anyone_listed": True, "players": []}
     # Nobody else plays squash, and the pair hold none of her tags: no row of
     # hers reads them, and their group of two is left off Hottest groups.
-    for row in ("/api/v1/same-level", "/api/v1/same-vibe", "/api/v1/new-in-raketa"):
+    for row in ("/api/v1/same-level", "/api/v1/same-vibe", "/api/v1/new-in-rakieta"):
         read = (await client.get(row, headers=her)).json()
         assert not set(pair) & {one["nickname"] for one in read["players"]}, row
     assert await assert_the_top_ten(session_factory, settings=get_settings(), now=now)

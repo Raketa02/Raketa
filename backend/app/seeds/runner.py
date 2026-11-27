@@ -254,11 +254,11 @@ from app.seeds.same_vibe import (
     same_vibe_lines,
     write_same_vibe,
 )
-from app.seeds.new_in_raketa import (
+from app.seeds.new_in_rakieta import (
     SeededJoiners,
-    assert_new_in_raketa,
-    new_in_raketa_lines,
-    write_new_in_raketa,
+    assert_new_in_rakieta,
+    new_in_rakieta_lines,
+    write_new_in_rakieta,
 )
 from app.seeds.top_ten import (
     SQUASH_PAIR,
@@ -1302,9 +1302,9 @@ class SeedReport:
     #: The HOTTEST group and her request waiting on it (#792). ``None`` on the
     #: same callers.
     hottest_groups: SeededHottestGroups | None = None
-    #: New in Raketa's joiners and her three relations among them (#793).
+    #: New in Rakieta's joiners and her three relations among them (#793).
     #: ``None`` on the same callers.
-    new_in_raketa: SeededJoiners | None = None
+    new_in_rakieta: SeededJoiners | None = None
     #: Same competitive level's two requests, and how many fresh good matches
     #: her row held (#794). ``None`` on the same callers.
     same_level: SeededSameLevel | None = None
@@ -1582,10 +1582,10 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             crowd=[(member.member.handle, member.player_id) for member in crowd],
             money=money,
         )
-        # **New in Raketa's joiners after her friends layers** (#793): eight
+        # **New in Rakieta's joiners after her friends layers** (#793): eight
         # players outside the cohort across the 30 days and one past them, and
         # her three relations among them. Drained by the layer itself.
-        new_in_raketa = await write_new_in_raketa(
+        new_in_rakieta = await write_new_in_rakieta(
             session_factory,
             settings=settings,
             now=now,
@@ -1632,8 +1632,8 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             await assert_the_hottest_groups(
                 session_factory, settings=settings, now=now, seeded=hottest_groups
             ),
-            await assert_new_in_raketa(
-                session_factory, settings=settings, now=now, seeded=new_in_raketa
+            await assert_new_in_rakieta(
+                session_factory, settings=settings, now=now, seeded=new_in_rakieta
             ),
             await assert_the_top_ten(session_factory, settings=settings, now=now),
             await assert_the_for_fun_deck(
@@ -1668,7 +1668,7 @@ async def _seed_with(settings: Settings, money: SeedMoney) -> SeedReport:
             friends_games=friends_games,
             full_hour=full_hour,
             hottest_groups=hottest_groups,
-            new_in_raketa=new_in_raketa,
+            new_in_rakieta=new_in_rakieta,
             same_level=same_level,
             same_vibe=same_vibe,
             squash_pair=squash_pair,
@@ -1784,8 +1784,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *friends_game_lines(run_report.friends_games)])
     if run_report.hottest_groups is not None:
         lines.extend(["", *hottest_group_lines(run_report.hottest_groups)])
-    if run_report.new_in_raketa is not None:
-        lines.extend(["", *new_in_raketa_lines(run_report.new_in_raketa)])
+    if run_report.new_in_rakieta is not None:
+        lines.extend(["", *new_in_rakieta_lines(run_report.new_in_rakieta)])
     if run_report.same_level is not None:
         lines.extend(["", *same_level_lines(run_report.same_level)])
     if run_report.same_vibe is not None:

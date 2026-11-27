@@ -49,7 +49,7 @@ class AskToBeFriendsRequest(BaseModel):
             "screen's *PLAYED WITH* card, or **the record opened from the "
             "Rankings page** — `RANKING`, with that page's `sport` (#773). Their "
             "Home card and notice then read *Found you in the padel ranking*, "
-            "whether or not you share a group. From Home's **New in Raketa** "
+            "whether or not you share a group. From Home's **New in Rakieta** "
             "row, or a record opened from it — `NEW_PLAYERS` (#793): their card "
             "and notice read *Found you among new players*. From Home's **Same "
             "competitive level players** row, or a record opened from it — "

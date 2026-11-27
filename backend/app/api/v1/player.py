@@ -20,7 +20,7 @@ from app.modules.conversations.presentation.routes import (
     router as conversations_router,
 )
 from app.modules.discovery.presentation.routes import (
-    new_in_raketa_router,
+    new_in_rakieta_router,
     on_screen_router,
     same_level_router,
     same_vibe_router,
@@ -110,7 +110,7 @@ player_api_router.include_router(groups_router)
 player_api_router.include_router(home_clubs_router)
 player_api_router.include_router(join_search_router)
 player_api_router.include_router(hottest_groups_router)
-player_api_router.include_router(new_in_raketa_router)
+player_api_router.include_router(new_in_rakieta_router)
 player_api_router.include_router(same_level_router)
 player_api_router.include_router(same_vibe_router)
 player_api_router.include_router(top_ten_router)

@@ -328,7 +328,7 @@ mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
   `starts_at` are `None`, **the group a request was asked from rides as `pool_id`** and its sport
   as `sport` (both `None` for a link's, whose `reason` is `BY_LINK`; a request made from the
   ranking names its sport and no group, `reason` `FROM_THE_RANKING`, and reads *Found you in the
-  padel ranking*, #773; one from New in Raketa names no group, `reason` `FROM_NEW_PLAYERS`, and
+  padel ranking*, #773; one from New in Rakieta names no group, `reason` `FROM_NEW_PLAYERS`, and
   reads *Found you among new players*, #793; one from Same competitive level names its sport and
   no group, `reason` `FROM_SAME_LEVEL`, and reads *Your level in padel · 91% even* — today's %
   between the notice's reader and the requester, through Notifications' own **`PercentsEven`**

@@ -186,18 +186,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   and fails unless the row is its first six and the row's total and the first page's are
   the number it lists, capped at 100. Proven on a fresh Postgres 17, run twice: no group or
   booking event the second time.
-- **New in Raketa needs newcomers in relations to her, so eight are written for it**
-  (#793, `app/seeds/new_in_raketa.py`; `discovery.md`): `NEWCOMERS`, outside the cohort, by
+- **New in Rakieta needs newcomers in relations to her, so eight are written for it**
+  (#793, `app/seeds/new_in_rakieta.py`; `discovery.md`): `NEWCOMERS`, outside the cohort, by
   `seed_the_cohort` on the clock their row names — today (no level), yesterday (she asked them
   from the row), 2 days (they asked her), 4 days (her friend, no level), 9, 16, 23 days, and 35
   days, out — in no group. After the Hottest groups layer, drained by the layer itself;
-  `assert_new_in_raketa` reads her row and See all among the screens, the relations held only
+  `assert_new_in_rakieta` reads her row and See all among the screens, the relations held only
   on the run that wrote them (their ages are that run's). The friends layer's Home claim reads
   the named accounts alone, since the newcomer who asked her is on her Home too.
 - **Same competitive level writes no player, and a request each way** (#794,
   `app/seeds/same_level.py`; `discovery.md`): the cohort already sits around her padel and
   tennis Levels, so she asks `cohort-c-01` from the row and `cohort-b-03` asks her, both in
-  padel, after New in Raketa, drained by the layer itself; `assert_same_level` reads her row
+  padel, after New in Rakieta, drained by the layer itself; `assert_same_level` reads her row
   and See all among the screens. **Nobody on the seed reads 70%** — five results leave a Level
   as unsure as hers — so her row is all gaps, and the run says so as a cost.
 - **Same vibe writes no player, gives her six tags, and a request each way** (#795,

@@ -422,7 +422,7 @@ async def test_unknown_and_excluded_ids_are_ignored(
 
 async def test_a_report_names_a_row_that_rests(client, tomek, crowd):
     for body in (
-        {"row": "NEW_IN_RAKETA", "player_ids": [str(crowd["kuba"]["id"])]},
+        {"row": "NEW_IN_RAKIETA", "player_ids": [str(crowd["kuba"]["id"])]},
         {"row": SAME_VIBE, "player_ids": []},
         {"row": SAME_VIBE, "player_ids": ["not-an-id"]},
     ):

@@ -2,7 +2,7 @@
 paths:
   - "app/modules/discovery/**"
   - "app/bootstrap/discovery_demands.py"
-  - "app/seeds/new_in_raketa.py"
+  - "app/seeds/new_in_rakieta.py"
   - "app/seeds/same_level.py"
   - "app/seeds/same_vibe.py"
   - "migrations/versions/0073_player_directory.py"
@@ -19,8 +19,8 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
 `CONTEXT.md`'s *Discovery* section and the words §31.5–§31.8, §31.10.
 
 - **The people rows' context, with no aggregate and no event of its own** — it registers nothing
-  in the catalog. It owns *Same competitive level players*, *New in Raketa* and *Same vibe
-  players*, their See all reads and the copies they read. **New in Raketa** (#793), **Same
+  in the catalog. It owns *Same competitive level players*, *New in Rakieta* and *Same vibe
+  players*, their See all reads and the copies they read. **New in Rakieta** (#793), **Same
   competitive level** (#794, with the current levels), **Same vibe** (#795), **the rest
   count** (#796) and **each row's total** (#812) are built.
 - **The player directory, a stated exception to *derived, never stored*** (ADR-0204 §10;
@@ -42,7 +42,7 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   the `users` row, the profile's stream) rather than applying the event, so a redelivery
   writes the same rows, a delivery out of order writes what the owners hold, and **the
   rebuild** (`RebuildTheDirectory`, every User stream oldest first) writes what live delivery
-  did — `tests/api/test_new_in_raketa.py` holds it, twice. A new field a row reads is a new
+  did — `tests/api/test_new_in_rakieta.py` holds it, twice. A new field a row reads is a new
   event in `FOLLOWED` too. **An account the owners no longer know is forgotten** — no active
   `users` row, today only a disabled one (nothing disables an account yet:
   `tests/unit/test_directory_follower.py` holds the seam) — with its tags.
@@ -59,10 +59,10 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   followed through the outbox** here, unlike the record's admission, which reads it live: a
   player who turns it off leaves the rows on the read after the delivery (call 12).
 - **One person on the row is a `Joiner`** in the code — never a *newcomer*, which is the
-  glossary's 14-day **Newcomer** (root `CONTEXT.md` › Discovery › *New in Raketa*, _Avoid_) —
-  and on the wire a `NewInRaketaPlayerSchema` under `players`.
-- **New in Raketa** (`domain/new_in_raketa.py`, `application/new_in_raketa.py`):
-  `GET /new-in-raketa` and `GET /new-in-raketa/all?sport&after` (player surface). **New is
+  glossary's 14-day **Newcomer** (root `CONTEXT.md` › Discovery › *New in Rakieta*, _Avoid_) —
+  and on the wire a `NewInRakietaPlayerSchema` under `players`.
+- **New in Rakieta** (`domain/new_in_rakieta.py`, `application/new_in_rakieta.py`):
+  `GET /new-in-rakieta` and `GET /new-in-rakieta/all?sport&after` (player surface). **New is
   strictly the last 30 days** (`NEW_FOR`): `now − joined < 30 days`, so a player who joined
   exactly 30 days ago is out. **The row is the 10 newest, then ordered** — the unconnected
   first (an `ASKED_YOU` among them, call 7), then `SENT`, then `FRIEND`, newest first within
@@ -72,7 +72,7 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   the cursor (`after`, `next`) is the last card's key (*joined* in microseconds and the id,
   base64url), and a page is everybody strictly behind it as the list stands now, so a sign-up
   between two pages moves nothing; a cursor this server never wrote is `400
-  not_a_new_in_raketa_page`. With `sport`, only joiners holding a level in it; `sports` is every
+  not_a_new_in_rakieta_page`. With `sport`, only joiners holding a level in it; `sports` is every
   sport at least one joiner holds a level in, whatever the filter. **`days_since_joined` is
   Warsaw days** (call 8) — the phone words it (*Joined today* … *Joined 4 weeks ago*, the words
   §31.7). Each card: id, nickname, first photo and its link, `joined_at`, every sport with a
@@ -82,7 +82,7 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
 - **See all reads every joiner's levels** — one stream load per joiner and sport — because
   the pill and the filter need them all. Bounded by the month's sign-ups, and still live:
   `LevelsHeld` is the port the current levels (below) can swap behind, a call #794 left —
-  New in Raketa's tests file their levels straight on the log, which the projection never
+  New in Rakieta's tests file their levels straight on the log, which the projection never
   hears.
 - **A request from the row is `made_from` `NEW_PLAYERS`** (Friends' `RequestOrigin`, the
   phone sends it from a record opened from the row too): **no group and no sport**
@@ -103,13 +103,13 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   `tests/unit/test_discovery_relation.py`, and the owners' events are read in
   `infrastructure/event_subscriptions.py`. It tells nobody anything (the mechanics §14), so it
   is on Notifications' forbidden list.
-- **Seeded by `app/seeds/new_in_raketa.py`**, after the friends and Hottest groups layers:
+- **Seeded by `app/seeds/new_in_rakieta.py`**, after the friends and Hottest groups layers:
   `JOINERS`, eight players **outside the cohort** written by `seed_the_cohort` on the clock
   their row names — joined today with no level, yesterday (padel, badminton; **she asked them
   from the row**, so their Home reads *Found you among new players*), 2 days ago (padel; **asked
   her**), 4 days ago (no level; **her friend**), 9, 16 and 23 days ago (tennis, nothing,
   squash) and **35 days ago, out** — in no group, so nobody deals them. Her relations go through
-  the friends' use cases, each pair read first. `assert_new_in_raketa` reads her row and every
+  the friends' use cases, each pair read first. `assert_new_in_rakieta` reads her row and every
   See all page among the screens and fails the run by name unless the 35-day one is out, the
   row is in order, its cards are in See all and it holds 10 whenever See all holds more — and,
   **on the run that wrote them**, the four relations on her row and the tennis filter. The
@@ -183,7 +183,7 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   reader's, to the hundredth, signed; never `gap`, which is the glossary's place in a row) and
   `your_band` (`LevelBandSchema`) — and `relation`, **no request
   id**, as #793's call has it.
-- **Seeded by `app/seeds/same_level.py`**, after New in Raketa: **no player of its own** —
+- **Seeded by `app/seeds/same_level.py`**, after New in Rakieta: **no player of its own** —
   the cohort already sits around her padel 3,21 and tennis 3,39, with results and on the
   questionnaire alone, her padel friends `cohort-a-08` and `cohort-a-11` among the most even —
   only **a request each way from the row**, in padel, each pair read first: she asks
@@ -261,7 +261,7 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   the cohort's own draws meet hers at every count: `cohort-a-01` all six, `cohort-a-15` and
   `cohort-d-07` five — re-picked, two of them among ADR-0207's eight, when #832 redrew the
   cohort from all twenty-seven tags), the ranking's crowd shares two, the For-fun deck's four
-  five to one, and the New in Raketa joiners none — and
+  five to one, and the New in Rakieta joiners none — and
   **a request each way from the row**, each pair read first: she asks `cohort-a-15`
   (`SHE_ASKS`, five in common) and `cohort-a-01` (`ASKS_HER`, six) asks her. **A store seeded
   before #795** committed her three — and one seeded before #832 her old six — and the commit
@@ -303,7 +303,7 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   the friends, the requests sent and the weaker matches, best first. **The count never resets**
   (call 9): a rested player added stays a gap as `SENT` or `FRIEND`, and is still rested when
   the request is cancelled or the friendship removed. **See all rests nobody**, and New in
-  Raketa is never reported. `tests/api/test_rows_stay_alive.py` walks it over HTTP, day by
+  Rakieta is never reported. `tests/api/test_rows_stay_alive.py` walks it over HTTP, day by
   day on the request's clock; `tests/unit/test_same_level_widening.py` holds a crowd with rests
   to the brute force.
 - **A gone account's rows go on either side** (`RestCount.forget`, by the viewer's key prefix
@@ -318,11 +318,11 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
   and the reader's blocks, **each person once**, `0` for an empty or hidden row; FOR YOU's line
   count and *See all N ›*. ADR-0205 calls them the rows' *pools*; the code doesn't, since **Pool**
   is the glossary's word for whom a game is dealt to. Additive on the wire
-  (`NewInRaketaResponse`, `SameLevelResponse`, `SameVibeResponse`); See all carries none. **Counted
+  (`NewInRakietaResponse`, `SameLevelResponse`, `SameVibeResponse`); See all carries none. **Counted
   up to 100** (`COUNTED_UP_TO`, `capped`), because the phone draws *99+* past 99: counting on buys
   nothing on screen and costs a scan of everybody who qualifies. **Each adds at most one statement
   to its row's read, and none scores anybody**:
-  - *New in Raketa*: **the row itself when it came back short of ten** (it is everybody); otherwise
+  - *New in Rakieta*: **the row itself when it came back short of ten** (it is everybody); otherwise
     `how_many_joined`, one count with a `LIMIT 100` inside it (`count_up_to`) on
     `ix_discovery_players_joined_at`'s range.
   - *Same vibe*: **`count(*) OVER ()` on the first batch's page** (`alike(…, counting=True)`,
@@ -341,7 +341,7 @@ Decisions that are load-bearing and not obvious from the code (#793, #794, #795,
     100, which an answer capped at 100 never does.
   - **Held by `statements`** (`tests/conftest.py`, any API test's): each row's API test counts the
     statements on the row's own tables, where any total's cost lands (the neighbours' — the session,
-    the blocks, Friends, the rating — are the cards', and move with their owners): New in Raketa
+    the blocks, Friends, the rating — are the cards', and move with their owners): New in Rakieta
     reads the directory once below ten and twice from ten, the second a count; Same vibe reads the
     tag rows twice, the reader's and the one pass, and See all's pass has no window; Same
     competitive level counts nothing after a drained or hundred-strong read and once, with one

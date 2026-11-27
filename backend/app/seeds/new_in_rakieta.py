@@ -1,4 +1,4 @@
-"""New in Raketa: joiners across the 30 days, and her three relations among
+"""New in Rakieta: joiners across the 30 days, and her three relations among
 them (#793; the home-rows mechanics §7, §20).
 
 **Why joiners of their own.** The cohort already has members inside the 30
@@ -27,7 +27,7 @@ the directory holds them before the screens are read.
 a profile already committed records nothing. **Only a fresh store's run is held
 to the whole row**: the ages are the first run's, so a run weeks later finds
 them older — the 35-day one long out, the rest following — and reports rather
-than fails on what time took. ``assert_new_in_raketa`` reads her row and See
+than fails on what time took. ``assert_new_in_rakieta`` reads her row and See
 all through their own use cases, among the screens.
 """
 
@@ -42,15 +42,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bootstrap.composition import (
     build_accept_friend_request,
     build_ask_to_be_friends,
-    build_read_new_in_raketa,
-    build_read_new_in_raketa_page,
+    build_read_new_in_rakieta,
+    build_read_new_in_rakieta_page,
     build_read_relations,
     build_user_repository,
 )
 from app.core.config import Settings
 from app.kernel import Instant, Sport
-from app.modules.discovery.application.new_in_raketa import JoinerCard
-from app.modules.discovery.domain.new_in_raketa import ON_THE_ROW
+from app.modules.discovery.application.new_in_rakieta import JoinerCard
+from app.modules.discovery.domain.new_in_rakieta import ON_THE_ROW
 from app.modules.discovery.domain.relation import Relation
 from app.modules.discovery.domain.totals import capped
 from app.modules.friends.application.commands import AnswerCommand, AskCommand
@@ -166,7 +166,7 @@ class SeededJoiners:
     created: bool
 
 
-async def write_new_in_raketa(
+async def write_new_in_rakieta(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     settings: Settings,
@@ -265,7 +265,7 @@ async def _ask(
 # --------------------------------------------------------------------------- #
 
 
-async def assert_new_in_raketa(
+async def assert_new_in_rakieta(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     settings: Settings,
@@ -278,21 +278,21 @@ async def assert_new_in_raketa(
     clock = FixedClock(at=now)
     async with session_factory() as session:
         her = await _her(session)
-        read = await build_read_new_in_raketa(
+        read = await build_read_new_in_rakieta(
             session, settings=settings, clock=clock
         ).execute(her)
         row = read.cards
         everyone: list[JoinerCard] = []
-        page = await build_read_new_in_raketa_page(
+        page = await build_read_new_in_rakieta_page(
             session, settings=settings, clock=clock
         ).execute(her, sport=None, after=None)
         everyone.extend(page.cards)
         while page.next is not None:
-            page = await build_read_new_in_raketa_page(
+            page = await build_read_new_in_rakieta_page(
                 session, settings=settings, clock=clock
             ).execute(her, sport=None, after=page.next)
             everyone.extend(page.cards)
-        tennis = await build_read_new_in_raketa_page(
+        tennis = await build_read_new_in_rakieta_page(
             session, settings=settings, clock=clock
         ).execute(her, sport=Sport.TENNIS, after=None)
 
@@ -300,7 +300,7 @@ async def assert_new_in_raketa(
     listed = {card.player_id for card in everyone}
     out = seeded.ids[OUT_OF_THE_MONTH]
     if not row or len(row) > ON_THE_ROW:
-        raise RuntimeError(f"her New in Raketa row holds {len(row)} cards")
+        raise RuntimeError(f"her New in Rakieta row holds {len(row)} cards")
     if out in on_the_row or out in listed:
         raise RuntimeError("the joiner who joined 35 days ago is still new")
     _refuse_a_row_out_of_order(row)
@@ -312,7 +312,7 @@ async def assert_new_in_raketa(
         )
     if read.total != capped(len(listed)):
         raise RuntimeError(
-            f"her New in Raketa line counts {read.total} and See all lists "
+            f"her New in Rakieta line counts {read.total} and See all lists "
             f"{len(listed)}"
         )
     if seeded.created:
@@ -333,7 +333,7 @@ async def assert_new_in_raketa(
         if seeded.ids[PLAYS_TENNIS] not in {card.player_id for card in tennis.cards}:
             raise RuntimeError("See all's tennis leaves out the tennis joiner")
     return (
-        f"New in Raketa: {len(row)} on her row of {read.total}, {len(everyone)} "
+        f"New in Rakieta: {len(row)} on her row of {read.total}, {len(everyone)} "
         f"in See all (pill: "
         f"{', '.join(sport.value.title() for sport in page.sports)})"
     )
@@ -349,13 +349,13 @@ def _refuse_a_row_out_of_order(row: tuple[JoinerCard, ...]) -> None:
     order = [standing[card.relation] for card in row]
     if order != sorted(order):
         raise RuntimeError(
-            "her New in Raketa row is not unconnected, then sent, then friends: "
+            "her New in Rakieta row is not unconnected, then sent, then friends: "
             + ", ".join(f"{card.nickname} {card.relation.value}" for card in row)
         )
 
 
-def new_in_raketa_lines(seeded: SeededJoiners) -> list[str]:
-    lines = ["New in Raketa (#793):"]
+def new_in_rakieta_lines(seeded: SeededJoiners) -> list[str]:
+    lines = ["New in Rakieta (#793):"]
     for index, member in enumerate(JOINERS.members):
         row = _ROWS[index]
         sports = ", ".join(sport.value.title() for sport in row.sports) or "no level"

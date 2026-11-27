@@ -208,7 +208,7 @@ class NoticeReason(StrEnum):
     #: A friend request made from a record opened on the Rankings page: *Found
     #: you in the padel ranking* (#773), the sport riding as ``sport``.
     FROM_THE_RANKING = "FROM_THE_RANKING"
-    #: A friend request made from Home's *New in Raketa* row, or a record
+    #: A friend request made from Home's *New in Rakieta* row, or a record
     #: opened from it: *Found you among new players* (#793).
     FROM_NEW_PLAYERS = "FROM_NEW_PLAYERS"
     #: A friend request made from Home's *Same competitive level players*, in
@@ -367,7 +367,7 @@ def friend_request_notice(
     the sport as ``sport``, so the body can say where it was asked; a link's
     request names neither (its ``Where`` cannot) and says so as its ``reason``,
     and the ranking's names its sport and no group, its ``reason``
-    ``FROM_THE_RANKING`` (#773); New in Raketa's names no group, its
+    ``FROM_THE_RANKING`` (#773); New in Rakieta's names no group, its
     ``reason`` ``FROM_NEW_PLAYERS`` (#793); Same competitive level's names its
     sport and no group, its ``reason`` ``FROM_SAME_LEVEL`` (#794); Same vibe's
     names neither, its ``reason`` ``FROM_SAME_VIBE`` (#795). Opens Home, where

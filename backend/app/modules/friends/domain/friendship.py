@@ -78,7 +78,7 @@ class Where:
     when it showed one. **A link's names neither**: it was opened, not pressed
     on a group's screen. **The ranking's names its sport and no group** (#773):
     the Rankings page is one sport's and no group's, and the card reads *Found
-    you in the padel ranking*. **New in Raketa's names neither** (#793): its
+    you in the padel ranking*. **New in Rakieta's names neither** (#793): its
     card reads *Found you among new players* and nothing more. **Same
     competitive level's names its sport and no group** (#794): the card reads
     *Your level in padel · 91% even*. **Same vibe's names neither** (#795):
@@ -121,7 +121,7 @@ class Where:
     ) -> "Where":
         """Where a client says a request was pressed — **the ranking's group
         dropped**, since the Rankings page shows none (#773), **New in
-        Raketa's group and sport** both, since its line names neither (#793),
+        Rakieta's group and sport** both, since its line names neither (#793),
         **Same competitive level's group**, since its row shows none (#794),
         and **Same vibe's group and sport**, since its line names neither
         (#795)."""

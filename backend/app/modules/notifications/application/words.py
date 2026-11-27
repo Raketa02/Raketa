@@ -278,7 +278,7 @@ def _asked_from(said: SaidOfNoGame) -> str:
     """The card's where-line, as far as a push can say it: *With you in
     Kazimierz crew · Padel*, *Invited you to Raketa* for a link's, *Found you
     in the padel ranking* for the ranking's (#773), *Found you among new
-    players* for New in Raketa's (#793), or *Your level in padel · 91% even* —
+    players* for New in Rakieta's (#793), or *Your level in padel · 91% even* —
     *Found you at your padel level* once either holds no level there — for
     Same competitive level's (#794), or *6 things in common* — *1 thing in
     common*, or *Found you through your tags* once none is shared — for Same

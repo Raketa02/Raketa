@@ -8,7 +8,7 @@ for whom a game is dealt to.
 exclusions — the reader, a block either way, *Show me to new people* off, an
 account that doesn't play — **each person once**, however many sports or tags
 put them there. *Same competitive level*: a level in a sport the reader holds
-one in; *New in Raketa*: joined in the last 30 days; *Same vibe*: a Social tag
+one in; *New in Rakieta*: joined in the last 30 days; *Same vibe*: a Social tag
 in common.
 
 **It is counted up to 100 and no further** (``COUNTED_UP_TO``): the phone draws

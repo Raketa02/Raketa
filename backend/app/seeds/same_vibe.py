@@ -5,7 +5,7 @@ home-rows mechanics §8, §9, §12, §20).
 (``catalog.HER_TAGS``), and the cohort's own draws meet them at every count from
 one to six — ``cohort-a-01`` holds all six, ``cohort-a-15`` and ``cohort-d-07``
 five, five members four (the cohort's draw from all twenty-seven tags, #832) —
-while the ranking's crowd shares two and the New in Raketa joiners none. Her
+while the ranking's crowd shares two and the New in Rakieta joiners none. Her
 friends share one, three and four. So this layer writes **no player**, as Same
 competitive level's doesn't.
 

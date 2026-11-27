@@ -2,8 +2,8 @@
 (``docs/adr/0204`` §10; ``docs/specs/home-rows/``).
 
 A new bounded context that owns **the three people rows** — *Same competitive
-level players*, *New in Raketa* and *Same vibe players* — their See all reads,
-and the stored copies they read. **New in Raketa** is built (#793); the other
+level players*, *New in Rakieta* and *Same vibe players* — their See all reads,
+and the stored copies they read. **New in Rakieta** is built (#793); the other
 two read the same directory (#794, #795).
 
 It records no event and has no aggregate. **The player directory** — one row

@@ -1,4 +1,4 @@
-"""*New in Raketa* — the players who joined in the last 30 days, newest first
+"""*New in Rakieta* — the players who joined in the last 30 days, newest first
 (``docs/adr/0204`` §5; the home-rows mechanics §7).
 
 Pure: every rule here takes ``now`` and the facts as inputs.

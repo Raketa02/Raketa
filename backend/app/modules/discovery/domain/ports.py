@@ -13,7 +13,7 @@ what the neighbour publishes, wired by the composition root, each with a row in
 - ``BlocksEitherWay`` — everybody the reader blocked or who blocked the reader,
   whom no people row may show (``docs/adr/0204`` §2);
 - ``LevelsHeld`` — every sport a person holds a level in, read live off the
-  rating's published read, for New in Raketa's tiles;
+  rating's published read, for New in Rakieta's tiles;
 - ``DirectoryFaces`` — a short-lived link to a photograph the directory names;
 - ``LevelSources`` — what a player's rating stream in a sport stands at now,
   which every current-level entry is written from (#794);
@@ -37,7 +37,7 @@ from uuid import UUID
 from app.kernel import Instant, Sport
 from app.modules.discovery.domain.directory import DirectoryEntry
 from app.modules.discovery.domain.levels import CurrentLevel, Estimate
-from app.modules.discovery.domain.new_in_raketa import Joiner
+from app.modules.discovery.domain.new_in_rakieta import Joiner
 from app.modules.discovery.domain.relation import Relation
 from app.modules.discovery.domain.rest import OnScreenRow
 from app.modules.discovery.domain.same_vibe import VibeKey, VibePlayer

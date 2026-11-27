@@ -337,7 +337,7 @@ async def write_the_friends(
         ).execute(ids[her.slug])
     slug_of = {player_id: slug for slug, player_id in ids.items()}
     # The named accounts alone: a later layer's people ask her too — New in
-    # Raketa's newcomer (#793) — and this layer's claim is about its own.
+    # Rakieta's newcomer (#793) — and this layer's claim is about its own.
     on_home = tuple(
         slug_of[card.requester_id] for card in home if card.requester_id in slug_of
     )

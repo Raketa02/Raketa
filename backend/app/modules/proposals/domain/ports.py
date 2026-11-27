@@ -495,7 +495,7 @@ class HomeFriendRequest:
     """One card in Home's *FRIEND REQUESTS* (``docs/adr/0202`` §1): who asked,
     and where — *With you in Kazimierz crew · Padel 3,40 · ✦ 98*, *Invited
     you to Raketa* for a link's, *Found you in the padel ranking* for the
-    ranking's (#773), *Found you among new players* for New in Raketa's
+    ranking's (#773), *Found you among new players* for New in Rakieta's
     (#793), *Your level in padel · 91% even* for Same competitive level's
     (#794), or *6 things in common* for Same vibe's (#795)."""
 
@@ -508,7 +508,7 @@ class HomeFriendRequest:
     by_link: bool
     #: Made from a record opened on the Rankings page, in ``sport`` (#773).
     from_ranking: bool
-    #: Made from Home's *New in Raketa* row, or a record opened from it (#793):
+    #: Made from Home's *New in Rakieta* row, or a record opened from it (#793):
     #: *Found you among new players*.
     from_new_players: bool
     #: Made from Home's *Same competitive level players* row, or a record

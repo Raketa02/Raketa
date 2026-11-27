@@ -154,7 +154,7 @@ WRITTEN_CONTEXTS = frozenset(
 #:
 #: `discovery` joined with #793 on the same terms: its player directory is
 #: written by the outbox delivery from the users' and the profiles' events, so
-#: the seed only **reads** New in Raketa, through the row's own use case.
+#: the seed only **reads** New in Rakieta, through the row's own use case.
 EXERCISED_CONTEXTS = frozenset(
     {"discovery", "matchmaking", "rankings", "sportsmanship"}
 )
@@ -321,7 +321,7 @@ def test_the_walk_has_something_to_walk():
         "guard.py",
         "hottest_groups.py",
         "money.py",
-        "new_in_raketa.py",
+        "new_in_rakieta.py",
         "official_groups.py",
         "payments.py",
         "photos.py",

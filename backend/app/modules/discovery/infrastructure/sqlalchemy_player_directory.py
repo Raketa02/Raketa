@@ -10,7 +10,7 @@ rows. ``forget`` deletes both.
 playing, *Show me to new people* on, and none of the ids left out — the reader
 and every block either way, tens at most, as one ``NOT IN``.
 
-**New in Raketa's total is one count over the month's range** (#812):
+**New in Rakieta's total is one count over the month's range** (#812):
 ``ix_discovery_players_joined_at`` read from 30 days back, the same ``WHERE``,
 stopping at the cap — a ``LIMIT`` inside the count (``count_up_to``, which
 Same competitive level's count shares), so a busy month is never counted
@@ -43,7 +43,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database.stored_time import stored_instant
 from app.kernel import Instant, Sport, invariant
 from app.modules.discovery.domain.directory import DirectoryEntry
-from app.modules.discovery.domain.new_in_raketa import Joiner
+from app.modules.discovery.domain.new_in_rakieta import Joiner
 from app.modules.discovery.domain.ports import Alike
 from app.modules.discovery.domain.same_vibe import VibeKey, vibe_player
 from app.modules.discovery.infrastructure.directory_model import (

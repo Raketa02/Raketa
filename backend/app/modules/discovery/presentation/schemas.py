@@ -18,10 +18,10 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.kernel import Sport, instant
-from app.modules.discovery.application.new_in_raketa import (
+from app.modules.discovery.application.new_in_rakieta import (
     JoinerCard,
-    NewInRaketaPage,
-    NewInRaketaRow,
+    NewInRakietaPage,
+    NewInRakietaRow,
 )
 from app.modules.discovery.application.same_level import (
     SameLevelCard,
@@ -34,11 +34,11 @@ from app.modules.discovery.application.same_vibe import (
     SameVibeRow,
 )
 from app.modules.discovery.domain.errors import (
-    NotANewInRaketaPage,
+    NotANewInRakietaPage,
     NotASameLevelPage,
     NotASameVibePage,
 )
-from app.modules.discovery.domain.new_in_raketa import JoinerKey
+from app.modules.discovery.domain.new_in_rakieta import JoinerKey
 from app.modules.discovery.domain.rest import A_REPORT, OnScreenRow
 from app.modules.discovery.domain.same_level import Comparison, SameLevelKey
 from app.modules.discovery.domain.same_vibe import VibeKey
@@ -67,7 +67,7 @@ def cursor_of(key: JoinerKey) -> str:
 
 
 def key_of(cursor: str) -> JoinerKey:
-    """The key a cursor names — :class:`NotANewInRaketaPage` for one this server
+    """The key a cursor names — :class:`NotANewInRakietaPage` for one this server
     never wrote."""
 
     try:
@@ -78,18 +78,18 @@ def key_of(cursor: str) -> JoinerKey:
             player_id=UUID(hex=player),
         )
     except (ValueError, OverflowError, UnicodeDecodeError, binascii.Error) as error:
-        raise NotANewInRaketaPage() from error
+        raise NotANewInRakietaPage() from error
 
 
-class NewInRaketaSportSchema(BaseModel):
+class NewInRakietaSportSchema(BaseModel):
     sport: Sport
     level: float = Field(
         description="Their published Level in the sport — *Padel 2,35*."
     )
 
 
-class NewInRaketaPlayerSchema(BaseModel):
-    """One New in Raketa tile."""
+class NewInRakietaPlayerSchema(BaseModel):
+    """One New in Rakieta tile."""
 
     player_id: UUID
     nickname: str = Field(description="Whole, never with an @ (docs/adr/0199 §1).")
@@ -110,7 +110,7 @@ class NewInRaketaPlayerSchema(BaseModel):
             "then *Joined {n} weeks ago* (days ÷ 7, at most 4)."
         ),
     )
-    sports: list[NewInRaketaSportSchema] = Field(
+    sports: list[NewInRakietaSportSchema] = Field(
         description=(
             "Every sport they hold a level in, in the sports' own order — "
             "**empty** for a player with no level, whose tile shows no sport "
@@ -127,7 +127,7 @@ class NewInRaketaPlayerSchema(BaseModel):
     )
 
     @classmethod
-    def of(cls, card: JoinerCard) -> "NewInRaketaPlayerSchema":
+    def of(cls, card: JoinerCard) -> "NewInRakietaPlayerSchema":
         return cls(
             player_id=card.player_id,
             nickname=card.nickname,
@@ -136,15 +136,15 @@ class NewInRaketaPlayerSchema(BaseModel):
             joined_at=card.joined_at,
             days_since_joined=card.days_since_joined,
             sports=[
-                NewInRaketaSportSchema(sport=level.sport, level=level.level)
+                NewInRakietaSportSchema(sport=level.sport, level=level.level)
                 for level in card.levels
             ],
             relation=FriendRelation(card.relation.value),
         )
 
 
-class NewInRaketaResponse(BaseModel):
-    players: list[NewInRaketaPlayerSchema] = Field(
+class NewInRakietaResponse(BaseModel):
+    players: list[NewInRakietaPlayerSchema] = Field(
         description=(
             "Up to 10: the 10 newest of the last 30 days, those you aren't "
             "connected with first (someone who asked you among them), then "
@@ -160,15 +160,15 @@ class NewInRaketaResponse(BaseModel):
     )
 
     @classmethod
-    def of(cls, row: NewInRaketaRow) -> "NewInRaketaResponse":
+    def of(cls, row: NewInRakietaRow) -> "NewInRakietaResponse":
         return cls(
-            players=[NewInRaketaPlayerSchema.of(card) for card in row.cards],
+            players=[NewInRakietaPlayerSchema.of(card) for card in row.cards],
             total=row.total,
         )
 
 
-class NewInRaketaPageResponse(BaseModel):
-    players: list[NewInRaketaPlayerSchema] = Field(
+class NewInRakietaPageResponse(BaseModel):
+    players: list[NewInRakietaPlayerSchema] = Field(
         description=(
             "Up to 20 players who joined in the last 30 days, newest first, friends "
             "where they fall — with `sport`, only those holding a level in it. "
@@ -188,9 +188,9 @@ class NewInRaketaPageResponse(BaseModel):
     )
 
     @classmethod
-    def of(cls, page: NewInRaketaPage) -> "NewInRaketaPageResponse":
+    def of(cls, page: NewInRakietaPage) -> "NewInRakietaPageResponse":
         return cls(
-            players=[NewInRaketaPlayerSchema.of(card) for card in page.cards],
+            players=[NewInRakietaPlayerSchema.of(card) for card in page.cards],
             next=None if page.next is None else cursor_of(page.next),
             sports=list(page.sports),
         )
@@ -532,7 +532,7 @@ class OnScreenRequest(BaseModel):
     row: OnScreenRow = Field(
         description=(
             "The row they came on screen in — `SAME_LEVEL` or `SAME_VIBE`, each "
-            "with its own count. New in Raketa and See all rest nobody, so are "
+            "with its own count. New in Rakieta and See all rest nobody, so are "
             "never reported."
         )
     )

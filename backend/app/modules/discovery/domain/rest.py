@@ -17,7 +17,7 @@ Pure: the days are counted by the rest count, the relation handed in.
 - **A rested player is a gap, never hidden**: §9.1's rule (``fresh_then_gaps``)
   takes them with the friends, the requests sent and the weaker matches, so they
   come back on a row with room, and See all lists them where they fall.
-- **Only the two rows that rest are reported**: *New in Raketa* turns over by
+- **Only the two rows that rest are reported**: *New in Rakieta* turns over by
   itself, and no See all rests anybody (§9.3).
 """
 
@@ -28,7 +28,7 @@ from enum import StrEnum
 from typing import Final
 
 from app.kernel import Instant
-from app.modules.discovery.domain.new_in_raketa import DAYS_IN
+from app.modules.discovery.domain.new_in_rakieta import DAYS_IN
 from app.modules.discovery.domain.relation import Relation
 
 #: Different days on screen that rest a player in a row.

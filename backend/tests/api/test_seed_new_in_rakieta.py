@@ -1,15 +1,15 @@
-"""The seeded *New in Raketa*, read back the way the player app reads it (#793;
+"""The seeded *New in Rakieta*, read back the way the player app reads it (#793;
 the home-rows mechanics §20).
 
-``app/seeds/new_in_raketa.py`` writes eight joiners outside the cohort across
+``app/seeds/new_in_rakieta.py`` writes eight joiners outside the cohort across
 the 30 days and one past them, and her three relations among them. Each claim
-is read by signing in as her and reading ``GET /new-in-raketa`` and its See
+is read by signing in as her and reading ``GET /new-in-rakieta`` and its See
 all; *a second run changes nothing* counts the stored events, where an account,
 a profile or a request written twice would show.
 
 The world is the runner's named accounts alone — she must exist to be asked —
 and the layer. The whole row, with the cohort's joiners beside these, is the
-runner's own screen assertion (``assert_new_in_raketa``).
+runner's own screen assertion (``assert_new_in_rakieta``).
 """
 
 from __future__ import annotations
@@ -22,21 +22,21 @@ from app.core.config import get_settings
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.seeds.catalog import SEED_PASSWORD, THE_POPULATED_PLAYER
 from app.seeds.clock import FixedClock
-from app.seeds.new_in_raketa import (
+from app.seeds.new_in_rakieta import (
     ASKED_HER,
     HER_FRIEND,
     JOINED_TODAY,
     JOINERS,
     OUT_OF_THE_MONTH,
     SHE_ASKED,
-    assert_new_in_raketa,
-    write_new_in_raketa,
+    assert_new_in_rakieta,
+    write_new_in_rakieta,
 )
 from app.seeds.runner import seed
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
-ROW = "/api/v1/new-in-raketa"
-ALL = "/api/v1/new-in-raketa/all"
+ROW = "/api/v1/new-in-rakieta"
+ALL = "/api/v1/new-in-rakieta/all"
 
 
 @pytest.fixture
@@ -58,7 +58,7 @@ async def named(session_factory, now, photos):
 
 
 async def written(session_factory, now, photos):
-    return await write_new_in_raketa(
+    return await write_new_in_rakieta(
         session_factory,
         settings=get_settings(),
         now=now,
@@ -114,10 +114,10 @@ async def test_her_row_holds_the_joiners_in_order_and_the_old_one_stays_out(
     assert every["sports"] == ["PADEL", "TENNIS", "SQUASH", "BADMINTON"]
     assert seeded.created
     assert (
-        await assert_new_in_raketa(
+        await assert_new_in_rakieta(
             session_factory, settings=get_settings(), now=now, seeded=seeded
         )
-    ).startswith("New in Raketa: ")
+    ).startswith("New in Rakieta: ")
 
 
 async def test_the_one_she_asked_reads_found_you_among_new_players(

@@ -3,7 +3,7 @@ over hand-written stand-ins for the two ports: an entry is written whole from
 what the owners hold, and **an account the owners no longer know is forgotten**
 — the deleted account's rows go, and its rest count on either side (#796).
 Nothing in ``users`` disables an account today, so this is the seam that holds
-it; the routes hold the rest (``tests/api/test_new_in_raketa.py``,
+it; the routes hold the rest (``tests/api/test_new_in_rakieta.py``,
 ``tests/api/test_rows_stay_alive.py``)."""
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from app.modules.discovery.application.directory import (
     RebuildTheDirectory,
 )
 from app.modules.discovery.domain.directory import DirectoryEntry, PlayerFacts
-from app.modules.discovery.domain.new_in_raketa import Joiner
+from app.modules.discovery.domain.new_in_rakieta import Joiner
 
 EWA, GONE = UUID(int=1), UUID(int=2)
 JOINED = instant(datetime(2026, 11, 1, 18, 0, tzinfo=timezone.utc))

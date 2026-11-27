@@ -1,4 +1,4 @@
-"""*New in Raketa*'s two reads: **the row** on Home, and **See all**
+"""*New in Rakieta*'s two reads: **the row** on Home, and **See all**
 (``docs/adr/0204`` §5, §10; the home-rows mechanics §7).
 
 **Worked out on each read** (call 11): the directory lists who joined inside
@@ -31,7 +31,7 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Clock, Instant, Sport
-from app.modules.discovery.domain.new_in_raketa import (
+from app.modules.discovery.domain.new_in_rakieta import (
     ON_THE_ROW,
     Joiner,
     JoinerKey,
@@ -72,7 +72,7 @@ class JoinerCard:
 
 @final
 @dataclass(frozen=True, slots=True)
-class NewInRaketaRow:
+class NewInRakietaRow:
     cards: tuple[JoinerCard, ...]
     #: How many joiners the row could show, counted up to 100 (``totals``).
     total: int
@@ -80,7 +80,7 @@ class NewInRaketaRow:
 
 @final
 @dataclass(frozen=True, slots=True)
-class NewInRaketaPage:
+class NewInRakietaPage:
     cards: tuple[JoinerCard, ...]
     #: Where the next page starts; ``None`` on the last.
     next: JoinerKey | None
@@ -154,7 +154,7 @@ class _Cards:
 
 
 @final
-class ReadNewInRaketa:
+class ReadNewInRakieta:
     """Home's row: the 10 newest, unconnected first, then sent, then friends."""
 
     def __init__(
@@ -172,7 +172,7 @@ class ReadNewInRaketa:
         self._cards = _Cards(relations=relations, levels=levels, faces=faces)
         self._clock = clock
 
-    async def execute(self, reader: UUID) -> NewInRaketaRow:
+    async def execute(self, reader: UUID) -> NewInRakietaRow:
         now = self._clock.now()
         leaving_out = {reader, *await self._blocks.either_way(reader)}
         newest = await self._directory.who_joined(
@@ -192,7 +192,7 @@ class ReadNewInRaketa:
                     after=new_since(now), leaving_out=leaving_out, up_to=COUNTED_UP_TO
                 ),
             )
-        return NewInRaketaRow(
+        return NewInRakietaRow(
             cards=await self._cards.of(
                 reader, on_the_row(newest, relations), now=now, relations=relations
             ),
@@ -201,7 +201,7 @@ class ReadNewInRaketa:
 
 
 @final
-class ReadNewInRaketaPage:
+class ReadNewInRakietaPage:
     """See all: every joiner, newest first, in pages — one sport's alone
     when a sport is asked."""
 
@@ -222,7 +222,7 @@ class ReadNewInRaketaPage:
 
     async def execute(
         self, reader: UUID, *, sport: Sport | None, after: JoinerKey | None
-    ) -> NewInRaketaPage:
+    ) -> NewInRakietaPage:
         now = self._clock.now()
         everyone = newest_first(
             await self._directory.who_joined(
@@ -241,7 +241,7 @@ class ReadNewInRaketaPage:
             else tuple(one for one in everyone if sport in held[one.player_id])
         )
         page = page_after(listed, after)
-        return NewInRaketaPage(
+        return NewInRakietaPage(
             cards=await self._cards.of(reader, page.joiners, now=now, levels=levels),
             next=page.next,
             sports=tuple(

@@ -18,7 +18,7 @@ band its tags don't reach.
   answers, so the four stand level with each other and well inside For fun's
   window of her, wherever her evenings have moved her since — and among the
   four only the company tells two tables apart.
-- **Settled**: committed sixty days ago, out of New in Raketa's month and the
+- **Settled**: committed sixty days ago, out of New in Rakieta's month and the
   newcomer's fourteen days, at her week's hours, For fun in tennis alone, a card
   each.
 - **In** *Tenis na luzie* **at Prądnik Tennis**, her group, which sells tennis on
@@ -98,7 +98,7 @@ from app.seeds.clubs import SEED_CLUBS
 from app.seeds.cohort import CLUB_PLAYER, COHORT, COHORT_SEED, Cohort, CohortMember
 from app.seeds.groups import group_repository, group_run_by, join_group
 from app.seeds.money import THE_FAKE, SeedMoney
-from app.seeds.new_in_raketa import JOINER_SURNAMES, JOINERS
+from app.seeds.new_in_rakieta import JOINER_SURNAMES, JOINERS
 from app.seeds.ranking_crowd import CROWD_SURNAMES, RANKING_CROWD
 from app.seeds.rooms import deliver_everything_told
 from app.seeds.top_ten import SQUASH_PAIR, SQUASH_SURNAMES
@@ -116,7 +116,7 @@ GroupName(FOR_FUN_GROUP)
 #: here is one already dealt.
 FOR_FUN_SURNAMES: Final[tuple[str, ...]] = ("Ibarra",)
 
-#: Committed this long before the run: out of New in Raketa's 30 days and the
+#: Committed this long before the run: out of New in Rakieta's 30 days and the
 #: newcomer's 14.
 _COMMITTED_DAYS_AGO: Final = 60
 #: How long ago the group was opened and joined: past the 30 days a member
@@ -376,7 +376,7 @@ async def assert_the_for_fun_deck(
     **Held on the run that opened the group**, whose deal came after every
     booking it made: a band with no card fails it by name with every card's %.
     **A later run reads what its store holds**, as Hottest groups' and New in
-    Raketa's claims do: a card an earlier run dealt keeps its pair, and a game
+    Rakieta's claims do: a card an earlier run dealt keeps its pair, and a game
     this run booked her at its hour — or a second game this week, which fills
     her two — withholds it, so a band missing then is a cost on the line, and
     a fresh store draws all four."""

@@ -1,6 +1,6 @@
-"""*New in Raketa*'s pure rules (#793; the home-rows mechanics §7): who is new,
+"""*New in Rakieta*'s pure rules (#793; the home-rows mechanics §7): who is new,
 Warsaw days, the row's order and a See all page. The routes are held in
-``tests/api/test_new_in_raketa.py``; this is the edges a clock can't easily
+``tests/api/test_new_in_rakieta.py``; this is the edges a clock can't easily
 walk to over HTTP."""
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from app.kernel import instant
-from app.modules.discovery.domain.new_in_raketa import (
+from app.modules.discovery.domain.new_in_rakieta import (
     A_PAGE,
     Joiner,
     days_since,

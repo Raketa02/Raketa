@@ -1613,7 +1613,7 @@ class HomeFriendRequestSchema(BaseModel):
     )
     from_new_players: bool = Field(
         description=(
-            "Made from Home's *New in Raketa* row, or a record opened from it: "
+            "Made from Home's *New in Rakieta* row, or a record opened from it: "
             "draw *Found you among new players* in place of the group line "
             "(#793)."
         )

@@ -139,7 +139,7 @@ the mechanics §3, §5, §5.1, §12; the words §29.1–§29.3, §29.5; the rank
   card names it only while both are still in it. **A ranking's request reads *Found you in
   the padel ranking*** on the Home card (`from_ranking`, Proposals' `HomeFriendRequest`) and in
   its notice (`reason` `FROM_THE_RANKING`), in place of the group line, as a link's *Invited you
-  to Raketa* stands — a group-mate's from the ranking too. **New in Raketa's** (#793,
+  to Raketa* stands — a group-mate's from the ranking too. **New in Rakieta's** (#793,
   `NEW_PLAYERS`, its row or a record opened from it) **names no group and no sport** —
   `pressed_on` drops either sent — and reads *Found you among new players* (`from_new_players`, `reason`
   `FROM_NEW_PLAYERS`; `discovery.md`). **Same competitive level's** (#794, `SAME_LEVEL`, its

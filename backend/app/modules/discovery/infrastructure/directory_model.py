@@ -9,7 +9,7 @@ the caller's transaction. The owners' streams are the record.
 non-player's profile columns are ``NULL``. **One row per tag**
 (``discovery_player_tags``), so the tags two players share are counted in SQL,
 portably, by a join (#795's Same vibe). ``ix_discovery_players_joined_at``
-serves New in Raketa's *who joined after*, newest first.
+serves New in Rakieta's *who joined after*, newest first.
 """
 
 from __future__ import annotations

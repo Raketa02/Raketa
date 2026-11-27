@@ -1,5 +1,5 @@
 """Home's people rows (#793, #794, #795, #796; ``docs/adr/0204`` §4–§7, §10,
-§12; the home-rows mechanics §6–§9). **New in Raketa**, **Same competitive
+§12; the home-rows mechanics §6–§9). **New in Rakieta**, **Same competitive
 level** and **Same vibe** are here, and **the on-screen report** that rests a
 card the reader keeps scrolling past.
 
@@ -19,8 +19,8 @@ from fastapi import APIRouter, Query, status
 from app.core.exception_handlers import ErrorResponse
 from app.kernel import Sport
 from app.modules.discovery.presentation.dependencies import (
-    ReadNewInRaketaPageDep,
-    ReadNewInRaketaDep,
+    ReadNewInRakietaPageDep,
+    ReadNewInRakietaDep,
     ReadSameLevelDep,
     ReadSameLevelPageDep,
     ReadSameVibeDep,
@@ -29,8 +29,8 @@ from app.modules.discovery.presentation.dependencies import (
 )
 from app.modules.discovery.presentation.schemas import (
     OnScreenRequest,
-    NewInRaketaPageResponse,
-    NewInRaketaResponse,
+    NewInRakietaPageResponse,
+    NewInRakietaResponse,
     SameLevelPageResponse,
     SameLevelResponse,
     SameVibePageResponse,
@@ -41,7 +41,7 @@ from app.modules.discovery.presentation.schemas import (
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
 
-new_in_raketa_router = APIRouter(prefix="/new-in-raketa", tags=["discovery"])
+new_in_rakieta_router = APIRouter(prefix="/new-in-rakieta", tags=["discovery"])
 same_level_router = APIRouter(prefix="/same-level", tags=["discovery"])
 same_vibe_router = APIRouter(prefix="/same-vibe", tags=["discovery"])
 on_screen_router = APIRouter(prefix="/on-screen", tags=["discovery"])
@@ -62,12 +62,12 @@ _BLOCKS_UNREADABLE: dict[int | str, dict[str, Any]] = {
 }
 
 
-@new_in_raketa_router.get(
+@new_in_rakieta_router.get(
     "",
-    response_model=NewInRaketaResponse,
+    response_model=NewInRakietaResponse,
     status_code=status.HTTP_200_OK,
     responses=_BLOCKS_UNREADABLE,
-    summary="Home's New in Raketa row",
+    summary="Home's New in Rakieta row",
     description=(
         "The players who finished sign-up in the **last 30 days**, strictly — "
         "the 10 newest, unrated ones included — those you aren't connected "
@@ -76,35 +76,35 @@ _BLOCKS_UNREADABLE: dict[int | str, dict[str, Any]] = {
         "row; they stay in See all until their 30 days end. " + _LEFT_OUT
     ),
 )
-async def read_new_in_raketa(
-    user: CurrentUserDep, use_case: ReadNewInRaketaDep
-) -> NewInRaketaResponse:
-    return NewInRaketaResponse.of(await use_case.execute(user.id))
+async def read_new_in_rakieta(
+    user: CurrentUserDep, use_case: ReadNewInRakietaDep
+) -> NewInRakietaResponse:
+    return NewInRakietaResponse.of(await use_case.execute(user.id))
 
 
-@new_in_raketa_router.get(
+@new_in_rakieta_router.get(
     "/all",
-    response_model=NewInRaketaPageResponse,
+    response_model=NewInRakietaPageResponse,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_400_BAD_REQUEST: {
             "model": ErrorResponse,
             "description": (
-                "`not_a_new_in_raketa_page` — a cursor this server never wrote."
+                "`not_a_new_in_rakieta_page` — a cursor this server never wrote."
             ),
         },
         **_BLOCKS_UNREADABLE,
     },
-    summary="New in Raketa's See all",
+    summary="New in Rakieta's See all",
     description=(
         "Every player who joined in the last 30 days, newest first, friends where they "
         "fall, in pages of 20 — with `sport`, only those holding a level in "
         "it — and the sports at least one of them holds a level in. " + _LEFT_OUT
     ),
 )
-async def read_new_in_raketa_page(
+async def read_new_in_rakieta_page(
     user: CurrentUserDep,
-    use_case: ReadNewInRaketaPageDep,
+    use_case: ReadNewInRakietaPageDep,
     sport: Sport | None = Query(
         default=None,
         description="Keep only the players holding a level in this sport.",
@@ -113,8 +113,8 @@ async def read_new_in_raketa_page(
         default=None,
         description="A `next` cursor: the 20 players behind it.",
     ),
-) -> NewInRaketaPageResponse:
-    return NewInRaketaPageResponse.of(
+) -> NewInRakietaPageResponse:
+    return NewInRakietaPageResponse.of(
         await use_case.execute(
             user.id, sport=sport, after=None if after is None else key_of(after)
         )

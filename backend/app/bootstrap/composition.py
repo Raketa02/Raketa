@@ -582,9 +582,9 @@ from app.modules.discovery.application.levels import (
     FollowTheLevels,
     RebuildTheLevels,
 )
-from app.modules.discovery.application.new_in_raketa import (
-    ReadNewInRaketaPage,
-    ReadNewInRaketa,
+from app.modules.discovery.application.new_in_rakieta import (
+    ReadNewInRakietaPage,
+    ReadNewInRakieta,
 )
 from app.modules.discovery.application.on_screen import ReportOnScreen
 from app.modules.discovery.application.same_level import (
@@ -4454,15 +4454,15 @@ def build_directory_faces(settings: Settings) -> DirectoryFaces:
     )
 
 
-def build_read_new_in_raketa(
+def build_read_new_in_rakieta(
     session: AsyncSession,
     *,
     settings: Settings,
     clock: Clock,
     runtime: EventRuntime | None = None,
-) -> ReadNewInRaketa:
-    """``GET /new-in-raketa``: Home's row of the 10 newest (#793)."""
-    return ReadNewInRaketa(
+) -> ReadNewInRakieta:
+    """``GET /new-in-rakieta``: Home's row of the 10 newest (#793)."""
+    return ReadNewInRakieta(
         directory=build_player_directory(session),
         blocks=build_blocks_either_way(session, runtime=runtime),
         relations=build_readers_relations(session, runtime=runtime),
@@ -4472,15 +4472,15 @@ def build_read_new_in_raketa(
     )
 
 
-def build_read_new_in_raketa_page(
+def build_read_new_in_rakieta_page(
     session: AsyncSession,
     *,
     settings: Settings,
     clock: Clock,
     runtime: EventRuntime | None = None,
-) -> ReadNewInRaketaPage:
-    """``GET /new-in-raketa/all``: See all, in pages of 20 (#793)."""
-    return ReadNewInRaketaPage(
+) -> ReadNewInRakietaPage:
+    """``GET /new-in-rakieta/all``: See all, in pages of 20 (#793)."""
+    return ReadNewInRakietaPage(
         directory=build_player_directory(session),
         blocks=build_blocks_either_way(session, runtime=runtime),
         relations=build_readers_relations(session, runtime=runtime),

@@ -18,7 +18,7 @@ ranking's crowd is: the histogram, the aging refusal and every deck never see
 them. Registered and named, **rated in squash by sitting the questionnaire**
 (``seed_the_cohort``, beside the crowd, one answer set for both so each is
 inside the other's competitive window), a profile committed **sixty days ago**
-— out of New in Raketa's month — and their week **cleared** after it, so the
+— out of New in Rakieta's month — and their week **cleared** after it, so the
 proposer deals neither of them; a card each, saved by the payment layer. **No
 tag of hers** and no padel or tennis level, so no row of hers reads them: Same
 competitive level compares only a sport two players share, and Same vibe a
@@ -99,7 +99,7 @@ from app.seeds.cohort import (
 )
 from app.seeds.groups import group_repository, group_run_by, join_group
 from app.seeds.money import THE_FAKE, SeedMoney
-from app.seeds.new_in_raketa import JOINER_SURNAMES, JOINERS
+from app.seeds.new_in_rakieta import JOINER_SURNAMES, JOINERS
 from app.seeds.ranking_crowd import CROWD_SURNAMES, RANKING_CROWD
 from app.seeds.rankings import EMPTY_SPORT, RANKED_SPORT
 
@@ -117,7 +117,7 @@ GroupName(SQUASH_GROUP)
 SQUASH_SURNAMES: Final[tuple[str, ...]] = ("Tejero",)
 
 #: Committed this long before the run — before the first game was made, and out
-#: of New in Raketa's 30 days and the newcomer's 14.
+#: of New in Rakieta's 30 days and the newcomer's 14.
 _COMMITTED_DAYS_AGO: Final = 60
 
 #: Three tags, **none of hers**, so Same vibe never reads them to her.

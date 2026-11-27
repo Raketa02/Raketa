@@ -79,6 +79,6 @@ def test_whom_a_row_asks_about_rest():
 
 
 def test_only_the_two_rows_that_rest_are_reported():
-    """New in Raketa turns over by itself and rests nobody (§9.3)."""
+    """New in Rakieta turns over by itself and rests nobody (§9.3)."""
 
     assert {row.value for row in OnScreenRow} == {"SAME_LEVEL", "SAME_VIBE"}

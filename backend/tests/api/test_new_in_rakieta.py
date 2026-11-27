@@ -1,4 +1,4 @@
-"""Home's *New in Raketa* row and its See all — over HTTP, as the player app
+"""Home's *New in Rakieta* row and its See all — over HTTP, as the player app
 calls them (#793; the home-rows mechanics §7, ``docs/adr/0204`` §5, §10).
 
 **Tomek** joined long ago and reads his Home. **Bartek** signed up 2 days ago
@@ -30,8 +30,8 @@ from app.modules.discovery.infrastructure.directory_model import (
 from tests.api import players_world as players
 from tests.api.discovery_world import a_crowd
 
-ROW = "/api/v1/new-in-raketa"
-ALL = "/api/v1/new-in-raketa/all"
+ROW = "/api/v1/new-in-rakieta"
+ALL = "/api/v1/new-in-rakieta/all"
 REQUESTS = "/api/v1/friends/requests"
 NOTICES = "/api/v1/players/me/notices"
 
@@ -301,7 +301,7 @@ async def test_a_cursor_this_server_never_wrote_is_refused(client, tomek):
     )
 
     assert refused.status_code == 400, refused.text
-    assert refused.json()["code"] == "not_a_new_in_raketa_page"
+    assert refused.json()["code"] == "not_a_new_in_rakieta_page"
 
 
 # --------------------------------------------------------------------------- #
