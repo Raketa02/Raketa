@@ -230,7 +230,7 @@ describe('an account the invitation was sent to', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
     await waitFor(() => expect(screen.queryByRole('header', { name: SHEET_TITLE })).toBeNull());
 
-    openLink(`raketa://invite/${TOKEN}`);
+    openLink(`rakieta://invite/${TOKEN}`);
 
     await expectTheAcceptSheet();
     // Nobody was moved to get there.
@@ -239,7 +239,7 @@ describe('an account the invitation was sent to', () => {
 
   /**
    * **Tomek's own button.** The club's email to an account that already exists carries no token —
-   * it is `raketa://`, *open Raketa and accept there* (ADR-0184 §2) — so tapped after *Not now*, it
+   * it is `rakieta://`, *open Rakieta and accept there* (ADR-0184 §2) — so tapped after *Not now*, it
    * is the app's bare address that asks for the sheet again.
    */
   it('gets it again from the button of the email an existing account is sent', async () => {
@@ -249,7 +249,7 @@ describe('an account the invitation was sent to', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
     await waitFor(() => expect(screen.queryByRole('header', { name: SHEET_TITLE })).toBeNull());
 
-    openLink('raketa://');
+    openLink('rakieta://');
 
     await expectTheAcceptSheet();
     expect(screen).toHavePathname('/');
@@ -279,7 +279,7 @@ describe('an account the invitation was sent to', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
     await waitFor(() => expect(screen.queryByRole('header', { name: bonarkaTitle })).toBeNull());
 
-    openLink(`raketa://invite/${TOKEN}`);
+    openLink(`rakieta://invite/${TOKEN}`);
 
     await expectTheAcceptSheet();
     fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
@@ -321,7 +321,7 @@ describe('an account the invitation was sent to', () => {
     serve(TOMEK);
     stubTheLink();
 
-    const landing = redirectSystemPath({ path: `raketa://invite/${TOKEN}`, initial: true });
+    const landing = redirectSystemPath({ path: `rakieta://invite/${TOKEN}`, initial: true });
     expect(landing).toBe(`/invite/${TOKEN}`);
     await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
     renderRouter(ONBOARDING_ROUTES, { initialUrl: landing });

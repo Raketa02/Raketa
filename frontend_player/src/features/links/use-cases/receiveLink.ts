@@ -9,7 +9,7 @@ import { landingOf, type Landing, type LinkSession } from '../domain/linkRules';
 import { readIncomingLink } from '../schemas/incomingLinkUrl';
 
 export interface LinkArrival {
-  /** The address as the operating system handed it — `raketa://…`, `https://…`, or a path. */
+  /** The address as the operating system handed it — `rakieta://…`, `https://…`, or a path. */
   readonly address: string;
   /** Whether it is the address the app was launched with, rather than one opened while running. */
   readonly initial: boolean;

@@ -109,7 +109,7 @@ describe("Stripe's provider", () => {
 
     expect(stripe.initStripe).toHaveBeenCalledTimes(1);
     expect(stripe.initStripe).toHaveBeenCalledWith(
-      expect.objectContaining({ publishableKey: 'pk_test_51abc', urlScheme: 'raketa' }),
+      expect.objectContaining({ publishableKey: 'pk_test_51abc', urlScheme: 'rakieta' }),
     );
     expect(stripe.confirmSetupIntent).toHaveBeenCalledWith('seti_1_secret_2', {
       paymentMethodType: 'Card',

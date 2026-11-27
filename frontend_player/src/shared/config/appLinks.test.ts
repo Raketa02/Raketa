@@ -84,7 +84,7 @@ describe('what the operating systems are told', () => {
 
 describe('the address a link is spelled at', () => {
   it("is the app's own scheme while there is no domain", () => {
-    expect(appLinkTo('join', 'k7pq2mxa', null)).toBe('raketa://join/k7pq2mxa');
+    expect(appLinkTo('join', 'k7pq2mxa', null)).toBe('rakieta://join/k7pq2mxa');
   });
 
   it('is the web domain once there is one', () => {
@@ -92,7 +92,7 @@ describe('the address a link is spelled at', () => {
   });
 
   it('spells a friend link the same way', () => {
-    expect(appLinkTo('f', 'tk4m9q2z', null)).toBe('raketa://f/tk4m9q2z');
+    expect(appLinkTo('f', 'tk4m9q2z', null)).toBe('rakieta://f/tk4m9q2z');
     expect(appLinkTo('f', 'tk4m9q2z', 'raketa.app')).toBe('https://raketa.app/f/tk4m9q2z');
   });
 });

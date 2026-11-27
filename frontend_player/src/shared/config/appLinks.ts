@@ -8,7 +8,7 @@
  * A group link in WhatsApp, the invitation email's button, the reset email's link and a friend link
  * are the public site's pages `join/<code>`, `invite/<token>`, `reset/<token>` and `f/<code>` (the
  * last since [#756](https://github.com/Raketa02/Raketa/issues/756), the friends mechanics §4.3).
- * On a phone with Raketa installed the same four open the app — by its own scheme today, and by
+ * On a phone with Rakieta installed the same four open the app — by its own scheme today, and by
  * the web domain once one exists, when iOS and Android are told the domain is the app's (universal
  * links, verified app links). **Which
  * domain is a setting, `EXPO_PUBLIC_LINK_DOMAIN`, and none is set anywhere yet**, so the associated
@@ -24,7 +24,7 @@
  * **One scheme, at every environment** — `app.config.ts`'s `scheme`, and the address every link
  * uses while no domain is set. Per-environment schemes wait for per-environment identifiers.
  */
-export const APP_SCHEME = 'raketa';
+export const APP_SCHEME = 'rakieta';
 
 /**
  * **The four pages a link opens in the app**, by their first path segment on the public site — a
@@ -89,7 +89,7 @@ export interface NativeLinkConfig {
  * the four pages over `https`, so a tap on the site's link opens the app without a chooser. The
  * site's half is #526's: Apple's association file claims the same four paths (`/f/*` since #755),
  * and Android's asset links name this package. The scheme needs no filter of its own — Expo
- * registers `raketa://` from the config's `scheme` — and it opens every path, which is why the app
+ * registers `rakieta://` from the config's `scheme` — and it opens every path, which is why the app
  * reads every link it is handed before trusting it (`+native-intent`).
  */
 export function nativeLinkConfig(domain: string | null): NativeLinkConfig {

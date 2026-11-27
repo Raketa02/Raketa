@@ -190,7 +190,7 @@ review comment and a test description all use the same word.
   `+native-intent` before anything is routed. Only four are links — `join/<code>` (a **Group
   link**), `invite/<token>`, `reset/<token>` and `f/<code>` (a **Friend link**, #756) — by the
   app's scheme or the **link domain** (`EXPO_PUBLIC_LINK_DOMAIN`, unset today) — plus the bare
-  `raketa://`, the existing-account invitation email's button; anything else is ignored (#520).
+  `rakieta://`, the existing-account invitation email's button; anything else is ignored (#520).
   _Avoid_: deep link for these four — any path is a deep link, and these are the only ones the
   app answers.
 - **Held link** — an incoming link not answered yet, kept in memory (one at a time) through

@@ -2,7 +2,7 @@
  * **The link an Android install carried, read once on the app's first launch**
  * ([#756](https://github.com/Raketa02/Raketa/issues/756), the friends mechanics §4.3).
  *
- * Zofia has no Raketa, opens Tomek's friend link, and installs from the public site's Google Play
+ * Zofia has no Rakieta, opens Tomek's friend link, and installs from the public site's Google Play
  * button, which carries the page's own link as the **install referrer** (#755). Opening the app
  * for the first time reads it, and **a group link or a friend link in it is held exactly as if she
  * had tapped it** — through sign-up and onboarding, then answered in the player's app: Join a group,

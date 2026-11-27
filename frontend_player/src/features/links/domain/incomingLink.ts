@@ -22,8 +22,8 @@ export type IncomingLink =
    */
   | { readonly kind: 'friend'; readonly code: string }
   /**
-   * **`raketa://` and nothing after it** — the button of the club's email to an account that
-   * already exists, which carries no token (ADR-0184 §2): *open Raketa, signed in as you, and
+   * **`rakieta://` and nothing after it** — the button of the club's email to an account that
+   * already exists, which carries no token (ADR-0184 §2): *open Rakieta, signed in as you, and
    * accept*. Opened while the app runs, it offers the invitations set aside this launch again.
    */
   | { readonly kind: 'open' };

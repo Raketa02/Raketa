@@ -27,7 +27,7 @@ import { receiveLink } from '../use-cases/receiveLink';
 import { linkScreenPath } from './linkRoutes';
 
 export interface SystemPath {
-  /** The address as the operating system handed it — `raketa://…`, `https://…`, or a path. */
+  /** The address as the operating system handed it — `rakieta://…`, `https://…`, or a path. */
   readonly path: string;
   /** Whether it is the address the app was launched with, rather than one opened while running. */
   readonly initial: boolean;

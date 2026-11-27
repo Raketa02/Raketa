@@ -46,10 +46,10 @@ export interface AppIdentity {
  * so on its face.
  */
 const IDENTITIES: Readonly<Record<AppEnvironment, AppIdentity>> = {
-  local: { displayName: 'Raketa local', badge: 'LOCAL' },
-  development: { displayName: 'Raketa development', badge: 'DEVELOPMENT' },
-  staging: { displayName: 'Raketa staging', badge: 'STAGING' },
-  production: { displayName: 'Raketa', badge: null },
+  local: { displayName: 'Rakieta local', badge: 'LOCAL' },
+  development: { displayName: 'Rakieta development', badge: 'DEVELOPMENT' },
+  staging: { displayName: 'Rakieta staging', badge: 'STAGING' },
+  production: { displayName: 'Rakieta', badge: null },
 };
 
 /**

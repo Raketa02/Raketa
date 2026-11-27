@@ -12,14 +12,14 @@ const arrival = (address: string, overrides: Partial<Parameters<typeof receiveLi
 
 describe('a link arriving', () => {
   it('is read and landed on its own screen with nobody signed in', () => {
-    expect(arrival(`raketa://reset/${TOKEN}`)).toEqual({
+    expect(arrival(`rakieta://reset/${TOKEN}`)).toEqual({
       link: { kind: 'reset', token: TOKEN },
       landing: { kind: 'its-screen', link: { kind: 'reset', token: TOKEN } },
     });
   });
 
   it('is held on a phone that is signed in', () => {
-    expect(arrival(`raketa://reset/${TOKEN}`, { session: 'signed-in' })).toEqual({
+    expect(arrival(`rakieta://reset/${TOKEN}`, { session: 'signed-in' })).toEqual({
       link: { kind: 'reset', token: TOKEN },
       landing: { kind: 'held' },
     });
@@ -27,14 +27,14 @@ describe('a link arriving', () => {
 
   /** A friend link is held whoever is on the phone, as a group link is (#756). */
   it('holds a friend link with nobody signed in', () => {
-    expect(arrival('raketa://f/tk4m9q2z')).toEqual({
+    expect(arrival('rakieta://f/tk4m9q2z')).toEqual({
       link: { kind: 'friend', code: 'tk4m9q2z' },
       landing: { kind: 'held' },
     });
   });
 
   it('is nothing when it is not a link', () => {
-    expect(arrival('raketa://sign-in')).toBeUndefined();
+    expect(arrival('rakieta://sign-in')).toBeUndefined();
   });
 
   /**
@@ -42,7 +42,7 @@ describe('a link arriving', () => {
    * asks nothing of anybody — the invitation sheet offers what is open on every launch anyway.
    */
   it('takes the app’s bare address as a link only while the app is running', () => {
-    expect(arrival('raketa://', { initial: true })).toBeUndefined();
-    expect(arrival('raketa://')).toEqual({ link: { kind: 'open' }, landing: { kind: 'held' } });
+    expect(arrival('rakieta://', { initial: true })).toBeUndefined();
+    expect(arrival('rakieta://')).toEqual({ link: { kind: 'open' }, landing: { kind: 'held' } });
   });
 });

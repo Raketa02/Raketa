@@ -16,31 +16,31 @@ const read = (url: string, domain: string | null = null) => readIncomingLink(url
 
 describe('a group link', () => {
   it.each([
-    'raketa://join/k7pq2mxa',
-    'raketa:///join/k7pq2mxa',
-    'raketa://join/k7pq2mxa/',
-    'RAKETA://join/k7pq2mxa',
+    'rakieta://join/k7pq2mxa',
+    'rakieta:///join/k7pq2mxa',
+    'rakieta://join/k7pq2mxa/',
+    'RAKIETA://join/k7pq2mxa',
     '/join/k7pq2mxa',
   ])('reads %p', (url) => {
     expect(read(url)).toEqual({ kind: 'join', code: 'k7pq2mxa' });
   });
 
   it('reads the code in lower case, the case every code is minted in', () => {
-    expect(read('raketa://join/K7PQ2MXA')).toEqual({ kind: 'join', code: 'k7pq2mxa' });
+    expect(read('rakieta://join/K7PQ2MXA')).toEqual({ kind: 'join', code: 'k7pq2mxa' });
   });
 
   it('keeps nothing of a query or a fragment', () => {
-    expect(read('raketa://join/k7pq2mxa?api=https://evil.example#https://evil.example')).toEqual({
+    expect(read('rakieta://join/k7pq2mxa?api=https://evil.example#https://evil.example')).toEqual({
       kind: 'join',
       code: 'k7pq2mxa',
     });
   });
 
   it.each([
-    'raketa://join/k7pq',
-    'raketa://join/k7pq2mxa9',
-    'raketa://join/k7pq-2mx',
-    'raketa://join',
+    'rakieta://join/k7pq',
+    'rakieta://join/k7pq2mxa9',
+    'rakieta://join/k7pq-2mx',
+    'rakieta://join',
   ])('is no link when the code cannot be one: %p', (url) => {
     expect(read(url)).toBeUndefined();
   });
@@ -48,7 +48,7 @@ describe('a group link', () => {
 
 /** **A friend link** (#756) — `f/<code>`, its code a group code's shape (the friends mechanics §4.1). */
 describe('a friend link', () => {
-  it.each(['raketa://f/tk4m9q2z', 'raketa:///f/tk4m9q2z', '/f/tk4m9q2z', 'raketa://f/TK4M9Q2Z'])(
+  it.each(['rakieta://f/tk4m9q2z', 'rakieta:///f/tk4m9q2z', '/f/tk4m9q2z', 'rakieta://f/TK4M9Q2Z'])(
     'reads %p, its code in lower case',
     (url) => {
       expect(read(url)).toEqual({ kind: 'friend', code: 'tk4m9q2z' });
@@ -63,7 +63,7 @@ describe('a friend link', () => {
     expect(read('https://raketa.app/f/tk4m9q2z')).toBeUndefined();
   });
 
-  it.each(['raketa://f/tk4m', 'raketa://f/tk4m-9q2', 'raketa://f', 'raketa://F/tk4m9q2z'])(
+  it.each(['rakieta://f/tk4m', 'rakieta://f/tk4m-9q2', 'rakieta://f', 'rakieta://F/tk4m9q2z'])(
     'is no link when it cannot be one: %p',
     (url) => {
       expect(read(url)).toBeUndefined();
@@ -100,15 +100,15 @@ describe('the web domain', () => {
 
 describe('an invitation link and a reset link', () => {
   it('reads each token as it was sent', () => {
-    expect(read(`raketa://invite/${TOKEN}`)).toEqual({ kind: 'invite', token: TOKEN });
-    expect(read(`raketa://reset/${TOKEN}`)).toEqual({ kind: 'reset', token: TOKEN });
+    expect(read(`rakieta://invite/${TOKEN}`)).toEqual({ kind: 'invite', token: TOKEN });
+    expect(read(`rakieta://reset/${TOKEN}`)).toEqual({ kind: 'reset', token: TOKEN });
   });
 
   it.each([
-    'raketa://invite/',
-    'raketa://invite/a%20b',
-    'raketa://reset/..%2F..',
-    `raketa://reset/${'a'.repeat(257)}`,
+    'rakieta://invite/',
+    'rakieta://invite/a%20b',
+    'rakieta://reset/..%2F..',
+    `rakieta://reset/${'a'.repeat(257)}`,
   ])('is no link when the token cannot be one: %p', (url) => {
     expect(read(url)).toBeUndefined();
   });
@@ -116,10 +116,10 @@ describe('an invitation link and a reset link', () => {
 
 /**
  * **The app's bare address** — the button of the club's email to an account that already exists
- * carries no token (ADR-0184 §2), only `raketa://`: *open Raketa and accept there*.
+ * carries no token (ADR-0184 §2), only `rakieta://`: *open Rakieta and accept there*.
  */
 describe('the app’s bare address', () => {
-  it.each(['raketa://', 'raketa:///', 'RAKETA://', 'raketa://?utm_source=email'])(
+  it.each(['rakieta://', 'rakieta:///', 'RAKIETA://', 'rakieta://?utm_source=email'])(
     'reads %p as opening the app',
     (url) => {
       expect(read(url)).toEqual({ kind: 'open' });
@@ -134,13 +134,13 @@ describe('the app’s bare address', () => {
 
 describe('everything else', () => {
   it.each([
-    'raketa://sign-in',
-    'raketa://play/join/k7pq2mxa',
-    'raketa://JOIN/k7pq2mxa',
-    'raketa://administrator/c0000000-0000-4000-8000-000000000033/you',
+    'rakieta://sign-in',
+    'rakieta://play/join/k7pq2mxa',
+    'rakieta://JOIN/k7pq2mxa',
+    'rakieta://administrator/c0000000-0000-4000-8000-000000000033/you',
     '/question/1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6?sport=PADEL',
     'exp://192.168.1.5:8081/--/join/k7pq2mxa',
-    'exp+raketa-player://expo-development-client/?url=http%3A%2F%2F192.168.1.5%3A8081',
+    'exp+rakieta-player://expo-development-client/?url=http%3A%2F%2F192.168.1.5%3A8081',
     'javascript:alert(1)',
     '',
   ])('is no link: %p', (url) => {
@@ -148,7 +148,7 @@ describe('everything else', () => {
   });
 
   it('reads nothing out of an address far longer than any link', () => {
-    expect(read(`raketa://join/k7pq2mxa?${'x'.repeat(10_000)}`)).toBeUndefined();
+    expect(read(`rakieta://join/k7pq2mxa?${'x'.repeat(10_000)}`)).toBeUndefined();
   });
 });
 
@@ -187,7 +187,7 @@ describe('the install referrer', () => {
     'https://raketa.app/',
     'https://raketa.app/play/join/k7pq2mxa',
     'https://raketa.app/f/tk4m',
-    'raketa://f/tk4m9q2z',
+    'rakieta://f/tk4m9q2z',
     'javascript:alert(1)',
     '%E0%A4%A',
     '',

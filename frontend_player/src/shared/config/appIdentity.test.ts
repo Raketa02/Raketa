@@ -11,6 +11,8 @@
  * function of its argument, which is why it is a module of its own.
  */
 
+import { WORDMARK } from '@/shared/lib/bootstrap/domain/splashGeometry';
+
 import {
   IDENTIFIED_ENVIRONMENTS,
   appIdentity,
@@ -36,11 +38,19 @@ describe('the identity table', () => {
 
 describe('the display name', () => {
   it('is the bare product name in production', () => {
-    expect(appIdentity('production').displayName).toBe('Raketa');
+    expect(appIdentity('production').displayName).toBe('Rakieta');
   });
 
   it.each(BADGED)('names the environment in %s', (environment) => {
-    expect(appIdentity(environment).displayName).toBe(`Raketa ${environment}`);
+    expect(appIdentity(environment).displayName).toBe(`Rakieta ${environment}`);
+  });
+
+  /**
+   * **One spelling** (ADR-0211): the name under the icon is the word the splash draws a moment
+   * later, so the launcher and the splash never disagree about which app this is.
+   */
+  it.each(ENVIRONMENTS)('starts with the word the splash draws, in %s', (environment) => {
+    expect(appIdentity(environment).displayName.split(' ')[0]).toBe(WORDMARK.join(''));
   });
 
   it('is different in every environment, so the app switcher can never be ambiguous', () => {

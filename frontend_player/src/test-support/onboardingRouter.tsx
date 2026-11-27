@@ -1608,7 +1608,7 @@ export const ROUTES_WITH_LINKS = { ...ONBOARDING_ROUTES, '+native-intent': Nativ
 
 /**
  * **A cold start by a link.** The address is what expo-router hands the reader for a launch — the
- * harness takes a path, so `/join/<code>` stands for `raketa://join/<code>`; the scheme's own
+ * harness takes a path, so `/join/<code>` stands for `rakieta://join/<code>`; the scheme's own
  * spelling is walked by `openLink` and read in `incomingLinkUrl.test.ts`.
  */
 export async function launchByLink(path: string, { signedIn }: { readonly signedIn: boolean }) {

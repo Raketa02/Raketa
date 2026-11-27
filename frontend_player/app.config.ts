@@ -60,7 +60,7 @@ export default (): ExpoConfig => {
 
   return withPush({
     name: appIdentity(environment).displayName,
-    slug: 'raketa-player',
+    slug: 'rakieta-player',
     version: '0.1.0',
     orientation: 'portrait',
     // One scheme, at every environment. A per-environment scheme would need
@@ -70,11 +70,11 @@ export default (): ExpoConfig => {
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.raketa.player',
+      bundleIdentifier: 'com.rakieta.player',
       ...links.ios,
     },
     android: {
-      package: 'com.raketa.player',
+      package: 'com.rakieta.player',
       adaptiveIcon: {
         backgroundColor: '#ffffff',
       },
@@ -106,7 +106,7 @@ export default (): ExpoConfig => {
           // different privacy class from the one this asks about, and a default is a
           // thing somebody flips without noticing.
           locationWhenInUsePermission:
-            'Raketa uses your location to set the area you play in and, when you say who’s at a game, to check you’re at the club.',
+            'Rakieta uses your location to set the area you play in and, when you say who’s at a game, to check you’re at the club.',
           isIosBackgroundLocationEnabled: false,
           isAndroidBackgroundLocationEnabled: false,
           isAndroidForegroundServiceEnabled: false,
@@ -116,7 +116,7 @@ export default (): ExpoConfig => {
         'expo-image-picker',
         {
           photosPermission:
-            'Raketa uses your photos so you can put a picture of yourself on your profile.',
+            'Rakieta uses your photos so you can put a picture of yourself on your profile.',
         },
       ],
       [

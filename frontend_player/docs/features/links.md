@@ -14,7 +14,7 @@ app with to `redirectSystemPath` (`components/redirectSystemPath`, over the `rec
 before expo-router routes it, and **anything that is not exactly one of the three — or the app's bare
 address, below — is ignored**: at a launch the app opens where it would
 have with no link (`/`), and while it runs nothing moves. So no route is reachable from outside by its
-path — `raketa://administrator/<club>/you` or `raketa://question/<id>` open nothing — which is the
+path — `rakieta://administrator/<club>/you` or `rakieta://question/<id>` open nothing — which is the
 stricter half of docs/architecture.md Part 2's _deep links are untrusted input_: the params of the
 three are checked, and the rest are never routes at all.
 
@@ -27,9 +27,9 @@ routes read their params with. **The query and the fragment are dropped, never r
 out is rebuilt from the checked parts, so no link carries an address, a flag or a host into the app —
 **none can repoint the backend**: the API's address is configuration read once at launch, and nothing a
 link holds reaches it. Expo Go's `exp://` is refused with the rest; the app runs as a development build,
-which answers to `raketa://`.
+which answers to `rakieta://`.
 
-**The app's bare address, `raketa://`, is the fourth thing read** — because it is the button of the
+**The app's bare address, `rakieta://`, is the fourth thing read** — because it is the button of the
 club's email to an account that already exists, which carries no token (ADR-0184 §2: _open Raketa,
 signed in as you, and accept_). **Tapped while the app runs, it has the invitation sheet offer every
 invitation set aside this launch again** — Tomek pressed _Not now_ earlier, and the button is him
@@ -63,7 +63,7 @@ data screen's _Start playing_ lands her in the app** (story 48; walked whole in 
 **A group link opens Join a group with the link in its field and its group found under it**, over
 Play › Groups so _back_ is the list (`shell`'s `openTab`, then the screen pushed) — story 46. The route
 carries the code (`/play/join?code=`), checked by `groups`' `parseJoinRouteParams`, and the route file
-spells the group's link back from it — `raketa://join/<code>` while no domain is set,
+spells the group's link back from it — `rakieta://join/<code>` while no domain is set,
 `https://<domain>/join/<code>` once one is (`shared/config/appLinks`' `appLinkTo`) — for the field, so
 the search is the one a paste would have made. Which move a group link makes where the account is —
 open Join, switch to Player, or wait — is `groupLinkMove`'s. **In an administrator area it switches to Player first** when the account
@@ -119,7 +119,7 @@ not play; the field shows the scheme's spelling of the link while no domain is s
 stays down; and a group link lands on Play under Join — on the _Groups_ title while the `explore`
 feature flag is off, which is every phone today, and on Play's remembered segment, which may be
 Explore, only while it is on (#826).
-**A backend contract gap, open**: the club's email to an existing account opens bare `raketa://`, so
+**A backend contract gap, open**: the club's email to an existing account opens bare `rakieta://`, so
 the app cannot tell whose invitation it is — **Kuba's phone opening Tomek's _existing-account_ email
 cannot name Tomek's address**; only a new person's token link can. Naming it would need that email to
 carry a link the app can read (a token, or the invitation's id with a read by it).
@@ -173,7 +173,7 @@ awaited**: the splash does not wait on Google Play. It reads **once, ever** — 
 for itself (`installReferrerRead`, under no account, kept at sign-out; a read that fails reads as
 raised, because acting on a stale link every launch is the worse mistake) — and **a `join/` or `f/`
 link in it is held as if it had been tapped**; it never replaces a link already held, which is the
-newer. **The referrer is anybody's text**, as `raketa://` is — any Play listing's address can carry any
+newer. **The referrer is anybody's text**, as `rakieta://` is — any Play listing's address can carry any
 referrer — so `readReferrerLink` reads the page and its value off any `http(s)` host (the laptop's
 `http://localhost:3001` included) and **never a token**: no store button carries one, and Play keeps
 a referrer for 90 days.

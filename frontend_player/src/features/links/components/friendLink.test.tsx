@@ -57,7 +57,7 @@ import { readTheInstallReferrerOnce } from './installReferrerLink';
 
 const CODE = 'tk4m9q2z';
 /** Tomek's link as the app spells it while no web domain is set — the app's own scheme. */
-const LINK = `raketa://f/${CODE}`;
+const LINK = `rakieta://f/${CODE}`;
 const OPENING = `/api/v1/friends/links/${CODE}/opening`;
 const TOMEK = { id: 'e0000000-0000-4000-8000-000000000101', name: 'tomek.k' };
 
@@ -155,7 +155,7 @@ describe('a friend link, on a phone that is signed in', () => {
     await onYou();
     const bellReads = transport.requestsTo('GET', NOTICES_PATH).length;
 
-    openLink(`raketa://f/${CODE.toUpperCase()}?utm_source=whatsapp`);
+    openLink(`rakieta://f/${CODE.toUpperCase()}?utm_source=whatsapp`);
 
     await expectTomeksRequestOnHome();
     // Opened once, by the code the link was read with, and the bell read again for its notice.
@@ -243,7 +243,7 @@ describe('a friend link, on a phone that is signed in', () => {
     expect(screen).toHavePathname('/you');
   });
 
-  it.each(['raketa://f/tk4m', 'raketa://f/tk4m-9q2', 'https://evil.example/f/tk4m9q2z'])(
+  it.each(['rakieta://f/tk4m', 'rakieta://f/tk4m-9q2', 'https://evil.example/f/tk4m9q2z'])(
     'reads nothing out of a link that cannot be one: %p',
     async (url) => {
       serve(ANIA);

@@ -196,7 +196,7 @@ expo-router hands every address the operating system opens the app with to `src/
 before it routes one, and the links feature answers: `join/<code>`, `invite/<token>`,
 `reset/<token>` and `f/<code>` — by the app's scheme, or the web domain once one is set — are read
 value by value and **held** until a place that can answer them is reached (and so is the bare
-`raketa://`, the existing-account invitation email's button); **anything else is ignored**, so no
+`rakieta://`, the existing-account invitation email's button); **anything else is ignored**, so no
 screen in the app is reachable from outside by its path. **One more address is read at launch**:
 the Android install referrer, once, on the first launch (#756) — anybody's text, as the scheme is,
 so it is read for `join/` and `f/` only, off any host, and never for a token. A held link never short-circuits the guard: it waits through sign-in and onboarding, and is

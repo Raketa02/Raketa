@@ -41,7 +41,7 @@
  *   about 880 pt. The fall still takes 0,39 s, so a taller phone gets a slightly faster drop.
  */
 
-/** The word the splash draws, letter by letter: the one place the app spells it so (ADR-0209 §5). */
+/** The word the splash draws, letter by letter: the name under the icon too (ADR-0211). */
 export const WORDMARK = ['R', 'a', 'k', 'i', 'e', 't', 'a'] as const;
 
 export type WordmarkLetter = (typeof WORDMARK)[number];

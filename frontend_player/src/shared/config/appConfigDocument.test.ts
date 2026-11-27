@@ -114,17 +114,33 @@ describe('the config document', () => {
   });
 
   /**
+   * **The launcher name, as the OS shows it under the icon** — at the one environment this document
+   * is evaluated at here, `jest.config.js`'s. The other three are `appIdentity.test.ts`'s.
+   */
+  it('names the app Rakieta development, at the environment it is evaluated at', () => {
+    expect(getEnv().environment).toBe('development');
+    expect(config.name).toBe('Rakieta development');
+  });
+
+  /**
    * ADR-0028 defers per-environment identifiers until a second backend exists to point
    * them at. Three installable apps that all reach the same laptop would be ceremony —
    * and the moment one exists, this assertion is the one that has to be argued with.
+   * They are permanent from the first store submission (ADR-0211).
    */
   it('publishes exactly one bundle identifier, shared by both platforms', () => {
-    expect(config.ios?.bundleIdentifier).toBe('com.raketa.player');
-    expect(config.android?.package).toBe('com.raketa.player');
+    expect(config.ios?.bundleIdentifier).toBe('com.rakieta.player');
+    expect(config.android?.package).toBe('com.rakieta.player');
   });
 
-  it('publishes exactly one URL scheme', () => {
+  /** The Expo project — and so the development build's own scheme, `exp+rakieta-player://`. */
+  it('is the Expo project rakieta-player', () => {
+    expect(config.slug).toBe('rakieta-player');
+  });
+
+  it('publishes exactly one URL scheme, rakieta', () => {
     expect(config.scheme).toBe(APP_SCHEME);
+    expect(config.scheme).toBe('rakieta');
   });
 
   /**
@@ -167,18 +183,20 @@ describe('the config document', () => {
     const [, options] = pluginNamed('expo-location');
 
     expect(options.locationWhenInUsePermission).toBe(
-      'Raketa uses your location to set the area you play in and, when you say who’s at a game, to check you’re at the club.',
+      'Rakieta uses your location to set the area you play in and, when you say who’s at a game, to check you’re at the club.',
     );
   });
 
   /**
    * The prompt is the only place the app explains itself before the OS asks, and an
-   * unexplained prompt is a prompt that gets refused.
+   * unexplained prompt is a prompt that gets refused. It names who is asking, too.
    */
   it('gives the photo-library prompt a reason to show the player', () => {
     const [, options] = pluginNamed('expo-image-picker');
 
-    expect(options.photosPermission).toEqual(expect.any(String));
+    expect(options.photosPermission).toBe(
+      'Rakieta uses your photos so you can put a picture of yourself on your profile.',
+    );
   });
 
   /**

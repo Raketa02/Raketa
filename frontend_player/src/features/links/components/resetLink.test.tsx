@@ -122,7 +122,7 @@ describe('a reset link, on a phone that is signed in', () => {
     await launchSignedIn();
     expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
 
-    openLink(`raketa://reset/${TOKEN}`);
+    openLink(`rakieta://reset/${TOKEN}`);
 
     expect(await screen.findByRole('header', { name: SHEET_TITLE })).toBeTruthy();
     expect(screen.getByText(new RegExp(`You’re signed in as ${GATE_USER.email}`))).toBeTruthy();
@@ -135,7 +135,7 @@ describe('a reset link, on a phone that is signed in', () => {
    * screen, whose guard finds the phone signed in and hands it to the gate, where the held link asks.
    */
   it('asks through the screen’s guard at a cold start', async () => {
-    const landing = redirectSystemPath({ path: `raketa://reset/${TOKEN}`, initial: true });
+    const landing = redirectSystemPath({ path: `rakieta://reset/${TOKEN}`, initial: true });
     expect(landing).toBe(`/reset/${TOKEN}`);
     await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
     renderRouter(ONBOARDING_ROUTES, { initialUrl: landing });

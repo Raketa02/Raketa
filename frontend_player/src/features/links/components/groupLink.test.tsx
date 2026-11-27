@@ -55,7 +55,7 @@ const COPY = GROUPS_COPY.joinGroup;
 
 const CODE = 'k7pq2mxa';
 /** The group link as the app spells it while no web domain is set — the app's own scheme. */
-const LINK = `raketa://join/${CODE}`;
+const LINK = `rakieta://join/${CODE}`;
 const JOIN_SEARCH = '/api/v1/join-search';
 
 const O3_CLUB: Wire['GroupAtClubSchema'] = {
@@ -186,7 +186,7 @@ describe('a link the app cannot read', () => {
     expect(searched()).toEqual([]);
   });
 
-  it.each(['raketa://join/k7pq-2mx', 'raketa://play/join', 'https://evil.example/join/k7pq2mxa'])(
+  it.each(['rakieta://join/k7pq-2mx', 'rakieta://play/join', 'https://evil.example/join/k7pq2mxa'])(
     'is ignored while the app is open, and nothing moves: %p',
     async (url) => {
       serve(KUBA);
