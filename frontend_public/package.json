@@ -1,8 +1,8 @@
 {
-  "name": "@raketa/frontend-public",
+  "name": "@rakieta/frontend-public",
   "version": "0.1.0",
   "private": true,
-  "description": "Raketa's public site: the pages a link opens when the app isn't installed. Next.js, every page server-rendered, holding nothing.",
+  "description": "Rakieta's public site: the pages a link opens when the app isn't installed. Next.js, every page server-rendered, holding nothing.",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=22"

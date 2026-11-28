@@ -19,11 +19,11 @@ for (const userAgent of MESSENGERS) {
     const { status, title, tags } = await headOf(request, '/join/k7pq2mxa', userAgent);
 
     expect(status).toBe(200);
-    expect(title).toBe('Ogrody 33 Club · Raketa');
+    expect(title).toBe('Ogrody 33 Club · Rakieta');
     expect(tags.get('og:title')).toBe('Ogrody 33 Club');
     expect(tags.get('og:description')).toBe('Ogrody 33 · Grzegórzki · Padel · 11 members');
     expect(tags.get('description')).toBe('Ogrody 33 · Grzegórzki · Padel · 11 members');
-    expect(tags.get('og:site_name')).toBe('Raketa');
+    expect(tags.get('og:site_name')).toBe('Rakieta');
     // Absolute, and at the address the site is reached at, which is not where the suite reaches it.
     expect(tags.get('og:url')).toBe(`${SITE_URL}/join/k7pq2mxa`);
     expect(tags.get('og:image')).toBe(`${SITE_URL}/preview/k7pq2mxa`);
@@ -67,7 +67,7 @@ test('a dead link has no preview card: it says Nothing at that link, with no ima
   const { status, title, tags } = await headOf(request, '/join/zzzzzzzz', MESSENGERS[0]!);
 
   expect(status).toBe(404);
-  expect(title).toBe('Nothing at that link · Raketa');
+  expect(title).toBe('Nothing at that link · Rakieta');
   expect(tags.has('og:image')).toBe(false);
   expect(tags.has('og:title')).toBe(false);
 });

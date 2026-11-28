@@ -1,5 +1,5 @@
 /**
- * **The way in, as a page draws it**: Raketa's two store listings, and the app itself at one of
+ * **The way in, as a page draws it**: Rakieta's two store listings, and the app itself at one of
  * its own routes. All three come from settings (ADR-0187 §7), and reach a page as addresses.
  */
 export interface AppLinks {

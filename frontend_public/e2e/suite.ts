@@ -10,15 +10,15 @@ export const STUB_PORT = 4020;
 const STUB = `http://127.0.0.1:${STUB_PORT}`;
 
 /** The address this site is told it is reached at: deliberately not where the suite reaches it. */
-export const SITE_URL = 'https://raketa.test';
+export const SITE_URL = 'https://rakieta.test';
 
-export const APP_STORE_URL = 'https://apps.apple.com/app/raketa/id0000000001';
-export const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.raketa.player';
+export const APP_STORE_URL = 'https://apps.apple.com/app/rakieta/id0000000001';
+export const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.rakieta.player';
 
 /** The app the app-link files name: its Apple team and bundle, and its Android package and keys. */
 export const APPLE_TEAM_ID = 'R4KET4TEAM';
-export const IOS_BUNDLE_ID = 'com.raketa.player';
-export const ANDROID_PACKAGE = 'com.raketa.player';
+export const IOS_BUNDLE_ID = 'com.rakieta.player';
+export const ANDROID_PACKAGE = 'com.rakieta.player';
 /** Two signing keys, as a release key and a store's re-signing key would be; written lower case. */
 export const ANDROID_CERT_FINGERPRINTS = [
   'fa:c6:17:45:dc:09:03:78:6f:b9:ed:e6:2a:96:2b:39:9f:73:48:f0:bb:6f:89:9b:83:32:66:75:91:03:3b:9c',

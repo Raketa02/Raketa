@@ -1,4 +1,4 @@
-# Raketa — the public site
+# Rakieta — the public site
 
 The pages a link opens when the app isn't installed:
 

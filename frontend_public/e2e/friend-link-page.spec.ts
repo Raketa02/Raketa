@@ -7,7 +7,7 @@ import { APP_STORE_URL, GOOGLE_PLAY_URL, SITE_URL } from './suite';
 
 /**
  * **The friend link's page** (#755, the friends mechanics §4.3): Zofia taps Tomek's
- * `rakieta.app/f/<code>` on a phone without Raketa. The page says who invited her, with his face,
+ * `rakieta.app/f/<code>` on a phone without Rakieta. The page says who invited her, with his face,
  * and shows the way in: the stores, and **Open in Rakieta** for when she comes back.
  */
 
@@ -17,7 +17,7 @@ test('a friend link says who invited you, with their face', async ({ page, frien
   await page.goto('/f/k7pq2mxa');
 
   await expect(
-    page.getByRole('heading', { level: 1, name: 'Tomek invited you to play on Raketa' }),
+    page.getByRole('heading', { level: 1, name: 'Tomek invited you to play on Rakieta' }),
   ).toBeVisible();
   // His face, from this site, drawn: the backend's link to it is never put into the page.
   const face = page.getByRole('main').locator('img');
@@ -32,7 +32,7 @@ test('somebody with no photograph is drawn without a face', async ({ page, stub,
   await page.goto('/f/k7pq2mxa');
 
   await expect(
-    page.getByRole('heading', { level: 1, name: 'Tomek invited you to play on Raketa' }),
+    page.getByRole('heading', { level: 1, name: 'Tomek invited you to play on Rakieta' }),
   ).toBeVisible();
   await expect(page.getByRole('main').locator('img')).toHaveCount(0);
   expect(stub.storageOpened()).toEqual([]);
@@ -72,7 +72,7 @@ test('a code is read in any case, as the backend reads it', async ({ page, frien
   await page.goto('/f/K7PQ2MXA');
 
   await expect(
-    page.getByRole('heading', { level: 1, name: 'Tomek invited you to play on Raketa' }),
+    page.getByRole('heading', { level: 1, name: 'Tomek invited you to play on Rakieta' }),
   ).toBeVisible();
 });
 
@@ -83,7 +83,7 @@ test('a link replaced by a New link says Nothing at that link, answered 404', as
   friendLinks.seat('k7pq2mxa');
   await page.goto('/f/k7pq2mxa');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    'Tomek invited you to play on Raketa',
+    'Tomek invited you to play on Rakieta',
   );
 
   friendLinks.replace('k7pq2mxa');
@@ -148,7 +148,7 @@ test.describe('without JavaScript', () => {
     await page.goto('/f/k7pq2mxa');
 
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Tomek invited you to play on Raketa' }),
+      page.getByRole('heading', { level: 1, name: 'Tomek invited you to play on Rakieta' }),
     ).toBeVisible();
     await expect(page.getByRole('main').locator('img')).toHaveJSProperty('naturalWidth', 300);
     await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toBeVisible();

@@ -11,9 +11,9 @@ export const FRIEND_LINK_COPY = {
   comeBack: `Once you have the app, come back here and tap ${GET_THE_APP_COPY.openInRakieta}`,
 } as const;
 
-/** *Tomek invited you to play on Raketa*: the page's heading, and the preview's title. */
+/** *Tomek invited you to play on Rakieta*: the page's heading, and the preview's title. */
 export function invitedYou(nickname: string): string {
-  return `${nickname} invited you to play on Raketa`;
+  return `${nickname} invited you to play on Rakieta`;
 }
 
 /**

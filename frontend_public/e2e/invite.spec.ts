@@ -19,6 +19,7 @@ test('an invitation link greets the person by name for the club, with the code a
 
   await page.goto(`/invite/${link}`);
 
+  await expect(page).toHaveTitle('Your invitation · Rakieta');
   // The whole name the club typed: nothing invents a first name (ADR-0171 §4).
   await expect(
     page.getByRole('heading', {
@@ -27,7 +28,7 @@ test('an invitation link greets the person by name for the club, with the code a
     }),
   ).toBeVisible();
   await expect(page.getByText('K7PQ2MXA', { exact: true })).toBeVisible();
-  await expect(page.getByText('After you install, open Raketa and enter this code')).toBeVisible();
+  await expect(page.getByText('After you install, open Rakieta and enter this code')).toBeVisible();
   await expect(page.getByRole('link', { name: 'App Store' })).toHaveAttribute(
     'href',
     APP_STORE_URL,
@@ -47,7 +48,7 @@ test('an invitation link greets the person by name for the club, with the code a
   ]);
 });
 
-test('Set your password here sets it by the link, then says to open Raketa and sign in', async ({
+test('Set your password here sets it by the link, then says to open Rakieta and sign in', async ({
   page,
   stub,
   credentials,
@@ -64,7 +65,7 @@ test('Set your password here sets it by the link, then says to open Raketa and s
   await page.getByRole('button', { name: 'Set password' }).click();
 
   await expect(
-    page.getByText('Password set. Open Raketa and sign in with your email and password.'),
+    page.getByText('Password set. Open Rakieta and sign in with your email and password.'),
   ).toBeVisible();
   expect(stub.requests('post', INVITATION_PASSWORD).map((request) => request.body)).toEqual([
     { token: link, password: 'ogrody33club' },
@@ -264,7 +265,7 @@ test('a mark written by hand on a link that still works changes nothing', async 
 
   await expect(page.getByRole('button', { name: 'Set password' })).toBeVisible();
   await expect(
-    page.getByText('Password set. Open Raketa and sign in with your email and password.'),
+    page.getByText('Password set. Open Rakieta and sign in with your email and password.'),
   ).toHaveCount(0);
 });
 

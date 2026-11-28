@@ -46,7 +46,7 @@ const BROWSER_URLS = ['PUBLIC_SITE_URL', 'APP_STORE_URL', 'GOOGLE_PLAY_URL'] as 
 
 /**
  * Schemes that are never an app's: a link built from one would open a web page, run script, or
- * read a file instead of opening Raketa.
+ * read a file instead of opening Rakieta.
  */
 const NOT_AN_APP_SCHEME = ['http', 'https', 'javascript', 'data', 'vbscript', 'file', 'blob'];
 
@@ -79,7 +79,7 @@ function matching(pattern: RegExp, otherwise: string) {
   return z.string({ error: required(otherwise) }).regex(pattern, { error: otherwise });
 }
 
-/** An identifier in dots, such as `com.raketa.player`: `part` is what one piece may be. */
+/** An identifier in dots, such as `com.rakieta.player`: `part` is what one piece may be. */
 function dotted(part: string, otherwise: string) {
   return matching(new RegExp(`^${part}(\\.${part})+$`), otherwise);
 }
@@ -99,9 +99,9 @@ const Fields = z.object({
    * from it, so it is the address people reach, not the one this process listens on.
    */
   PUBLIC_SITE_URL: httpUrl,
-  /** Where the App Store button goes: Raketa's listing. */
+  /** Where the App Store button goes: Rakieta's listing. */
   APP_STORE_URL: httpUrl,
-  /** Where the Google Play button goes: Raketa's listing. */
+  /** Where the Google Play button goes: Rakieta's listing. */
   GOOGLE_PLAY_URL: httpUrl,
   /**
    * The player app's own scheme, without `://`: **Open in Rakieta** goes to
@@ -120,11 +120,11 @@ const Fields = z.object({
     'must be the 10-character Apple team id, capitals and digits',
   ),
   /** The iOS app's bundle id (`frontend_player`'s `ios.bundleIdentifier`). */
-  IOS_BUNDLE_ID: dotted('[A-Za-z0-9-]+', 'must be a bundle id such as com.raketa.player'),
+  IOS_BUNDLE_ID: dotted('[A-Za-z0-9-]+', 'must be a bundle id such as com.rakieta.player'),
   /** The Android app's package (`frontend_player`'s `android.package`). */
   ANDROID_PACKAGE: dotted(
     '[A-Za-z][A-Za-z0-9_]*',
-    'must be an Android package name such as com.raketa.player',
+    'must be an Android package name such as com.rakieta.player',
   ),
   /**
    * The SHA-256 fingerprints of every key the Android app is signed with, separated by commas: a

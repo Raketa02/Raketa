@@ -4,18 +4,19 @@ import type { LinkState } from '@/features/set-password/mappers';
 /**
  * **The invitation page's words.** They follow the app's *Set your password* where the two say the
  * same thing, by copying it (`frontend_player`'s `invitationPresentation.ts`), and send the person
- * to *the app* where the web can't do what is needed. **Raketa is named only in the two sentences
- * ADR-0187 names it in** (§4's *after you install, open Raketa and enter this code*, §8's *Open
- * Raketa and sign in with your email and password*); everywhere else the copy rule stands.
+ * to *the app* where the web can't do what is needed. **Rakieta is named only in the two
+ * sentences ADR-0187 names it in** (§4's *after you install, open Rakieta and enter this code*,
+ * and §8's *Open Rakieta and sign in with your email and password*, which ADR-0211 respells
+ * *Rakieta*); everywhere else the copy rule stands.
  */
 
 export const INVITATION_COPY = {
   title: 'Your invitation',
   /** The code the email carries, set out for typing into the app. */
   code: 'Your code',
-  next: 'After you install, open Raketa and enter this code',
+  next: 'After you install, open Rakieta and enter this code',
   /** Once the password is set here (#500 story 112). */
-  done: 'Password set. Open Raketa and sign in with your email and password.',
+  done: 'Password set. Open Rakieta and sign in with your email and password.',
 } as const;
 
 export const INVITATION_FORM: PasswordFormWords = {

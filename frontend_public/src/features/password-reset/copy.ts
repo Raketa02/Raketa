@@ -5,7 +5,7 @@ import type { LinkState } from '@/features/set-password/mappers';
  * **The reset page's words.** They follow the app's *Forgot password?* where the two say the same
  * thing, by copying it (`frontend_player`'s `resetPresentation.ts`), and send the person to *the
  * app* where the web can't ask again: this site has no *Forgot password?* of its own. None names
- * Raketa: no mock sentence does (ADR-0187 §8).
+ * Rakieta: no mock sentence does (ADR-0187 §8's copy rule, which ADR-0211 keeps).
  */
 
 const ASK_AGAIN = 'To ask again for a new one, open the app and tap “Forgot password?”';

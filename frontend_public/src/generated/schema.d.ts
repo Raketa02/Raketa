@@ -55,7 +55,7 @@ export interface paths {
         put?: never;
         /**
          * Set your password here, by the invitation's link
-         * @description **The same rules and the same results as the app's *Set your password***: a new person's account is created — no player name, no nickname, no Adult attestation — or an account the club reset gets its password back, and either way the administrator is active and the link is spent. **Nobody is signed in**: the page then says to open Raketa and sign in with this email and password.
+         * @description **The same rules and the same results as the app's *Set your password***: a new person's account is created — no player name, no nickname, no Adult attestation — or an account the club reset gets its password back, and either way the administrator is active and the link is spent. **Nobody is signed in**: the page then says to open Rakieta and sign in with this email and password.
          */
         post: operations["set_password_on_the_invitation_page_api_v1_public_invitations_password_post"];
         delete?: never;
@@ -95,7 +95,7 @@ export interface paths {
         put?: never;
         /**
          * Set a new password by a reset's link, and sign out everywhere
-         * @description **The same rules and the same results as the app's *Forgot password?***: the password rule, the link spent, and **every session signed out** — every access token issued before this moment is refused (`access_token_revoked`) and every refresh token revoked. **Nobody is signed in**: the page then says to open Raketa and sign in with the new password.
+         * @description **The same rules and the same results as the app's *Forgot password?***: the password rule, the link spent, and **every session signed out** — every access token issued before this moment is refused (`access_token_revoked`) and every refresh token revoked. **Nobody is signed in**: the page then says to open Rakieta and sign in with the new password.
          */
         post: operations["set_password_on_the_reset_page_api_v1_public_password_resets_password_post"];
         delete?: never;
@@ -212,7 +212,7 @@ export interface components {
             state: components["schemas"]["InvitationLinkState"];
             /**
              * Code
-             * @description The 8-character code the email carries under its button, for *after you install, open Raketa and enter this code* — **only while `valid`**, `null` otherwise.
+             * @description The 8-character code the email carries under its button, for *after you install, open Rakieta and enter this code* — **only while `valid`**, `null` otherwise.
              */
             code: string | null;
         };
@@ -220,7 +220,7 @@ export interface components {
          * LinkedFriendResponse
          * @description A Friend link's owner as the public site's `/f/<code>` page draws them for
          *     somebody who has not signed in — *{nickname} invited you to play on
-         *     Raketa* — **and nothing else about them**.
+         *     Rakieta* — **and nothing else about them**.
          */
         LinkedFriendResponse: {
             /** Nickname */
@@ -272,7 +272,7 @@ export interface components {
         MonogramSchema: {
             /**
              * Letters
-             * @description The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my raketa group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes — never change its case.
+             * @description The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my rakieta group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes — never change its case.
              */
             letters: string;
             /**
@@ -324,7 +324,7 @@ export interface components {
         };
         /**
          * Sport
-         * @description The four sports Raketa rates, as a closed enum.
+         * @description The four sports Rakieta rates, as a closed enum.
          * @enum {string}
          */
         Sport: "PADEL" | "TENNIS" | "SQUASH" | "BADMINTON";

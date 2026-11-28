@@ -17,6 +17,7 @@ test('a reset link sets a new password, then says to sign in to the app with it'
   credentials.reset(link);
   await page.goto(`/reset/${link}`);
 
+  await expect(page).toHaveTitle('Set a new password · Rakieta');
   await expect(page.getByRole('heading', { level: 1, name: 'Set a new password' })).toBeVisible();
   await expect(page.getByText('Setting it signs your account out on every phone.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open in Rakieta' })).toHaveAttribute(

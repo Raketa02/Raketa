@@ -1,4 +1,4 @@
-# Raketa — the public site
+# Rakieta — the public site
 
 Next.js 16 (App Router) + React 19 + TypeScript, pnpm. The pages a link opens when the app isn't
 installed: the group page (`/join/<code>`) and its preview, the friend link's page (`/f/<code>`)

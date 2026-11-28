@@ -5,7 +5,7 @@ import styles from './OwnerCard.module.css';
 
 /**
  * **Who invited you** (the friends screens §11): their face and *Tomek invited you to play on
- * Raketa*, laid out as the group page lays out a group's tile and name. The face is a box rounded
+ * Rakieta*, laid out as the group page lays out a group's tile and name. The face is a box rounded
  * as the app rounds one, and somebody with no photograph has none: the app's stand-in, a poster,
  * is drawn from an id the public read rightly withholds, and a face carries no initials
  * (ADR-0167 §3).

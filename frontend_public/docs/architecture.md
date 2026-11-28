@@ -115,7 +115,7 @@ sees (ADR-0187 §4). The suite reads the raw HTML to prove it.
   description where it plays, its sports and its size, and the image its tile. Every address in
   them is absolute and made from `PUBLIC_SITE_URL`, the address people reach the site by. The
   invitation and reset pages have a title and no preview: a credential's page describes nobody.
-- **A friend link's preview** is _Tomek invited you to play on Raketa_, whole, without the site's
+- **A friend link's preview** is _Tomek invited you to play on Rakieta_, whole, without the site's
   name after it, over _Tomek wants to be your friend_, beside his face. Somebody with no photograph
   has no picture, on the page or in the preview: the app's stand-in, a poster, is drawn from an id
   the public read withholds, and a face carries no initials (ADR-0167 §3). The page asks never to
@@ -170,9 +170,9 @@ worded as the app words it. While it is valid the page offers the form.
 - **The form needs JavaScript.** Under `Referrer-Policy: no-referrer` a browser posts a plain form
   with `Origin: null`, which Next refuses as a cross-site action. A browser without it is told so
   in a `<noscript>`, and everything else on these pages reads without it.
-- **Raketa is named only where ADR-0187 names it**: _after you install, open Raketa and enter this
-  code_ (§4) and _Open Raketa and sign in with your email and password_ (§8). Everywhere else
-  these pages say _the app_, as the copy rule has it.
+- **Rakieta is named only where ADR-0187 names it**: _after you install, open Rakieta and enter
+  this code_ (§4) and _Open Rakieta and sign in with your email and password_ (§8, which ADR-0211
+  respells _Rakieta_). Everywhere else these pages say _the app_, as the copy rule has it.
 - **Open in Rakieta** opens the app at `invite/<token>` or `reset/<token>` while the link works
   (#520), and at the app's start once it can't, where the person signs in.
 
@@ -216,7 +216,7 @@ pages carry nothing: Play keeps a referrer for 90 days, and a token is a credent
 
 **A real browser in front, a stand-in backend behind**, and nothing in between replaced
 (ADR-0187 §6). `pnpm test` builds the site and starts it on port 3200 with a configuration made
-for the suite, told it is reached at `https://raketa.test`. Each Playwright worker starts the
+for the suite, told it is reached at `https://rakieta.test`. Each Playwright worker starts the
 **stub backend** on port 4020, where `API_URL` points. The ports are not the club website's, so
 the two suites can run side by side.
 

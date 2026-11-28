@@ -15,7 +15,7 @@ export interface PreviewLinks {
 /**
  * **The friend link's preview tags** (ADR-0187 §4): what a messenger draws for the link, read from
  * the `<head>` the server sends. The title is the page's heading, whole, without the site's name
- * after it, since it already says *Raketa*; the line under it what the link comes to; the picture
+ * after it, since it already says *Rakieta*; the line under it what the link comes to; the picture
  * the owner's face (`/face/<code>`), and none for somebody with no photograph.
  *
  * **It asks never to be listed**: the page names somebody and shows their face, by a link they

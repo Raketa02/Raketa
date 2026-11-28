@@ -9,7 +9,7 @@ import { SITE_URL } from './suite';
 
 /**
  * **The friend link's preview** (#755): Tomek pastes his link into a WhatsApp chat, and the card
- * says *Tomek invited you to play on Raketa* beside his face. The tags are read from the HTML the
+ * says *Tomek invited you to play on Rakieta* beside his face. The tags are read from the HTML the
  * server sends (ADR-0187 §4); the picture is his photograph, drawn square by this site from a link
  * the backend signs for minutes, so it is read afresh for every picture.
  */
@@ -52,11 +52,11 @@ for (const userAgent of MESSENGERS) {
     const { status, title, tags } = await headOf(request, '/f/k7pq2mxa', userAgent);
 
     expect(status).toBe(200);
-    expect(title).toBe('Tomek invited you to play on Raketa');
-    expect(tags.get('og:title')).toBe('Tomek invited you to play on Raketa');
+    expect(title).toBe('Tomek invited you to play on Rakieta');
+    expect(tags.get('og:title')).toBe('Tomek invited you to play on Rakieta');
     expect(tags.get('og:description')).toBe('Tomek wants to be your friend');
     expect(tags.get('description')).toBe('Tomek wants to be your friend');
-    expect(tags.get('og:site_name')).toBe('Raketa');
+    expect(tags.get('og:site_name')).toBe('Rakieta');
     // Absolute, at the address the site is reached at, and outside /f/, which the app claims.
     expect(tags.get('og:url')).toBe(`${SITE_URL}/f/k7pq2mxa`);
     expect(tags.get('og:image')).toBe(`${SITE_URL}/face/k7pq2mxa`);
@@ -87,7 +87,7 @@ test('somebody with no photograph is previewed without a picture', async ({
   const { status, tags } = await headOf(request, '/f/k7pq2mxa', MESSENGERS[0]!);
 
   expect(status).toBe(200);
-  expect(tags.get('og:title')).toBe('Tomek invited you to play on Raketa');
+  expect(tags.get('og:title')).toBe('Tomek invited you to play on Rakieta');
   expect(tags.has('og:image')).toBe(false);
   expect((await request.get('/face/k7pq2mxa')).status()).toBe(404);
 });
@@ -98,7 +98,7 @@ test('a dead link has no preview card: it says Nothing at that link, with no ima
   const { status, title, tags } = await headOf(request, '/f/zzzzzzzz', MESSENGERS[0]!);
 
   expect(status).toBe(404);
-  expect(title).toBe('Nothing at that link · Raketa');
+  expect(title).toBe('Nothing at that link · Rakieta');
   expect(tags.has('og:image')).toBe(false);
   expect(tags.has('og:title')).toBe(false);
 });

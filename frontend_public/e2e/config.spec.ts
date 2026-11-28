@@ -80,7 +80,7 @@ test.describe('Configuration', () => {
     const { code, output } = await start({
       ...SUITE_ENV,
       API_URL: 'localhost:8000',
-      PUBLIC_SITE_URL: 'raketa.example',
+      PUBLIC_SITE_URL: 'rakieta.example',
       // Starts like one, and is none: the Android button's link is built from it.
       GOOGLE_PLAY_URL: 'https://[play.google.com/store',
       APP_SCHEME: 'rakieta://',
@@ -108,7 +108,7 @@ test.describe('Configuration', () => {
     const { code, output } = await start({
       ...SUITE_ENV,
       APP_ENV: 'staging',
-      PUBLIC_SITE_URL: 'http://raketa.example',
+      PUBLIC_SITE_URL: 'http://rakieta.example',
       APP_STORE_URL: 'http://apps.apple.com/app/id1',
       APP_SCHEME: '',
     });
@@ -126,7 +126,7 @@ test.describe('The app-link files’ settings', () => {
     const { code, output } = await start({
       ...SUITE_ENV,
       APPLE_TEAM_ID: 'r4ket4',
-      IOS_BUNDLE_ID: 'raketa',
+      IOS_BUNDLE_ID: 'rakieta',
       ANDROID_PACKAGE: '',
       ANDROID_CERT_FINGERPRINTS: 'FA:C6:17:45, not-a-key',
     });
@@ -135,7 +135,7 @@ test.describe('The app-link files’ settings', () => {
     expect(output).toContain(
       'APPLE_TEAM_ID: must be the 10-character Apple team id, capitals and digits',
     );
-    expect(output).toContain('IOS_BUNDLE_ID: must be a bundle id such as com.raketa.player');
+    expect(output).toContain('IOS_BUNDLE_ID: must be a bundle id such as com.rakieta.player');
     expect(output).toContain('ANDROID_PACKAGE: is required');
     expect(output).toContain(
       'ANDROID_CERT_FINGERPRINTS: must be SHA-256 fingerprints (32 hex pairs, AA:BB:…), separated by commas',
@@ -149,7 +149,7 @@ test.describe('The app-link files’ settings', () => {
       return (await response.json()) as { applinks: { details: { appIDs: string[] }[] } };
     });
 
-    expect(served.applinks.details[0]?.appIDs).toEqual(['DEPL0YTEAM.com.raketa.player']);
+    expect(served.applinks.details[0]?.appIDs).toEqual(['DEPL0YTEAM.com.rakieta.player']);
   });
 });
 
