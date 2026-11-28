@@ -2,8 +2,8 @@
 
 The club website: a club signs up with its name, district, city, sports and a pin on the map,
 signs in, keeps its details, and recovers its password. Administrators and official groups
-arrive with [#523](https://github.com/Raketa02/Raketa/issues/523) and
-[#524](https://github.com/Raketa02/Raketa/issues/524).
+arrive with [#523](https://github.com/Rakieta02/Rakieta/issues/523) and
+[#524](https://github.com/Rakieta02/Rakieta/issues/524).
 
 Next.js 16 with the App Router, talking to the backend's club surface from its own server. The
 club's session is a sealed `httpOnly` cookie, and the browser never holds a token
