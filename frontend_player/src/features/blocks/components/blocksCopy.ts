@@ -1,6 +1,6 @@
 /**
  * **Every sentence this feature says** — the row at the foot of a record, the confirm sheet, and
- * You › Account › Blocked players ([#587](https://github.com/Raketa02/Raketa/issues/587), PRD #571;
+ * You › Account › Blocked players ([#587](https://github.com/Rakieta02/Rakieta/issues/587), PRD #571;
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
  *
  * ## The whole name, and no pronoun

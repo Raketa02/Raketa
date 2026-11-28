@@ -16,8 +16,8 @@
  * even* — it is this app's word for a number — so it sat beside Play's other copy tables. A
  * group's Games deck, its game card and details, and a booked game's forecast block draw the
  * same bar and say the same word, and none of them may import `features/play/` — the loop
- * [#569](https://github.com/Raketa02/Raketa/issues/569) removes — so the table came below all of
- * them ([#574](https://github.com/Raketa02/Raketa/issues/574)), beside the vocabularies whose
+ * [#569](https://github.com/Rakieta02/Rakieta/issues/569) removes — so the table came below all of
+ * them ([#574](https://github.com/Rakieta02/Rakieta/issues/574)), beside the vocabularies whose
  * words a second feature would have written identically.
  *
  * ## The word breaks in four where the tone breaks in three

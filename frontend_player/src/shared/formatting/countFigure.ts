@@ -1,6 +1,6 @@
 /**
  * **A count, as drawn** — FOR YOU's count pill and *See all N ›*
- * ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6), and the bell's and the
+ * ([#822](https://github.com/Rakieta02/Rakieta/issues/822); ADR-0205 §6), and the bell's and the
  * envelope's badges: the figure up to 99, ***99+*** past it.
  *
  * **A line's server never counts past 100**, which reads *100 or more*: a total is how many there are

@@ -1,6 +1,6 @@
 /**
  * **A password reset's link, opened on a phone** — it opens **Set a new password** with its token
- * ([#520](https://github.com/Raketa02/Raketa/issues/520), PRD #500 stories 84–87; the screen is
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520), PRD #500 stories 84–87; the screen is
  * #515's).
  *
  * Signed out, the link lands straight on the screen. Signed in, a sheet asks first: a reset link

@@ -12,7 +12,7 @@
  * holding a second opinion about who is in a room.
  *
  * It was also the Chats tab's inbox and the old loop's chat doors — a challenge joining its way
- * into its room — until that loop was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+ * into its room — until that loop was removed ([#576](https://github.com/Rakieta02/Rakieta/issues/576)).
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -42,8 +42,8 @@ export function useConversations() {
 
 /**
  * **A booked game's room, found by its booking**
- * ([#556](https://github.com/Raketa02/Raketa/issues/556),
- * [#577](https://github.com/Raketa02/Raketa/issues/577)).
+ * ([#556](https://github.com/Rakieta02/Rakieta/issues/556),
+ * [#577](https://github.com/Rakieta02/Rakieta/issues/577)).
  *
  * A booked game's room opens with the booking (the mechanics §14.3) and is filed under it: every
  * row carries the `booking_id` it was opened for, and *a room is opened only by a booked game, so

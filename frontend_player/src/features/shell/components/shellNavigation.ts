@@ -4,7 +4,7 @@
  *
  * There is one stack, not three. `expo-router`'s `<Tabs>` gives every tab its own history and
  * restores it on return — which is what it is for, and which fails
- * [#227](https://github.com/Raketa02/Raketa/issues/227)'s rule *silently*: a player who
+ * [#227](https://github.com/Rakieta02/Rakieta/issues/227)'s rule *silently*: a player who
  * leaves a group's page and comes back lands on the page, nothing throws, nothing looks wrong,
  * and the only way to notice is to do it deliberately. So the shell is a plain `Stack` and every
  * tab press **replaces** what is above Home.

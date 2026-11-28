@@ -1,7 +1,7 @@
 /**
  * **The Rankings page's own rules**, with no renderer — which sports the pill offers and in what
  * order, which sport the page opens on, and when there is a podium
- * ([#775](https://github.com/Raketa02/Raketa/issues/775); the rankings mechanics §9, the screens
+ * ([#775](https://github.com/Rakieta02/Rakieta/issues/775); the rankings mechanics §9, the screens
  * §2, §5.1).
  */
 

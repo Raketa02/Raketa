@@ -64,7 +64,7 @@
  * ## An option that owns a menu — a tab with a second layer
  *
  * A group page's **Friends** tab holds the kind of the game being built, in **the tab's menu**
- * (`TabMenu`, 9.5; PRD [#859](https://github.com/Raketa02/Raketa/issues/859), #861), and **Games**
+ * (`TabMenu`, 9.5; PRD [#859](https://github.com/Rakieta02/Rakieta/issues/859), #861), and **Games**
  * its deck's kind since #862, where a row of *Competitive | For fun* under the tabs once stood. Such an option carries
  * `menu`. **While it is selected and its menu is offered** — the page's rule, not this control's —
  * it draws a Feather chevron at its right edge, pointing down while the menu is shut and turning up
@@ -174,7 +174,7 @@ export interface SegmentProps<K extends string> {
   readonly onDark?: boolean;
   /**
    * **The tab's own view switch**, drawn as play mocks 1 and 3 draw Play's *Groups | Explore*
-   * ([#512](https://github.com/Raketa02/Raketa/issues/512), 6.3 as amended in Part 16): a taller
+   * ([#512](https://github.com/Rakieta02/Rakieta/issues/512), 6.3 as amended in Part 16): a taller
    * control whose raised segment is **`ink` with a `surface` label** rather than `surface` with an
    * `ink` one. It switches the whole tab rather than a pane inside a screen, and the mocks set it
    * apart for that — the same lightness step read from the dark side, as `onDark` reads it. The

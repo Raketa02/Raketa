@@ -1,7 +1,7 @@
 /**
  * **The filter's switch — a save on every tap, settled by the re-read**
  * ([ADR-0195](../../../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
- * §6, [#662](https://github.com/Raketa02/Raketa/issues/662)).
+ * §6, [#662](https://github.com/Rakieta02/Rakieta/issues/662)).
  *
  * `PUT /players/me/reliability-filter` answers `204` and nothing else: what is saved, and how many
  * players in the player's groups it now hides, is the own record's to say. So the act is two steps

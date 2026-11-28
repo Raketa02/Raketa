@@ -1,7 +1,7 @@
 /**
  * **The links into the app, as configuration** — the one setting that turns the web domain's links
  * on, and what iOS and Android are told once it does
- * ([#520](https://github.com/Raketa02/Raketa/issues/520), ADR-0187 §7).
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520), ADR-0187 §7).
  *
  * Pure, like `appIdentity`: the functions are what `app.config.ts` calls in Node and what `env.ts`
  * calls at launch, so the table is tested here without booting either.

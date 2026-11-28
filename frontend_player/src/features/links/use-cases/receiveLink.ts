@@ -1,6 +1,6 @@
 /**
  * **A link arriving** — the address the operating system opened the app with, read, and where it
- * lands decided ([#520](https://github.com/Raketa02/Raketa/issues/520)). Holding it and routing to
+ * lands decided ([#520](https://github.com/Rakieta02/Rakieta/issues/520)). Holding it and routing to
  * its screen are the caller's; the reading is `schemas/`', and the landing `domain/`'s.
  */
 

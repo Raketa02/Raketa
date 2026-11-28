@@ -1,5 +1,5 @@
 /**
- * **FOR YOU's lines, as a player reaches them** ([#820](https://github.com/Raketa02/Raketa/issues/820);
+ * **FOR YOU's lines, as a player reaches them** ([#820](https://github.com/Rakieta02/Rakieta/issues/820);
  * ADR-0205 §5) — every line is closed when Home opens, and a closed line draws nothing it holds, so a
  * suite about what a line holds opens it first, as a player would.
  */

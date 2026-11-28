@@ -1,7 +1,7 @@
 /**
  * **You › Account › Payments, walked the way a player walks it** — the real route tree, the real
  * bar, and only `fetch` and the payment provider's phone half faked
- * ([#552](https://github.com/Raketa02/Raketa/issues/552); the screens A7.3; the mechanics §12.5).
+ * ([#552](https://github.com/Rakieta02/Rakieta/issues/552); the screens A7.3; the mechanics §12.5).
  *
  * The provider is `fakePayments()`, which behaves as Stripe's test cards do: the number typed into
  * its field decides whether the bank saves the card, checks it first, or refuses it. The server is

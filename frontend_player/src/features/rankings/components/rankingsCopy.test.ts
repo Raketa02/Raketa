@@ -1,5 +1,5 @@
 /**
- * **The Rankings page's words** ([#775](https://github.com/Raketa02/Raketa/issues/775)) — every
+ * **The Rankings page's words** ([#775](https://github.com/Rakieta02/Rakieta/issues/775)) — every
  * sentence as the words §30 write it, with the ordinals §30's placeholders spell, and the rule over
  * all of them: no sentence says *her*, *his*, *she* or *he* about another player (ADR-0096).
  */

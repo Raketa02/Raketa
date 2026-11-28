@@ -120,7 +120,7 @@
  * page asks for the deck of the kind the menu stands on, Fill in and the live yeses for the sport
  * it stands on (`useReadGroupGamesAhead`), and the tabs find them read or on their way.
  *
- * **It shimmers until it is built, then reveals together** ([#875](https://github.com/Raketa02/Raketa/issues/875);
+ * **It shimmers until it is built, then reveals together** ([#875](https://github.com/Rakieta02/Rakieta/issues/875);
  * PRD #867; the loading shimmer log §10): **two parts, top-down** (`groupPageParts`) — **the header
  * and the tab bar**, which wait for the group and the sport, and **the body of the tab on screen**,
  * which waits for that tab's first read (`proposals`' `useGroupTabRead`). While they wait, on one

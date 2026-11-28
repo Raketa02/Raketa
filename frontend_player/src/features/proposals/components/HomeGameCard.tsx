@@ -1,5 +1,5 @@
 /**
- * **One booked game on Home's rail** ([#556](https://github.com/Raketa02/Raketa/issues/556); the
+ * **One booked game on Home's rail** ([#556](https://github.com/Rakieta02/Rakieta/issues/556); the
  * screens A8; the mechanics §14.1) — a dark shell: the status and the sport · the court's facts on
  * the status's line, the faces beside them · the money line · *Open game*.
  *

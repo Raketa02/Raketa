@@ -4,7 +4,7 @@
  * 10.3's header with a `lead` slot, which arrived for this: a room is named by the people in it,
  * so their faces belong beside their handles rather than in the page under them, where the stream
  * would scroll them away. Two of the five are this ticket's and the other three are untouched
- * ([#401](https://github.com/Raketa02/Raketa/issues/401)).
+ * ([#401](https://github.com/Rakieta02/Rakieta/issues/401)).
  *
  * ## The title is the stems, and the name is the handles whole
  *
@@ -21,7 +21,7 @@
  *
  * **With nobody else to name, the title says what the room is doing** — `headerTitle` answers
  * *Waiting for others to join* for no handles, and `conversationHeaderLabel` speaks it in their
- * place. The organiser alone again is a real room ([#429](https://github.com/Raketa02/Raketa/issues/429)
+ * place. The organiser alone again is a real room ([#429](https://github.com/Rakieta02/Rakieta/issues/429)
  * E4), and this component draws no faces for it and passes an empty list on; the words are the
  * copy deck's, so there is no arrangement of props here that draws a blank at `h1`.
  *

@@ -1,7 +1,7 @@
 /**
  * ***Leave or call it off***, a friends game's sender's one way out before the cut-off — the
  * place of *Leave the game*, and a sheet with **two ways**
- * ([#760](https://github.com/Raketa02/Raketa/issues/760), over #752's; the friends mechanics §11.2;
+ * ([#760](https://github.com/Rakieta02/Rakieta/issues/760), over #752's; the friends mechanics §11.2;
  * the screens §9; the words §29.10):
  *
  * ```

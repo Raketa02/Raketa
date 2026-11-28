@@ -1,7 +1,7 @@
 /**
  * **A group page's badges count what the player hasn't seen, and the phone remembers what they
- * have** — Fill in's and You’re in's ([#849](https://github.com/Raketa02/Raketa/issues/849)), and
- * Games' across both kinds ([#850](https://github.com/Raketa02/Raketa/issues/850);
+ * have** — Fill in's and You’re in's ([#849](https://github.com/Rakieta02/Rakieta/issues/849)), and
+ * Games' across both kinds ([#850](https://github.com/Rakieta02/Rakieta/issues/850);
  * [ADR-0208](../../../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md);
  * PRD #844; split override 2).
  *

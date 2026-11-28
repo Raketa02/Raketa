@@ -10,7 +10,7 @@
  *
  * ## `more` is the eighth, and it is a **count**, not a state
  *
- * *+2 more* on a Same vibe tile ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows
+ * *+2 more* on a Same vibe tile ([#803](https://github.com/Rakieta02/Rakieta/issues/803); the Home rows
  * screens §6.2): the tags a tile had no room for, drawn in the last place its lines leave. **A dashed
  * `line` border on no bed, its words `muted`** — the mocks' (home rows 20, 22.3): it says *there is
  * more of the same*, so it takes none of the six tones, and the dash is what tells it from the tags

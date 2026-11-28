@@ -4,8 +4,8 @@
 > what it is, one paragraph per decision. **Append here** when a ticket changes what this feature
 > does. Index: [`README.md`](README.md).
 
-**Three links open the app, and nothing else does** ([#520](https://github.com/Raketa02/Raketa/issues/520),
-PRD [#500](https://github.com/Raketa02/Raketa/issues/500) stories 46–48, 111–113, 117;
+**Three links open the app, and nothing else does** ([#520](https://github.com/Rakieta02/Rakieta/issues/520),
+PRD [#500](https://github.com/Rakieta02/Rakieta/issues/500) stories 46–48, 111–113, 117;
 [ADR-0187](../../../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
 §4, §7). They are the public site's pages that have an in-app twin: **`join/<code>`** — a **Group
 link** out of WhatsApp — **`invite/<token>`**, an **Invitation**'s button, and **`reset/<token>`**, a
@@ -128,8 +128,8 @@ carry a link the app can read (a token, or the invitation's id with a read by it
 
 ## A friend link, and the link an Android install carried (#756)
 
-**A fourth page: `f/<code>`, a friend link** ([#756](https://github.com/Raketa02/Raketa/issues/756),
-PRD [#743](https://github.com/Raketa02/Raketa/issues/743); the friends mechanics §4.2–§4.3). Tomek's
+**A fourth page: `f/<code>`, a friend link** ([#756](https://github.com/Rakieta02/Rakieta/issues/756),
+PRD [#743](https://github.com/Rakieta02/Rakieta/issues/743); the friends mechanics §4.2–§4.3). Tomek's
 link, `<public site>/f/<code>`, opens the app by the scheme and, once a domain is set, by the domain:
 `LINK_PAGES` gains `f`, so `app.config.ts`'s verified Android filter gains `/f/` with the rest (the
 site's association file claims `/f/*` since #755). **Its code is checked like a group's** — eight
@@ -144,7 +144,7 @@ function for both, `playersLinkMove` (formerly `groupLinkMove`): both are the pl
 
 **Answered by opening the code, then Home** (`FriendLink`, `friendLinkLanding`). `friends`' opening
 answers where the opener stands with the owner: **`ASKED_YOU` lands on Home with Needs your answer
-up** ([#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1; until then Home's FRIEND
+up** ([#817](https://github.com/Rakieta02/Rakieta/issues/817), ADR-0205 §1; until then Home's FRIEND
 REQUESTS row at the top) — `shell`'s `openNeedsYourAnswer`, which lays Home's root down as `openTab`
 does and raises the sheet, _tomek.k wants to be your friend_ in it — with Home and the bell read
 again for the request and its notice. The opening resolves once that re-read has landed, so the

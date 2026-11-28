@@ -1,7 +1,7 @@
 /**
  * **The profile switcher, walked** — the chip on each profile's You tab, the sheet it opens, the
  * switch, and the phone remembering which profile an account wore last
- * ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories 134, 135 and 138; club
+ * ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 stories 134, 135 and 138; club
  * mocks 6–7; ADR-0185 §3, ADR-0188 §2).
  *
  * The real route tree, with only the socket faked. The club's administrator routes are answered by

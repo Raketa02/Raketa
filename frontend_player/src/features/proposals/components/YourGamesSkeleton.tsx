@@ -1,5 +1,5 @@
 /**
- * **YOUR GAMES' skeleton** ([#871](https://github.com/Raketa02/Raketa/issues/871); PRD #867; the
+ * **YOUR GAMES' skeleton** ([#871](https://github.com/Rakieta02/Rakieta/issues/871); PRD #867; the
  * loading shimmer log §6, Q15; design system 5.6) — what stands in the rail's place on Home while
  * the reads it waits on are out, and in the rail's place while its first read retries. **Only what
  * is always there**: the heading's bar, as wide as its words with a one-figure count — *YOUR GAMES ·

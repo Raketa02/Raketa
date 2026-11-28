@@ -2,7 +2,7 @@
  * **Who you play with, walked the way a player walks it** — the real route tree, the real bar,
  * and only `fetch` faked
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
- * §2, §4; [#472](https://github.com/Raketa02/Raketa/issues/472)).
+ * §2, §4; [#472](https://github.com/Rakieta02/Rakieta/issues/472)).
  *
  * The screen is the onboarding step's two groups under the tab's chrome, and the step's own
  * suite already proves the controls — the three answers and the reach sentence. What is
@@ -13,7 +13,7 @@
  * so the group just saved turns green and the other stays as it was.
  *
  * *Game suggestions* beside it is gone, with the proposals question it answered again
- * ([#582](https://github.com/Raketa02/Raketa/issues/582)).
+ * ([#582](https://github.com/Rakieta02/Rakieta/issues/582)).
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';

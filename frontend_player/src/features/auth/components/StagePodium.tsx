@@ -1,6 +1,6 @@
 /**
  * **Sign-up's podium** — the Rankings podium in the hero's room, with **You** on the first step
- * ([#788](https://github.com/Raketa02/Raketa/issues/788), PRD #783; design system 12.2, mock 5).
+ * ([#788](https://github.com/Rakieta02/Rakieta/issues/788), PRD #783; design system 12.2, mock 5).
  *
  * ```
  *                   [ TK ]                 You's tile, larger, ringed in volt

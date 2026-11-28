@@ -1,6 +1,6 @@
 /**
  * **The invitation sheet, walked** — an existing player the club invited, offered the administrator
- * profile on launch ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories
+ * profile on launch ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 stories
  * 117–119; club mocks 5–6; ADR-0184 §2, ADR-0185 §3).
  *
  * The real route tree, with only the socket faked. *A relaunch* is the process ending and a new one

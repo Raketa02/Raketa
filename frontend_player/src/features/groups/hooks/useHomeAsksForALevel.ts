@@ -1,7 +1,7 @@
 /**
  * **Whether Home asks for a level** — `homeAsksForALevel` over the two reads it needs
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §7,
- * [#731](https://github.com/Raketa02/Raketa/issues/731)).
+ * [#731](https://github.com/Rakieta02/Rakieta/issues/731)).
  *
  * **The ratings first, and the groups only for a player rated in nothing**: a rated player — the
  * common Home — is asked nothing by the card, so asking which groups she is in would be a read for

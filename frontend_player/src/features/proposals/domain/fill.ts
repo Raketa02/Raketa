@@ -1,7 +1,7 @@
 /**
  * **The moment a yes may fill a game** — which yes waits ten seconds behind *Undo*, what the
  * server's answer to a yes means, and who *It's a game!* draws
- * ([#555](https://github.com/Raketa02/Raketa/issues/555); the mechanics §6.5, §11, §12.2; the
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555); the mechanics §6.5, §11, §12.2; the
  * screens A2.4).
  *
  * Pure. **Whether a game filled is the server's to say** — the last yes books it inside its own

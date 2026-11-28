@@ -1,6 +1,6 @@
 /**
  * **Same competitive level's See all** — pushed over Home, whose tab stays lit
- * ([#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows screens §4.4; the mechanics
+ * ([#802](https://github.com/Rakieta02/Rakieta/issues/802); the Home rows screens §4.4; the mechanics
  * §6.7; home rows 12–16).
  *
  * - **Header**: ‹, *Same competitive level players* bold — two lines where it wraps — and the sport

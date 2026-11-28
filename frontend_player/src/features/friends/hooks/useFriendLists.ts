@@ -1,5 +1,5 @@
 /**
- * **The Friends page's reads** ([#754](https://github.com/Raketa02/Raketa/issues/754)) — your
+ * **The Friends page's reads** ([#754](https://github.com/Rakieta02/Rakieta/issues/754)) — your
  * friends, the requests each way, and the Add friends sheet's groups. One key each, so the You
  * tab's row and the page behind it are one read and agree, and every friends write re-reads them
  * (`friendKeys`). The global defaults suit them: lists only the players' own acts move.

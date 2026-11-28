@@ -1,6 +1,6 @@
 /**
  * **What of a scrolled page is on screen** — the geometry a Home row's cards are seen by
- * ([#804](https://github.com/Raketa02/Raketa/issues/804); the Home rows mechanics §9.2, call 2).
+ * ([#804](https://github.com/Rakieta02/Rakieta/issues/804); the Home rows mechanics §9.2, call 2).
  *
  * A card on a Home row is **on screen when at least half of it is visible** — across the page's own
  * scroll, which moves the row up and down, and the row's sideways one, which moves the card along

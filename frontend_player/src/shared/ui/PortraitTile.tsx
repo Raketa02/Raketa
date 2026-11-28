@@ -1,6 +1,6 @@
 /**
  * **The portrait tile** — a player's face edge to edge, a wash rising over its foot, and the words
- * over the wash ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows screens §5.2,
+ * over the wash ([#801](https://github.com/Rakieta02/Rakieta/issues/801); the Home rows screens §5.2,
  * §11; home rows 17–19; design-system 7.31). New in Rakieta draws it on Home's row and in See all's
  * two columns; Top 10's card draws it too (#805).
  *

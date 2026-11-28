@@ -1,5 +1,5 @@
 /**
- * **Read one sport's ranking in one view** ([#775](https://github.com/Raketa02/Raketa/issues/775)) —
+ * **Read one sport's ranking in one view** ([#775](https://github.com/Rakieta02/Rakieta/issues/775)) —
  * the route, folded into the page's shapes. No rule of its own: every place, chip and gap is the
  * server's (the rankings mechanics §7.2), so this is the uniform-strict pass-through.
  */

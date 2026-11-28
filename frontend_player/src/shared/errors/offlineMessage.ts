@@ -4,7 +4,7 @@
  * ## Why this is a function and not a banner
  *
  * `docs/architecture.md` Part 11 names `OfflineBanner` as a shared component to build, and
- * [#239](https://github.com/Raketa02/Raketa/issues/239) declines it there in writing. A
+ * [#239](https://github.com/Rakieta02/Rakieta/issues/239) declines it there in writing. A
  * screen-level banner assumes that being offline makes what is on screen *wrong*. In the Play
  * tab it does not: every ranked list is a mutation-minted record pinned at
  * `staleTime: Infinity`, so **a pool held offline is not stale — it is the record**. What

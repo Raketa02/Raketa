@@ -1,6 +1,6 @@
 /**
  * ***Confirm your payment*** — a share refused when its game filled, confirmed on the same payment
- * ([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A2.4; the mechanics §12.2;
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555); the screens A2.4; the mechanics §12.2;
  * #541) — ***Fix your card*** before the club's cut-off (#643; Q113).
  *
  * ```

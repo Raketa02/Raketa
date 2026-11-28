@@ -1,7 +1,7 @@
 /**
  * **Sign-in's hero loop** — the deal, the pick-up, the swipe, *It's a game!* and the reset, over and
- * over ([#786](https://github.com/Raketa02/Raketa/issues/786),
- * [#787](https://github.com/Raketa02/Raketa/issues/787), PRD #783; design system 12.2).
+ * over ([#786](https://github.com/Rakieta02/Rakieta/issues/786),
+ * [#787](https://github.com/Rakieta02/Rakieta/issues/787), PRD #783; design system 12.2).
  *
  * ## One sequence, looped, and no React state
  *

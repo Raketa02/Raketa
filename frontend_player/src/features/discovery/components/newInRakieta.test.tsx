@@ -1,7 +1,7 @@
 /**
  * **New in Rakieta on Home, its See all, and the round friend button** — FOR YOU's third line, walked
- * through the real route tree ([#801](https://github.com/Raketa02/Raketa/issues/801), PRD #789;
- * [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §5, ADR-0205 §5; the Home rows
+ * through the real route tree ([#801](https://github.com/Rakieta02/Rakieta/issues/801), PRD #789;
+ * [#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0204 §5, ADR-0205 §5; the Home rows
  * screens §5, §8; the mechanics §7, §11–§13; the words §31.7, §31.9, §31.10).
  *
  * - **The line**: after Groups heating up, closed; open, *See all ›* named at its foot; hidden while

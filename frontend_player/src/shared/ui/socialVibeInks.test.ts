@@ -1,6 +1,6 @@
 /**
  * **The Social vibe card's paper paint, computed** — every ratio `theme.ts` states for `voltPale`,
- * `oliveInk`, `oliveInkDim` and `vibeGrey` ([#840](https://github.com/Raketa02/Raketa/issues/840);
+ * `oliveInk`, `oliveInkDim` and `vibeGrey` ([#840](https://github.com/Rakieta02/Rakieta/issues/840);
  * ADR-0207 §8–§9, 7.39, Part 16 2026-11-23).
  *
  * `gameGround.test.ts`'s shape: the figures are derived rather than typed, so a nudge to any of the

@@ -1,5 +1,5 @@
 /**
- * **Same vibe, read** ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows mechanics
+ * **Same vibe, read** ([#803](https://github.com/Rakieta02/Rakieta/issues/803); the Home rows mechanics
  * §3, §8, §13).
  *
  * | | |

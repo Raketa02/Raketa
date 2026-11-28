@@ -1,5 +1,5 @@
 /**
- * **The request tile's frame** ([#816](https://github.com/Raketa02/Raketa/issues/816); home refactor
+ * **The request tile's frame** ([#816](https://github.com/Rakieta02/Rakieta/issues/816); home refactor
  * 2; Q3) — what FRIEND REQUESTS' and ASKED FOR A LEVEL's tiles share in Needs your answer, held once
  * so the two sections' buttons line up on one sheet.
  *

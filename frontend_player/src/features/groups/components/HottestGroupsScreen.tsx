@@ -1,6 +1,6 @@
 /**
  * **Groups heating up** — every group with 3 or more players, hottest first, page by page
- * ([#823](https://github.com/Raketa02/Raketa/issues/823); ADR-0205 §7, Q18, Q35, Q36; the Home rows
+ * ([#823](https://github.com/Rakieta02/Rakieta/issues/823); ADR-0205 §7, Q18, Q35, Q36; the Home rows
  * screens §3.6; the mechanics §5.10), pushed over Home by its line's *All groups ›*, the Home tab
  * still lit. **Shaped like the people See all screens** (`discovery`'s `SeeAllScreen`), without their
  * sport pill — the page has no filter:
@@ -24,7 +24,7 @@
  * - **Every state** is See all's: reading, failed (the recovery sentence and *Try again*), offline
  *   (resumes), a later page refused (said under the list, with its own *Try again*), the empty line,
  *   the end (nothing more is asked), and the pull, which reads every page again.
- * - **Reading shimmers, as See all does** ([#872](https://github.com/Raketa02/Raketa/issues/872); PRD
+ * - **Reading shimmers, as See all does** ([#872](https://github.com/Rakieta02/Rakieta/issues/872); PRD
  *   #867; the loading shimmer log §10): while the first page is out with nothing to draw, **the card
  *   stands as its skeleton at the content's whole width, as many as fill the screen**
  *   (`HottestGroupCardSkeleton`), under the real header, and the page comes in on one cross-fade once

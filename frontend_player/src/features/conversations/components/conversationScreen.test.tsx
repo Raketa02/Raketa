@@ -2,7 +2,7 @@
  * **A booked game's room, walked the way a member walks it**: the real route tree, the real shell,
  * the booked game's details it is opened from, and only `fetch` faked.
  *
- * Most of [#364](https://github.com/Raketa02/Raketa/issues/364)'s acceptance criteria are
+ * Most of [#364](https://github.com/Rakieta02/Rakieta/issues/364)'s acceptance criteria are
  * assertions in this file and opinions nowhere else — the header names the people, the sport and
  * the booking's word, the stream is two components, the author's handle is drawn only in a room
  * of more than two, there is no timestamp and there is a day separator, the stream pages backward
@@ -10,7 +10,7 @@
  * element a listener can move through.
  *
  * It walked the old loop's room from the Chats tab until that loop was removed
- * ([#576](https://github.com/Raketa02/Raketa/issues/576)); the room is a booked game's now, reached
+ * ([#576](https://github.com/Rakieta02/Rakieta/issues/576)); the room is a booked game's now, reached
  * from its details, with no plan card, no quick chips and no *Details* door — and this file says
  * so.
  *
@@ -203,7 +203,7 @@ async function openTheRoom(
 describe('the header', () => {
   /**
    * **The drawn line is stemmed and the spoken name is whole, and the two differing is the point**
-   * ([#401](https://github.com/Raketa02/Raketa/issues/401)) — so both are asserted in one test,
+   * ([#401](https://github.com/Rakieta02/Rakieta/issues/401)) — so both are asserted in one test,
    * against the copy deck: `headerTitle` is `handleStem` over `handleLine`, and
    * `conversationHeaderLabel` is every handle whole in the row's own dialect.
    */
@@ -271,7 +271,7 @@ describe('the header', () => {
   });
 
   /**
-   * **The organiser alone again** ([#429](https://github.com/Raketa02/Raketa/issues/429) E4):
+   * **The organiser alone again** ([#429](https://github.com/Rakieta02/Rakieta/issues/429) E4):
    * B joined and left while C and D were still deciding, so the room stands with one member and
    * nobody to name. The title slot said nothing — a blank at `h1` over *Padel* — and now says
    * what the room is doing, spoken the same way. The list is stubbed as it last read the room, a
@@ -469,7 +469,7 @@ describe('paging backward', () => {
 
 /**
  * **`{name}` is filled from the people the response names, and not from the roster**
- * ([#409](https://github.com/Raketa02/Raketa/issues/409)). Membership is the accepted seats, a
+ * ([#409](https://github.com/Rakieta02/Rakieta/issues/409)). Membership is the accepted seats, a
  * *no* is not one, so the actor of a `SEAT_LEFT` line was never a member and the room used to
  * draw `? said no — that seat is open again` — the one line a roster lookup cannot name.
  */
@@ -611,7 +611,7 @@ describe('a refused send', () => {
   });
 
   /**
-   * §3.7 as amended by [#429](https://github.com/Raketa02/Raketa/issues/429): **a room that ends
+   * §3.7 as amended by [#429](https://github.com/Rakieta02/Rakieta/issues/429): **a room that ends
    * while it is on screen stays on screen, closed.** A send answered `conversation_not_found` is
    * a send racing the nudge, and it does not decide the room is over — the read does, so the send
    * asks the read again and the read closes the room. One code for three cases, and there is no
@@ -651,7 +651,7 @@ describe('a refused send', () => {
 });
 
 /**
- * **The field and Send are one block** ([#402](https://github.com/Raketa02/Raketa/issues/402)) —
+ * **The field and Send are one block** ([#402](https://github.com/Rakieta02/Rakieta/issues/402)) —
  * asserted structurally, because *one block* is a claim about what contains what and a renderer
  * cannot see a ground or a hairline. A booked game has no plan, so the block asks no questions
  * about one: no quick chip is drawn (#576).
@@ -680,7 +680,7 @@ describe('the composer block', () => {
 /**
  * **The frame, asserted structurally**, the way `ShellScreen.test.tsx` asserts 10.1's — because
  * every claim here is about *what contains what*, and both fail invisibly in a renderer with no
- * status bar and no home indicator ([#400](https://github.com/Raketa02/Raketa/issues/400)).
+ * status bar and no home indicator ([#400](https://github.com/Rakieta02/Rakieta/issues/400)).
  *
  * The edges are read rather than a padding measured, because the padding is the library's
  * arithmetic and the edges are the app's decision.

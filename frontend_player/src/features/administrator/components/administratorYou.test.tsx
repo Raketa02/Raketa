@@ -1,7 +1,7 @@
 /**
  * **The administrator's You tab, walked** — the name and the club, one row per official group
  * opening its settings, *Start playing* for an account that does not play yet, and *Sign out*
- * ([#517](https://github.com/Raketa02/Raketa/issues/517), PRD #500 stories 131–133).
+ * ([#517](https://github.com/Rakieta02/Rakieta/issues/517), PRD #500 stories 131–133).
  *
  * The real route tree with the socket faked; the club's administrator routes are answered by
  * `officialGroupsServer`'s small fake, so a save changes what the next read says, as it would.

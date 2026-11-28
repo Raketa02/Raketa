@@ -1,6 +1,6 @@
 /**
  * **A cell's sheet** — what is free at a day's range: the poster's best fits, the courts, and what
- * is already happening there ([#558](https://github.com/Raketa02/Raketa/issues/558); the screens
+ * is already happening there ([#558](https://github.com/Rakieta02/Rakieta/issues/558); the screens
  * A5.3; mocks 34, 35; the mechanics §9.1 step 6).
  *
  * ```

@@ -1,6 +1,6 @@
 /**
  * **The Social vibe card** — [7.39](../../../docs/design-system.md#739-the-social-vibe-card)
- * ([#840](https://github.com/Raketa02/Raketa/issues/840); ADR-0207 §6, §9; for fun 7, which leads
+ * ([#840](https://github.com/Rakieta02/Rakieta/issues/840); ADR-0207 §6, §9; for fun 7, which leads
  * over 5 and 6).
  *
  * A For-fun game's full card, where a competitive game draws its Balance forecast: how much the

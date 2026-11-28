@@ -1,7 +1,7 @@
 /**
  * **Friends, on the You tab** — its title, how many friends and who waits on an answer in one line —
  * *3 friends · 1 asked you*, *1 friend*, *No friends yet* — and the door to You › Friends
- * ([#754](https://github.com/Raketa02/Raketa/issues/754), PRD #743 story 34; the friends screens
+ * ([#754](https://github.com/Rakieta02/Rakieta/issues/754), PRD #743 story 34; the friends screens
  * §4.1).
  *
  * **The line is the page's own two reads** — your friends and *Asked you* — so an accept there is on

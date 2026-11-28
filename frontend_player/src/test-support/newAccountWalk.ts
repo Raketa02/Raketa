@@ -1,8 +1,8 @@
 /**
  * **A new person's walk into the app** — sign-up, the naming and the profile steps, up to the
  * gender step's *Finish*: what a link opened before the account existed waits through
- * ([#520](https://github.com/Raketa02/Raketa/issues/520) story 48, walked for a group link;
- * [#756](https://github.com/Raketa02/Raketa/issues/756), for a friend link).
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520) story 48, walked for a group link;
+ * [#756](https://github.com/Rakieta02/Rakieta/issues/756), for a friend link).
  *
  * Each screen of it is its own suite's; a link suite walks it to prove the link outlives every one of
  * them. No questionnaire on the way: a level is asked where play begins (ADR-0200 §1, #730).

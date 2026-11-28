@@ -12,7 +12,7 @@
  * is not there ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md)
  * §3.7), on `challenge_not_found`'s own arm in §2.4's table. **A client holding the room when it
  * ends stays on it**, drawing what it held, closed, with one sentence saying so
- * (`ROOM_OVER_LINE`; [#429](https://github.com/Raketa02/Raketa/issues/429)) — the ending is the one
+ * (`ROOM_OVER_LINE`; [#429](https://github.com/Rakieta02/Rakieta/issues/429)) — the ending is the one
  * thing that happened while the reader was looking, and a screen that vanished under them said
  * less about it than a screen that stayed. Neither retries, and the deletion is **not inferable
  * from a gap in the sequence**, because there is no sequence left to have a gap in.

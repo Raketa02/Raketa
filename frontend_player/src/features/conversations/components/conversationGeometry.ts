@@ -11,11 +11,11 @@
  * a drawn object the design system owns; not the **shell**, whose `types.ts` re-exports `TabShell`
  * and would make a row reading a number at module scope a cycle; and not `shared/ui/`, which would
  * say the design system owns a face after
- * [#338](https://github.com/Raketa02/Raketa/issues/338) §5 refused exactly that. **A third row is
- * the signal to move them** ([#363](https://github.com/Raketa02/Raketa/issues/363)).
+ * [#338](https://github.com/Rakieta02/Rakieta/issues/338) §5 refused exactly that. **A third row is
+ * the signal to move them** ([#363](https://github.com/Rakieta02/Rakieta/issues/363)).
  *
  * **One face size, because one is all that was drawn.**
- * [#335](https://github.com/Raketa02/Raketa/issues/335) resolved the tab as *"variant B's
+ * [#335](https://github.com/Rakieta02/Rakieta/issues/335) resolved the tab as *"variant B's
  * conversation row, with C's weighting on the challenge card"*, and 38 is the number that
  * prototype published. The weighting that shipped is the challenge row's **stripe and its
  * obligation line**, not a second face size: no device in this repository has drawn a smaller one,
@@ -81,7 +81,7 @@ export function handleBudget(screenWidth: number, faces: number): number {
  * `space.sm` gaps 10.3 sets between its parts, the cluster, and the two controls.
  *
  * **And the characters are counted at `h1`, because that is what the title is set in.** Until
- * [#401](https://github.com/Raketa02/Raketa/issues/401) they were counted at the rows' `cardTitle`,
+ * [#401](https://github.com/Rakieta02/Rakieta/issues/401) they were counted at the rows' `cardTitle`,
  * six points smaller — nearly half again as many characters — so this budget said a line fitted
  * that did not. The header's title is not capped at one line, so what that drew was not a handle
  * cut in the middle but a **second line**: the whole point of dropping names to a budget is to

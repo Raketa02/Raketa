@@ -1,7 +1,7 @@
 /**
  * **The friends card's and *Find a court*'s fixed words** — the words
  * [§29.6](../../../../../docs/specs/matchmaking/the-words.md#296-the-friends-tab)
- * ([#757](https://github.com/Raketa02/Raketa/issues/757)). The sentences built from a value are
+ * ([#757](https://github.com/Rakieta02/Rakieta/issues/757)). The sentences built from a value are
  * `friendsCardPresentation.ts`'s; the deck card's own words — the *vs* line, the balance, the
  * overlap's grade — are `proposalsCopy`'s, cited, because the friends card is the deck's card
  * without its tiles.

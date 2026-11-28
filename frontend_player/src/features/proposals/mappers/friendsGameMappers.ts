@@ -1,6 +1,6 @@
 /**
  * **A friends game's writes, off and onto the wire** — the send's body and its answer, and an
- * accept's answer ([#759](https://github.com/Raketa02/Raketa/issues/759), over #751's routes).
+ * accept's answer ([#759](https://github.com/Rakieta02/Rakieta/issues/759), over #751's routes).
  */
 
 import { toWireSport } from '@/features/onboarding/types';

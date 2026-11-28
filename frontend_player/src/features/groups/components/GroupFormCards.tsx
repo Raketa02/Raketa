@@ -1,6 +1,6 @@
 /**
  * **The Name and *Who can join* every group form draws** (play 5, 12;
- * [#514](https://github.com/Raketa02/Raketa/issues/514): Edit group is *the New group form's Name
+ * [#514](https://github.com/Rakieta02/Rakieta/issues/514): Edit group is *the New group form's Name
  * and Who can join cards*). One drawing of each control, so the forms cannot drift apart; each
  * screen holds its own state and hands it in.
  *

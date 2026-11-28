@@ -28,7 +28,7 @@
  * sentence (`ROOM_OVER_LINE`), which is the read's to draw and never a refusal note's.
  *
  * **`account_held` never reaches this table**, and that is a decision rather than a gap
- * ([#365](https://github.com/Raketa02/Raketa/issues/365)). A hold is a fact about the **account**
+ * ([#365](https://github.com/Rakieta02/Rakieta/issues/365)). A hold is a fact about the **account**
  * rather than about the message that met it, so the screen folds it into `liveState` and draws
  * §22.5's amber note above the strip, with the composer and every chip greyed under it — *you are
  * never told off for having tapped*. A coral sentence beside the control as well would say one fact

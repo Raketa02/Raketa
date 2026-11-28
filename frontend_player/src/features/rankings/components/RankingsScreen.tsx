@@ -1,6 +1,6 @@
 /**
  * **Rankings** — a ranking per sport, sorted by the level
- * ([#775](https://github.com/Raketa02/Raketa/issues/775); [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md);
+ * ([#775](https://github.com/Rakieta02/Rakieta/issues/775); [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md);
  * the rankings screens §2–§5; rankings 2–11).
  *
  * **The header** (§2): ‹ back to Home, *Rankings* with *Competitive games only* under it, small and
@@ -40,7 +40,7 @@
  * comes cached fades in from the skeleton that stood while they were unknown.
  *
  * **Any face, row or podium step opens the full record**, a stranger's too; the reader's own opens
- * their own (§6). **Everybody is listed** (ADR-0204 §2, [#799](https://github.com/Raketa02/Raketa/issues/799)),
+ * their own (§6). **Everybody is listed** (ADR-0204 §2, [#799](https://github.com/Rakieta02/Rakieta/issues/799)),
  * a player the reader blocked or who blocked them included, at their true place: a tap on them opens
  * the record sheet, which reads *This record isn't available* — the server's one refusal, the sheet's
  * own drawing of it. **The page draws no switch but General | Friends**: *Show me in General* and its

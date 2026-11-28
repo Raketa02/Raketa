@@ -1,6 +1,6 @@
 /**
  * **You › Friends** — `friends`' page from You, composed with what it may not import
- * ([#754](https://github.com/Raketa02/Raketa/issues/754); the friends screens §4.1, §5).
+ * ([#754](https://github.com/Rakieta02/Rakieta/issues/754); the friends screens §4.1, §5).
  *
  * The page and its three tabs are `friends`'. **The shell hands in the three things that are other
  * features'**, as it does for Home's request cards: the record a row opens (`player_record`'s, which

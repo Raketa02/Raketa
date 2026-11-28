@@ -98,11 +98,11 @@ line off a read and a chevron, spoken as _title, live line_; what a row says whi
 on its way or has failed is `shared/errors`' `liveLine`, because a read's standing turned into a
 sentence is an errors concern and not a drawing. `DarkCard` gained `PressableDarkCard` for the
 tab's header card, as `Card` has `PressableCard`. And by promotion out of Play's courts
-([#574](https://github.com/Raketa02/Raketa/issues/574)): `SeatFace` with `SeatCaption` and the
+([#574](https://github.com/Rakieta02/Rakieta/issues/574)): `SeatFace` with `SeatCaption` and the
 seat's ring, which the group page, Fill in and a booked game's players card draw. And by _Your
-rating_'s first showing ([#732](https://github.com/Raketa02/Raketa/issues/732)): `Guide` (9.4),
+rating_'s first showing ([#732](https://github.com/Rakieta02/Rakieta/issues/732)): `Guide` (9.4),
 with its arithmetic in `guideGeometry.ts`. And by promotion out of the group page's fast filter, so
-Rankings draws the very same one ([#774](https://github.com/Raketa02/Raketa/issues/774)):
+Rankings draws the very same one ([#774](https://github.com/Rakieta02/Rakieta/issues/774)):
 `SportPillFrame` (7.21) — the sport pill, the bar it unfolds into and the layer they open on, the
 backdrop and the folds on back and on leaving among it — with the drawing in `SportPill.tsx`. It
 takes the sports to offer, the one the page is on and the page's words, and reports a pick of
@@ -110,65 +110,65 @@ another sport; which sports, which one, and what pressing the pill does are the 
 down ahead of its second caller**, which `docs/architecture.md`'s fourth non-negotiable would
 refuse: PRD #766 call 13 decided that Rankings draws the deck's own pill, so the promotion is the
 prefactor that keeps it one control rather than a copy made later. And by Home's rows, ahead of
-the five PRD #789 adds ([#798](https://github.com/Raketa02/Raketa/issues/798)): `HomeRow` — a
+the five PRD #789 adds ([#798](https://github.com/Rakieta02/Rakieta/issues/798)): `HomeRow` — a
 row's section, its eyebrow heading and, on the heading's line, an optional control and an optional
 link (_See all ›_) — and `HomeRowRail`, 7.7's peeking or paging rail over Part 8's Strip, never
 remounted. Every row on Home draws them; the words, the presses and the cards are the row's. A
 rail handed **`onScreen`** is told which of its cards are at least half on screen
-([#804](https://github.com/Raketa02/Raketa/issues/804)), from `onScreen.ts`: the page's band
+([#804](https://github.com/Rakieta02/Rakieta/issues/804)), from `onScreen.ts`: the page's band
 (`PageOnScreen`, which a page that watches feeds through `useWatchedPage`), where `HomeRow`'s
 section stands on it (its own layout, so on such a page it stands directly in the page's column),
 and the rail's own frame and scroll (`useCardsOnScreen`). They are followed values, never state, so
 nothing re-renders as the page moves.
-And by the record's photos ([#799](https://github.com/Raketa02/Raketa/issues/799)):
+And by the record's photos ([#799](https://github.com/Rakieta02/Rakieta/issues/799)):
 `PhotoCarousel` — every photo a player has, sideways, a 4:5 card at `photoCarouselRatio` of the
 content width over Part 8's Strip, nothing with no photo. **It came down ahead of its second
 caller** too: the Home rows screens §9.3 decided that the record and the vibe sheet (#803) draw one
 carousel, so it is built where both can reach it rather than copied out of `player_record` later.
-And by Top 10 ([#805](https://github.com/Raketa02/Raketa/issues/805)): `RowSportPill` — the deck's
+And by Top 10 ([#805](https://github.com/Rakieta02/Rakieta/issues/805)): `RowSportPill` — the deck's
 pill on a Home row's heading line, its bar ending where the pill ends rather than at the page's edge,
 laid over the row through `HomeRow`'s **`over`** — and `HomeRowRail`'s **`numbered`** geometry. **It
 has one caller and stands here anyway**, against the fourth non-negotiable, because it is not code
 moved out of a feature: it is a second holder of the one sport pill (`SportPill`, `SportBar`,
 `FoldAway`), whose parts are this folder's own and unexported, and written in `rankings` it would
 have to export them — making the pill's internals the surface instead. Import them from `@/shared/ui`.
-**Since [#820](https://github.com/Raketa02/Raketa/issues/820) the five rows are FOR YOU's folding
+**Since [#820](https://github.com/Rakieta02/Rakieta/issues/820) the five rows are FOR YOU's folding
 lines** (7.37): `FoldingLines` (the section and its eyebrow), `FoldingLine` (a card whose header the
 page opens and closes, its content drawn only while open, one height change moved by a layout
 transition) and `FoldingLineFooter` (the open content's foot: a control at its left, a 44pt link at its
-right, a layer over it). Since [#821](https://github.com/Raketa02/Raketa/issues/821) Top 10's sport
+right, a layer over it). Since [#821](https://github.com/Rakieta02/Rakieta/issues/821) Top 10's sport
 pill opens rightwards there (`opens`), the current sport at the bar's left end. Since
-[#822](https://github.com/Raketa02/Raketa/issues/822) a line takes a `count` — the read's total, drawn
+[#822](https://github.com/Rakieta02/Rakieta/issues/822) a line takes a `count` — the read's total, drawn
 in the count pill, _99+_ past 99 (`shared/formatting`'s `countFigure`), and said after the title
 (`withCount`). `HomeRow`'s heading lost its
 control, link and `over`, which only those rows used — the pill now stands in the footer — and
 `HomeRowRail` takes its bounds from a line (`RailBounds`). A section's top on the page composes
 through what holds it (`useTopOnPage`), and a page that watches shows what a line unfolds
-(`PageReveal`). And by For fun's Social vibe ([#838](https://github.com/Raketa02/Raketa/issues/838)):
+(`PageReveal`). And by For fun's Social vibe ([#838](https://github.com/Rakieta02/Rakieta/issues/838)):
 `SocialVibeRow` (7.38) — the % beside a 0–100 bar filled to it, _Social vibe_ inside, coloured by
 `shared/vocabulary`'s `socialVibeBand`. **It came down ahead of its second caller**, as ADR-0207 §9.4
 decides: it is the deck card's row, the Friends card's (#842), and a part of the Social vibe
 card, which a booked game draws in `games` (#841) — so it is built where both features reach
 it rather than copied out of `proposals` later. And by a competitive game's details
-([#839](https://github.com/Raketa02/Raketa/issues/839)): **`ForecastBlock`** — _BALANCE FORECAST_,
+([#839](https://github.com/Rakieta02/Rakieta/issues/839)): **`ForecastBlock`** — _BALANCE FORECAST_,
 both side levels and the gap, 7.11's bar, the % and its word, the sentence, and **`StakeTiles`**
 (7.14 as amended: _If you win_ / _If you lose_, two or none) — moved here from `games`, unchanged,
 because the booked game (`games`' `GamePairingCard`) and the details (`proposals`) both draw it
 (ADR-0207 §6). Its words are `shared/vocabulary/forecastPresentation.ts`'. And by a For-fun game's
-details ([#840](https://github.com/Raketa02/Raketa/issues/840)): **`SocialVibeCard`** (7.39) —
+details ([#840](https://github.com/Rakieta02/Rakieta/issues/840)): **`SocialVibeCard`** (7.39) —
 _SOCIAL VIBE_, the % and its word over a full-width bar, then the grid of your tags with a dot under
 each carrier, on paper in `voltPale` and the olive inks. It is handed a `SocialVibeGrid`
 (`shared/vocabulary/socialVibeGrid.ts`) and derives nothing, because the details (`proposals`) and
 the booked game (`games`' `GamePairingCard`, #841) each build one from their own read. And by the
 group page's Friends tab, where its _Competitive | For fun_ row went
-([#861](https://github.com/Raketa02/Raketa/issues/861), PRD #859): **`TabMenu`** (9.5) — a picker
+([#861](https://github.com/Rakieta02/Rakieta/issues/861), PRD #859): **`TabMenu`** (9.5) — a picker
 hanging from the tab that opens it, its lines' words, an optional muted count, a door, and the
 `coralInk` circle with `Tick` on the line selected; drawn in the page's own tree, never on the modal
 stage, with a catcher round the tab bar and `FoldAway`'s back and blur — with its place and its
 catcher's boxes in `tabMenuGeometry.ts`; and **`Segment`'s option that owns a menu** (6.3 as
 amended), its chevron, and the widths moving by a layout transition. **It came down ahead of its
 second caller**, as #861 decided: Games' tab draws the same menu since #862, with counts and a door.
-And by the loading shimmer ([#870](https://github.com/Raketa02/Raketa/issues/870), PRD #867; 5.6):
+And by the loading shimmer ([#870](https://github.com/Rakieta02/Rakieta/issues/870), PRD #867; 5.6):
 **`Skeleton`** — `SkeletonBlock`, `SkeletonLine` (a text bar, a type role's size tall) and
 `SkeletonCircle`, rounded, in `color.skeleton`, each drawn on a **`SkeletonGround`**, the view a screen
 puts round everything that shimmers: it holds the one clock and the one moving style, and is what
@@ -180,7 +180,7 @@ finished — a cut under reduced motion, decided at the first draw, never back o
 in (a refusal or the offline note gives way to it again when the read sets out once more). **It came down ahead
 of its second caller**, as PRD #867 decides: Rankings is the first, and Home, See all and the group
 page follow (#871–#876). The layouts are the features'; the shapes and the band are this folder's.
-Home added ([#871](https://github.com/Raketa02/Raketa/issues/871)) **`useRevealParts`**, for a screen
+Home added ([#871](https://github.com/Rakieta02/Rakieta/issues/871)) **`useRevealParts`**, for a screen
 with several parts: `revealParts.ts`'s pure rule — together before the ceiling (`REVEAL_CEILING`,
 2.5 s from the mount), top-down from it, never a lower part before an upper one, never a part taken
 back — with the ceiling's one timer; **`Reveal`'s `sizedBy="skeleton"`**, a part of a scrolling
@@ -202,10 +202,10 @@ caller may hand the `figure` to print, because a Player Score is out of a hundre
 percentage. The `label` beneath became optional for the reliability screen's reason.
 
 **Six of those arrived by promotion rather than by being built here**, and the promotion is the
-interesting half ([#375](https://github.com/Raketa02/Raketa/issues/375),
-[#384](https://github.com/Raketa02/Raketa/issues/384)). Five were the competitive candidate
+interesting half ([#375](https://github.com/Rakieta02/Rakieta/issues/375),
+[#384](https://github.com/Rakieta02/Rakieta/issues/384)). Five were the competitive candidate
 card's and one was the profile photos step's, and the record sheet draws all six
-([#373](https://github.com/Raketa02/Raketa/issues/373)): copying any of them would be a second
+([#373](https://github.com/Rakieta02/Rakieta/issues/373)): copying any of them would be a second
 thing to keep in step — `RunOfForm`'s three contrast ratios are **pinned** in
 `recordSquares.test.ts` and `OnCourtMark`'s cap is derived per panel in `onCourtMarkFit.test.ts`,
 and a second copy of either would be values those tests never see — and importing them out of
@@ -220,7 +220,7 @@ object, never off the token it happens to use today.
 
 **`StarRow` is 6.13, and it is here for the reason `Tick` is rather than for a second
 caller's.** It is the sportsmanship card's alone today
-([#386](https://github.com/Raketa02/Raketa/issues/386)), and a control with a touch rule, a
+([#386](https://github.com/Rakieta02/Rakieta/issues/386)), and a control with a touch rule, a
 press state, a fill pair and three pinned contrast ratios is a design-system object whether or
 not two features draw it — the same standing `AvailabilityGrid`, `RadiusSlider` and `TickBox`
 have, each with one caller. `STAR_FILL` is exported for `RUN_OF_FORM_FILL`'s reason, and it is
@@ -279,13 +279,13 @@ is no prop to pass one through, which is what stops somebody helpfully adding
 **The meter's fill takes a `tone` and the ladder does not come with it.** Three steps in an
 existing fill — `mint` · `night` · `red` — because the record card stacked three metered rows in
 one column where the why-fit sheet drew one fill for all of them
-([#385](https://github.com/Raketa02/Raketa/issues/385)). What the component deliberately does
+([#385](https://github.com/Rakieta02/Rakieta/issues/385)). What the component deliberately does
 not hold is **where** a figure turns poor: that is a fact about the figure and belongs to
 whoever knows what it means. A meter that banded its own share would be a second opinion.
 `METER_TONE_FILL` is exported so `meterTone.test.ts` derives the ratios off the component rather
 than off the theme — and the pair bound there is stated in `L*` rather than as a contrast ratio,
 because three fills that each clear their track cannot also be 3:1 from one another. **It has no
-caller since [#660](https://github.com/Raketa02/Raketa/issues/660)**: the why-fit sheet left with
+caller since [#660](https://github.com/Rakieta02/Rakieta/issues/660)**: the why-fit sheet left with
 Classic play, and the record card draws Player reliability's four counts as words — a bar draws a
 ratio, and nothing there is one any more. It stays as 7.3's primitive until a surface needs it or a
 design-system pass retires it with its `size.meter` and `radius.meter`.

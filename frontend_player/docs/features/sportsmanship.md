@@ -7,7 +7,7 @@
 
 **A card at the end of the game screen asks how the other players were, and it is
 `features/sportsmanship/`**
-([#386](https://github.com/Raketa02/Raketa/issues/386),
+([#386](https://github.com/Rakieta02/Rakieta/issues/386),
 [ADR-0158](../../../docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)). **The
 word _rating_ is Skill rating's**, so everything in the feature is spelled **stars** or **the
 card**: a bare _rating_ on this platform is still the μ/σ a player holds in a sport, and these
@@ -71,5 +71,5 @@ result screen around it draws a note, because a game a player pushed into vanish
 indistinguishable from a link gone stale and must not be, and a coral note over an unasked-for
 favour is the app apologising for a chore it invented.
 
-**The stars name the nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). The people on the card come off the game's seats,
+**The stars name the nickname** ([#728](https://github.com/Rakieta02/Rakieta/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). The people on the card come off the game's seats,
 which read the wire's `nickname`, so each row of stars names the person whole and never with an @.

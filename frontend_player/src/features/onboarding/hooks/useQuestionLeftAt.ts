@@ -1,6 +1,6 @@
 /**
  * **Is a questionnaire in this sport left halfway, and on which question?** — for a door about one
- * sport, which says *Carry on* in place of its start ([#765](https://github.com/Raketa02/Raketa/issues/765):
+ * sport, which says *Carry on* in place of its start ([#765](https://github.com/Rakieta02/Rakieta/issues/765):
  * a friend's ask for a level on Home, *Carry on* and *You're on question 5.*).
  *
  * The door where play begins answers the same question about **any** sport (`useLevelDoor`, the

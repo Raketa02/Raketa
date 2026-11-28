@@ -1,6 +1,6 @@
 /**
  * **Info** — the group itself rather than a sport of it (play 57–60, club 20;
- * [#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 71–79), **its own screen
+ * [#514](https://github.com/Rakieta02/Rakieta/issues/514), PRD #500 stories 71–79), **its own screen
  * since Q125**: pushed over the group's page from the page's header, so *back* is the page, on the
  * tab the player left. Its header is the page's without the sport pill, and presses nothing
  * (`GroupHeader`). Top to bottom:

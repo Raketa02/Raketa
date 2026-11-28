@@ -1,5 +1,5 @@
 /**
- * **The guide on _Your rating_** ([#732](https://github.com/Raketa02/Raketa/issues/732),
+ * **The guide on _Your rating_** ([#732](https://github.com/Rakieta02/Rakieta/issues/732),
  * [ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8), walked
  * through the real route tree with only `fetch` faked.
  *

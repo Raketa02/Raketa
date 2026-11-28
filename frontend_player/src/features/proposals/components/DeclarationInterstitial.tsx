@@ -1,6 +1,6 @@
 /**
  * ADR-0094's **one-tap interstitial** — *permanent, not a migration path* — in front of a group's
- * Games deck ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A2.1).
+ * Games deck ([#553](https://github.com/Rakieta02/Rakieta/issues/553), the screens A2.1).
  *
  * A group deals a player only the kind of game their intent wants, and nothing while they have
  * declared none, so the one-time question replaces the deck until it is answered. It reports
@@ -10,8 +10,8 @@
  * it stands in front of.
  *
  * It began on Find a game, which reported `SEARCH_SWITCH` and said its own line, and came here
- * with the Games deck ([#574](https://github.com/Raketa02/Raketa/issues/574)); that screen left
- * with the old loop ([#576](https://github.com/Raketa02/Raketa/issues/576)), and its surface, its
+ * with the Games deck ([#574](https://github.com/Rakieta02/Rakieta/issues/574)); that screen left
+ * with the old loop ([#576](https://github.com/Rakieta02/Rakieta/issues/576)), and its surface, its
  * line and the two props that let two callers differ went with it. A refusal is said in the app's
  * recovery sentence: the declaration's route answers only a lost race and a malformed request.
  *
@@ -26,7 +26,7 @@
  * about the player**, kept on their profile and read by other people's searches — and the app
  * already has one surface for those: [5.2](../../../../docs/design-system.md#52-dark-card)
  * draws the onboarding result and nothing else
- * ([#293](https://github.com/Raketa02/Raketa/issues/293)). On Find a game the note was drawn
+ * ([#293](https://github.com/Rakieta02/Rakieta/issues/293)). On Find a game the note was drawn
  * as a sibling of the mode section, same width and same rhythm, so proximity was grouping a
  * search's toggle with a profile's answer and *"looks like the user is selecting options for
  * the same thing"* was the correct reading of it. The render order is what took the pair

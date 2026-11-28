@@ -1,9 +1,9 @@
 /**
  * **A link into the app** — one of the four the public site serves an in-app twin of
- * ([#520](https://github.com/Raketa02/Raketa/issues/520), PRD #500 stories 46–48, 111–113, 117;
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520), PRD #500 stories 46–48, 111–113, 117;
  * [ADR-0187](../../../../../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
  * §4, §7): a **Group link** out of WhatsApp, an **Invitation**'s button, a password reset's link, a
- * **Friend link** ([#756](https://github.com/Raketa02/Raketa/issues/756)) — and the app's own bare
+ * **Friend link** ([#756](https://github.com/Rakieta02/Rakieta/issues/756)) — and the app's own bare
  * address, which the club's email to an existing account opens.
  *
  * What the app does with one depends on who is signed in on the phone when it arrives, and on

@@ -1,6 +1,6 @@
 /**
  * **The Friends page as a picker** — what it holds when a group's Friends court opens it
- * ([#757](https://github.com/Raketa02/Raketa/issues/757); the friends screens §4.2; friends 3, 6).
+ * ([#757](https://github.com/Rakieta02/Rakieta/issues/757); the friends screens §4.2; friends 3, 6).
  *
  * ```
  * ┌──────────────────────────────────────┐
@@ -24,7 +24,7 @@
  *   cannot be picked until one is unpicked; a picked row never greys.
  * - **No Level in the sport**: greyed, *No padel level yet*. One seated before they lost it can
  *   still be unpicked.
- * - **The ask** ([#758](https://github.com/Raketa02/Raketa/issues/758); the screens §4.2; the words
+ * - **The ask** ([#758](https://github.com/Rakieta02/Rakieta/issues/758); the screens §4.2; the words
  *   §29.3): under a greyed no-Level row, *Ask zofia.b to get a padel level* — the `secondary`
  *   button at `sm` in the friend pills' pill — or the *Asked* tag once asked, as the read's
  *   `level_asked_in` says: once per sport, ever (`levelAskOf`). **A sibling of the row's checkbox,
@@ -32,7 +32,7 @@
  *   the group the picker was opened from, whose picker their answer opens.
  *   It stays busy until the list has re-read, so *Asked* is the server's answer, never a guess.
  * - **No friends at all**: the group's empty card (play 55), handed in, since it is `groups'`.
- * - **With one seat** ([#760](https://github.com/Raketa02/Raketa/issues/760)) — *Invite a friend*
+ * - **With one seat** ([#760](https://github.com/Rakieta02/Rakieta/issues/760)) — *Invite a friend*
  *   on a booked friends game's empty seat — `seats` is 1, and **everybody already on the game is
  *   left out** (`leaveOut`), whom the server would refuse; with nobody left, the composer's empty.
  *

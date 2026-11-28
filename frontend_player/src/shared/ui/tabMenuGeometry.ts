@@ -1,6 +1,6 @@
 /**
  * **Where the tab's menu stands, and what its catcher covers** (design-system 9.5,
- * [#861](https://github.com/Raketa02/Raketa/issues/861); PRD #859) — `TabMenu`'s numbers, pure, so
+ * [#861](https://github.com/Rakieta02/Rakieta/issues/861); PRD #859) — `TabMenu`'s numbers, pure, so
  * they are tested as numbers: Jest has no layout.
  *
  * Every frame is in **the layer's** coordinates — the page the menu is drawn over, which the caller

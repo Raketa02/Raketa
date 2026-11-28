@@ -1,6 +1,6 @@
 /**
  * The payment provider's phone half, behind a port. **The only module that imports
- * `@stripe/stripe-react-native`** ([#552](https://github.com/Raketa02/Raketa/issues/552); the
+ * `@stripe/stripe-react-native`** ([#552](https://github.com/Rakieta02/Rakieta/issues/552); the
  * mechanics §12.4, §12.5; [ADR-0190](../../../../../docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md)).
  *
  * Saving a payment method is four steps, and two of them happen on the provider's side of the

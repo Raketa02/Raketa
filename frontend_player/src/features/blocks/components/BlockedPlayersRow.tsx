@@ -1,7 +1,7 @@
 /**
  * **Blocked players, on the You tab** — the ACCOUNT group's last row: its title, how many in one
  * line — *Nobody*, *1 player*, *2 players* — and the door to the list
- * ([#587](https://github.com/Raketa02/Raketa/issues/587), PRD #571 story 19).
+ * ([#587](https://github.com/Rakieta02/Rakieta/issues/587), PRD #571 story 19).
  *
  * The line is the screen's own read, so an unblock there is on the row the moment the player comes
  * back; a read that failed says so on the row, in the recovery register every row on the tab uses.

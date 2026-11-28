@@ -1,5 +1,5 @@
 /**
- * **A friend link, opened on a phone** ([#756](https://github.com/Raketa02/Raketa/issues/756), PRD
+ * **A friend link, opened on a phone** ([#756](https://github.com/Rakieta02/Rakieta/issues/756), PRD
  * #743; the friends mechanics §4.2–§4.3). Tomek sends his link, `rakieta.app/f/<code>`:
  *
  * - **Ania, signed in**, opens it and lands on Home with Needs your answer already up (#817), and

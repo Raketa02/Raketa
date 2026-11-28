@@ -1,7 +1,7 @@
 /**
  * **The eight friends writes, and what each re-reads**
- * ([#753](https://github.com/Raketa02/Raketa/issues/753), [#756](https://github.com/Raketa02/Raketa/issues/756),
- * [#758](https://github.com/Raketa02/Raketa/issues/758), [#765](https://github.com/Raketa02/Raketa/issues/765);
+ * ([#753](https://github.com/Rakieta02/Rakieta/issues/753), [#756](https://github.com/Rakieta02/Rakieta/issues/756),
+ * [#758](https://github.com/Rakieta02/Rakieta/issues/758), [#765](https://github.com/Rakieta02/Rakieta/issues/765);
  * ADR-0202 §1–§2, §4).
  *
  * | Hook | Route | Re-reads |

@@ -5,7 +5,7 @@
  * ## Why these are not in `genderPresentation`
  *
  * They are shown on the same screen — *Who you play with* is the last step and carries the
- * finish ([#582](https://github.com/Raketa02/Raketa/issues/582)) — and they are about a
+ * finish ([#582](https://github.com/Rakieta02/Rakieta/issues/582)) — and they are about a
  * different thing. Nothing below is about who a player is or who they play with: it describes
  * the state of a setup flow, it is shown conditionally, and it would say the same words on
  * whichever step happened to end the part. That is how it moved here once already, from the

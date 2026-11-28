@@ -10,7 +10,7 @@
  * mount nor a foreground, and a query that is already active does not refetch on staleness
  * alone. The symptom is a list that was true when the player left it and is stale when they
  * return — the Chats tab reading *Waiting on 2 answers* under a room in which the second answer
- * had just landed as a line ([#429](https://github.com/Raketa02/Raketa/issues/429) A5, A6).
+ * had just landed as a line ([#429](https://github.com/Rakieta02/Rakieta/issues/429) A5, A6).
  * Switching tabs happened to repair it, because a tab press replaces the stack and the remount
  * re-read; *back* never did.
  *

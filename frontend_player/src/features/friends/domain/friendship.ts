@@ -1,6 +1,6 @@
 /**
  * **What a relation draws, and where a request was asked from**
- * ([#753](https://github.com/Raketa02/Raketa/issues/753); the friends screens §1–§2; ADR-0202 §1).
+ * ([#753](https://github.com/Rakieta02/Rakieta/issues/753); the friends screens §1–§2; ADR-0202 §1).
  *
  * The rules a surface would otherwise spell in a ternary: which end a Members row ends in, and which
  * buttons the record's foot holds. Both are the server's relation read one way, so Members and the

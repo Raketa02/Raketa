@@ -1,7 +1,7 @@
 /**
  * **New in Rakieta** — the third of FOR YOU's five lines
- * ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5; was the NEW IN RAKIETA row,
- * [#801](https://github.com/Raketa02/Raketa/issues/801), ADR-0204 §5; the Home rows screens §5.1; the
+ * ([#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0205 §5; was the NEW IN RAKIETA row,
+ * [#801](https://github.com/Rakieta02/Rakieta/issues/801), ADR-0204 §5; the Home rows screens §5.1; the
  * mechanics §7; home rows 1, 17, 17.2; home refactor 8, 9).
  *
  * Open, up to ten portrait tiles on the row frame's `tiles` rail, settling on their edges, in the
@@ -10,7 +10,7 @@
  * failed: a line that fails is left out, and the rest of Home stands (the screens §1).
  *
  * **Its count, on the line and in *See all N ›*, is how many joined in the last 30 days**
- * ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6; the mechanics §7.5) — the
+ * ([#822](https://github.com/Rakieta02/Rakieta/issues/822); ADR-0205 §6; the mechanics §7.5) — the
  * read's `total`, *99+* past 99 — and moves with the read.
  *
  * **A tile opens the record**, its requests sent from *new players* (`foundIn`). The line's reads list

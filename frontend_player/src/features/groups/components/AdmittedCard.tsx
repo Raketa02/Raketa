@@ -3,8 +3,8 @@
  * is in at once, and the save's answer says who, as a card under the button — a face and a name
  * each, and it stays until the next save.
  *
- * Edit group's (story 76, [#514](https://github.com/Raketa02/Raketa/issues/514)), and an official
- * group's settings' ([#517](https://github.com/Raketa02/Raketa/issues/517)), where the same switch
+ * Edit group's (story 76, [#514](https://github.com/Rakieta02/Rakieta/issues/514)), and an official
+ * group's settings' ([#517](https://github.com/Rakieta02/Rakieta/issues/517)), where the same switch
  * does the same thing: one drawing, lent to the administrator through `types.ts`.
  */
 

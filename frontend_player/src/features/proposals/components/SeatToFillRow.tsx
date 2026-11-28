@@ -1,6 +1,6 @@
 /**
  * **A *Seats to fill* row** — a booked game that lost a player, offered to the reader
- * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A3.1; mock 12; the mechanics
+ * ([#557](https://github.com/Rakieta02/Rakieta/issues/557); the screens A3.1; mock 12; the mechanics
  * §10.1).
  *
  * ```

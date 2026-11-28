@@ -1,6 +1,6 @@
 /**
  * **Choosing a password: the box, the repeat, and the rule** — sign-up's two boxes, and *Set a
- * new password*'s ([#515](https://github.com/Raketa02/Raketa/issues/515)).
+ * new password*'s ([#515](https://github.com/Rakieta02/Rakieta/issues/515)).
  *
  * **Both boxes can be read back.** These are the forms that ask for the same secret twice and
  * refuse on a mismatch, so a typo nobody can see costs the whole form — and, on a phone whose
@@ -12,7 +12,7 @@
  * listener as the box's hint, and it is not drawn twice — when the box is refused, the refusal
  * line has the sentence.
  *
- * **`stage` is sign-up's on the stage** ([#785](https://github.com/Raketa02/Raketa/issues/785),
+ * **`stage` is sign-up's on the stage** ([#785](https://github.com/Rakieta02/Rakieta/issues/785),
  * mocks 4 and 6): both boxes in the shared field's `stage` look, each refusal on its box's label
  * row (`errorOnLabelRow`), the placeholders *At least 8 characters* and *Once more* — and **the rule
  * under the first box all the time**. The refusal has moved up to the label row, so nothing is said

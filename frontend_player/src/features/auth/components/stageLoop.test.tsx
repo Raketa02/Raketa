@@ -1,5 +1,5 @@
 /**
- * **Sign-in's hero loop** ([#787](https://github.com/Raketa02/Raketa/issues/787), PRD #783) — after
+ * **Sign-in's hero loop** ([#787](https://github.com/Rakieta02/Rakieta/issues/787), PRD #783) — after
  * #786's deal, the front card is picked up with **I'M IN** on it, swiped off to the right, and the
  * hero becomes *It's a game!* until the cards are dealt again.
  *

@@ -1,5 +1,5 @@
 /**
- * **Same competitive level, read** ([#802](https://github.com/Raketa02/Raketa/issues/802); the Home
+ * **Same competitive level, read** ([#802](https://github.com/Rakieta02/Rakieta/issues/802); the Home
  * rows mechanics §3, §6, §13).
  *
  * | | |

@@ -1,7 +1,7 @@
 /**
- * **Discovery's routes** ([#801](https://github.com/Raketa02/Raketa/issues/801), the backend's #793;
- * [#802](https://github.com/Raketa02/Raketa/issues/802), the backend's #794;
- * [#803](https://github.com/Raketa02/Raketa/issues/803), the backend's #795).
+ * **Discovery's routes** ([#801](https://github.com/Rakieta02/Rakieta/issues/801), the backend's #793;
+ * [#802](https://github.com/Rakieta02/Rakieta/issues/802), the backend's #794;
+ * [#803](https://github.com/Rakieta02/Rakieta/issues/803), the backend's #795).
  *
  * | Route | |
  * | --- | --- |
@@ -11,7 +11,7 @@
  * | `GET /same-level/all?sport&after` | See all: 20 to a page, best % first; a sport re-compares everybody in it |
  * | `GET /same-vibe` | Home's row: up to 10, fresh good matches first, then the gaps |
  * | `GET /same-vibe/all?sport&after` | See all: 20 to a page, most in common first; a sport keeps who holds a level in it |
- * | `POST /on-screen` | The cards that came on screen in one row ([#804](https://github.com/Raketa02/Raketa/issues/804), the backend's #796): 204 always, an id that counts nothing ignored |
+ * | `POST /on-screen` | The cards that came on screen in one row ([#804](https://github.com/Rakieta02/Rakieta/issues/804), the backend's #796): 204 always, an id that counts nothing ignored |
  *
  * Every one refuses `block_state_unavailable` (503) — the blocks could not be read, so no row is
  * drawn rather than one that might suggest a blocked person — and each See all its own code for a

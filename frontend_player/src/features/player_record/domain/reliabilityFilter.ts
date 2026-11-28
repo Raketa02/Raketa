@@ -2,7 +2,7 @@
  * **The reliability filter's switch** — *Play only with players of at least High reliability*, or
  * *at least Medium*, or off
  * ([ADR-0195](../../../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
- * §6, [#662](https://github.com/Raketa02/Raketa/issues/662)).
+ * §6, [#662](https://github.com/Rakieta02/Rakieta/issues/662)).
  *
  * Three positions and two facts about them, which is the whole of what this client decides:
  *

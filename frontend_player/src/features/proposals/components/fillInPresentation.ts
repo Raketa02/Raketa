@@ -1,6 +1,6 @@
 /**
  * **Every sentence a group's Fill in and You’re in tabs compose from a value** — a row's title and
- * subtitle, and each row spoken ([#557](https://github.com/Raketa02/Raketa/issues/557), split by
+ * subtitle, and each row spoken ([#557](https://github.com/Rakieta02/Rakieta/issues/557), split by
  * #847, which took the two sections' heads away; the screens A3; mocks 12–13). The fixed words are
  * `fillInCopy.ts`.
  *

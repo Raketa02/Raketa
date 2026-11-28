@@ -1,7 +1,7 @@
 /**
  * **Players with your vibe on Home, the vibe sheet and See all** — FOR YOU's fourth line, walked
- * through the real route tree ([#803](https://github.com/Raketa02/Raketa/issues/803), PRD #789;
- * [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §6, ADR-0205 §5; the Home rows
+ * through the real route tree ([#803](https://github.com/Rakieta02/Rakieta/issues/803), PRD #789;
+ * [#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0204 §6, ADR-0205 §5; the Home rows
  * screens §6, §8; the mechanics §8, §11–§13; the words §31.8, §31.10).
  *
  * - **The line**: fourth of the five, closed; open, its tiles and *See all ›* named at its foot; hidden

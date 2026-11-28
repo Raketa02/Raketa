@@ -1,6 +1,6 @@
 /**
- * **A friends game in Needs your answer and in detail** ([#759](https://github.com/Raketa02/Raketa/issues/759),
- * [#817](https://github.com/Raketa02/Raketa/issues/817); ADR-0205 §1; the friends screens §6.1,
+ * **A friends game in Needs your answer and in detail** ([#759](https://github.com/Rakieta02/Rakieta/issues/759),
+ * [#817](https://github.com/Rakieta02/Rakieta/issues/817); ADR-0205 §1; the friends screens §6.1,
  * §6.3, §9; friends 12; home refactor 2; the words §29.8–§29.10).
  *
  * The real route tree, with the socket faked. **An invitation** waits on the reader — tomek.k's

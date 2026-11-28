@@ -12,9 +12,9 @@
  * They began in `features/play/components/accessibilityPresentation.ts`, beside every other name
  * a Play control is spoken by. The group page's Friends court and its Games card say the same
  * sentences — *a group's court and a line-up's say the same thing* — and may not import
- * `features/play/`, the loop [#569](https://github.com/Raketa02/Raketa/issues/569) removes. So the
+ * `features/play/`, the loop [#569](https://github.com/Rakieta02/Rakieta/issues/569) removes. So the
  * sentences a second feature would have written identically came below both
- * ([#574](https://github.com/Raketa02/Raketa/issues/574)). **What stayed behind is what only a
+ * ([#574](https://github.com/Rakieta02/Rakieta/issues/574)). **What stayed behind is what only a
  * line-up being built says**: a seat the record no longer describes, the engine's reason a seat
  * is empty, and the clear badge.
  */

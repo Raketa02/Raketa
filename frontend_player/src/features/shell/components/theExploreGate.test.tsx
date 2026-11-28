@@ -2,7 +2,7 @@
  * **Play's Explore, behind `explore`** — the *Groups | Explore* switcher drawn only on an explicit
  * **on**, through the real route tree, the real shell and the real Featurevisor SDK, with the
  * datafile stubbed at the socket exactly as every API response is
- * ([#826](https://github.com/Raketa02/Raketa/issues/826),
+ * ([#826](https://github.com/Rakieta02/Rakieta/issues/826),
  * [ADR-0206](../../../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)).
  *
  * **Off is the code default**, and off is Play titled *Groups* over the groups list, with no

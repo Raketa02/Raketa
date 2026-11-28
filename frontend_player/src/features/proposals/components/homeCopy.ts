@@ -1,6 +1,6 @@
 /**
  * **Every fixed word Home's booked cards and a booked game's details say**
- * ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.1, A8; the mechanics
+ * ([#556](https://github.com/Rakieta02/Rakieta/issues/556); the screens A4.1, A8; the mechanics
  * §14.1) — copy is code, keyed by the wire's own status so a status with no words fails to compile.
  *
  * Import-light, as `proposalsCopy.ts` is, because the shell composes Home at module load. Taken

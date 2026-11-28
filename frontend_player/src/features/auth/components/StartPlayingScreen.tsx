@@ -1,6 +1,6 @@
 /**
  * ***Start playing*'s first step — the Adult attestation**
- * ([#517](https://github.com/Raketa02/Raketa/issues/517),
+ * ([#517](https://github.com/Rakieta02/Rakieta/issues/517),
  * [ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
  * §4–§5).
  *

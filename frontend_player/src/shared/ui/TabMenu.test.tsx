@@ -1,5 +1,5 @@
 /**
- * **The tab's menu** (design-system 9.5, [#861](https://github.com/Raketa02/Raketa/issues/861); PRD
+ * **The tab's menu** (design-system 9.5, [#861](https://github.com/Rakieta02/Rakieta/issues/861); PRD
  * #859) — a picker hanging from the tab that opens it, drawn in the page's own tree over the page.
  * What it draws, what a press on it reports, and every way it closes but the page's own. Where it
  * stands is `tabMenuGeometry.test.ts`'s; the group page's router suites walk it on a real page.

@@ -59,7 +59,7 @@ describe('what crosses', () => {
 
   /**
    * **The booking the room is filed under rides on the row** — the join Home's cards and a booked
-   * game's details find their chat by ([#577](https://github.com/Raketa02/Raketa/issues/577)) —
+   * game's details find their chat by ([#577](https://github.com/Rakieta02/Rakieta/issues/577)) —
    * and the game it names does not: nothing reads it since the join moved to the booking.
    */
   it('files the room under its booking, and leaves the game it names behind', () => {
@@ -106,7 +106,7 @@ describe('what crosses', () => {
 
   /**
    * **Everybody the row names, and not only who is on the court**
-   * ([#409](https://github.com/Raketa02/Raketa/issues/409)). A *no* is not an accepted seat, so
+   * ([#409](https://github.com/Rakieta02/Rakieta/issues/409)). A *no* is not an accepted seat, so
    * the actor of a `SEAT_LEFT` line was never a member — `people` is the list that can name them,
    * and it is mapped as the same shape a member is, under a wider claim.
    */

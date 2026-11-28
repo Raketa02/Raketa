@@ -1,6 +1,6 @@
 /**
  * **Want to join · N** — the Owner's queue, between the link card and the members row (club 20;
- * [#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 73–74).
+ * [#514](https://github.com/Rakieta02/Rakieta/issues/514), PRD #500 stories 73–74).
  *
  * **Club 20's card, everywhere** — PRD #500 replaces play 62 by name: one card, a row per person
  * in the order they asked, each with their face, their whole nickname and **every sport they are

@@ -1,5 +1,5 @@
 /**
- * **New in Rakieta, read** ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows
+ * **New in Rakieta, read** ([#801](https://github.com/Rakieta02/Rakieta/issues/801); the Home rows
  * mechanics §3, §7, §13).
  *
  * | | |

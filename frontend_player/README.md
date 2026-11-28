@@ -81,7 +81,7 @@ Copy `.env.example` → `.env.local`. `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATUR
 startup screen naming whichever is missing or malformed, rather than failing later inside a
 feature. On a **physical device**, the API URL must be a LAN IP or tunnel — `localhost` on a
 phone means the phone. **`EXPO_PUBLIC_FEATURES_URL`** is the feature-flag datafiles' host (#826,
-ADR-0206): run `npm run serve` in the flags repo (`Raketa02/raketa-features`) and point it at
+ADR-0206): run `npm run serve` in the flags repo (`Rakieta02/rakieta-features`) and point it at
 `http://localhost:3040` — on a phone, `http://<your machine's LAN IP>:3040`. It is never waited
 on: with nothing served, every feature flag is at its code default, which is how the app ships
 (Play titled _Groups_, no Explore). To see Explore, set the flags repo's `local` rule for `explore`

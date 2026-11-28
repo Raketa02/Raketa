@@ -1,7 +1,7 @@
 /**
  * **A group's You’re in tab, walked** — the reader's own live yeses in this group and sport, its
  * badge, its empty states, *+ Post a game* floating over it, and a yes withdrawn from its row
- * ([#847](https://github.com/Raketa02/Raketa/issues/847), PRD #844; the screens A1, A3, A3.2; split
+ * ([#847](https://github.com/Rakieta02/Rakieta/issues/847), PRD #844; the screens A1, A3, A3.2; split
  * mocks 2 and 3; the mechanics §10).
  *
  * The real route tree from Play › Groups, with `fetch` and the platform edges faked. The rows are

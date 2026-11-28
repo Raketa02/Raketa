@@ -1,5 +1,5 @@
 /**
- * **FOR YOU's skeleton** ([#871](https://github.com/Raketa02/Raketa/issues/871); PRD #867; the
+ * **FOR YOU's skeleton** ([#871](https://github.com/Rakieta02/Rakieta/issues/871); PRD #867; the
  * loading shimmer log §6, Q15; design system 5.6) — what stands in FOR YOU's place on Home while the
  * reads its lines wait on are out: **the heading's bar**, as wide as its words, and **four closed
  * lines at the line's real height** — the `h2` line and `space.md` above and below it, `minTouch`

@@ -1,6 +1,6 @@
 /**
  * **What a screen that says yes may ask of the fill** — the contract `FillProvider` serves and
- * `useFillYes` binds to a screen ([#555](https://github.com/Raketa02/Raketa/issues/555)). Here, in
+ * `useFillYes` binds to a screen ([#555](https://github.com/Rakieta02/Rakieta/issues/555)). Here, in
  * `hooks/`, so a hook can reach it without importing a component.
  */
 

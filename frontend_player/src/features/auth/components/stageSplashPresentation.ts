@@ -1,5 +1,5 @@
 /**
- * **The hero's *It's a game!*, composed from the copy** ([#787](https://github.com/Raketa02/Raketa/issues/787);
+ * **The hero's *It's a game!*, composed from the copy** ([#787](https://github.com/Rakieta02/Rakieta/issues/787);
  * design system 12.2, mocks 7–8) — the splash's `stageDeckPresentation`: who faces whom, the letters
  * over each poster, and the line under the word.
  *

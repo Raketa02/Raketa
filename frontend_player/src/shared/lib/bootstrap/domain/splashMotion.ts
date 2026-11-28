@@ -1,6 +1,6 @@
 /**
  * **The splash's motion** — how the ball and the letters move between the geometry's keyframes, at
- * any moment of the splash's clock ([#856](https://github.com/Raketa02/Raketa/issues/856); the
+ * any moment of the splash's clock ([#856](https://github.com/Rakieta02/Rakieta/issues/856); the
  * brief's §3, decision log §4–§5;
  * [ADR-0209](../../../../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)).
  *

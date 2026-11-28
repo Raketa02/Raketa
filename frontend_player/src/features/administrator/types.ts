@@ -1,8 +1,8 @@
 /**
  * **The administrator feature's only public surface** — the administrator area: its two tabs,
  * **Groups · You**, New official group, an official group's page and its settings
- * ([#516](https://github.com/Raketa02/Raketa/issues/516),
- * [#517](https://github.com/Raketa02/Raketa/issues/517), PRD #500, ADR-0184, ADR-0185).
+ * ([#516](https://github.com/Rakieta02/Rakieta/issues/516),
+ * [#517](https://github.com/Rakieta02/Rakieta/issues/517), PRD #500, ADR-0184, ADR-0185).
  *
  * The screens are mounted by the route files under `src/app/(administrator)/`, which check their
  * params here first; the entry gate reaches for `administratorHome` to send an account that only
@@ -30,7 +30,7 @@ export { ProfileChip } from './components/ProfileChip';
 export { HandoverSheet } from './components/HandoverSheet';
 export { InvitationSheet } from './components/InvitationSheet';
 /**
- * **What an incoming link asks of this feature** ([#520](https://github.com/Raketa02/Raketa/issues/520)):
+ * **What an incoming link asks of this feature** ([#520](https://github.com/Rakieta02/Rakieta/issues/520)):
  * an invitation's link opened by the account it was sent to has the sheet offer it again, even if it
  * was set aside this launch; a group link opened in the area switches to Player, where Join a group
  * is — the switcher's own move.

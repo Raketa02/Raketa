@@ -30,7 +30,7 @@
  * as a *list* — *"a formatter that returns one string has decided the layout, and this one
  * must not"*, because at 64 characters a join produces a phrase no side label can hold — and
  * it had one caller, the builder's forecast card. That row is now a list of **controls** and
- * not of names ([#285](https://github.com/Raketa02/Raketa/issues/285)): each seated name
+ * not of names ([#285](https://github.com/Rakieta02/Rakieta/issues/285)): each seated name
  * with a breakdown behind it opens `SH.whyfit`, so the entry carries a place and a candidate
  * row beside its word. `handlesOn` composes those entries from this file's one formatter, and
  * a `map` over a shape it does not own could not have been the thing doing it.
@@ -81,7 +81,7 @@ export function playerName(player: NamedPlayer): string {
  * accessible name and every toast still carries all sixty-four characters: the two rows that
  * draw this stem sit directly under one that speaks the whole thing, and the conversation's
  * header, the third drawer, is called by the nicknames whole in its own accessible name
- * ([#401](https://github.com/Raketa02/Raketa/issues/401)).
+ * ([#401](https://github.com/Rakieta02/Rakieta/issues/401)).
  *
  * **The first dot, and deliberately not a dash or an underscore** — ADR-0157's cut, as it stood
  * before ADR-0171 (ADR-0199, *Leaves standing*). `-` and `_` are as often inside one word as
@@ -112,7 +112,7 @@ const STEM_BREAK = '.';
  * §3, cut from the **nickname** since
  * [ADR-0199](../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §2. `handleStem`
  * above is a prefix somebody typed; two initials are a derived form, which is what
- * [#338](https://github.com/Raketa02/Raketa/issues/338) §5 refused on the Chats rows. What §4
+ * [#338](https://github.com/Rakieta02/Rakieta/issues/338) §5 refused on the Chats rows. What §4
  * protects is a **sentence** — *addressing a person by a name they never gave it* — and this
  * is a **drawing**: it goes over the generated poster on the yes screen's tile, where the
  * gradient alone cannot say who at tile size, and over nothing else. **The fence has four

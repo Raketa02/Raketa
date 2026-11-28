@@ -2,16 +2,16 @@
  * The tag's seventh variant, and the arithmetic under the border that arrives beside it.
  *
  * [6.4](../../../docs/design-system.md#64-tag--the-status-pill) gained `volt` for Play's *they
- * want you* signal ([#309](https://github.com/Raketa02/Raketa/issues/309)), and it is the one
+ * want you* signal ([#309](https://github.com/Rakieta02/Rakieta/issues/309)), and it is the one
  * variant whose background is a **base** colour rather than a soft. The pair it rests on is
  * already in [2.5](../../../docs/design-system.md#25-contrast--computed) — so what this file
  * does is what `Switch.test.tsx`, `textOnMedia.test.ts` and `posterHues.test.ts` do for their
  * own published figures: **derive them, rather than let two documents drift.**
  *
  * The second block is the more useful one, and it changed hands.
- * [#309](https://github.com/Raketa02/Raketa/issues/309) read *a fill anywhere and a stroke only
+ * [#309](https://github.com/Rakieta02/Rakieta/issues/309) read *a fill anywhere and a stroke only
  * on dark* as refusing the green border its designs asked for, and shipped the two ratios as the
- * refusal. [#310](https://github.com/Raketa02/Raketa/issues/310) draws the border, so the block
+ * refusal. [#310](https://github.com/Rakieta02/Rakieta/issues/310) draws the border, so the block
  * now proves the narrower claim that survived: **volt itself still cannot be that stroke**, and
  * `voltStroke` — volt's meaning at a border's ratio, the relationship `coralInk` has to `coral` —
  * is what is drawn instead. Both halves are computed, because a published number nothing
@@ -135,7 +135,7 @@ describe('voltStroke as a stroke on paper', () => {
 
 /**
  * `arranging` — the dot on the Now card's tag while the game is still in the players' hands
- * ([#413](https://github.com/Raketa02/Raketa/issues/413)), and the figures `theme.ts` publishes
+ * ([#413](https://github.com/Rakieta02/Rakieta/issues/413)), and the figures `theme.ts` publishes
  * for it.
  *
  * **The mock's dot was measured and found to be `amber`.** `#87641A` is a degree off amber's hue

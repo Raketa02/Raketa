@@ -2,7 +2,7 @@
  * **A friends game's fixed words** — the send sheet, *FRIENDS GAME · n* on Home, the sender's game in
  * Your games and the details' seats — the words
  * [§29.7–§29.10](../../../../../docs/specs/matchmaking/the-words.md#297-sending)
- * ([#759](https://github.com/Raketa02/Raketa/issues/759)). The sentences built from a value are
+ * ([#759](https://github.com/Rakieta02/Rakieta/issues/759)). The sentences built from a value are
  * `friendsGamePresentation.ts`'s; a refusal the deck already words is `proposalsCopy`'s, cited.
  *
  * ## Calls, for the product owner to overrule
@@ -28,7 +28,7 @@
  *   confirmation, *Call it off?* · **Keep the game**, went with its button: calling it off is the
  *   sender's leave sheet's (2026-11-07, below).
  *
- * And these, written in by [#760](https://github.com/Raketa02/Raketa/issues/760):
+ * And these, written in by [#760](https://github.com/Rakieta02/Rakieta/issues/760):
  *
  * - **A friend invited into an empty seat**, under it: *piotr.s invited · 20 h 00 left* — the
  *   read's own example; *A friend invited · …* for one it cannot name.

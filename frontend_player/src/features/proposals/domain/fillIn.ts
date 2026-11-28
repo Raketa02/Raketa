@@ -1,6 +1,6 @@
 /**
  * **A group's Fill in and You’re in tabs** — the rescues the reader is offered, on Fill in, and their
- * own yeses on games still filling, on You’re in ([#557](https://github.com/Raketa02/Raketa/issues/557),
+ * own yeses on games still filling, on You’re in ([#557](https://github.com/Rakieta02/Rakieta/issues/557),
  * a tab each since #847; the screens A3; the mechanics §10).
  *
  * Pure. Which rescues the reader fits and is free for, in what order and until when, is the
@@ -117,7 +117,7 @@ export function youreInEmpty(
 }
 
 /**
- * **How far You’re in's first read has come** ([#875](https://github.com/Raketa02/Raketa/issues/875))
+ * **How far You’re in's first read has come** ([#875](https://github.com/Rakieta02/Rakieta/issues/875))
  * — what the group page's reveal waits on for the tab: the reader's live yeses, and **with no yes
  * here, Fill in's read too**, since the starting card waits for it (`youreInEmpty`). `here` is how
  * many yeses the read holds in this group and sport, `undefined` until it has landed.

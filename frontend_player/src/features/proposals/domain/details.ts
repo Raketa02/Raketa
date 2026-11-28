@@ -1,6 +1,6 @@
 /**
  * **A game still filling, in detail** — `GET /proposals/{id}` (#542), the details a card's **i**,
- * a *You’re in* row and a live yes open ([#557](https://github.com/Raketa02/Raketa/issues/557); the
+ * a *You’re in* row and a live yes open ([#557](https://github.com/Rakieta02/Rakieta/issues/557); the
  * screens A4.2; the mechanics §14.2).
  *
  * Pure. The read is the server's whole answer — who is In, the sides and their forecast, the club

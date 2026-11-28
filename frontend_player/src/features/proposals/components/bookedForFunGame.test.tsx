@@ -1,5 +1,5 @@
 /**
- * **A booked For-fun game reads the same as before it was booked** ([#841](https://github.com/Raketa02/Raketa/issues/841);
+ * **A booked For-fun game reads the same as before it was booked** ([#841](https://github.com/Rakieta02/Rakieta/issues/841);
  * ADR-0207 §5, §6) — walked the way a player walks it: the real route tree, the real shell, and only
  * `fetch` faked.
  *

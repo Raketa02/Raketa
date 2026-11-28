@@ -1,8 +1,8 @@
 /**
- * **The sport switcher on a Home line** ([#805](https://github.com/Raketa02/Raketa/issues/805); the
+ * **The sport switcher on a Home line** ([#805](https://github.com/Rakieta02/Rakieta/issues/805); the
  * Home rows screens §7.3; design-system 7.36, 7.37) — the deck's pill (#774) standing in a folding
- * line's footer since [#820](https://github.com/Raketa02/Raketa/issues/820), and the bar it unfolds
- * into **sliding over the footer**. Since [#821](https://github.com/Raketa02/Raketa/issues/821)
+ * line's footer since [#820](https://github.com/Rakieta02/Rakieta/issues/820), and the bar it unfolds
+ * into **sliding over the footer**. Since [#821](https://github.com/Rakieta02/Rakieta/issues/821)
  * (ADR-0205 §5, Q19, Q37; home refactor 12, 13) it stands **first, at the footer's left**, reading
  * *● Padel ›*, with *Open the rankings ›* at the right, and **opens to the right** (`SportBar`'s
  * `opens`): the current sport at the bar's left end where the pill stood, the others after it.

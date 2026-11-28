@@ -1,7 +1,7 @@
 /**
  * **The way out of a group** — *Delete the group* for an Owner alone, *Leave the group* for
  * everybody else, each behind a confirmation sheet, and then the Groups list
- * ([#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 77–79; play 57–60).
+ * ([#514](https://github.com/Rakieta02/Rakieta/issues/514), PRD #500 stories 77–79; play 57–60).
  *
  * **The sheet is the departure's shape** (`LeaveSheet`'s, for its reasons): a real modal whose
  * title names the moment rather than the act, a close named by what it keeps, focus on the title

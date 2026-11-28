@@ -1,6 +1,6 @@
 /**
  * **Removed while here** — the club took this person's administrator profile away while the area
- * was open (PRD #500 story 136, ADR-0184 §7; [#516](https://github.com/Raketa02/Raketa/issues/516)).
+ * was open (PRD #500 story 136, ADR-0184 §7; [#516](https://github.com/Rakieta02/Rakieta/issues/516)).
  *
  * The backend asks again on **every** administrator request, so a removal lands as
  * `403 not_an_administrator` on whichever request the area makes next — the Groups tab's read, a
@@ -10,7 +10,7 @@
  * What it answers is the caller's (`onRemoved`), because what a removal means depends on what else
  * the account holds: an account that only administers has nowhere left to be and is signed out;
  * one that also plays is moved to its player side, which is the profile switcher's
- * ([#518](https://github.com/Raketa02/Raketa/issues/518)).
+ * ([#518](https://github.com/Rakieta02/Rakieta/issues/518)).
  *
  * A cache subscription rather than an `onError` on each hook: queries have no `onError` in this
  * Query, and a rule restated on five hooks is the one the sixth forgets.

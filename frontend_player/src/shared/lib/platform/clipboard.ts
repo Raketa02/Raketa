@@ -1,6 +1,6 @@
 /**
  * The clipboard, behind a port. **The only module that imports `expo-clipboard`**
- * ([#512](https://github.com/Raketa02/Raketa/issues/512)).
+ * ([#512](https://github.com/Rakieta02/Rakieta/issues/512)).
  *
  * The first read of it arrived with *Join a group*'s **Paste** chip: a group link copied out of
  * WhatsApp is one tap from the field (PRD #500 story 30). It is a port and not a line in a
@@ -8,7 +8,7 @@
  * it, so a screen that imports one is a screen no suite can put a link in front of.
  *
  * **Two verbs, read and write.** The write arrived with a group page's **Copy link**
- * ([#513](https://github.com/Raketa02/Raketa/issues/513), story 65): the link the player sends
+ * ([#513](https://github.com/Rakieta02/Rakieta/issues/513), story 65): the link the player sends
  * the crowd, one tap from anywhere they can paste.
  *
  * **Neither rejects.** A clipboard that cannot be read — refused by the OS, empty, holding an

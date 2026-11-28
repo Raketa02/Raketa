@@ -1,6 +1,6 @@
 /**
  * **Who turned up** — the four acts at a booked game's court
- * ([#658](https://github.com/Raketa02/Raketa/issues/658); ADR-0195 §3): *isn't here yet*, an arrival
+ * ([#658](https://github.com/Rakieta02/Rakieta/issues/658); ADR-0195 §3): *isn't here yet*, an arrival
  * (*I'm here* or *they're here*), *I was there* and *yes, they were here*.
  *
  * **Every answer is dropped**, for `stateResult`'s reason: each route replies with the game as it

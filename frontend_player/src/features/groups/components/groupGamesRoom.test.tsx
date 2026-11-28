@@ -1,7 +1,7 @@
 /**
  * **The Games deck on a phone too short for its card** — the stage laid out at the card's least
  * height, and the scroller holding the ✕ · i · ball buttons under it
- * ([#865](https://github.com/Raketa02/Raketa/issues/865); the tab menu log §6.5).
+ * ([#865](https://github.com/Rakieta02/Rakieta/issues/865); the tab menu log §6.5).
  *
  * The real route tree, with the socket faked. Jest lays nothing out, so the suite plays the layout a
  * 320 × 568 phone would — the card's box, the stage's, then each of its blocks, by `onLayout` — and

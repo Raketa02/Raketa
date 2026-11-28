@@ -1,7 +1,7 @@
 /**
  * **How the stage's pictures move** — what sign-in's loop (#787) and sign-up's rise (#788) build their
- * sequences from ([#787](https://github.com/Raketa02/Raketa/issues/787),
- * [#788](https://github.com/Raketa02/Raketa/issues/788); design system 12.2): both `move` on the
+ * sequences from ([#787](https://github.com/Rakieta02/Rakieta/issues/787),
+ * [#788](https://github.com/Rakieta02/Rakieta/issues/788); design system 12.2): both `move` on the
  * native driver and land with `ARRIVE`; the loop alone also throws a card off on a curve of its own
  * and `put`s values back between cycles.
  *

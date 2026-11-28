@@ -1,6 +1,6 @@
 /**
  * **RECEIPTS** — You › Payments' last section, under the method and the live yeses
- * ([#555](https://github.com/Raketa02/Raketa/issues/555), [#644](https://github.com/Raketa02/Raketa/issues/644);
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555), [#644](https://github.com/Rakieta02/Rakieta/issues/644);
  * the screens A7.3; mock 49; the mechanics §12.1, Q113).
  *
  * ```

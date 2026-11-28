@@ -1,11 +1,11 @@
 /**
  * **A page filtered by the fast filter** — the group page and Members
- * ([#513](https://github.com/Raketa02/Raketa/issues/513),
- * [#514](https://github.com/Raketa02/Raketa/issues/514)): its header with the sport pill, what is
+ * ([#513](https://github.com/Rakieta02/Rakieta/issues/513),
+ * [#514](https://github.com/Rakieta02/Rakieta/issues/514)): its header with the sport pill, what is
  * under the header for the sport chosen, and the bar the pill unfolds into, floating over both.
  *
  * **The pill, the bar and the layer they open on are shared UI's** — `SportPillFrame`, the one
- * control Rankings draws too ([#774](https://github.com/Raketa02/Raketa/issues/774)). What is the
+ * control Rankings draws too ([#774](https://github.com/Rakieta02/Rakieta/issues/774)). What is the
  * group page's is here: the filter's state, and its words.
  *
  * **One filter, one state**: the sport is `useGroupSport`'s, the one value last picked anywhere in

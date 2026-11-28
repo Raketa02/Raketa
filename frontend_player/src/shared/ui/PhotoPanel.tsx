@@ -1,7 +1,7 @@
 /**
  * The **photo panel** — the photograph with the facts that outrank it printed on top
  * ([7.16](../../../docs/design-system.md#716-the-photo-panel),
- * [#309](https://github.com/Raketa02/Raketa/issues/309)).
+ * [#309](https://github.com/Rakieta02/Rakieta/issues/309)).
  *
  * It replaced a bare 74 × 92 thumbnail on the competitive candidate card, and the replacement
  * is a statement about the product:
@@ -10,7 +10,7 @@
  *
  * So the **Level** is the biggest text on the panel, the **Sport** sits small and capitalised
  * under it, and the top of the panel carries the **ON COURT** mark
- * ([#313](https://github.com/Raketa02/Raketa/issues/313)) — which is why the content column is
+ * ([#313](https://github.com/Rakieta02/Rakieta/issues/313)) — which is why the content column is
  * anchored to the bottom rather than centred. The mark is what the space was left clear for,
  * and it arrived as a label rather than as the designs' shield: `OnCourtMark` holds that
  * arithmetic, and the short version is that the panel is 74pt wide and the words are 51,19 of
@@ -19,7 +19,7 @@
  * ## Two sizes, and the larger one **re-derives** rather than scaling
  *
  * The record sheet's header is the second composition to draw one
- * ([#384](https://github.com/Raketa02/Raketa/issues/384)), at `PHOTO_PANEL.record` — which is
+ * ([#384](https://github.com/Rakieta02/Rakieta/issues/384)), at `PHOTO_PANEL.record` — which is
  * why this component came below both features with `PlayerPhoto` and `OnCourtMark`, on the
  * same argument that moved the run of form and the Social tag row: `player_record` may not
  * import `features/play/`, because Play is what opens the sheet.

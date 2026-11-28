@@ -1,6 +1,6 @@
 /**
  * **PLAYED WITH on a booked game's result, walked through the real route tree**
- * ([#754](https://github.com/Raketa02/Raketa/issues/754), PRD #743 story 15; the friends screens
+ * ([#754](https://github.com/Rakieta02/Rakieta/issues/754), PRD #743 story 15; the friends screens
  * §3; Q26).
  *
  * The card lists the others on the game in Members' rows with Members' pills — *friend*, **+ Add**,

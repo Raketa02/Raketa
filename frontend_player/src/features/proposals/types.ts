@@ -1,8 +1,8 @@
 /**
  * **The proposals feature's only public surface** — a group's Games deck and a game's details
- * ([#553](https://github.com/Raketa02/Raketa/issues/553); the screens A2, A4.2; the mechanics
+ * ([#553](https://github.com/Rakieta02/Rakieta/issues/553); the screens A2, A4.2; the mechanics
  * §6–§8), and the player's own two reads, Games & money and the live yeses
- * ([#554](https://github.com/Raketa02/Raketa/issues/554); the screens A7.1, A7.3) — over the
+ * ([#554](https://github.com/Rakieta02/Rakieta/issues/554); the screens A7.1, A7.3) — over the
  * backend's Proposals context (#538, #539).
  *
  * The group page draws `GamesDeck` as its Games tab, reads the tab's badge with `useGamesBadge`
@@ -125,12 +125,12 @@ export { HOME_GAME_COPY } from './components/homeCopy';
 /**
  * ***Leave the game*** — the departure's one word, on the door and on the sheet's act, for the
  * suites that press it. The sheet and its words are this feature's since
- * [#574](https://github.com/Raketa02/Raketa/issues/574), with the booked game's departure.
+ * [#574](https://github.com/Rakieta02/Rakieta/issues/574), with the booked game's departure.
  */
 export { LEAVE_THE_GAME } from './components/leaveSheetCopy';
 
 /**
- * **Where a notice opens** ([#559](https://github.com/Raketa02/Raketa/issues/559); the screens A9):
+ * **Where a notice opens** ([#559](https://github.com/Rakieta02/Rakieta/issues/559); the screens A9):
  * a game still filling's details, spelled here for the deck's own **i**, a booked game's open seat
  * seen from outside — a booked game's own is `bookedGameRoute`, above — and a booked game's result
  * screen, where each step at the court is acted on (#664); and the keys a tap re-reads, so the

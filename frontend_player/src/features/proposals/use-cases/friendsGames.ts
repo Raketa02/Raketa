@@ -1,7 +1,7 @@
 /**
  * **A friends game's writes** — sent, accepted, declined, called off
- * ([#759](https://github.com/Raketa02/Raketa/issues/759)); a friend invited into an empty seat, and
- * the seat opened to the group ([#760](https://github.com/Raketa02/Raketa/issues/760)).
+ * ([#759](https://github.com/Rakieta02/Rakieta/issues/759)); a friend invited into an empty seat, and
+ * the seat opened to the group ([#760](https://github.com/Rakieta02/Rakieta/issues/760)).
  * Pass-throughs over the wire: what each answer means is the domain's (`friendsGame.ts`) and the
  * screens'.
  */

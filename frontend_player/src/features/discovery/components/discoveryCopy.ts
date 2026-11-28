@@ -1,12 +1,12 @@
 /**
  * **Every sentence Discovery's rows say** — New in Rakieta
- * ([#801](https://github.com/Raketa02/Raketa/issues/801); the words
+ * ([#801](https://github.com/Rakieta02/Rakieta/issues/801); the words
  * [§31.1 and §31.7](../../../../../docs/specs/matchmaking/the-words.md#317-new-in-rakieta)): the row's
  * heading and its *See all ›*, the tile's tag, sports and *Joined …*, and See all's title, pill and
- * empty line; Same competitive level ([#802](https://github.com/Raketa02/Raketa/issues/802); the
+ * empty line; Same competitive level ([#802](https://github.com/Rakieta02/Rakieta/issues/802); the
  * words [§31.5 and §31.6](../../../../../docs/specs/matchmaking/the-words.md#315-same-competitive-level--the-card)):
  * the card's pairing, *EVEN*, the bar's *YOU*, *N sports ›*, and the comparison sheet with its gap; and
- * Same vibe ([#803](https://github.com/Raketa02/Raketa/issues/803); the words
+ * Same vibe ([#803](https://github.com/Rakieta02/Rakieta/issues/803); the words
  * [§31.8](../../../../../docs/specs/matchmaking/the-words.md#318-same-vibe)): the tile's %, *+N more*,
  * the sheet's title and identity row. The round button's words are `friends'`, the bands' names
  * onboarding's (`BAND_NAMES`), *6 things in common* and the tags' own `shared/vocabulary`'s — the

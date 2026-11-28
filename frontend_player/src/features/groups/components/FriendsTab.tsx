@@ -1,6 +1,6 @@
 /**
  * **The Friends tab** — the court a game with friends is built on, and the card under it once
- * every seat is filled ([#757](https://github.com/Raketa02/Raketa/issues/757); play 49–53; the
+ * every seat is filled ([#757](https://github.com/Rakieta02/Rakieta/issues/757); play 49–53; the
  * friends screens §7.1–§7.2; friends 7, 8).
  *
  * ```

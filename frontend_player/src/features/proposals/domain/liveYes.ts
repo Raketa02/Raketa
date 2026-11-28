@@ -1,7 +1,7 @@
 /**
  * **A live yes** — a yes of the reader's on a game that has not filled, across every group (You ›
  * Payments' *LIVE YESES*, the screens A7.3; mock 48;
- * [#554](https://github.com/Raketa02/Raketa/issues/554)).
+ * [#554](https://github.com/Rakieta02/Rakieta/issues/554)).
  *
  * The server's read (`ReadLiveYeses`, #539) lists them soonest game first and drops a game past its
  * book-by, whether or not its expiry has been recorded — so nothing here re-derives which yeses are

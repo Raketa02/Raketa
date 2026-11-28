@@ -1,6 +1,6 @@
 /**
  * **The cards a row has reported on screen today** — once per card, row and Warsaw day
- * ([#804](https://github.com/Raketa02/Raketa/issues/804); the Home rows mechanics §9.2, call 2; the
+ * ([#804](https://github.com/Rakieta02/Rakieta/issues/804); the Home rows mechanics §9.2, call 2; the
  * backend's #796).
  *
  * A card on *Same competitive level* or *Same vibe* that comes at least half on screen counts one day

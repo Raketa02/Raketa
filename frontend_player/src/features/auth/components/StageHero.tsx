@@ -1,7 +1,7 @@
 /**
  * **The stage's hero** — the dark top of sign-in and sign-up (#785): the *Rakieta* wordmark in its
  * top-left corner, room for the deck (#786) or the podium (#788) in the middle, and the headline at
- * its foot ([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783; design system 12.2).
+ * its foot ([#784](https://github.com/Rakieta02/Rakieta/issues/784), PRD #783; design system 12.2).
  *
  * **A picture, and nothing else.** It is hidden from screen readers whole (ADR-0198: the form is the
  * screen), it takes no touch, and it does not move with the sheet: it is drawn behind the scroll at

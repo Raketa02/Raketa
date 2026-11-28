@@ -1,6 +1,6 @@
 /**
  * **The other kind's door, opened** — the panel the Games tab's menu's dimmed line opens over the
- * deck (the switch's dimmed kind until #862) ([#740](https://github.com/Raketa02/Raketa/issues/740);
+ * deck (the switch's dimmed kind until #862) ([#740](https://github.com/Rakieta02/Rakieta/issues/740);
  * [ADR-0201](../../../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
  * §2; the screens A2.1; the words §28).
  *

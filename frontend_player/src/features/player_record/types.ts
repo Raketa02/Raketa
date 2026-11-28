@@ -17,7 +17,7 @@ export { PlayerRecordSheet, type PlayerRecordSheetProps } from './components/Pla
 
 /**
  * **The record, read by a surface that is not the record sheet** — Discovery's **vibe sheet**
- * ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows screens §6.3), which *reads
+ * ([#803](https://github.com/Rakieta02/Rakieta/issues/803); the Home rows screens §6.3), which *reads
  * the record* and shows what it shows: the read in every state, refusal included (`RecordRead`); the
  * tag row with the shared ones green and *· you too* (`RecordTags`); and the intro in its marks
  * (`RecordIntro`). Each is the record's own drawing, so the sheet and the record never say one thing
@@ -119,7 +119,7 @@ export {
  * card's four counts with the two figures it prints, and the sportsmanship row's label with the
  * figure it draws for everybody. The three band words it used to draw for the subject are
  * exported by nothing, because nothing draws them
- * ([#473](https://github.com/Raketa02/Raketa/issues/473)); nor are the strands' names or the
+ * ([#473](https://github.com/Rakieta02/Rakieta/issues/473)); nor are the strands' names or the
  * tone ladder's words, retired by ADR-0195 (#660).
  */
 export {

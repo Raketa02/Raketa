@@ -1,7 +1,7 @@
 /**
  * **Every sentence the friends card and *Find a court* compose from a value** — the words
  * [§29.6](../../../../../docs/specs/matchmaking/the-words.md#296-the-friends-tab)
- * ([#757](https://github.com/Raketa02/Raketa/issues/757)). The fixed words are
+ * ([#757](https://github.com/Rakieta02/Rakieta/issues/757)). The fixed words are
  * `friendsCardCopy.ts`; the court line, the share and the *vs* line are the deck's
  * (`deckPresentation`), cited, because the card is the deck's card without its tiles.
  *

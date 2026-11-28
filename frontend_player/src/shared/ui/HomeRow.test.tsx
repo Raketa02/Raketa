@@ -1,7 +1,7 @@
 /**
  * **The Home row frame** — one heading and one rail, for every row in Needs your answer and *Your
- * games*, and the rail FOR YOU's open lines draw on ([#798](https://github.com/Raketa02/Raketa/issues/798),
- * [#820](https://github.com/Raketa02/Raketa/issues/820); the Home rows screens §2).
+ * games*, and the rail FOR YOU's open lines draw on ([#798](https://github.com/Rakieta02/Rakieta/issues/798),
+ * [#820](https://github.com/Rakieta02/Rakieta/issues/820); the Home rows screens §2).
  *
  * The rows that sit on it keep their own tests; they say what each row does, and the geometry the rows
  * used to copy is held here, once: the heading, the bleed, the gap, every rail's widths and the paging

@@ -1,6 +1,6 @@
 /**
  * **Whether this route is the screen in view** — the navigator's focus, as a value
- * ([#784](https://github.com/Raketa02/Raketa/issues/784)).
+ * ([#784](https://github.com/Rakieta02/Rakieta/issues/784)).
  *
  * The stage draws a light status bar over its hero, and a stack keeps sign-in mounted under the
  * screen pushed over it, so *mounted* is not *in view*: the bar has to go when *Forgot password?*

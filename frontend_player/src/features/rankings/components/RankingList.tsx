@@ -1,6 +1,6 @@
 /**
- * **The list** (rankings 5, 7–11; the screens §5.2, §5.3; [#775](https://github.com/Raketa02/Raketa/issues/775),
- * [#776](https://github.com/Raketa02/Raketa/issues/776)): one row per listed player — everybody, a
+ * **The list** (rankings 5, 7–11; the screens §5.2, §5.3; [#775](https://github.com/Rakieta02/Rakieta/issues/775),
+ * [#776](https://github.com/Rakieta02/Rakieta/issues/776)): one row per listed player — everybody, a
  * player the reader blocked included (ADR-0204 §2, #799) — best first, on one white card — and the page's scroller, the card and the podium its header.
  *
  * **A row:**
@@ -32,7 +32,7 @@
  * otherwise read the page above before it reached the reader. The reader's own drag takes the list
  * back.
  *
- * **A jump that reads makes the button busy** ([#869](https://github.com/Raketa02/Raketa/issues/869)):
+ * **A jump that reads makes the button busy** ([#869](https://github.com/Rakieta02/Rakieta/issues/869)):
  * *Finding you…* from the press until the reader's row is on screen — the button then goes, as it
  * does — or the jump is refused, or the reader's own drag takes the list back, when the read still
  * lands and swaps the list. A page landing with no row of the reader's ends it too: the server

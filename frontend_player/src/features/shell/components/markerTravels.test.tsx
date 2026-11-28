@@ -1,5 +1,5 @@
 /**
- * **The selection marker travels** (ADR-0210 §8, 10.2, [#884](https://github.com/Raketa02/Raketa/issues/884)),
+ * **The selection marker travels** (ADR-0210 §8, 10.2, [#884](https://github.com/Rakieta02/Rakieta/issues/884)),
  * walked through the shell: when the lit tab changes it slides to it on the 460 ms spring and the new
  * tab colours in after it, and when nothing about the lit tab changes — the dock's first draw, the
  * dock coming back, a press of the lit tab — nothing moves.

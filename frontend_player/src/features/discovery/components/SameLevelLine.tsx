@@ -1,13 +1,13 @@
 /**
  * **Players at your level** — the second of FOR YOU's five lines
- * ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5; was SAME COMPETITIVE LEVEL
- * PLAYERS, [#802](https://github.com/Raketa02/Raketa/issues/802), ADR-0204 §4; the Home rows screens
+ * ([#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0205 §5; was SAME COMPETITIVE LEVEL
+ * PLAYERS, [#802](https://github.com/Rakieta02/Rakieta/issues/802), ADR-0204 §4; the Home rows screens
  * §4.1; the mechanics §6, §9; home rows 1, 7; home refactor 6, 7).
  *
  * Open, up to ten dark cards on the row frame's peeking rail, settling on their edges, in the read's
  * order — fresh good matches first, then the gaps — and *See all N ›* to the full list at the foot.
  * **Its count**, on the line and in *See all N ›*, is everybody holding a level in a sport the reader
- * holds one in ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6; the mechanics
+ * holds one in ([#822](https://github.com/Rakieta02/Rakieta/issues/822); ADR-0205 §6; the mechanics
  * §6.9) — the read's `total`, *99+* past 99, never the good matches — and moves with the read.
  * **Hidden** while the read holds nobody (the reader holds no level anywhere, or nobody shares a
  * sport), is in flight, or failed: a line that fails is left out, and the rest of Home stands.
@@ -19,7 +19,7 @@
  * reads the line again.
  *
  * **Every card that comes at least half on screen is reported**, once that Warsaw day
- * ([#804](https://github.com/Raketa02/Raketa/issues/804); §9.2) — **only while the line is open**: a
+ * ([#804](https://github.com/Rakieta02/Rakieta/issues/804); §9.2) — **only while the line is open**: a
  * closed line draws no card, so it reports nobody. The reporter is the line's, so a report waiting to
  * be sent outlives a close. See all reports nothing.
  */

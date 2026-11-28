@@ -1,6 +1,6 @@
 /**
- * **General, as the page reads it** ([#775](https://github.com/Raketa02/Raketa/issues/775),
- * [#776](https://github.com/Raketa02/Raketa/issues/776); the screens §4, §5.3) — the main read, and the
+ * **General, as the page reads it** ([#775](https://github.com/Rakieta02/Rakieta/issues/775),
+ * [#776](https://github.com/Rakieta02/Rakieta/issues/776); the screens §4, §5.3) — the main read, and the
  * list in pages of 50.
  *
  * **Two windows over one list, each an infinite query.**
@@ -29,7 +29,7 @@
  *
  * **Nothing follows a switch.** The page once re-read itself a second at a time behind *Show me in
  * General* (#778); that switch and the hidden card it drove are gone (ADR-0204 §2,
- * [#799](https://github.com/Raketa02/Raketa/issues/799)) — the ranking lists everybody, so there is
+ * [#799](https://github.com/Rakieta02/Rakieta/issues/799)) — the ranking lists everybody, so there is
  * nothing for the reader's own card to catch up with.
  *
  * **A page is asked for only when there is one, and never twice**: an end reached while that page is

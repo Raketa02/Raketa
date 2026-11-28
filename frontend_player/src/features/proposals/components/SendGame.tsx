@@ -1,6 +1,6 @@
 /**
  * ***Send game and pay 25 zł*** — the friends card's order, and the send sheet it opens
- * ([#759](https://github.com/Raketa02/Raketa/issues/759); the friends screens §8, designed, no mock;
+ * ([#759](https://github.com/Rakieta02/Rakieta/issues/759); the friends screens §8, designed, no mock;
  * the mechanics §8; the words §29.7).
  *
  * ```

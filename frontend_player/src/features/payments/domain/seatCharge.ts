@@ -1,6 +1,6 @@
 /**
  * **A share of a game, and the one moment it needs its player** — a payment refused when the game
- * filled, confirmed in the app ([#555](https://github.com/Raketa02/Raketa/issues/555); #541; the
+ * filled, confirmed in the app ([#555](https://github.com/Rakieta02/Rakieta/issues/555); #541; the
  * mechanics §12.2).
  *
  * Every seat's share is held automatically, *exactly like a subscription*, and taken at the club's

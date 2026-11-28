@@ -1,12 +1,12 @@
 /**
- * **The composer: the field and Send** ([#402](https://github.com/Raketa02/Raketa/issues/402)).
+ * **The composer: the field and Send** ([#402](https://github.com/Rakieta02/Rakieta/issues/402)).
  *
  * The field is 6.13's, which arrived with this surface — *"two more surfaces need a field, and a
  * third implementation is exactly the drift a shared primitive exists to prevent"*. What this
  * component owns is the block: the field, the cap, the one control beside it, and when that
  * control is open. It drew a row of quick chips above the field too, asking about an old-loop
  * plan's empty slots, until a booked game's room became the only room
- * ([#576](https://github.com/Raketa02/Raketa/issues/576)): the booking is the plan, so there is
+ * ([#576](https://github.com/Rakieta02/Rakieta/issues/576)): the booking is the plan, so there is
  * nothing left to ask.
  *
  * **The block has one door out, `onPost`** — the screen's `post()`, optimistic and reconciled on
@@ -63,7 +63,7 @@
  * CTA slot, so a second bounded surface under a screen whose content is already bounded blocks
  * would be a tray around a tray; and **the bottom safe-area inset is the frame's**, taken under
  * this block by `ConversationScreen`'s `SafeAreaView`, outside the keyboard avoidance
- * ([#400](https://github.com/Raketa02/Raketa/issues/400)) — so a block on a ground of its own
+ * ([#400](https://github.com/Rakieta02/Rakieta/issues/400)) — so a block on a ground of its own
  * would leave a band of paper between itself and the home indicator, and a block that took the
  * inset itself would be counted a second time the moment the keyboard is up. The tab bar stands
  * down inside a conversation, and this block is what stands where it stood; the inset is applied

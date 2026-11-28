@@ -1,6 +1,6 @@
 /**
  * **Leave the game** — `POST /bookings/{id}/departure` (#544), from a booked game's details
- * ([#557](https://github.com/Raketa02/Raketa/issues/557); the mechanics §13) — and **Withdraw**, the
+ * ([#557](https://github.com/Rakieta02/Rakieta/issues/557); the mechanics §13) — and **Withdraw**, the
  * way out of a full game gone back to filling (#629).
  *
  * **Pending, never optimistic, and not retried**: leaving moves money — a refund before the club's

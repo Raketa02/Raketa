@@ -46,7 +46,7 @@ function roomSaid(who: string, sportName: string, then: string | undefined): str
 /**
  * **What the room's header is called** — every handle whole, then the sport, then the state.
  *
- * The drawn title is the handles' **stems** ([#401](https://github.com/Raketa02/Raketa/issues/401)),
+ * The drawn title is the handles' **stems** ([#401](https://github.com/Rakieta02/Rakieta/issues/401)),
  * and this is the other half of what makes that allowed: §20.4's *the visible label truncates, the
  * spoken one never does*, read with `handleStem`'s own condition — *every sentence, every accessible
  * name and every toast still carries all sixty-four characters*. It is the row's dialect one screen

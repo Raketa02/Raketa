@@ -4,7 +4,7 @@
  *
  * ## The swipe reveals; it never acts
  *
- * [#231](https://github.com/Raketa02/Raketa/issues/231) §3 refused a swipe on the deck because
+ * [#231](https://github.com/Rakieta02/Rakieta/issues/231) §3 refused a swipe on the deck because
  * *the cheapest gesture in the app must not carry the most durable act*, and that argument is kept
  * here by construction rather than by restraint: what a swipe does is move the card aside and show
  * a button. The act is the button's, and every caller so far puts a confirmation behind it
@@ -51,7 +51,7 @@
  * ## A longer word wraps, and the control holds it
  *
  * `reveal` was sized so *Leave the game* sits on one line with `space.md` either side; *Remove
- * the challenge* ([#428](https://github.com/Raketa02/Raketa/issues/428)) does not fit that and
+ * the challenge* ([#428](https://github.com/Rakieta02/Rakieta/issues/428)) does not fit that and
  * wraps to two, which the row's full height holds. The label is centred so the second line sits
  * under the first rather than left of it, and the width does not grow for the word: `reveal` is how
  * far the card travels, and a control that widened per caller would move the card different

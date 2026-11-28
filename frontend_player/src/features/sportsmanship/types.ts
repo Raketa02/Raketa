@@ -4,7 +4,7 @@
  * **What other players said about being on a court with somebody** — the one thing on a player
  * record the platform cannot count for itself, and the first part of that work with an input
  * surface ([ADR-0158](../../../../docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md),
- * [#386](https://github.com/Raketa02/Raketa/issues/386)). This half of it is the asking: a card
+ * [#386](https://github.com/Rakieta02/Rakieta/issues/386)). This half of it is the asking: a card
  * per settled court, everybody else who was on it, one to five whole stars each, and one press
  * that closes the question for ever.
  *

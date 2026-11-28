@@ -1,6 +1,6 @@
 /**
  * **The administrator area, walked** — the gate, the Groups tab, New official group and an official
- * group's page ([#516](https://github.com/Raketa02/Raketa/issues/516), PRD #500 stories 122–130
+ * group's page ([#516](https://github.com/Rakieta02/Rakieta/issues/516), PRD #500 stories 122–130
  * and 136; club mocks 8–11, 17–20).
  *
  * The real route tree, with the socket, the share sheet and the clipboard faked at the platform

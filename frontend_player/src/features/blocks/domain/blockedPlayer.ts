@@ -1,6 +1,6 @@
 /**
  * **Somebody the reader blocked** — the one shape this feature holds
- * ([#587](https://github.com/Raketa02/Raketa/issues/587);
+ * ([#587](https://github.com/Rakieta02/Rakieta/issues/587);
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
  * §3).
  *

@@ -13,7 +13,7 @@
  * Continuing starts the first selected sport's assessment and lands on its opening
  * question. **Where the pass began is the route's to say**: a group's tab — the door where play
  * begins ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §2,
- * [#730](https://github.com/Raketa02/Raketa/issues/730)) — whose pass returns to that tab, or Home.
+ * [#730](https://github.com/Rakieta02/Rakieta/issues/730)) — whose pass returns to that tab, or Home.
  * It is `replace`, not `push`: a player walks back through the questionnaire with its own control
  * (ADR-0020), and the system back gesture must not be a second, unlabelled way out of the run.
  *
@@ -23,7 +23,7 @@
  * sport. Back, the header's or the device's, **turns back**: a pass over nothing, begun and over at
  * once, which the gate lands where it began — the group and the tab the door stood on, or Home.
  *
- * **A door may narrow what it lists** ([#731](https://github.com/Raketa02/Raketa/issues/731),
+ * **A door may narrow what it lists** ([#731](https://github.com/Rakieta02/Rakieta/issues/731),
  * ADR-0200 §4): *+ Another sport* opens it over the sports the player is unrated in — an official
  * group's own, or any — and only those of the served sports are drawn (`sportsOnOffer`). The door
  * and the Home card offer every sport. Nothing is ticked either way.

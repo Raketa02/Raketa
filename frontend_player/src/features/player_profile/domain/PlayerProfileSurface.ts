@@ -3,15 +3,15 @@
  *
  * `GET /api/v1/players/me/profile` carries the weekly hours and the per-sport Play intent,
  * across the two aggregates that own them
- * ([#246](https://github.com/Raketa02/Raketa/issues/246)) — and, since the route grew for
- * *You* ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8), the Social
+ * ([#246](https://github.com/Rakieta02/Rakieta/issues/246)) — and, since the route grew for
+ * *You* ([#466](https://github.com/Rakieta02/Rakieta/issues/466), ADR-0179 §4, §8), the Social
  * tags, the photos with their verdicts and the intro
- * ([#471](https://github.com/Raketa02/Raketa/issues/471)), and the owner's own gender and
- * preference ([#472](https://github.com/Raketa02/Raketa/issues/472)), and *Show me to new people*
- * ([#799](https://github.com/Raketa02/Raketa/issues/799), which replaced #778's *Show me in
+ * ([#471](https://github.com/Rakieta02/Rakieta/issues/471)), and the owner's own gender and
+ * preference ([#472](https://github.com/Rakieta02/Rakieta/issues/472)), and *Show me to new people*
+ * ([#799](https://github.com/Rakieta02/Rakieta/issues/799), which replaced #778's *Show me in
  * General*). The Search radius and
  * the proposals answer left it with the old loop
- * ([#581](https://github.com/Raketa02/Raketa/issues/581)). There is no `has_location`,
+ * ([#581](https://github.com/Rakieta02/Rakieta/issues/581)). There is no `has_location`,
  * because a profile cannot be committed without an area. This type is what the route serves
  * and this client reads, and a field appears the day both are true.
  *
@@ -87,7 +87,7 @@ export interface PlayerProfileSurface {
    * ***Show me to new people*** — on, anybody may open the owner's record and ask them; off, only
    * people they share a group, a game or a friendship with
    * ([ADR-0204](../../../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
-   * §2, [#799](https://github.com/Raketa02/Raketa/issues/799)). **Always present, and on by
+   * §2, [#799](https://github.com/Rakieta02/Rakieta/issues/799)). **Always present, and on by
    * default** — a player who had turned *Show me in General* off starts with it off.
    */
   readonly showMeToNewPeople: boolean;

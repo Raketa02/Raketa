@@ -1,5 +1,5 @@
 /**
- * **The vibe sheet** — *You and karol.t* ([#803](https://github.com/Raketa02/Raketa/issues/803); the
+ * **The vibe sheet** — *You and karol.t* ([#803](https://github.com/Rakieta02/Rakieta/issues/803); the
  * Home rows screens §6.3; the mechanics §8.5; the words §31.8; home rows 23; design-system 7.35).
  * Opened by a tile, on Home's row and in See all alike — whose sheet is up is the people lists' own
  * state (`usePersonSheet`): it draws the person's latest read, closes drawn as they last were when a

@@ -35,7 +35,7 @@
  * ## The figure says its band, or *New*, and nothing here is tinted
  *
  * Under the figure, the band's word — *Very high*, *High*, *Medium*, *Low* — or *New* in its
- * place ([#660](https://github.com/Raketa02/Raketa/issues/660), ADR-0195 §1): a group-mate who
+ * place ([#660](https://github.com/Rakieta02/Rakieta/issues/660), ADR-0195 §1): a group-mate who
  * opens somebody's record reads what they read about themselves, and *New* is what tells them a
  * 100 has not been tested yet. On its own line, in the key-value row's value role, so a
  * *Very high* never has to share a third of the width with the figure. Both are `ink` — 7.13

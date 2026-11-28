@@ -1,6 +1,6 @@
 /**
  * **The folding line** — FOR YOU's five quiet lines on Home, each a white card that opens to what it
- * holds, one at a time ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5, §8,
+ * holds, one at a time ([#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0205 §5, §8,
  * §9.5; home refactor 3–13; design-system 7.37).
  *
  * ```
@@ -61,7 +61,7 @@
  * ## Spoken
  *
  * **Each line is a button named by its title and its count** — *Players at your level, 14* — saying
- * whether it is expanded (ADR-0205 §8, [#822](https://github.com/Raketa02/Raketa/issues/822)). Each
+ * whether it is expanded (ADR-0205 §8, [#822](https://github.com/Rakieta02/Rakieta/issues/822)). Each
  * footer link is a button of its own.
  *
  * ## Its count

@@ -1,6 +1,6 @@
 /**
  * **The reveal at its own seam** (design system 5.6; PRD #867,
- * [#870](https://github.com/Raketa02/Raketa/issues/870)) — how a screen with one read goes from its
+ * [#870](https://github.com/Rakieta02/Rakieta/issues/870)) — how a screen with one read goes from its
  * skeleton to its content: the content laid out underneath and hidden, then one cross-fade on
  * `motion.fade`, opacity only, and a cut under reduced motion. Whether a skeleton is drawn at all is
  * decided at the first draw, and a revealed screen never goes back to it.

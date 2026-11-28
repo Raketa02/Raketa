@@ -1,6 +1,6 @@
 /**
  * **The three blocks routes**, and the only place their paths are written down
- * ([#587](https://github.com/Raketa02/Raketa/issues/587);
+ * ([#587](https://github.com/Rakieta02/Rakieta/issues/587);
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
  *
  * One of the two layers allowed to read generated types.

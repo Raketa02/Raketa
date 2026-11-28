@@ -1,7 +1,7 @@
 /**
  * **Play › Groups and a group's page, walked** — the list (play 1, 38) and the page's header
  * (play 40) through the real routes, with only the socket faked
- * ([#512](https://github.com/Raketa02/Raketa/issues/512), PRD #500 stories 1, 5–8, 50).
+ * ([#512](https://github.com/Rakieta02/Rakieta/issues/512), PRD #500 stories 1, 5–8, 50).
  */
 
 import { router } from 'expo-router';

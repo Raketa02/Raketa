@@ -1,6 +1,6 @@
 /**
  * **Reading a link the phone hands the app** — the one place an address from outside is turned into
- * something the app acts on ([#520](https://github.com/Raketa02/Raketa/issues/520), ADR-0187 §7:
+ * something the app acts on ([#520](https://github.com/Rakieta02/Rakieta/issues/520), ADR-0187 §7:
  * *untrusted route input, never able to repoint the backend*).
  *
  * Four links and nothing else, each rebuilt from the parts that were checked: a link that is not

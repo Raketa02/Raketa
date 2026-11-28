@@ -1,8 +1,8 @@
 /**
  * **A group's Fill in tab, walked** — the rescues the reader is offered, the tab's badge, its empty
  * line and its own read, and a rescue taken from its row
- * ([#557](https://github.com/Raketa02/Raketa/issues/557), split by
- * [#847](https://github.com/Raketa02/Raketa/issues/847); the screens A1, A3, A3.1; split mock 1;
+ * ([#557](https://github.com/Rakieta02/Rakieta/issues/557), split by
+ * [#847](https://github.com/Rakieta02/Rakieta/issues/847); the screens A1, A3, A3.1; split mock 1;
  * mocks 12 and 14; the mechanics §10). The reader's own yeses are the tab beside it, You’re in
  * (`groupYoureIn.test.tsx`).
  *

@@ -104,7 +104,7 @@ interface PopoverBase {
 /**
  * **One sentence, or a legend in its place — one of the two, never neither.** The legend is *Post a
  * game*'s *How to read the map*: rows of a mark and its meaning
- * ([#558](https://github.com/Raketa02/Raketa/issues/558), mock 20; Part 16 2026-10-02), drawn under
+ * ([#558](https://github.com/Rakieta02/Rakieta/issues/558), mock 20; Part 16 2026-10-02), drawn under
  * the head where the sentence would be.
  */
 export type PopoverProps = PopoverBase &

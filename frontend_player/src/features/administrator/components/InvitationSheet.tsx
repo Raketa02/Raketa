@@ -1,6 +1,6 @@
 /**
  * **The invitation sheet** — a club offering an account that already exists its administrator
- * profile, on launch ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories
+ * profile, on launch ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 stories
  * 117–119; club mocks 5–6; ADR-0184 §2, ADR-0185 §3).
  *
  * **It is offered whenever the signed-in account's own read lists an invitation this launch has not

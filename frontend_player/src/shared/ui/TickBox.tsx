@@ -12,7 +12,7 @@
  * blindness while the tick is the shape [Part 13](../../../docs/design-system.md#part-13--accessibility)
  * asks for. A box carrying its state in fill alone is a stain, not an answer.
  *
- * **The box is the sign-up mocks' rounded square** ([#785](https://github.com/Raketa02/Raketa/issues/785),
+ * **The box is the sign-up mocks' rounded square** ([#785](https://github.com/Rakieta02/Rakieta/issues/785),
  * mocks 4 and 6): 22pt with the cell's 6pt corner, white on a `line` border, filled `ink` with a
  * white tick when ticked. *Start playing* draws this same box, because it is the same claim.
  *

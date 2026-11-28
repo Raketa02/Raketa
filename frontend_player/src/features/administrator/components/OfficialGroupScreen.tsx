@@ -1,6 +1,6 @@
 /**
  * **An official group's page** — the Administrator's own view of it (club 11, 18, 19; PRD #500
- * stories 126–130; [#516](https://github.com/Raketa02/Raketa/issues/516)).
+ * stories 126–130; [#516](https://github.com/Rakieta02/Rakieta/issues/516)).
  *
  * Headed by the group's name alone, with a back arrow to the Groups tab — no eyebrow over it: club
  * 11's *OGRODY 33 · OFFICIAL* said what every group in this area is, at the club the area is already
@@ -14,7 +14,7 @@
  *
  * **There is no way to delete or leave the group**: running an official group is not membership,
  * and only the club moves it (ADR-0183 §7–§8). Its settings are the You tab's
- * ([#517](https://github.com/Raketa02/Raketa/issues/517)).
+ * ([#517](https://github.com/Rakieta02/Rakieta/issues/517)).
  *
  * **A pull reads the group again** (#529), as the Groups tab's does: somebody who asked or arrived
  * on another phone is on the page when the spinner stops, where they waited for a return to it.

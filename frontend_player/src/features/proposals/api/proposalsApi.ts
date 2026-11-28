@@ -1,8 +1,8 @@
 /**
  * **The group deck's read, a player's answers, their own reads, and a booked game with its seats**
  * — one of the two layers allowed to read generated types, and the only place these paths are
- * written down ([#553](https://github.com/Raketa02/Raketa/issues/553),
- * [#554](https://github.com/Raketa02/Raketa/issues/554), #556, #557; #538–#545).
+ * written down ([#553](https://github.com/Rakieta02/Rakieta/issues/553),
+ * [#554](https://github.com/Rakieta02/Rakieta/issues/554), #556, #557; #538–#545).
  *
  * | | |
  * | --- | --- |

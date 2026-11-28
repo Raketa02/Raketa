@@ -1,6 +1,6 @@
 /**
  * **The administrator area** — a sibling of `(app)`, not a child of it
- * ([#516](https://github.com/Raketa02/Raketa/issues/516), ADR-0185).
+ * ([#516](https://github.com/Rakieta02/Rakieta/issues/516), ADR-0185).
  *
  * The nesting matters for onboarding's reason: `(app)`'s entry gate redirects *into* this group
  * an account that only runs a club's groups, so the area sitting inside `(app)` would put it behind

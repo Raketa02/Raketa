@@ -1,7 +1,7 @@
 /**
  * **A player's payment method on the wire** — one of the two layers allowed to read generated
  * types, and the only place these paths are written down
- * ([#552](https://github.com/Raketa02/Raketa/issues/552); the routes are #536's).
+ * ([#552](https://github.com/Rakieta02/Rakieta/issues/552); the routes are #536's).
  *
  * | | |
  * | --- | --- |

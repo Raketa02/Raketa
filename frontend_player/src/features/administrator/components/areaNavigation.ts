@@ -1,6 +1,6 @@
 /**
  * **The area's two tabs, as moves** — the player shell's rule, for the administrator's two
- * (`shell`'s `shellNavigation`, [#227](https://github.com/Raketa02/Raketa/issues/227)): **one
+ * (`shell`'s `shellNavigation`, [#227](https://github.com/Rakieta02/Rakieta/issues/227)): **one
  * stack, and a tab press lays that tab's root down in place of whatever was on it.** Pressing
  * Groups from a group's page lands on the Groups list, never on the page; pressing the tab already
  * showing its root is not a move at all.
@@ -39,7 +39,7 @@ export function openAreaTab(clubId: string, tab: AdministratorTabBarKey, where: 
 
 /**
  * **Wearing another profile** — instantly, with no password and no new token
- * ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 story 134; ADR-0185 §6).
+ * ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 story 134; ADR-0185 §6).
  *
  * Switching is client state: the administrator's authority is not in the token at all, and every
  * administrator route asks the server again. So a switch is two moves and nothing on the wire —

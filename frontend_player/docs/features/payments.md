@@ -1,7 +1,7 @@
 # payments — You › Account › Payments
 
 The client side of the backend's **Payment method** (#536): a player saves the way the clubs charge
-them, and sees what is saved. Built by [#552](https://github.com/Raketa02/Raketa/issues/552) from the
+them, and sees what is saved. Built by [#552](https://github.com/Rakieta02/Rakieta/issues/552) from the
 Games & Fill in screens (A7, A7.3; mocks 40–47), the mechanics (§12.4, §12.5), Q82 and Q83, and
 [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) /
 [ADR-0190](../../../docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md). The
@@ -92,7 +92,7 @@ single-line field (number, then expiry and CVC as it scrolls), and the SDK draws
 it is styled with the text field's surface, border and radius and the number in the mono face. The
 alternative, `CardForm`, draws a country and postcode Rakieta does not need. Part 16.
 
-**The deck hosts the setup as a sheet** ([#555](https://github.com/Raketa02/Raketa/issues/555)):
+**The deck hosts the setup as a sheet** ([#555](https://github.com/Rakieta02/Rakieta/issues/555)):
 `PaymentSetupSheet` is the same checklist over a line, titled _Before your first yes_, opened by the
 fill when a yes meets nothing saved (`usePaymentSetupNeeded`, the read's `method === null`) or the
 server refuses one `payment_method_required`. `onSaved` lands the yes; closing drops it, and the close
@@ -101,13 +101,13 @@ seen on a device**: the Stripe SDK needs a development build rebuilt with it (`p
 no Stripe test key exists yet (O7, #533) — against a laptop's fake provider the card path is walkable
 and saves the fake's Visa 4242 whatever is typed.
 
-**State B places the live yeses; it does not read them** ([#554](https://github.com/Raketa02/Raketa/issues/554)).
+**State B places the live yeses; it does not read them** ([#554](https://github.com/Rakieta02/Rakieta/issues/554)).
 _LIVE YESES_ is the proposals feature's section — the deck's answers, whose details are the deck's
 screen — and the deck will open this feature's setup as a sheet (A2.4), so the edge points from
 there to here. `PaymentsScreen` takes a `liveYeses` slot, drawn under the method in state B only,
 and the route file `you/payments.tsx` composes it. See [`proposals.md`](proposals.md).
 
-**RECEIPTS close state B** ([#555](https://github.com/Raketa02/Raketa/issues/555); A7.3; mock 49).
+**RECEIPTS close state B** ([#555](https://github.com/Rakieta02/Rakieta/issues/555); A7.3; mock 49).
 `GET /players/me/receipts` is this feature's own read (`useReceipts`, `paymentKeys.receipts()`):
 every share paid, newest first as served, **the club as the row's title** — the seller (§12.1) — and
 _Padel · Today · 16:00_ under it, the amount signed with a true minus (_−28 zł_). Refunds (↩ on
@@ -122,7 +122,7 @@ it. A booking anywhere re-reads the list (the fill, through `paymentKeys` on `ty
 and so is _TO CONFIRM_, the list of them, placed on state B by the route file above _LIVE YESES_
 (`toConfirm` slot). How a share is confirmed is `confirmsWith` (a decline with another card typed
 for it, anything else the bank's check over the card on file).
-([#555](https://github.com/Raketa02/Raketa/issues/555); #541). `useSeatCharge` reads `GET
+([#555](https://github.com/Rakieta02/Rakieta/issues/555); #541). `useSeatCharge` reads `GET
 /seat-charges/{id}` for what the confirmation draws — the share, the seller, the game, why it was
 refused — **mapped without its secret**; `useConfirmOnPhone` reads it again for the press, hands the
 secret straight to the port and never caches it (the setup's rule). The port's fourth verb,
@@ -137,7 +137,7 @@ refused `payment_not_confirmed` on a laptop — only a test key (O7) walks it en
 a device**, and `retrievePaymentIntent` / `confirmPayment` on a connected account have met only the
 type checker.
 
-**The confirmation names the time to pay** ([#630](https://github.com/Raketa02/Raketa/issues/630);
+**The confirmation names the time to pay** ([#630](https://github.com/Rakieta02/Rakieta/issues/630);
 the backend's #625 and #626; the mechanics Q109). A refused share now holds its player's seat for
 thirty minutes, never past the book-by, and the sheet says until when in an amber note: _Confirm your
 payment by 14:40 to keep your seat_, the notice's and the email's words, the time written as Home
@@ -153,7 +153,7 @@ which nobody else can take until the time ends, and one list can hold both. The 
 and what a booked confirmation shows are `proposals.md`'s.
 
 **The confirmation reads by the window the server names**
-([#643](https://github.com/Raketa02/Raketa/issues/643), [#645](https://github.com/Raketa02/Raketa/issues/645);
+([#643](https://github.com/Rakieta02/Rakieta/issues/643), [#645](https://github.com/Rakieta02/Rakieta/issues/645);
 the backend's #638 and #640; the mechanics Q113, §12.2). Before the club's cut-off nothing is being
 taken, so a refused card is fixed, never paid: the sheet is _Fix your card_, its note _Fix your card
 by 14:40 to keep your seat_, a line _Nothing is paid now — fixing your card only places the hold
@@ -171,16 +171,16 @@ record; `FILL_COPY.confirm` keys each by the window.
 
 **Decided, and built since #642 and #644 (below): new terms, and receipts that explain every
 movement** (the mechanics
-Q113 and §12.5, the screens A7.3; [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; root [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a share is
+Q113 and §12.5, the screens A7.3; [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; root [#635](https://github.com/Rakieta02/Rakieta/issues/635)). **Why**: a share is
 now held when its game fills and taken at the club's cut-off, so the terms, the method card's
 _Charged by the club when a game fills_ and the receipts must say what really happens. `PAYMENT_TERMS`
 gets a new version with §12.5's words, under the version the backend puts in force, and a player who
-accepted the old one accepts again before their next game holds money ([#637](https://github.com/Raketa02/Raketa/issues/637), [#642](https://github.com/Raketa02/Raketa/issues/642)).
+accepted the old one accepts again before their next game holds money ([#637](https://github.com/Rakieta02/Rakieta/issues/637), [#642](https://github.com/Rakieta02/Rakieta/issues/642)).
 Receipts read _−40 zł · paid_ for a share taken, _+38,24 zł · refunded_ over _1,76 zł kept on your
 payment_ for a refund, and _40 zł held · released_ for a hold let go; the card check never appears,
-and the footer loses its BLIK line ([#641](https://github.com/Raketa02/Raketa/issues/641), [#644](https://github.com/Raketa02/Raketa/issues/644)).
+and the footer loses its BLIK line ([#641](https://github.com/Rakieta02/Rakieta/issues/641), [#644](https://github.com/Rakieta02/Rakieta/issues/644)).
 
-**The terms in force are Q113's** ([#642](https://github.com/Raketa02/Raketa/issues/642); the
+**The terms in force are Q113's** ([#642](https://github.com/Rakieta02/Rakieta/issues/642); the
 backend's #637; the mechanics §12.5, the screens A7.3). `PAYMENT_TERMS_VERSION` is `2026-10-10`, the
 version #637 put in force, and `PAYMENT_TERMS` is §12.5's text without its first sentence (_Your card
 is saved_ is not yet true on step 3): the share held when a game fills, or the card checked and the
@@ -202,7 +202,7 @@ pay. Nothing is held until a game you said yes to fills, and nothing is taken be
 cut-off._; and the terms-again note's words. **Owed to the lawyer** (O3): the clause after the
 cut-off. **Nothing here has been seen on a device.**
 
-**Receipts explain every movement of the money** ([#644](https://github.com/Raketa02/Raketa/issues/644);
+**Receipts explain every movement of the money** ([#644](https://github.com/Rakieta02/Rakieta/issues/644);
 the backend's #641; the mechanics Q113, §12.1, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; the screens A7.3). Ivan left Thursday's game after the
 cut-off and Diego took his seat, so his receipts read _−40 zł · paid_ and _+38,24 zł · refunded_ over
 _1,76 zł kept on your payment_. A player who left before the cut-off reads _40 zł held · released_

@@ -2,7 +2,7 @@
  * **Which profile the account wears** — Player, or the Administrator of one club — and how the
  * phone keeps the last one ([ADR-0188](../../../../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)
  * §2, [ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
- * §3, [#518](https://github.com/Raketa02/Raketa/issues/518)).
+ * §3, [#518](https://github.com/Rakieta02/Rakieta/issues/518)).
  *
  * *Profile* is the switcher's word and UI vocabulary, not a domain term (ADR-0185 §1): a **Player
  * profile** is an aggregate, and this is not it. Switching is client state, never a new token — the

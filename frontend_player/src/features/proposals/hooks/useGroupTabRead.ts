@@ -1,5 +1,5 @@
 /**
- * **How far a group tab's first read has come** ([#875](https://github.com/Raketa02/Raketa/issues/875);
+ * **How far a group tab's first read has come** ([#875](https://github.com/Rakieta02/Rakieta/issues/875);
  * PRD #867; the loading shimmer log §10) — for the three tabs this feature draws on a group's page:
  * what the page's reveal waits on for the body on screen.
  *

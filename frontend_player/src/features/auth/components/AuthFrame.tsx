@@ -4,7 +4,7 @@
  *
  * It was drawn twice, once by sign-in and once by sign-up, with two copies of one style sheet.
  * *Forgot password?* added four screens that are the same screen asking something else
- * ([#515](https://github.com/Raketa02/Raketa/issues/515): *every screen is built from the sign-in
+ * ([#515](https://github.com/Rakieta02/Rakieta/issues/515): *every screen is built from the sign-in
  * screen's existing pieces; nothing is duplicated*), so the chrome is here once, and each screen
  * owns only what it asks.
  *

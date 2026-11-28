@@ -1,5 +1,5 @@
 /**
- * **The Friends page** — one page, two modes ([#754](https://github.com/Raketa02/Raketa/issues/754),
+ * **The Friends page** — one page, two modes ([#754](https://github.com/Rakieta02/Rakieta/issues/754),
  * PRD #743 stories 34–41; the friends screens §4; friends 3).
  *
  * ```

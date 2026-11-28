@@ -1,5 +1,5 @@
 /**
- * **The envelope's count** ([#819](https://github.com/Raketa02/Raketa/issues/819); ADR-0205 §2, §3;
+ * **The envelope's count** ([#819](https://github.com/Rakieta02/Rakieta/issues/819); ADR-0205 §2, §3;
  * home refactor 1) — walked through the real route tree, with only `fetch` faked: the bell's count
  * mark on the header's envelope, *Needs your answer, 2 new*, and the visit that clears it when the
  * sheet goes for good.

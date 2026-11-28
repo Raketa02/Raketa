@@ -1,6 +1,6 @@
 /**
  * **LEVEL · narrow it, not widen it** — the two bounds of who may be on the post
- * ([#558](https://github.com/Raketa02/Raketa/issues/558); the screens A5.1; mock 19; Q78).
+ * ([#558](https://github.com/Rakieta02/Rakieta/issues/558); the screens A5.1; mock 19; Q78).
  *
  * ```
  * [ − 2,56 + ] ───────── [ − 2,86 + ]

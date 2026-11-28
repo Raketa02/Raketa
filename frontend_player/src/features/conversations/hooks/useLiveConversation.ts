@@ -36,15 +36,15 @@
  *
  * ## A nudge re-reads the stream, and the game it is about
  *
- * The room is a booked game's ([#556](https://github.com/Raketa02/Raketa/issues/556)), and its
+ * The room is a booked game's ([#556](https://github.com/Rakieta02/Rakieta/issues/556)), and its
  * stream is what it draws. **The game is the other read a nudge marks stale**
- * ([#406](https://github.com/Raketa02/Raketa/issues/406)): a *we played* line moves the Game's
+ * ([#406](https://github.com/Rakieta02/Rakieta/issues/406)): a *we played* line moves the Game's
  * standing on `GET /games`, which the booked game's result screen reads the moment it is opened
  * from the details beneath this room — so the line and the screen it points at cannot disagree.
  * `features/games`' result writes **invalidate** that list rather than writing a reply in, so a
  * nudge's re-read and a result's re-read are the same read and cannot cross; there is nothing to
  * cancel. It drew the old loop's plan card too, and re-read `GET /plans` on every nudge for it,
- * until that loop was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+ * until that loop was removed ([#576](https://github.com/Rakieta02/Rakieta/issues/576)).
  *
  * **On every nudge, and not on sighting a line.** A nudge carries no content by construction and
  * the port drops the number; a trigger derived from the stream's codes would couple the game's

@@ -1,5 +1,5 @@
 /**
- * The rankings feature's only public surface ([#775](https://github.com/Raketa02/Raketa/issues/775);
+ * The rankings feature's only public surface ([#775](https://github.com/Rakieta02/Rakieta/issues/775);
  * [ADR-0203](../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md)).
  *
  * A ranking per sport, sorted by the level: Home's trophy, Home's Top 10 and the Rankings page. Every place, chip and

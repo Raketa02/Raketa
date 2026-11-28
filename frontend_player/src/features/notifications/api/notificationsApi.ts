@@ -1,6 +1,6 @@
 /**
  * **The notices on the wire** — one of the two layers allowed to read generated types, and the only
- * place these paths are written down ([#559](https://github.com/Raketa02/Raketa/issues/559); the
+ * place these paths are written down ([#559](https://github.com/Rakieta02/Rakieta/issues/559); the
  * routes are #549's).
  *
  * | | |

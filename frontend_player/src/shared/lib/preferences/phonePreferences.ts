@@ -44,7 +44,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * in a group's fast filter (#513) and the profile an account with two wore last (#518). The table
  * is full: a value not listed here cannot be stored, and a fourth is a new record.
  *
- * **A fourth since [#556](https://github.com/Raketa02/Raketa/issues/556)**: the booked games whose
+ * **A fourth since [#556](https://github.com/Rakieta02/Rakieta/issues/556)**: the booked games whose
  * details this account has opened, which is what keeps a game on Home *new until opened* (the
  * mechanics §11.4). It is what the player did on this phone rather than a copy of anything the
  * server knows — no read says whether a game was opened — and it obeys the table's two rules, per
@@ -52,12 +52,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * owner's ruling that *new* lives elsewhere — and until it exists this value stands outside the
  * table ADR-0188 §2 accepted.
  *
- * **And the Rankings view** ([#777](https://github.com/Raketa02/Raketa/issues/777)), *General* or
+ * **And the Rankings view** ([#777](https://github.com/Rakieta02/Rakieta/issues/777)), *General* or
  * *Friends* — the view last looked at on the Rankings page, which Home's trophy reads too. It is the
  * per-account value [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md)
  * adds to ADR-0188's table, so its record exists; per account and forgotten at sign-out like the rest.
  *
- * **And the rows seen on a group page's tabs** ([#849](https://github.com/Raketa02/Raketa/issues/849)),
+ * **And the rows seen on a group page's tabs** ([#849](https://github.com/Rakieta02/Rakieta/issues/849)),
  * the value [ADR-0208](../../../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)
  * adds — see {@link SeenRowsPreference}.
  */
@@ -160,7 +160,7 @@ export async function raisePhoneFlag(account: string, flag: PhoneFlag): Promise<
 
 /**
  * **The flags the phone keeps for itself** — under no account, and kept at sign-out
- * ([#756](https://github.com/Raketa02/Raketa/issues/756)). One: *the install referrer was read*,
+ * ([#756](https://github.com/Rakieta02/Rakieta/issues/756)). One: *the install referrer was read*,
  * which an Android phone does on the app's first launch, before anybody has signed in (the friends
  * mechanics §4.3). It is a fact about this installation, not about whoever uses it: the link Google
  * Play carried through the install is opened once, and never handed to a later account.

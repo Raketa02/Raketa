@@ -10,7 +10,7 @@
  * ✦ 48   red on redSoft        LOW        (below 50)
  * ```
  *
- * **The tint is the served band's, never the figure's** ([#660](https://github.com/Raketa02/Raketa/issues/660),
+ * **The tint is the served band's, never the figure's** ([#660](https://github.com/Rakieta02/Rakieta/issues/660),
  * ADR-0195 §1). The ranges above are the backend's and are written here only to explain the
  * drawing: this client holds no threshold, so the day the floors move the tag moves with them.
  * A band this build cannot name is drawn on the neutral tint — the figure, and no claim.

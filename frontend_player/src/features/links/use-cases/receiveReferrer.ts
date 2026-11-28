@@ -1,5 +1,5 @@
 /**
- * **The link an Android install carried, arriving** ([#756](https://github.com/Raketa02/Raketa/issues/756),
+ * **The link an Android install carried, arriving** ([#756](https://github.com/Rakieta02/Rakieta/issues/756),
  * the friends mechanics §4.3) — `receiveLink`'s twin for the one address no tap hands the app. The
  * reading is `schemas/`' (`readReferrerLink`); holding it is the caller's.
  *

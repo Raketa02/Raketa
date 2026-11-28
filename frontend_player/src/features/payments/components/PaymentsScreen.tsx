@@ -1,6 +1,6 @@
 /**
  * **You › Account › Payments** — the four-step setup, or the saved method
- * ([#552](https://github.com/Raketa02/Raketa/issues/552); the screens A7.3; mocks 41–47; the
+ * ([#552](https://github.com/Rakieta02/Rakieta/issues/552); the screens A7.3; mocks 41–47; the
  * mechanics §12.4, §12.5).
  *
  * ## Two states, one read

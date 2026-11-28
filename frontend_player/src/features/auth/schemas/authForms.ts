@@ -191,7 +191,7 @@ export type NamingValues = z.output<typeof namingSchema>;
 
 /**
  * ***Forgot password?*** — the address to send a link and a code to
- * ([#515](https://github.com/Raketa02/Raketa/issues/515)). Only its shape is checked: whether it
+ * ([#515](https://github.com/Rakieta02/Rakieta/issues/515)). Only its shape is checked: whether it
  * has an account is exactly what nobody may learn from this form (ADR-0184 §5).
  */
 export const forgotPasswordSchema = z.object({ email });

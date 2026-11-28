@@ -1,5 +1,5 @@
 /**
- * **A friends game's empty seats, and leaving it** ([#760](https://github.com/Raketa02/Raketa/issues/760),
+ * **A friends game's empty seats, and leaving it** ([#760](https://github.com/Rakieta02/Rakieta/issues/760),
  * over #752's routes; the friends screens §9; the mechanics §10–§12; the words §29.8–§29.10).
  *
  * The real route tree, with the socket faked. **The reader's own game** is Home's booked game — you

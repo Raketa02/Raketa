@@ -10,7 +10,7 @@
  * as drawn; **with one, it reads that and nothing else**. `titleLabel` is §20.4's *the visible
  * label truncates, the spoken one never does*, for a header whose drawn lines are not what it is
  * called — the conversation draws the handles' stems over a `·`, and is called by the handles
- * whole over commas ([#401](https://github.com/Raketa02/Raketa/issues/401)). A screen whose
+ * whole over commas ([#401](https://github.com/Rakieta02/Rakieta/issues/401)). A screen whose
  * sub-line carries a mark a listener has no reading for supplies one. The eyebrow stays outside
  * the element, above it: it labels the **region**, not the title.
  *
@@ -46,7 +46,7 @@
  *
  * 10.3 says a screen keeps its h1 even where the eyebrow seems to say enough, and the game
  * screen's plan lead is the first surface the design draws without one
- * ([#414](https://github.com/Raketa02/Raketa/issues/414), Part 16): `DOUBLES · COUNTED` over a
+ * ([#414](https://github.com/Rakieta02/Rakieta/issues/414), Part 16): `DOUBLES · COUNTED` over a
  * card that names the people and a plan that names the day, and nothing an h1 could add. So
  * `title` is optional, and **where it is absent the eyebrow moves inside the element and becomes
  * the heading** — the same words, the same style, one row lower in the tree — because a listener's
@@ -122,7 +122,7 @@ interface ScreenHeaderSlots {
   readonly backLabel?: string;
   /**
    * **A header that names a thing rather than a screen** — a group's page (play 39, 40;
-   * [#512](https://github.com/Raketa02/Raketa/issues/512)): the title at `h2` beside the group's
+   * [#512](https://github.com/Rakieta02/Rakieta/issues/512)): the title at `h2` beside the group's
    * tile in the lead slot, and **the title and the sub-line each on one line, ending in an
    * ellipsis** rather than wrapping (story 50), because a long group name and its club must not
    * push the page down. The spoken name is never cut: the element reads both texts whole.

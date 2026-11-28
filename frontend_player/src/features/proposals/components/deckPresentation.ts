@@ -1,7 +1,7 @@
 /**
  * **Every sentence a group's Games deck and a game's details compose from a value** — and every
  * name a control or a region is spoken by. The fixed words are `proposalsCopy.ts`, re-exported
- * here ([#553](https://github.com/Raketa02/Raketa/issues/553)).
+ * here ([#553](https://github.com/Rakieta02/Rakieta/issues/553)).
  *
  * Two rules sit over it, the app's own:
  *

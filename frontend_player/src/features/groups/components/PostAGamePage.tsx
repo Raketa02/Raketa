@@ -1,6 +1,6 @@
 /**
  * ***Post a game*, over a group's page** — what only the group knows, handed to `proposals`' screen
- * ([#558](https://github.com/Raketa02/Raketa/issues/558); the screens A5, A5.1; Q80).
+ * ([#558](https://github.com/Rakieta02/Rakieta/issues/558); the screens A5, A5.1; Q80).
  *
  * The screen is `proposals`', and the edge points one way — `groups` reads `proposals`, never the
  * reverse — so this page hands in what the group says: **the sports the reader may post in here**,

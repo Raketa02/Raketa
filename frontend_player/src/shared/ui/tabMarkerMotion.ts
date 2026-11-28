@@ -1,7 +1,7 @@
 /**
  * **The selection marker's motion** — where the marker stands and how it is stretched at any moment
  * of a trip between two tabs, and how far the lit tab's colour has come in (10.2, ADR-0210 §8,
- * [#884](https://github.com/Raketa02/Raketa/issues/884); the decision log's §10).
+ * [#884](https://github.com/Rakieta02/Rakieta/issues/884); the decision log's §10).
  *
  * Pure functions of a trip and a clock. **The bar runs them on the UI thread**, each frame, from one
  * clock that Reanimated moves from 0 to `MARKER_SLIDE`, as the splash runs its own motion module, so

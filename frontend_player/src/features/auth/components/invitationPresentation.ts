@@ -1,6 +1,6 @@
 /**
  * **Every sentence an invited person's way in says** — *Have an invitation code?* and *Set your
- * password* ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories 113–116 and
+ * password* ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 stories 113–116 and
  * 121, [ADR-0184](../../../../../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
  * §2–§4) — the two screens' words and the refusals, keyed by the wire's code.
  *

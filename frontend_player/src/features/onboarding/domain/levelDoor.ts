@@ -1,7 +1,7 @@
 /**
  * **The door where play begins** — what it offers a player rated in nothing
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §2, §5,
- * [#730](https://github.com/Raketa02/Raketa/issues/730)).
+ * [#730](https://github.com/Rakieta02/Rakieta/issues/730)).
  *
  * Onboarding no longer asks for a level, so it is asked where one unlocks something: a player
  * group's Games, Fill in and Friends, *Post a game* and Members. The door offers one of two things,

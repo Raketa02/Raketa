@@ -1,6 +1,6 @@
 /**
  * **Every sentence You › Payments' LIVE YESES composes** — the head and a row
- * ([#554](https://github.com/Raketa02/Raketa/issues/554); the screens A7.3; mock 48).
+ * ([#554](https://github.com/Rakieta02/Rakieta/issues/554); the screens A7.3; mock 48).
  *
  * A row names its game the way the deck's court block does — *Today*, *Tomorrow*, *Saturday*, or a
  * weekday with its date from a week out (`gameDayWords`) — so the same game is the same words on

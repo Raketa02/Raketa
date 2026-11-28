@@ -1,7 +1,7 @@
 /**
- * **A Groups heating up card** ([#800](https://github.com/Raketa02/Raketa/issues/800); the Home rows
+ * **A Groups heating up card** ([#800](https://github.com/Rakieta02/Rakieta/issues/800); the Home rows
  * screens §3.2; home rows 3, 3.2, 4, 5, 21) — **slimmer since
- * [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home refactor 5.1): the
+ * [#821](https://github.com/Rakieta02/Rakieta/issues/821)** (ADR-0205 §5, Q22; home refactor 5.1): the
  * heat bar, *+N this month* and the sport line are gone. The group sheet keeps the sports and *new this
  * month*; the heat still orders the groups and picks the tags, and is drawn nowhere.
  *
@@ -33,7 +33,7 @@
  * their own size and the sides their own inset.
  *
  * **While Groups heating up's first page is read, the card stands as its skeleton**
- * (`HottestGroupCardSkeleton`, [#872](https://github.com/Raketa02/Raketa/issues/872)): 5.1's white
+ * (`HottestGroupCardSkeleton`, [#872](https://github.com/Rakieta02/Rakieta/issues/872)): 5.1's white
  * card is always there, so it is drawn as itself, at the card's own height, with the shapes every
  * card has inside it — the band, the shield over it in the card's white ring, the name, and the two
  * figures over their words. The tag is the hottest few's and the faces are as many as the server

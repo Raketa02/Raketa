@@ -10,7 +10,7 @@
  * A system line carries an `actor_id` and never a handle, so *"a handle correction reaches the
  * whole backlog for free"* — and the price of that is a lookup. It used to be a lookup over the
  * **members**, and the one line whose actor is never a member showed why that was the wrong list
- * ([#409](https://github.com/Raketa02/Raketa/issues/409), ADR-0148's 2026-09-11 amendment): a
+ * ([#409](https://github.com/Rakieta02/Rakieta/issues/409), ADR-0148's 2026-09-11 amendment): a
  * *no* is not an accepted seat, so a third player declining a doubles court drew `? said no`. The
  * wire now names **everybody the response names** under `people` — the members, and every actor
  * and author in the entries carried, one face read — and `{name}` and the author label are filled

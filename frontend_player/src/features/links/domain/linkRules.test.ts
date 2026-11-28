@@ -1,6 +1,6 @@
 /**
  * **What a link does, by who is on the phone** — the two rules the links feature decides by
- * ([#520](https://github.com/Raketa02/Raketa/issues/520)): where a link first lands as it arrives,
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520)): where a link first lands as it arrives,
  * and what an invitation's link means to the account signed in when it is opened.
  */
 

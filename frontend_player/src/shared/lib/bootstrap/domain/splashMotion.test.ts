@@ -1,6 +1,6 @@
 /**
  * **The splash's motion, pure** — how the ball and the letters move between the geometry's keyframes
- * ([#856](https://github.com/Raketa02/Raketa/issues/856); the brief's §3, decision log §4–§5).
+ * ([#856](https://github.com/Rakieta02/Rakieta/issues/856); the brief's §3, decision log §4–§5).
  *
  * The path's keyframes are `splashGeometry.test.ts`'s; this holds the curves through them, sampled
  * at times, with no renderer: every fall accelerates and every rise decelerates, a landing squashes

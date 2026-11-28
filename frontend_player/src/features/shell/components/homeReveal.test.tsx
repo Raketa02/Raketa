@@ -1,6 +1,6 @@
 /**
  * **Home shimmers until it is built, then reveals together** — walked through the real route tree
- * ([#871](https://github.com/Raketa02/Raketa/issues/871); PRD #867; the loading shimmer log §5, §6).
+ * ([#871](https://github.com/Rakieta02/Rakieta/issues/871); PRD #867; the loading shimmer log §5, §6).
  *
  * Home's reads are held on their way by the fake server and landed when a walk says. What is asserted
  * is what a player sees: whether a skeleton is drawn (found by its id, since it is hidden from a

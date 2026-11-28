@@ -1,7 +1,7 @@
 /**
  * **Where an invited person's way in lives**, spelled once — `RESET_ROUTES`' reason. The route files
  * under `src/app/(auth)/` make them routes; this is what the screens push to, and what the links
- * ticket ([#520](https://github.com/Raketa02/Raketa/issues/520)) reads to open *Set your password*
+ * ticket ([#520](https://github.com/Rakieta02/Rakieta/issues/520)) reads to open *Set your password*
  * from an email's `invite/<token>`.
  *
  * Under `(auth)`, beside sign-in and *Forgot password?*, because they are for somebody who is not

@@ -1,6 +1,6 @@
 /**
  * **New group, walked** — every state play mocks 4–13 draw, through the real routes with only the
- * socket faked ([#512](https://github.com/Raketa02/Raketa/issues/512), PRD #500 stories 11–28).
+ * socket faked ([#512](https://github.com/Rakieta02/Rakieta/issues/512), PRD #500 stories 11–28).
  *
  * The home club is **required** (PRD #500 overrides play 4 by name), and its search rows draw no
  * distance (#512). The walks run on the code defaults, which since #512 put Groups on the Play tab.

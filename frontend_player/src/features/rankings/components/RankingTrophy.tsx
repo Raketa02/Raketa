@@ -1,8 +1,8 @@
 /**
  * **The trophy on Home** — a dark pill in the header's far-right corner, right of the bell since
- * [#816](https://github.com/Raketa02/Raketa/issues/816) (ADR-0205 §2; home refactor 1), where it
+ * [#816](https://github.com/Rakieta02/Rakieta/issues/816) (ADR-0205 §2; home refactor 1), where it
  * stood left of it (rankings 1; the screens §1; the mechanics §8;
- * [#775](https://github.com/Raketa02/Raketa/issues/775)): the drawn trophy and the reader's place,
+ * [#775](https://github.com/Rakieta02/Rakieta/issues/775)): the drawn trophy and the reader's place,
  * *🏆 #7*, mono.
  *
  * **The place is the remembered view's** (#777; the mechanics §8) in the sport of the reader's latest

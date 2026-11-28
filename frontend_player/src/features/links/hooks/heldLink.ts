@@ -1,7 +1,7 @@
 /**
  * **The held link, for the places that answer it** — held as it arrives, read by the hosts in the
  * player's app and the administrator area, let go of by whichever answers it
- * ([#520](https://github.com/Raketa02/Raketa/issues/520)).
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520)).
  *
  * `holdLink`, `letGoOf` and `linkHeldNow` are not hooks: a link arrives before any component
  * exists. They live here because this is the layer that reaches the store — and because holding a

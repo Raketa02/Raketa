@@ -1,6 +1,6 @@
 /**
  * **The bubble in a Home card's footer** — the card's second door, straight into the game's room
- * (Q100; [#619](https://github.com/Raketa02/Raketa/issues/619)). It is Classic play's bubble
+ * (Q100; [#619](https://github.com/Rakieta02/Rakieta/issues/619)). It is Classic play's bubble
  * (`plans`' `ChatDoor`, #413), removed with that loop in #576 and drawn again here on the same
  * shape, design system 6.14.
  *

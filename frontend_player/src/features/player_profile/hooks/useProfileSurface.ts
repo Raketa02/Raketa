@@ -67,7 +67,7 @@ export function useProfileSurface() {
  * would draw a week the profile does not hold.
  *
  * The one caller today is the prompt sheet's *yes* to `KEEP_THESE_TIMES`
- * ([#275](https://github.com/Raketa02/Raketa/issues/275)); *You* will be the second.
+ * ([#275](https://github.com/Rakieta02/Rakieta/issues/275)); *You* will be the second.
  */
 export function useChangeWeeklyHours() {
   const client = useQueryClient();

@@ -61,7 +61,7 @@ const RATING: Wire['RatingResponse'] = {
  * leaving without an area costs, because a location is what search and matchmaking are
  * worked out from — and this walk is the one that leaves without one. The last step,
  * *Who you play with*, finishes rather than continuing: there is nothing in front of it but
- * the commit ([#582](https://github.com/Raketa02/Raketa/issues/582)). The week's control
+ * the commit ([#582](https://github.com/Rakieta02/Rakieta/issues/582)). The week's control
  * also says what is missing while nothing is ticked, but this walk answers every step it is
  * on, so *Continue* is what it meets.
  */

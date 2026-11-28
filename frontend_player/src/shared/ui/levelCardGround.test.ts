@@ -1,7 +1,7 @@
 /**
  * **The Same level card's ground, computed** — the dark card of Home's *Same competitive level
  * players* row, which the theme fences as that card's alone, and every ratio its comment states
- * ([#802](https://github.com/Raketa02/Raketa/issues/802), [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking)
+ * ([#802](https://github.com/Rakieta02/Rakieta/issues/802), [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking)
  * 2026-11-14).
  *
  * The app's sixth dark surface, so this is 2.5's row for it: what sits on it — white, volt, the game

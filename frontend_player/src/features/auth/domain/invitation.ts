@@ -2,7 +2,7 @@
  * **An invitation, as the invited person meets it** — the code they type, what opens *Set your
  * password*, and what a link says about itself before anything is set
  * ([ADR-0184](../../../../../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
- * §2–§5, [#518](https://github.com/Raketa02/Raketa/issues/518)).
+ * §2–§5, [#518](https://github.com/Rakieta02/Rakieta/issues/518)).
  *
  * Types and nothing else, for `passwordReset`'s reason — it is the same machinery: whether a code
  * is right, whether a link still works and whether an email already has an account are all the

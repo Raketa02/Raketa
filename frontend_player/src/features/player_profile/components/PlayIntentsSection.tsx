@@ -1,6 +1,6 @@
 /**
  * **The play intents, listed where the other durable facts live** — one row per rated sport,
- * on the You tab ([#296](https://github.com/Raketa02/Raketa/issues/296)).
+ * on the You tab ([#296](https://github.com/Rakieta02/Rakieta/issues/296)).
  *
  * A player rated in three sports holds three declarations and, until this shipped, had no page
  * that listed them: the only surface either one was ever seen on was the search form, which is
@@ -48,7 +48,7 @@
  *
  * Since Q127 a change takes the player off the cards they have not answered of a kind they
  * dropped, in every group ([ADR-0201](../../../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
- * §3, §6; [#742](https://github.com/Raketa02/Raketa/issues/742)). So an open **declared** row
+ * §3, §6; [#742](https://github.com/Rakieta02/Rakieta/issues/742)). So an open **declared** row
  * also reads its sport's cards across the groups, and under each answer that changes something
  * one line says so: *Your 7 competitive cards in your groups go. Games you’re In on stay.*, or
  * *Keep your competitive cards and get for-fun ones too.* Which line is

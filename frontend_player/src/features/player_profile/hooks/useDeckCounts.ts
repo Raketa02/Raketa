@@ -1,7 +1,7 @@
 /**
  * **The cards each kind deals the player now in one sport, across their groups** — read when You ›
  * *What kind of game* opens a declared sport's row, so its answers can say what a change costs
- * (ADR-0201 §6, [#742](https://github.com/Raketa02/Raketa/issues/742)).
+ * (ADR-0201 §6, [#742](https://github.com/Rakieta02/Rakieta/issues/742)).
  *
  * `sport` is `domain/intentChangeCost`'s `sportToCount`: the open row's while it is declared, and
  * `undefined` otherwise, when nothing is read.

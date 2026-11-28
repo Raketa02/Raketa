@@ -7,7 +7,7 @@
  * disagreeing, and saying who turned up at the court — and the words for the ends a game can reach.
  *
  * **What is exported is what has a caller**, and since the old loop's game card, its rail and the
- * `/games/[id]` route were removed ([#576](https://github.com/Raketa02/Raketa/issues/576)) every
+ * `/games/[id]` route were removed ([#576](https://github.com/Rakieta02/Rakieta/issues/576)) every
  * caller is a booked game's: its result screen, its pairing's card on the details, and the writes that
  * say the games list is out of date. The result argument's fold, the score's shape, the copy deck
  * and the writes stay internal.

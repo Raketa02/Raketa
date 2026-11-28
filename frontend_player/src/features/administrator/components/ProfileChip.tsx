@@ -1,6 +1,6 @@
 /**
  * **The profile switcher** — the chip in each profile's You header, and the sheet it opens
- * ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories 134–135, club mocks 6–7;
+ * ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 stories 134–135, club mocks 6–7;
  * ADR-0185 §3, which amends ADR-0179 §1's locked header by exactly this element).
  *
  * **The chip is club 7's**: a pill on `surface` inside a `line` border, holding the face of the

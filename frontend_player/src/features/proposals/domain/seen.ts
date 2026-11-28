@@ -1,7 +1,7 @@
 /**
  * **What a group page's tabs count: the rows the player hasn't seen**
  * ([ADR-0208](../../../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md),
- * [#849](https://github.com/Raketa02/Raketa/issues/849); split Q2b, Q10). Beside the Fill in rules
+ * [#849](https://github.com/Rakieta02/Rakieta/issues/849); split Q2b, Q10). Beside the Fill in rules
  * (`fillIn.ts`), because Fill in and You’re in were the first tabs it counted; Games joined them
  * with the deck's ids (#850).
  *

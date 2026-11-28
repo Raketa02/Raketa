@@ -2,7 +2,7 @@
  * **The forecast block on a booked game's details, walked the way a player walks it**: the real
  * route tree, the real shell, and only `fetch` faked.
  *
- * [#415](https://github.com/Raketa02/Raketa/issues/415)'s acceptance criteria for the block are
+ * [#415](https://github.com/Rakieta02/Rakieta/issues/415)'s acceptance criteria for the block are
  * assertions in this file and opinions nowhere else — present with a forecast and absent without
  * one with no sentence saying why, the gap's sign as served, the bar's labels for doubles and
  * singles, the word and the tone per band, the counted sentence, two stake tiles or none, no
@@ -10,7 +10,7 @@
  * `gamePresentation.ts`' and `shared/vocabulary/balancePresentation.ts`'.
  *
  * It walked the old loop's game screen at `/games/[id]` until that route was removed
- * ([#576](https://github.com/Raketa02/Raketa/issues/576)); the block is the same one, drawn on a
+ * ([#576](https://github.com/Rakieta02/Rakieta/issues/576)); the block is the same one, drawn on a
  * booked game's details (#556), so the walk is the details' now.
  */
 

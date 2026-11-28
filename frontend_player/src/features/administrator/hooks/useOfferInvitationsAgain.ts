@@ -1,6 +1,6 @@
 /**
  * **Offer the account's invitations again, now** — what a link opened by the account it was sent to
- * asks of the invitation sheet ([#520](https://github.com/Raketa02/Raketa/issues/520)).
+ * asks of the invitation sheet ([#520](https://github.com/Rakieta02/Rakieta/issues/520)).
  *
  * The sheet offers whatever `/users/me` lists that this launch has not set aside, so *again* is two
  * moves: take back what *Not now* set aside, and read the account again — a link can arrive for an

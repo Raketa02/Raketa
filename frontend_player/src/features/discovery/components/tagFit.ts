@@ -1,5 +1,5 @@
 /**
- * **How many of a Same vibe tile's chips are drawn whole** ([#803](https://github.com/Raketa02/Raketa/issues/803);
+ * **How many of a Same vibe tile's chips are drawn whole** ([#803](https://github.com/Rakieta02/Rakieta/issues/803);
  * the Home rows screens §6.2; the README's override 8) — as many as fit in **three lines**, the last
  * place a dashed *+N more* when more remain, on Home's tile and in See all alike.
  *

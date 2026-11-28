@@ -37,7 +37,7 @@ type WireSport = components['schemas']['Sport'];
  * branches on**, recorded beside the fact and never read by a decision, so there is nothing
  * for a domain table to be about. A second spelling would be a table that buys documentation
  * nothing was missing and can still drift — and it would have had to be widened by hand when
- * `DECK` landed ([#280](https://github.com/Raketa02/Raketa/issues/280)), which is the drift
+ * `DECK` landed ([#280](https://github.com/Rakieta02/Rakieta/issues/280)), which is the drift
  * this alias exists to make impossible.
  */
 export type PlayIntentSurface = components['schemas']['PlayIntentSurface'];
@@ -211,7 +211,7 @@ export interface ChangeWeeklyHoursOptions {
  * **This is where a `KEEP_THESE_TIMES` prompt is answered.** The engine notices that a search
  * ran on a week the profile does not hold and asks; nothing in the matcher writes a profile,
  * so a *yes* is this request and a *not now* is a different one entirely
- * ([#275](https://github.com/Raketa02/Raketa/issues/275)).
+ * ([#275](https://github.com/Rakieta02/Rakieta/issues/275)).
  *
  * **Unkeyed**, unlike the commit: that request *creates* an aggregate and a duplicate would be
  * a second profile, where a `PUT` that lands the same state twice has nothing to deduplicate.
@@ -398,7 +398,7 @@ export function changeGenderPreference({
 
 /**
  * Turn ***Show me to new people*** on or off ([ADR-0204](../../../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
- * §2, [#799](https://github.com/Raketa02/Raketa/issues/799)). Written at once, from the You row; an
+ * §2, [#799](https://github.com/Rakieta02/Rakieta/issues/799)). Written at once, from the You row; an
  * unchanged value records nothing.
  *
  * **`204` and no body**, for the gender write's reason: the switch is served back on the profile

@@ -1,7 +1,7 @@
 /**
  * **Where every address the operating system opens the app with arrives** — expo-router's
  * `redirectSystemPath`, which `src/app/+native-intent.ts` hands straight to this
- * ([#520](https://github.com/Raketa02/Raketa/issues/520), docs/architecture.md Part 2).
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520), docs/architecture.md Part 2).
  *
  * Not a component: expo-router calls it before it routes anything, at a cold start before a
  * component exists. It is the adapter between that call and the feature — who is signed in, which

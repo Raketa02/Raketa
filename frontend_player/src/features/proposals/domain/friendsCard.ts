@@ -1,6 +1,6 @@
 /**
  * **The friends card, and *Find a court*** — a fixed line-up's card on a group's Friends tab, and
- * every court it could take ([#757](https://github.com/Raketa02/Raketa/issues/757), over #750's
+ * every court it could take ([#757](https://github.com/Rakieta02/Rakieta/issues/757), over #750's
  * reads; the friends mechanics §7.4–§7.6, the screens §7.2–§7.3).
  *
  * Pure, and as little as the deck's: **the sides, the forecast or the Social vibe, the overlap, the

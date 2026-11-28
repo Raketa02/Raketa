@@ -454,7 +454,7 @@ describe('the record card', () => {
  * as a settled fact about somebody — so the count is asserted inseparable. The second thing
  * this suite used to hold, that a figure about *yourself* is never drawn, is reversed: ADR-0179
  * §5 serves the subject the figure, and the band that stood in for it is retired
- * ([#473](https://github.com/Raketa02/Raketa/issues/473)) — so what is pinned now is that the
+ * ([#473](https://github.com/Rakieta02/Rakieta/issues/473)) — so what is pinned now is that the
  * row has one reading, the figure's, and no word in it.
  */
 describe('what opponents said', () => {

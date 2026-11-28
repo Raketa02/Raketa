@@ -1,7 +1,7 @@
 /**
  * **Top 10 on Home — FOR YOU's last line — walked through the real route tree**
- * ([#805](https://github.com/Raketa02/Raketa/issues/805), PRD #789; [#820](https://github.com/Raketa02/Raketa/issues/820),
- * [#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0204, ADR-0205 §5; the Home rows
+ * ([#805](https://github.com/Rakieta02/Rakieta/issues/805), PRD #789; [#820](https://github.com/Rakieta02/Rakieta/issues/820),
+ * [#821](https://github.com/Rakieta02/Rakieta/issues/821); ADR-0204, ADR-0205 §5; the Home rows
  * mechanics §3, §10, §12; the screens §7; the words §31.1, §31.11), with only `fetch` faked. Every
  * test opens the line first, as a player would: closed, it draws no card, no switcher and no link;
  * open, its foot holds the switcher, *Padel ›*, on the left, opening rightwards, and *Open the

@@ -2,7 +2,7 @@
  * **A group's Info and Members, walked** — Info opened from the page's header (Q125), the link
  * card, *Want to join* and the Owner's count on the tile, the members row, Edit group, leaving and
  * deleting, the re-reads, and Members with its press and hold
- * ([#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 71–84; play mocks
+ * ([#514](https://github.com/Rakieta02/Rakieta/issues/514), PRD #500 stories 71–84; play mocks
  * 57–61, club 20).
  *
  * The real route tree, with the socket, the share sheet and the clipboard faked at the platform

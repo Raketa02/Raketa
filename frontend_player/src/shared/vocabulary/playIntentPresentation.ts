@@ -5,7 +5,7 @@
  * They were `features/play/components/findAGamePresentation.ts`'s while Play was the only
  * feature that drew a declaration. `player_profile` is the second: the You tab lists what a
  * player has declared per sport and offers the same three answers on the same route
- * ([#296](https://github.com/Raketa02/Raketa/issues/296)), and the value in a row there has to
+ * ([#296](https://github.com/Rakieta02/Rakieta/issues/296)), and the value in a row there has to
  * be the same word the search screen prints or the two screens are describing two facts.
  *
  * So they are promoted on `shared/README.md`'s own test — *"whether a second feature would
@@ -49,7 +49,7 @@ export function intentLabel(intent: PlayIntent): string {
  *
  * The three answers are a row of near-synonyms without them — *Competitive*, *For fun*,
  * *Either suits me* — and the surface they are on states a fact about the player, which is a
- * surface with room to say what the fact is ([#293](https://github.com/Raketa02/Raketa/issues/293)).
+ * surface with room to say what the fact is ([#293](https://github.com/Rakieta02/Rakieta/issues/293)).
  *
  * They are written in the **second person about the player**, because that is who the answer
  * describes and who reads it: the intent alignment term takes *their* intent against *my* mode
@@ -72,7 +72,7 @@ export function intentGloss(intent: PlayIntent): string {
  *
  * *Your usual* is the app's own words for the durable value, and it has been saying it to
  * screen-reader users since the interstitial shipped — the visible copy on Find a game caught
- * up with it in [#293](https://github.com/Raketa02/Raketa/issues/293). It is here rather than
+ * up with it in [#293](https://github.com/Rakieta02/Rakieta/issues/293). It is here rather than
  * in Play for the reason the labels are: the You tab offers the identical three answers about
  * the identical fact, and *Competitive* announced two different ways on two screens is the same
  * value described as two.

@@ -1,6 +1,6 @@
 /**
  * **The photo carousel** — all of a player's photos, sideways, a card at a time
- * ([#799](https://github.com/Raketa02/Raketa/issues/799); the Home rows screens §6.3, §9.3; home rows
+ * ([#799](https://github.com/Rakieta02/Rakieta/issues/799); the Home rows screens §6.3, §9.3; home rows
  * 23; Part 16, 2026-11-14).
  *
  * ```

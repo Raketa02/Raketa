@@ -1,6 +1,6 @@
 /**
  * **You › Payments' RECEIPTS, walked** — the real route tree with only `fetch` faked
- * ([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A7.3; mock 49): a share
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555); the screens A7.3; mock 49): a share
  * taken, a refund with what was kept on the payment, and a hold let go (#644).
  *
  * **The day words are asserted on dates a week or more from the read**, where they are a date

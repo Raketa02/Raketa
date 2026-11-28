@@ -1,5 +1,5 @@
 /**
- * **Home's Top 10, read** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home rows
+ * **Home's Top 10, read** ([#805](https://github.com/Rakieta02/Rakieta/issues/805); the Home rows
  * mechanics §3, §10; the screens §7) — on its own, so a slow or failed read holds up nothing else on
  * Home.
  *

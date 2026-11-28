@@ -1,6 +1,6 @@
 /**
  * ***Who's here*** — the attendance block on a booked game's result screen
- * ([#658](https://github.com/Raketa02/Raketa/issues/658); ADR-0195 §3), one row per player it has
+ * ([#658](https://github.com/Rakieta02/Rakieta/issues/658); ADR-0195 §3), one row per player it has
  * something to say about or offer, in the court's order.
  *
  * ```

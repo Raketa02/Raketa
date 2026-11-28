@@ -15,8 +15,8 @@
  * It was `features/play/components/court/seatFace`, while Play's courts were the only ones that
  * drew a face. The group page's Friends court and Games card, Fill in's squares and a booked
  * game's players card draw the same face in the same ring, and none of them may import
- * `features/play/` — the loop [#569](https://github.com/Raketa02/Raketa/issues/569) removes — so
- * the drawing came below all of them ([#574](https://github.com/Raketa02/Raketa/issues/574)), as
+ * `features/play/` — the loop [#569](https://github.com/Rakieta02/Rakieta/issues/569) removes — so
+ * the drawing came below all of them ([#574](https://github.com/Rakieta02/Rakieta/issues/574)), as
  * `PlayerPhoto` under it did. The ring came with it, because the face is its only reader.
  *
  * **Your own seat draws the poster.** `photo_url` is minted for another player's card row;
@@ -25,7 +25,7 @@
  * a court drawn from an id alone.
  *
  * **And the id is the account's, not the answer's**
- * ([#282](https://github.com/Raketa02/Raketa/issues/282)). A builder draws an empty court
+ * ([#282](https://github.com/Rakieta02/Rakieta/issues/282)). A builder draws an empty court
  * before anybody has answered for it, so a seat that waited for `Relationship.SELF` to name
  * you sat faceless until a fill came back; the screen reads `GET /users/me` instead and hands
  * the id down, because a drawing may not fetch its own occupant.
@@ -148,7 +148,7 @@ export interface SeatCaptionProps {
  * courts that have one.
  *
  * It moved here from `CourtSeat` when Now's card drew the third court
- * ([#367](https://github.com/Raketa02/Raketa/issues/367)). The rule and the geometry travel
+ * ([#367](https://github.com/Rakieta02/Rakieta/issues/367)). The rule and the geometry travel
  * together on purpose: the three-character cut was already exported so a test could pin it, and
  * the negative insets, the `tag` role and the media shadow are the half a second copy would have
  * drifted on first.

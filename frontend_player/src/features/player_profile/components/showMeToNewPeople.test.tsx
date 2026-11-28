@@ -1,6 +1,6 @@
 /**
  * ***Show me to new people* on You, walked the way a player walks it** — the real route tree, the real
- * bar, and only `fetch` faked ([#799](https://github.com/Raketa02/Raketa/issues/799); ADR-0204 §2; the
+ * bar, and only `fetch` faked ([#799](https://github.com/Rakieta02/Rakieta/issues/799); ADR-0204 §2; the
  * Home rows screens §9.1; the words §31.12).
  *
  * The row is the switch: *Show me to new people*, with *Players you don't share a group or a game with

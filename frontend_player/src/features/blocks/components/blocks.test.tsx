@@ -1,12 +1,12 @@
 /**
  * **Block and Unblock, walked through the real route tree**
- * ([#587](https://github.com/Raketa02/Raketa/issues/587), PRD #571;
+ * ([#587](https://github.com/Rakieta02/Rakieta/issues/587), PRD #571;
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
  *
  * The record a deck tile opens ends with *Block* and the person's name; the confirm sheet says what
  * a block does, and where Unblock is, and offers *Block* and *Cancel*; once blocked, **the record
- * closes** ([#779](https://github.com/Raketa02/Raketa/issues/779)) — a blocked pair's record is
- * refused both ways since [#773](https://github.com/Raketa02/Raketa/issues/773) (ADR-0203). **You ›
+ * closes** ([#779](https://github.com/Rakieta02/Rakieta/issues/779)) — a blocked pair's record is
+ * refused both ways since [#773](https://github.com/Rakieta02/Rakieta/issues/773) (ADR-0203). **You ›
  * Account › Blocked players** lists everyone the reader blocked, each with *Unblock*, which is the
  * one way back. Your own record ends in neither.
  *

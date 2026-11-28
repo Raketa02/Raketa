@@ -8,7 +8,7 @@
  * player who left a screen and came back lands on it. So the assertions are about the
  * **stack**: what is underneath, and whether there is anything underneath at all.
  *
- * **The bar is Home · ⚡Play · You, for good** ([#576](https://github.com/Raketa02/Raketa/issues/576)):
+ * **The bar is Home · ⚡Play · You, for good** ([#576](https://github.com/Rakieta02/Rakieta/issues/576)):
  * the old loop's Players and Chats columns, and the feature flag that brought them back, are gone.
  * Play's own feature flag, `explore` (#826), is walked in `theExploreGate.test.tsx`; here Play is
  * as it ships, titled *Groups*.
@@ -434,7 +434,7 @@ describe('You', () => {
   });
 
   /**
-   * **Two rows left with the questions that set them** ([#582](https://github.com/Raketa02/Raketa/issues/582)):
+   * **Two rows left with the questions that set them** ([#582](https://github.com/Rakieta02/Rakieta/issues/582)):
    * *How far to look* and *Game suggestions* were read only by the old loop's ranking, so a
    * player who changed either changed nothing they would ever see. *Your games* is the week, the
    * area and who they play with — every one of them read when a game is proposed.
@@ -705,8 +705,8 @@ describe('Home, kept', () => {
 });
 
 /**
- * **Needs your answer** ([#816](https://github.com/Raketa02/Raketa/issues/816),
- * [#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1–§2; home refactor 1 and 2): the
+ * **Needs your answer** ([#816](https://github.com/Rakieta02/Rakieta/issues/816),
+ * [#817](https://github.com/Rakieta02/Rakieta/issues/817), ADR-0205 §1–§2; home refactor 1 and 2): the
  * header's envelope, there only while something waits, and the sheet it opens. What each section's
  * tiles say and do is `friends`' and `proposals`' suites'; this is the frame — the header's order, the
  * sheet's title, focus and ways out, the four sections' order, and the self-close.
@@ -1050,7 +1050,7 @@ describe('the shell survives the gate re-reading the player', () => {
 /**
  * **The bar stands down inside a booked game's chat, and nowhere else.** The composer replaces it
  * there so the keyboard and the stream get the whole screen
- * ([#400](https://github.com/Raketa02/Raketa/issues/400)) — and it is *not rendered* rather than
+ * ([#400](https://github.com/Rakieta02/Rakieta/issues/400)) — and it is *not rendered* rather than
  * hidden, and its reach is nothing, because a hidden bar would still be a reach every screen kept
  * clear of (#881). The details the room is pushed over keep their bar, which is what a
  * prefix match under `/booking/…` would get wrong.

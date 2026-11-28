@@ -5,8 +5,8 @@
 > feature does. Index: [`README.md`](README.md).
 
 **Play opens on Groups, and the feature is four screens over six routes**
-([#512](https://github.com/Raketa02/Raketa/issues/512), PRD
-[#500](https://github.com/Raketa02/Raketa/issues/500), ADR-0182, ADR-0183). The Play tab draws
+([#512](https://github.com/Rakieta02/Rakieta/issues/512), PRD
+[#500](https://github.com/Rakieta02/Rakieta/issues/500), ADR-0182, ADR-0183). The Play tab draws
 the shell's _Groups | Explore_ segment
 ([`shell.md`](shell.md)), and _Groups_ is `GroupsSection`: the groups the player belongs to,
 newest joined first, with **+ New** (outlined, `secondary`) and **Join** (coral, `primary`)
@@ -61,7 +61,7 @@ page, more on scroll**: an infinite query over `next_page`, and each screen's sc
 the next page within half a screen of its end. The results sit **inside the page's own scroller**
 on New group rather than in a list of their own, because a list inside a form is two scrollers
 under one thumb. **An answer lives only while it is on screen** (`gcTime: 0`, `staleTime: 0`,
-[#529](https://github.com/Raketa02/Raketa/issues/529) D6): it carries the reader's relation to
+[#529](https://github.com/Rakieta02/Rakieta/issues/529) D6): it carries the reader's relation to
 every group in it, and that changes on another phone — an Owner lets them in, or declines. Kept by
 text, the answer to _og_ read before an approval was drawn again the next time _og_ was typed, so
 the row flipped between _requested · waiting_ and _you're in_ letter by letter. A text typed again
@@ -135,7 +135,7 @@ asked, until the 2026-09-27 mocks drew it `ink` like every other field. **Nothin
 seen on a device.**
 
 **The page is filtered by one sport, and the phone remembers which**
-([#513](https://github.com/Raketa02/Raketa/issues/513), stories 51–58, ADR-0188). The fast
+([#513](https://github.com/Rakieta02/Rakieta/issues/513), stories 51–58, ADR-0188). The fast
 filter lists **only the sports the reader is rated in**, in the registry's order — never the
 group's dots, since a player may be the only one here who plays a sport and a dot they are not
 rated in is a sport they cannot play — and a player rated in one sport gets a **plain label** with
@@ -171,7 +171,7 @@ tile open the bar that far; sports that stop short of it end the bar where they 
 tile and covers nothing.
 
 **The pill is shared UI's, and the filter is the page's**
-([#774](https://github.com/Raketa02/Raketa/issues/774)). Rankings draws the very same control, so the
+([#774](https://github.com/Rakieta02/Rakieta/issues/774)). Rankings draws the very same control, so the
 pill, the bar and the layer they open on — the backdrop, the header's measured box, folding on back
 and on leaving — moved to `shared/ui` as `SportPillFrame`, which takes the sports to offer, the sport
 the page is on and its words, and reports a pick of another sport. **Every word is the caller's**:
@@ -207,7 +207,7 @@ games yet_ once anybody has joined: a posted game is seen by everybody who arriv
 #847) — drawn disabled until posting shipped, and since #558 the door to _Post a game_ (below).
 
 **Friends is the court a game with friends is built on** (stories 68–70; since
-[#757](https://github.com/Raketa02/Raketa/issues/757), the friends screens §7.1–§7.2, friends 7–8).
+[#757](https://github.com/Rakieta02/Rakieta/issues/757), the friends screens §7.1–§7.2, friends 7–8).
 **Competitive · For fun sets this game's kind, and nothing else's** (ADR-0202; the friends README's
 defaults): it is `friendsGame.store`'s, no longer `gameIntent.store`'s, so turning it never moves the
 Games deck's kind or the Play intent, and the deck's kind never moves it. It keeps its position while
@@ -215,7 +215,7 @@ the app is open, in memory only (ADR-0188 §5) — one value for the app, since 
 game being built — and, like the app's other process stores, a sign-out does not reset it.
 
 **The kind is picked in the Friends tab's menu, and the court sits right under the tabs**
-([#861](https://github.com/Raketa02/Raketa/issues/861), PRD #859; the friends screens §7.1, tab menu
+([#861](https://github.com/Rakieta02/Rakieta/issues/861), PRD #859; the friends screens §7.1, tab menu
 mocks 2 and 4 as illustrations). The _Competitive | For fun_ row above the court is gone, and the
 court keeps its size. **Whenever the court is drawn** — not on the _add a sport_ card, not on the
 level door — the selected Friends tab draws a chevron, widens for it, and is spoken _Friends,
@@ -300,13 +300,13 @@ to `[groupId]/index` to make room for it.
 and whether Android delivers a press to the half of it outside the seat; the court and the card
 scrolling together (friends 8); the swap's volt ring; the picker's greyed rows.
 
-**Sent, the court is empty again** ([#759](https://github.com/Raketa02/Raketa/issues/759); the
+**Sent, the court is empty again** ([#759](https://github.com/Rakieta02/Rakieta/issues/759); the
 friends screens §8): the card's _Send game and pay_ is `proposals`' (`SendGame`), and its `onSent`
 is `useFriendsGameOn`'s `sent` — the line-up put back to an empty court, as the page opens on. The
 kind stays where it stood. The game itself is on Home, in Your games.
 
 **Three things the group page's mocks draw that this record departs from**
-([#513](https://github.com/Raketa02/Raketa/issues/513), design-system Part 16). The Games card's
+([#513](https://github.com/Rakieta02/Rakieta/issues/513), design-system Part 16). The Games card's
 faces are **the face box, not circles** — this app has no round face (#338) — and **no face carries
 initials**, which ADR-0167 §3 fences to the yes screen's tile; widening that fence is an amendment
 to the ADR, not a drawing call. **+ Post a game** is **the primary button at 4.2's corner** rather
@@ -315,7 +315,7 @@ than the mocks' coral pill with a glow: the pill is the chip's and the yes scree
 been seen on a device** — the unfold's pace, and whether four sports fit the bar on a 320pt phone,
 are asked for a look.
 
-**The header opens Info** (Q125, the product owner's ruling of 2026-11-02, [#721](https://github.com/Raketa02/Raketa/issues/721)).
+**The header opens Info** (Q125, the product owner's ruling of 2026-11-02, [#721](https://github.com/Rakieta02/Rakieta/issues/721)).
 Info was a fourth tab; the page now carries only the tabs drawn for a sport (three then, four since
 #847), and Info — about
 the group, not one of its sports — opens from the group's own header, as WhatsApp, Telegram and
@@ -332,7 +332,7 @@ card. Members and Edit group are pushed over Info now, so back from each is Info
 device**: the row's pressed look, and the badge on the 36pt tile and beside the open bar, are asked
 for a look.
 
-**Info is the group rather than a sport of it** ([#514](https://github.com/Raketa02/Raketa/issues/514),
+**Info is the group rather than a sport of it** ([#514](https://github.com/Rakieta02/Rakieta/issues/514),
 stories 71–79; play 57–60, club 20), and its own screen since Q125 (`GroupInfoScreen`). **Its header is
 the page's without the sport pill, and presses nothing**; its body is unchanged. Top to bottom: **the
 link card** — the link in mono on one line, cut in the middle so its code stays in view, and
@@ -343,7 +343,7 @@ what scrolls rather than in it (#529 F1), so it is in the same place however lon
 grows, and success lands on the Groups list past the page (`dismissTo`). Info never waits for the
 filter's sport, because nothing on it is drawn for one.
 
-**The Owner's count of waiting requests is on the tile's corner** ([#529](https://github.com/Raketa02/Raketa/issues/529)
+**The Owner's count of waiting requests is on the tile's corner** ([#529](https://github.com/Rakieta02/Rakieta/issues/529)
 D6; the Info tab's until Q125). It is the badge the tab carried — the Chats badge at the segment's
 size, `CornerBadge` (lifted out of `Segment`, which draws it over Games, Fill in and You’re in), `size.segmentBadge`
 — over the tile's top-right corner, on the page from every tab and on Info's header, and **spoken
@@ -466,7 +466,7 @@ is the player's choice. The group's sports come from the administrator area's re
 make that possible the filter's page split in two: `SportFilterPage` reads `useGroupSport` and draws
 `SportFilterFrame`, which takes the filter's state from whoever holds it. **The server admits whoever
 runs an official group** to the members read and to its members' records, as a member is admitted
-([#566](https://github.com/Raketa02/Raketa/issues/566)). **A refused list
+([#566](https://github.com/Rakieta02/Rakieta/issues/566)). **A refused list
 says why in its caller's words** (`refused`, by code): a member's _This group isn't one of yours._,
 the page's own, and the Administrator's _This isn't a group you run any more._ — where it had fallen
 through to the recovery's _Something went wrong at our end_, which blamed the server for a refusal.
@@ -497,7 +497,7 @@ owner, with the stacked faces' sizes. Leave, Delete, Save and the two answers pa
 create do; no act here says so beside itself yet. **Nothing here has been seen on a device.**
 
 **The administrator area draws with this feature's pieces, and they are lent from `types.ts`**
-([#516](https://github.com/Raketa02/Raketa/issues/516); [`administrator.md`](administrator.md)). An
+([#516](https://github.com/Rakieta02/Rakieta/issues/516); [`administrator.md`](administrator.md)). An
 official group is a Group, so the tile, the dots, the group forms' two cards, the request row, a
 failed read, the row face, the stacked faces and the words they share are exported for that one
 caller, and the dependency points one way. Four changes made the lending possible without changing
@@ -508,13 +508,13 @@ answer through their own routes, as #514's handover suggested; **_Who can join_ 
 (`noSportNote`), which is false of an official group; and **the Name card takes a placeholder and an
 error**, for _Same name as the WhatsApp group_ and a refusal said on the field. The share sentence is
 the administrator's WhatsApp post too, as #513 already wrote it for. **Edit group's _LET IN · N_ card left the
-screen** for `AdmittedCard` ([#517](https://github.com/Raketa02/Raketa/issues/517)), which an official
+screen** for `AdmittedCard` ([#517](https://github.com/Rakieta02/Rakieta/issues/517)), which an official
 group's settings draw after the same switch to Anyone. **Edit group's _Let anyone join?_ sheet left
 the screen** for `OpenToAnyoneSheet` (#529, 2026-10-02), which an official group's settings open
 before the same switch, so an Administrator is asked in an Owner's words.
 
 **An official group is a Group the player meets as one, told apart by what it plays and who
-answers** ([#519](https://github.com/Raketa02/Raketa/issues/519), PRD #500 stories 40, 56, 57;
+answers** ([#519](https://github.com/Rakieta02/Rakieta/issues/519), PRD #500 stories 40, 56, 57;
 ADR-0183 §3, §6, §7). The reads carry `kind`, and nothing else about the drawing changes: **its
 dots are its declared sports**, served as `sports` on every row, card and page — the Groups list,
 both searches and Info's members row; the header draws no dots (play 40), so "the group header" in
@@ -572,11 +572,11 @@ for the screen's field, so the answer is exactly the group a paste would have fo
 there is nothing to type, and a keyboard over the one result would hide the button the link is for. What
 opens the screen, and when, is [`links.md`](links.md)'s.
 
-**`find_a_game` became `classic_play`** ([#550](https://github.com/Raketa02/Raketa/issues/550)),
-and then went with the old loop ([#576](https://github.com/Raketa02/Raketa/issues/576)). Nothing
+**`find_a_game` became `classic_play`** ([#550](https://github.com/Rakieta02/Rakieta/issues/550)),
+and then went with the old loop ([#576](https://github.com/Rakieta02/Rakieta/issues/576)). Nothing
 here changed either time: Play opens on Groups, and no flag decides it any more.
 
-**Games is the deck** ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A1–A2).
+**Games is the deck** ([#553](https://github.com/Rakieta02/Rakieta/issues/553), the screens A1–A2).
 `GamesTab` hands `proposals`' `GamesDeck` the kind the Games tab's menu stands on (below; the
 switch's until #862) — the game-intent store, which Friends' kind no longer shares since #757 (it is
 the Friends tab's menu's since #861) — each line picked in that menu, and the starting card
@@ -591,7 +591,7 @@ opens a group's page stubs the deck (`test-support/groupDeck`'s quiet deck); the
 `groupGames.test.tsx`. The record of the deck itself is [`proposals.md`](proposals.md).
 
 **The deck's kind is picked in the Games tab's menu, and the cap line sits right under the tabs**
-([#862](https://github.com/Raketa02/Raketa/issues/862), PRD #859; the screens A1, A2.1; tab menu
+([#862](https://github.com/Rakieta02/Rakieta/issues/862), PRD #859; the screens A1, A2.1; tab menu
 mocks 1 and 3 as illustrations). The deck's _Competitive · N / For fun · N_ row is gone: the weekly
 cap's line and the offline note stand directly under the tabs, and the deck takes the height. **The
 chevron's rule is the switch's**: the selected Games tab draws one where there is a sport to play —
@@ -623,7 +623,7 @@ absent states in `officialGroups.test.tsx` and `theDoorWherePlayBegins.test.tsx`
 device** — the Games chevron, its menu over the deck and the cap line under the tabs are asked for a
 look (#866).
 
-**Fill in is `proposals`' board** ([#557](https://github.com/Raketa02/Raketa/issues/557), the screens
+**Fill in is `proposals`' board** ([#557](https://github.com/Rakieta02/Rakieta/issues/557), the screens
 A1, A3; mocks 11–14). Until #847 split it, `GroupScreen` drew one board as the tab — _Seats to fill_,
 the rescues the reader is offered, then _You’re in_, their own yeses on this group's games still
 filling, each under a heading — and handed it the starting card above for a tab with no row in
@@ -633,7 +633,7 @@ whichever tab is open, so `stubGroupDeck` now serves an empty Fill in too and ev
 page gets it. The tab's walk is `groupFillIn.test.tsx`; the board's record is
 [`proposals.md`](proposals.md).
 
-**You’re in is a tab of its own** ([#847](https://github.com/Raketa02/Raketa/issues/847), PRD #844;
+**You’re in is a tab of its own** ([#847](https://github.com/Rakieta02/Rakieta/issues/847), PRD #844;
 the screens A1, A3; split mocks 1–3). **Four tabs, Games · Fill in · You’re in · Friends**, and the
 two lists that shared Fill in get one each: `GROUP_TABS` gains `youreIn` after `fillIn`, so the tab
 store, the route params and an onboarding pass's origin take it, and a tab this build does not know
@@ -658,7 +658,7 @@ a 320pt phone and at a large text size, which the split's log estimates at about
 about 55pt for _You’re in_, are asked for a look.
 
 **Fill in's and You’re in's badges count what the player hasn't seen**
-([#849](https://github.com/Raketa02/Raketa/issues/849),
+([#849](https://github.com/Rakieta02/Rakieta/issues/849),
 [ADR-0208](../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md);
 PRD #844; split Q2b, Q10–Q12). Until then a badge never cleared: _Fill in 2_ came back on every
 visit until those games were gone. Now **a tab's rows are seen while it is on screen** — the page
@@ -678,7 +678,7 @@ the selected tab too — until #850 gave it the deck's ids (below). Walked in `g
 are asked for a look (the split's §17).
 
 **The Games badge counts the cards with somebody In that the player hasn't seen, across both
-kinds** ([#850](https://github.com/Raketa02/Raketa/issues/850), ADR-0208; PRD #844, split Q2b, Q10).
+kinds** ([#850](https://github.com/Rakieta02/Rakieta/issues/850), ADR-0208; PRD #844, split Q2b, Q10).
 Until then it was the server's `games_badge`, which never cleared and was drawn on the selected tab
 too. Now it is the deck read's ids (`in_card_ids`, #846, across both kinds) minus the ids seen, read
 off the deck the tab already draws — **no extra request, and nothing reads the other kind's deck**;
@@ -714,7 +714,7 @@ the stage's among them (`proposals.md`). Friends keeps none — it was not asked
 a device** — the deck's pull shares the page with the card's drag, and only a thumb can say they keep
 out of each other's way.
 
-**_Post a game_ is `proposals`' screen over the page** ([#558](https://github.com/Raketa02/Raketa/issues/558),
+**_Post a game_ is `proposals`' screen over the page** ([#558](https://github.com/Rakieta02/Rakieta/issues/558),
 the screens A5). Both doors — the floating button (Fill in's then, You’re in's since #847) and _Nothing picked right now_'s third — push
 `/play/group/[groupId]/post`, whose route mounts `PostAGamePage`: it hands the screen the page's own
 sport filter (`useGroupSport`), each sport's rated count off the group's roster, the page's sport and
@@ -727,7 +727,7 @@ still always opens on Games (story 51, ADR-0188 §5). The record of the screen i
 [`proposals.md`](proposals.md); its walk `proposals/components/postAGame.test.tsx`.
 
 **_Post a game_ backs out to the tab it came from, and a post lands on You’re in**
-([#848](https://github.com/Raketa02/Raketa/issues/848), PRD #844; the screens A5). **Opening it no
+([#848](https://github.com/Rakieta02/Rakieta/issues/848), PRD #844; the screens A5). **Opening it no
 longer turns the page.** `PostAGamePage` reads the page's tab once, as it opens — the store's entry,
 or Games while the page has not moved off its opening tab — and that is the **origin**: the chevron,
 the hardware back and the swipe all uncover the page as it was, on that tab, and back from Info after
@@ -747,7 +747,7 @@ begun from its level door or _add a sport_ card returns to You’re in**, whiche
 from — where the button lives and a post lands. Walked in `postAGame.test.tsx` (both doors, each way
 back, each landing) and the onboarding suites (the pass's return, opened over Games).
 
-**A group's page opens at a card when a notice says so** ([#559](https://github.com/Raketa02/Raketa/issues/559);
+**A group's page opens at a card when a notice says so** ([#559](https://github.com/Rakieta02/Rakieta/issues/559);
 the screens A9: _the deck opens with the card on top_). The route reads an **arrival** beside the
 group's id — the card's sport, kind and id, all three or none (`parseGroupRouteParams`), spelled by
 `groupDeckRoute`, which `notifications` pushes. The page stands on the card's sport until the player
@@ -757,7 +757,7 @@ the phone's last sport is untouched — turns to Games, moves the deck to the ca
 card to the deck as `onTop`. An arrival
 this build cannot read opens the page as it always opens: the group's id alone is a page.
 
-**Members' score tag is the served band, on every row** ([#660](https://github.com/Raketa02/Raketa/issues/660),
+**Members' score tag is the served band, on every row** ([#660](https://github.com/Rakieta02/Rakieta/issues/660),
 ADR-0195 §1). Every Members row carries `player_score` and `reliability_band` since the backend's
 #659 — everyone starts at 100 — so `GroupMember.playerScore` is no longer optional and the tag is
 drawn on every row; _no record, no tag_ is gone with the absence it drew. The tint is **the band
@@ -772,7 +772,7 @@ its only carrier. Members carries no _New_, so a new player's tag reads `100` in
 opens the same sheet the player reads about themselves: the figure with the band's word or _New_,
 and the four counts under _Full record_ (`player_record.md`).
 
-**Members, requests and _… runs this group_ name the nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1, §4). The
+**Members, requests and _… runs this group_ name the nickname** ([#728](https://github.com/Rakieta02/Rakieta/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1, §4). The
 members, the people, the join requests and the Owner's _approves joins_ line read the wire's
 `nickname` / `owner_nickname` into the same fields, whole and never with an @. **An official
 group's runner is the one value that is not always a nickname**: `administrator_nickname` is the
@@ -781,13 +781,13 @@ Administrator who has never played is still named, and `administratorName` keeps
 reason. `groupInfo.test.tsx` holds _ania.k_ on a Members row.
 
 **An official group's card begins a pass that comes back to the page**
-([#729](https://github.com/Raketa02/Raketa/issues/729), ADR-0200 §3, §5), which rules the
+([#729](https://github.com/Rakieta02/Rakieta/issues/729), ADR-0200 §3, §5), which rules the
 _pass ending on the passport_ call above: its buttons say _Rate Padel_, `AddSportCard` takes the
 group and the tab to come back to, and the page reads the tab and the sport off the route as
 `returning`. The whole of it is in [`onboarding.md`](onboarding.md), whose pass it is.
 
 **A player group's reader rated in nothing meets the level door**
-([#730](https://github.com/Raketa02/Raketa/issues/730), ADR-0200 §2, §4, §6). `needsALevel(rated,
+([#730](https://github.com/Rakieta02/Rakieta/issues/730), ADR-0200 §2, §4, §6). `needsALevel(rated,
 declared)` — a player group, rated in no sport — rides on `useGroupSport` and is handed to
 `SportFilterPage`'s children as a third argument; where it holds, Games, Fill in, You’re in (#847) and Friends draw
 onboarding's `LevelDoor` in place of their content, Members draws it in place of the list she is
@@ -799,7 +799,7 @@ An official group keeps `AddSportCard`. The words and the reads are onboarding's
 ([`onboarding.md`](onboarding.md)).
 
 **The chip ends with _+ Another sport_, and Home asks a member rated in nothing**
-([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §4, §7). `sportsToOffer(rated,
+([#731](https://github.com/Rakieta02/Rakieta/issues/731), ADR-0200 §4, §7). `sportsToOffer(rated,
 declared)` is what it offers — every sport the reader is unrated in, in a player group; an official
 group's own sports she is missing, in one — and **nothing while there is no chip** (the door or the
 group's card asks then) or once nothing is left. It rides on `useGroupSport` as `toOffer`.
@@ -816,7 +816,7 @@ least one group, player or official, holding no rating. **`useHomeAsksForALevel`
 first and the groups only for a player rated in nothing** (`useMyGroups({ enabled })`) — though Home
 reads the groups for everybody since #800, for _Your games_' groupless line — so the card costs one read — `GET /ratings` on every visit, the price of the card, which every group's chip
 shares — and it draws nothing until both have answered and nothing on a failure: it is a nudge,
-never a wall. **A friend's ask for a level stands in its place** ([#765](https://github.com/Raketa02/Raketa/issues/765),
+never a wall. **A friend's ask for a level stands in its place** ([#765](https://github.com/Rakieta02/Rakieta/issues/765),
 Q129): the rule is `homeAsksForALevel(groups, rated, askedForALevel)` now, over `proposals`'
 `useHomeLevelAsks` too — nothing while Home's ASKED FOR A LEVEL holds a card or Home has yet to
 answer, and the card again once the row is empty; a Home read refused or offline holds none. `groupKeys` is exported for the notice that opens Home on it, which marks the groups
@@ -830,7 +830,7 @@ beside the pill (no mock draws it); Members' chip carries it too; the pill's hin
 it alone is _Offers another sport to rate_. **Not seen on a device**: the pill and the bar with
 _+ Another sport_ in them, and their unfold.
 
-**Members' rows end in the reader's relation to them** ([#753](https://github.com/Raketa02/Raketa/issues/753),
+**Members' rows end in the reader's relation to them** ([#753](https://github.com/Rakieta02/Rakieta/issues/753),
 [ADR-0202](../../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
 §1; the friends screens §1). Every row but yours is handed, as it was, to `friends`' `RowWithFriendEnd`,
 which puts **+ Add**, _request sent_, _friend_ or **Accept** on its right — **the rows keep today's
@@ -844,13 +844,13 @@ record reads `friends`' acts, not this list's key. The record is handed the grou
 request asked there. **The Administrator's Members draws no ends** (`MembersList`'s `friends`, off in
 the administrator area). The record of why the end looks as it does is [`friends.md`](friends.md).
 
-**A group's tile, by id, for the Add friends sheet** ([#754](https://github.com/Raketa02/Raketa/issues/754)).
+**A group's tile, by id, for the Add friends sheet** ([#754](https://github.com/Rakieta02/Rakieta/issues/754)).
 `MyGroupMonogram` draws one of the reader's groups' tiles off their own Groups list (`useMyGroups`),
 its box held empty until the list is in: the sheet's read names no tile, and a group's letters are
 cut once, by the server (ADR-0183 §5). The shell hands it, and `groupMembersRoute`, to `friends`' page.
 
 **The Friends screen hands the picker its group, and a notice opens it with the page under it**
-([#758](https://github.com/Raketa02/Raketa/issues/758)). `FriendsPicker` takes `groupId`, the group an
+([#758](https://github.com/Rakieta02/Rakieta/issues/758)). `FriendsPicker` takes `groupId`, the group an
 ask for a Level is made from, whose picker the friend's answer opens for the asker
 ([`friends.md`](friends.md)). **`groupPickerRoutes(groupId, sport)`** is where _Level got_ lands: the
 page on its Friends tab standing on the sport — `groupReturnRoute`'s params, the way a returning pass
@@ -858,7 +858,7 @@ stands on one, so opening is not picking — and the Friends screen over it, so 
 on that court and _back_ is the court, as from _+ Friends_; `notifications` pushes the two
 ([`notifications.md`](notifications.md)).
 
-**Home's HOTTEST GROUPS is this feature's row** ([#800](https://github.com/Raketa02/Raketa/issues/800),
+**Home's HOTTEST GROUPS is this feature's row** ([#800](https://github.com/Rakieta02/Rakieta/issues/800),
 [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 §3; the Home rows screens §3, the mechanics §5; home rows 3–6, 21). `HottestGroupsRow` reads
 `GET /hottest-groups` (`useHottestGroups`, keyed `groupKeys.hottest()`) and draws up to six cards on
@@ -895,7 +895,7 @@ _Keep the request_, neither in §31; _Withdraw request_ is the outlined
 `secondary` button, since the system has no destructive-outline one. **Not seen on a device**: the
 card, the band's stripes, the shield, the heat bar, both sheets — against home rows 3–6 and 21.
 
-**HOTTEST GROUPS is FOR YOU's first line, _Groups heating up_** ([#820](https://github.com/Raketa02/Raketa/issues/820);
+**HOTTEST GROUPS is FOR YOU's first line, _Groups heating up_** ([#820](https://github.com/Rakieta02/Rakieta/issues/820);
 ADR-0205 §5; home refactor 5). `HottestGroupsRow` became `useHottestGroupsLine`, which hands the shell
 the line's title (`GROUPS_COPY.hottest.line`), its cards on the peeking rail — now settling on their
 edges — and the group sheet, or `undefined` while the read is empty, out or failed. **No footer**
@@ -907,7 +907,7 @@ under FOR YOU, closed; open onto the cards with no footer; hidden empty or faile
 when it empties while open, back closed; and the groupless line with the line open, kept open by a
 join from it.
 
-**The slimmer card** ([#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5, Q22; home
+**The slimmer card** ([#821](https://github.com/Rakieta02/Rakieta/issues/821); ADR-0205 §5, Q22; home
 refactor 5.1). Open in Groups heating up, a card is the striped band, the tag, the shield, the name,
 **_N games this week_ on the left and _N players_ on the right** (`Figure`'s `end`, held against the
 card's edge), the faces and the chip. **Gone: the heat bar, _+N this month_ and the sport line**, dots
@@ -922,7 +922,7 @@ name, nothing removed drawn on any card, and the sheet's every detail. **Not see
 is owed against home refactor 5.1: the figures' places, the card's height without the bar, the faces
 and chip at its foot.
 
-**Groups heating up counts the groups to look through** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+**Groups heating up counts the groups to look through** ([#822](https://github.com/Rakieta02/Rakieta/issues/822);
 ADR-0205 §6; the mechanics §5.10; home refactor 3, 4). The read keeps the server's **`total`** beside
 its six cards — `HottestRow` (`toHottestRow`), every group of 3 or more players, the reader's own
 included, counted up to 100 — and the line hands it to the shell as its `count`, drawn _99+_ past 99.
@@ -934,7 +934,7 @@ its count would stand as they were before it. No footer still, so no _See all N_
 `hottestGroups.test.tsx` (the count moving with a join's re-read, and not before it lands; a refusal
 reading the row again), `hottest.test.ts` and the mapper test.
 
-**The Groups heating up page** ([#823](https://github.com/Raketa02/Raketa/issues/823); ADR-0205 §7;
+**The Groups heating up page** ([#823](https://github.com/Rakieta02/Rakieta/issues/823); ADR-0205 §7;
 the Home rows screens §3.6, the mechanics §5.10; the words §31.14). **The line's footer reads _All
 groups ›_** (`FoldingLineFooter`, spoken _All groups heating up_), which pushes `HottestGroupsScreen`
 over Home at **`/hottest-groups`** (`HOTTEST_GROUPS_ROUTE`) — the one groups screen not under Play, so
@@ -994,7 +994,7 @@ landed ~1,4 s sooner. Walked in the router suites; `groupGames.test.tsx`'s faile
 until the retry or the pull, since the read ahead meets the refusal first.
 
 **Groups heating up shimmers while its first page is read** (2026-11-24,
-[#872](https://github.com/Raketa02/Raketa/issues/872); PRD #867, the loading shimmer log §10; design
+[#872](https://github.com/Rakieta02/Rakieta/issues/872); PRD #867, the loading shimmer log §10; design
 system 5.6). The spinner is gone. Under the real header, **the line's card stands as its skeleton at
 the content's whole width, `sm` apart, as many as fill the screen** (`HottestGroupsScreen`'s
 `HottestGroupsSkeleton`), on one `SkeletonGround`; the first page comes in on `Reveal`'s cross-fade once
@@ -1012,7 +1012,7 @@ empty line; the retries, the failure and _Try again_; the offline note and the c
 pull. **Not seen on a device**: a look is owed at the card's shimmer and the fade onto the list.
 
 **A group's page shimmers until it is built, then reveals together** (2026-11-25,
-[#875](https://github.com/Raketa02/Raketa/issues/875); PRD #867, the loading shimmer log §10; design
+[#875](https://github.com/Rakieta02/Rakieta/issues/875); PRD #867, the loading shimmer log §10; design
 system 5.6). It opened blank — a back arrow over nothing while the group was read, and nothing at all
 offline. **Two parts, top-down** (`groupPageParts`): **the header and the tab bar**, which wait for
 the group's read and the sport, and **the body of the tab on screen**, which waits for that tab's

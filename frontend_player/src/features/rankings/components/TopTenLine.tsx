@@ -1,7 +1,7 @@
 /**
- * **Top 10** — the last of FOR YOU's five lines ([#820](https://github.com/Raketa02/Raketa/issues/820),
- * [#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5; was the TOP 10 row,
- * [#805](https://github.com/Raketa02/Raketa/issues/805), ADR-0204; the Home rows screens §7, the
+ * **Top 10** — the last of FOR YOU's five lines ([#820](https://github.com/Rakieta02/Rakieta/issues/820),
+ * [#821](https://github.com/Rakieta02/Rakieta/issues/821); ADR-0205 §5; was the TOP 10 row,
+ * [#805](https://github.com/Rakieta02/Rakieta/issues/805), ADR-0204; the Home rows screens §7, the
  * mechanics §10; the words §31.1, §31.11; home rows 25–27, home refactor 12, 13).
  *
  * Places 1 to 10 of General in one sport. Open, the line holds the cards (`TopTenCard`) on a

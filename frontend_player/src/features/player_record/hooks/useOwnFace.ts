@@ -2,7 +2,7 @@
  * **The reader's own face** — their photograph off their own record, or nothing, for the one
  * surface that draws the reader as a tile rather than as a seat
  * ([ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
- * §3, [#433](https://github.com/Raketa02/Raketa/issues/433)).
+ * §3, [#433](https://github.com/Rakieta02/Rakieta/issues/433)).
  *
  * ## Why a read at all
  *

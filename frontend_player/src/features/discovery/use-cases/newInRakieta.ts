@@ -1,5 +1,5 @@
 /**
- * **New in Rakieta's two reads** ([#801](https://github.com/Raketa02/Raketa/issues/801)) —
+ * **New in Rakieta's two reads** ([#801](https://github.com/Rakieta02/Rakieta/issues/801)) —
  * pass-throughs, the template's uniform-strict escape hatch: who is on the row, in which order and
  * how many are the server's (the Home rows mechanics §7), and nothing here judges them again.
  */

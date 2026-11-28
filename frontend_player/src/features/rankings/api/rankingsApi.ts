@@ -1,12 +1,12 @@
 /**
- * **The Rankings routes this build reads** ([#775](https://github.com/Raketa02/Raketa/issues/775),
- * [#776](https://github.com/Raketa02/Raketa/issues/776)), through the one HTTP chokepoint.
+ * **The Rankings routes this build reads** ([#775](https://github.com/Rakieta02/Rakieta/issues/775),
+ * [#776](https://github.com/Rakieta02/Rakieta/issues/776)), through the one HTTP chokepoint.
  *
  * | Function | Route |
  * | --- | --- |
  * | `getRanking` | `GET /rankings/{sport}?view=GENERAL\|FRIENDS` — the reader's card, the podium, and General's first page of 50 or the whole of Friends |
  * | `getGeneralPage` | `GET /rankings/{sport}/general/rows?after=\|before=\|around_me=true` — a page of General: below a cursor, above one, or with the reader in the middle |
- * | `getTopTen` | `GET /top-10?sport=\|prefer=` — Home's Top 10 ([#805](https://github.com/Raketa02/Raketa/issues/805)): General's first ten in a sport named exactly, or in a preferred one the server falls through from |
+ * | `getTopTen` | `GET /top-10?sport=\|prefer=` — Home's Top 10 ([#805](https://github.com/Rakieta02/Rakieta/issues/805)): General's first ten in a sport named exactly, or in a preferred one the server falls through from |
  */
 
 import type { components } from '@/generated/schema';

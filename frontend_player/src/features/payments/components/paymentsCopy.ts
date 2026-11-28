@@ -1,6 +1,6 @@
 /**
  * **Every sentence You › Payments says** — the row, the four steps, the method card, and the terms
- * ([#552](https://github.com/Raketa02/Raketa/issues/552); the screens A7, A7.3; mocks 40–47).
+ * ([#552](https://github.com/Rakieta02/Rakieta/issues/552); the screens A7, A7.3; mocks 40–47).
  *
  * ## The terms are evidence, not copy
  *

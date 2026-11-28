@@ -1,5 +1,5 @@
 /**
- * **Home's Hottest groups, read** ([#800](https://github.com/Raketa02/Raketa/issues/800); the Home
+ * **Home's Hottest groups, read** ([#800](https://github.com/Rakieta02/Rakieta/issues/800); the Home
  * rows mechanics §3, §13).
  *
  * | | |
@@ -82,7 +82,7 @@ export interface HottestGroupsList {
 type HottestPages = InfiniteData<HottestPage, string | undefined>;
 
 /**
- * ***Groups heating up*, page by page** ([#823](https://github.com/Raketa02/Raketa/issues/823);
+ * ***Groups heating up*, page by page** ([#823](https://github.com/Rakieta02/Rakieta/issues/823);
  * ADR-0205 §7) — `GET /hottest-groups/all`, 20 to a page, the next read as the list nears its end, as
  * the people See all screens read theirs. **It lists people too** — the faces are the reader's friends
  * first, and the sheet counts them — so it declares `LISTS_PEOPLE`, and a friend write reads every page

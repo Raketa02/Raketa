@@ -56,11 +56,11 @@ import { ShellScreen } from './ShellScreen';
 import { HOME_COPY } from './shellCopy';
 
 /**
- * **Home — the landing, after onboarding** ([#367](https://github.com/Raketa02/Raketa/issues/367)).
- * It was **Now** until [#550](https://github.com/Raketa02/Raketa/issues/550) renamed the tab whole
+ * **Home — the landing, after onboarding** ([#367](https://github.com/Rakieta02/Rakieta/issues/367)).
+ * It was **Now** until [#550](https://github.com/Rakieta02/Rakieta/issues/550) renamed the tab whole
  * — key, label, copy and this component — with the route staying `/`.
  *
- * **Booked games only** ([#576](https://github.com/Raketa02/Raketa/issues/576)): the player's
+ * **Booked games only** ([#576](https://github.com/Rakieta02/Rakieta/issues/576)): the player's
  * booked games and the ones waiting for a club, on `features/proposals`' rail. The tab keeps the
  * shape it has always had — it owns its own words and nothing that is drawn under them — so the
  * empty sentences are handed down and the heading over the rail is the rail's.
@@ -69,14 +69,14 @@ import { HOME_COPY } from './shellCopy';
  * it names the act, which is true whether or not a game is on screen.
  *
  * **A member of a group rated in nothing is asked for a level first** (`groups`' `HomeLevelCard`,
- * [#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §7): *Get your level — your
+ * [#731](https://github.com/Rakieta02/Rakieta/issues/731), ADR-0200 §7): *Get your level — your
  * groups can't deal you games until you have one.*, at the top, since until she has one nothing
  * under it can happen. It draws nothing for anybody else.
  *
  * **What waits on the reader is behind the envelope** (ADR-0205 §1): **Needs your answer**, the sheet
  * the header's envelope opens (`NeedsYourAnswer`) — TO CONFIRM and FRIENDS GAME, `proposals`'
- * ([#817](https://github.com/Raketa02/Raketa/issues/817)), then FRIEND REQUESTS and ASKED FOR A
- * LEVEL, `friends`' ([#816](https://github.com/Raketa02/Raketa/issues/816)). They were Home's rows
+ * ([#817](https://github.com/Rakieta02/Rakieta/issues/817)), then FRIEND REQUESTS and ASKED FOR A
+ * LEVEL, `friends`' ([#816](https://github.com/Rakieta02/Rakieta/issues/816)). They were Home's rows
  * above Your games from #555, #759, #753 and #765, and the ask no longer stands in place of *Get your
  * level*, which is drawn whether or not someone asked. **The bar's Home badge still counts every
  * payment to confirm** (`needing_you`): the tab still pulls the player in when money waits, and the
@@ -84,11 +84,11 @@ import { HOME_COPY } from './shellCopy';
  *
  * **The header reads envelope, bell, trophy** (ADR-0205 §2; home refactor 1): the envelope only while
  * something waits for an answer; `notifications`' bell; and `rankings`' `RankingTrophy`
- * ([#775](https://github.com/Raketa02/Raketa/issues/775)), the reader's General place and the way to
+ * ([#775](https://github.com/Rakieta02/Rakieta/issues/775)), the reader's General place and the way to
  * Rankings, in the far-right corner. The slot is right-aligned, so without the envelope the bell and
  * the trophy stand where they were.
  *
- * **FOR YOU stands below *Your games*** ([#820](https://github.com/Raketa02/Raketa/issues/820);
+ * **FOR YOU stands below *Your games*** ([#820](https://github.com/Rakieta02/Rakieta/issues/820);
  * ADR-0205 §5; home refactor 3–13): the five rows ADR-0204 put there, folded into five quiet lines —
  * **Groups heating up** (`groups`'), **Players at your level**, **New in Rakieta** and **Players with
  * your vibe** (`discovery`'s), and **Top 10** (`rankings`') — each feature handing its title, what it
@@ -98,7 +98,7 @@ import { HOME_COPY } from './shellCopy';
  * games* reads *Join a group to get games — see Groups heating up, just below.* where *Play finds you
  * one.* stood (§31.1). **Every line reads when Home opens**, open or not, so a closed line still
  * knows whether to show; the pull re-reads them all with Home's own. With all five hidden, FOR YOU is
- * hidden too. **Four lines carry a count** ([#822](https://github.com/Raketa02/Raketa/issues/822),
+ * hidden too. **Four lines carry a count** ([#822](https://github.com/Rakieta02/Rakieta/issues/822),
  * ADR-0205 §6) — how many there are to explore, on each line's own read — which the shell hands the
  * line as it hands the title; Top 10 has none.
  *
@@ -107,7 +107,7 @@ import { HOME_COPY } from './shellCopy';
  * reaches those; the shell hands them nothing for that. **A pick on Top 10's pill re-reads that line
  * alone**; the pull re-reads it with the rest (`rereadTopTen`).
  *
- * **It shimmers until it is built, then reveals together** ([#871](https://github.com/Raketa02/Raketa/issues/871);
+ * **It shimmers until it is built, then reveals together** ([#871](https://github.com/Rakieta02/Rakieta/issues/871);
  * PRD #867; the loading shimmer log §6): **two parts, top-down** (`useHomeParts`) — *your things*
  * (the header's numbers, the level card and *Your games*) and FOR YOU whole. While a part's reads are
  * out its skeleton stands in its place — *Your games*' heading and one card (`proposals`'

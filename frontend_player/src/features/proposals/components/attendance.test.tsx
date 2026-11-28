@@ -1,6 +1,6 @@
 /**
  * **Who's here — caught at the court, one tap while you wait and one when they walk in**
- * ([#658](https://github.com/Raketa02/Raketa/issues/658); ADR-0195 §3; the backend's #657), walked
+ * ([#658](https://github.com/Rakieta02/Rakieta/issues/658); ADR-0195 §3; the backend's #657), walked
  * the way a player walks it: the real route tree and shell, only `fetch` and the phone's position
  * faked.
  *

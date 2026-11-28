@@ -1,6 +1,6 @@
 /**
  * `theme.size.stage.textMaxScale`, held against the words it caps
- * ([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783 story 37).
+ * ([#784](https://github.com/Rakieta02/Rakieta/issues/784), PRD #783 story 37).
  *
  * The hero is a picture with a fixed room — four tenths of the window, under the status bar, with
  * the deck (#786) taking whatever its words leave — so its words may neither be frozen (Part 13

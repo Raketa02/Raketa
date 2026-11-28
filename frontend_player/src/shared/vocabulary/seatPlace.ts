@@ -12,8 +12,8 @@
  * It began in `features/play/domain/lineup.ts`, because Play's builder was the only court a
  * listener placed seats on. The group page's Friends court says the same places in the same
  * words, and it may not import `features/play/` — the loop
- * [#569](https://github.com/Raketa02/Raketa/issues/569) removes — so the vocabulary and its rule
- * came below both ([#574](https://github.com/Raketa02/Raketa/issues/574)). **What stayed behind is
+ * [#569](https://github.com/Rakieta02/Rakieta/issues/569) removes — so the vocabulary and its rule
+ * came below both ([#574](https://github.com/Rakieta02/Rakieta/issues/574)). **What stayed behind is
  * everything the builder does with a place**: which half it is on for the forecast, which seat may
  * be vacated, and what a tap means.
  */

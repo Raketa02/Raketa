@@ -1,7 +1,7 @@
 /**
  * ***Invite a friend*** **into an empty seat** — `friends`' page as a picker with one seat, pushed
  * over a booked friends game's details, so *back* is the game
- * ([#760](https://github.com/Raketa02/Raketa/issues/760); the friends screens §9).
+ * ([#760](https://github.com/Rakieta02/Rakieta/issues/760); the friends screens §9).
  *
  * **Composed here because it is three features'**: the game and the order are `proposals'`
  * (`SeatInvite`, `InviteOrder`), the page and the picker `friends'` (`FriendsPage`,

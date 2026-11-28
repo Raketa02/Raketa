@@ -2,7 +2,7 @@
  * The tab bar, per design-system 10.2 — **the dock**: a rounded slab floating over the screen's
  * foot, **Home · Play · You** in three equal columns, and the selection marker under the lit one
  * ([ADR-0210](../../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md),
- * [#883](https://github.com/Raketa02/Raketa/issues/883)).
+ * [#883](https://github.com/Rakieta02/Rakieta/issues/883)).
  *
  * **The drawn object only.** It takes the active tab and a press handler and knows nothing
  * about routes, stacks or which screen is mounted; the shell that wires it is a separate
@@ -59,7 +59,7 @@
  *
  * **When the lit tab changes, the marker slides to it** on `motion.tabMarker`'s 460 ms spring,
  * stretching like a bubble as it speeds up and recoiling as it brakes, and the new tab colours in
- * after it sets off (ADR-0210 §8, [#884](https://github.com/Raketa02/Raketa/issues/884)). The
+ * after it sets off (ADR-0210 §8, [#884](https://github.com/Rakieta02/Rakieta/issues/884)). The
  * numbers are `tabMarkerMotion.ts`'s, pure; here they run on the UI thread off **one clock** that
  * Reanimated moves from 0 to 460, so the travel, the stretch and the colour-in can never drift apart.
  * Per frame only `transform` and `opacity` move.
@@ -92,9 +92,9 @@
  * ## One badge, on Home, and on no other column
  *
  * **The badge inventory is fixed at one, for the reason the glyph inventory is fixed at three**
- * ([#326](https://github.com/Raketa02/Raketa/issues/326)). It counts the booked games that need
+ * ([#326](https://github.com/Rakieta02/Rakieta/issues/326)). It counts the booked games that need
  * you — a seat open, a result to enter or confirm, a no-show against you, a payment to confirm
- * ([#550](https://github.com/Raketa02/Raketa/issues/550), [#556](https://github.com/Raketa02/Raketa/issues/556))
+ * ([#550](https://github.com/Rakieta02/Rakieta/issues/550), [#556](https://github.com/Rakieta02/Rakieta/issues/556))
  * — which is what makes it an obligation a player can discharge rather than a number that nags.
  * It is a `coralInk` fill, *a thing to attend to*, kept apart from the marker's `coralSoft`,
  * *where you are*, by fill.
@@ -170,7 +170,7 @@ export interface TabBarTab<Key extends string = TabBarKey> {
 
 /**
  * The three, in order. **The first is Home**, today's Now renamed whole — key, label and screen,
- * the route staying `/` ([#550](https://github.com/Raketa02/Raketa/issues/550)): your games from
+ * the route staying `/` ([#550](https://github.com/Rakieta02/Rakieta/issues/550)): your games from
  * the moment they are booked. **Play's bolt is `flash` in both states** (ADR-0210 §5): the brand's
  * mark for a game being dealt, not a pictogram with an outline.
  *
@@ -228,7 +228,7 @@ export interface TabBarProps {
  *
  * **The words live here rather than in `the-words.md`**: that file is the deck for codes the
  * backend sends and the app writes words for, and these are chrome copy over a count the client
- * is handed ([#326](https://github.com/Raketa02/Raketa/issues/326) §9). They sit beside
+ * is handed ([#326](https://github.com/Rakieta02/Rakieta/issues/326) §9). They sit beside
  * `TAB_BAR_TABS`, which already owns the label they follow — and the counted phrase goes through
  * `counted()` like every other in the app, because a market with real plural rules has to have
  * one function to change rather than every sentence that counts something.
@@ -253,7 +253,7 @@ export function TabBar({ active, onPress, gamesNeedingYou }: TabBarProps) {
 
 /**
  * **The administrator area's bar** — two columns, **Groups · You**, the same dock with the same
- * marker (club mock 17; [#516](https://github.com/Raketa02/Raketa/issues/516); ADR-0210 §3, Q16).
+ * marker (club mock 17; [#516](https://github.com/Rakieta02/Rakieta/issues/516); ADR-0210 §3, Q16).
  *
  * **A second fixed inventory, not a caller's list.** ADR-0135's argument stands whole: a bar that
  * took its tabs from a caller could grow a fourth without argument. The administrator's side of the

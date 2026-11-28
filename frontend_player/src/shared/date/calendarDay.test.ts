@@ -1,6 +1,6 @@
 /**
  * The date beside the weekday, read off the string — the first date this app draws
- * ([#413](https://github.com/Raketa02/Raketa/issues/413)).
+ * ([#413](https://github.com/Rakieta02/Rakieta/issues/413)).
  */
 
 import { dayDate } from './calendarDay';

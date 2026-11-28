@@ -1,6 +1,6 @@
 /**
  * **One cell of the posting grid** — a day's range, drawn in one of nine looks
- * ([#558](https://github.com/Raketa02/Raketa/issues/558); the screens A5.2; mocks 23–32).
+ * ([#558](https://github.com/Rakieta02/Rakieta/issues/558); the screens A5.2; mocks 23–32).
  *
  * ```
  * dead            paper2, no number                         nobody who fits is free

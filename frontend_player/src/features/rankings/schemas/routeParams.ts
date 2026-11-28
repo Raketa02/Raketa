@@ -1,5 +1,5 @@
 /**
- * **The Rankings route's params** ([#775](https://github.com/Raketa02/Raketa/issues/775)) — the sport
+ * **The Rankings route's params** ([#775](https://github.com/Rakieta02/Rakieta/issues/775)) — the sport
  * the page opens on: the trophy's, or the one a pass returns to. A route param is untrusted input
  * (`docs/architecture.md`), so it is checked here before anything reads it, and **anything that is
  * not one sport this build knows is no sport** — the page then opens as the trophy with none would.

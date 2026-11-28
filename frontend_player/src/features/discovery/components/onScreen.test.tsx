@@ -1,7 +1,7 @@
 /**
  * **Rows stay alive — the cards that came on screen, reported** — walked through the real route tree
- * with the fake clock ([#804](https://github.com/Raketa02/Raketa/issues/804), PRD #789;
- * [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204, ADR-0205 §5; the Home rows
+ * with the fake clock ([#804](https://github.com/Rakieta02/Rakieta/issues/804), PRD #789;
+ * [#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0204, ADR-0205 §5; the Home rows
  * mechanics §9.2; the backend's #796).
  *
  * The phone tells the server which cards of *Same competitive level* and *Same vibe* came at least

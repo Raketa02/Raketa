@@ -1,7 +1,7 @@
 /**
  * **The friends codes, spelled here** — held equal to the generated ones in
  * `mappers/wireVocabulary.ts`, so a code the contract adds or renames fails `pnpm typecheck` in the
- * one file whose job is saying so ([#753](https://github.com/Raketa02/Raketa/issues/753); ADR-0202
+ * one file whose job is saying so ([#753](https://github.com/Rakieta02/Rakieta/issues/753); ADR-0202
  * §1–§2).
  *
  * The wire's own spellings, kept, as `groups`' relation to a group keeps its own: every surface that

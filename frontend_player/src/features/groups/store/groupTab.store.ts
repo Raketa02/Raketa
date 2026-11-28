@@ -1,6 +1,6 @@
 /**
  * **Which tab a group's page is on** — held for as long as the page is up, and dropped with it
- * ([#558](https://github.com/Raketa02/Raketa/issues/558)).
+ * ([#558](https://github.com/Rakieta02/Rakieta/issues/558)).
  *
  * It was the page's own state, and one screen pushed over the page has to read it and move it:
  * ***Post a game*** reads the tab the page stands on as it opens — its **origin**, which a back-out

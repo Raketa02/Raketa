@@ -1,7 +1,7 @@
 /**
  * **The game card's ground, computed** — the colours the theme fences as a group's Games card's
  * alone, and every ratio their comments state
- * ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A2.3,
+ * ([#553](https://github.com/Rakieta02/Rakieta/issues/553), the screens A2.3,
  * [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking) 2026-09-30).
  *
  * `yesGround.test.ts`'s shape: 2.5's table has no row for this ground, so this is the row, and the

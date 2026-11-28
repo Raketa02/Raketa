@@ -1,6 +1,6 @@
 /**
  * **The Undo toast** — 9.2's toast with a draining ring and one action: *Booking in 10 s · Undo*
- * ([#555](https://github.com/Raketa02/Raketa/issues/555); the Games & Fill in screens A2.4, A10;
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555); the Games & Fill in screens A2.4, A10;
  * the mechanics §6.5).
  *
  * ```

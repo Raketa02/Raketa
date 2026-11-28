@@ -3,7 +3,7 @@
  *
  * **A button, since the tab was built.** It was `AccountScreen`, the authenticated placeholder
  * a player landed on past the entry gate; the five-tab shell
- * ([#261](https://github.com/Raketa02/Raketa/issues/261)) made it a panel on the You tab —
+ * ([#261](https://github.com/Rakieta02/Rakieta/issues/261)) made it a panel on the You tab —
  * the name, the handle, the email and the button — because the tab was a placeholder and the
  * panel was how you told *which* player the gate let through. The tab is built now
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)

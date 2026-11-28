@@ -9,7 +9,7 @@
  * The Social tag row's own three words are asserted here too, and the assertion is the split
  * between the two registers: the chip carries a glyph and a per-tag marker, and the clause a
  * listener gets carries neither — that half is the drawing surface's and stays with it
- * ([#311](https://github.com/Raketa02/Raketa/issues/311)).
+ * ([#311](https://github.com/Rakieta02/Rakieta/issues/311)).
  */
 
 import {

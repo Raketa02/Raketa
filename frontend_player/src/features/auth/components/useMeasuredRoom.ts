@@ -1,7 +1,7 @@
 /**
  * **The hero's room, measured** — the picture's view takes `onLayout`, and the deck (#786) and the
- * podium (#788) draw nothing until it has answered ([#786](https://github.com/Raketa02/Raketa/issues/786),
- * [#788](https://github.com/Raketa02/Raketa/issues/788); design system 12.2). A short phone, a tall
+ * podium (#788) draw nothing until it has answered ([#786](https://github.com/Rakieta02/Rakieta/issues/786),
+ * [#788](https://github.com/Rakieta02/Rakieta/issues/788); design system 12.2). A short phone, a tall
  * one, and a headline at the text cap's three lines each leave a different room, which is why nothing
  * computes one; a frame drawn at the wrong size before the answer would be a jump.
  */

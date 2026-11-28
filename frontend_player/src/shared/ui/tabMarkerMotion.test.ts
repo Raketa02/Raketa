@@ -1,6 +1,6 @@
 /**
  * **The selection marker's motion, as numbers** (10.2, ADR-0210 §8,
- * [#884](https://github.com/Raketa02/Raketa/issues/884)): the spring that carries it, the stretch
+ * [#884](https://github.com/Rakieta02/Rakieta/issues/884)): the spring that carries it, the stretch
  * its motion gives it, a retarget mid-flight, and the colour-in's share of its beat. Pure, so the
  * brief's figures are asserted as figures: jest draws no frame a person could look at.
  */

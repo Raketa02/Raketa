@@ -1,6 +1,6 @@
 /**
  * **Who's here, at a booked game's court** — what the attendance block offers a reader and says
- * about each player ([#658](https://github.com/Raketa02/Raketa/issues/658); ADR-0195 §3; the
+ * about each player ([#658](https://github.com/Rakieta02/Rakieta/issues/658); ADR-0195 §3; the
  * backend's #657).
  *
  * Only a real absence starts anything. In the **first half hour** a player at the club taps *Oscar

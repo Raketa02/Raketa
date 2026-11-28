@@ -1,5 +1,5 @@
 /**
- * **The ranking's codes, spelled by this feature** ([#775](https://github.com/Raketa02/Raketa/issues/775);
+ * **The ranking's codes, spelled by this feature** ([#775](https://github.com/Rakieta02/Rakieta/issues/775);
  * [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md)). Copy is keyed
  * by them, so each is spelled here and held equal to the contract's in `mappers/wireVocabulary.ts`:
  * a code added on the wire fails `pnpm typecheck` there, and again wherever no words exist for it.

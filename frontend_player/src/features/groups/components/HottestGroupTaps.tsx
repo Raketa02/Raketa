@@ -1,6 +1,6 @@
 /**
  * **What a Groups heating up card's taps do** — on Home's line and on the Groups heating up page alike
- * ([#800](https://github.com/Raketa02/Raketa/issues/800), [#823](https://github.com/Raketa02/Raketa/issues/823);
+ * ([#800](https://github.com/Rakieta02/Rakieta/issues/800), [#823](https://github.com/Rakieta02/Rakieta/issues/823);
  * ADR-0205 §7: *a tile opens the same group sheet, and the chips behave as on Home*).
  *
  * | | |

@@ -2,9 +2,9 @@
 
 The client side of the backend's **Friends** context: a player asks a group-mate to be friends from
 Members or from their record, answers a request on Home, and sees who is a friend on every face.
-Built by [#753](https://github.com/Raketa02/Raketa/issues/753) for PRD
-[#743](https://github.com/Raketa02/Raketa/issues/743), on the contract
-[#745](https://github.com/Raketa02/Raketa/issues/745) built, and decided by
+Built by [#753](https://github.com/Rakieta02/Rakieta/issues/753) for PRD
+[#743](https://github.com/Rakieta02/Rakieta/issues/743), on the contract
+[#745](https://github.com/Rakieta02/Rakieta/issues/745) built, and decided by
 [ADR-0202](../../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
 §1–§2. The screens are [the friends spec set](../../../docs/specs/friends/the-screens.md) §1, §2 and
 §6.2; every sentence is [the words §29.1–§29.2](../../../docs/specs/matchmaking/the-words.md#29-friends).
@@ -91,8 +91,8 @@ card and the rail of two; the _friend_ tag across a Fill in square's foot.
 
 ## You › Friends, the Add friends sheet, and PLAYED WITH (#754)
 
-**The Friends page is a frame, and its mode is its body.** [#754](https://github.com/Raketa02/Raketa/issues/754)
-builds the page from You; [#757](https://github.com/Raketa02/Raketa/issues/757) opens the same page
+**The Friends page is a frame, and its mode is its body.** [#754](https://github.com/Rakieta02/Rakieta/issues/754)
+builds the page from You; [#757](https://github.com/Rakieta02/Rakieta/issues/757) opens the same page
 from a group's Friends tab as a picker (the screens §4). What the two share is the header — back,
 _Friends_, **+ Add friends** top right, the black pill friends 3 draws — and the **Add friends** sheet
 it opens, so `FriendsPage` is that frame and takes its body (`children`) and its foot (`action`).
@@ -177,7 +177,7 @@ nickname beside _request sent_.
 ## The link card, and opening somebody's link (#756)
 
 **_Not on Rakieta yet?_ is the Add friends sheet's second card**
-([#756](https://github.com/Raketa02/Raketa/issues/756); the screens §5; friends 4; the words §29.3):
+([#756](https://github.com/Rakieta02/Rakieta/issues/756); the screens §5; friends 4; the words §29.3):
 your link in a recessed field, without its scheme (`linkShown`, _rakieta.app/f/tk4m9q2z_), on one
 line in mono and cut in the middle so the code stays in view — Info's link card's drawing — with
 **Copy** (coral, the card's one action) beside it and a small **New link** under it. The question is
@@ -217,7 +217,7 @@ domain cut in the middle; the confirmation sheet over the Add friends sheet on A
 ## The picker (#757)
 
 **The page's second body: every friend, a circle each, and Done at the foot.**
-[#757](https://github.com/Raketa02/Raketa/issues/757) opens `FriendsPage` from a group's Friends tab
+[#757](https://github.com/Rakieta02/Rakieta/issues/757) opens `FriendsPage` from a group's Friends tab
 with `FriendsPicker` as its body (the screens §4.2; friends 3, 6). `groups` composes it, as the shell
 composes the page from You: the group tiles and Members as the sheet's doors, the picks, and
 **Done** pinned in the frame's `action`. No tabs.
@@ -244,7 +244,7 @@ were.
 
 **Not seen on a device**: the round box beside a long nickname; the greyed rows (friends 6).
 
-**With one seat, over a booked game** ([#760](https://github.com/Raketa02/Raketa/issues/760)):
+**With one seat, over a booked game** ([#760](https://github.com/Rakieta02/Rakieta/issues/760)):
 _Invite a friend_ on a friends game's empty seat opens the same page and picker with `seats` 1, so a
 pick greys the rest; the shell composes it around `proposals`' game and order. **`leaveOut` drops the
 friends already on the game** before the list is drawn or found empty — the server would refuse each
@@ -253,7 +253,7 @@ friends already on the game** before the list is drawn or found empty — the se
 ## Asking a friend to get a Level (#758)
 
 **A greyed no-Level row asks: _Ask zofia.b to get a padel level_, and _Asked_ once asked.**
-[#758](https://github.com/Raketa02/Raketa/issues/758) (the screens §4.2; the words §29.3; the
+[#758](https://github.com/Rakieta02/Rakieta/issues/758) (the screens §4.2; the words §29.3; the
 mechanics §5) draws the ask under a picker row whose friend has no Level in the sport — the
 `secondary` button at `sm` in the friend pills' pill (design-system Part 16, 2026-11-07) — or the
 _Asked_ tag where the read's `level_asked_in` names the sport: **once per sport, ever**. `levelAskOf`
@@ -287,7 +287,7 @@ the tag beside it.
 ## A friend's ask for a level, on Home (#765)
 
 **Home: ASKED FOR A LEVEL · n after FRIEND REQUESTS and before Your games, only while an ask waits.**
-[#765](https://github.com/Raketa02/Raketa/issues/765) (PRD #762; the screens §6.4; the mechanics
+[#765](https://github.com/Rakieta02/Rakieta/issues/765) (PRD #762; the screens §6.4; the mechanics
 §5.1; the words §29.5; Q129) draws the asks the push alone left nowhere to find: **one card per
 sport**, the sport with the newest ask first, on `GET /home`'s `level_asks`, which `proposals` reads
 and maps (`useHomeLevelAsks`) and this feature draws and answers (`LevelAsksRow`). _n_ is the number
@@ -341,7 +341,7 @@ _Starting…_ as the coral button's busy word (onboarding's); the overlapping fa
 ## Strangers from the ranking (#779)
 
 **_Add friend_ on a record opened from Rankings sends the request from the ranking.**
-[#779](https://github.com/Raketa02/Raketa/issues/779) (PRD #766; the rankings screens §6–§7; the
+[#779](https://github.com/Rakieta02/Rakieta/issues/779) (PRD #766; the rankings screens §6–§7; the
 mechanics §12–§13; the words §30.8). **`AskedWhere` is a union now**: `RANKING` carries the page's
 sport, required, and no group — the server refuses one without its sport, and the type says so
 before it can. `recordAskedWhere` is the rule every record's request goes through: the ranking, with
@@ -382,7 +382,7 @@ rather than across both buttons, as §6 of the screens writes it — every frien
 the new `unblock_them_first` and `player_not_in_your_groups` sentences. **Not seen on a device**: the limit sentence wrapping in the left
 half at the narrowest width; _Block_ alone across the foot; the ranking line on Home's card.
 
-**No daily limit, and asking somebody no longer askable says nothing** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+**No daily limit, and asking somebody no longer askable says nothing** ([#799](https://github.com/Rakieta02/Rakieta/issues/799),
 [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 §2; the words §31.13). Anybody may be asked, as many as you like, so `daily_request_limit` and its
 sentence are gone from `FRIENDS_COPY.refused`, and with them #779's call about where the sentence
@@ -396,7 +396,7 @@ relation alone (`NONE` and not your own record): a record that opens is somebody
 paragraphs above on the limit sentence and on `player_not_in_your_groups` describe #779 and are
 superseded; so is that paragraph's _listed on General and not hidden_.
 
-**The round friend button, and its worded twin** ([#801](https://github.com/Raketa02/Raketa/issues/801);
+**The round friend button, and its worded twin** ([#801](https://github.com/Rakieta02/Rakieta/issues/801);
 the Home rows mechanics §11, screens §8; Q29; design-system 7.32). `RoundFriendButton` is on every
 card of Home's people rows — **+** white, **…** amber, **✓** `mintInk`, the envelope volt with a halo,
 each a drawn mark named for whom (`roundLabel`, §31.9's calls) — and `variant="worded"` draws it on a
@@ -435,7 +435,7 @@ module imports no feature). `FriendRequestsRow`'s `whereFound` names the sport; 
 sport this build cannot name draws the chip alone, as the ranking's did. A fifth origin (#803's Same
 vibe) is one arm in each and a `switch` that fails to compile without its words.
 
-**A request found through the tags** ([#803](https://github.com/Raketa02/Raketa/issues/803); the words
+**A request found through the tags** ([#803](https://github.com/Rakieta02/Rakieta/issues/803); the words
 §31.10) — that fifth origin. `AskedFrom` gained `SAME_VIBE` and `FoundIn` the arm `{ from: 'SAME_VIBE'
 }`, naming **neither a group nor a sport** (`toAskRequest` sends neither, as New in Rakieta's): the
 tile's round button, the vibe sheet's worded one and the record the sheet's face opens all send it.
@@ -455,7 +455,7 @@ its surface is a people list. The request card's three exclusive booleans this p
 
 ## FRIEND REQUESTS and ASKED FOR A LEVEL move into Needs your answer (#816)
 
-**Both rows left Home for the sheet the header's envelope opens** ([#816](https://github.com/Raketa02/Raketa/issues/816),
+**Both rows left Home for the sheet the header's envelope opens** ([#816](https://github.com/Rakieta02/Rakieta/issues/816),
 PRD #810; [ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
 §1; home refactor 2). They are `FriendRequestsSection` and `LevelAsksSection` now, renamed from
 `…Row`, and the shell's `NeedsYourAnswer` holds them, FRIEND REQUESTS first, each drawing nothing
@@ -490,7 +490,7 @@ rail of two.
 
 ## A friend request names every sport the sender plays (#818)
 
-**The tile reads what the sender plays, under who asks** ([#818](https://github.com/Raketa02/Raketa/issues/818),
+**The tile reads what the sender plays, under who asks** ([#818](https://github.com/Rakieta02/Rakieta/issues/818),
 PRD #810; ADR-0205 §1, §10; Q28): _ines.d wants to be your friend_, then _● Padel 3,40 · ● Tennis
 2,90_, then the chip. It is #814's `levels` on each of Home's `friend_requests`, which `proposals`
 maps onto `HomeFriendRequest.levels` — every sport the sender holds a published Level in, **in the

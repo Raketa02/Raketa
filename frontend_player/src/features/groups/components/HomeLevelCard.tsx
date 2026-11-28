@@ -1,7 +1,7 @@
 /**
  * **Home's *Get your level*** — the door where play begins, on Home, for a member of a group who
  * holds no rating ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §7, [#731](https://github.com/Raketa02/Raketa/issues/731)): *Get your level — your groups can't
+ * §7, [#731](https://github.com/Rakieta02/Rakieta/issues/731)): *Get your level — your groups can't
  * deal you games until you have one.*
  *
  * A player who joins a group and never opens it would otherwise never learn why nothing happens:

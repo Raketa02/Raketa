@@ -1,7 +1,7 @@
 /**
  * **The tinted pale tile** — a light card washed from its top-left in the colour of the player's
  * court poster, the colour that never changes for them
- * ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows screens §6.2, §11; home rows
+ * ([#803](https://github.com/Rakieta02/Rakieta/issues/803); the Home rows screens §6.2, §11; home rows
  * 20, 22–22.3, 24; design-system 7.35). Same vibe draws it on Home's row and in See all's two columns.
  *
  * ```

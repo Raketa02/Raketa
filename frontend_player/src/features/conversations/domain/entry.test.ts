@@ -6,7 +6,7 @@
  *
  * **The two conversions that are about a zone are tested in `shared/date/platformZone.test.ts`**,
  * which is where they moved when the plan's day row became their third caller
- * ([#366](https://github.com/Raketa02/Raketa/issues/366)). What is asserted here is the rule they
+ * ([#366](https://github.com/Rakieta02/Rakieta/issues/366)). What is asserted here is the rule they
  * are read by — a separator wherever the platform day changes, and nowhere else.
  */
 

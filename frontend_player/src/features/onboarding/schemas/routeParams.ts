@@ -41,7 +41,7 @@ export type AssessmentRouteParams = z.infer<typeof assessmentRouteParams>;
 /**
  * **The sports the picker offers, when a door narrows them** — *+ Another sport*'s
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §4,
- * [#731](https://github.com/Raketa02/Raketa/issues/731)): the sports the player is unrated in, an
+ * [#731](https://github.com/Rakieta02/Rakieta/issues/731)): the sports the player is unrated in, an
  * official group's own or any. One param, the sports joined by commas, so a route that carries it
  * is a plain string however expo-router serialises a list.
  *

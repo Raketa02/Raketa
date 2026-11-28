@@ -1,10 +1,10 @@
 /**
  * **The thirteen friends routes this app sends**, and the only place their paths are written down
- * ([#753](https://github.com/Raketa02/Raketa/issues/753), [#754](https://github.com/Raketa02/Raketa/issues/754),
- * [#756](https://github.com/Raketa02/Raketa/issues/756), [#758](https://github.com/Raketa02/Raketa/issues/758),
- * [#765](https://github.com/Raketa02/Raketa/issues/765), on the contract [#745](https://github.com/Raketa02/Raketa/issues/745),
- * [#748](https://github.com/Raketa02/Raketa/issues/748), [#749](https://github.com/Raketa02/Raketa/issues/749)
- * and [#764](https://github.com/Raketa02/Raketa/issues/764) built; ADR-0202 §1, §4).
+ * ([#753](https://github.com/Rakieta02/Rakieta/issues/753), [#754](https://github.com/Rakieta02/Rakieta/issues/754),
+ * [#756](https://github.com/Rakieta02/Rakieta/issues/756), [#758](https://github.com/Rakieta02/Rakieta/issues/758),
+ * [#765](https://github.com/Rakieta02/Rakieta/issues/765), on the contract [#745](https://github.com/Rakieta02/Rakieta/issues/745),
+ * [#748](https://github.com/Rakieta02/Rakieta/issues/748), [#749](https://github.com/Rakieta02/Rakieta/issues/749)
+ * and [#764](https://github.com/Rakieta02/Rakieta/issues/764) built; ADR-0202 §1, §4).
  *
  * One of the two layers allowed to read generated types.
  *

@@ -1,6 +1,6 @@
 /**
  * **The squares under a Fill in row** — the posters of the people on the game, then a dashed square
- * per open seat ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A3; mocks 12, 13).
+ * per open seat ([#557](https://github.com/Rakieta02/Rakieta/issues/557); the screens A3; mocks 12, 13).
  *
  * The group page's own seat (`SeatFace` at `groupPage.seat`, the faces its starting cards draw): a
  * photograph or the poster behind it, ringed as seated; an open seat the dashed empty ring — with a

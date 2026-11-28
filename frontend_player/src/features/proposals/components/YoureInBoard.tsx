@@ -1,7 +1,7 @@
 /**
  * **A group's You’re in tab** — the reader's own live yeses in this group and sport, on games still
- * filling ([#557](https://github.com/Raketa02/Raketa/issues/557), a tab of its own since
- * [#847](https://github.com/Raketa02/Raketa/issues/847); the screens A3, A3.2; split mock 2;
+ * filling ([#557](https://github.com/Rakieta02/Rakieta/issues/557), a tab of its own since
+ * [#847](https://github.com/Rakieta02/Rakieta/issues/847); the screens A3, A3.2; split mock 2;
  * mock 13; the mechanics §10.2).
  *
  * ```
@@ -15,7 +15,7 @@
  * **Its read is its own**: the live yeses (`yesesIn`) — picks, challenges and posts, never a rescue,
  * which goes straight to Home — in the list's order, soonest first, each row reading its own game's
  * details for the squares. **While nothing is drawn yet, its rows shimmer** (`BoardSkeleton`,
- * [#875](https://github.com/Raketa02/Raketa/issues/875)) — the group page reveals the tab from that
+ * [#875](https://github.com/Rakieta02/Rakieta/issues/875)) — the group page reveals the tab from that
  * skeleton once its reads have finished (`youreInRead`), and while one retries the rows stand here; a
  * read held offline says it resumes, and one refused says why with the retry. None of it touches Fill in. The
  * read starts as the page opens, for the tab's badge (`useYoureInBadge`), so the tab usually opens

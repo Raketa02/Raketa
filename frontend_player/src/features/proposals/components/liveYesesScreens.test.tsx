@@ -1,6 +1,6 @@
 /**
  * **You › Payments' LIVE YESES, walked** — the real route tree, with only `fetch` faked
- * ([#554](https://github.com/Raketa02/Raketa/issues/554); the screens A7.3; mock 48).
+ * ([#554](https://github.com/Rakieta02/Rakieta/issues/554); the screens A7.3; mock 48).
  *
  * The list is `GET /players/me/live-yeses` as #539 serves it; a row opens the deck's own details
  * screen for the group, sport and kind the yes was said in, drawn from the game's own read (`GET

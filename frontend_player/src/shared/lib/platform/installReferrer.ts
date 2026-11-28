@@ -1,6 +1,6 @@
 /**
  * The install referrer, behind a port. **The only module that imports `expo-application`**
- * ([#756](https://github.com/Raketa02/Raketa/issues/756), the friends mechanics §4.3).
+ * ([#756](https://github.com/Rakieta02/Rakieta/issues/756), the friends mechanics §4.3).
  *
  * Somebody without the app opens a friend link or a group link, lands on the public site's page, and
  * installs from its Google Play button — which carries the page's own link as the **install

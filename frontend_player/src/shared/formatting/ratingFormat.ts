@@ -36,7 +36,7 @@ const DISTANCE_DECIMALS = 1;
  *
  * Nothing printed a negative level until the forecast card's **gap**, which is `your_side −
  * their_side` and signed by construction
- * ([#290](https://github.com/Raketa02/Raketa/issues/290)) — so this is inert on every other
+ * ([#290](https://github.com/Rakieta02/Rakieta/issues/290)) — so this is inert on every other
  * caller by construction: a Level is 1,00–5,00 and a range is two of them.
  */
 const MINUS = '\u2212';
@@ -63,7 +63,7 @@ export function formatLevel(value: number): string {
  *
  * The plus is the whole of what this adds, and it is not decoration: the competitive card's
  * stake boxes print two figures whose signs are the fact
- * ([#312](https://github.com/Raketa02/Raketa/issues/312)), and a bare `0,08` beside a
+ * ([#312](https://github.com/Rakieta02/Rakieta/issues/312)), and a bare `0,08` beside a
  * `−0,05` reads as a magnitude somebody forgot to sign rather than as a gain. The minus is
  * `decimal`'s own U+2212, so the pair lines up in a tabular column.
  *

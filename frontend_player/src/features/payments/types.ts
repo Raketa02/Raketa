@@ -1,6 +1,6 @@
 /**
  * **The payments feature's only public surface** — You › Account › Payments: the row on the You
- * tab and the screen behind it ([#552](https://github.com/Raketa02/Raketa/issues/552); the screens
+ * tab and the screen behind it ([#552](https://github.com/Rakieta02/Rakieta/issues/552); the screens
  * A7, A7.3).
  *
  * The shell composes the row into the tab's ACCOUNT group; the route file under `you/` mounts the

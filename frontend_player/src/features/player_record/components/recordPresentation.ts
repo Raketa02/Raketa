@@ -394,7 +394,7 @@ export function recordBlocksLabel(facts: RecordBlockFacts): string {
 
 /**
  * **The four counts' names** — `the-words.md` §27 as ADR-0195 §1 wrote them
- * ([#660](https://github.com/Raketa02/Raketa/issues/660)). They replaced the strands' names, and
+ * ([#660](https://github.com/Rakieta02/Rakieta/issues/660)). They replaced the strands' names, and
  * *Answers about results* is not among them: silence on a score costs nothing now, and no row
  * may say it is counted.
  */
@@ -537,7 +537,7 @@ const STAR_SCALE = 5;
  *
  * The subject used to be answered here with one word — *Good*, *Mixed* or *Poor*, a band too
  * coarse to subtract a rater from — and is answered with the figure since ADR-0179 §5
- * ([#473](https://github.com/Raketa02/Raketa/issues/473)); the band's words are gone from this
+ * ([#473](https://github.com/Rakieta02/Rakieta/issues/473)); the band's words are gone from this
  * deck rather than kept unreachable, so nothing can draw one.
  */
 export function opinionFigure(figure: Opinion): string {

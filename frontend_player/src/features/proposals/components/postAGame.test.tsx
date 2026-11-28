@@ -1,8 +1,8 @@
 /**
  * ***Post a game*, walked** — from a group's page, every control, each of the grid's nine looks, a
  * cell's sheet, the guards on the button, the way back to the tab it was opened from and the landing
- * on *You’re in* ([#558](https://github.com/Raketa02/Raketa/issues/558),
- * [#848](https://github.com/Raketa02/Raketa/issues/848); the screens A5; mocks 15–35; the
+ * on *You’re in* ([#558](https://github.com/Rakieta02/Rakieta/issues/558),
+ * [#848](https://github.com/Rakieta02/Rakieta/issues/848); the screens A5; mocks 15–35; the
  * mechanics §9; the backend's #546).
  *
  * The real route tree from Play › Groups, with `fetch`, the payment provider's phone half and the

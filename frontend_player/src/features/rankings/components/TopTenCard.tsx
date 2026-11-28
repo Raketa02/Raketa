@@ -1,5 +1,5 @@
 /**
- * **A Top 10 card** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home rows screens
+ * **A Top 10 card** ([#805](https://github.com/Rakieta02/Rakieta/issues/805); the Home rows screens
  * §7.2; the words §31.11; home rows 25–26.1; design-system 7.36) — the numeral, and the portrait
  * card standing over its right part.
  *

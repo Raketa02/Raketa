@@ -1,5 +1,5 @@
 /**
- * **When a read counts as finished** (PRD #867, [#871](https://github.com/Raketa02/Raketa/issues/871);
+ * **When a read counts as finished** (PRD #867, [#871](https://github.com/Rakieta02/Rakieta/issues/871);
  * the loading shimmer log §5, Q13) — the rule a screen built from several reads waits on before it
  * reveals: a read has finished once it has landed, been refused, paused for a connection, or failed
  * once and started retrying. Read off Query's own state.

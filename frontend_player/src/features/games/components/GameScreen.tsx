@@ -29,7 +29,7 @@
  * Two scores on the table used to cross with **neither** of them on the response, so the screen
  * stated the ending and offered nothing — *"the client could offer the act only by asking
  * somebody to agree with a score it cannot show them"*. Both travel now
- * ([#317](https://github.com/Raketa02/Raketa/issues/317)), so the reader's own is drawn quiet
+ * ([#317](https://github.com/Rakieta02/Rakieta/issues/317)), so the reader's own is drawn quiet
  * above the other side's and the agreement is offered under them, named for the score it agrees
  * with. There is no counter there: that side has had its one turn.
  *
@@ -45,7 +45,7 @@
  * `features/sportsmanship/`'s, composed here and drawn under everything above — the moment a
  * player has to think about how an evening went is the moment they are looking at what came of
  * it. It used to sit above the games list on Now
- * ([#386](https://github.com/Raketa02/Raketa/issues/386)); moving it here costs the one thing
+ * ([#386](https://github.com/Rakieta02/Rakieta/issues/386)); moving it here costs the one thing
  * that surfaced it, so a player who never re-opens a settled game never sees a card. That is a
  * fair trade only because ignoring one costs nothing and always did.
  *
@@ -70,7 +70,7 @@
  *
  * ## For fun asks nothing, and a score may still go in
  *
- * A friendly reads *Played* before its score and after it ([#656](https://github.com/Raketa02/Raketa/issues/656)):
+ * A friendly reads *Played* before its score and after it ([#656](https://github.com/Rakieta02/Rakieta/issues/656)):
  * nobody is asked to agree, so there is no *Is that right?*, no clock and nothing pinned once a
  * score is up. Until one is, the grid is the screen under that heading, as on the entry, because
  * the one way here is a door named *Add the score*.
@@ -78,7 +78,7 @@
  * ## The plan arms are a slot, and this screen knows nothing about what fills it
  *
  * `ResultScreen` became `GameScreen` because one screen shows a game **whatever state it is in**
- * ([#368](https://github.com/Raketa02/Raketa/issues/368),
+ * ([#368](https://github.com/Rakieta02/Rakieta/issues/368),
  * [`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §5): the plan
  * while it is being agreed, the score once it has been played. **Grown, not replaced** — a hand-off
  * in the middle of one standing's life would give a player two different screens for the same game
@@ -93,7 +93,7 @@
  * arrangement*.
  *
  * **One route mounts this component now** — a booked game's result, `/booking/[id]/result`,
- * on the score lead with the four slots empty ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+ * on the score lead with the four slots empty ([#576](https://github.com/Rakieta02/Rakieta/issues/576)).
  * It was mounted at `/games/[gameId]` and behind a room's *Details* too, filled by the old loop's
  * plan, until that loop was removed; the plan lead and the slots below are that loop's, kept until
  * a ticket of its own folds the screen to the one lead it has.
@@ -114,10 +114,10 @@
  *
  * ## The plan lead is three slots and two doors, and the screen still knows nothing
  *
- * [#410](https://github.com/Raketa02/Raketa/issues/410)'s design redraws the screen for the two
- * plan-lead rungs ([#414](https://github.com/Raketa02/Raketa/issues/414)): an eyebrow and **no
+ * [#410](https://github.com/Rakieta02/Rakieta/issues/410)'s design redraws the screen for the two
+ * plan-lead rungs ([#414](https://github.com/Rakieta02/Rakieta/issues/414)): an eyebrow and **no
  * title**, the Now card at the top with its doors left off, the court's pairing — the forecast
- * block and the players card, filled by [#415](https://github.com/Raketa02/Raketa/issues/415)
+ * block and the players card, filled by [#415](https://github.com/Rakieta02/Rakieta/issues/415)
  * with this feature's own `CourtPairing` — the chat's editable plan card, *We played* quiet
  * beneath it. So the one slot became **three** — `card`, `court`, `plan` — and every one of them
  * is a `ReactNode` this screen draws in order and cannot read, for the same reason the first was.
@@ -125,7 +125,7 @@
  * [ADR-0175](../../../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)
  * §4: the one act on the court itself this screen still draws — *Fill the seat*, a **challenge**
  * act reached from a game, composed onto this screen exactly as the plan is. It arrived as
- * `courtActs` with [#418](https://github.com/Raketa02/Raketa/issues/418), drawn last with *Leave
+ * `courtActs` with [#418](https://github.com/Rakieta02/Rakieta/issues/418), drawn last with *Leave
  * this game* and *Call it off*; both of those are gone — leaving is the Chats row's swipe alone,
  * and nobody calls a game off — and the fill moved to where the card that says *needs a player*
  * is. The eyebrow is `formatEyebrow`'s —
@@ -147,7 +147,7 @@
  *
  * ## A booked game's result says who's here, caught at the court
  *
- * [#658](https://github.com/Raketa02/Raketa/issues/658) (ADR-0195 §3): on a **booked** game a *Who's
+ * [#658](https://github.com/Rakieta02/Rakieta/issues/658) (ADR-0195 §3): on a **booked** game a *Who's
  * here* block (`WhosHere`) sits above the grid. In the first half hour it offers *Oscar isn't here
  * yet* about every other player and *Oscar is here* about anybody awaited — one press each, no
  * sheet, the phone's position read at the press — and after it says who came late and offers *Yes,
@@ -254,7 +254,7 @@ export interface GameScreenProps {
   readonly gameId: string;
   /**
    * **The card at the top of the plan lead** — the Now card without its doors, drawn by whoever
-   * composed this screen ([#414](https://github.com/Raketa02/Raketa/issues/414)). A slot, and
+   * composed this screen ([#414](https://github.com/Rakieta02/Rakieta/issues/414)). A slot, and
    * nothing about it is known here: it is `features/plans`' shell over a plan this feature may not
    * read. Drawn on the plan lead and nowhere else.
    */
@@ -262,7 +262,7 @@ export interface GameScreenProps {
   /**
    * **The court's pairing — the forecast and the players — under the card.** A slot, so the
    * layout's order is decided once, and it is this feature's own `CourtPairing` that fills it
-   * ([#415](https://github.com/Raketa02/Raketa/issues/415)) — composed by whoever composes the
+   * ([#415](https://github.com/Rakieta02/Rakieta/issues/415)) — composed by whoever composes the
    * screen rather than drawn here, because the faces on the players card come off the room join
    * that composition already holds for the card above, and this screen may not read that list.
    * Drawn on the plan lead and nowhere else, which is what keeps the read behind it off every
@@ -290,7 +290,7 @@ export interface GameScreenProps {
   readonly entryLead: EntryLead;
   /**
    * **The fill, directly under the card on the plan lead** — *Fill the seat*
-   * ([#419](https://github.com/Raketa02/Raketa/issues/419), placed by ADR-0175 §4). A slot,
+   * ([#419](https://github.com/Rakieta02/Rakieta/issues/419), placed by ADR-0175 §4). A slot,
    * because it is a **challenge** act reached from a game (ADR-0162): the seat that fills is the
    * challenge's, so the control and its words are that feature's, and whoever composes this
    * screen hands it in — exactly as the plan is handed in, and for the same reason. Whether it
@@ -306,7 +306,7 @@ export interface GameScreenProps {
    */
   readonly booked?: BookedFacts;
   /**
-   * **PLAYED WITH, between the score and the star card** ([#754](https://github.com/Raketa02/Raketa/issues/754);
+   * **PLAYED WITH, between the score and the star card** ([#754](https://github.com/Rakieta02/Rakieta/issues/754);
    * the friends screens §3). A slot, as the card and the plan are: the people and where the reader
    * stands with them are the booking's, and the rows are `friends`', so the composer hands it in and
    * this screen only says where it stands — under everything about the score, over *How were

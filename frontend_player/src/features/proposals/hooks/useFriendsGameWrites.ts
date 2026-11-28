@@ -1,6 +1,6 @@
 /**
- * **A friends game's writes** ([#759](https://github.com/Raketa02/Raketa/issues/759),
- * [#760](https://github.com/Raketa02/Raketa/issues/760)) — each
+ * **A friends game's writes** ([#759](https://github.com/Rakieta02/Rakieta/issues/759),
+ * [#760](https://github.com/Rakieta02/Rakieta/issues/760)) — each
  * a mutation the player waits on, made now or not at all (`networkMode: 'always'`): a send that
  * books a court, or an answer that holds money, landing minutes later would be the wrong game.
  * **None is retried** — the app's rule for a write that moves money.

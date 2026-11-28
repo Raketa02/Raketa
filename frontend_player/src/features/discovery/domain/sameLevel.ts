@@ -1,7 +1,7 @@
 /**
  * **A Same competitive level player** — somebody whose level in a sport the reader also plays is
  * closest, so a competitive game between them would be even
- * ([#802](https://github.com/Raketa02/Raketa/issues/802); ADR-0204 §4; the Home rows mechanics §6;
+ * ([#802](https://github.com/Rakieta02/Rakieta/issues/802); ADR-0204 §4; the Home rows mechanics §6;
  * the backend's #794 `SameLevelPlayerSchema`).
  *
  * The rules are the server's — who is on the row, the % even (the app's Forecast with one player a

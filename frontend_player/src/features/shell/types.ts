@@ -9,7 +9,7 @@
  *
  * `ShellScreen` is exported because a tab's screen wears 10.1's arrangement, and the chrome it
  * wears is the shell's rather than something a feature draws again a little differently
- * ([#268](https://github.com/Raketa02/Raketa/issues/268)).
+ * ([#268](https://github.com/Rakieta02/Rakieta/issues/268)).
  *
  * **Three of the layers are empty, and stay present.** The shell reads nothing from the backend
  * and writes nothing to it, so `api/`, `mappers/` and `schemas/` have nothing to hold — and the
@@ -25,8 +25,8 @@ export { ShellScreen, type ShellScreenProps } from './components/ShellScreen';
 /**
  * The tabs' own sentences, read outside this feature by the test harness — which asserts *the
  * player is in the app* and needs to know what that looks like now that the landing is the Home
- * tab ([#367](https://github.com/Raketa02/Raketa/issues/367), renamed from Now by
- * [#550](https://github.com/Raketa02/Raketa/issues/550)) — and by each tab's own suite, which
+ * tab ([#367](https://github.com/Rakieta02/Rakieta/issues/367), renamed from Now by
+ * [#550](https://github.com/Rakieta02/Rakieta/issues/550)) — and by each tab's own suite, which
  * asserts the tab's sentences rather than string literals, because the wording is this file's to
  * change and the rules the sentences carry are not.
  */
@@ -39,8 +39,8 @@ export { NEEDS_YOUR_ANSWER_COPY } from './components/shellCopy';
 
 /**
  * **Play** — the groups under a *Groups* title, or, with the `explore` feature flag on, the
- * *Groups | Explore* segment and the page under it ([#512](https://github.com/Raketa02/Raketa/issues/512),
- * [#826](https://github.com/Raketa02/Raketa/issues/826)).
+ * *Groups | Explore* segment and the page under it ([#512](https://github.com/Rakieta02/Rakieta/issues/512),
+ * [#826](https://github.com/Rakieta02/Rakieta/issues/826)).
  */
 export { PlayScreen } from './components/PlayScreen';
 

@@ -1,7 +1,7 @@
 /**
  * **How much a For-fun table shares, in a word** — the Social vibe's four bands
  * ([ADR-0207](../../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
- * §8, [#838](https://github.com/Raketa02/Raketa/issues/838)).
+ * §8, [#838](https://github.com/Rakieta02/Rakieta/issues/838)).
  *
  * The words are written in [`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §33.
  *

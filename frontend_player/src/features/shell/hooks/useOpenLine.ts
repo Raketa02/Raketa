@@ -1,5 +1,5 @@
 /**
- * **Which of FOR YOU's lines is open, kept while Home lives** ([#820](https://github.com/Raketa02/Raketa/issues/820);
+ * **Which of FOR YOU's lines is open, kept while Home lives** ([#820](https://github.com/Rakieta02/Rakieta/issues/820);
  * ADR-0205 §5; Q10, Q38).
  *
  * The rules are `forYou`'s; this keeps the answer and runs the one clock they ask for: **once a fold

@@ -46,7 +46,7 @@ nothing on that screen was ever waiting on the commit to be true. Entered with n
 running, it has nothing of its own to show and says so.
 
 **The entry gate reads the name before anything else, and the naming step is the first screen
-after sign-up** ([#451](https://github.com/Raketa02/Raketa/issues/451),
+after sign-up** ([#451](https://github.com/Rakieta02/Rakieta/issues/451),
 [ADR-0171](../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
 §3). The gate has five destinations now — _no name → the naming step_ · resume · welcome · the
 social steps · the app — and the new one goes **first**, because every destination after it says
@@ -63,7 +63,7 @@ lesson that a shape the gate does not route is a loop. The step itself is `featu
 `SOCIAL_STEPS_ENTRY`; it claims the hardware back like every first step does, and after the
 naming it hands the next destination back to this gate rather than naming welcome itself.
 
-**`Verdict` is the result card, extracted** ([#469](https://github.com/Raketa02/Raketa/issues/469),
+**`Verdict` is the result card, extracted** ([#469](https://github.com/Rakieta02/Rakieta/issues/469),
 [ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
 §2). The dark card the result screen draws — _Your level_, the figure, the likely range, the
 confidence ring, the on-dark level bar with its legend, _Band_ and _Rating status_ as rows, and
@@ -82,7 +82,7 @@ the result screen (`BandCard`): it is the run's, and the passport draws the ladd
 status chip.
 
 **A pass has an origin, and a pass may begin at the Skill passport**
-([#470](https://github.com/Raketa02/Raketa/issues/470),
+([#470](https://github.com/Rakieta02/Rakieta/issues/470),
 [ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
 §3). The glossary's _there is no re-take from inside the app_ narrowed to _a pass has an origin_:
 `begin` takes it — `welcome` for the picker's queue and for a run the gate resumes with no picker
@@ -108,7 +108,7 @@ any resumed run does — ADR-0179 names that as a consequence. The frame between
 the first tab and its effect laying the stack down was seen on a device in the end, as a blink on
 a group pass's way back, and no longer exists — see the landing paragraph at the end.
 
-**The gate reads the account's profiles first** ([#516](https://github.com/Raketa02/Raketa/issues/516),
+**The gate reads the account's profiles first** ([#516](https://github.com/Rakieta02/Rakieta/issues/516),
 ADR-0185 §3). `entryDestination` has a sixth destination, **the administrator area**, ahead of the
 naming: an account that does not act as a player and administers a club goes to that club's area
 (`administratorArea`, the first club the server lists) and is never sent into onboarding — it has not
@@ -120,7 +120,7 @@ last-used profile is #518's. The redirect is `(app)/_layout`'s, to the route the
 feature names (`administratorHome`).
 
 **No profile at all goes to _Start playing_, and named in full is a name and a nickname**
-([#517](https://github.com/Raketa02/Raketa/issues/517), ADR-0185 §3–§4). The gate's first read is
+([#517](https://github.com/Rakieta02/Rakieta/issues/517), ADR-0185 §3–§4). The gate's first read is
 `profileDestination` now: the administrator area for an account that only administers, and **a
 seventh destination, `start-playing`**, for one that holds no profile at all — an administrator-only
 account its club removed — which the layout redirects to `auth`'s `START_PLAYING_STEP`, the Adult
@@ -131,7 +131,7 @@ nickname: once it attests, it acts as a player and the naming is still owed — 
 nickname ([`auth.md`](auth.md)). For every account sign-up creates this is the same destination as
 before, since it holds neither until the naming.
 
-**Named is holding a nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728),
+**Named is holding a nickname** ([#728](https://github.com/Rakieta02/Rakieta/issues/728),
 [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3, amending the two
 paragraphs above where they speak of a name). The gate's first player destination reads **no
 nickname**: `EntryInput.named`, from `auth`'s `named`, off `GET /users/me`'s `nickname` — the
@@ -140,7 +140,7 @@ name, and an account an Invitation opened holds none (§4), so _named in full_ a
 gone: such an account, once it attests, is sent to the naming like any account sign-up created,
 and the step tells it what the nickname is for ([`auth.md`](auth.md)). The order is unchanged.
 
-**An account with two profiles opens in the one it wore last** ([#518](https://github.com/Raketa02/Raketa/issues/518),
+**An account with two profiles opens in the one it wore last** ([#518](https://github.com/Rakieta02/Rakieta/issues/518),
 ADR-0185 §3, ADR-0188 §2). `profileDestination` takes **the profile the phone remembers** (`auth`'s
 `useLastProfile`) ahead of everything: an administrator profile the account still holds opens that
 club's area — ahead of the naming and of anything the player side still owes, because choosing that
@@ -154,11 +154,11 @@ _pending_ and unmounted the app it was drawing, the sheet with it, which the inv
 account that does not play never asks the player's reads, whichever club it opens on.
 
 **_What Rakieta keeps_ lost the radius and the suggestions consent**
-([#582](https://github.com/Raketa02/Raketa/issues/582)): setting up stopped asking either, so the
+([#582](https://github.com/Rakieta02/Rakieta/issues/582)): setting up stopped asking either, so the
 screen keeps no account of them. Why the gender answer did not take the radius's place on the
 card is in [`player_profile.md`](player_profile.md).
 
-**A pass begun on a group returns to it** ([#729](https://github.com/Raketa02/Raketa/issues/729),
+**A pass begun on a group returns to it** ([#729](https://github.com/Rakieta02/Rakieta/issues/729),
 [ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §3, §5, amending the
 passport paragraph above). The origin is a union now — `welcome`, `passport`, or `group` with the
 group's id and **the tab it began on** (`fromAGroup`), identifiers only, since the group's name is
@@ -193,7 +193,7 @@ group (`parseGroupPlace`), and a page route opens on Games (`parseGroupRoutePara
 device**: the frame between the gate mounting Home and the group's page pushed over Play.
 
 **Onboarding is a nickname and a profile, and a level is asked where play begins**
-([#730](https://github.com/Raketa02/Raketa/issues/730),
+([#730](https://github.com/Rakieta02/Rakieta/issues/730),
 [ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1–§6, amending every
 paragraph above that speaks of welcome, the summary, the data screen, _resume_ or a deferral).
 **The gate reads the player and nothing else**: profiles → _no nickname_ → the naming →
@@ -240,7 +240,7 @@ unfinished run back. **Not seen on a device**: the door's card, and the frame
 between the gate mounting Home and the group pushed back over Play.
 
 **Two more doors into the picker, and one narrows it**
-([#731](https://github.com/Raketa02/Raketa/issues/731),
+([#731](https://github.com/Rakieta02/Rakieta/issues/731),
 [ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §4, §5, §7). **The picker
 takes an offer**: `/sports?…&offer=tennis,squash`, read by `parsePickerOffer` (one param, the sports
 joined by commas, so the route is a plain string however expo-router serialises a list) and drawn
@@ -258,7 +258,7 @@ dash, as the door's is; the offer travels in the route rather than being read ag
 **Not seen on a device**: the card on Home.
 
 **The first _Your rating_ a phone shows an account runs a guide over the verdict**
-([#732](https://github.com/Raketa02/Raketa/issues/732),
+([#732](https://github.com/Rakieta02/Rakieta/issues/732),
 [ADR-0200](../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §8). The screen dims and
 `shared/ui`'s `Guide` (design-system 9.4) cuts out **the level** with its head, then **the likely
 range**, then **the confidence ring** — _1 of 3_ to _3 of 3_, _Next_ and _Skip_, _Got it_ last —
@@ -333,7 +333,7 @@ edge level with the ⓘ, and the count over _Skip_ / _Next_ because it is narrow
 range and the ring keep their bubbles under them. `verdictGuide.test` holds which step asks.
 Seen working on the user's iPhone the same day.
 
-**A notice is a third door into a pass of one sport** ([#758](https://github.com/Raketa02/Raketa/issues/758)):
+**A notice is a third door into a pass of one sport** ([#758](https://github.com/Rakieta02/Rakieta/issues/758)):
 _Level asked_ — a friend wants to play the sport with you — opens its questionnaire through
 `useAddASport(FROM_HOME)`, held by `notifications`' `useOpenNotice`. Home is the origin because a
 notice names no group to go back to, so every way out of the pass lands on Home, the pass's usual
@@ -359,7 +359,7 @@ connection is now at most five seconds of splash and then this screen. **Not see
 
 ## A friend's ask for a level on Home (#765)
 
-**A pass that rated a sport tells the gate which.** [#765](https://github.com/Raketa02/Raketa/issues/765)
+**A pass that rated a sport tells the gate which.** [#765](https://github.com/Rakieta02/Rakieta/issues/765)
 gives `useEndOnboardingPass` a third argument, `onRated`, called in the same layout effect that ends the
 pass — before the shell is drawn — with the sports the ended pass rated (`rated` on the pass, recorded
 by the result screen), whatever its origin. Every level is got inside a pass and every pass ends at
@@ -376,7 +376,7 @@ unfinished run back), so unlike the level door it draws its start at once.
 
 ## Rankings' Get your level (#775)
 
-**A pass has a fourth origin, Rankings** ([#775](https://github.com/Raketa02/Raketa/issues/775); the
+**A pass has a fourth origin, Rankings** ([#775](https://github.com/Rakieta02/Rakieta/issues/775); the
 rankings mechanics §9; ADR-0200 §5's _a pass ends where it began_). `PassOrigin` gained
 `{ kind: 'rankings', sport }` (`fromRankings`), begun by the page's _Get your {sport} level_ through
 `useAddASport` like the passport's chip — one sport, at its question route. `stopDestination` answers

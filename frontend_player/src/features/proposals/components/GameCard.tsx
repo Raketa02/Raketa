@@ -1,6 +1,6 @@
 /**
  * **A game card** — one proposal as the reader is dealt it: their own version of the game (the
- * screens A2.3; mocks 2–8, 10; [#553](https://github.com/Raketa02/Raketa/issues/553)).
+ * screens A2.3; mocks 2–8, 10; [#553](https://github.com/Rakieta02/Rakieta/issues/553)).
  *
  * ```
  * ┌───────────────────────────────────────────┐

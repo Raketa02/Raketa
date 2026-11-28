@@ -60,7 +60,7 @@ commit re-validates every rule a picker enforced, and re-sending the identical b
 fail identically.
 
 **The intro — one line, a visible Skip, and the fence said before it is met**
-([#445](https://github.com/Raketa02/Raketa/issues/445),
+([#445](https://github.com/Rakieta02/Rakieta/issues/445),
 [ADR-0170](../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)).
 `SOCIAL_STEPS` gained `intro` between `tags` and `photos` — _you've picked your tags; now say it
 in your own words_ — so the part is eight steps and the opt-in is still last. The step is one
@@ -109,7 +109,7 @@ whether the counter sits right under it, and whether the action bar rises cleanl
 keyboard, are the author's to check.
 
 **The location moves on a cold start — silently, after a day in the background, never on a
-plain foreground, and You says so** ([#462](https://github.com/Raketa02/Raketa/issues/462),
+plain foreground, and You says so** ([#462](https://github.com/Rakieta02/Rakieta/issues/462),
 [ADR-0174](../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §6).
 A location was written once, at the end of onboarding, and nothing moved it — a radar that
 draws people where onboarding left them draws a city as it was. `useLocationRefresh` is the
@@ -144,7 +144,7 @@ tracking. **Not seen on a device**: the read on a real cold start against the OS
 sentence's fit on the tab, are the author's to check.
 
 **The profile's declarations on the You tab — each row a step's control under the tab's chrome,
-and a draft until _Save_** ([#469](https://github.com/Raketa02/Raketa/issues/469),
+and a draft until _Save_** ([#469](https://github.com/Rakieta02/Rakieta/issues/469),
 [ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
 §2). **The refactor came first**: each step this ticket reuses separates _the control_ from _the
 onboarding around it_. `WeekGrid` is the availability grid drawn from a week — the step's own
@@ -187,7 +187,7 @@ shape would be a guess. **Not seen on a device**: the grid's footnote under a sa
 slider's _Saved_ after a re-snap, and the area screen's notes.
 
 **Photos, tags and intro edited from You — the three onboarding steps as they are, one piece of
-work** ([#471](https://github.com/Raketa02/Raketa/issues/471),
+work** ([#471](https://github.com/Rakieta02/Rakieta/issues/471),
 [ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
 §2, §6, §8 — the day [ADR-0170](../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
 §5 named, when no field is editable while the two beside it are frozen). **The contract came
@@ -250,7 +250,7 @@ Social vibe card). The live lines are `photosLine`,
 the write failure pinned under the row, and the intro's action bar over the keyboard.
 
 **Who you play with and Game suggestions — the gender step's two groups each under a _Save_,
-and the opt-in answered again from You** ([#472](https://github.com/Raketa02/Raketa/issues/472),
+and the opt-in answered again from You** ([#472](https://github.com/Rakieta02/Rakieta/issues/472),
 [ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
 §2, §4, §8). **The read came first**: `PlayerProfileSurface` grew `gender` (absent on a profile
 committed before the question existed — never `prefer-not-to-say`, which is an answer somebody
@@ -322,7 +322,7 @@ dimmed coral and `Saved` is whole mint, and the jump in opacity lands on the sam
 fade starts.
 
 **Your week is a week of hours: seven days across, sixteen hours down, a tap toggling one hour and
-a press and drag painting a run** ([#551](https://github.com/Raketa02/Raketa/issues/551),
+a press and drag painting a run** ([#551](https://github.com/Rakieta02/Rakieta/issues/551),
 [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5, the
 mechanics §4.2, the screens A6, mock 36). One grid serves the availability step and You's _Your
 week_ — `WeekGrid`, now `MON … SUN` across and `07:00 … 22:00` down, over design-system 6.8 as
@@ -347,8 +347,8 @@ that a drag down a column paints rather than scrolls the page on both platforms,
 under a thumb, and the tick at that size — the three things this change could not prove in Jest.
 
 **Setting up ends on _Who you play with_, and You loses _How far to look_ and _Game
-suggestions_** ([#582](https://github.com/Raketa02/Raketa/issues/582), PRD
-[#569](https://github.com/Raketa02/Raketa/issues/569)). The Search radius and the Proposals
+suggestions_** ([#582](https://github.com/Rakieta02/Rakieta/issues/582), PRD
+[#569](https://github.com/Rakieta02/Rakieta/issues/569)). The Search radius and the Proposals
 opt-in were read only by the old loop's ranking, and both left the server with it (#581), so a
 player who answered either changed nothing they would ever see. `SOCIAL_STEPS` is **six** —
 tags, intro, photos, availability, location, gender — and `/radius` and `/opt-in` are gone, with
@@ -374,14 +374,14 @@ record — _the consent step's copy is frozen and versioned_ — is gone with th
 **Left for a design-system ticket**: `RadiusSlider` (6.10) and `theme.size.radiusSlider` have no
 caller. **Not seen on a device**: the finish's notes stacked under the gender step's two groups.
 
-**_Finish_ lands on Home** ([#730](https://github.com/Raketa02/Raketa/issues/730), ADR-0200 §1).
+**_Finish_ lands on Home** ([#730](https://github.com/Rakieta02/Rakieta/issues/730), ADR-0200 §1).
 `ProfileFinish`'s `AFTER_THE_PART` is `/`: _What Rakieta keeps_ recorded nothing and went, and the
 commit marks the profile on the player read, so the gate lets her through to the app's root. The
 six steps are all of onboarding after the naming now — the questionnaire left it — so step one is
 entered straight from _How should people see you?_, and no rating is read on the way.
 
 **The intro takes 250 characters and says its rule only when it is broken**
-([#733](https://github.com/Raketa02/Raketa/issues/733), ADR-0200 §9). `INTRO_CAP` is 250, so the
+([#733](https://github.com/Rakieta02/Rakieta/issues/733), ADR-0200 §9). `INTRO_CAP` is 250, so the
 counter reads _n / 250_ and _Keep it under 250 characters._ is the length refusal — on the step
 and on You's _Intro_, which draw the same `IntroField`. **The paragraph of rules under the box is
 gone** (`INTRO_RULE`): it argued, above, that the contact refusal lands six screens later and so
@@ -395,7 +395,7 @@ read back whole, and one more is room for the overrun. **Not seen on a device**:
 the keyboard on a small phone.
 
 **_Where do you play?_ tells the truth, waits for an area, and answers a refusal with a club**
-([#733](https://github.com/Raketa02/Raketa/issues/733), ADR-0200 §10, Apple 5.1.1(iv)). The
+([#733](https://github.com/Rakieta02/Rakieta/issues/733), ADR-0200 §10, Apple 5.1.1(iv)). The
 note is ADR-0200 §10's sentence — _Rakieta shows how far each club is and lists the nearest first.
 Your area is rounded to about a kilometre and never shown to other players._ — and every line
 about nearby players or matching went: _Continue without matching_, the cost clause about
@@ -435,7 +435,7 @@ not move until the phone may be read. **Not seen on a device**: the picker on th
 keyboard, and the chosen card beside _Use my location_.
 
 **_What kind of game_ says what a change costs, counted across the groups**
-([#742](https://github.com/Raketa02/Raketa/issues/742),
+([#742](https://github.com/Rakieta02/Rakieta/issues/742),
 [ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
 §6, the You screen 3.3, the words §27's rows marked _(ADR-0201)_). Opening a **declared** sport's
 row reads `GET /players/me/deck-counts?sport=` (`useDeckCounts`; which sport is
@@ -463,7 +463,7 @@ device**: the line under each glossed answer, and the row's height with three an
 lines open.
 
 **_Show me in General_ — the one row on the tab that is a switch**
-([#778](https://github.com/Raketa02/Raketa/issues/778),
+([#778](https://github.com/Rakieta02/Rakieta/issues/778),
 [ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §7, the You screen
 3.14, the words §27's row marked _(ADR-0203)_). The last row of _On your card_, after _Nickname_:
 6.12's switch in a card of door rows — the door row's lead square (Feather `eye`), the title _Show me
@@ -485,7 +485,7 @@ page follows the value the profile holds (`useShownInGeneral`, a read that turns
 The wire types were already regenerated by #775. **Not seen on a device**: the row's lead and track
 under the door rows, and the note under it.
 
-**_Show me to new people_ replaces _Show me in General_** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+**_Show me to new people_ replaces _Show me in General_** ([#799](https://github.com/Rakieta02/Rakieta/issues/799),
 [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 §2; the Home rows screens §9.1; the words §31.12). The same row in the same place, now
 `ShowMeToNewPeopleRow`: the title _Show me to new people_ and the line _Players you don't share a group
@@ -502,7 +502,7 @@ describes #778 and is superseded by this one. `showMeToNewPeople.test.tsx` walks
 router harness. **Not seen on a device**: the longer line wrapping under the title at the narrowest
 width.
 
-**The picker offers 27 tags and takes up to 8** ([#837](https://github.com/Raketa02/Raketa/issues/837),
+**The picker offers 27 tags and takes up to 8** ([#837](https://github.com/Rakieta02/Rakieta/issues/837),
 [ADR-0207](../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
 §7; the words §27, §27.1). The backend appended eight tags, each at the end of its group, and moved
 the bounds from 2–6 to 2–8 (#829). **The picker needed no code for either**: it draws the groups and

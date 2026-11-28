@@ -1,6 +1,6 @@
 /**
  * **Two more ways to the same questions** — *+ Another sport* at the end of a group's sport chip,
- * and *Get your level* on Home ([#731](https://github.com/Raketa02/Raketa/issues/731),
+ * and *Get your level* on Home ([#731](https://github.com/Rakieta02/Rakieta/issues/731),
  * [ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §4, §5, §7),
  * driven through the real route tree with only `fetch` faked.
  *

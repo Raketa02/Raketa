@@ -9,7 +9,7 @@
  * one sport, and the pass ends back on the passport — and both are the pass's, not the chip's.
  * What crosses the feature's public surface is the act, never the store.
  *
- * **A notice is a third** ([#758](https://github.com/Raketa02/Raketa/issues/758)): *Level asked*
+ * **A notice is a third** ([#758](https://github.com/Rakieta02/Rakieta/issues/758)): *Level asked*
  * opens its sport's questionnaire from Home's origin — a pass begun with no group to return to — and,
  * having no chip to draw a failure beside, hands `rate` an `onError`.
  *

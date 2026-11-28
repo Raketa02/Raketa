@@ -1,6 +1,6 @@
 /**
  * **Where the skeleton's band stands** (design system 5.6; PRD #867,
- * [#870](https://github.com/Raketa02/Raketa/issues/870)) — `Skeleton`'s numbers, pure, so they are
+ * [#870](https://github.com/Rakieta02/Rakieta/issues/870)) — `Skeleton`'s numbers, pure, so they are
  * tested as numbers: Jest has no layout.
  *
  * **One band crosses every shape on a screen at once.** It is a stripe of light leaning

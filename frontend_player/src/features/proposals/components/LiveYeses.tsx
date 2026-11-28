@@ -1,6 +1,6 @@
 /**
  * **LIVE YESES · n** — You › Payments' section: every yes on a game still filling, across groups,
- * each with what it would charge ([#554](https://github.com/Raketa02/Raketa/issues/554); the
+ * each with what it would charge ([#554](https://github.com/Rakieta02/Rakieta/issues/554); the
  * screens A7.3; mock 48).
  *
  * ```

@@ -1,7 +1,7 @@
 /**
  * **Every fixed word the moment a game fills says** — the Undo toast, *It's a game!*, a payment
  * that did not go through and the confirmation that keeps the seat
- * ([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A2.4, A9; the mechanics
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555); the screens A2.4, A9; the mechanics
  * §6.5, §11, §12.2).
  *
  * Import-free but for types, as `proposalsCopy.ts` is: the shell mounts the fill for the whole

@@ -1,5 +1,5 @@
 /**
- * **Sign-in on the stage** ([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783) — the
+ * **Sign-in on the stage** ([#784](https://github.com/Rakieta02/Rakieta/issues/784), PRD #783) — the
  * dark hero, the paper sheet and the restyled form, held to what a person can read or hear.
  *
  * Only `fetch` is faked, as in `authFlow.test.tsx`: the screen, its schema, the mutation and the

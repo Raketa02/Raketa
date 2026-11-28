@@ -1,5 +1,5 @@
 /**
- * **The sheet's swipe down** (9.1 as amended by [#816](https://github.com/Raketa02/Raketa/issues/816)):
+ * **The sheet's swipe down** (9.1 as amended by [#816](https://github.com/Rakieta02/Rakieta/issues/816)):
  * three rules, and no React in any of them.
  *
  * Kept apart from `BottomSheet` for `swipeRowGeometry`'s reason: a rule about numbers can be tested

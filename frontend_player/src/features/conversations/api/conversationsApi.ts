@@ -6,7 +6,7 @@
  *
  * **Four of the five routes are here**, and the fifth is deliberately not: the live channel is
  * `text/event-stream` and belongs behind a platform port with the rest of the transports this app
- * does not write itself ([#365](https://github.com/Raketa02/Raketa/issues/365)). A route nothing
+ * does not write itself ([#365](https://github.com/Rakieta02/Rakieta/issues/365)). A route nothing
  * calls is a route nobody is checking, so each of the four arrives with the screen that uses it.
  *
  * ## `signal` on the three reads and none on the send

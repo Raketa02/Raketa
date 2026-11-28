@@ -1,5 +1,5 @@
 /**
- * **Who's here, at a booked game's court** ([#658](https://github.com/Raketa02/Raketa/issues/658);
+ * **Who's here, at a booked game's court** ([#658](https://github.com/Rakieta02/Rakieta/issues/658);
  * ADR-0195 §3; the backend's #657). In the first half hour a player at the club taps *isn't here
  * yet* about anybody else on the court, an awaited player says *I'm here*, and anybody says *they're
  * here* about somebody awaited. Afterwards a player who Didn't come may say *I was there* within a

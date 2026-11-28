@@ -1,6 +1,6 @@
 /**
  * **The splash's geometry, static part** — where the lockup stands on every phone
- * ([#855](https://github.com/Raketa02/Raketa/issues/855); decision log §4, Q6 and Q7;
+ * ([#855](https://github.com/Rakieta02/Rakieta/issues/855); decision log §4, Q6 and Q7;
  * [ADR-0209](../../../../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)).
  *
  * Pure: a screen and the wordmark's font constants in, positions out, no renderer. The constants

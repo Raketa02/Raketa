@@ -1,5 +1,5 @@
 /**
- * **The podium** (rankings 4, 6; the screens §5.1; [#775](https://github.com/Raketa02/Raketa/issues/775)):
+ * **The podium** (rankings 4, 6; the screens §5.1; [#775](https://github.com/Rakieta02/Rakieta/issues/775)):
  * the first three rows, on three steps — first in the middle on the tallest, volt;
  * second on the left, white; third on the right, white and slightly lower than second. Each shows the
  * face, the nickname and the level, and its step reads the **true** place — a player the reader

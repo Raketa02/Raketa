@@ -1,6 +1,6 @@
 /**
  * **The round friend button** — on every card of Home's people rows — **and its worded twin** on a
- * sheet ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows mechanics §11, screens
+ * sheet ([#801](https://github.com/Rakieta02/Rakieta/issues/801); the Home rows mechanics §11, screens
  * §8; Q29; design-system 7.32).
  *
  * | Relation | Round | Worded | A tap |

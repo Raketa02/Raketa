@@ -101,7 +101,7 @@ describe('the call to action', () => {
 
 describe('a screen with no title', () => {
   /**
-   * The game screen's plan lead is the first ([#414](https://github.com/Raketa02/Raketa/issues/414)):
+   * The game screen's plan lead is the first ([#414](https://github.com/Rakieta02/Rakieta/issues/414)):
    * an eyebrow, no h1. The header is still pinned and still a heading — the eyebrow is what it
    * says — and the page under it is untouched.
    */

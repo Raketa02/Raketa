@@ -1,7 +1,7 @@
 /**
  * **The game being built on a group's Friends tab, and its card** — the line-up's store, the
  * friends it seats and the card it is read for, in one place
- * ([#757](https://github.com/Raketa02/Raketa/issues/757); the friends mechanics §7.1–§7.5).
+ * ([#757](https://github.com/Rakieta02/Rakieta/issues/757); the friends mechanics §7.1–§7.5).
  *
  * The rules are `friendsLineUp`'s; this is where they meet the reads:
  *

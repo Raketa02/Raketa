@@ -1,6 +1,6 @@
 /**
  * **FRIEND REQUESTS · n** — Needs your answer's section of friend requests, after FRIENDS GAME and
- * before ASKED FOR A LEVEL ([#816](https://github.com/Raketa02/Raketa/issues/816), ADR-0205 §1;
+ * before ASKED FOR A LEVEL ([#816](https://github.com/Rakieta02/Rakieta/issues/816), ADR-0205 §1;
  * the friends screens §6.2; home refactor 2). It was Home's row, above Your games, from #753.
  *
  * ```

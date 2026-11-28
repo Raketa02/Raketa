@@ -1,5 +1,5 @@
 /**
- * **Reading a page of General** ([#776](https://github.com/Raketa02/Raketa/issues/776)) — which route
+ * **Reading a page of General** ([#776](https://github.com/Rakieta02/Rakieta/issues/776)) — which route
  * each page is read from, and what comes back: the list's own first page is the main read, with the
  * card and the podium; every other page is the rows route, its cursor handed back as it came. Driven
  * through the real HTTP layer with only the socket faked.

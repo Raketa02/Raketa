@@ -1,6 +1,6 @@
 /**
  * **Every fixed word *Post a game* says** — the controls, the grid, its legend, a cell's sheet and
- * the button ([#558](https://github.com/Raketa02/Raketa/issues/558); the screens A5; mocks 15–35).
+ * the button ([#558](https://github.com/Rakieta02/Rakieta/issues/558); the screens A5; mocks 15–35).
  * Copy is code; nothing is inlined in a component.
  *
  * Import-free but for types, so a screen can read it at module load; the sentences composed from a

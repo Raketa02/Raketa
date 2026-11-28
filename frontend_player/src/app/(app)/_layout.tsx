@@ -52,7 +52,7 @@
  * A link opened on the phone — a group link out of WhatsApp, an invitation's or a reset's button — is
  * **held** from the moment it arrives, through sign-in, sign-up and every destination above, and
  * answered here, where the account is in the player's app
- * ([#520](https://github.com/Raketa02/Raketa/issues/520)): Join a group with the link filled in, or a
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520)): Join a group with the link filled in, or a
  * sheet over the app. What each gets is the links feature's; this file only mounts the place.
  *
  * ## A pass ends where it began

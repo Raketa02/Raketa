@@ -24,7 +24,7 @@
  * above the box and no button beside it to read the box off. **It is never a way to leave a field
  * unnamed** — the name is required either way, and what this chooses is only whether it is drawn.
  *
- * **`errorOnLabelRow` moves the sentence, and nothing else** ([#784](https://github.com/Raketa02/Raketa/issues/784),
+ * **`errorOnLabelRow` moves the sentence, and nothing else** ([#784](https://github.com/Rakieta02/Rakieta/issues/784),
  * 6.13 as amended in Part 16). The stage — sign-in's form and sign-up's — draws a field's refusal
  * on its label's row, right-aligned, so the form under it does not shift down a line when a box is
  * refused. It is the same sentence, still announced, beside the same red border; a long one wraps
@@ -56,7 +56,7 @@
  *
  * **`disabled` is greyed, and it is the one thing 6.13 said not to build** — amended
  * ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-09-09,
- * [#365](https://github.com/Raketa02/Raketa/issues/365)). That section refused a disabled
+ * [#365](https://github.com/Rakieta02/Rakieta/issues/365)). That section refused a disabled
  * appearance because the case it had in mind was **busy**: `editable={false}` is how a form waits
  * for a submit, the button beside it already carries the busy word, and greying the boxes there
  * would say *refused* about something that is not. A held account **is** refused, so the sentence
@@ -134,7 +134,7 @@ export interface TextFieldProps extends Omit<
   readonly disabled?: boolean;
   /**
    * **A control inside the box, after the value** — Join a group's *Paste* chip and the **✕**
-   * that replaces it while typing (play 23, 26; [#512](https://github.com/Raketa02/Raketa/issues/512)).
+   * that replaces it while typing (play 23, 26; [#512](https://github.com/Rakieta02/Rakieta/issues/512)).
    * A slot rather than a second `reveal`: what goes in it is the screen's, and the field only
    * owns that it sits inside the border it belongs to. The caller names it — a slot is not a
    * way to put an unnamed control on screen.

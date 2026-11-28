@@ -16,7 +16,7 @@
  *
  * **Onboarding is a nickname and a profile**
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1,
- * [#730](https://github.com/Raketa02/Raketa/issues/730)). The questionnaire left it: a level is
+ * [#730](https://github.com/Rakieta02/Rakieta/issues/730)). The questionnaire left it: a level is
  * asked where play begins — a group's tabs, *Post a game* and Members — so **zero ratings and an
  * unfinished run route nowhere**, and neither is an input here. The gate used to answer *resume*
  * for a run left halfway and *welcome* for a player rated in nothing; the first took over every
@@ -42,12 +42,12 @@
  * Invitation opened holds no nickname (ADR-0199 §4), which for anybody who does play is the naming
  * still owed. The area opens on the first club it administers, in the
  * server's order; which one a person with two clubs opens on is the switcher's
- * ([#518](https://github.com/Raketa02/Raketa/issues/518)), as is the last-used profile of an account
+ * ([#518](https://github.com/Rakieta02/Rakieta/issues/518)), as is the last-used profile of an account
  * that holds both — which opens in Player until then, so it passes straight through to the player's
  * gate below.
  *
  * **An account that holds no profile at all is offered the player setup, from its first step**
- * (ADR-0185 §3, [#517](https://github.com/Raketa02/Raketa/issues/517)). The only way to be one is an
+ * (ADR-0185 §3, [#517](https://github.com/Rakieta02/Rakieta/issues/517)). The only way to be one is an
  * administrator-only account whose club removed it; the account stays, and signing in again must
  * never be a dead end. So it takes *Start playing*'s three steps from the gate instead of from the
  * administrator's You tab — and the first is the **Adult attestation**, which such an account has

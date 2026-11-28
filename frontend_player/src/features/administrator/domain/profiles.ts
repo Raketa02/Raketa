@@ -1,6 +1,6 @@
 /**
  * **The profiles one account can switch between** — what the switcher lists, and which of them is
- * worn ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories 134–135; ADR-0185
+ * worn ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 stories 134–135; ADR-0185
  * §1, §3).
  *
  * **Player first, then one administrator profile per club**, in the server's order — Player only

@@ -1,6 +1,6 @@
 /**
  * **Block and unblock** — the two writes, and what each re-reads
- * ([#587](https://github.com/Raketa02/Raketa/issues/587);
+ * ([#587](https://github.com/Rakieta02/Rakieta/issues/587);
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
  *
  * | Hook | Route | Re-reads |
@@ -10,7 +10,7 @@
  *
  * ## What a block moves, and so what it re-reads
  *
- * **Their record is not read again: it closes** ([#779](https://github.com/Raketa02/Raketa/issues/779),
+ * **Their record is not read again: it closes** ([#779](https://github.com/Rakieta02/Rakieta/issues/779),
  * ADR-0203 §8). A record never opens between two people either of whom blocked the other, so its
  * re-read would only be refused; the record sheet hands `BlockRow` its own close instead. And an
  * unblock is made on the list alone, where no record is open. **Blocked players**, which lists them

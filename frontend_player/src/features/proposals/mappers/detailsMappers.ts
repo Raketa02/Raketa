@@ -1,6 +1,6 @@
 /**
  * **A game still filling, off the wire** — `GET /proposals/{id}` (#542) read into the domain's
- * shape ([#557](https://github.com/Raketa02/Raketa/issues/557)). The deck mapper's narrowings for
+ * shape ([#557](https://github.com/Rakieta02/Rakieta/issues/557)). The deck mapper's narrowings for
  * the same fields — the tiles, the challenger and the grid are a card's — and a sport this build
  * cannot name, or a game cell outside the week, is nothing to draw. **The kind's card is the
  * details' own** since #833: a competitive game's figure with both side strengths and the signed

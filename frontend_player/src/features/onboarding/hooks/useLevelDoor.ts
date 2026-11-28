@@ -1,7 +1,7 @@
 /**
  * **The door where play begins, as a hook** — what it offers, and walking through it
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §2, §5,
- * [#730](https://github.com/Raketa02/Raketa/issues/730)).
+ * [#730](https://github.com/Rakieta02/Rakieta/issues/730)).
  *
  * What it offers is `levelDoor`'s rule, off two reads: the first unfinished run, and that run's
  * own step — the question she is on is its count, replayed from the transcript. **Nothing is

@@ -1,5 +1,5 @@
 /**
- * **What a level got changes on Home** ([#765](https://github.com/Raketa02/Raketa/issues/765); the
+ * **What a level got changes on Home** ([#765](https://github.com/Rakieta02/Rakieta/issues/765); the
  * friends mechanics §5.1) — its sport's ASKED FOR A LEVEL card dropped and Home read again
  * (`proposals`' `rereadHomeAfterALevel`), and the bell, whose *level asked* row went with the card
  * (`notifications`' `rereadNotices`).

@@ -31,7 +31,7 @@
  * `proposals` carries nought, one or two, and **the count is the state**: nothing on the table,
  * one score waiting on the other side, or the disagreement. The field it replaced was absent for
  * *nothing entered* and for *both sides have spoken* alike, which is two opposite things in one
- * spelling ([#317](https://github.com/Raketa02/Raketa/issues/317)) — so the standing had to tell
+ * spelling ([#317](https://github.com/Rakieta02/Rakieta/issues/317)) — so the standing had to tell
  * them apart, and now it only says the argument is still live at all.
  *
  * ## An agreement is not a state — it is the end

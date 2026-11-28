@@ -1,6 +1,6 @@
 /**
  * **The comparison bar** — two players' levels in one sport on the Skill passport's scale, per
- * design-system 7.33 ([#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows screens
+ * design-system 7.33 ([#802](https://github.com/Rakieta02/Rakieta/issues/802); the Home rows screens
  * §4.2–§4.3; home rows 7–16). A drawn object, like 7.5's level bar, and **reading that bar's scale and
  * bands, never new ones** (`levelScaleFraction`, `LEVEL_BANDS`, `theme.band`).
  *

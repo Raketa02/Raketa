@@ -1,6 +1,6 @@
 /**
  * **Edit group's one schema** — the New group form's Name and Who can join, checked, and what a
- * save sends ([#514](https://github.com/Raketa02/Raketa/issues/514), story 75).
+ * save sends ([#514](https://github.com/Rakieta02/Rakieta/issues/514), story 75).
  *
  * *Save* is pressable when this answers **and** the answer differs from the group
  * (`detailsUnchanged`). The name is New group's rule, shared rather than restated; the home club

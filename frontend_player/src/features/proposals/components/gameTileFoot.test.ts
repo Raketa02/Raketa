@@ -1,6 +1,6 @@
 /**
  * `theme.size.gameCard.footMaxScale`, the tile foot's text cap, and `tileNarrowest`, the floor it is
- * derived against — measured, not argued ([#865](https://github.com/Raketa02/Raketa/issues/865); the
+ * derived against — measured, not argued ([#865](https://github.com/Rakieta02/Rakieta/issues/865); the
  * tab menu log §6.4; design system 7.22).
  *
  * **A deck tile is a fixed box now** — one shape per court (#864) — so the design system's rule for

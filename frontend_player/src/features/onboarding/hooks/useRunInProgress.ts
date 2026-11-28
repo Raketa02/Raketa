@@ -3,7 +3,7 @@
  *
  * It was the entry gate's read, and the gate resumed what it answered. Nothing resumes a run on
  * launch any more ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §5, [#730](https://github.com/Raketa02/Raketa/issues/730)), so its one reader is the door where
+ * §5, [#730](https://github.com/Rakieta02/Rakieta/issues/730)), so its one reader is the door where
  * play begins, which offers the run as *Carry on*. Same key, same `queryFn`: a start marks it stale,
  * an answer that ends the run and a completion invalidate it, and an abandonment removes it.
  *

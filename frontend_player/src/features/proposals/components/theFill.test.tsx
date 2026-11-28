@@ -1,7 +1,7 @@
 /**
  * **The moment a yes fills a game, walked** — the ten seconds of *Undo* in front of a yes that
  * moves money, *It's a game!*, a first yes with nothing saved, and a refused share confirmed on the
- * same payment ([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A2.4; the
+ * same payment ([#555](https://github.com/Rakieta02/Rakieta/issues/555); the screens A2.4; the
  * mechanics §6.5, §11, §12.2).
  *
  * The real route tree, from a group's Games tab, with the socket, the haptic motor and the payment

@@ -1,7 +1,7 @@
 /**
  * **Every sentence the moment a game fills composes from a value** — the toast's count, *It's a
  * game!* as a listener hears it, and the facts of a payment to confirm
- * ([#555](https://github.com/Raketa02/Raketa/issues/555)). The fixed words are `fillCopy.ts`.
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555)). The fixed words are `fillCopy.ts`.
  *
  * **The announcement is built from whole nicknames**, the yes screen's own rule (ADR-0167 §3,
  * ADR-0199 §1–§2): the tiles draw initials over a poster, and those never reach a sentence.

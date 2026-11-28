@@ -161,7 +161,7 @@ export function useNamePlayer() {
  * area, and the awaited `fetchQuery` is the server staying the authority. The caller's own
  * `onSuccess` navigates on a cache that is already right.
  *
- * **Starting to play is choosing Player** ([#518](https://github.com/Raketa02/Raketa/issues/518)):
+ * **Starting to play is choosing Player** ([#518](https://github.com/Rakieta02/Rakieta/issues/518)):
  * the gate reads the profile the phone remembers first, and an account that wore a club's profile
  * last would be sent straight back to that club's area. So the choice is kept here, before the
  * re-read, and the gate goes on to the naming.
@@ -266,7 +266,7 @@ export function useSetInvitationPassword() {
 
 /**
  * **Accept a club's invitation** — the administrator profile added to this account, and the cache
- * effect it declares ([#518](https://github.com/Raketa02/Raketa/issues/518), ADR-0184 §2).
+ * effect it declares ([#518](https://github.com/Rakieta02/Rakieta/issues/518), ADR-0184 §2).
  *
  * **Not retried**, though accepting twice is the same answer: a failure is the person's to see and
  * press again, every mutation's rule here.

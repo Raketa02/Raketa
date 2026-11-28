@@ -49,7 +49,7 @@
  * domain rule and belongs to no feature. It began in `player_profile/components/`, because the
  * photos step was the only surface that had met a poster; `PlayerPhoto` is the second and the
  * **record sheet's header is the third**
- * ([#384](https://github.com/Raketa02/Raketa/issues/384)), and a component below every feature
+ * ([#384](https://github.com/Rakieta02/Rakieta/issues/384)), and a component below every feature
  * cannot reach a function inside one. The design system's own contract — *one player id, one
  * poster, forever* — is what makes this the design system's to keep, and it is why it moved
  * rather than being re-exported through a third feature's barrel.

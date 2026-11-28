@@ -1,5 +1,5 @@
 /**
- * **A level is asked where play begins** ([#730](https://github.com/Raketa02/Raketa/issues/730),
+ * **A level is asked where play begins** ([#730](https://github.com/Rakieta02/Rakieta/issues/730),
  * [ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §2–§6), driven
  * through the real route tree with only `fetch` faked.
  *

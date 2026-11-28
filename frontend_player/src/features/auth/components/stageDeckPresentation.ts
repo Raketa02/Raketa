@@ -1,6 +1,6 @@
 /**
  * **Sign-in's three miniature cards, composed from the copy**
- * ([#786](https://github.com/Raketa02/Raketa/issues/786); design system 12.2, mock 2) — the deck's
+ * ([#786](https://github.com/Rakieta02/Rakieta/issues/786); design system 12.2, mock 2) — the deck's
  * `deckPresentation`: every line a card draws is put together here from `stageHeroCopy`'s words,
  * names and figures, through the app's own formatters, and the card is handed plain props.
  *

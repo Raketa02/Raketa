@@ -1,7 +1,7 @@
 /**
  * **The fill, bound to one screen that says yes** — the deck and a game's details ask it the same
  * four things, for the deck the card was dealt in and the screen to leave once a yes books
- * ([#555](https://github.com/Raketa02/Raketa/issues/555)).
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555)).
  *
  * | | |
  * | --- | --- |

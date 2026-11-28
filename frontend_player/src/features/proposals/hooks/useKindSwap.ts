@@ -1,6 +1,6 @@
 /**
  * **The deck as the Games tab draws it, and a swap's clock** — the kind chosen, or while a pick's
- * stack goes out the kind it leaves ([#863](https://github.com/Raketa02/Raketa/issues/863); the
+ * stack goes out the kind it leaves ([#863](https://github.com/Rakieta02/Rakieta/issues/863); the
  * rules are `domain/kindSwap.ts`).
  *
  * **The kind chosen is read from the pick on**, whatever is drawn: the stack going out holds the

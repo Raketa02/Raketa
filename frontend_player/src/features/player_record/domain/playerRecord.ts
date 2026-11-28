@@ -1,7 +1,7 @@
 /**
  * **Everything the platform will say about one person, to this reader** — the record sheet's
  * own shape, mapped once at the wire boundary and read by nothing else
- * ([#384](https://github.com/Raketa02/Raketa/issues/384)).
+ * ([#384](https://github.com/Rakieta02/Rakieta/issues/384)).
  *
  * ## A record is live, and a card is recorded
  *
@@ -116,7 +116,7 @@ export interface ReliabilityCounts {
 /**
  * **The two bands a filter can ask for** — the switch's on positions, *at least Medium* and *at
  * least High* ([ADR-0195](../../../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
- * §6, [#662](https://github.com/Raketa02/Raketa/issues/662)). Two and not four: the route offers
+ * §6, [#662](https://github.com/Rakieta02/Rakieta/issues/662)). Two and not four: the route offers
  * exactly these, and the two are held equal to its request in `mappers/wireVocabulary.ts`.
  */
 export const RELIABILITY_MINIMUMS = ['MEDIUM', 'HIGH'] as const;
@@ -150,7 +150,7 @@ export interface BackWithEveryone {
 
 /**
  * **Player reliability** — the figure in points, its band, *New*, and the counts it is read
- * beside ([#660](https://github.com/Raketa02/Raketa/issues/660)).
+ * beside ([#660](https://github.com/Rakieta02/Rakieta/issues/660)).
  *
  * It replaced the pill and the metered strands it was the weighted mean of: there are no
  * weights, no ratios and no tone here, and nothing on this client blends, bands or thresholds
@@ -215,8 +215,8 @@ export interface OpponentVariety {
  * [ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
  * §5 weighed that against a player being told *Mixed* about themselves with no number to work
  * on, chose the number, and retired the band from the wire
- * ([#468](https://github.com/Raketa02/Raketa/issues/468)) and from this client
- * ([#473](https://github.com/Raketa02/Raketa/issues/473)). What holds the subtraction in check
+ * ([#468](https://github.com/Rakieta02/Rakieta/issues/468)) and from this client
+ * ([#473](https://github.com/Rakieta02/Rakieta/issues/473)). What holds the subtraction in check
  * is the record's own and not this shape's: the collapse to one answer per rater, the
  * fifty-rater window, no zero on the scale, and no individual rating on any route.
  *
@@ -320,7 +320,7 @@ export interface PlayerRecord {
   /**
    * **Every photo, in their own order** — the first is `photoUrl`'s
    * ([ADR-0204](../../../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
-   * §2, [#799](https://github.com/Raketa02/Raketa/issues/799)). Whoever the record opens for sees
+   * §2, [#799](https://github.com/Rakieta02/Rakieta/issues/799)). Whoever the record opens for sees
    * them all, a stranger included. Empty where they have none: the header's poster stands alone.
    */
   readonly photos: readonly RecordPhoto[];
@@ -362,7 +362,7 @@ export interface PlayerRecord {
    */
   readonly opinion?: Opinion;
   /**
-   * **Where the reader stands with them** ([#753](https://github.com/Raketa02/Raketa/issues/753),
+   * **Where the reader stands with them** ([#753](https://github.com/Rakieta02/Rakieta/issues/753),
    * ADR-0202 §1) — the left button of the record's foot, beside *Block*: *Add friend*, *Request
    * sent ▾*, *Accept* or *Friend ✓ ▾*. `NONE` on your own record, which draws neither.
    *
@@ -372,8 +372,8 @@ export interface PlayerRecord {
    */
   readonly relation: FriendRelation;
   /**
-   * **Whether to offer *Add friend*** ([#779](https://github.com/Raketa02/Raketa/issues/779);
-   * ADR-0204 §2, [#799](https://github.com/Raketa02/Raketa/issues/799)) — the server's answer:
+   * **Whether to offer *Add friend*** ([#779](https://github.com/Rakieta02/Rakieta/issues/779);
+   * ADR-0204 §2, [#799](https://github.com/Rakieta02/Rakieta/issues/799)) — the server's answer:
    * `relation` is `NONE` and this is not your own record. A request is admitted by the rule the record
    * opened by, so a record that opens is somebody the reader may ask, as many as they like — there is
    * no daily limit. Where it is `false` and nothing stands between them, *Block* stands alone

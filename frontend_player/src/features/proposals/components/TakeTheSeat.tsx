@@ -1,6 +1,6 @@
 /**
  * ***Pay 27 zł* on a rescue** — a booked game's open seat taken at once
- * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A3.1, A4.3; the mechanics
+ * ([#557](https://github.com/Rakieta02/Rakieta/issues/557); the screens A3.1, A4.3; the mechanics
  * §10.1), from a rescue's details and from a *Seats to fill* row: it moves money, so it says *Pay*
  * (Q124). **Its name says what the share does** (#645; Q113): *Pay 27 zł, held until the cut-off*
  * while the cut-off is ahead — held like every seat's, and free to leave until then — and *Pay 27

@@ -1,6 +1,6 @@
 /**
  * *Forgot password?* — **the email to send a link and a code to**
- * ([#515](https://github.com/Raketa02/Raketa/issues/515)).
+ * ([#515](https://github.com/Rakieta02/Rakieta/issues/515)).
  *
  * The sign-in screen's pieces asking one thing. Opened from under the Sign in button with what
  * was typed there already in the box, and from the code screen's *Ask again* the same way.

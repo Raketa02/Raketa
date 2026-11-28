@@ -1,8 +1,8 @@
 /**
  * **The *Block* a record ends with**, behind a confirm sheet
- * ([#587](https://github.com/Raketa02/Raketa/issues/587), PRD #571 stories 1–5 and 18;
+ * ([#587](https://github.com/Rakieta02/Rakieta/issues/587), PRD #571 stories 1–5 and 18;
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md);
- * [#779](https://github.com/Raketa02/Raketa/issues/779), ADR-0203 §8).
+ * [#779](https://github.com/Rakieta02/Rakieta/issues/779), ADR-0203 §8).
  *
  * `player_record`'s sheet draws it last, on every record but your own. **It is always *Block***: a
  * record never opens between two people either of whom blocked the other (#773), so there is no
@@ -35,7 +35,7 @@
  *
  * ## Beside the friend button, or alone
  *
- * Since [#753](https://github.com/Raketa02/Raketa/issues/753) the record's foot is **one row of two**:
+ * Since [#753](https://github.com/Rakieta02/Rakieta/issues/753) the record's foot is **one row of two**:
  * `friends`' button on the left and this one on the right, drawn *Block* — the name is spoken, the
  * drawing is the half-width button's word. **Where the record offers no friend button** — nothing
  * stands between them and no request may be sent (#779) — it stands alone, full width (`friends`'

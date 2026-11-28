@@ -1,6 +1,6 @@
 /**
  * **Groups heating up on Home** — FOR YOU's first line, walked through the real route tree
- * ([#800](https://github.com/Raketa02/Raketa/issues/800), PRD #789; [#820](https://github.com/Raketa02/Raketa/issues/820);
+ * ([#800](https://github.com/Rakieta02/Rakieta/issues/800), PRD #789; [#820](https://github.com/Rakieta02/Rakieta/issues/820);
  * ADR-0204 §3, ADR-0205 §5; the Home rows screens §3; the mechanics §5; the words §31.1–§31.4).
  *
  * - **The line**: first under FOR YOU, just below *Your games*, closed; open, its cards and *All

@@ -1,6 +1,6 @@
 /**
  * React's scheduler, on the clock the suite is on — for the test process only
- * ([#493](https://github.com/Raketa02/Raketa/issues/493)).
+ * ([#493](https://github.com/Rakieta02/Rakieta/issues/493)).
  *
  * ## What this fixes
  *

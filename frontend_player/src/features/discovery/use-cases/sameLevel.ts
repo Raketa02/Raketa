@@ -1,5 +1,5 @@
 /**
- * **Same competitive level's two reads** ([#802](https://github.com/Raketa02/Raketa/issues/802)) —
+ * **Same competitive level's two reads** ([#802](https://github.com/Rakieta02/Rakieta/issues/802)) —
  * pass-throughs, the template's uniform-strict escape hatch: who is on the row, in which sport, with
  * which % and in which order are the server's (the Home rows mechanics §6, §9), and nothing here
  * judges them again.

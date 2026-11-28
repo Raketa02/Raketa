@@ -12,7 +12,7 @@
  * moves the two forms always made through `Link`, and `onPress` for the ones that have to choose
  * a verb — back down the stack to sign-in, or a push that carries the email typed so far.
  *
- * **`quiet` is the stage's *Forgot password?*** ([#784](https://github.com/Raketa02/Raketa/issues/784)):
+ * **`quiet` is the stage's *Forgot password?*** ([#784](https://github.com/Rakieta02/Rakieta/issues/784)):
  * `muted` rather than `ink`, and at the end of its row rather than the middle — right-aligned under
  * the password box it is about, where the problem is. Still the same 44pt control.
  *

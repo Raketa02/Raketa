@@ -1,5 +1,5 @@
 /**
- * **Create an account on the stage** ([#785](https://github.com/Raketa02/Raketa/issues/785), PRD
+ * **Create an account on the stage** ([#785](https://github.com/Rakieta02/Rakieta/issues/785), PRD
  * #783) — sign-in's dark hero and paper sheet with sign-up's own form, restyled to mocks 4 and 6,
  * and the move between the two read as one flow.
  *

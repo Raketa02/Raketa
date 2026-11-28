@@ -9,7 +9,7 @@
  * ```
  *
  * **The header pins.** The UI specification proposed the opposite and lost twice over
- * ([#227](https://github.com/Raketa02/Raketa/issues/227)): its argument is a viewport budget
+ * ([#227](https://github.com/Rakieta02/Rakieta/issues/227)): its argument is a viewport budget
  * computed against a 392 x 788 phone with *no safe areas at all*, so the number gets worse on
  * a real device rather than better — and this app has one header behaviour, already built
  * this way by `SocialStepLayout` and `OnboardingChrome`. Play's screens are the longest in
@@ -19,7 +19,7 @@
  * **The bar is not here.** It is mounted once by `TabShell`, over the navigator, because a bar
  * rendered per screen is a bar that slides with the screen — and it floats over the screen's foot
  * and owns no layout (10.1, [ADR-0210](../../../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md)
- * §3, [#881](https://github.com/Raketa02/Raketa/issues/881)). So the screen draws to the bottom of
+ * §3, [#881](https://github.com/Rakieta02/Rakieta/issues/881)). So the screen draws to the bottom of
  * the phone, and **ends at the bar's reach** — its height and the bottom inset while it is drawn,
  * nothing while it stands down:
  *
@@ -35,7 +35,7 @@
  *
  * The CTA is *conditional* rather than always drawn: a screen with nothing to press has
  * nothing pinned, and the court screen populating it on one of three branches
- * ([#271](https://github.com/Raketa02/Raketa/issues/271)) is that same conditional read once
+ * ([#271](https://github.com/Rakieta02/Rakieta/issues/271)) is that same conditional read once
  * per branch.
  */
 
@@ -61,7 +61,7 @@ import {
 
 export interface ShellScreenProps {
   /**
-   * The h1 — **optional since [#414](https://github.com/Raketa02/Raketa/issues/414)**, whose
+   * The h1 — **optional since [#414](https://github.com/Rakieta02/Rakieta/issues/414)**, whose
    * plan lead is the first screen the design draws with an eyebrow and no title. Forwarded, not
    * designed: `ScreenHeader` makes the eyebrow the heading where there is none, and draws no
    * heading at all where there is neither.
@@ -122,7 +122,7 @@ export interface ShellScreenProps {
   /**
    * Whether the page and the action get out of the keyboard's way — **forwarded, not
    * designed.** The *Name* screen on the You tab is the first shell screen that types
-   * ([#469](https://github.com/Raketa02/Raketa/issues/469)), and its *Save* is pinned in the
+   * ([#469](https://github.com/Rakieta02/Rakieta/issues/469)), and its *Save* is pinned in the
    * action slot under the scroller, which on iOS is exactly where the keyboard goes. So the two
    * are wrapped in `KeyboardAvoidingView` under `KEYBOARD_AVOIDANCE` — the value
    * `SocialStepLayout` and the conversation use — and taps on the action
@@ -139,7 +139,7 @@ export interface ShellScreenProps {
   readonly keepsKeyboardOnTap?: boolean;
   /**
    * **Whether the page says what of it is on screen** — forwarded, not designed. Home is the one
-   * page that asks ([#804](https://github.com/Raketa02/Raketa/issues/804)): its *Same competitive
+   * page that asks ([#804](https://github.com/Rakieta02/Rakieta/issues/804)): its *Same competitive
    * level* and *Same vibe* rows report the cards that came at least half into view, and only the
    * page knows how far it is scrolled and how tall it shows. So the scroller's every move, and the
    * page leaving view and coming back — a screen pushed over it, another tab, the app in the

@@ -1,6 +1,6 @@
 /**
  * **Who the stage's hero draws, and every name, figure and line on its pictures**
- * ([#786](https://github.com/Raketa02/Raketa/issues/786), PRD #783; design system 12.2). Copy is
+ * ([#786](https://github.com/Rakieta02/Rakieta/issues/786), PRD #783; design system 12.2). Copy is
  * code: the miniature cards draw nothing that is not here.
  *
  * ## The cast

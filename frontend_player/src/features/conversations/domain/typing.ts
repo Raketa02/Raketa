@@ -2,7 +2,7 @@
  * **Somebody is typing** — who is drawn, when the roster is trusted, and how often the heartbeat
  * goes out
  * ([ADR-0156](../../../../../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md),
- * [#404](https://github.com/Raketa02/Raketa/issues/404)).
+ * [#404](https://github.com/Rakieta02/Rakieta/issues/404)).
  *
  * ## Typing is not query cache state
  *

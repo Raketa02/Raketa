@@ -1,6 +1,6 @@
 /**
  * **The payment setup's four steps, as a machine** — which step is open, which are finished, and
- * what each press moves ([#552](https://github.com/Raketa02/Raketa/issues/552); the screens A7.3;
+ * what each press moves ([#552](https://github.com/Rakieta02/Rakieta/issues/552); the screens A7.3;
  * the mechanics §12.5).
  *
  * ## The order is Q82's, and the contract's

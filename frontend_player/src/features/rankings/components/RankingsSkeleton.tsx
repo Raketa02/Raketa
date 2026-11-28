@@ -1,5 +1,5 @@
 /**
- * **Rankings' skeleton** ([#870](https://github.com/Raketa02/Raketa/issues/870); PRD #867; the loading
+ * **Rankings' skeleton** ([#870](https://github.com/Rakieta02/Rakieta/issues/870); PRD #867; the loading
  * shimmer log §8, Q6; design system 5.6) — what stands below the header while the page has nothing to
  * draw yet. **One fixed skeleton for both views and every sport**, which never predicts the page's
  * true shape (no card, *Nobody ranked*, or Friends' card alone):

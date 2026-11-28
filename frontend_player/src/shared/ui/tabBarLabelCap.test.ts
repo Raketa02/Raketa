@@ -9,7 +9,7 @@
  *
  * **1,6 was derived over five columns** — the largest step at which *Players*, the longest of
  * five labels, still fit a 64pt column on the narrowest phone. The bar is three columns since
- * the old loop's Players and Chats left it ([#576](https://github.com/Raketa02/Raketa/issues/576)),
+ * the old loop's Players and Chats left it ([#576](https://github.com/Rakieta02/Rakieta/issues/576)),
  * and the five-column fit went with them. **The cap stays where the five left it, and it now holds
  * the column's content inside the selection marker**: the dock is 54 at every text size, and an 18pt
  * icon, the grid's smallest step and one line of `tag` at the cap must stand inside the 75 × 42

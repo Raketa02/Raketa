@@ -1,6 +1,6 @@
 /**
  * **`SH.player`** — everything the platform will say about one *person*, current at the moment
- * the sheet was opened ([#384](https://github.com/Raketa02/Raketa/issues/384)).
+ * the sheet was opened ([#384](https://github.com/Rakieta02/Rakieta/issues/384)).
  *
  * Tapping a photograph and receiving a weights-and-contributions table was always slightly
  * wrong: somebody tapping a picture of a person is asking **who is this**. So a face opens the
@@ -58,7 +58,7 @@
  *
  * The sheet had no control but the pairing row until the radar
  * ([ADR-0174](../../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
- * §4, [#464](https://github.com/Raketa02/Raketa/issues/464)): reached from a radar card it ends
+ * §4, [#464](https://github.com/Rakieta02/Rakieta/issues/464)): reached from a radar card it ends
  * in *Not today* and *Let's play*, or in what already stands between the two. That foot is an
  * **optional slot** — `foot`, drawn under everything else and only where the caller fills it —
  * and not a prop set this sheet reads, because what stands between two people is the caller's
@@ -70,11 +70,11 @@
  *
  * ## It ends in Block — but not on your own
  *
- * The last row is **`blocks`' `BlockRow`** ([#587](https://github.com/Raketa02/Raketa/issues/587),
+ * The last row is **`blocks`' `BlockRow`** ([#587](https://github.com/Rakieta02/Rakieta/issues/587),
  * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)):
  * *Block kuba.w* behind a confirm sheet. It is not the foot — no caller fills it, and every surface
  * that opens a record gets it — and it reads no global state either. **It is always *Block***
- * ([#779](https://github.com/Raketa02/Raketa/issues/779), ADR-0203 §8): a record never opens
+ * ([#779](https://github.com/Rakieta02/Rakieta/issues/779), ADR-0203 §8): a record never opens
  * between two people either of whom blocked the other, so there is no *Unblock* here — it lives in
  * You › Blocked players, and the confirm sheet says so. **Once the block stands, this sheet closes**
  * (`onBlocked` is the sheet's own close): the record no longer opens for either of them. Drawn with
@@ -82,7 +82,7 @@
  *
  * ## Its foot is two buttons: Add friend beside Block
  *
- * Since [#753](https://github.com/Raketa02/Raketa/issues/753) (the friends screens §2; Q3, Q40) the
+ * Since [#753](https://github.com/Rakieta02/Rakieta/issues/753) (the friends screens §2; Q3, Q40) the
  * last row is **one row of two**: `friends`' `FriendButton` on the left — *Add friend*, *Request
  * sent ▾*, *Accept* or *Friend ✓ ▾*, from this read's own `relation` — and `blocks`' *Block* on the
  * right. **Add friend only where the record says a request may be sent** (`canAddFriend`, #779):
@@ -102,7 +102,7 @@
  * ## All their photos, under the header
  *
  * **Every photo the player has**, in their own order, on `shared/ui`'s carousel
- * ([#799](https://github.com/Raketa02/Raketa/issues/799), ADR-0204 §2; the Home rows screens §9.3):
+ * ([#799](https://github.com/Rakieta02/Rakieta/issues/799), ADR-0204 §2; the Home rows screens §9.3):
  * whoever the record opens for sees them all, a stranger included, where the header's panel once
  * stood alone. The vibe sheet (#803) draws the same carousel. **None with no photo** — the panel's
  * poster is the face then. It sits outside the header's one element: a photograph is not a fact this

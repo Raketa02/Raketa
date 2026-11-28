@@ -1,6 +1,6 @@
 /**
  * **You › Account › Games & money** — the two limits that bound what every deck deals, saved as
- * the player taps ([#554](https://github.com/Raketa02/Raketa/issues/554); the screens A7.1; mocks
+ * the player taps ([#554](https://github.com/Rakieta02/Rakieta/issues/554); the screens A7.1; mocks
  * 38, 39; the mechanics §6.6).
  *
  * ```

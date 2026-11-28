@@ -1,6 +1,6 @@
 /**
  * **The notices, walked the way a player meets them** — the real route tree and the real bar, with
- * only `fetch` and the phone faked ([#559](https://github.com/Raketa02/Raketa/issues/559); the screens
+ * only `fetch` and the phone faked ([#559](https://github.com/Rakieta02/Rakieta/issues/559); the screens
  * A7.2, A9; mocks 50, 52, 53; the mechanics §17.2).
  *
  * The server is #549's: `GET`/`PUT /players/me/notifications` (a save answers the three it saved),

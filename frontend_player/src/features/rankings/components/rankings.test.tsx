@@ -1,8 +1,8 @@
 /**
  * **The trophy on Home and the Rankings page, walked through the real route tree**
- * ([#775](https://github.com/Raketa02/Raketa/issues/775)–[#779](https://github.com/Raketa02/Raketa/issues/779),
+ * ([#775](https://github.com/Rakieta02/Rakieta/issues/775)–[#779](https://github.com/Rakieta02/Rakieta/issues/779),
  * PRD #766; [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md); the
- * rankings screens §1–§6; the ranking that shows everybody, [#799](https://github.com/Raketa02/Raketa/issues/799),
+ * rankings screens §1–§6; the ranking that shows everybody, [#799](https://github.com/Rakieta02/Rakieta/issues/799),
  * ADR-0204 §2), with only `fetch` faked.
  *
  * Tomek is 7th of 13 in padel at 2,71: Karol just above at 2,75, Zofia just below at 2,69, Inés at the

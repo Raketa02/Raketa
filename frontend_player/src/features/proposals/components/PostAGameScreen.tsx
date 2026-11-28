@@ -1,6 +1,6 @@
 /**
  * ***Post a game*** — full screen over the group, scrolling, the bar still under it
- * ([#558](https://github.com/Raketa02/Raketa/issues/558); the screens A5; mocks 15–35; the
+ * ([#558](https://github.com/Rakieta02/Rakieta/issues/558); the screens A5; mocks 15–35; the
  * mechanics §9; the backend's #546).
  *
  * ```

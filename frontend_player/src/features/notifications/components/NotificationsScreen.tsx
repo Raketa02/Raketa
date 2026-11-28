@@ -1,6 +1,6 @@
 /**
  * **You › Account › Notifications** — the notices that are always on, and the three a player
- * chooses, saved as they tap ([#559](https://github.com/Raketa02/Raketa/issues/559); the screens
+ * chooses, saved as they tap ([#559](https://github.com/Rakieta02/Rakieta/issues/559); the screens
  * A7.2; mocks 52, 53; the mechanics §17.2).
  *
  * ```

@@ -1,6 +1,6 @@
 /**
  * **A competitive game's details open on the full Balance forecast, with what is at stake**
- * ([#839](https://github.com/Raketa02/Raketa/issues/839); for fun 3–4; ADR-0207 §6) — walked the way
+ * ([#839](https://github.com/Rakieta02/Rakieta/issues/839); for fun 3–4; ADR-0207 §6) — walked the way
  * a player opens them: the real route tree, the real shell, and only `fetch` faked.
  *
  * Before saying yes, the reader reads both sides' levels and the gap, the bar with the sides' names,

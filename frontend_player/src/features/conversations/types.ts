@@ -2,12 +2,12 @@
  * The `conversations` feature's only public surface.
  *
  * **A booked game's room** — opened with the booking, reached from the game's details
- * ([#556](https://github.com/Raketa02/Raketa/issues/556)). The backend's messaging context arrived
- * with [#356](https://github.com/Raketa02/Raketa/issues/356), and this was the first client that
- * read it ([#363](https://github.com/Raketa02/Raketa/issues/363)).
+ * ([#556](https://github.com/Rakieta02/Rakieta/issues/556)). The backend's messaging context arrived
+ * with [#356](https://github.com/Rakieta02/Rakieta/issues/356), and this was the first client that
+ * read it ([#363](https://github.com/Rakieta02/Rakieta/issues/363)).
  *
  * It was the old loop's rooms too, with the Chats tab's inbox, a plan card, quick chips and a
- * *Details* door, until that loop was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+ * *Details* door, until that loop was removed ([#576](https://github.com/Rakieta02/Rakieta/issues/576)).
  * **What is exported is what has a caller**, and every caller is `features/proposals`' booked
  * game: its chat mounts the screen, its details and Home's cards find the room by its booking.
  * The reads, the mappers, the words and the domain files stay internal.

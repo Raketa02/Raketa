@@ -1,11 +1,11 @@
 /**
  * **Every sentence this feature says** — Members' pills and tags, the record's two buttons and their
- * sheets, and FRIEND REQUESTS, in Needs your answer since #816 ([#753](https://github.com/Raketa02/Raketa/issues/753); the
+ * sheets, and FRIEND REQUESTS, in Needs your answer since #816 ([#753](https://github.com/Rakieta02/Rakieta/issues/753); the
  * words [§29.1–§29.2](../../../../../docs/specs/matchmaking/the-words.md#29-friends)); You ›
  * Friends, the Add friends sheet and the result screen's PLAYED WITH
- * ([#754](https://github.com/Raketa02/Raketa/issues/754); the words §29.1, §29.3); and the friend
+ * ([#754](https://github.com/Rakieta02/Rakieta/issues/754); the words §29.1, §29.3); and the friend
  * link — the sheet's card, and what opening somebody's says when it cannot
- * ([#756](https://github.com/Raketa02/Raketa/issues/756); the words §29.3–§29.4).
+ * ([#756](https://github.com/Rakieta02/Rakieta/issues/756); the words §29.3–§29.4).
  *
  * ## Calls, for the product owner to overrule
  *

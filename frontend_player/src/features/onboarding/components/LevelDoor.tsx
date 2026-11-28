@@ -2,7 +2,7 @@
  * **The door where play begins** — one dark card in place of a player group's Games, Fill in and
  * Friends, its *Post a game* and its Members, for a player rated in nothing
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §2, §5,
- * [#730](https://github.com/Raketa02/Raketa/issues/730)).
+ * [#730](https://github.com/Rakieta02/Rakieta/issues/730)).
  *
  * - ***Get your level*** — *pick the sports you play, a few questions each* — opens *Which sports
  *   do you play?* over every sport, with nothing ticked.
@@ -14,7 +14,7 @@
  * rated. **Nothing is drawn until the door knows which it is**, so it never says one and then the
  * other — and offline, with nothing cached, it says it is waiting rather than drawing nothing.
  *
- * **On Home it is the card** ([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §7):
+ * **On Home it is the card** ([#731](https://github.com/Rakieta02/Rakieta/issues/731), ADR-0200 §7):
  * the same door, `from` Home, whose line says why nothing is happening — *your groups can't deal you
  * games until you have one* — and whose pass ends on Home. Where it is drawn is `groups`' rule.
  *

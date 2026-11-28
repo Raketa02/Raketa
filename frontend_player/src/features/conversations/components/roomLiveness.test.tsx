@@ -1,10 +1,10 @@
 /**
- * **Live, not live, and held** — [#365](https://github.com/Raketa02/Raketa/issues/365) walked the way a
+ * **Live, not live, and held** — [#365](https://github.com/Rakieta02/Rakieta/issues/365) walked the way a
  * member walks it: the real route tree, the real shell, the booked game's details the room is
  * opened from, the real Query cache, and two things faked — `fetch`, and the socket.
  *
  * It walked the old loop's room from the Chats tab until that loop was removed
- * ([#576](https://github.com/Raketa02/Raketa/issues/576)); every room is a booked game's now, and
+ * ([#576](https://github.com/Rakieta02/Rakieta/issues/576)); every room is a booked game's now, and
  * the room's liveness is the same — the stream, the nudge, the hold and the typing frame.
  *
  * The socket's stand-in is `fakeLiveStream()` from `src/test-support/platform.ts`, beside the two
@@ -250,7 +250,7 @@ describe('the nudge', () => {
 
   /**
    * **A nudge re-reads the stream and the game it is about, and nothing else**
-   * ([#406](https://github.com/Raketa02/Raketa/issues/406)): a *we played* line moves the Game's
+   * ([#406](https://github.com/Rakieta02/Rakieta/issues/406)): a *we played* line moves the Game's
    * standing on `GET /games`, which the result screen behind the details reads. The rooms list is
    * **not** re-read — the room draws nothing from it — and nor is the old loop's `GET /plans`, which
    * no room draws since #576.
@@ -290,7 +290,7 @@ describe('the nudge', () => {
 describe('a room that ends while it is on screen', () => {
   /**
    * **The room stays as it was, closed, and says so**
-   * ([#429](https://github.com/Raketa02/Raketa/issues/429)). A booked game's room ends with its
+   * ([#429](https://github.com/Rakieta02/Rakieta/issues/429)). A booked game's room ends with its
    * game, so the nudge's re-read is answered by `conversation_not_found`. The screen used to leave
    * on that answer, and a player reading a room was taken off it with the room gone from under
    * them. Now what was held is drawn as it was, and the composer gives way to one sentence — why

@@ -1,6 +1,6 @@
 /**
- * **One view of the ranking, as the page draws it** ([#776](https://github.com/Raketa02/Raketa/issues/776),
- * [#777](https://github.com/Raketa02/Raketa/issues/777)) — what General's pages (`useGeneral`) and the
+ * **One view of the ranking, as the page draws it** ([#776](https://github.com/Rakieta02/Rakieta/issues/776),
+ * [#777](https://github.com/Rakieta02/Rakieta/issues/777)) — what General's pages (`useGeneral`) and the
  * Friends table (`useFriendsTable`) each hand the page, so the card, the podium, the list, the
  * *You · 4th* button, the pull and the refusals are drawn once for both.
  *

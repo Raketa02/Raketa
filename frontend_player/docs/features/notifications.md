@@ -3,7 +3,7 @@
 The client side of the backend's **Notifications** context (#549): the three notices a player
 chooses, the phone pushed every notice given to them, a push drawn as a banner while the app is
 open, and the recent notices behind a bell on Home. Built by
-[#559](https://github.com/Raketa02/Raketa/issues/559) from the Games & Fill in screens (A7.2, A9;
+[#559](https://github.com/Rakieta02/Rakieta/issues/559) from the Games & Fill in screens (A7.2, A9;
 mocks 50, 52, 53), the mechanics (§17.2) and
 [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5. The shell
 composes `NotificationsRow` into the You tab's **ACCOUNT** group under _Payments_, `NoticeBell` into
@@ -21,7 +21,7 @@ date past it — by the Warsaw calendar, never by the hours since).
 `bookedGameRoute` — the booking's id is the game's own), `PROPOSAL` a game still filling — or one
 that did not fill — in its group (`gameRoute`), `DECK` the group's deck **with the card on top**
 (`groups`' `groupDeckRoute`), and `RESULT` the booked game's result screen (`bookedResultRoute`,
-since [#664](https://github.com/Raketa02/Raketa/issues/664)) — every step at the court. **A Fill in alert is the one notice whose kind decides**: the backend
+since [#664](https://github.com/Rakieta02/Rakieta/issues/664)) — every step at the court. **A Fill in alert is the one notice whose kind decides**: the backend
 sends it as `BOOKING` to a reader who is **not in the game**, so it opens the open seat seen from
 outside, in its group (`rescueRoute`, A4.3) — the booked game's own details would tell that reader the
 game is not theirs any more. **One function opens all five** (`useOpenNotice`'s `destinationOf`: the
@@ -50,8 +50,8 @@ taps are held. The row's line is the chosen ones that are on, short — _You com
 Fill in alerts_ (mock 50) — or _Only the ones always on_.
 
 **The always on are words and a tag, never controls** — sixteen since #677. Mock 52 drew seven; the rows are
-A7.2's as [#620](https://github.com/Raketa02/Raketa/issues/620) amends it, a row a line of the
-mechanics §17.2's table, in its order ([#628](https://github.com/Raketa02/Raketa/issues/628)): _It's a
+A7.2's as [#620](https://github.com/Rakieta02/Rakieta/issues/620) amends it, a row a line of the
+mechanics §17.2's table, in its order ([#628](https://github.com/Rakieta02/Rakieta/issues/628)): _It's a
 game! · you paid_ (_· held_ since #642) · _Waiting for one payment_ · _Fix your card
 by … to keep your seat_ (since #643) · _Confirm your payment by … to keep your seat_ · _Game called off · with the refund_ (_· nothing was taken, or with the refund_ since #642) · _Someone left your game · or
 it's filling again_ · _You've been refunded_ · _Your new game_ · _A game moved to another court_ (#677) · _A game you left_ · _Your post didn't fill_ · and since #664 the five steps at the court: _… is at the club and you're not there yet_ · _… is at the club · who you said isn't here yet_ · _How did it go? · your game's hour has ended_ · _Is that right? · … put a score up, or changed it_ · _Was … at the club? · they say they were_. One row can be several notices — _A game you left_ is two — and a row names a
@@ -103,7 +103,7 @@ phone, until the Expo project exists), is still told while the app is open:
 
 **Each notice is drawn once.** What the session has seen is every id in its first read — so **a
 launch draws nothing**: what was told while the app was closed is in the bell's number, which is the
-catch-up (Q101, [#627](https://github.com/Raketa02/Raketa/issues/627)) — and a pushed notice's id the
+catch-up (Q101, [#627](https://github.com/Rakieta02/Rakieta/issues/627)) — and a pushed notice's id the
 moment it is drawn, so the list read after it does not draw it again; a notice the day bundled another
 into keeps its id, and is not new. **Coming back from the background draws the newest notice the
 session has not seen, and the number counts the rest** — the bannered one too: the number is the
@@ -135,7 +135,7 @@ in mono at the trailing edge and a chevron on every row that opens something. **
 Empty, it says what will arrive there; a pull re-reads it, as does a push arriving — the session
 holds it for the banner.
 
-**The bell shows a number** (Q101, [#627](https://github.com/Raketa02/Raketa/issues/627)): the
+**The bell shows a number** (Q101, [#627](https://github.com/Rakieta02/Rakieta/issues/627)): the
 notices that reached the list since the player last opened it, never their own — the server's count
 (#621's `new_count`), so it is the same on every phone. Drawn up to 99, _99+_ above it, and nothing at
 nought; spoken on the bell's name exactly, _Recent notifications, 120 new_. It is the session's read,
@@ -174,8 +174,8 @@ permission is asked, the choices save and the list is read, and nothing is pushe
    opened from Home lights Play, as a live yes opened from Payments does.
 4. ~~**The bell carries no count**~~ — **answered** by Q101 (2026-10-09, the product owner, from
    S-01B): the bell counts the notices since the list was last opened, the server keeps it, and
-   opening the list clears it ([#621](https://github.com/Raketa02/Raketa/issues/621),
-   [#627](https://github.com/Raketa02/Raketa/issues/627)). See _The bell shows a number_ above.
+   opening the list clears it ([#621](https://github.com/Rakieta02/Rakieta/issues/621),
+   [#627](https://github.com/Rakieta02/Rakieta/issues/627)). See _The bell shows a number_ above.
 5. **The deck opened by a notice stands on the card's sport without saving it** as the last sport
    picked, and moves the switch to the card's kind. The switch is one value for the app, held only
    while it is open (ADR-0188 §5), and Friends shares it: holding the card's kind apart for Games
@@ -255,7 +255,7 @@ are the backend's, read by the one `targetOf`. Before #628 a build listed it and
 code this build cannot name still opens nothing.
 
 **A time to pay is told by the server, and an arrival re-reads _TO CONFIRM_ too**
-([#630](https://github.com/Raketa02/Raketa/issues/630); the backend's #625 and #626; the mechanics
+([#630](https://github.com/Rakieta02/Rakieta/issues/630); the backend's #625 and #626; the mechanics
 Q109–Q111). Paula's bank wants to check her payment when Ivan's yes fills the game: she is told
 _Confirm your payment by 14:40 to keep your seat_, the others _It's a game! · waiting for one payment
 until 14:40_, and at 14:40 she reads _Your time to pay ran out · Tue 19:00_ while the rest read that
@@ -268,20 +268,20 @@ time that had run out, until the app came back to the foreground.
 
 **Decided, and built since #642 and #643 (below): twelve always on — ten since #676 — and the take is quiet**
 (the mechanics Q113 and §17.2;
-[ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; root [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a share is now held when its game fills and
+[ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; root [#635](https://github.com/Rakieta02/Rakieta/issues/635)). **Why**: a share is now held when its game fills and
 taken at the club's cut-off, and a card refused before the cut-off is fixed, not paid. The first row
 reads _It's a game! · held_, the called-off row _Game called off · nothing was taken, or with the
 refund_, and _Fix your card by … to keep your seat_ joins before _Confirm your payment_
-([#642](https://github.com/Raketa02/Raketa/issues/642), [#643](https://github.com/Raketa02/Raketa/issues/643)). The take at the cut-off is a quiet row in the list, never pushed, so it is
+([#642](https://github.com/Rakieta02/Rakieta/issues/642), [#643](https://github.com/Rakieta02/Rakieta/issues/643)). The take at the cut-off is a quiet row in the list, never pushed, so it is
 not a row here.
 
-**Held, not paid** ([#642](https://github.com/Raketa02/Raketa/issues/642); the mechanics Q113,
+**Held, not paid** ([#642](https://github.com/Rakieta02/Rakieta/issues/642); the mechanics Q113,
 §17.2). The first always-on row reads _It's a game! · held_ and the called-off row _Game called off ·
 nothing was taken, or with the refund_; the words a notice says are still the backend's. The phone
 spells the two kinds #638 added, `FIX_YOUR_CARD` and `TIME_TO_FIX_RAN_OUT`, so a tap on one opens
 where the backend says; their row in the settings is #643's.
 
-**Fix your card is always on** ([#643](https://github.com/Raketa02/Raketa/issues/643); the mechanics
+**Fix your card is always on** ([#643](https://github.com/Rakieta02/Rakieta/issues/643); the mechanics
 Q113, §17.2; the screens A7.2). The settings listed twelve (ten since #676): _Fix your card by … to keep your seat_ sits
 after _Waiting for one payment_ and before _Confirm your payment by … to keep your seat_, as A7.2
 orders them. **Why**: a card refused before the cut-off is told to its player every way there is, as
@@ -289,8 +289,8 @@ a time to pay is. The notice's words, and _Your time to fix your card ran out_, 
 arrival re-reads _TO CONFIRM_ as any does, so a row loses its time when the time-ran-out notice lands.
 
 **Each step at the court is told, and a tap lands where it is acted on**
-([#664](https://github.com/Raketa02/Raketa/issues/664); the backend's
-[#663](https://github.com/Raketa02/Raketa/issues/663); the spec #649, F-RESULT-10.1 and 35.1;
+([#664](https://github.com/Rakieta02/Rakieta/issues/664); the backend's
+[#663](https://github.com/Rakieta02/Rakieta/issues/663); the spec #649, F-RESULT-10.1 and 35.1;
 [ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
 §7). At
 16:10 Ivan taps _Oscar isn't here yet_ at Ogrody 33: Oscar is told _Ivan is at Ogrody 33 and you're
@@ -307,7 +307,7 @@ booking's. The words are the backend's, a For fun game is told none of these, an
 always on, because each decides somebody's record or result. Push itself is still off: switching it
 on is the set-up ticket's.
 **No notice is about a club's answer — no club confirms a game**
-([#676](https://github.com/Raketa02/Raketa/issues/676); the backend's #669;
+([#676](https://github.com/Rakieta02/Rakieta/issues/676); the backend's #669;
 [ADR-0196](../../../docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
 §1, the mechanics Q121; the screens A7.2). Paula's yes completes Marta's Thursday game at Kazimierz
 Padel and it is booked at once, so the four are told _It's a game! · 25 zł held_ like at any club.
@@ -325,8 +325,8 @@ changes_ for the club's own. It is not emailed. `targetOf` opens it where the ba
 court and its kind on it (_Court 3 · indoor_).
 
 **A notice about no game is listed, and opens nowhere yet**
-([#728](https://github.com/Raketa02/Raketa/issues/728), carrying
-[#727](https://github.com/Raketa02/Raketa/issues/727)'s contract). Regenerating the player types for
+([#728](https://github.com/Rakieta02/Rakieta/issues/728), carrying
+[#727](https://github.com/Rakieta02/Rakieta/issues/727)'s contract). Regenerating the player types for
 the nickname brought #727's _Get your level_ with it: the wire's `NoticeKind` gained
 `GET_YOUR_LEVEL`, `Opens` gained `HOME`, and a listed notice's game facts (`game_id`, `pool_id`,
 `sport`, `game_kind`) may be `null` — the first notice about no game. The vocabulary spells both codes,
@@ -335,10 +335,10 @@ answers `undefined` for a notice that opens Home or names no game, so it is list
 words with nowhere to open, as a code this build cannot name already was. `targetOf` takes
 `GameOpens`, every place but Home. **The push is untouched**: its schema still asks for a game, so a
 _Get your level_ push is not read. Drawing it, opening Home and reading its push are
-[#731](https://github.com/Raketa02/Raketa/issues/731)'s. `notificationMappers.test.ts` holds both
+[#731](https://github.com/Rakieta02/Rakieta/issues/731)'s. `notificationMappers.test.ts` holds both
 _nowhere_ answers.
 
-**_Get your level_ opens Home** ([#731](https://github.com/Raketa02/Raketa/issues/731),
+**_Get your level_ opens Home** ([#731](https://github.com/Rakieta02/Rakieta/issues/731),
 ADR-0200 §7), which rules the paragraph above's _nowhere yet_. `NoticeTarget` gained `{ opens:
 'home' }`, and `toTarget` answers it for **any notice that says it opens Home**, whatever its kind,
 since it names nothing a later release could have meant differently. **The push is read now**: the
@@ -352,7 +352,7 @@ already on screen. The ratings, the groups list and the run left halfway — wha
 from — are marked stale first. The walk is `notifications.test.tsx`'s _Get your level_ block, with Home's card on the
 landing.
 
-**A friend's two notices** ([#753](https://github.com/Raketa02/Raketa/issues/753), on #745's;
+**A friend's two notices** ([#753](https://github.com/Rakieta02/Rakieta/issues/753), on #745's;
 the friends mechanics §12). `FRIEND_REQUEST` opens **Home**, where its card is — the _Get your level_
 landing, with Home's own read now among the reads marked stale. `FRIENDS_MADE` opens **the new
 friend's record**: `Opens` gained `RECORD`, and the notice names its person as `player_id` (on the list
@@ -364,15 +364,15 @@ tabs are, draws `player_record`'s sheet over wherever the player is, and forgets
 once: `rereadNotices` crosses to the shell, which hands it to `friends`' request row — `friends`
 naming this feature's keys would loop back through the record.
 
-**#749's two notices are spelled, and land nowhere yet** ([#757](https://github.com/Raketa02/Raketa/issues/757)
+**#749's two notices are spelled, and land nowhere yet** ([#757](https://github.com/Rakieta02/Rakieta/issues/757)
 regenerated the types). `LEVEL_ASKED` and `LEVEL_GOT` join the kinds, and `QUESTIONNAIRE` and
 `PICKER` join `Opens`, held to the wire as every code here is. Both are told and listed, and a tap
 opens nothing — `toTarget` answers `undefined`, as for a code this build cannot place — and a push
 that opens either is not read as a notice. Their landings, the sport's questionnaire and the group's
-picker, are [#758](https://github.com/Raketa02/Raketa/issues/758)'s.
+picker, are [#758](https://github.com/Rakieta02/Rakieta/issues/758)'s.
 
 **An ask for a Level lands: _Level asked_ on the sport's questionnaire, _Level got_ on the asker's
-picker** ([#758](https://github.com/Raketa02/Raketa/issues/758), on #749's; the friends mechanics
+picker** ([#758](https://github.com/Rakieta02/Rakieta/issues/758), on #749's; the friends mechanics
 §5, §12; the words §29.5). `NoticeTarget` gained `questionnaire` (a sport) and `picker` (a group and
 a sport), and the push is read for both: `LEVEL_ASKED` by the sport it names, `LEVEL_GOT` by the
 group it names as `pool_id` and the sport — each nothing to open without them, the person each names
@@ -396,7 +396,7 @@ turns the row pickable. **Calls made here**: _You have a padel level already._ (
 refusal); the page under the picker. **Not seen on a device**: the two screens pushed at once, and
 the questionnaire replacing the list.
 
-**The bell follows the ask's Home card** ([#765](https://github.com/Raketa02/Raketa/issues/765), on
+**The bell follows the ask's Home card** ([#765](https://github.com/Rakieta02/Rakieta/issues/765), on
 #764's; the friends mechanics §5.1, §12): a _level asked_ row is listed, and counted in the bell's
 number, only while its card waits in Needs your answer's _ASKED FOR A LEVEL_ (Home's row until #816,
 ADR-0205 §1) — the server's rule, matched by asker and sport, which the sheet left as it was. So **whatever takes the card re-reads the bell**: Not now on the card, a start refused as
@@ -406,7 +406,7 @@ unchanged (_Level asked_ above), and the card's coral button runs the same start
 same toast: `OPEN_NOTICE_WORDS` crosses to the shell, which hands its `unstarted` to `friends`' row.
 
 **A friends game's three new notices land where every notice of their kind does**
-([#759](https://github.com/Raketa02/Raketa/issues/759), on #751's; the friends mechanics §12):
+([#759](https://github.com/Rakieta02/Rakieta/issues/759), on #751's; the friends mechanics §12):
 `FRIENDS_GAME_INVITATION` opens Home, where its card is at the very top (_FRIENDS GAME · n_, and
 Home's read is marked stale first, as a friend request's is); `CANT_MAKE_IT` and `DIDNT_ANSWER` open
 the game, where the seat reads _can't make it_ or _didn't answer_; and _called off · nobody paid_ is
@@ -418,7 +418,7 @@ as it does the friend requests row); whether the server takes its row off is #75
 — and its notice opens the sheet: below.)_
 
 **A notice whose card waits in Needs your answer opens Home with the sheet up**
-([#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1; Q25). Two kinds pointed at a
+([#817](https://github.com/Rakieta02/Rakieta/issues/817), ADR-0205 §1; Q25). Two kinds pointed at a
 card that left Home for the sheet: `FRIEND_REQUEST` and `FRIENDS_GAME_INVITATION`, the seat
 invitation among them. Both still say they open `HOME`, and the kind decides
 (`homeTargetOf`, `domain/notice.ts`): they are `{ opens: 'needsYourAnswer' }`, and every other notice
@@ -433,7 +433,7 @@ set. The walks are this feature's suite (a request from the bell, from a push, a
 elsewhere; _Get your level_ with no sheet) and `proposals`' `friendsGames.test.tsx` (the invitation's
 push from another tab, on Home, and with nothing left).
 
-**An empty seat's two new notices open the game** ([#760](https://github.com/Raketa02/Raketa/issues/760),
+**An empty seat's two new notices open the game** ([#760](https://github.com/Rakieta02/Rakieta/issues/760),
 on #752's; the friends mechanics §12): `COVER_WARNING` — the Split sender's warning a day before the
 cut-off — lands on the details, where the empty seat's **Invite a friend** and **Open to {group}** and
 the sender's **Leave or call it off**, whose sheet holds **Call it off for everyone**, are its three

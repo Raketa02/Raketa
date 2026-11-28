@@ -1,7 +1,7 @@
 /**
  * **The club's administrator routes, faked** — the fixtures and the small server the administrator
- * area's router suites walk against ([#516](https://github.com/Raketa02/Raketa/issues/516),
- * [#517](https://github.com/Raketa02/Raketa/issues/517); PRD #500, club mocks 8–11 and 17–20).
+ * area's router suites walk against ([#516](https://github.com/Rakieta02/Rakieta/issues/516),
+ * [#517](https://github.com/Rakieta02/Rakieta/issues/517); PRD #500, club mocks 8–11 and 17–20).
  *
  * Ogrody 33, the people who ask to join its groups, two official groups as club 17–19 draw them,
  * and `club()`: the rules the routes document and nothing more — the groups this Administrator

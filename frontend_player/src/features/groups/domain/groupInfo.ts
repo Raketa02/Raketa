@@ -1,7 +1,7 @@
 /**
  * **Info's rules** — what its members row draws, which way out of the group it offers,
  * and whether Edit group has anything to save
- * ([#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 71–79,
+ * ([#514](https://github.com/Rakieta02/Rakieta/issues/514), PRD #500 stories 71–79,
  * [ADR-0183](../../../../../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
  * §7).
  *

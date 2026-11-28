@@ -1,9 +1,9 @@
 /**
  * **A friends game's sentences built from a value** — the send sheet's order and cover line, an
  * invitation's title, clock, line and answers, the sender's seats line and the details' seats
- * ([#759](https://github.com/Raketa02/Raketa/issues/759); the words §29.7–§29.10); an empty seat's
+ * ([#759](https://github.com/Rakieta02/Rakieta/issues/759); the words §29.7–§29.10); an empty seat's
  * invitations, its two actions and their outcomes, and the sender's two ways to leave
- * ([#760](https://github.com/Raketa02/Raketa/issues/760); §29.9, §29.10). The fixed words are
+ * ([#760](https://github.com/Rakieta02/Rakieta/issues/760); §29.9, §29.10). The fixed words are
  * `friendsGameCopy.ts`'s.
  */
 

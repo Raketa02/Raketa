@@ -3,7 +3,7 @@
  * chose tinted, and one amber sentence where nothing is shared.
  *
  * Four answers arrive as a `SocialTagOverlap` and this component draws them; it decides nothing
- * ([#311](https://github.com/Raketa02/Raketa/issues/311)). The switch is exhaustive over the
+ * ([#311](https://github.com/Rakieta02/Rakieta/issues/311)). The switch is exhaustive over the
  * union for the reason the union exists: *we do not know* and *there is nothing* are different
  * sentences, and a component reading a list plus a flag would eventually draw the claim in the
  * case that has not earned it.
@@ -46,7 +46,7 @@
  * ## Why this is `shared/ui` and not the candidate card's own component
  *
  * It was the competitive card's. The record sheet draws the same row from its own read
- * ([#373](https://github.com/Raketa02/Raketa/issues/373)), so the row came below both features
+ * ([#373](https://github.com/Rakieta02/Rakieta/issues/373)), so the row came below both features
  * rather than being copied or imported sideways out of `features/play/`. **The rule stayed
  * behind**: `features/play/domain/socialTagOverlap` reads one of these four answers off a
  * candidate row, which is a search result and Play's alone. A caller computes the overlap and

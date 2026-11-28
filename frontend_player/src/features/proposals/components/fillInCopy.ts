@@ -1,7 +1,7 @@
 /**
  * **Every fixed word a group's Fill in and You’re in tabs say** — a row's lines and its doors, and
- * each tab's empty line and spinner ([#557](https://github.com/Raketa02/Raketa/issues/557), split by
- * [#847](https://github.com/Raketa02/Raketa/issues/847); the screens A3; mocks 12–13, split mocks 1
+ * each tab's empty line and spinner ([#557](https://github.com/Rakieta02/Rakieta/issues/557), split by
+ * [#847](https://github.com/Rakieta02/Rakieta/issues/847); the screens A3; mocks 12–13, split mocks 1
  * and 2). Neither tab has a heading: the tab's name does that job. Import-free, as
  * `proposalsCopy.ts` is: the group page reads the tabs' words at module load. The sentences composed
  * from a value are `fillInPresentation.ts`.

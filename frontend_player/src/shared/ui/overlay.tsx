@@ -334,7 +334,7 @@ const READ_SCREEN_READER = () => AccessibilityInfo.isScreenReaderEnabled();
  * **The floor itself does not**, and this sentence used to say it did. `motion.hold` had
  * already decided the other way in writing — *a held duration is not an animation: nothing
  * moves, and the player who asked the OS to calm things down is the last one who should get a
- * flash* — and [#269](https://github.com/Raketa02/Raketa/issues/269) is where the two met.
+ * flash* — and [#269](https://github.com/Rakieta02/Rakieta/issues/269) is where the two met.
  * `searchingWait.ts` is where the split is arithmetic rather than prose.
  */
 export function useCollapsedPresentation(): boolean {

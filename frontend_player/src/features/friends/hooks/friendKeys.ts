@@ -1,5 +1,5 @@
 /**
- * **The friends feature's query keys** ([#754](https://github.com/Raketa02/Raketa/issues/754)) —
+ * **The friends feature's query keys** ([#754](https://github.com/Rakieta02/Rakieta/issues/754)) —
  * the Friends page's three reads and the Add friends sheet's two, which the You tab's row shares.
  *
  * **Every friends write re-reads them all** (`useFriendWrites`' `settle`): an accept on Home moves

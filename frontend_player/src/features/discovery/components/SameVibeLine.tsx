@@ -1,13 +1,13 @@
 /**
  * **Players with your vibe** — the fourth of FOR YOU's five lines
- * ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5; was SAME VIBE PLAYERS,
- * [#803](https://github.com/Raketa02/Raketa/issues/803), ADR-0204 §6; the Home rows screens §6.1; the
+ * ([#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0205 §5; was SAME VIBE PLAYERS,
+ * [#803](https://github.com/Rakieta02/Rakieta/issues/803), ADR-0204 §6; the Home rows screens §6.1; the
  * mechanics §8, §9; home rows 2, 20, 20.1; home refactor 10, 11).
  *
  * Open, up to ten pale tiles on the row frame's peeking rail, settling on their edges, in the read's
  * order — fresh good matches first, then the gaps — and *See all N ›* to the grid at the foot.
  * **Its count**, on the line and in *See all N ›*, is everybody sharing at least one tag with the
- * reader ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6; the mechanics §8.8) —
+ * reader ([#822](https://github.com/Rakieta02/Rakieta/issues/822); ADR-0205 §6; the mechanics §8.8) —
  * the read's `total`, *99+* past 99, never the good matches — and moves with the read.
  * **Hidden** while the read holds nobody (the reader holds no tag, or nobody shares one), is in
  * flight, or failed: a line that fails is left out, and the rest of Home stands. Skill plays no part,
@@ -19,7 +19,7 @@
  * stands, and the next read moves it (§9.1, §13; `usePeopleRow`). A block reads the line again.
  *
  * **Every tile that comes at least half on screen is reported**, once that Warsaw day
- * ([#804](https://github.com/Raketa02/Raketa/issues/804); §9.2), its count this line's own — **only
+ * ([#804](https://github.com/Rakieta02/Rakieta/issues/804); §9.2), its count this line's own — **only
  * while the line is open**: a closed line draws no tile. See all reports nothing.
  */
 

@@ -57,7 +57,7 @@
  * from the other end. Two people in one room read one weekday, by construction.
  *
  * **Both conversions left this file** for `shared/date/platformZone.ts`
- * ([#366](https://github.com/Raketa02/Raketa/issues/366)): the plan's day row is the third caller,
+ * ([#366](https://github.com/Rakieta02/Rakieta/issues/366)): the plan's day row is the third caller,
  * and unlike the tables that were promoted before them a second copy of this one would put two
  * surfaces of one screen on two different days. What stayed is {@link separatorBefore}, which is a
  * rule about a **stream** and belongs to the feature that draws one.

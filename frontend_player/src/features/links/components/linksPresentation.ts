@@ -1,6 +1,6 @@
 /**
  * **Every sentence a link says when it is opened on a phone somebody is signed in on**
- * ([#520](https://github.com/Raketa02/Raketa/issues/520)) — the two sheets that ask first, because
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520)) — the two sheets that ask first, because
  * the link may not be the signed-in person's: an invitation for another address, and a password
  * reset for an account nobody can tell from its link.
  *

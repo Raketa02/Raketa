@@ -1,6 +1,6 @@
 /**
  * **Posting a game** — the grid of when a member could post one, a cell's sheet, and the draft the
- * four controls hold ([#558](https://github.com/Raketa02/Raketa/issues/558); the screens A5; the
+ * four controls hold ([#558](https://github.com/Rakieta02/Rakieta/issues/558); the screens A5; the
  * mechanics §9; the backend's #546).
  *
  * Pure. **Everything a cell says is the server's** (`GET /pools/{id}/posting-grid`): how many of the

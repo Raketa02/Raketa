@@ -1,7 +1,7 @@
 /**
  * **The profile an account wore last, and keeping a new one** — per account, on the phone
  * ([ADR-0188](../../../../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)
- * §2, [#518](https://github.com/Raketa02/Raketa/issues/518)).
+ * §2, [#518](https://github.com/Rakieta02/Rakieta/issues/518)).
  *
  * The Play segment's shape (`shell`'s `usePlaySegment`): the phone is read once per account per
  * session into the Query cache, under `phonePreferenceKeys`, and never waits on the network —

@@ -1,5 +1,5 @@
 /**
- * **Which sport the Rankings page is on, and the pill's sports** ([#775](https://github.com/Raketa02/Raketa/issues/775);
+ * **Which sport the Rankings page is on, and the pill's sports** ([#775](https://github.com/Rakieta02/Rakieta/issues/775);
  * the rankings mechanics §9).
  *
  * The page opens on the sport it was asked for — the trophy's, or the one a pass returns to — else on
@@ -47,7 +47,7 @@ export type OpeningSport = Opening;
 
 /**
  * **The reads behind the opening sport and the pill** — the page's, and Home's Top 10 row's
- * ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home rows mechanics §10.3), which opens
+ * ([#805](https://github.com/Rakieta02/Rakieta/issues/805); the Home rows mechanics §10.3), which opens
  * on the same sport the trophy would and offers the same four, asking for none in particular.
  */
 export function useOpeningSport(asked?: Sport): OpeningSport {

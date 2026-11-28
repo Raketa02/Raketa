@@ -1,6 +1,6 @@
 /**
  * **You › Friends and the Add friends sheet, walked through the real route tree**
- * ([#754](https://github.com/Raketa02/Raketa/issues/754), PRD #743; the friends screens §4.1, §5;
+ * ([#754](https://github.com/Rakieta02/Rakieta/issues/754), PRD #743; the friends screens §4.1, §5;
  * friends 3, 4).
  *
  * - **The You tab's *Friends* row** says how many friends and who asked, and opens the page.

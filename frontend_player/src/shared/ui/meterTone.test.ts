@@ -1,6 +1,6 @@
 /**
  * The meter's three fills, and the arithmetic that makes drawing a figure in one of them legal
- * ([#385](https://github.com/Raketa02/Raketa/issues/385)).
+ * ([#385](https://github.com/Rakieta02/Rakieta/issues/385)).
  *
  * A meter is a **graphical object** conveying information, so
  * [1.4.11](../../../docs/design-system.md#25-contrast--computed) asks 3:1 of each fill against

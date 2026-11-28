@@ -1,6 +1,6 @@
 /**
  * **The record's left button** — *Add friend*, *Request sent ▾*, *Accept* or *Friend ✓ ▾*
- * ([#753](https://github.com/Raketa02/Raketa/issues/753); the friends screens §2; Q3, Q40).
+ * ([#753](https://github.com/Rakieta02/Rakieta/issues/753); the friends screens §2; Q3, Q40).
  *
  * `player_record`'s sheet draws it beside `blocks`' **Block**, one row of two at the record's foot
  * (`recordFootOf` says which, and when **Block** stands alone instead: nothing between them, and the

@@ -1,6 +1,6 @@
 /**
  * ***Invite a friend*** **into an empty seat** — this feature's half of the picker with one seat
- * ([#760](https://github.com/Raketa02/Raketa/issues/760), over #752's route; the friends screens §9;
+ * ([#760](https://github.com/Rakieta02/Rakieta/issues/760), over #752's route; the friends screens §9;
  * the mechanics §10.1, §10.3, §11.3). The page and the picker are `friends`', which reads this
  * feature, so the shell composes them around these three:
  *

@@ -1,6 +1,6 @@
 /**
- * **What a link does, by who is on the phone** ([#520](https://github.com/Raketa02/Raketa/issues/520),
- * PRD #500 stories 46–48 and 111–119; [#756](https://github.com/Raketa02/Raketa/issues/756)).
+ * **What a link does, by who is on the phone** ([#520](https://github.com/Rakieta02/Rakieta/issues/520),
+ * PRD #500 stories 46–48 and 111–119; [#756](https://github.com/Rakieta02/Rakieta/issues/756)).
  *
  * The rules the links feature decides by, over plain data: **where a link lands as it arrives** — its
  * own screen, or held for the place that can answer it; **what a group link or a friend link does

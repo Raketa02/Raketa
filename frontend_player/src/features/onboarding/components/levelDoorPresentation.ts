@@ -1,7 +1,7 @@
 /**
  * **The door's words** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §2, §5, §7, [#730](https://github.com/Raketa02/Raketa/issues/730),
- * [#731](https://github.com/Raketa02/Raketa/issues/731)) — on a group's tab, *Get your level — pick
+ * §2, §5, §7, [#730](https://github.com/Rakieta02/Rakieta/issues/730),
+ * [#731](https://github.com/Rakieta02/Rakieta/issues/731)) — on a group's tab, *Get your level — pick
  * the sports you play, a few questions each*; on Home, *Get your level — your groups can't deal you
  * games until you have one*; and with a run left halfway, on either, *Carry on with your padel
  * questions — you're on question 5*.

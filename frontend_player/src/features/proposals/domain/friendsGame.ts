@@ -1,10 +1,10 @@
 /**
  * **A friends game, sent and answered** — the send sheet's two ways to pay, an invitation on Home,
  * the sender's game in Your games and every seat's state on the details
- * ([#759](https://github.com/Raketa02/Raketa/issues/759), over #751's routes; ADR-0202 §5–§6; the
+ * ([#759](https://github.com/Rakieta02/Rakieta/issues/759), over #751's routes; ADR-0202 §5–§6; the
  * friends mechanics §8–§9, §11.2; the screens §6.1, §6.3, §8, §9) — and an empty seat's two
  * actions and the sender's two ways to leave
- * ([#760](https://github.com/Raketa02/Raketa/issues/760), over #752's; the mechanics §10–§11).
+ * ([#760](https://github.com/Rakieta02/Rakieta/issues/760), over #752's; the mechanics §10–§11).
  *
  * Pure, and the server's folds are never re-derived: who is In, whose invitation waits and until
  * when, who may call it off, whether the game is whole — all the read's (`friends_game`, #751).

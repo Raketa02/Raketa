@@ -1,5 +1,5 @@
 /**
- * **Read one page of General** ([#776](https://github.com/Raketa02/Raketa/issues/776); the screens
+ * **Read one page of General** ([#776](https://github.com/Rakieta02/Rakieta/issues/776); the screens
  * §5.3) — the list's own first page, which is the main read's, the page around the reader, or the
  * page below or above a cursor, folded into one shape. No rule of its own: the order, every place
  * and every cursor are the server's.

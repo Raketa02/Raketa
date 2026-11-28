@@ -35,7 +35,7 @@
  * `socialTagChip`, its `· you too` marker and `NO_TAGS_IN_COMMON` are at the foot of this
  * file. They began on the competitive candidate card, where the tag row was the only thing
  * that drew them; they are here because the record sheet draws that row too
- * ([#373](https://github.com/Raketa02/Raketa/issues/373)) and the row is now one component
+ * ([#373](https://github.com/Rakieta02/Rakieta/issues/373)) and the row is now one component
  * in `shared/ui`. A second spelling of the marker is exactly the drift the twenty-seven labels
  * were promoted to stop, one register down. What each surface **says about** a row still
  * belongs to that surface: the clauses a listener gets on a candidate card are
@@ -143,7 +143,7 @@ export function socialTagGroupHeading(group: SocialTagGroupId): string {
  * **The Social tag row's words** — the chip, its *you too* marker, and the amber sentence.
  *
  * The row is `socialTagOverlap`'s four answers; these are the four things they say
- * ([#311](https://github.com/Raketa02/Raketa/issues/311)). Nothing here decides which tags are
+ * ([#311](https://github.com/Rakieta02/Rakieta/issues/311)). Nothing here decides which tags are
  * shared, and nothing here re-words a tag: `socialTagLabel` and `socialTagName` are the
  * promoted table's, and a second spelling of twenty-seven labels is what the promotion existed to
  * prevent ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §1).

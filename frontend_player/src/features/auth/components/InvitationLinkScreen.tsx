@@ -1,7 +1,7 @@
 /**
  * ***Set your password*** **by the invitation email's button** — `invite/<token>`
- * ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 story 113). The links ticket
- * ([#520](https://github.com/Raketa02/Raketa/issues/520)) opens it from an incoming link; this is
+ * ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 story 113). The links ticket
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520)) opens it from an incoming link; this is
  * the screen the link lands on.
  *
  * **The token is validated before anything is drawn**: the link is read first

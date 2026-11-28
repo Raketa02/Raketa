@@ -1,7 +1,7 @@
 /**
  * **Posting a game, off the wire and onto it** — `GET /pools/{id}/posting-grid`, its slot, and
  * `POST /pools/{id}/posts` (#546), read into the domain's shape and asked in the wire's
- * ([#558](https://github.com/Raketa02/Raketa/issues/558)).
+ * ([#558](https://github.com/Rakieta02/Rakieta/issues/558)).
  *
  * The deck's narrowings, the same ones: a `null` becomes an absent field; the kind is the switch's
  * spelling; a rescue in a sport this build cannot name is dropped, as a *Seats to fill* row is.

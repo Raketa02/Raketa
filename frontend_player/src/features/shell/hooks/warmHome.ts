@@ -1,5 +1,5 @@
 /**
- * **Home's reads, set out while the splash plays** ([#874](https://github.com/Raketa02/Raketa/issues/874);
+ * **Home's reads, set out while the splash plays** ([#874](https://github.com/Rakieta02/Rakieta/issues/874);
  * PRD #867; [ADR-0209](../../../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)
  * §2, amended 2026-11-24; the loading shimmer log §7, Q18) — so that on a normal connection a cold
  * open fades onto a Home that is already whole, with no shimmer.

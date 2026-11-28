@@ -56,7 +56,7 @@ export function passportLine(ratings: readonly RatedSport[]): string {
 
 /**
  * `75 · High` · `100 · New` — **the sheet's own head, written in** (`the-words.md` §27,
- * [#660](https://github.com/Raketa02/Raketa/issues/660)).
+ * [#660](https://github.com/Rakieta02/Rakieta/issues/660)).
  *
  * It read `92 of 100 · 3 things counted`, the strands behind a blended score, and *Nothing
  * counted yet* for a player with none. Everyone has a figure from the start now, so there is no
@@ -113,7 +113,7 @@ export const NEW_PLAYER_NOTE =
 /**
  * **The switch** — *Play only with players of at least High reliability*, or *at least Medium*,
  * or off ([ADR-0195](../../../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
- * §6, [#662](https://github.com/Raketa02/Raketa/issues/662)). A segmented control under a label:
+ * §6, [#662](https://github.com/Rakieta02/Rakieta/issues/662)). A segmented control under a label:
  * the label is the sentence's head, the segments its three endings, and each segment's spoken
  * name is the whole sentence, because *At least High* on its own says nothing about whom.
  */

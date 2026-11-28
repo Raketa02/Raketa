@@ -1,6 +1,6 @@
 /**
  * ***It's a game!*** — the yes screen's third face, for the player whose yes filled a game
- * ([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A2.4; the mechanics §11.3;
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555); the screens A2.4; the mechanics §11.3;
  * [ADR-0167](../../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)).
  *
  * *Today's yes screen, with the new word*: the dark ground and its glow, your side sliding in from
@@ -16,7 +16,7 @@
  * game, who sees this screen then (Q110, §12.2).
  *
  * The ground, the entrance's one beat and the tile are this screen's own (`YesGround`,
- * `YesEntrance`, `YesTile`), since [#574](https://github.com/Raketa02/Raketa/issues/574) brought
+ * `YesEntrance`, `YesTile`), since [#574](https://github.com/Rakieta02/Rakieta/issues/574) brought
  * them here from the challenge's yes screen, which is the old loop's.
  *
  * ## The faces are the card's

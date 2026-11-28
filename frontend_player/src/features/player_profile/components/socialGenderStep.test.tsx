@@ -4,7 +4,7 @@
  * The router, the http client, the domain rules, the draft and the screen all run for real,
  * and every assertion is about what a player can see, operate or be told.
  *
- * **It is the last step and carries the finish** ([#582](https://github.com/Raketa02/Raketa/issues/582)).
+ * **It is the last step and carries the finish** ([#582](https://github.com/Rakieta02/Rakieta/issues/582)).
  * What the finish sends, and what a failed commit leaves behind, is `commitTheProfile.test.tsx`;
  * this suite is about the two questions and when the finish opens on them.
  *

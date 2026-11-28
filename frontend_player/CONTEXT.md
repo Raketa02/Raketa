@@ -10,12 +10,12 @@ shared glossary [`../CONTEXT.md`](../CONTEXT.md), which all three apps obey. See
 > name a _domain_ concept, use the root glossary. Don't drift to synonyms either avoids.
 >
 > **Cut back on 2026-10-06** with the Classic play removal
-> ([#569](https://github.com/Raketa02/Raketa/issues/569)): the Players deck and its radar, the
+> ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the Players deck and its radar, the
 > Chats tab, Find a game, challenges, plans and the old game card, the `/games/[id]` route, the
 > feature flags and sign-up's radius and opt-in steps left the code, and every term that named
 > only them went with them.
 >
-> **The feature flags came back on 2026-11-21** ([#826](https://github.com/Raketa02/Raketa/issues/826),
+> **The feature flags came back on 2026-11-21** ([#826](https://github.com/Rakieta02/Rakieta/issues/826),
 > ADR-0206), with one key, `explore`, and without the tester mark: see **Feature flag**.
 
 ## Glossary — player-app technical terms
@@ -156,7 +156,7 @@ review comment and a test description all use the same word.
   no nickname ([ADR-0199](../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3) — then
   the social steps for one with no Player profile, then the app
   ([ADR-0200](../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1). **A rating and an
-  unfinished run route nowhere** ([#730](https://github.com/Raketa02/Raketa/issues/730)): a
+  unfinished run route nowhere** ([#730](https://github.com/Rakieta02/Rakieta/issues/730)): a
   level is asked where play begins, by the **level door**, and a run left halfway is offered
   there. Until #730 the gate read three facts in parallel and had two more destinations,
   _resume_ and _welcome_. Distinct from the guard, and deliberately **not** part of session
@@ -205,27 +205,27 @@ review comment and a test description all use the same word.
 - **The shell** — the tabs a signed-in player is inside, and the **one stack** under them:
   `Home · ⚡Play · You`, three fixed columns drawn by `TabBar` and mounted once by `TabShell`.
   Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it, which is the
-  whole of what [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. Home is the
+  whole of what [#227](https://github.com/Rakieta02/Rakieta/issues/227) forbids. Home is the
   bottom of the stack and is kept; You and Play are laid over it fresh by every press. _Avoid_:
   "the tab navigator" — there isn't one. The one tab bar **floats over the stack**
   ([ADR-0210](../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §3, built
-  by [#881](https://github.com/Raketa02/Raketa/issues/881)), not below it as a flex sibling, and
+  by [#881](https://github.com/Rakieta02/Rakieta/issues/881)), not below it as a flex sibling, and
   screens end at its **reach**: the room the bar takes at the bottom — the dock's lift and its 54
   while it is drawn, nothing while it stands down — a followed value the shell says
   (`shared/ui`'s `tabBarReach.ts`). It stands down in the chat and, on Android, while the keyboard
-  is up ([#882](https://github.com/Raketa02/Raketa/issues/882)). The bar is a rounded **dock**, glass
+  is up ([#882](https://github.com/Rakieta02/Rakieta/issues/882)). The bar is a rounded **dock**, glass
   on the iPhone and opaque on Android, with the **selection marker** under the lit tab
-  ([#883](https://github.com/Raketa02/Raketa/issues/883)); _dock_ describes its look and is not its
+  ([#883](https://github.com/Rakieta02/Rakieta/issues/883)); _dock_ describes its look and is not its
   name. _Avoid_ confusing the
   reach with the tab's menu's `TAB_REACH`, which is a touch slop. The one stack, the reset and what
   each tab opens don't change.
 - **Home** — the first tab, route `/`: the booked-games rail under the tab's own words —
   `features/proposals`' `HomeRail` over `GET /home`, with the payments to confirm above it. It
-  was **Now** until [#550](https://github.com/Raketa02/Raketa/issues/550), and the rename is
+  was **Now** until [#550](https://github.com/Rakieta02/Rakieta/issues/550), and the rename is
   whole — key `home`, label _Home_, `HomeScreen`, `HOME_COPY`, `landOnHome`. **Home's badge** is
   `useHomeBadge()`, the read's `needing_you` — the cards that need you and every payment you have
   to confirm — and nothing at nought; the shell reads it on every screen, so it holds `GET /home`
-  for the session, and since [#576](https://github.com/Raketa02/Raketa/issues/576) that is the
+  for the session, and since [#576](https://github.com/Rakieta02/Rakieta/issues/576) that is the
   only list it holds. _Avoid_: "Now" for the tab.
 - **The reset** — `resetShellStack`, the shell's only navigation move: throw the stack away
   and lay a new one down. Home and You lay down one screen and ⚡Play lays down two — Home
@@ -300,7 +300,7 @@ naming, the steps, Home — eight screens, and no questionnaire.
   over who you play with narrows who is put in front of you rather than describing you; and
   **gender last** — _Who you play with_ carries the finish (`ProfileFinish`), and the radius and
   the opt-in that used to follow it left with the old loop's ranking
-  ([#582](https://github.com/Raketa02/Raketa/issues/582)). **The part is the unit, not the
+  ([#582](https://github.com/Rakieta02/Rakieta/issues/582)). **The part is the unit, not the
   step** — back and forward move freely between steps and never cross out of the part, the
   first step has no back control, and the last is followed by the profile commit rather than
   by a seventh screen
@@ -360,7 +360,7 @@ naming, the steps, Home — eight screens, and no questionnaire.
   filter what a player sees — it hides them from every man, including men who would play
   anybody, and that is the half nobody would guess. The rule decides _whether there is a
   cost_; this app's copy says it **at the moment of the press, on every surface that takes
-  the value** — the step, and since [#472](https://github.com/Raketa02/Raketa/issues/472)
+  the value** — the step, and since [#472](https://github.com/Rakieta02/Rakieta/issues/472)
   the You tab's _Who you play with_, which draws the same group (`GenderControls`) under a
   _Save_ of its own. Learning it from an empty deck is not acceptable
   ([ADR-0096](../docs/adr/0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)).
@@ -394,11 +394,11 @@ naming, the steps, Home — eight screens, and no questionnaire.
 - **Profile surface** — the **one read** this app holds about the player's declared facts:
   the weekly hours and the per-sport Play intent, in one round trip across the two aggregates
   that own them — and, since the route **grew** the day **You** was built
-  ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8), the Social tags,
+  ([#466](https://github.com/Rakieta02/Rakieta/issues/466), ADR-0179 §4, §8), the Social tags,
   the photos with their verdicts and the intro, read on #471, and the **owner's own** gender
   and preference — the one shape that carries them — read on #472. The Search radius and the
   standing Proposals opt-in left it with the old loop
-  ([#581](https://github.com/Raketa02/Raketa/issues/581)). There is no `has_location`, because a
+  ([#581](https://github.com/Rakieta02/Rakieta/issues/581)). There is no `has_location`, because a
   profile cannot be committed without an area and a flag that cannot be false is a branch
   nobody tests. Its home is `player_profile/` because the **writes** are: one unkeyed `PUT` per
   fact, and a read whose paired writes live in another feature is a read in the wrong feature.
@@ -421,7 +421,7 @@ naming, the steps, Home — eight screens, and no questionnaire.
   _Avoid_: "tab" — Play is the tab and these are its segments.
 
 A group's page is Play's too (`/play/group/[groupId]`), and its **Games** tab is the deck
-`features/proposals` deals ([#553](https://github.com/Raketa02/Raketa/issues/553)). Two of that
+`features/proposals` deals ([#553](https://github.com/Rakieta02/Rakieta/issues/553)). Two of that
 deck's client-only concepts are listed here; the yes that fills a game is
 [the fill](#the-fill)'s.
 
@@ -455,7 +455,7 @@ deck's client-only concepts are listed here; the yes that fills a game is
 Five drawn parts in `shared/ui/`, with the vocabulary under them in `shared/vocabulary/`, built
 for Play's candidate cards and brought below every feature when the record sheet became their
 second caller. The cards left with Find a game
-([#576](https://github.com/Raketa02/Raketa/issues/576)); the parts stayed with the record sheet
+([#576](https://github.com/Rakieta02/Rakieta/issues/576)); the parts stayed with the record sheet
 (`features/player_record/`), the You tab's header card, a game's forecast and the post-a-game
 slot sheet. _At stake_, _Run of form_, _Social tag_ and the _On-court check_ are the root
 glossary's terms; what follows is only how this client draws them.
@@ -520,10 +520,10 @@ here; what follows is only what this client had to invent to draw them.
   their score stands (_Is that right?_) · both stand · confirmed · disputed · played · no score ·
   for fun (_Played_, which asks nothing), the endings a booked game adds (called off, started
   short) and its two at the court (not here yet, didn't come —
-  [#658](https://github.com/Raketa02/Raketa/issues/658)), plus _not yours_ for a link that has
+  [#658](https://github.com/Rakieta02/Rakieta/issues/658)), plus _not yours_ for a link that has
   gone stale.
   **An agreement is not one of them** since #654: _That's right_ settles at once, so the next
-  read is confirmed ([#656](https://github.com/Raketa02/Raketa/issues/656)). It is what
+  read is confirmed ([#656](https://github.com/Rakieta02/Rakieta/issues/656)). It is what
   decides whether a screen offers a **correction** or a **counter** — the same request and
   completely different news — so nothing outside that file reads a `GameStanding` directly.
   _Avoid_: "the result **conversation**", which this client used until
@@ -535,7 +535,7 @@ here; what follows is only what this client had to invent to draw them.
   takes three.
 - **The attendance block** — _Who's here_, then _Who was there_: the rows `attendanceBlock` folds
   in `domain/attendance.ts` for a booked game's reader
-  ([#658](https://github.com/Raketa02/Raketa/issues/658)) — a tap about each other player in the
+  ([#658](https://github.com/Rakieta02/Rakieta/issues/658)) — a tap about each other player in the
   first half hour (_isn't here yet_, or _is here_ about somebody awaited), a late claim to confirm
   afterwards, and _came late_ said beside whoever did. **The reader's own act is not a row**: _I'm
   here_ and _I was there_ are pinned, as the score's send is. The **first half hour** is the one
@@ -591,13 +591,13 @@ here; what follows is only what this client had to invent to draw them.
   with one open started short. _Avoid_: dropping the seat (a three-person doubles game), and
   drawing `?` in it (that is a person `users` cannot name).
 - **The slots** — the four `ReactNode`s `GameScreen` grew when it stopped being only the result
-  argument ([#368](https://github.com/Raketa02/Raketa/issues/368)) — `card`, `court`, `plan` and
+  argument ([#368](https://github.com/Rakieta02/Rakieta/issues/368)) — `card`, `court`, `plan` and
   `fill` — and `entryLead`, which of two things an `AWAITING_ENTRY` arm leads with, the plan or
   the score. The screen draws each and reads none
   ([ADR-0149](../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
   §2): they were how the old loop's card, pairing, plan and _Fill the seat_ were composed onto
   it without `features/games` learning what a plan was. That loop is gone
-  ([#576](https://github.com/Raketa02/Raketa/issues/576)), and the one route that mounts the
+  ([#576](https://github.com/Rakieta02/Rakieta/issues/576)), and the one route that mounts the
   screen now — a booked game's result, `BookedGameResult` — leads with the score and hands every
   slot `null`, each for a reason of its own: the booking is the plan, the details are the card
   and drew the forecast, and a seat open on a booking is a rescue. The props stay until a
@@ -615,13 +615,13 @@ here; what follows is only what this client had to invent to draw them.
 Eight client-only concepts, in `features/conversations/`, `shared/lib/platform/` and — for the
 one of them several features now read — `shared/date/`. The room is a booked game's: opened with
 the booking and reached from the game's details, with no plan card, quick chips or details door
-in it since the old loop left ([#576](https://github.com/Raketa02/Raketa/issues/576)). The spec's
+in it since the old loop left ([#576](https://github.com/Rakieta02/Rakieta/issues/576)). The spec's
 Q100 (2026-10-09) makes the bubble on the game's Home card a second door: it opens the room
-straight over Home, and Back returns to whichever screen opened it ([#619](https://github.com/Raketa02/Raketa/issues/619)). The
+straight over Home, and Back returns to whichever screen opened it ([#619](https://github.com/Rakieta02/Rakieta/issues/619)). The
 domain terms — Conversation, Message, System line, Member — are the **root glossary's** and are
 not restated here; what follows is only what this client had to invent to draw the room
-([#364](https://github.com/Raketa02/Raketa/issues/364)) and to keep it current
-([#365](https://github.com/Raketa02/Raketa/issues/365)).
+([#364](https://github.com/Rakieta02/Rakieta/issues/364)) and to keep it current
+([#365](https://github.com/Rakieta02/Rakieta/issues/365)).
 
 - **Stream entry** — what one row of the room draws: a recorded **Entry** the server has
   answered for, or a **Sending message**, which is a message this phone has posted and the server
@@ -679,7 +679,7 @@ not restated here; what follows is only what this client had to invent to draw t
 One client-only concept, in `features/proposals/`
 ([ADR-0167](../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)):
 the screen a yes lands on. Its first two faces — a challenge's _Challenge!_ and a mutual's
-_Matched!_ — left with the old loop ([#576](https://github.com/Raketa02/Raketa/issues/576)); the
+_Matched!_ — left with the old loop ([#576](https://github.com/Rakieta02/Rakieta/issues/576)); the
 ground, the entrance and the tile came to `features/proposals` with the face that stays (#574).
 
 - **It's a game!** — the full-phone screen a yes lands on when it **filled a game** dealt in a
@@ -696,7 +696,7 @@ ground, the entrance and the tile came to `features/proposals` with the face tha
   the root glossary, the share is **held** at the fill and taken at the club's **Cut-off**) its
   lines and the
   notices beside it say _held_, never _you paid_, before the cut-off
-  ([#642](https://github.com/Raketa02/Raketa/issues/642)). _Avoid_: "the celebration" or "the moment"
+  ([#642](https://github.com/Rakieta02/Rakieta/issues/642)). _Avoid_: "the celebration" or "the moment"
   (not terms); showing it to anybody but the player whose yes filled the game — the others are
   told by a notice — and re-showing it, which nothing does.
 
@@ -721,18 +721,18 @@ One client-only concept, in `features/proposals/` (#555; the Games & Fill in mec
   the root glossary's **Time to pay**, or since Q113 its **Time to fix the card**, named by the
   read (`timeTo`: `FIX_THE_CARD` or `PAY`) and drawn by it — _Fix your card by 14:40_ where it would
   say _Confirm your payment by 14:40_
-  ([#643](https://github.com/Raketa02/Raketa/issues/643),
-  [#645](https://github.com/Raketa02/Raketa/issues/645)). On a rescue the seat is kept for them
+  ([#643](https://github.com/Rakieta02/Rakieta/issues/643),
+  [#645](https://github.com/Rakieta02/Rakieta/issues/645)). On a rescue the seat is kept for them
   to take: _… to take the seat_. _Avoid_: "retry the payment" (the server never retries it; the
   player confirms it); "pay" for the time to fix the card (nothing is paid in it).
 
 ### Home
 
 One client-only concept, in `features/proposals/` since
-[#576](https://github.com/Raketa02/Raketa/issues/576): Home is booked games only, so the rail is
+[#576](https://github.com/Rakieta02/Rakieta/issues/576): Home is booked games only, so the rail is
 that feature's whole, and the old loop's card — its ladder, its slot rows, its doors and its
 dismissal — left with `features/plans`. What follows is only what this client had to invent to
-draw a player's games ([#556](https://github.com/Raketa02/Raketa/issues/556)).
+draw a player's games ([#556](https://github.com/Rakieta02/Rakieta/issues/556)).
 
 - **The rail** — `YOUR GAMES · n`, **one card, swipe**: the booked games and the ones waiting
   for a club, on `HomeRail`. A rail rather than a list, because _a game awaiting its club, one
@@ -856,7 +856,7 @@ it.
   account (#756).
   _Avoid_: "settings", "local storage", "cache" — it holds a choice, never a copy of the server,
   and never a credential.
-- **Feature flag** — a named switch, defined in `Raketa02/raketa-features` and turned on or off by
+- **Feature flag** — a named switch, defined in `Rakieta02/rakieta-features` and turned on or off by
   a pull request there, that answers _is this feature on_ for the signed-in player, **decided on the
   phone** by the Featurevisor SDK from the datafile built for the app's environment
   (`features/feature_flags`, [ADR-0206](../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)).
@@ -883,7 +883,7 @@ it.
   one anybody agreed to, and nothing in this app asks for it. **The area**: a fix is
   **coarsened the moment it is read** — the Location area is what the app keeps, and the
   fix itself does not outlive the function that asked for it. **An attendance tap**
-  ([#658](https://github.com/Raketa02/Raketa/issues/658)): when a player says who's at a
+  ([#658](https://github.com/Rakieta02/Rakieta/issues/658)): when a player says who's at a
   game, one **precise** fix (`readPreciseFix`) is read at that tap and sent with it, so the
   backend can tell whether they are at the club — never coarsened, because 300 m is the
   question, and never kept: it is read inside the write and handed to the request, the
@@ -978,8 +978,8 @@ comment and a commit message all use the same word.
   in both states, so there the marker and the colour carry it alone. When the lit tab changes it
   **travels** to the new one, on a spring that stretches as it moves. On the bar's first draw, or when the bar comes back, it is simply there
   ([ADR-0210](../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §4, §8;
-  drawn by [#883](https://github.com/Raketa02/Raketa/issues/883), its travel by
-  [#884](https://github.com/Raketa02/Raketa/issues/884), `tabMarkerMotion.ts`). The
+  drawn by [#883](https://github.com/Rakieta02/Rakieta/issues/883), its travel by
+  [#884](https://github.com/Rakieta02/Rakieta/issues/884), `tabMarkerMotion.ts`). The
   brief's own phrase. UI vocabulary, not a domain term. _Avoid_: pill (taken by `radius.pill`,
   `SportPill` and FOR YOU's count pill), highlight, and the ring (the ⚡Play disc's, which
   retires with the disc). Not **the tab's menu**, which is a group page's.
@@ -997,7 +997,7 @@ comment and a commit message all use the same word.
   where **marked** (`voltStroke`, 1pt) is a standing fact about whoever is drawn on it. The
   press still wins over it, it announces nothing, and it is **never the only cue** — a caller
   that draws it also draws the word. Its callers were the two list cards, bound to the _Wants to
-  play you_ tag; both left with Find a game ([#576](https://github.com/Raketa02/Raketa/issues/576)),
+  play you_ tag; both left with Find a game ([#576](https://github.com/Rakieta02/Rakieta/issues/576)),
   and `Card`'s `marked` has no caller today.
 - **Eyebrow vs form label** — an **eyebrow** labels a region you are _reading_; a **form
   label** labels a control you are about to _operate_. Not interchangeable.

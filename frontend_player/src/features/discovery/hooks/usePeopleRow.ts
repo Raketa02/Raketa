@@ -1,6 +1,6 @@
 /**
- * **A people row on Home, read** ([#801](https://github.com/Raketa02/Raketa/issues/801),
- * [#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows mechanics §3, §9, §13) — on
+ * **A people row on Home, read** ([#801](https://github.com/Rakieta02/Rakieta/issues/801),
+ * [#802](https://github.com/Rakieta02/Rakieta/issues/802); the Home rows mechanics §3, §9, §13) — on
  * its own, so a slow or failed read holds up nothing else on Home.
  *
  * - **Coming back to Home re-reads it once its last read is older than thirty seconds** — the app's
@@ -11,7 +11,7 @@
  *   a gap the next fresh match takes the place of; read at the tap, the card would leave under the
  *   thumb. **The next read** — a return, a pull, foregrounding — **moves them**.
  * - **A block re-reads it at once**, and so does a refusal that is the state moving: those cards leave.
- * - **Its total moves with its reads and nothing else** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+ * - **Its total moves with its reads and nothing else** ([#822](https://github.com/Rakieta02/Rakieta/issues/822);
  *   ADR-0205 §6): the line's count and *See all N ›* are the server's, so a friend write drawn on a
  *   card leaves them as read, and the next read brings the new figure. Nothing polls for it.
  */

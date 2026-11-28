@@ -1,5 +1,5 @@
 /**
- * **The Games deck swapped to its other kind, in place** ([#863](https://github.com/Raketa02/Raketa/issues/863),
+ * **The Games deck swapped to its other kind, in place** ([#863](https://github.com/Rakieta02/Rakieta/issues/863),
  * PRD #859; the tab menu log §5.1–§5.2) — the rules of a pick from the Games tab's menu, which
  * `GamesDeck` draws and times. Pure.
  *

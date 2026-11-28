@@ -1,6 +1,6 @@
 /**
  * One recessed box — a name, and the fact under it
- * ([#312](https://github.com/Raketa02/Raketa/issues/312)).
+ * ([#312](https://github.com/Rakieta02/Rakieta/issues/312)).
  *
  * The shape [7.13](../../../docs/design-system.md#713-the-record-block) and
  * [7.14](../../../docs/design-system.md#714-the-stake-box) share. Three of them across
@@ -45,7 +45,7 @@
  * 7.14 keeps the stake boxes untinted on a card — *mint is settled, safe, covered, and neither is
  * true of a result nobody has played* — and #410's design tints the **win** tile on the game
  * screen's forecast block ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking),
- * [#415](https://github.com/Raketa02/Raketa/issues/415)). The design wins, and it lands here as a
+ * [#415](https://github.com/Rakieta02/Rakieta/issues/415)). The design wins, and it lands here as a
  * `variant` rather than as a second box, for the reason this file exists: the padding, the ground
  * and the two type steps are one shape, and a tinted copy is where they stop matching. `mint`
  * paints the bed `mintSoft` and the label `mintInk` — the pair 2.2 publishes together at 5:1 or

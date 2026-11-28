@@ -1,6 +1,6 @@
 /**
  * **The You tab, walked the way a player walks it** — the real route tree, the real bar, and
- * only `fetch` faked ([#296](https://github.com/Raketa02/Raketa/issues/296)).
+ * only `fetch` faked ([#296](https://github.com/Rakieta02/Rakieta/issues/296)).
  *
  * The section exists because a declaration whose only home was the search form kept reading as
  * a search setting. So the assertions are about it being a **fact about the player**: it is
@@ -214,7 +214,7 @@ describe('the play intents on You', () => {
 
 /**
  * **What a change costs, said before the tap** (ADR-0201 §6,
- * [#742](https://github.com/Raketa02/Raketa/issues/742)): opening a declared sport reads its cards
+ * [#742](https://github.com/Rakieta02/Rakieta/issues/742)): opening a declared sport reads its cards
  * across the groups, and each answer that would change something says what it does to them.
  */
 describe('what an answer costs, on You', () => {

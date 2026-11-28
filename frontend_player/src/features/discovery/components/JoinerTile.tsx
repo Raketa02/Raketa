@@ -1,5 +1,5 @@
 /**
- * **A New in Rakieta tile** ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows
+ * **A New in Rakieta tile** ([#801](https://github.com/Rakieta02/Rakieta/issues/801); the Home rows
  * screens §5.2–§5.3; home rows 17–19; design-system 7.31) — `shared/ui`'s portrait tile, with:
  *
  * - **a volt *NEW*** top-left, and **`friends`' round button** top-right, asking from *new players*;
@@ -11,7 +11,7 @@
  * order drawn (`tileLabel`).
  *
  * **While See all's first page is read, a grid tile is one skeleton block** (`JOINER_TILE_SKELETON`,
- * [#872](https://github.com/Raketa02/Raketa/issues/872)): everything on it is drawn over the
+ * [#872](https://github.com/Rakieta02/Rakieta/issues/872)): everything on it is drawn over the
  * photograph, so the whole tile is the one shape, at the grid's 9:8 and the tile's corner.
  */
 

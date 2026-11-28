@@ -1,6 +1,6 @@
 /**
  * **The friends card and *Find a court*, off the wire** — and the card's question onto it
- * ([#757](https://github.com/Raketa02/Raketa/issues/757), over #750's two reads). Generated types
+ * ([#757](https://github.com/Rakieta02/Rakieta/issues/757), over #750's two reads). Generated types
  * stop here and in `api/`.
  *
  * The deck's narrowings, borrowed whole: a club with no name, a forecast the server could not

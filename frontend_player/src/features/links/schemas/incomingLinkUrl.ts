@@ -1,7 +1,7 @@
 /**
  * **Reading a link the phone hands the app** — the address the operating system opened Rakieta with,
  * turned into one of the four links or into nothing
- * ([#520](https://github.com/Raketa02/Raketa/issues/520), docs/architecture.md Part 2 *Deep links are
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520), docs/architecture.md Part 2 *Deep links are
  * untrusted input*, ADR-0187 §7).
  *
  * **Everything here is somebody else's text.** Anybody can make a page, a message or a QR code that

@@ -1,10 +1,10 @@
 /**
  * **Rescues, walked** — a booked game that lost a player, its open seat dealt as a *Seat open* card
  * and taken from the card or from its details seen from outside
- * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A2.3, A2.4, A4.3; mock 2; the
+ * ([#557](https://github.com/Rakieta02/Rakieta/issues/557); the screens A2.3, A2.4, A4.3; mock 2; the
  * mechanics §10.1; the backend's #545).
  *
- * **What the share does** ([#645](https://github.com/Raketa02/Raketa/issues/645); Q113): before
+ * **What the share does** ([#645](https://github.com/Rakieta02/Rakieta/issues/645); Q113): before
  * the club's cut-off *Pay 27 zł* is said *held until the cut-off*, and once in, the rescuer
  * reads the game as everybody does — held, free to leave until the cut-off; after it, *paid now*.
  * **A rescuer whose card is refused** keeps the seat for 30 minutes (#640), told to fix the card

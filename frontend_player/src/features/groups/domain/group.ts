@@ -232,7 +232,7 @@ export interface EditedGroup {
 }
 
 /**
- * **One card of Home's *Hottest groups*** ([#800](https://github.com/Raketa02/Raketa/issues/800);
+ * **One card of Home's *Hottest groups*** ([#800](https://github.com/Rakieta02/Rakieta/issues/800);
  * ADR-0204 §3; the Home rows mechanics §5) — and **everything its group sheet shows**, so tapping the
  * card needs no second read. Drawn for any reader, **whether they are in the group or not**; the
  * group's page stays members-only.
@@ -279,7 +279,7 @@ export interface HottestGroup {
 
 /**
  * **Home's Hottest groups, as read** — the six cards, and **how many groups there are to look
- * through** ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6): every group with 3
+ * through** ([#822](https://github.com/Rakieta02/Rakieta/issues/822); ADR-0205 §6): every group with 3
  * or more players, the reader's own included, counted up to 100 — the line's count. The server's
  * figure, refreshed only by the next read.
  */
@@ -289,7 +289,7 @@ export interface HottestRow {
 }
 
 /**
- * **One page of *Groups heating up*** ([#823](https://github.com/Raketa02/Raketa/issues/823);
+ * **One page of *Groups heating up*** ([#823](https://github.com/Rakieta02/Rakieta/issues/823);
  * ADR-0205 §7; the Home rows mechanics §5.10) — up to 20 of the row's cards, every group with 3 or
  * more players, the reader's own included, in the row's order, and the cursor behind them. The first
  * page's total is the line's count, which the page does not draw, so it is not carried.

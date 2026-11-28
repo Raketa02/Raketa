@@ -1,5 +1,5 @@
 /**
- * **The group page's skeleton above the body** ([#875](https://github.com/Raketa02/Raketa/issues/875);
+ * **The group page's skeleton above the body** ([#875](https://github.com/Rakieta02/Rakieta/issues/875);
  * PRD #867; the loading shimmer log §10) — what stands while the group and the sport are read: **a
  * monogram circle and a bar for the name** in the header, beside its real way back
  * (`GroupHeader`'s `shimmering`), and **the tab bar's shape** under it. The body's skeleton is the

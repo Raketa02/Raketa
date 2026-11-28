@@ -6,7 +6,7 @@
 > changes what this feature does. Index: [`README.md`](README.md).
 
 **`{name}` is filled from the people the response names, and the roster is not that list**
-([#409](https://github.com/Raketa02/Raketa/issues/409),
+([#409](https://github.com/Rakieta02/Rakieta/issues/409),
 [ADR-0148](../../../docs/adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md)'s
 2026-09-11 amendment). Membership is derived live — the accepted seats, then the game's frozen
 line-up — and a _no_ is not an accepted seat, so the actor of a `SEAT_LEFT` line was never a member
@@ -29,17 +29,17 @@ keeps its single meaning: `nickname: null` is the platform no longer able to nam
 nothing else draws it.
 
 **The room is a header, a stream and a composer**
-([#364](https://github.com/Raketa02/Raketa/issues/364)). The header is 10.3's with a new **lead**
+([#364](https://github.com/Rakieta02/Rakieta/issues/364)). The header is 10.3's with a new **lead**
 slot — a room is named by the people in it, so the faces sit beside the handles rather than in the
 page under them, where the stream would scroll them away. **Its title is the handles' stems and its
 spoken name is the handles whole, and the line under it is the sport and the game's state in lower
-case** ([#401](https://github.com/Raketa02/Raketa/issues/401),
+case** ([#401](https://github.com/Rakieta02/Rakieta/issues/401),
 [ADR-0157](../../../docs/adr/0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)):
 `handleStem` is a prefix of the handle the person typed — ADR-0107 forbids _inventing_ a familiar
 form and a stem invents nothing, which is `the-words.md` §15's and `handleStem`'s own argument — and
 the state is the game's own word in lower case — the old loop's Now card's rung then, a booked
 game's status now (below) — and never the twenty-state standing ADR-0148 §6 refused. **With nobody else to name, the title is
-_Waiting for others to join_** ([#429](https://github.com/Raketa02/Raketa/issues/429) E4): the
+_Waiting for others to join_** ([#429](https://github.com/Rakieta02/Rakieta/issues/429) E4): the
 organiser alone again — somebody joined and left while the rest were still deciding — is a real
 room with one member, and `headerTitle` of no handles drew a blank at `h1` over the sport. The
 rule lives in `headerTitle` rather than at the call site so no arrangement of props draws that gap,
@@ -74,7 +74,7 @@ the second store this app does not have. A refusal **puts the words back in the 
 retry is the control that failed.
 
 **The room stays current on its own, and the whole live layer is a nudge, a fold and a sentence**
-([#365](https://github.com/Raketa02/Raketa/issues/365),
+([#365](https://github.com/Rakieta02/Rakieta/issues/365),
 [ADR-0147](../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)).
 `shared/lib/platform/liveStream.ts` is the app's **third port** and the only importer of
 `react-native-sse` — beside the two native ones, on the second of their two arguments: a transport
@@ -102,7 +102,7 @@ are what drive the arm. 6.2 and 6.13 each gained a `disabled` state for it, unde
 **only where a note above has already said why.**
 
 **The stream carries a second frame, and the port subscribes per name**
-([#404](https://github.com/Raketa02/Raketa/issues/404),
+([#404](https://github.com/Rakieta02/Rakieta/issues/404),
 [ADR-0156](../../../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)).
 `event: nudge` and `event: typing` are the two names the route writes, and `liveStream.ts` listens
 for exactly those — never `message` — so a frame under a name this build has not heard of is dropped
@@ -129,7 +129,7 @@ hold. It is not a `useMutation`, because a paused heartbeat resuming on reconnec
 about a person who left a minute ago.
 
 **A room that ends while it is on screen stays on screen, closed, and says so**
-([#429](https://github.com/Raketa02/Raketa/issues/429)). A room's end is answered by the nudge's
+([#429](https://github.com/Rakieta02/Rakieta/issues/429)). A room's end is answered by the nudge's
 re-read with `conversation_not_found`. The screen answered that by leaving — a player reading a
 room was taken off it a moment later with the room gone from under them, which read as the app
 acting on their behalf. Now `roomIsGone` on a read **with pages held** keeps the room: the stream as
@@ -140,7 +140,7 @@ place closes the room. A room **nothing was ever read from** still leaves — a 
 room that is not there.
 
 **A booked game's room is the same screen, reached from its details**
-([#556](https://github.com/Raketa02/Raketa/issues/556); the Games & Fill in screens A4.4, the
+([#556](https://github.com/Rakieta02/Rakieta/issues/556); the Games & Fill in screens A4.4, the
 mechanics §14.3). `ConversationScreen` takes `booked: { state }` and draws the conversation alone —
 no plan card, no plan quick chips, no _Details_ door (`ConversationHeader`'s `onOpenGame` is
 optional for it) — with the header's second line the booking's word, because the Classic fold names
@@ -152,7 +152,7 @@ room is filed under its booking and is about its game from its first moment. No 
 conversation id.
 
 **Every room is a booked game's now, and the room lost what only the old loop's needed**
-([#576](https://github.com/Raketa02/Raketa/issues/576), PRD [#569](https://github.com/Raketa02/Raketa/issues/569)).
+([#576](https://github.com/Rakieta02/Rakieta/issues/576), PRD [#569](https://github.com/Rakieta02/Rakieta/issues/569)).
 The Chats tab's `CONVERSATIONS` section and its rows, the swipe that revealed _Leave the game_ on
 them, the return re-read they took, the plan card pinned under the header, the quick chips, the
 _Details_ door and the route it opened, the challenge's chat doors (`useChatDoor`,
@@ -170,8 +170,8 @@ backend keeps the codes for the same reason. `roomLiveness.test.tsx` and
 `conversationScreen.test.tsx` walk the booked chat now, entered from the details' _Open the chat_.
 
 **A booked game's room is found by its booking**
-([#577](https://github.com/Raketa02/Raketa/issues/577), PRD
-[#569](https://github.com/Raketa02/Raketa/issues/569)). #575 renamed the room's `challenge_id` to
+([#577](https://github.com/Rakieta02/Rakieta/issues/577), PRD
+[#569](https://github.com/Rakieta02/Rakieta/issues/569)). #575 renamed the room's `challenge_id` to
 `booking_id` — the same value, the booking whose game opened the room — and a room is opened only by
 a booked game, so every room has one. The join moved onto it: `Conversation.bookingId` replaces
 `gameId`, and `useGameRoom(gameId)` and `useGameRooms()` are `useBookingRoom(bookingId)` and
@@ -185,13 +185,13 @@ with their booking about the game: one filed under the booking and naming no gam
 card and the details, and one filed under another booking but naming this game draws no bubble and
 no _Chat_.
 
-**A booked game's room has a second door** ([#619](https://github.com/Raketa02/Raketa/issues/619);
+**A booked game's room has a second door** ([#619](https://github.com/Rakieta02/Rakieta/issues/619);
 the mechanics Q100). The bubble on the game's Home card opens the same route as the details'
 _Open the chat_, pushed straight over Home, so Back from the room is whichever screen opened it. The
 screen is unchanged — it never had a way into the details and still has none; the door is
 `proposals`' (`ChatDoor`), named by `OPEN_THE_CHAT` like the details' one.
 
-**The chat names its people by nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). Members and people read the wire's
+**The chat names its people by nickname** ([#728](https://github.com/Rakieta02/Rakieta/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). Members and people read the wire's
 `nickname`; the header's drawn line is each nickname's stem at its **first dot**, spoken whole, and
 the author labels, the typing line and the system lines say the whole nickname, never with an @.
 `conversationScreen.test.tsx` holds _ania.k_ in the header, on her bubble and in a line about her.

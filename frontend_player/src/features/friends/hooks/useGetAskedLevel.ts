@@ -1,6 +1,6 @@
 /**
  * **The coral button on a friend's ask for a level** — *Get your padel level*, or *Carry on*
- * ([#765](https://github.com/Raketa02/Raketa/issues/765); the friends screens §6.4).
+ * ([#765](https://github.com/Rakieta02/Rakieta/issues/765); the friends screens §6.4).
  *
  * **It is the *level asked* notice's act** — `onboarding`'s `useAddASport` from Home: the sport's
  * questionnaire started, its unfinished run handed back if there is one, a pass of that one sport

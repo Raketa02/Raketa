@@ -1,7 +1,7 @@
 /**
  * **A group link, opened on a phone** — Kuba taps one in WhatsApp and the app opens on Join a group
  * with that group already there; Kasia opened the same link before she had an account, and lands on
- * it once she has signed up and been rated ([#520](https://github.com/Raketa02/Raketa/issues/520),
+ * it once she has signed up and been rated ([#520](https://github.com/Rakieta02/Rakieta/issues/520),
  * PRD #500 stories 46 and 48).
  *
  * Driven through the real route tree **with the app's link reader in front of it**

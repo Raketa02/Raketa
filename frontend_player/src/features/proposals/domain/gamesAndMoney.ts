@@ -1,6 +1,6 @@
 /**
  * **Games & money — a player's two limits** (You › Account; the screens A7.1; the mechanics §6.6;
- * [#554](https://github.com/Raketa02/Raketa/issues/554)), the backend's second Proposals aggregate
+ * [#554](https://github.com/Rakieta02/Rakieta/issues/554)), the backend's second Proposals aggregate
  * (#539).
  *
  * **Games per week**: once that many games are booked in a week, Monday to Sunday, the deck deals

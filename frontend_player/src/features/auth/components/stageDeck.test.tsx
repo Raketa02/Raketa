@@ -1,5 +1,5 @@
 /**
- * **Sign-in's dealt deck** ([#786](https://github.com/Raketa02/Raketa/issues/786), PRD #783) —
+ * **Sign-in's dealt deck** ([#786](https://github.com/Rakieta02/Rakieta/issues/786), PRD #783) —
  * three miniature game cards in the hero, dealt from a stack to the fan when the screen opens.
  *
  * Drawn through `SignInScreen`, the hero as sign-in draws it, under the reduced-motion provider's

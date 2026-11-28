@@ -1,6 +1,6 @@
 /**
  * **A person's row** — the face, the whole nickname and a line under it, the whole row one press
- * that opens their record ([#754](https://github.com/Raketa02/Raketa/issues/754)).
+ * that opens their record ([#754](https://github.com/Rakieta02/Rakieta/issues/754)).
  *
  * ```
  * ┌────┐ magda.p

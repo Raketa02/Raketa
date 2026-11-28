@@ -1,7 +1,7 @@
 /**
  * **A game with friends, built on a group's Friends tab** — the picker, the court, the card and
- * *Find a court* ([#757](https://github.com/Raketa02/Raketa/issues/757); the friends screens §4.2,
- * §7; friends 3, 6–11), and sending it ([#759](https://github.com/Raketa02/Raketa/issues/759)).
+ * *Find a court* ([#757](https://github.com/Rakieta02/Rakieta/issues/757); the friends screens §4.2,
+ * §7; friends 3, 6–11), and sending it ([#759](https://github.com/Rakieta02/Rakieta/issues/759)).
  *
  * The real route tree, with the socket faked: the friends read answers per sport, highest Level
  * first, as `GET /friends?sport=` does; the card answers the evenest sides — *You + ewa.m* against

@@ -1,5 +1,5 @@
 /**
- * **The ranking's wire boundary** ([#775](https://github.com/Raketa02/Raketa/issues/775)) — every
+ * **The ranking's wire boundary** ([#775](https://github.com/Rakieta02/Rakieta/issues/775)) — every
  * card state, the chip, the gap line and a row, and the absences: a field the server sends `null`
  * is left out rather than turned into a nought, and what this build cannot read is drawn as nothing
  * rather than guessed.

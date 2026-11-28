@@ -27,7 +27,7 @@
  * `conversationKeys`' own reasoning about the list one screen up: nothing here is a number and
  * nothing draws a clock, so a stream served from cache is internally consistent rather than merely
  * recent. **What another member said arrives on a nudge**
- * ([#365](https://github.com/Raketa02/Raketa/issues/365)), and the nudge **invalidates** — the
+ * ([#365](https://github.com/Rakieta02/Rakieta/issues/365)), and the nudge **invalidates** — the
  * Query cache stays the single copy and there is no second store for a conversation
  * ([ADR-0147](../../../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md) §5).
  * Until that lands, foregrounding is what makes a room current.
@@ -114,7 +114,7 @@ export function useConversation(conversationId: string) {
  * those pages name, **merged** newest page first.
  *
  * A page backward carries its own authors and actors and nothing about the roster
- * ([#409](https://github.com/Raketa02/Raketa/issues/409)), so its people are added to what is
+ * ([#409](https://github.com/Rakieta02/Rakieta/issues/409)), so its people are added to what is
  * held rather than put in its place: replacing would forget the members the moment the first
  * older page landed, and a page's people are exactly the ones the room's first read could not
  * have known. `mergedPeople` keeps the first face seen per id, which here is the newest page's —

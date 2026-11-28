@@ -1,6 +1,6 @@
 /**
  * ***Find a court*** — every court the line-up could take in the next 14 days, by day, each row
- * tinted by how many of them are free then ([#757](https://github.com/Raketa02/Raketa/issues/757);
+ * tinted by how many of them are free then ([#757](https://github.com/Rakieta02/Rakieta/issues/757);
  * the friends screens §7.3; friends 10, 11, README note 5).
  *
  * ```

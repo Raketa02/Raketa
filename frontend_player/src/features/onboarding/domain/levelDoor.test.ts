@@ -1,6 +1,6 @@
 /**
  * **What the door where play begins offers** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §2, §5, [#730](https://github.com/Raketa02/Raketa/issues/730)) — with no renderer and no
+ * §2, §5, [#730](https://github.com/Rakieta02/Rakieta/issues/730)) — with no renderer and no
  * network: the picker for a player with nothing left halfway, and the run itself, at the question
  * she is on, for one who left it.
  */

@@ -1,7 +1,7 @@
 /**
  * **The sport pill** — the pill in a page's header, and the bar it unfolds into: the group page's
- * fast filter (play 41–42, PRD #500 stories 52–58, [#513](https://github.com/Raketa02/Raketa/issues/513))
- * and Rankings' sport, **one control** since [#774](https://github.com/Raketa02/Raketa/issues/774).
+ * fast filter (play 41–42, PRD #500 stories 52–58, [#513](https://github.com/Rakieta02/Rakieta/issues/513))
+ * and Rankings' sport, **one control** since [#774](https://github.com/Rakieta02/Rakieta/issues/774).
  * A page draws it through `SportPillFrame`, which holds it open or folded; this is the drawing.
  *
  * **Every word is the caller's** (`SportPillWords`, `AnotherSport`) — a sport's name, the pill's
@@ -27,7 +27,7 @@
  * it; a tap on the current one, or anywhere else on the page (the frame's backdrop), folds the bar
  * and changes nothing.
  *
- * **Or it opens rightwards** (`opens`, [#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205
+ * **Or it opens rightwards** (`opens`, [#821](https://github.com/Rakieta02/Rakieta/issues/821); ADR-0205
  * §5, Q19, Q37; home refactor 12, 13): Top 10's switcher stands first in its line's footer, so it
  * reads *Padel ›*, its chevron pointing the way it opens, and the bar grows **to the right** across
  * the footer — the current sport dark at its **left** end where the pill stood, its chevron turned
@@ -61,7 +61,7 @@
  * immediate** — see `motion.unfold`.
  *
  * **It can end with *+ Another sport*** — the group page's, while there is a sport left to offer
- * ([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §4): the farthest pill from the
+ * ([#731](https://github.com/Rakieta02/Rakieta/issues/731), ADR-0200 §4): the farthest pill from the
  * current sport, the last to slide out, so it is where the row ends. It is no sport — no dot, the
  * plus in front — and its press is the page's: the group page opens *Which sports do you play?*
  * over the sports the reader is unrated in. A page that hands no `another` draws none.

@@ -1,6 +1,6 @@
 /**
  * *Forgot password?* — driven through the real route tree and the network boundary
- * ([#515](https://github.com/Raketa02/Raketa/issues/515),
+ * ([#515](https://github.com/Rakieta02/Rakieta/issues/515),
  * [ADR-0184](../../../../../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
  * §5).
  *

@@ -1,6 +1,6 @@
 /**
  * **A refused share, read and confirmed on the phone** — the payments half of *Confirm your payment
- * to keep your seat* ([#555](https://github.com/Raketa02/Raketa/issues/555); #541; the mechanics
+ * to keep your seat* ([#555](https://github.com/Rakieta02/Rakieta/issues/555); #541; the mechanics
  * §12.2). The yes again — `POST /seat-charges/{id}/confirmation` — is the proposals feature's, as
  * the backend's is, and its caller sends it once this says `confirmed`.
  *

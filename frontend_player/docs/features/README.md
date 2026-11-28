@@ -46,14 +46,14 @@ is referenced from the other by a sentence, not copied.
 
 ## The map
 
-**On 2026-10-06 the old loop left** ([#576](https://github.com/Raketa02/Raketa/issues/576),
-PRD [#569](https://github.com/Raketa02/Raketa/issues/569)): the Players deck and its radar, the
+**On 2026-10-06 the old loop left** ([#576](https://github.com/Rakieta02/Rakieta/issues/576),
+PRD [#569](https://github.com/Rakieta02/Rakieta/issues/569)): the Players deck and its radar, the
 Chats tab, Find a game, challenges, plans, the old game screen at `/games/[id]` and the feature
 flags that hid them were deleted, with their records here (`play.md`, `challenges.md`,
 `plans.md`, `feature_flags.md`). The bar is **Home · ⚡Play · You**. What the new games shared
-with the old loop was moved first ([#574](https://github.com/Raketa02/Raketa/issues/574)) and
+with the old loop was moved first ([#574](https://github.com/Rakieta02/Rakieta/issues/574)) and
 lives in the features that use it. **The feature flags came back on 2026-11-21**
-([#826](https://github.com/Raketa02/Raketa/issues/826)), restored from git with their record, to keep
+([#826](https://github.com/Rakieta02/Rakieta/issues/826)), restored from git with their record, to keep
 Play's Explore off while it is unbuilt.
 
 What exists, feature by feature:
@@ -84,6 +84,6 @@ startup sequence. Above that: the HTTP client with its 401 → refresh → retry
 - `blocks` — Block at the foot of that sheet, and You › Account › Blocked players, where Unblock is.
 - `payments`, `notifications`, `links`, `administrator` and `find_a_game_next` (Explore's empty
   page) — each in its own record above.
-- `feature_flags` — the feature flags: the datafile from `Raketa02/raketa-features`, its saved copy,
+- `feature_flags` — the feature flags: the datafile from `Rakieta02/rakieta-features`, its saved copy,
   the Featurevisor SDK behind one file, and the gate a screen reads once when it mounts. One key,
   `explore`, off.

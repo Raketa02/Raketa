@@ -17,7 +17,7 @@ export const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
  * The months, short — one row beside a weekday that is already whole.
  *
  * **The first month names in this app.** The Now card's `DAY` slot is the first surface to draw
- * a date ([#413](https://github.com/Raketa02/Raketa/issues/413)); §5.4 refused one on the game
+ * a date ([#413](https://github.com/Rakieta02/Rakieta/issues/413)); §5.4 refused one on the game
  * screen because *the horizon is seven chips, so a weekday is exact*, and the design wins on the
  * card.
  */

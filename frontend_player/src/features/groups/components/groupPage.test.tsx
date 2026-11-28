@@ -1,7 +1,7 @@
 /**
  * **A group's page, walked** — the fast filter, the tab bar, and the Games, Fill in and Friends
  * tabs in their starting states, and the Friends screen behind the court
- * ([#513](https://github.com/Raketa02/Raketa/issues/513), PRD #500 stories 51–70; play mocks
+ * ([#513](https://github.com/Rakieta02/Rakieta/issues/513), PRD #500 stories 51–70; play mocks
  * 14–17, 39–55). Info and Members are `groupInfo.test.tsx`'s.
  *
  * The real route tree, with the socket, the share sheet and the clipboard faked at the platform

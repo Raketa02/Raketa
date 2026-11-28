@@ -1,6 +1,6 @@
 /**
  * **Play's two segments** — Groups and Explore, and which one the tab opens on
- * ([#512](https://github.com/Raketa02/Raketa/issues/512), PRD #500 stories 2–4).
+ * ([#512](https://github.com/Rakieta02/Rakieta/issues/512), PRD #500 stories 2–4).
  *
  * Groups is the crowd a player already plays with; Explore is where the rebuilt Find a game will
  * grow, and is a blank page until it does. The segment is the first value the phone-preferences

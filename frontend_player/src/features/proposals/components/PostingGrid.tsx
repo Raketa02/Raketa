@@ -1,6 +1,6 @@
 /**
  * **WHEN** — the posting grid: its head, its legend and one week of cells
- * ([#558](https://github.com/Raketa02/Raketa/issues/558); the screens A5.2; mocks 2-, 20–32).
+ * ([#558](https://github.com/Rakieta02/Rakieta/issues/558); the screens A5.2; mocks 2-, 20–32).
  *
  * ```
  * WHEN (i)                         [‹]  This week  [›]

@@ -1,6 +1,6 @@
 /**
  * **A game still filling, in detail** — `GET /proposals/{id}` (#542), the details a card's **i**, a
- * *You’re in* row and a live yes open ([#557](https://github.com/Raketa02/Raketa/issues/557)).
+ * *You’re in* row and a live yes open ([#557](https://github.com/Rakieta02/Rakieta/issues/557)).
  *
  * | | |
  * | --- | --- |

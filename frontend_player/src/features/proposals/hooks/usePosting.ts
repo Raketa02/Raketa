@@ -1,5 +1,5 @@
 /**
- * ***Post a game*'s reads and its write** ([#558](https://github.com/Raketa02/Raketa/issues/558);
+ * ***Post a game*'s reads and its write** ([#558](https://github.com/Rakieta02/Rakieta/issues/558);
  * the backend's #546).
  *
  * | | |

@@ -51,7 +51,7 @@ export {
  *
  * Presentation the wire does not carry, decided here because onboarding drew the first Level
  * bar. The **record sheet is the second**
- * ([#384](https://github.com/Raketa02/Raketa/issues/384)) and it draws the same bar: the four
+ * ([#384](https://github.com/Rakieta02/Rakieta/issues/384)) and it draws the same bar: the four
  * labels beneath it and the key that highlights one of them are a fact about the *vocabulary*
  * rather than about either screen, so a second table would be a second answer to a question
  * this feature already owns — `sportLabel`'s own argument, one row down.
@@ -134,7 +134,7 @@ export { useReturningGroup } from './hooks/useReturningGroup';
 
 /**
  * **The door where play begins** ([ADR-0200](../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §2, §5, [#730](https://github.com/Raketa02/Raketa/issues/730)) — *Get your level*, or *Carry on
+ * §2, §5, [#730](https://github.com/Rakieta02/Rakieta/issues/730)) — *Get your level*, or *Carry on
  * with your padel questions — you're on question 5* — drawn by a player group's Games, Fill in and
  * Friends, its *Post a game* and its Members for a player rated in nothing. The pass it begins
  * returns to the door's origin; the card, its words and both reads are this feature's.
@@ -170,7 +170,7 @@ export {
 } from './schemas/routeParams';
 
 /**
- * **The picker, opened from a group's chip** — *+ Another sport* ([#731](https://github.com/Raketa02/Raketa/issues/731),
+ * **The picker, opened from a group's chip** — *+ Another sport* ([#731](https://github.com/Rakieta02/Rakieta/issues/731),
  * ADR-0200 §4): where *Which sports do you play?* is, for a pass that returns to the group's tab,
  * over the sports the chip offers. The door and the Home card open it through `LevelDoor`.
  */

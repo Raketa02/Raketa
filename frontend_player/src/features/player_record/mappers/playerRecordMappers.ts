@@ -28,10 +28,10 @@
  * ## The opinion is one figure for every reader, and the band no longer crosses
  *
  * The contract served `sportsmanship_band` to a record's subject and `sportsmanship` to anybody
- * else until [#468](https://github.com/Raketa02/Raketa/issues/468) retired the band (ADR-0179
+ * else until [#468](https://github.com/Rakieta02/Rakieta/issues/468) retired the band (ADR-0179
  * §5): the figure and its count now cross to the subject as to any reader, and the wire has one
  * field. So the mapper reads that one field whoever is asking, and `Opinion` is that one shape
- * ([#473](https://github.com/Raketa02/Raketa/issues/473)) — `is_self` retitles the sheet and
+ * ([#473](https://github.com/Rakieta02/Rakieta/issues/473)) — `is_self` retitles the sheet and
  * decides nothing here.
  *
  * ## The verdict is folded to a boolean here and is never carried further

@@ -1,6 +1,6 @@
 /**
  * **Home and a booked game, off the wire** — `GET /home` and `GET /bookings/{id}` (#542) read into
- * the domain's shapes ([#556](https://github.com/Raketa02/Raketa/issues/556)).
+ * the domain's shapes ([#556](https://github.com/Rakieta02/Rakieta/issues/556)).
  *
  * A seat is the deck's person with its *paid* beside it: the tiles are the deck's tiles, and a
  * booked game is the card it was, turned into a court. A `null` on the wire is a field left off,

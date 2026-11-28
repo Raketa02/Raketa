@@ -1,7 +1,7 @@
 /**
  * **A booked game's chat** — the room, opened from the game's details
- * ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.4; the mechanics §14.3) or
- * straight over Home from the bubble on its card (Q100, [#619](https://github.com/Raketa02/Raketa/issues/619)).
+ * ([#556](https://github.com/Rakieta02/Rakieta/issues/556); the screens A4.4; the mechanics §14.3) or
+ * straight over Home from the bubble on its card (Q100, [#619](https://github.com/Rakieta02/Rakieta/issues/619)).
  *
  * `conversations`' own screen, the header's second line the booking's word. The room is found by
  * the join keyed by the booking (`useBookingRoom`, #577) — the route's own id. From the details the

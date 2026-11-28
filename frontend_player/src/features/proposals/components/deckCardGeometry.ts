@@ -1,7 +1,7 @@
 /**
  * **The Games card's room, as numbers** — how big its tiles are, where the height they leave goes,
  * and how short the card may get before the deck scrolls
- * ([#864](https://github.com/Raketa02/Raketa/issues/864), [#865](https://github.com/Raketa02/Raketa/issues/865);
+ * ([#864](https://github.com/Rakieta02/Rakieta/issues/864), [#865](https://github.com/Rakieta02/Rakieta/issues/865);
  * the tab menu log §6.2–§6.5; design system 7.22). No React in any of it: the card measures, this
  * decides, and `deckCardGeometry.test` holds it to the phones the decision was made on.
  *

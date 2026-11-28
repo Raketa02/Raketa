@@ -30,7 +30,7 @@
  * the fill inversion [6.8](../../../docs/design-system.md#68-the-availability-grid) already
  * uses rather than a second on-colour.
  *
- * **One consumer**: *Show me to new people* on the You tab ([#799](https://github.com/Raketa02/Raketa/issues/799),
+ * **One consumer**: *Show me to new people* on the You tab ([#799](https://github.com/Rakieta02/Rakieta/issues/799),
  * which renamed #778's *Show me in General*). It asked for one thing the first spelling did not have,
  * a prop rather than a second control:
  *

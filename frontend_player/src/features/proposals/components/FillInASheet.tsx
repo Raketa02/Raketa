@@ -1,5 +1,5 @@
 /**
- * **The fill, carried into a sheet** ([#817](https://github.com/Raketa02/Raketa/issues/817);
+ * **The fill, carried into a sheet** ([#817](https://github.com/Rakieta02/Rakieta/issues/817);
  * ADR-0205 §1) — what a sheet holding *TO CONFIRM* or *FRIENDS GAME* needs of the fill, which it
  * cannot reach by itself.
  *

@@ -1,7 +1,7 @@
 /**
  * **A friends game as the wire answers it** — the fixtures the friends game suites build on
- * ([#759](https://github.com/Raketa02/Raketa/issues/759),
- * [#760](https://github.com/Raketa02/Raketa/issues/760)).
+ * ([#759](https://github.com/Rakieta02/Rakieta/issues/759),
+ * [#760](https://github.com/Rakieta02/Rakieta/issues/760)).
  *
  * **An invitation** waits on the reader: tomek.k's Saturday 10:00 at Ogrody 33, Court 3, 25 zł a
  * seat, magda.p In, ania.k still to answer, the reader's 24 hours ending 1 h 35 after Home's read.

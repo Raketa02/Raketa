@@ -1,7 +1,7 @@
 /**
  * **The four-step setup, run** — the machine in `domain/setupSteps`, the provider's phone half
  * behind `usePayments()`, and the three writes the server takes in order
- * ([#552](https://github.com/Raketa02/Raketa/issues/552); the mechanics §12.5; the screens A7.3).
+ * ([#552](https://github.com/Rakieta02/Rakieta/issues/552); the mechanics §12.5; the screens A7.3).
  *
  * | Press | What happens |
  * | --- | --- |

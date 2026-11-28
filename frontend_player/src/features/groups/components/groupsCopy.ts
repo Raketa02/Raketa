@@ -182,7 +182,7 @@ export const GROUPS_COPY = {
     anyoneClose: 'Keep People I approve',
   },
   /**
-   * **Home's Hottest groups** ([#800](https://github.com/Raketa02/Raketa/issues/800); the words
+   * **Home's Hottest groups** ([#800](https://github.com/Rakieta02/Rakieta/issues/800); the words
    * §31.1–§31.4): the row, its card, the group sheet and the withdraw sheet. The marks before the
    * tags — ▲ and + — are drawn, never characters.
    */

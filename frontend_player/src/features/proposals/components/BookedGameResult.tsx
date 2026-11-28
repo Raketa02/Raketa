@@ -1,6 +1,6 @@
 /**
  * **A booked game's result** — today's game screen, over the game's details
- * ([#556](https://github.com/Raketa02/Raketa/issues/556); the mechanics §14.1: the result states are
+ * ([#556](https://github.com/Rakieta02/Rakieta/issues/556); the mechanics §14.1: the result states are
  * *unchanged from today*).
  *
  * A booking opens an ordinary Game (#541), and its result is told and agreed exactly as any game's
@@ -10,13 +10,13 @@
  * #557's) — and no court, because the details drew the forecast already. The Game is found off the
  * booking's own read, which the details have just made.
  *
- * **And the booking's facts the Game does not carry** ([#560](https://github.com/Raketa02/Raketa/issues/560),
- * [#658](https://github.com/Raketa02/Raketa/issues/658)): that it is booked, when its hour starts
+ * **And the booking's facts the Game does not carry** ([#560](https://github.com/Rakieta02/Rakieta/issues/560),
+ * [#658](https://github.com/Rakieta02/Rakieta/issues/658)): that it is booked, when its hour starts
  * and at which club — so the screen says who's here in the first half hour, and names the club when
  * a tap is made away from it — with the re-read of Home and these details, so the status, the badge
  * and the door under this screen follow a score or a tap at once.
  *
- * **And PLAYED WITH** ([#754](https://github.com/Raketa02/Raketa/issues/754); the friends screens
+ * **And PLAYED WITH** ([#754](https://github.com/Rakieta02/Rakieta/issues/754); the friends screens
  * §3): the others on the game, each with where the reader stands with them, between the score and
  * the star card. The people are this booking's — its seats and its `played_with`, joined by
  * `playedWithOf` — and the card is `friends`', which this feature may not import, not even its

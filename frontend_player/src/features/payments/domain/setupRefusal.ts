@@ -1,7 +1,7 @@
 /**
  * **What a refusal on the way to a saved method costs the checklist next** — `sendRefusal`'s shape
  * (`features/challenges`): a refusal turned into the act the screen owes, whether the server said
- * it or the bank did ([#552](https://github.com/Raketa02/Raketa/issues/552); the routes are #536's).
+ * it or the bank did ([#552](https://github.com/Rakieta02/Rakieta/issues/552); the routes are #536's).
  *
  * | Said by | Saying | The checklist |
  * | --- | --- | --- |

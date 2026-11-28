@@ -2,7 +2,7 @@
  * **The filter's switch and its line** — *Play only with players of · Off | At least Medium | At
  * least High*, and under it *Your filter hides 2 of the 11 players in your groups.*
  * ([ADR-0195](../../../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
- * §6, [#662](https://github.com/Raketa02/Raketa/issues/662)).
+ * §6, [#662](https://github.com/Rakieta02/Rakieta/issues/662)).
  *
  * ```
  * ┌ PLAY ONLY WITH PLAYERS OF                           ┐   flab — it labels the control

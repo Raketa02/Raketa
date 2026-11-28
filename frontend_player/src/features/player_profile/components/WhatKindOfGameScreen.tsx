@@ -3,7 +3,7 @@
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
  * §2).
  *
- * `PlayIntentsSection` as built ([#296](https://github.com/Raketa02/Raketa/issues/296)): one
+ * `PlayIntentsSection` as built ([#296](https://github.com/Rakieta02/Rakieta/issues/296)): one
  * row per rated sport, the row expands in place to the three answers, the footnote where a
  * sport is undeclared, every press a `PUT /play-intents/{sport}` on the `PROFILE_SCREEN`
  * surface. What the section lost on the way from the tab to a screen is its heading and its

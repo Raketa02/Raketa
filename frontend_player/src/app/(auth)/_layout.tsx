@@ -10,7 +10,7 @@
  * Setting one begins a session, and this redirect is what hands it to the entry gate — the
  * flow never navigates into the app itself.
  *
- * **Sign-in and sign-up cross-fade** ([#785](https://github.com/Raketa02/Raketa/issues/785), design
+ * **Sign-in and sign-up cross-fade** ([#785](https://github.com/Rakieta02/Rakieta/issues/785), design
  * system 12.2): the two stage screens are two pages of one flow, so the move between them keeps the
  * frame where it is and changes what is in it, rather than sliding a second stage over the first. A
  * screen's `animation` is the one it is pushed **and** popped with, so sign-up's alone fades both

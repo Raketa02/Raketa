@@ -362,10 +362,10 @@ describe('how widely they spread their games', () => {
 /**
  * **What other players said — one figure, for every reader.**
  *
- * The band a subject used to be answered with is retired ([#468](https://github.com/Raketa02/Raketa/issues/468),
+ * The band a subject used to be answered with is retired ([#468](https://github.com/Rakieta02/Rakieta/issues/468),
  * ADR-0179 §5): the wire carries `sportsmanship` whoever is asking, and the mapper reads it
  * whoever is asking. `Opinion` is the figure and its count and nothing else
- * ([#473](https://github.com/Raketa02/Raketa/issues/473)) — no arm, no discriminator — so what
+ * ([#473](https://github.com/Rakieta02/Rakieta/issues/473)) — no arm, no discriminator — so what
  * this suite holds is that a self read is mapped exactly as a stranger's is.
  */
 describe('what other players said', () => {

@@ -1,6 +1,6 @@
 /**
  * **Every sentence Games & money says** — the row on the You tab, the two cards and the bound under
- * them ([#554](https://github.com/Raketa02/Raketa/issues/554); the screens A7, A7.1; mocks 37–39).
+ * them ([#554](https://github.com/Rakieta02/Rakieta/issues/554); the screens A7, A7.1; mocks 37–39).
  *
  * Import-light — shared formatting only — because the shell composes the row into the You tab at
  * module load, and `deckPresentation`'s imports reach back into features that reach the shell.

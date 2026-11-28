@@ -1,6 +1,6 @@
 /**
  * **An invitation's link, opened on a phone** — in every sign-in state the ticket names
- * ([#520](https://github.com/Raketa02/Raketa/issues/520), PRD #500 stories 112–118):
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520), PRD #500 stories 112–118):
  *
  * - Marta, a new person, taps the button and lands on **Set your password**, the token read and her
  *   email locked;

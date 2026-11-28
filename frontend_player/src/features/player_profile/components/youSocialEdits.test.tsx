@@ -2,7 +2,7 @@
  * **Photos, Tags and Intro edited from You, walked the way a player walks them** — the real
  * route tree, the real bar, and only `fetch` and the photo library faked
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
- * §2, §6; [#471](https://github.com/Raketa02/Raketa/issues/471)).
+ * §2, §6; [#471](https://github.com/Rakieta02/Rakieta/issues/471)).
  *
  * Each screen is an onboarding step's control under the tab's chrome, and the steps' own
  * suites already prove the controls — the ceiling, the picker, the counter. What is proved

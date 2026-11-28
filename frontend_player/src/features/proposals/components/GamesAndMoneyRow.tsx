@@ -1,6 +1,6 @@
 /**
  * **Games & money, on the You tab** — the ACCOUNT group's first row: its title, the limits in one
- * line, and the door to the screen ([#554](https://github.com/Raketa02/Raketa/issues/554); the
+ * line, and the door to the screen ([#554](https://github.com/Rakieta02/Rakieta/issues/554); the
  * screens A7; mock 37).
  *
  * The line repeats the screen's bound — *At most 4 games a week*, with *· up to 180 zł* once a

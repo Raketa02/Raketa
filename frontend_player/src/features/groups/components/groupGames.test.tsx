@@ -1,7 +1,7 @@
 /**
  * **A group's Games tab, walked** — the switch, the one-time question, the stage and its answers,
  * every card type and tag the read can deal, the states around the deck, and the game's details
- * the card opens ([#553](https://github.com/Raketa02/Raketa/issues/553); the screens A2, A4.2).
+ * the card opens ([#553](https://github.com/Rakieta02/Rakieta/issues/553); the screens A2, A4.2).
  *
  * The real route tree, with the socket and the haptic motor faked at the platform edge. Swipes are
  * driven at the stage's responder by `test-support/swipe.ts`, in the order the responder system

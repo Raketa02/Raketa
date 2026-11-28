@@ -14,7 +14,7 @@
  *
  * **It is the only importer of React Native's `Keyboard`** — the one fenced name out of that module
  * beside `Share` — and so **the app's only listener for the keyboard's show and hide** (ADR-0210 §9,
- * [#882](https://github.com/Raketa02/Raketa/issues/882)). The reading is a port, `KeyboardPort`, for
+ * [#882](https://github.com/Rakieta02/Rakieta/issues/882)). The reading is a port, `KeyboardPort`, for
  * the share sheet's reason: the keyboard is the OS's, a suite cannot bring one up, and a shell that
  * stands its bar down while it is up is a shell no suite could see do it. `fakeKeyboard()` in
  * `src/test-support/platform.ts` raises and drops it, and a tree reaches the port through

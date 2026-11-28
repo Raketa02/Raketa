@@ -4,7 +4,7 @@
  * These cases are the whole of "where does a player belong on launch", and each one is a
  * decision someone could plausibly get backwards. **Ratings and an unfinished run are not among
  * its inputs** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §1, §5, [#730](https://github.com/Raketa02/Raketa/issues/730)): onboarding is a nickname and a
+ * §1, §5, [#730](https://github.com/Rakieta02/Rakieta/issues/730)): onboarding is a nickname and a
  * profile, and a level is asked where play begins — so neither can route anywhere, by
  * construction.
  */
@@ -98,7 +98,7 @@ describe('an account that holds only administrator profiles', () => {
 
 /**
  * **An account with no profile at all is offered the player setup, from the Adult attestation**
- * (ADR-0185 §3, [#517](https://github.com/Raketa02/Raketa/issues/517)). The only way to be one is
+ * (ADR-0185 §3, [#517](https://github.com/Rakieta02/Rakieta/issues/517)). The only way to be one is
  * an administrator-only account whose club removed it. Signing in again must never be a dead end,
  * so it takes *Start playing*'s steps from the gate — and the first is the attestation, which it
  * has never given and which comes ahead of anything player-side, the naming included (§5).

@@ -1,5 +1,5 @@
 /**
- * **Sign-up's podium, composed from the copy** ([#788](https://github.com/Raketa02/Raketa/issues/788);
+ * **Sign-up's podium, composed from the copy** ([#788](https://github.com/Rakieta02/Rakieta/issues/788);
  * design system 12.2, mock 5) — who stands on which step, the letters over each poster and the name
  * under it.
  *

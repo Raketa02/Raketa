@@ -1,6 +1,6 @@
 /**
  * ***TO CONFIRM*** — the way back to a seat whose share was refused, on You › Payments
- * ([#555](https://github.com/Raketa02/Raketa/issues/555); the mechanics §12.2; the screens A7.3;
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555); the mechanics §12.2; the screens A7.3;
  * #541's `GET /players/me/payments-to-confirm`). It was on Home above the rail too, until #817 moved
  * Home's into Needs your answer as a tile per payment (`ToConfirmSection`); this card is unchanged.
  *

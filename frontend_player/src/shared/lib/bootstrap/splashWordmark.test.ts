@@ -1,7 +1,7 @@
 /**
  * **The wordmark's constants, pinned against the font file** — the numbers the splash places its
  * seven letters by, read back off `Archivo_800ExtraBold.ttf` in the bundle
- * ([#855](https://github.com/Raketa02/Raketa/issues/855); ADR-0209, *Consequences*).
+ * ([#855](https://github.com/Rakieta02/Rakieta/issues/855); ADR-0209, *Consequences*).
  *
  * The splash sets *Rakieta* letter by letter from the font's own advances and kerning rather than
  * from a text layout, so its geometry is known before the first frame. That trades a measurement

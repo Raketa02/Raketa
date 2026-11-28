@@ -1,7 +1,7 @@
 /**
  * **Players at your level on Home, the comparison sheet and See all** — FOR YOU's second line, walked
- * through the real route tree ([#802](https://github.com/Raketa02/Raketa/issues/802), PRD #789;
- * [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §4, ADR-0205 §5; the Home rows
+ * through the real route tree ([#802](https://github.com/Rakieta02/Rakieta/issues/802), PRD #789;
+ * [#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0204 §4, ADR-0205 §5; the Home rows
  * screens §4; the mechanics §6, §11–§13; the words §31.5, §31.6, §31.10).
  *
  * - **The line**: second of the five, closed; open, its cards and *See all ›* named at its foot; hidden

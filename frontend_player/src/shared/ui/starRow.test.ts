@@ -1,6 +1,6 @@
 /**
  * A star row is five marks distinguished by **fill**, and this is the arithmetic that makes
- * that legal ([#386](https://github.com/Raketa02/Raketa/issues/386)).
+ * that legal ([#386](https://github.com/Rakieta02/Rakieta/issues/386)).
  *
  * `recordSquares.test.ts`'s three rows, asked of the same pair on a different bed. A star
  * carries no word, so it is a **graphical object** conveying information and

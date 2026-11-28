@@ -6,8 +6,8 @@
 > changes what this feature does. Index: [`README.md`](README.md).
 
 **A face opens the person, and the pairing gets a row**
-([#384](https://github.com/Raketa02/Raketa/issues/384),
-[#373](https://github.com/Raketa02/Raketa/issues/373)). Tapping a photograph on the balance
+([#384](https://github.com/Rakieta02/Rakieta/issues/384),
+[#373](https://github.com/Rakieta02/Rakieta/issues/373)). Tapping a photograph on the balance
 forecast used to open the **Fit breakdown** — the arithmetic of a _pairing_ — which answers a
 question nobody asked by tapping a picture of a person. `features/player_record/` is what it
 opens instead: the poster with the Level printed on it and the sport beneath, the on-court mark,
@@ -69,7 +69,7 @@ number the engine acts on, and every absence is the field's own — no panel of 
 sentence explaining a gap.
 
 **The card under it is headed with the rule it enforces, and one ladder tints the pill and
-every bar** ([#385](https://github.com/Raketa02/Raketa/issues/385)). Three metered rows —
+every bar** ([#385](https://github.com/Rakieta02/Rakieta/issues/385)). Three metered rows —
 turning up, answering challenges and **answering about results**, never _confirming_ them,
 because countering a score you believe is wrong is an answer and costs nothing
 ([ADR-0160](../../../docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md)) — each
@@ -91,7 +91,7 @@ two words earlier; and a player nothing has ever fallen due for draws **no card 
 because _we have not seen enough_ and _they are bad at this_ are different facts.
 
 **What opponents said is a second block, and the heading above it is the whole reason**
-([#387](https://github.com/Raketa02/Raketa/issues/387)). _Counted by the system, not written by
+([#387](https://github.com/Rakieta02/Rakieta/issues/387)). _Counted by the system, not written by
 people_ is one star average away from false at all times, so the one thing on this sheet people
 wrote stands **outside** that card under a heading naming its own author: two headings, no lie,
 and the heading is the cheap half of the pair. A reader gets `4,7 / 5 · 17 players`, and **the
@@ -116,7 +116,7 @@ at all**: a fourth absence asking a fourth question, since rating is a favour an
 anywhere records that a card was ignored.
 
 **The reader's own face crosses the seam, and nothing else about the record does**
-([#433](https://github.com/Raketa02/Raketa/issues/433),
+([#433](https://github.com/Rakieta02/Rakieta/issues/433),
 [ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
 §3). `useOwnFace` reads the ungated `/players/me/record` and selects the photograph's signed link,
 or nothing, with whether the read is in — for the yes screen, the one surface that draws the reader
@@ -130,7 +130,7 @@ there to be drawn first. `challenges → player_record` is a new feature edge, t
 held open by `scripts/test-import-boundaries.sh`.
 
 **The deck is the sheet's third door, and the header's mark gained its tick**
-([#444](https://github.com/Raketa02/Raketa/issues/444),
+([#444](https://github.com/Rakieta02/Rakieta/issues/444),
 [ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §3,
 §7). The Players deck opens this sheet from its **i** button and from a long press on the card,
 with the deck's pairing in hand — subject, sport, distance, the reader's own area, the tag
@@ -143,7 +143,7 @@ now, at `space.md` down the panel rather than `space.xs`, because one mark has o
 the deck card draws it too (`_shared.md`).
 
 **The intro sits under the name, and only there**
-([#445](https://github.com/Raketa02/Raketa/issues/445),
+([#445](https://github.com/Rakieta02/Rakieta/issues/445),
 [ADR-0170](../../../docs/adr/0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)
 §3, §4). `intro` crosses on `PlayerRecordResponse`, omitted where they wrote none and never an
 empty string, and the mapper carries it verbatim — nothing trims, shortens or defaults it,
@@ -164,7 +164,7 @@ seat, not a Chats row, not a conversation header, not a challenge card, and not 
 shortlist or pool cards, which `candidateCards.test.tsx` holds to it.
 
 **The header draws the name, and `@nickname` under it — one of the two places a handle is drawn**
-([#451](https://github.com/Raketa02/Raketa/issues/451),
+([#451](https://github.com/Rakieta02/Rakieta/issues/451),
 [ADR-0171](../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
 §4). The record's read carries both. The title of the sheet is the whole name with `(you)` after
 your own, and the handle sits under it in `tiny` and `muted` as `atNickname` spells it: two people
@@ -173,7 +173,7 @@ handle is here and on the reader's own You tab and nowhere else. The header's sp
 both, in the order they are drawn, because a listener is told what a reader is shown.
 
 **The header draws the nickname large, and nothing under it**
-([#728](https://github.com/Raketa02/Raketa/issues/728),
+([#728](https://github.com/Rakieta02/Rakieta/issues/728),
 [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1, superseding the
 paragraph above). The record's read drops `name` and keeps `nickname`, and so does
 `PlayerRecord`: the sheet's title is the whole nickname with `(you)` after your own, never written
@@ -187,7 +187,7 @@ names the record's nickname. `groupGames.test.tsx` opens _ania.k_'s record from 
 without their second line.
 
 **The identity line prints the kilometres to one decimal**
-([#461](https://github.com/Raketa02/Raketa/issues/461),
+([#461](https://github.com/Rakieta02/Rakieta/issues/461),
 [ADR-0174](../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §2).
 _In your area · 0,6 km_ for somebody in the reader's own cell, _4,3 km_ for somebody in another,
 and nothing where the surface that opened the record held no distance — the same
@@ -199,7 +199,7 @@ rule that the whole line goes on your own record stands, and so does _In your ar
 alone where the distance is omitted.
 
 **The sheet has a foot now, and one surface fills it**
-([#464](https://github.com/Raketa02/Raketa/issues/464),
+([#464](https://github.com/Rakieta02/Rakieta/issues/464),
 [ADR-0174](../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §4).
 `PlayerRecordSheet` takes an optional `foot` — a slot, drawn last and inside the scroll because a
 sheet reads statement first and answer last (9.1), and only with the record: a refused record is
@@ -212,7 +212,7 @@ away and two places to answer at once invites a double tap, which `deck.test.tsx
 surface that wants a foot has to argue for one.
 
 **The record on the You tab — the header card, the two read-only screens, and the sheet behind
-a row** ([#469](https://github.com/Raketa02/Raketa/issues/469),
+a row** ([#469](https://github.com/Rakieta02/Rakieta/issues/469),
 [ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
 §1–§3). `useOwnRecord` is `usePlayerRecord` on `{ kind: 'me' }` with the id off `GET /users/me`
 — the same entry the sheet reads, on the sheet's own defaults, so the card that summarises the
@@ -242,7 +242,7 @@ while the status is an Initial estimate — answers nothing until the read carri
 30 would be the copy the amendment removed. _Add a sport_ is one `Chip` per unrated sport in the
 served registry — the registry minus `GET /ratings` — and not drawn for a player rated in every
 sport; **a chip begins a pass of that one sport** through onboarding's `useAddASport`
-([#470](https://github.com/Raketa02/Raketa/issues/470)), says _Starting…_ while the start is in
+([#470](https://github.com/Rakieta02/Rakieta/issues/470)), says _Starting…_ while the start is in
 the air, and a failed start is a coral note above the chips with the chip offered again — the
 player is still on this screen and a failed start began nothing. Where the pass ends is read off
 its origin by the entry gate, which lands it back here with the You tab beneath; `YOU_PASSPORT_ROUTE`
@@ -261,8 +261,8 @@ as a sibling of the passport's root as the result screen draws its own. **Not se
 device**: two cards' worth of dark card and blocks scrolling, the ladder's rungs, and the ring
 at 56 beside a wrapped name.
 
-**The band left the wire before its words left this client** ([#471](https://github.com/Raketa02/Raketa/issues/471)
-regenerated the contract; [#468](https://github.com/Raketa02/Raketa/issues/468) retired
+**The band left the wire before its words left this client** ([#471](https://github.com/Rakieta02/Rakieta/issues/471)
+regenerated the contract; [#468](https://github.com/Rakieta02/Rakieta/issues/468) retired
 `sportsmanship_band`, ADR-0179 §5). `playerRecordMappers` reads the one `sportsmanship` field for
 every reader, self included, because that is the one field there is; the `band` arm of
 `Opinion`, `OPINION_BANDS`, `OPINION_BAND_NAME` and `RecordCard`'s branch for them were unreachable
@@ -270,7 +270,7 @@ from the wire for one ticket and were retired by the next. The reliability scree
 from that commit on, being `RecordCard` unchanged.
 
 **One row for everybody, and the band's words are gone rather than kept unreachable**
-([#473](https://github.com/Raketa02/Raketa/issues/473),
+([#473](https://github.com/Rakieta02/Rakieta/issues/473),
 [ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
 §5). `Opinion` is the figure and its count — `average` and `raters` — and nothing else: no
 `kind`, no second arm, no `OpinionFigure` beside it, because a type with one arm is that arm. The
@@ -284,7 +284,7 @@ drawn row and the spoken one are composed from one `opinionParts`, the variety r
 suites that walk the three surfaces — the deck's spoken reading, the builder's own face, and the
 You tab's two doors — assert the three (_Good · Mixed · Poor_) absent by spelling them
 themselves, which is the one thing a retired word may be spelled for. **What this reverses** is the paragraph on
-[#387](https://github.com/Raketa02/Raketa/issues/387) above, where the subject got a band and no
+[#387](https://github.com/Rakieta02/Rakieta/issues/387) above, where the subject got a band and no
 count because an average beside a count is a subtraction that names each new rating: the ADR
 weighed that against a player being told _Mixed_ about themselves with no number to work on and
 chose the number, and the cost — a rater nameable by their subject, blunted by the collapse and
@@ -330,7 +330,7 @@ same forced commits every transition filmed followed `easeDecel` with no frame h
 only; Android owes a look.
 
 **The sheet ends in Block or Unblock, and a block is no longer one of its refusals**
-([#587](https://github.com/Raketa02/Raketa/issues/587),
+([#587](https://github.com/Rakieta02/Rakieta/issues/587),
 [ADR-0193](../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
 §2–§3). The last row of every record but your own is `blocks`' `BlockRow`, drawn from this read's
 own `blocked_by_you`, which the mapper folds to `blockedByYou` and drops on your own record and
@@ -343,7 +343,7 @@ three causes (never disclosed, held or not showable, no such player), and the co
 listed four say three.
 
 **Player reliability is points: the band's word, _100 · New_, and four counts instead of metered
-strands** ([#660](https://github.com/Raketa02/Raketa/issues/660),
+strands** ([#660](https://github.com/Rakieta02/Rakieta/issues/660),
 [ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
 §1, after the backend's #659). The record's `reliability` is **always there** now — everyone starts
 at 100 — and the mapper reads it field for field: `playerScore`, the served `band` (narrowed by
@@ -384,7 +384,7 @@ on a device**: the block's second line beside _Last 5_ and _Counted_, the word b
 the note under the dark card.
 
 **The filter switch — _Play only with players of at least…_, the hides line and the hidden
-player's sentence** ([#662](https://github.com/Raketa02/Raketa/issues/662),
+player's sentence** ([#662](https://github.com/Rakieta02/Rakieta/issues/662),
 [ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
 §6, after the backend's #661). The own record's `reliability` now carries `filter` — `minimum`
 (absent while off), `hides` and `of` — and, while somebody's filter keeps the reader off a court,
@@ -425,7 +425,7 @@ served, rather than a sentence of its own, since the line is drawn only while a 
 filter that hides nobody is still on. **Not seen on a device**: the three segment labels at a third
 of the content width under Dynamic Type, and the card between the dark card and the record card.
 
-**The record's foot is Add friend beside Block** ([#753](https://github.com/Raketa02/Raketa/issues/753);
+**The record's foot is Add friend beside Block** ([#753](https://github.com/Rakieta02/Rakieta/issues/753);
 the friends screens §2; Q3, Q40). The record reads the wire's `relation` — `NONE · SENT · ASKED_YOU ·
 FRIEND`, `friends`' spelling, `NONE` on your own — and its last row is `friends`' `recordFootOf` of it:
 **nothing on your own record**, **_Unblock_ alone and full width on somebody the reader blocked**, and
@@ -438,18 +438,18 @@ came from the record, with the sport the sheet was opened for and the group the 
 Post a game pass theirs). The rules and the words are [`friends.md`](friends.md)'s.
 
 **A record that opens is never blocked, so the wire stopped saying whether it was**
-([#775](https://github.com/Raketa02/Raketa/issues/775) regenerated the types #773 changed). Since
+([#775](https://github.com/Rakieta02/Rakieta/issues/775) regenerated the types #773 changed). Since
 #773 the server refuses a blocked pair's record both ways with the record's one refusal, and a block
 state it cannot read is a `503` — so `blocked_by_you` left the contract and `can_add_friend` joined
 it. `ownBlock` now folds somebody else's record to `blockedByYou: false` — _Block_ — and your own to
 nothing. The _Unblock_ the field fed is unreachable; taking it out of the foot, and using
-`can_add_friend`, is [#779](https://github.com/Raketa02/Raketa/issues/779)'s. The suites that walked an
+`can_add_friend`, is [#779](https://github.com/Rakieta02/Rakieta/issues/779)'s. The suites that walked an
 _Unblock_ on the record lost those cases (`blocks.test`, `friends.test`): the state cannot occur. After
 a block from the record, the record's re-read is refused and the record already drawn stays drawn
 until the sheet is closed — #779 closes it once the block is made (the rankings screens §6).
 
 **Add friend where the record says so, no Unblock, and a block closes the sheet**
-([#779](https://github.com/Raketa02/Raketa/issues/779); ADR-0203 §8–§9; the rankings screens §6).
+([#779](https://github.com/Rakieta02/Rakieta/issues/779); ADR-0203 §8–§9; the rankings screens §6).
 `blockedByYou` and `ownBlock` are gone; the record carries **`canAddFriend`**, the wire's
 `can_add_friend` as it came, and its foot is `friends`' `recordFootOf` of it — the rule, with _Block_
 alone where no request may be sent and no _Unblock_ anywhere, is [`friends.md`](friends.md)'s. **The
@@ -461,7 +461,7 @@ record's request now goes through. The paragraphs above on _Unblock_ at the foot
 could not be read describe #587–#775 and are superseded; since #773 those are a `503`, the recovery
 sentence with _Try again_.
 
-**All their photos, and a refusal that wins over a record already drawn** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+**All their photos, and a refusal that wins over a record already drawn** ([#799](https://github.com/Rakieta02/Rakieta/issues/799),
 [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 §2; the Home rows screens §9.3). **The record carries every photo** (`photos`, the wire's
 `[{photo_id, photo_url}]`, in the player's own order, the first the header's `photoUrl`), and the sheet
@@ -480,14 +480,14 @@ unnamed `player_unavailable` quiet: the friend button re-reads, and the record s
 available_ ([`friends.md`](friends.md)). **Not seen on a device**: the carousel's two cards under the
 header, the bleed to the sheet's edge and the snap.
 
-**A record a Home row opened keeps the row** ([#801](https://github.com/Raketa02/Raketa/issues/801);
+**A record a Home row opened keeps the row** ([#801](https://github.com/Rakieta02/Rakieta/issues/801);
 the Home rows mechanics §12). **`foundIn`** is the row — a request asked at the foot is then _found
 among new players_, _at the same level_ in the card's sport (#802), or _through the tags_ (#803, from
 the vibe sheet's face; `friends`' `recordAskedWhere`);
 the people rows' faces hand it (`discovery`'s `RowRecord`). The row under the sheet moves on its own: a friend act or a block at the foot
 re-reads every read that lists people (`LISTS_PEOPLE`).
 
-**The vibe sheet reads the record through three of this feature's own parts** ([#803](https://github.com/Raketa02/Raketa/issues/803);
+**The vibe sheet reads the record through three of this feature's own parts** ([#803](https://github.com/Rakieta02/Rakieta/issues/803);
 the Home rows screens §6.3, the mechanics §8.5). Discovery's vibe sheet _reads the record_ and shows
 what it shows — every photo, the intro, every tag — so it opens only where the record would and is
 current as the record is. Rather than a second spelling of any of it, the record's own drawing crosses
@@ -506,7 +506,7 @@ row reads _6 things in common_ alone, never _· In your area · 0,6 km_. The rea
 (their own record's `area_code`), but no form of the line writes _In your area_ without the kilometres.
 #795's contract says the sheet reads the distance off the record: a backend ask, for the product owner.
 
-**The record shows up to 8 tags** ([#837](https://github.com/Raketa02/Raketa/issues/837),
+**The record shows up to 8 tags** ([#837](https://github.com/Rakieta02/Rakieta/issues/837),
 [ADR-0207](../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
 §7; the player record spec's 2026-11-22 note). A player picks 2 to 8 of 27 now, so
 `SOCIAL_TAG_ROW_CAP` — the row's layout ceiling, read from the profile step's own — went from 6 to 8,

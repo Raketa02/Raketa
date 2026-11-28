@@ -2,7 +2,7 @@
 
 The client side of the backend's **Proposals** context (#538, #539): the games a group deals a
 player, answered with a silent yes, and one game still filling seen in detail. Built by
-[#553](https://github.com/Raketa02/Raketa/issues/553) from the Games & Fill in screens (A2, A4.2),
+[#553](https://github.com/Rakieta02/Rakieta/issues/553) from the Games & Fill in screens (A2, A4.2),
 the mechanics (§6–§8) and
 [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md). The group page
 (`groups`) draws `GamesDeck` as its Games tab and reads its badge; the dependency points one way —
@@ -26,7 +26,7 @@ the overlap has nobody to overlap with. And no paragraph explains what a yes cos
 its line under it say it, and the first yes's payment setup says the rest.
 
 **The details read top to bottom: the top card, the game card, _Who is free_**
-([#836](https://github.com/Raketa02/Raketa/issues/836); for fun 3–6; design-system 7.22), for both
+([#836](https://github.com/Rakieta02/Rakieta/issues/836); for fun 3–6; design-system 7.22), for both
 kinds. The top card comes first — the kind's own (below: the Balance forecast, or the Social vibe
 card) — then the dark game card: the status tag, the tiles, the vs line, WHERE · DAY ·
 TIME · YOUR SHARE, the offline note while an answer waits, and **what the reader may do, in the
@@ -41,7 +41,7 @@ their _Padel · 3 of 4 in_: the count is the status tag's alone (the For-fun rec
 3). _Who is free_ follows the card. **Not seen on a device.**
 
 **A competitive game's details open on the full Balance forecast, with what is at stake**
-([#839](https://github.com/Raketa02/Raketa/issues/839); ADR-0207 §6; for fun 3–4). Before saying
+([#839](https://github.com/Rakieta02/Rakieta/issues/839); ADR-0207 §6; for fun 3–4). Before saying
 yes the reader reads both sides' levels with _gap_ and the signed gap between them, the bar with the
 sides' names, the % and its word, _A counted game — a confirmed score moves everybody's level._, and
 _If you win +0,08 · If you lose −0,07_ — **two tiles or none**. It is **the booked game's own block**,
@@ -61,7 +61,7 @@ the deck card and the details drew it before; the booked game never receives one
 unchanged**: no stakes there. Walked in `competitiveDetails.test.tsx`; the booked game's
 `forecastBlock.test.tsx` passed untouched. **Not seen on a device.**
 
-**A For-fun game's details open on the Social vibe card** ([#840](https://github.com/Raketa02/Raketa/issues/840);
+**A For-fun game's details open on the Social vibe card** ([#840](https://github.com/Rakieta02/Rakieta/issues/840);
 ADR-0207 §6; for fun 7, which leads over 5 and 6). How much the whole table shares, and who shares
 yours. **The top**: _SOCIAL VIBE_, the big % in its band's paper ink with its word beside it, and the
 bar full width below — **the deck card's own number**, so the % swiped on is the % looked at, worded
@@ -97,7 +97,7 @@ then you, then the rest — the one rule every mock (2–8, 10) agrees with; `ri
 `countdownOf` (under 24 h, floored), `standingCards` (a card past its deadline leaves silently), `weekCapOf` (the fortnight's capped weeks) and `refusalOutcome`.
 
 **Sign-in's hero draws a miniature copy of the game card** — `auth`'s `MiniGameCard`, redrawn there
-and never this feature's component ([#786](https://github.com/Raketa02/Raketa/issues/786); see
+and never this feature's component ([#786](https://github.com/Rakieta02/Rakieta/issues/786); see
 `auth.md`). **A change to the card's look here does not reach it by itself: whoever changes the card
 checks the hero.**
 
@@ -177,7 +177,7 @@ the server's. **Owed to the backend**: serving the signed gap on `DeckForecastSc
 make the fold the engine's too.
 
 **A For-fun card leads with its Social vibe, and never with a forecast**
-([#838](https://github.com/Raketa02/Raketa/issues/838); ADR-0207 §5, §8; for fun 1–2). Below the
+([#838](https://github.com/Rakieta02/Rakieta/issues/838); ADR-0207 §5, §8; for fun 1–2). Below the
 tiles and the vs line, where a competitive card draws its forecast, a For-fun card draws
 `shared/ui`'s `SocialVibeRow`: the deck's `vibe.pct` beside a 0–100 bar filled to it, with _Social
 vibe_ inside, spoken _Social vibe, 82 percent, Great vibe_. **`headlineOf` (`domain/deck.ts`) is the
@@ -226,7 +226,7 @@ in the design system's §1.2 as meanings it already had (a stroke is _where_, a 
 attention). **Owed to the backend**: a distance for the details' WHERE (A4.1 draws _3,1 km_; a deck
 card carries none).
 
-**Games & money and the live yeses are this feature's** ([#554](https://github.com/Raketa02/Raketa/issues/554);
+**Games & money and the live yeses are this feature's** ([#554](https://github.com/Rakieta02/Rakieta/issues/554);
 the screens A7.1, A7.3; mocks 37–39, 48). Both are the backend's Proposals context — Games & money is
 its second aggregate (#539), and a live yes is a yes on a game still filling — and the deck is what
 both bound: games per week decides which weeks a deck deals into, and the ceiling which cards it
@@ -280,7 +280,7 @@ sentence's figures, where 1.4 sets display figures in mono). **Nothing here has 
 device.**
 
 **The moment a yes fills a game is this feature's, held above the tabs**
-([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A2.4; the mechanics §6.1, §6.5,
+([#555](https://github.com/Rakieta02/Rakieta/issues/555); the screens A2.4; the mechanics §6.1, §6.5,
 §11, §12.2). `FillProvider` is mounted by the shell around the stack and the bar for the session,
 because what a yes sets going outlives the screen it was said on: the player swipes _Book it now_
 and walks to Home inside the ten seconds, and the yes is still theirs. The deck and the details reach
@@ -355,7 +355,7 @@ in a toast (since #630 the screen, drawn off the booking).
 been seen on a device.**
 
 **Home's booked games and a booked game's details are this feature's**
-([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.1, A4.4, A8; the mechanics
+([#556](https://github.com/Rakieta02/Rakieta/issues/556); the screens A4.1, A4.4, A8; the mechanics
 §11.4, §14). Two reads, both #542's and both the backend's Proposals context: `GET /home` (the
 reader's booked games, soonest first, the ended ones too, and Home's badge) and `GET /bookings/{id}`
 (one booked game in detail). `useHome`, `useBooking`, keys
@@ -410,7 +410,7 @@ pairing (`games`' `GamePairingCard`) while the booking says to draw it. The fill
 `OthersFaces`.
 
 **A booked For-fun game draws the Social vibe card where _A friendly — nothing moves._ stood**
-([#841](https://github.com/Raketa02/Raketa/issues/841); ADR-0207 §5, §6; the backend's #835), so a
+([#841](https://github.com/Rakieta02/Rakieta/issues/841); ADR-0207 §5, §6; the backend's #835), so a
 For-fun game reads the same before and after it is booked. The card under the game card is the
 **kind's**, chosen in `games` (`pairingCardOf`) off the Game's own pairing: For fun draws the vibe
 card — the court's number, and a row for each of your tags with a dot under everybody who carries it
@@ -435,7 +435,7 @@ and §5's _no wider_ keeps it so. **Not seen on a device**: the card under a boo
 **The chat is reached from the details** (A4.4, §14.3) — and, since #619, from the Home card's
 bubble too (Q100, below). _Chat_ is drawn while the
 join keyed by the booking finds the room (`conversations`' `useBookingRoom`, by the booking the room
-is filed under since [#577](https://github.com/Raketa02/Raketa/issues/577)) and the status can have
+is filed under since [#577](https://github.com/Rakieta02/Rakieta/issues/577)) and the status can have
 one (`chatIsOpen`: not before it is booked, not once called off). **The room's own life decides
 the rest**: it closes as today — 48 hours after _we played_, when the result window closes — so a
 counted game keeps its door for as long as its room does, rather than leaving a room open with no
@@ -486,7 +486,7 @@ user). **Nothing here has
 been seen on a device.**
 
 **Fill in, rescues and leaving are this feature's**
-([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A3, A4.2, A4.3, A8; mocks 2,
+([#557](https://github.com/Rakieta02/Rakieta/issues/557); the screens A3, A4.2, A4.3, A8; mocks 2,
 11–14, details 10; the mechanics §10, §11, §13, §14; the backend's #544, #545). Four reads,
 each the server's whole answer: `GET /pools/{id}/fill-in?sport` (_Seats to fill_ and the tab's
 badge), `GET /proposals/{id}` (a game still filling, in detail), `GET /bookings/{id}` (a booked game —
@@ -511,7 +511,7 @@ Each row's upper block opens its game. Sections only when they have rows; with n
 starting card. The tab's badge was the read's `badge` (until #849, below), filed under the group's root
 (`proposalKeys.fillIn`), so every answer in the group and every changed limit re-reads it.
 
-**Fill in and You’re in are a board each since #847** ([#847](https://github.com/Raketa02/Raketa/issues/847),
+**Fill in and You’re in are a board each since #847** ([#847](https://github.com/Rakieta02/Rakieta/issues/847),
 PRD #844; the screens A3; split mocks 1 and 2). The rows above are unchanged; what changed is the page
 round them. **`FillInBoard` is the Fill in tab**: the rescues alone, read through `useSeatsToFill`
 (the read, its clock, and the rows standing on it), with no heading, the muted spinner (_Reading Fill
@@ -539,7 +539,7 @@ owning its read, while Fill in still stacked both, and the Fill in suite passed 
 found one trap: **a board mounted on a refused read reads it again** (Query's retry on mount), so a
 stack that unmounted a board with each refusal asked for ever; it keeps both mounted.
 
-**The two badges count what the reader hasn't seen** ([#849](https://github.com/Raketa02/Raketa/issues/849),
+**The two badges count what the reader hasn't seen** ([#849](https://github.com/Rakieta02/Rakieta/issues/849),
 [ADR-0208](../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md);
 PRD #844; split Q2b, Q10–Q12). The product owner's rule is over every choice: **a badge is a nudge,
 not a ledger** — it never costs a request or a wait, and where being exact would, the simpler rule
@@ -588,7 +588,7 @@ held** — a suite cannot hold the store without importing AsyncStorage, which t
 two modules — so _no badge until read_ is `useUnseenCount`'s one line, read, not run.
 
 **The Games badge counts what the reader hasn't seen too, across both kinds**
-([#850](https://github.com/Raketa02/Raketa/issues/850), ADR-0208; PRD #844). The same rule and the
+([#850](https://github.com/Rakieta02/Rakieta/issues/850), ADR-0208; PRD #844). The same rule and the
 same phone memory as Fill in's and You’re in's, on the deck read's new field:
 
 - **The ids are the read's `in_card_ids`** (#846): the cards with somebody In with the reader across
@@ -656,7 +656,7 @@ row's upper block push `/play/group/[groupId]/rescue/[bookingId]` — under Play
 group — which mounts `BookedGameScreen` with `offer`: the read carries `rescue`, and the screen draws
 the players _paid_, the reader's dashed seat, WHERE with the court, the share with how long the seat
 is offered, and a volt **Pay 27 zł** (`TakeTheSeat`, the row's door too; spoken by what the share
-does since [#645](https://github.com/Raketa02/Raketa/issues/645), below) — no Chat, no Leave, no
+does since [#645](https://github.com/Rakieta02/Rakieta/issues/645), below) — no Chat, no Leave, no
 _new_ marked. A seat gone before the read says _This seat isn't offered to you any more._
 
 **_Leave the game_ is at the foot of a booked game's details** (A4.1, details 10; §13), with the line
@@ -728,7 +728,7 @@ full game a player left is no longer called off but stays on the others' Home as
 #629, below); and who is In on the live yes, which would save _You’re in_ its read a row. **Nothing here has been seen on a
 device.**
 
-**Posting a game is this feature's** ([#558](https://github.com/Raketa02/Raketa/issues/558); the
+**Posting a game is this feature's** ([#558](https://github.com/Rakieta02/Rakieta/issues/558); the
 screens A5; mocks 14–35; the mechanics §9; the backend's #546). Three routes, all the backend's
 Proposals context: `GET /pools/{id}/posting-grid` (one week of WHEN for what the controls ask),
 `GET /pools/{id}/posting-grid/slot` (a cell's sheet) and `POST /pools/{id}/posts` (_Post — you're
@@ -871,7 +871,7 @@ didn't fill_ (#549). **Nothing here has been seen on a device** — the cells' l
 legend's width and two sheets swapping in one tick on iOS least of all.
 
 **Somebody didn't come — the booking hands the Game what it knows, and Home says it**
-([#560](https://github.com/Raketa02/Raketa/issues/560); the backend's #547; the mechanics §15.3).
+([#560](https://github.com/Rakieta02/Rakieta/issues/560); the backend's #547; the mechanics §15.3).
 `BookedGameResult` composes `games`' result screen with `booked`: `useRereadBooking` — Home and
 this booking read again once a score, an agreement, a mark or a dispute lands, so the status, the
 bar's badge and the door under the screen follow at once. The result entry then offers _Kuba Nowak
@@ -907,18 +907,18 @@ them. The walk is `noShows.test.tsx`.
 **Owed**: the push and in-app notice for a report and for the club's cancel (#549/#559). **Nothing
 here has been seen on a device.**
 
-**A notice opens the deck at its card** ([#559](https://github.com/Raketa02/Raketa/issues/559); the
+**A notice opens the deck at its card** ([#559](https://github.com/Rakieta02/Rakieta/issues/559); the
 screens A9). `GamesDeck` takes `onTop` — the card's id, handed down by the group page from its route —
 and draws it first while it is dealt, the rest in the order dealt (`withOnTop`, pure and tested); once
 it is answered, filled or gone the deck is the server's order again, with nothing said about it. The
 exports that cross for the notices: `gameRoute`, so a notice about a game still filling opens the details
 the deck's **i** opens; `rescueRoute`, so a Fill in alert opens the open seat from outside; since
-[#664](https://github.com/Raketa02/Raketa/issues/664) `bookedResultRoute`, so a step at the court opens
+[#664](https://github.com/Rakieta02/Rakieta/issues/664) `bookedResultRoute`, so a step at the court opens
 the game's result screen; and `proposalKeys`, so a tap re-reads the reads behind the screen it opens and a
 push arriving re-reads Home's — `paymentKeys`' reason. The record is
 [`notifications.md`](notifications.md).
 
-**Home is this feature's rail now, and the old loop's exports went** ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+**Home is this feature's rail now, and the old loop's exports went** ([#576](https://github.com/Rakieta02/Rakieta/issues/576)).
 `HomeRail` is Home's whole rail — the heading's count (`gamesHeading`, `YOUR GAMES · n`), the pager
 and its dots, the empty sentences the shell hands down and the error note — over `GET /home` alone:
 the old loop's rail that took the booked cards as a slot, and `useBookedCards` with its `gameIds`
@@ -935,7 +935,7 @@ asserts the fill marks the games list stale rather than counting a re-read, sinc
 that list on the group page any more.
 
 **What Home is sent, and every money row's words under the figure**
-([#615](https://github.com/Raketa02/Raketa/issues/615); the backend's #613; the mechanics §14.1, the
+([#615](https://github.com/Rakieta02/Rakieta/issues/615); the backend's #613; the mechanics §14.1, the
 screens A4.2 and A8). Either details' money row draws the card's line word for word, on a line of its
 own under the share: the booked details opened from the card, and the filling details opened from a
 _You’re in_ row (`GameFacts`' `below`). It first ran on after the figure, so the card and its details
@@ -965,7 +965,7 @@ taken here.
 
 **Nothing here has been seen on a device.**
 
-**What a leaver gets back** ([#618](https://github.com/Raketa02/Raketa/issues/618); the backend's
+**What a leaver gets back** ([#618](https://github.com/Rakieta02/Rakieta/issues/618); the backend's
 #617; the mechanics Q99; story S-01A's F-LEAVE-20.1). While the cut-off is ahead, a booked card's
 line reads _Paid · 40 zł · 38,40 zł back if you leave by Wed 19:00_ and the details' money row
 _PAID 40 zł_ over _Paid · 38,40 zł back if you leave by Wed 19:00_. **Why**: _free
@@ -986,7 +986,7 @@ words until the lawyer's review (the spec's O3). The Games deck's _no free cance
 leave sheet are unchanged. **Reversed by Q113 and #642** (below): leaving before the cut-off is free
 again, so the line says so, and the figure and `backIfYouLeaveAhead` are gone.
 
-**The bubble opens the chat** ([#619](https://github.com/Raketa02/Raketa/issues/619); the mechanics
+**The bubble opens the chat** ([#619](https://github.com/Rakieta02/Rakieta/issues/619); the mechanics
 Q100; story S-01A's F-HOME-15.1). Marta, on the tram, taps the bubble on her Thursday card, writes
 _10 min late_, presses Back and is on Home again. **Why**: the chat was two taps deep — _Open game_,
 then _Chat_ — for the one thing a player does with a game on its day, and the bubble already sat on
@@ -1007,7 +1007,7 @@ word — where from the details it opens at once. **Not seen on a device**: the 
 and its row with _Open game_ want a look.
 
 **It's a game! marks the four matched, with what is still missing under the word**
-([#628](https://github.com/Raketa02/Raketa/issues/628); the backend's #622; the mechanics Q103, the
+([#628](https://github.com/Rakieta02/Rakieta/issues/628); the backend's #622; the mechanics Q103, the
 screens A2.4). **Why**: the product owner ruled that _It's a game!_ marks the four being matched, not
 only a booking that is paid. With every share held nothing is missing, and there is no line; the one
 thing that can be missing is a payment (#630, below). The line is drawn in `tiny` `onDarkTiny`, the
@@ -1016,7 +1016,7 @@ picture in the header's sentence (design-system Part 16, 2026-10-10). It shows o
 whose yes filled the game; the other three are told by a notice (`notifications.md`).
 
 **A full game that falls back stays on Home as _Seat open_**
-([#629](https://github.com/Raketa02/Raketa/issues/629); the backend's #624; the mechanics Q106, the
+([#629](https://github.com/Rakieta02/Rakieta/issues/629); the backend's #624; the mechanics Q106, the
 screens A8; story S-01B's F-HOME-10.1, F-REQUEST-31.1, F-REQUEST-31.2). On Thursday at 20:40 Oscar
 leaves Friday's 19:00 at Kazimierz Padel while one payment is awaited. Marta reads _Oscar Bertran left
 your game — it's filling again_, and the game stays on her Home: _Seat open_ in amber, _1 seat open ·
@@ -1062,7 +1062,7 @@ off Home too.
 foot of the details, and the longer called-off lines on a narrow card, want a look.
 
 **Time to pay, on the phone**
-([#630](https://github.com/Raketa02/Raketa/issues/630); the backend's #625 and #626; the mechanics
+([#630](https://github.com/Rakieta02/Rakieta/issues/630); the backend's #625 and #626; the mechanics
 Q109–Q112, the screens A2.4, A7.3, A8; story S-01B's F-PAY-39.1, F-EMAIL-5.2, F-FILL-35.1,
 F-REQUEST-15.1). At 14:10 on Tuesday Ivan's yes fills the 19:00 at Bonarka Arena (40 zł a share), but
 Paula's bank wants to check her payment. She has until 14:40, the other three holds wait, and her
@@ -1134,22 +1134,22 @@ sheet's note, the line under the word and the details' _Confirm your payment_ al
 
 **Decided, and built since #642, #643, #644 and #645 (below): the share is held until
 the club's cut-off, and leaving before it is free** (the mechanics Q113, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; story S-01A's F-LEAVE-6.1; root
-[#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a refund always cost somebody Stripe's fee, the 1,60 zł this feature prints was
+[#635](https://github.com/Rakieta02/Rakieta/issues/635)). **Why**: a refund always cost somebody Stripe's fee, the 1,60 zł this feature prints was
 an estimate of a fee that depends on the card, and keeping it is exposed under Polish payment law.
 Letting a hold go costs nothing. So the fill holds the shares and the cut-off takes them. What it
 reverses here, for the tickets that build it:
 
 - **The money line** goes back to _40 zł · free to leave until Wed 19:00_, and _Paid · 40 zł_ once
   taken; the details' row says when the share is held and when it is taken.
-  `back_if_you_leave_grosze` leaves the wire ([#637](https://github.com/Raketa02/Raketa/issues/637); the phone's words [#642](https://github.com/Raketa02/Raketa/issues/642)).
+  `back_if_you_leave_grosze` leaves the wire ([#637](https://github.com/Rakieta02/Rakieta/issues/637); the phone's words [#642](https://github.com/Rakieta02/Rakieta/issues/642)).
 - **Leaving before the cut-off** takes nothing: the line under _Leave the game_, the sheet and the
-  toast say so ([#642](https://github.com/Raketa02/Raketa/issues/642)). After it, they give the exact refund the server sends, or no figure
-  ([#641](https://github.com/Raketa02/Raketa/issues/641), [#644](https://github.com/Raketa02/Raketa/issues/644)).
+  toast say so ([#642](https://github.com/Rakieta02/Rakieta/issues/642)). After it, they give the exact refund the server sends, or no figure
+  ([#641](https://github.com/Rakieta02/Rakieta/issues/641), [#644](https://github.com/Rakieta02/Rakieta/issues/644)).
 - **A refused card before the cut-off** is the root glossary's **Time to fix the card**: _Fix your
-  card by 14:40_ where this feature says _Confirm your payment_ ([#643](https://github.com/Raketa02/Raketa/issues/643)); a rescue's button says
-  _held until the cut-off_ or _paid now_ ([#645](https://github.com/Raketa02/Raketa/issues/645)).
+  card by 14:40_ where this feature says _Confirm your payment_ ([#643](https://github.com/Rakieta02/Rakieta/issues/643)); a rescue's button says
+  _held until the cut-off_ or _paid now_ ([#645](https://github.com/Rakieta02/Rakieta/issues/645)).
 
-**Held until the cut-off, on the phone** ([#642](https://github.com/Raketa02/Raketa/issues/642); the
+**Held until the cut-off, on the phone** ([#642](https://github.com/Rakieta02/Rakieta/issues/642); the
 backend's #637 and #639; the mechanics Q113, §12.2, §13, §14.1; the screens A4.1, A4.2, A8; story
 S-01A's F-LEAVE-6.1). Ivan's Thursday 19:00 at Bonarka Arena fills a week ahead. His Visa is only
 checked that day, Oscar's Mastercard holds, and both read _40 zł · free to leave until Wed 19:00_ on
@@ -1192,7 +1192,7 @@ table puts it, where Home said _Nobody paid_; the folds at `heldFrom` and `taken
 read clock, which the backend's own reads do at the same instants. **Owed**: the rescue's join
 (#645), time to fix (#643) — both built since (below). **Nothing here has been seen on a device.**
 
-**The late leave's exact refund** ([#644](https://github.com/Raketa02/Raketa/issues/644); the
+**The late leave's exact refund** ([#644](https://github.com/Rakieta02/Rakieta/issues/644); the
 backend's #641; the mechanics Q113, §13, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; the screens A4.1, details 10). Ivan leaves Thursday's game on
 Wednesday at 21:00, after the cut-off, with his business Visa. The line under _Leave the game_ reads
 _If someone takes your seat, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)_, and
@@ -1219,7 +1219,7 @@ stood for. **Owed to the lawyer** (O3): the clause's wording, the terms'. **Noth
 on a device**: the line under the button is now a sentence long and wants a look.
 
 **Time to fix the card, and a rescue's share, on the phone**
-([#643](https://github.com/Raketa02/Raketa/issues/643), [#645](https://github.com/Raketa02/Raketa/issues/645);
+([#643](https://github.com/Rakieta02/Rakieta/issues/643), [#645](https://github.com/Rakieta02/Rakieta/issues/645);
 the backend's #638, #639 and #640; the mechanics Q113, §10.1, §12.2, §14.1; the screens A2.4, A3.1,
 A4.1, A4.3, A5.3, A7.3, A8; story S-01A's F-LEAVE-6.1). Paula's card is refused at 14:10 when Ivan's
 yes fills Thursday's game, a week before the cut-off. Nothing is being taken, so she is told _Your
@@ -1292,7 +1292,7 @@ to fix the card** and **Rescue** still say _not yet built_. **Nothing here has b
 device**: the row's fourth line and its **Fix**, and the sheet's extra line, want a look.
 
 **Nothing is shown at the desk: players walk straight to the court**
-([#653](https://github.com/Raketa02/Raketa/issues/653); ADR-0195, Q116; the backend's #651). The
+([#653](https://github.com/Rakieta02/Rakieta/issues/653); ADR-0195, Q116; the backend's #651). The
 booked details no longer carry a _Show at the desk_ card on the game's day, and Home's card never
 had a desk line. `CheckInCard`, its QR drawing (`qrPath.ts`, the `qrcode` core declared in
 `qrcode-core.d.ts`), the `qrcode` and `@types/qrcode` dependencies, the four desk words in
@@ -1304,7 +1304,7 @@ landed**: #651 stopped sending `check_in`, and the mapper read `wire.check_in.sh
 the field was not `null`, so every booked game's details threw.
 
 **_Played · no score_, and a For fun game reads _Played_**
-([#656](https://github.com/Raketa02/Raketa/issues/656); ADR-0195 §2, §5, Q114, Q119; the backend's
+([#656](https://github.com/Rakieta02/Rakieta/issues/656); ADR-0195 §2, §5, Q114, Q119; the backend's
 #654 and #655). `HomeStatus` swaps `NEVER_PLAYED` for `PLAYED_NO_SCORE`: Home's card, the details'
 tag and second line say _Played · no score_ — `onDarkHair` as _Never played_ was, an ending with the
 room as before — and offer nothing. **A For fun game after its hour reads _Played_**, not _Needs
@@ -1319,7 +1319,7 @@ Home's count**: the backend's `845decf0` made a For fun game whose hour has come
 so the tab counts it no more — the phone draws the count it is sent and holds no second one.
 
 **Who's here — the details' door at the court, and Home's line for a game somebody didn't come to**
-([#658](https://github.com/Raketa02/Raketa/issues/658); ADR-0195 §3; the backend's #657).
+([#658](https://github.com/Rakieta02/Rakieta/issues/658); ADR-0195 §3; the backend's #657).
 `BookedGameResult` hands `games`' result screen the booking's hour and club beside the re-read
 (`BookedFacts`' `startsAt` and `club`): the first half hour is measured from the one, and _You can
 say so only from Bonarka Arena_ names the other. **In the first half hour the details' door is _Who's
@@ -1347,7 +1347,7 @@ fake server judging it by distance, as the backend does. **Not seen on a device.
   screen it opens: at 16:10 the court, not the score, is what a player is there for.
 
 **No club confirms a game: a full game is simply booked**
-([#676](https://github.com/Raketa02/Raketa/issues/676); the backend's #669;
+([#676](https://github.com/Rakieta02/Rakieta/issues/676); the backend's #669;
 [ADR-0196](../../../docs/adr/0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
 §1, the mechanics Q121; story S-01E's F-REQUEST-3.1, F-REQUEST-23.1). Paula's yes completes Marta's
 Thursday game at Kazimierz Padel: _It's a game!_ with nothing under the word, and Home and the details
@@ -1385,7 +1385,7 @@ it; the owed card carries no mark, and the one lift the phone makes is the card 
 (`withOnTop`), as it was before.
 
 **A yes that moves money says Pay, and every yes's stamp carries its share**
-([#719](https://github.com/Raketa02/Raketa/issues/719); Q124, the mechanics §6.5 and §8.1, the screens
+([#719](https://github.com/Rakieta02/Rakieta/issues/719); Q124, the mechanics §6.5 and §8.1, the screens
 A2.2, A3.1, A4.2, A4.3, A5.3; story S-16A's F-DECK-34.1 and F-FILL-1.1). Ivan drags a Bonarka card his
 yes would only add to and reads **I'M IN · 40 zł**; Marta drags the card her yes would book and reads
 **PAY · 40 zł**, and a _Seat open_ card reads the same. **Why**: the product owner ruled that the
@@ -1408,7 +1408,7 @@ game's details are spoken _Pay 32 zł_, where the rescue's doors say what the sh
 here has been seen on a device**: the stamp on every card, and _Pay_ on the rows, the sheet and the
 details, want a look.
 
-**Every person here is named by their nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1–§2). The deck's tiles, the
+**Every person here is named by their nickname** ([#728](https://github.com/Rakieta02/Rakieta/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1–§2). The deck's tiles, the
 _vs_ line, the bar's labels and the ribbon's challenger, a game's details, the booked game and
 _It's a game!_, the posting sheet's fits and Fill in's people all read the wire's `nickname` at
 their mapper into the same `name` field — what a player is called, whole and never with an @ — so
@@ -1420,7 +1420,7 @@ nickname is said as its owner wrote it. The harness's deck and Home people are h
 (_karol.t_, _zofia.b_, _ania.k_, _piotr.s_, …), so the stems are exercised as they are drawn.
 `groupGames.test.tsx` holds _ania.k_ on a tile and on her record.
 
-**The kind you don't play is a door** ([#740](https://github.com/Raketa02/Raketa/issues/740),
+**The kind you don't play is a door** ([#740](https://github.com/Rakieta02/Rakieta/issues/740),
 [ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
 §2, Q127). _As built, on the switch — #862 moved the door into the Games tab's menu (below); what
 it says and opens is unchanged._ The switch draws both kinds always (`switchSides`): the read's
@@ -1454,7 +1454,7 @@ the panel covers the cards on paper rather than over a scrim. `groupGamesDoor.te
 against a fake server that holds each sport's intent. **Not seen on a device**: the dim, and the
 panel over the stack — the ticket asks for that walk. _Finding…_ after an answer is #741's.
 
-**The switch leaves the deck for the Games tab's menu** ([#862](https://github.com/Raketa02/Raketa/issues/862),
+**The switch leaves the deck for the Games tab's menu** ([#862](https://github.com/Rakieta02/Rakieta/issues/862),
 PRD #859; the screens A1, A2.1; tab menu mocks 1 and 3 as illustrations). **`GamesDeck` draws no
 switch**: above the deck stand only the weekly cap's line and the offline note, directly under the
 page's tabs, and the deck takes the height. The menu is the group page's; this feature gives it
@@ -1481,7 +1481,7 @@ off the cache with no observer, which a never-fetching observer would have made 
 suites (`groups.md`), with `domain/deck.test.ts` and `deckPresentation.test.ts` for the rule and
 the words. **Not seen on a device** (#866).
 
-**A kind picked in the menu swaps the deck in place** ([#863](https://github.com/Raketa02/Raketa/issues/863),
+**A kind picked in the menu swaps the deck in place** ([#863](https://github.com/Rakieta02/Rakieta/issues/863),
 PRD #859; the tab menu log §5.1, §5.2). **The stack goes out** — `motion.kindSwap.rise` (24) down
 and faded over `.out` (200) — and **the other kind's comes in**, up from `rise` below into the same
 place over `.in` (250): opacity and a translation on the native driver, nothing scaled, the stage
@@ -1514,7 +1514,7 @@ swap before it answers (`landTheSwap`), the door suite's finding drawing directl
 `domain/kindSwap.test.ts` for the rules and `deckStage.test.tsx` for `standing`. **Not seen on a
 device** (#866).
 
-**After an intent answer on Games, the tab is finding** ([#741](https://github.com/Raketa02/Raketa/issues/741),
+**After an intent answer on Games, the tab is finding** ([#741](https://github.com/Rakieta02/Rakieta/issues/741),
 [ADR-0201](../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
 §4, the screens A2.1 state 5). The deck read straight after an answer used to come before Rakieta had
 dealt anything for it, so a new player and Ania both landed on a false _Nothing picked right now_.
@@ -1552,7 +1552,7 @@ fall-through. **Calls made without a ruling**:
 `groupGamesDoor.test.tsx` walks it against a server whose new kind has no cards until it is dealt.
 **Not seen on a device.**
 
-**The reader's own friends carry the tag on every face** ([#753](https://github.com/Raketa02/Raketa/issues/753);
+**The reader's own friends carry the tag on every face** ([#753](https://github.com/Rakieta02/Rakieta/issues/753);
 Q68, applying since Q128). `DeckPerson.friend` is mapped from the wire's `friend` on the deck's tiles
 and a booked game's seats — present only when they are, so nothing claims who else is friends with
 whom — and drawn as **FRIEND** in volt (`CardTag`) after the name and its IN on a game card's tile:
@@ -1573,7 +1573,7 @@ sport and the Level, the reliability and its band) and crossed by
 `useHomeFriendRequests`. `friends` draws and answers them; the read is this feature's because it is
 Home's. They are not counted in `needingYou`.
 
-**A booked game's details carry PLAYED WITH** ([#754](https://github.com/Raketa02/Raketa/issues/754)):
+**A booked game's details carry PLAYED WITH** ([#754](https://github.com/Rakieta02/Rakieta/issues/754)):
 `BookedGame.playedWith` is the read's `played_with` — everybody else on the game with the reader's
 own relation — and `playedWithOf` joins it to the seats for the card's faces, names and Levels.
 `BookedGameResult` builds `PlayedWithInput` from it — this feature's own statement of what the card
@@ -1585,7 +1585,7 @@ behind the record while it is up. The record of the card is [`friends.md`](frien
 ## The friends card and Find a court (#757)
 
 **The deck's card without its tiles, for people who chose each other.**
-[#757](https://github.com/Raketa02/Raketa/issues/757) draws the card a group's Friends tab shows once
+[#757](https://github.com/Rakieta02/Rakieta/issues/757) draws the card a group's Friends tab shows once
 every seat is filled (the friends screens §7.2; friends 8, 9), over #750's
 `GET /pools/{id}/friends-card`. **Every part is the deck card's own** — `GameGround`, the _vs_ line,
 the forecast's figure and `BalanceBar`, `OverlapGrid`, `CourtBlock` — laid out as friends 9 draws
@@ -1652,7 +1652,7 @@ side.
 
 ## A friends game: sent, answered, called off (#759)
 
-[#759](https://github.com/Raketa02/Raketa/issues/759) (the friends screens §6.1, §6.3, §8, §9; the
+[#759](https://github.com/Rakieta02/Rakieta/issues/759) (the friends screens §6.1, §6.3, §8, §9; the
 mechanics §8–§9, §11.2; the words §29.7–§29.10; over #751's routes) builds the game the friends card
 sends. The rules are `domain/friendsGame.ts`; the wire is `friends_game` on every Home card and booked
 game's details, and `friends_games` on Home.
@@ -1717,7 +1717,7 @@ a row on a card that asks for every one.
 
 ## A friends game's empty seats, and leaving it (#760)
 
-[#760](https://github.com/Raketa02/Raketa/issues/760) (the friends screens §9; the mechanics §10–§12;
+[#760](https://github.com/Rakieta02/Rakieta/issues/760) (the friends screens §9; the mechanics §10–§12;
 the words §29.8–§29.10; over #752's routes and its re-emitted document) gives an empty seat its two
 acts and the sender two ways to leave. The rules are `domain/friendsGame.ts`: **who may do what is
 the read's** (`friends_game.seats[]`: `seat_of`, `invitations`, `can_invite`, `can_open`), and the
@@ -2066,7 +2066,7 @@ largest text size, the shrink on a 360 phone and the scroll on the smallest.
 
 ## Your games is not drawn before its read lands (#871)
 
-**`HomeRail` draws nothing until Home's read lands** ([#871](https://github.com/Raketa02/Raketa/issues/871);
+**`HomeRail` draws nothing until Home's read lands** ([#871](https://github.com/Rakieta02/Rakieta/issues/871);
 PRD #867; the loading shimmer log §6, Q16): it never says _Your games · 0_, nor the empty sentences,
 while it does not know. **This reverses the rail's first rule** (#556, #576) — the sentences were _not
 gated on the read having landed_ because they were true of everybody, and holding them back would
@@ -2086,7 +2086,7 @@ rail's own walks are unchanged (`homeAndBookedGame.test.tsx`), every one of them
 
 ## The group page's three tabs shimmer, and the deck's first read says when it is held offline (#875)
 
-[#875](https://github.com/Raketa02/Raketa/issues/875); PRD #867, the loading shimmer log §10; design
+[#875](https://github.com/Rakieta02/Rakieta/issues/875); PRD #867, the loading shimmer log §10; design
 system 5.6. The group page (`groups.md`) reveals its header and tab bar, then the body of the tab on
 screen; this feature says how far the three tabs it draws have come, and draws what they shimmer as.
 
@@ -2117,7 +2117,7 @@ on a device**: the block's and the rows' sizes against what replaces them (the p
 
 ## A kind picked from the menu and not read yet shimmers in the stack's place (#876)
 
-[#876](https://github.com/Raketa02/Raketa/issues/876); PRD #867, the loading shimmer log §10 (Q26),
+[#876](https://github.com/Rakieta02/Rakieta/issues/876); PRD #867, the loading shimmer log §10 (Q26),
 amending the tab menu log §5.2. **On #863's uncached path the group page's deck-card block stands
 where the spinner stood.** The stack goes out as #863 built it, then the block stands in the stack's
 place, on the page's `SkeletonGround`, until the read lands. The new stack then rises into place as

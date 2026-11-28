@@ -1,7 +1,7 @@
 /**
  * **Reads that list people with the reader's relation to them** — tagged, so a write that moves a
  * relation reaches every one of them without naming whose they are
- * ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows mechanics §13; architecture
+ * ([#801](https://github.com/Rakieta02/Rakieta/issues/801); the Home rows mechanics §13; architecture
  * Part 7, *A write some other feature's reads depend on*).
  *
  * Home's people rows and their See all (`discovery`) and Hottest groups (`groups`, friends drawn

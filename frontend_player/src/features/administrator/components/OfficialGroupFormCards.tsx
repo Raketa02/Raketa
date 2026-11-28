@@ -1,7 +1,7 @@
 /**
  * **The two cards only an official group's form has** — the group size and the Sports —
- * shared by New official group ([#516](https://github.com/Raketa02/Raketa/issues/516)) and the
- * group's settings ([#517](https://github.com/Raketa02/Raketa/issues/517)), which ask the same four
+ * shared by New official group ([#516](https://github.com/Rakieta02/Rakieta/issues/516)) and the
+ * group's settings ([#517](https://github.com/Rakieta02/Rakieta/issues/517)), which ask the same four
  * things. The Name and *Who can join* are `groups`' own two cards; these are the other two, drawn
  * once so the two forms cannot drift apart. Each screen holds its own state and hands it in.
  */

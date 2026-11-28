@@ -1,6 +1,6 @@
 /**
  * **Needs your answer** — the envelope on Home's header, and the sheet it opens
- * ([#816](https://github.com/Raketa02/Raketa/issues/816), [#817](https://github.com/Raketa02/Raketa/issues/817),
+ * ([#816](https://github.com/Rakieta02/Rakieta/issues/816), [#817](https://github.com/Rakieta02/Rakieta/issues/817),
  * [ADR-0205](../../../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
  * §1–§2; home refactor 1 and 2).
  *

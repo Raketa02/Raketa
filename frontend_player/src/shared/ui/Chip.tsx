@@ -26,7 +26,7 @@
  *
  * **`busy` is 6.1's shape on 6.2's pill, and it arrived with the plan card**
  * ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-09-09,
- * [#366](https://github.com/Raketa02/Raketa/issues/366)). A slot chip takes a mutation, *pending,
+ * [#366](https://github.com/Rakieta02/Rakieta/issues/366)). A slot chip takes a mutation, *pending,
  * never optimistic* is that map's rule for everything that reaches another person, and a chip that
  * looked pressable while its write was going out would take a second press this app would send.
  * It blocks the press, announces `busy` and dims — the same three things 6.1's button does — and
@@ -45,7 +45,7 @@
  *
  * **The disabled chip arrived late and only where a chip is genuinely refused**
  * ([Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-09-09,
- * [#365](https://github.com/Raketa02/Raketa/issues/365)). It is not the tag picker's answer to a
+ * [#365](https://github.com/Rakieta02/Rakieta/issues/365)). It is not the tag picker's answer to a
  * ninth tag — that step refuses out loud rather than by greying the other nineteen, and 6.2's
  * original sentence about it stands. What it is for is a control the **account** may not use: a
  * held account cannot post, and a quick chip that looked pressable and did nothing would be
@@ -80,7 +80,7 @@ export interface ChipProps {
   readonly dot?: string;
   /**
    * **A count after the label** — *Padel 10*, the members rated in a sport on *Post a game*'s chips
-   * ([#558](https://github.com/Raketa02/Raketa/issues/558), mock 16; Part 16 2026-10-02). Mono, as
+   * ([#558](https://github.com/Rakieta02/Rakieta/issues/558), mock 16; Part 16 2026-10-02). Mono, as
    * every count is (1.4), and quieter than the word: `muted`, `onDarkTiny` once selected. Drawn and
    * not spoken — the caller says it in `accessibilityLabel`, where it can say what it counts.
    */

@@ -15,7 +15,7 @@
  *
  * **It takes the top inset, and only that one.** The header it draws stands where the room's
  * will, and a header under the clock for the length of a read is the same bug for the length of
- * a read ([#400](https://github.com/Raketa02/Raketa/issues/400)). The bottom edge is not taken
+ * a read ([#400](https://github.com/Rakieta02/Rakieta/issues/400)). The bottom edge is not taken
  * because nothing here reaches it: on the room's own route the bar is down and the room takes
  * that edge once it lands, and behind the *Details* door the bar is drawn and owns it.
  */

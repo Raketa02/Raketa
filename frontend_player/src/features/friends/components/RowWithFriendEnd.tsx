@@ -1,6 +1,6 @@
 /**
  * **A Members row's right-hand end** — **+ Add**, *request sent*, *friend* or **Accept**
- * ([#753](https://github.com/Raketa02/Raketa/issues/753); the friends screens §1; friends 1, 2).
+ * ([#753](https://github.com/Rakieta02/Rakieta/issues/753); the friends screens §1; friends 1, 2).
  *
  * ```
  * ┌ the row (groups') ─────────────────────────────┐ ┌──────────┐

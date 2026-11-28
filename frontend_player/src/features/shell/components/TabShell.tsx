@@ -5,7 +5,7 @@
  * come back — which is what it is for, and which breaks *back goes where I came from* without a
  * symptom: a player who leaves a group's page and returns to Play lands back on the page, nothing
  * throws, and the rule is only observable to somebody doing it on purpose
- * ([#227](https://github.com/Raketa02/Raketa/issues/227)). `shellNavigation` replaces rather than
+ * ([#227](https://github.com/Rakieta02/Rakieta/issues/227)). `shellNavigation` replaces rather than
  * pushes, and this file draws the result.
  *
  * **The bar is mounted here, once, over the navigator** — a sibling of the *navigator*, not of
@@ -14,7 +14,7 @@
  * screen takes only the top edge.
  *
  * **It floats, and owns no layout** (10.1, [ADR-0210](../../../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md)
- * §3, [#881](https://github.com/Raketa02/Raketa/issues/881)). It was a flex sibling under the
+ * §3, [#881](https://github.com/Rakieta02/Rakieta/issues/881)). It was a flex sibling under the
  * stack, which ended every screen above it for free; now every screen inside the tabs draws to the
  * bottom of the phone and the bar is drawn over its foot. What it takes there is its **reach** —
  * the dock's lift and its 54 while it is drawn, nothing while it stands down — and this shell
@@ -29,13 +29,13 @@
  * ## The shell holds one query, and that is the honest price of a badge
  *
  * #227's finding was that *"the shell remembers nothing"*, and it is **amended rather than
- * quietly contradicted** ([#326](https://github.com/Raketa02/Raketa/issues/326) §7): the bar
+ * quietly contradicted** ([#326](https://github.com/Rakieta02/Rakieta/issues/326) §7): the bar
  * carries a count of the booked games that need you, and a count on permanent chrome has to come
  * from somewhere. It is read **here** rather than by the bar, because `shared/ui` importing a
  * feature hook would invert the dependency and give a drawn object a network call — so the shell
  * reads and the bar takes a number. It is Home's own read (`GET /home`), so TanStack dedupes the
  * two mounts to one request, and whatever invalidates it — a fill, a foreground — re-reads it at
- * once. Since the old loop left ([#576](https://github.com/Raketa02/Raketa/issues/576)) it is the
+ * once. Since the old loop left ([#576](https://github.com/Rakieta02/Rakieta/issues/576)) it is the
  * only list the shell holds: the old games, plans and challenges reads went with it.
  *
  * **The same path decides whether a press is a move at all.** `openTab` takes it and declines
@@ -55,7 +55,7 @@
  * ## The bar stands down inside a booked game's chat, and standing down is not being drawn
  *
  * The room replaces the bar with its composer, so the keyboard and the stream get the whole
- * screen ([#400](https://github.com/Raketa02/Raketa/issues/400)). Which screen is
+ * screen ([#400](https://github.com/Rakieta02/Rakieta/issues/400)). Which screen is
  * `barStandsDown`'s answer, read off the same pathname the active column is — the shell learns
  * that *a route* stands the bar down and nothing about what a room is. What it does with the
  * answer is **not render** the bar rather than hide it, and say its reach is nothing: a bar that
@@ -68,7 +68,7 @@
  * hold, and the amendment beside it says so.
  *
  * **On Android it stands down while the keyboard is up, too** (10.1, ADR-0210 §9,
- * [#882](https://github.com/Raketa02/Raketa/issues/882)). Android shrinks the window for the
+ * [#882](https://github.com/Rakieta02/Rakieta/issues/882)). Android shrinks the window for the
  * keyboard, and the bar floats at the window's foot, so it would ride up above the keyboard — over
  * the field being typed into, on a form whose page no longer ends above the bar. The same answer
  * as the chat's: not rendered, its reach nothing, so a form ends at its own gap above the keyboard,

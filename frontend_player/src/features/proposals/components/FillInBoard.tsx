@@ -1,7 +1,7 @@
 /**
  * **A group's Fill in tab** — the rescues the reader is offered, and nothing else
- * ([#557](https://github.com/Raketa02/Raketa/issues/557), split by
- * [#847](https://github.com/Raketa02/Raketa/issues/847); the screens A3, A3.1; split mock 1; mock 12;
+ * ([#557](https://github.com/Rakieta02/Rakieta/issues/557), split by
+ * [#847](https://github.com/Rakieta02/Rakieta/issues/847); the screens A3, A3.1; split mock 1; mock 12;
  * the mechanics §10).
  *
  * ```
@@ -14,7 +14,7 @@
  * **Its read is its own**: `GET /pools/{id}/fill-in` for the page's sport (#545) — only rescues,
  * booked games that lost a player, which the reader fits and is free for — soonest first, each
  * leaving at its deadline (`useSeatsToFill`, on the read's clock). **While nothing is drawn yet, its
- * rows shimmer** (`BoardSkeleton`, [#875](https://github.com/Raketa02/Raketa/issues/875)) — the group
+ * rows shimmer** (`BoardSkeleton`, [#875](https://github.com/Rakieta02/Rakieta/issues/875)) — the group
  * page reveals the tab from that skeleton once the read has finished, and while it retries the rows
  * stand here; a read held offline says it resumes, and one refused says why with the retry. None of
  * it touches You’re in, the tab beside it, which reads the reader's own live yeses.

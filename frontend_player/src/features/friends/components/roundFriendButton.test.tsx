@@ -1,5 +1,5 @@
 /**
- * **The round friend button's worded twin** — on a sheet's title row ([#801](https://github.com/Raketa02/Raketa/issues/801);
+ * **The round friend button's worded twin** — on a sheet's title row ([#801](https://github.com/Rakieta02/Rakieta/issues/801);
  * the Home rows screens §8.2; the words §31.9): *+ Add friend*, *Request sent*, *✓ Friends*, *Accept*,
  * the same taps as the round face. The round face is walked on Home's New in Rakieta row
  * (`discovery`'s `newInRakieta.test.tsx`); no sheet draws the worded one until the comparison and vibe

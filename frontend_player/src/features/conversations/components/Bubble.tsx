@@ -61,7 +61,7 @@ export interface BubbleProps {
   /**
    * The author's whole handle, or **`You`** — always spoken, and drawn only when `showAuthor` is
    * set. Never a familiar form, and never derived here: the screen names it off the response's
-   * `people`, as it fills every `{name}` ([#409](https://github.com/Raketa02/Raketa/issues/409)).
+   * `people`, as it fills every `{name}` ([#409](https://github.com/Rakieta02/Rakieta/issues/409)).
    */
   readonly author: string;
   /** Whose side it goes on. The reader's own messages sit right, on the dark ground. */

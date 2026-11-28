@@ -1,5 +1,5 @@
 /**
- * **A Same vibe tile** ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows screens
+ * **A Same vibe tile** ([#803](https://github.com/Rakieta02/Rakieta/issues/803); the Home rows screens
  * §6.2, §6.4; the words §31.8; home rows 20, 22–22.3, 24; design-system 7.35) — `shared/ui`'s tinted
  * pale tile, washed in their court poster's hue, with:
  *
@@ -25,7 +25,7 @@
  * width did, the words, the face, the chips and the sides their own. The grid keeps its own.
  *
  * **While See all's first page is read, a grid tile stands as its skeleton** (`SAME_VIBE_TILE_SKELETON`,
- * [#872](https://github.com/Raketa02/Raketa/issues/872)): the pale tile is a white card that is always
+ * [#872](https://github.com/Rakieta02/Rakieta/issues/872)): the pale tile is a white card that is always
  * there, so it is drawn as itself — without the wash, which is the person's — at the grid tile's own
  * height (its three lines of chips keep their room), and inside it the shapes every tile has: the face,
  * the nickname and the % circle, the count's words, a first chip, and the round button's circle in

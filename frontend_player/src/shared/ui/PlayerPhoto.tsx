@@ -19,10 +19,10 @@
  *
  * It was `features/play/components/candidate/CandidatePhoto`, because a search result was the
  * only thing in the app that had a face. The **record sheet's header draws the same switch**
- * ([#384](https://github.com/Raketa02/Raketa/issues/384)) and `player_record` may not import
+ * ([#384](https://github.com/Rakieta02/Rakieta/issues/384)) and `player_record` may not import
  * `features/play/` — the arrow runs the other way, since Play is what opens the sheet — so the
  * switch came below both, exactly as the run of form and the Social tag row did
- * ([#375](https://github.com/Raketa02/Raketa/issues/375)). A *candidate* is Play's word for a
+ * ([#375](https://github.com/Rakieta02/Rakieta/issues/375)). A *candidate* is Play's word for a
  * row a search returned; what this draws is a **player**, which is the word that survives the
  * move.
  *
@@ -102,7 +102,7 @@ export type PhotoPanelSize = 'card' | 'record';
  * and control vocabulary, and this is one drawn object's own geometry.
  *
  * **Exported, because it stopped being a thumbnail.**
- * [#309](https://github.com/Raketa02/Raketa/issues/309) turned the box into a panel with a
+ * [#309](https://github.com/Rakieta02/Rakieta/issues/309) turned the box into a panel with a
  * scrim, a Level and a Sport over it, and those overlays have to be clipped to exactly the
  * corner the photograph takes. `PhotoPanel` reads the numbers from here rather than restating
  * them, which is the same *one owner* argument `playerPhotoRadius` already makes for the

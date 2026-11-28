@@ -1,6 +1,6 @@
 /**
  * **The Groups heating up page** — behind its line's *All groups ›*, walked through the real route
- * tree ([#823](https://github.com/Raketa02/Raketa/issues/823); ADR-0205 §7; the Home rows screens
+ * tree ([#823](https://github.com/Rakieta02/Rakieta/issues/823); ADR-0205 §7; the Home rows screens
  * §3.6; the mechanics §5.10; the words §31.14).
  *
  * - **The way in**: *All groups ›* pushes it over Home, the Home tab lit, titled *Groups heating up*.

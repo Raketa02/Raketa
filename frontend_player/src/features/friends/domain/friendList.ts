@@ -1,6 +1,6 @@
 /**
  * **The Friends page's lists, the Add friends sheet's groups, and who PLAYED WITH names**
- * ([#754](https://github.com/Raketa02/Raketa/issues/754); the friends screens §3–§5; ADR-0202 §1).
+ * ([#754](https://github.com/Rakieta02/Rakieta/issues/754); the friends screens §3–§5; ADR-0202 §1).
  *
  * The shapes the reads arrive in, and the one rule a surface would otherwise spell in a ternary:
  * when the result screen's card is hidden. **Every list is the server's, in the server's order** —
@@ -44,7 +44,7 @@ export function levelIn(
 }
 
 /**
- * **What a picker row offers under its line** ([#758](https://github.com/Raketa02/Raketa/issues/758);
+ * **What a picker row offers under its line** ([#758](https://github.com/Rakieta02/Rakieta/issues/758);
  * the screens §4.2; the words §29.3): *Ask zofia.b to get a padel level* on a greyed row — a friend
  * with no Level in the picker's sport — or *Asked* once you have, since you ask once per sport,
  * ever. **Nothing on any other row**: a friend with a Level is picked, not asked, and a picked row is

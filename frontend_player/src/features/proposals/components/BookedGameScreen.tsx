@@ -1,6 +1,6 @@
 /**
  * **A booked game you're in, in detail** — what Home's *Open game* and *It's a game!*'s *Open game*
- * open ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.1, details 5–10; the
+ * open ([#556](https://github.com/Rakieta02/Rakieta/issues/556); the screens A4.1, details 5–10; the
  * mechanics §14.2).
  *
  * ```

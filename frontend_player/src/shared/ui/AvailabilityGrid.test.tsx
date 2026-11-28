@@ -121,7 +121,7 @@ describe('the selected cell', () => {
  * It is drawn rather than announced-only for the reason the tick is: a cell is a bare
  * rectangle, and the mark is the whole of what separates a square that is part of the ask from
  * one that a rung widened for one search
- * ([#283](https://github.com/Raketa02/Raketa/issues/283)). The bed is the argument for the
+ * ([#283](https://github.com/Rakieta02/Rakieta/issues/283)). The bed is the argument for the
  * second plus: `Plus` is volt on the filled cell, and this one is **not** filled — it is not
  * part of the week, and a filled one would read as ticked under a finger that is about to
  * tick it.

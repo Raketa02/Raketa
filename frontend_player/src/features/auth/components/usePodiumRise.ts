@@ -1,6 +1,6 @@
 /**
  * **Sign-up's podium rising** — played once when the screen opens, and then still
- * ([#788](https://github.com/Raketa02/Raketa/issues/788), PRD #783; design system 12.2).
+ * ([#788](https://github.com/Rakieta02/Rakieta/issues/788), PRD #783; design system 12.2).
  *
  * ## Once, because it is a statement
  *

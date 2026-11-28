@@ -1,6 +1,6 @@
 /**
- * **A people row's See all** — the frame every one draws ([#801](https://github.com/Raketa02/Raketa/issues/801),
- * [#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows screens §4.4, §5.3), pushed
+ * **A people row's See all** — the frame every one draws ([#801](https://github.com/Rakieta02/Rakieta/issues/801),
+ * [#802](https://github.com/Rakieta02/Rakieta/issues/802); the Home rows screens §4.4, §5.3), pushed
  * over Home whose tab stays lit:
  *
  * - **Header**: ‹, the row's title, and the sport pill — *● All ‹* — which slides open over the title
@@ -15,7 +15,7 @@
  *   later page refused (said under the list, with its own *Try again*), the empty line, and the pull,
  *   which reads every page again. **The pill keeps the last sports a read offered**, so a sport whose
  *   read is out or failed keeps *All* a tap away.
- * - **Reading shimmers** ([#872](https://github.com/Raketa02/Raketa/issues/872); PRD #867; the
+ * - **Reading shimmers** ([#872](https://github.com/Rakieta02/Rakieta/issues/872); PRD #867; the
  *   loading shimmer log §10): while the first page is out with nothing to draw, **the row's own tile
  *   or card stands as a skeleton in the grid, as many lines of it as fill the screen** (`skeleton`,
  *   the caller's shape; `SeeAllSkeleton`), and the page comes in on one cross-fade once that read

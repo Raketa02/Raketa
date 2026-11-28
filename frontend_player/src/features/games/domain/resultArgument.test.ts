@@ -247,7 +247,7 @@ describe('two scores on the table', () => {
   /**
    * The count *is* the state. It used to be read off the standing, because the field it
    * replaced was absent for *nothing entered* and for *both sides have spoken* alike
-   * ([#317](https://github.com/Raketa02/Raketa/issues/317)).
+   * ([#317](https://github.com/Rakieta02/Rakieta/issues/317)).
    */
   it('hands both scores over, the reader’s own named as theirs', () => {
     expect(resultArgument(game(arguing), ME)).toMatchObject({
@@ -419,7 +419,7 @@ describe('a state this build cannot name', () => {
 });
 
 /**
- * **Who turned up, caught at the court** ([#658](https://github.com/Raketa02/Raketa/issues/658);
+ * **Who turned up, caught at the court** ([#658](https://github.com/Rakieta02/Rakieta/issues/658);
  * ADR-0195 §3). While somebody tapped *isn't here yet* is awaited no score is taken, and once the
  * half hour has run with them not arrived the game is one somebody Didn't come to. Neither arm
  * offers a result act: the taps are the attendance block's (`attendance.ts`).

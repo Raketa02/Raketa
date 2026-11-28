@@ -486,7 +486,7 @@ describe('a disagreement names its way out, and never only its ending', () => {
   /**
    * The paragraph used to state the ending and promise no control, because the wire returned
    * neither score and *"the client could offer the act only by asking somebody to agree with a
-   * score it cannot show them"* ([#317](https://github.com/Raketa02/Raketa/issues/317)). Both
+   * score it cannot show them"* ([#317](https://github.com/Rakieta02/Rakieta/issues/317)). Both
    * scores travel, so it names the exit — and since #654, what happens if nobody takes it.
    */
   it('names the agreement that ends it at once, and the two ways it settles without one', () => {
@@ -514,7 +514,7 @@ describe('the eyebrow on the plan lead', () => {
   };
 
   /**
-   * **The format and the kind, and nothing else** ([#414](https://github.com/Raketa02/Raketa/issues/414)):
+   * **The format and the kind, and nothing else** ([#414](https://github.com/Rakieta02/Rakieta/issues/414)):
    * the card under it names the people and the plan names the day, so the handles and *arranged n
    * ago* go. The format is read off the seats, as the Now card's retired eyebrow read it. **Not
    * uppercased here** — the header's style does that, and a listener would get the letters.
@@ -667,7 +667,7 @@ describe('the court’s pairing, in words', () => {
 });
 
 /**
- * **Who turned up, in words** ([#658](https://github.com/Raketa02/Raketa/issues/658); ADR-0195 §3).
+ * **Who turned up, in words** ([#658](https://github.com/Rakieta02/Rakieta/issues/658); ADR-0195 §3).
  * The awaited player reads who is waiting for them and what the half hour decides, before it runs
  * out; everybody else reads whom the game waits for, and that saying so cost them nothing. The
  * player who didn't come is told how long they have to say they were there, the way silence on a

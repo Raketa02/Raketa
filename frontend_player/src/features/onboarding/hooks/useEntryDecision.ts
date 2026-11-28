@@ -2,7 +2,7 @@
  * The entry gate, as a hook.
  *
  * **It reads the player and nothing else** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §1, [#730](https://github.com/Raketa02/Raketa/issues/730)). It used to fire three reads in
+ * §1, [#730](https://github.com/Rakieta02/Rakieta/issues/730)). It used to fire three reads in
  * parallel — the ratings, the unfinished run, and the player — because two of its destinations
  * turned on a rating and a run. Onboarding is a nickname and a profile now, and both facts route
  * nowhere, so both reads went with their destinations: a cold launch waits on one request, and the
@@ -16,7 +16,7 @@
  * what the bootstrap sequence exists to avoid.
  *
  * **And the profile the phone remembers** (ADR-0185 §3, ADR-0188 §2,
- * [#518](https://github.com/Raketa02/Raketa/issues/518)). An account that runs a club's groups opens
+ * [#518](https://github.com/Rakieta02/Rakieta/issues/518)). An account that runs a club's groups opens
  * in the profile it wore last, so for it the gate reads that — a local read, never the network — and
  * decides nothing before it has. Every other launch is not held for it; the read is made anyway, so
  * an account that gains a club while the gate is mounted finds it already settled, and the app it is

@@ -1,7 +1,7 @@
 /**
  * **The tags two players share, as a tile's green chips** — as many whole chips as fit in **three
  * lines**, the last place a dashed *+N more* when more remain
- * ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows screens §6.2; the README's
+ * ([#803](https://github.com/Rakieta02/Rakieta/issues/803); the Home rows screens §6.2; the README's
  * override 8; home rows 20, 22–22.3, 24). Three lines on Home's tile and in See all alike.
  *
  * ## Measured, never guessed

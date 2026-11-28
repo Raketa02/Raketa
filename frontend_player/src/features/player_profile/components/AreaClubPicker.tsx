@@ -1,7 +1,7 @@
 /**
  * **Pick a club near where you play** — the other way to a Location area, for a player whose phone
  * will not say where she is ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §10, [#733](https://github.com/Raketa02/Raketa/issues/733)). The location step offers it after a
+ * §10, [#733](https://github.com/Rakieta02/Rakieta/issues/733)). The location step offers it after a
  * refusal — denied, blocked or no fix — and You's *Where you play* offers it always.
  *
  * | state | what is drawn |

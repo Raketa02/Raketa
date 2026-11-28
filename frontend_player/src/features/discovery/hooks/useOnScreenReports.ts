@@ -1,5 +1,5 @@
 /**
- * **A Home row's on-screen reports** ([#804](https://github.com/Raketa02/Raketa/issues/804); the Home
+ * **A Home row's on-screen reports** ([#804](https://github.com/Rakieta02/Rakieta/issues/804); the Home
  * rows mechanics §9.2) — what the row hands its rail as `onScreen`, so every card the rail says is at
  * least half on screen is told once that Warsaw day (`use-cases/onScreen.ts`).
  *

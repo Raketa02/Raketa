@@ -1,13 +1,13 @@
 /**
  * **Play's two segments, walked** — Groups | Explore, and the phone remembering which one a player
- * left it on ([#512](https://github.com/Raketa02/Raketa/issues/512),
+ * left it on ([#512](https://github.com/Rakieta02/Rakieta/issues/512),
  * [ADR-0188](../../../../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)).
  *
  * The real route tree and the real shell, with only the socket faked. *A relaunch* is the process
  * ending and a new one starting: the Query cache and the session go, and what is saved on the
  * device — the keychain, the phone's preferences and the last good datafile — stays.
  *
- * **Every walk runs with `explore` served on** ([#826](https://github.com/Raketa02/Raketa/issues/826)):
+ * **Every walk runs with `explore` served on** ([#826](https://github.com/Rakieta02/Rakieta/issues/826)):
  * the switcher is drawn only on an explicit on, and off is the gate's suite
  * (`theExploreGate.test.tsx`). `launchWithExplore` serves it and waits on it before Play is pressed,
  * because Play reads the feature flag once, when it mounts.

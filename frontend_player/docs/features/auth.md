@@ -18,7 +18,7 @@ replayed request can carry a body this form would not have sent, and _try again_
 be the one thing that is not true.
 
 **Sign-up asks for credentials only, and the naming is this feature's screen inside onboarding**
-([#451](https://github.com/Raketa02/Raketa/issues/451),
+([#451](https://github.com/Rakieta02/Rakieta/issues/451),
 [ADR-0171](../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
 The nickname left the sign-up form: choosing credentials and saying who you are are two different
 moments, and a sign-up refused for a taken handle was a sign-up refused for a reason that had
@@ -46,7 +46,7 @@ the same request with a re-read that answers. `AuthenticatedUser` carries `name`
 `nickname`, both absent until the naming, and the **You tab draws the name, `@nickname` under it
 and the email** — one of the two screens that draw a handle, the other being the record.
 
-**The naming, from the You tab** ([#469](https://github.com/Raketa02/Raketa/issues/469),
+**The naming, from the You tab** ([#469](https://github.com/Rakieta02/Rakieta/issues/469),
 [ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
 §7 — the follow-up ADR-0171 left open). **The refactor came first**: `useNamingForm` is the
 form — what is typed, what the schema refuses before a round trip, the send through
@@ -82,7 +82,7 @@ passes nothing, and the way back is the header's. `nameFromYou.test.tsx` walks i
 on a device**: the boxes re-drawn from the re-read under a green button.
 
 **A player is known by their nickname, and the naming asks for it alone**
-([#728](https://github.com/Raketa02/Raketa/issues/728),
+([#728](https://github.com/Rakieta02/Rakieta/issues/728),
 [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3, superseding ADR-0171
 and the two paragraphs above where they speak of a Name). _How should people see you?_ keeps its
 title and has **one box, _Nickname_**: `namingSchema`, `Naming`, `useNamingForm` and the request are
@@ -104,13 +104,13 @@ _Pick a nickname — it's how players will see you._ under the title; every acco
 reads the title alone. `theNaming.test.tsx` and `nicknameFromYou.test.tsx` walk both. **Not seen on
 a device**: the one-box step, the invitation line, and the You row's new title.
 
-**The tester mark is not read** ([#576](https://github.com/Raketa02/Raketa/issues/576)). It was
+**The tester mark is not read** ([#576](https://github.com/Rakieta02/Rakieta/issues/576)). It was
 carried as `AuthenticatedUser.isTester` for one reader, feature-flag evaluation (#479, ADR-0180
 §9), which left with the flags. `/users/me` still sends `is_tester` until the backend drops it
 (#581), and the mapper drops it as it drops `is_admin`.
 
 **_Forgot password?_ is four screens and a toast, made of the sign-in screen's pieces**
-([#515](https://github.com/Raketa02/Raketa/issues/515),
+([#515](https://github.com/Rakieta02/Rakieta/issues/515),
 [ADR-0184](../../../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
 §5). It sits under the Sign in button on the one sign-in screen players and administrators share,
 and walks: the email (`/forgot-password`, opened with whatever the sign-in box held), a neutral
@@ -194,7 +194,7 @@ too**. The server's `password_too_weak` says the rule itself, under the box.
 **Not seen on a device**: the four new screens, the `lead` line under a title, the _Forgot
 password?_ link's place between _Sign in_ and _New to Rakieta?_, and sign-up's new rule line.
 
-**The signed-in player carries the account's profiles** ([#516](https://github.com/Raketa02/Raketa/issues/516),
+**The signed-in player carries the account's profiles** ([#516](https://github.com/Rakieta02/Rakieta/issues/516),
 ADR-0185 §2). `GET /users/me` answers `MeResponse` since #508, and `me()` reads it: `AuthenticatedUser`
 gains `profiles` — `actsAsPlayer` and the clubs it `administers`, by id and name — for the entry
 gate's first read, kept for `hasPlayerProfile`'s reason. The pending invitations are not carried until
@@ -203,7 +203,7 @@ the administrator area, which signs out an account its club removed; the sequenc
 feature's.
 
 **_Start playing_'s first step is this feature's, and so is the naming that follows it**
-([#517](https://github.com/Raketa02/Raketa/issues/517), ADR-0185 §4–§5). An account an Invitation
+([#517](https://github.com/Rakieta02/Rakieta/issues/517), ADR-0185 §4–§5). An account an Invitation
 opened runs a club's groups and has never been asked its age, so the first time it acts as a player
 it gives **the Adult attestation**: `StartPlayingScreen`, `POST /users/me/adult-attestation` through
 `attestAdult` and `useAttestAdult`. It lives here on the naming's precedent — the act is the users
@@ -229,7 +229,7 @@ _Superseded by #728 (ADR-0199 §4): no account holds a player name, the naming i
 everybody, and an invitation account reads its own line — see the nickname paragraph above._
 
 **_Have an invitation code?_ and _Set your password_ are _Forgot password?_'s pieces asking for an
-invitation's** ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories 113–116 and
+invitation's** ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 stories 113–116 and
 121, ADR-0184 §2–§4). The link sits under _Forgot password?_ on the one sign-in screen, carrying the
 email typed there. `/invitation` takes **the email and the code** — read the server's way, its length
 checked first, `invitationCodeSchema` being `resetCodeSchema` since it is one credential machinery —
@@ -294,7 +294,7 @@ used, and the sheets' _Sign out_ is this feature's button. A malformed token no 
 either route from outside — the reader ignores the link — so their redirects to the code form and the
 email form now guard only the app's own navigation.
 
-**A sign-out lets the phone go first** ([#559](https://github.com/Raketa02/Raketa/issues/559)).
+**A sign-out lets the phone go first** ([#559](https://github.com/Rakieta02/Rakieta/issues/559)).
 `signOut(phone)` — handed the push port by `useSignOut` — asks the phone for its push token, only on
 a phone that may show a notice, and `POST /players/me/devices/removal` with it in the body, **before
 the revoke**: both need what `endSession` destroys, the removal the session and the revoke the
@@ -303,7 +303,7 @@ in `auth`'s api because the act is the sign-out's; registering the phone is `not
 that ends by itself — a refused refresh — cannot sign a removal, and that phone stays registered to
 the last player until the next sign-in on it (`notifications.md`'s call 7).
 
-**The naming leads to the profile steps** ([#730](https://github.com/Raketa02/Raketa/issues/730),
+**The naming leads to the profile steps** ([#730](https://github.com/Rakieta02/Rakieta/issues/730),
 ADR-0200 §1). The step still hands the next destination back to the gate, which now answers _the
 six steps_ for an account sign-up created; the _Continue_ hint that promised _a few questions to
 find your level_ says _Next, what kind of player you are_.
@@ -326,7 +326,7 @@ it, so what arrives is a cancellation rather than the 401. The session machine a
 covered**: a launch that starts on an expired access token refreshes with the ordinary `request`
 budget — the rotation is single-flight and shared, so there is no caller to take a class from.
 **Not seen on a device.** **Amended 2026-11-23: the check is not sent when the phone already knows
-it is offline** ([#858](https://github.com/Raketa02/Raketa/issues/858),
+it is offline** ([#858](https://github.com/Rakieta02/Rakieta/issues/858),
 [ADR-0209](../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md) §4).
 On a captive portal or a _connected, no internet_ network the check could only wait out its five
 seconds and land the player on _We couldn't pick up where you left off_. `restoreSession` now takes
@@ -350,7 +350,7 @@ the gate's resumed read is _pending_ with no failure to keep, so the gate draws 
 answered. **Not seen on a device.**
 
 **Sign-in is drawn on the stage, and nothing it does changed**
-([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783; design system 12.2). A dark hero
+([#784](https://github.com/Rakieta02/Rakieta/issues/784), PRD #783; design system 12.2). A dark hero
 over the top four tenths of the window — the _Rakieta_ wordmark in its top-left corner and _Your next
 game is only one swipe away._ at its foot, the deck dealt between them since #786 — and a paper
 sheet with rounded top corners over it, holding the form. Every control keeps its target and what it
@@ -429,7 +429,7 @@ phone with the keyboard up, the label-row refusals, the light status bar, and th
 largest text size — on iOS and Android.
 
 **Create an account is drawn on the same stage, and nothing it does changed**
-([#785](https://github.com/Raketa02/Raketa/issues/785), PRD #783; design system 12.2, mocks 4 and
+([#785](https://github.com/Rakieta02/Rakieta/issues/785), PRD #783; design system 12.2, mocks 4 and
 6). The hero is sign-in's — the wordmark exactly where sign-in has it — with _Play ranked. The
 competition starts with you._ at its foot, and the podium over it (#788, below). The sheet holds the
 title alone, the banner, _Email_, _Password_ with the rule under it, _Repeat password_, _I am 18 or
@@ -473,7 +473,7 @@ phone with the keyboard up, the rule under the box beside a refusal on the label
 the cross-fade both ways (and whether iOS's edge swipe back still works under a fade), and the hero's
 words at the largest text size.
 
-**Sign-in's hero deals three miniature game cards** ([#786](https://github.com/Raketa02/Raketa/issues/786),
+**Sign-in's hero deals three miniature game cards** ([#786](https://github.com/Rakieta02/Rakieta/issues/786),
 PRD #783; design system 12.2, mock 2), fanned between the wordmark and the headline. **Front,
 straight**: a padel game waiting for a fourth — _Seat open · ⏱ 21 h 00_, `karol.t` 2,75, `ania.k`
 2,68 and `kuba.w` 2,80, each _paid_, the reader's dashed volt seat _You complete it_, _91%_ over
@@ -526,7 +526,7 @@ so its queries opt into hidden elements.
 dashed seats at half size, the turned cards' edges, the fit on a short phone and with large text,
 and the headline under the deck.
 
-**Sign-in's hero plays its story on a loop** ([#787](https://github.com/Raketa02/Raketa/issues/787),
+**Sign-in's hero plays its story on a loop** ([#787](https://github.com/Rakieta02/Rakieta/issues/787),
 PRD #783; design system 12.2, mocks 2, 7 and 8). After the deal, a still moment so the cards can be
 read; then the front card is **picked up** — a little right, a few degrees — with **I'M IN** on it,
 the real deck's yes in volt with no price, set clockwise at the card's top-right where mock 2 draws
@@ -577,7 +577,7 @@ pick-up and the stamp at half size, the swipe leaving the phone, the splash's ni
 wordmark and the sheet's edge, the tiles and the word on a short phone and with large text, and the
 loop stopping and starting from the deal around _Create an account_ and the app switcher.
 
-**Sign-up's hero is the Rankings podium, with You on the first step** ([#788](https://github.com/Raketa02/Raketa/issues/788),
+**Sign-up's hero is the Rankings podium, with You on the first step** ([#788](https://github.com/Rakieta02/Rakieta/issues/788),
 PRD #783; design system 12.2, mock 5). Three steps over _Play ranked. The competition starts with
 you._, in 2 / 1 / 3 order: the middle one volt and the tallest, numbered 1, the outer two white at a
 seventh, numbered 2 and 3. `stas.w` stands on 2 under _SW_, `ines.d` on 3 under _ID_, and **You** on

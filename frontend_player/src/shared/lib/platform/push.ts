@@ -1,6 +1,6 @@
 /**
  * The phone's push notifications, behind a port. **The only module that imports
- * `expo-notifications`** ([#559](https://github.com/Raketa02/Raketa/issues/559); the screens A7.2,
+ * `expo-notifications`** ([#559](https://github.com/Rakieta02/Rakieta/issues/559); the screens A7.2,
  * A9; the mechanics §17.2).
  *
  * A notice reaches a phone through Expo's push service, which addresses the phone by a **token** it

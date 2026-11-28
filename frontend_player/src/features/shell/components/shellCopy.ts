@@ -3,7 +3,7 @@
  *
  * **These are citations, not filler**, and there is no placeholder among them any more. For
  * as long as a tab was unbuilt its line was one sentence naming what the tab would be plus
- * that it was not built ([#227](https://github.com/Raketa02/Raketa/issues/227)); every tab has
+ * that it was not built ([#227](https://github.com/Rakieta02/Rakieta/issues/227)); every tab has
  * left that table and none of them was deleted. You's own words are in `youCopy`.
  *
  * **No sentence here may say "nothing is happening."** It began as Now's refusal — Now is where a
@@ -18,7 +18,7 @@ import { countFigure } from '@/shared/formatting/countFigure';
  * **The Home tab's own sentences** — its title, and what it says when it holds no games
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.7).
  *
- * **Home is today's Now, renamed** ([#550](https://github.com/Raketa02/Raketa/issues/550),
+ * **Home is today's Now, renamed** ([#550](https://github.com/Rakieta02/Rakieta/issues/550),
  * [the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)):
  * the title is the bar's word. The two lines below are still true of the tab — every game you are
  * in shows up here — and they are here rather than in `features/proposals` for §1's reason: the
@@ -48,7 +48,7 @@ export const HOME_COPY = {
 
 /**
  * **Needs your answer** — the envelope on Home's header and the sheet it opens
- * ([#816](https://github.com/Raketa02/Raketa/issues/816), ADR-0205 §1–§2; the words §32).
+ * ([#816](https://github.com/Rakieta02/Rakieta/issues/816), ADR-0205 §1–§2; the words §32).
  *
  * The shell's because the header and the sheet are: each section under the title is its feature's,
  * with its own heading. The envelope is named by what it opens, as the bell is; its count, *, 2
@@ -82,8 +82,8 @@ export function envelopeSpoken(count: number): string {
 
 /**
  * **The Play tab's own words** — its title, and the two segments it opens on
- * ([#512](https://github.com/Raketa02/Raketa/issues/512), play mocks 1 and 3;
- * [#826](https://github.com/Raketa02/Raketa/issues/826)).
+ * ([#512](https://github.com/Rakieta02/Rakieta/issues/512), play mocks 1 and 3;
+ * [#826](https://github.com/Rakieta02/Rakieta/issues/826)).
  *
  * The shell's rather than `groups`' because the title and the segment are the *tab*: they name
  * the ways the tab finds a player games, and each segment's page owns its own sentences under it.

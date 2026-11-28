@@ -2,7 +2,7 @@
  * **Which sports the profile lists a declaration for, and which of them have none.**
  *
  * Two rules, and both are the sort a screen would otherwise answer inline
- * ([#296](https://github.com/Raketa02/Raketa/issues/296)):
+ * ([#296](https://github.com/Rakieta02/Rakieta/issues/296)):
  *
  * **An unrated sport is not a row.** A rating is what makes a sport matchable — every
  * matchmaking route is keyed by one — so offering the question for a sport nobody has been

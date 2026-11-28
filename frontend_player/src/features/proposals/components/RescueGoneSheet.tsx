@@ -1,6 +1,6 @@
 /**
  * **A rescue that went while the player reached for it** — the blocking sheet a refused swipe yes
- * opens, in place of a toast that goes in 2.6 seconds ([#545](https://github.com/Raketa02/Raketa/issues/545);
+ * opens, in place of a toast that goes in 2.6 seconds ([#545](https://github.com/Rakieta02/Rakieta/issues/545);
  * the bug report's P1 on the rescue swipe). It names the reason the join gave — the seat taken, the
  * game called off at its cut-off or cancelled by its club (with the club's reason), the game
  * started, the seat no longer offered — says nothing was charged, and stays until the player closes

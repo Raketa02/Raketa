@@ -142,7 +142,7 @@ import {
  * kind of sentence that gets reworded and eight suites holding a string literal is eight red tests
  * for a wording change.
  *
- * It was the tab's **placeholder** line until [#367](https://github.com/Raketa02/Raketa/issues/367)
+ * It was the tab's **placeholder** line until [#367](https://github.com/Rakieta02/Rakieta/issues/367)
  * built the rail, and it is now the tab's **empty** line — which every one of these suites draws,
  * because `stubGate` stubs the games list to nothing and a launch that arrives with no games is
  * the state they are all asserting.
@@ -676,7 +676,7 @@ export const PROFILE_SURFACE_PATH = '/api/v1/players/me/profile';
 
 /**
  * The profile as `GET /players/me/profile` serves it: a week and one declaration, and the
- * facts the read grew for the You tab ([#466](https://github.com/Raketa02/Raketa/issues/466)):
+ * facts the read grew for the You tab ([#466](https://github.com/Rakieta02/Rakieta/issues/466)):
  * the tags, the photos with their verdicts, the intro and the owner's own gender and
  * preference.
  *
@@ -947,7 +947,7 @@ export async function datafileSettled(transport: Transport, count = 1) {
 
 /**
  * **Explore, switched on** — for every suite that walks Play's *Groups | Explore* switcher. Since
- * [#826](https://github.com/Raketa02/Raketa/issues/826) Play is Groups under a Groups title without
+ * [#826](https://github.com/Rakieta02/Rakieta/issues/826) Play is Groups under a Groups title without
  * a datafile; `explore` brings the switcher back.
  *
  * Served, launched, and **waited on before anything presses Play**: a gate reads its feature flag
@@ -1206,7 +1206,7 @@ export const GATE_USER: Wire['MeResponse'] = {
  * through here first. All three are defaulted to nothing, and a suite with any of them calls the
  * stub again afterwards to replace it.
  *
- * **So is the Groups list** ([#512](https://github.com/Raketa02/Raketa/issues/512)): the Play tab
+ * **So is the Groups list** ([#512](https://github.com/Rakieta02/Rakieta/issues/512)): the Play tab
  * opens on Groups, so a suite that presses Play for any reason reads it.
  *
  * **So is the feature-flag datafile**, and for the same reason: the signed-in app fetches it the

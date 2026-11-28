@@ -1,6 +1,6 @@
 /**
  * **Blocked players** — everyone the reader blocked, each with **Unblock**, pushed over the You tab
- * from its ACCOUNT group ([#587](https://github.com/Raketa02/Raketa/issues/587), PRD #571 stories
+ * from its ACCOUNT group ([#587](https://github.com/Rakieta02/Rakieta/issues/587), PRD #571 stories
  * 19–21; [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
  * §3).
  *

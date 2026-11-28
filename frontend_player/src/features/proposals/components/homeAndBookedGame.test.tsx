@@ -1,6 +1,6 @@
 /**
  * **Home and a booked game, walked the way a player walks them** — the real route tree, the real
- * shell, the real Home tab, and only `fetch` faked ([#556](https://github.com/Raketa02/Raketa/issues/556);
+ * shell, the real Home tab, and only `fetch` faked ([#556](https://github.com/Rakieta02/Rakieta/issues/556);
  * the screens A4.1, A4.4, A8; the mechanics §11.4, §14).
  *
  * **A payment to confirm waits in Needs your answer** since #817: a tile per payment, first in the
@@ -599,7 +599,7 @@ describe('Home — a booked game’s card (A8)', () => {
 });
 
 /**
- * **TO CONFIRM waits in Needs your answer** ([#817](https://github.com/Raketa02/Raketa/issues/817);
+ * **TO CONFIRM waits in Needs your answer** ([#817](https://github.com/Rakieta02/Rakieta/issues/817);
  * ADR-0205 §1, §3): a tile per refused share, first in the sheet the header's envelope opens, where
  * Home's one card of rows used to stand above the rail. Every read is at `HOME_READ_AT`, 10:00 in
  * Warsaw; Bonarka Arena's Saturday 15:00, 32 zł, the time to pay ending at 14:40.
@@ -1305,7 +1305,7 @@ describe('the chat — from the details (A4.4)', () => {
 
 /**
  * **A booked game's room is found by the booking it is filed under, and by nothing else**
- * ([#577](https://github.com/Raketa02/Raketa/issues/577)) — the wire's `booking_id`, which #575
+ * ([#577](https://github.com/Rakieta02/Rakieta/issues/577)) — the wire's `booking_id`, which #575
  * renamed from `challenge_id`. Each room here disagrees with its booking about the game, so a join
  * still keyed by the game finds the wrong answer in both.
  */

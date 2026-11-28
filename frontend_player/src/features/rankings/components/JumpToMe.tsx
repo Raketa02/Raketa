@@ -1,13 +1,13 @@
 /**
  * **The floating *You · 212th*** (the screens §5.3; the words §30.7;
- * [#776](https://github.com/Raketa02/Raketa/issues/776)) — at the foot, above the tab bar, over the
+ * [#776](https://github.com/Rakieta02/Rakieta/issues/776)) — at the foot, above the tab bar, over the
  * list: a `dark` button, the place card's own colour (Part 16, 2026-11-08).
  *
  * **It shows while the reader's row is off screen**, and waits for the list's first report rather than
  * flashing up before it: `seen` is `undefined` until the list has said. **A jump that is refused says
  * why where the button stood**, with *Try again*, until a jump lands.
  *
- * **While a jump reads the page around the reader it says so: *◌ Finding you…*** ([#869](https://github.com/Raketa02/Raketa/issues/869);
+ * **While a jump reads the page around the reader it says so: *◌ Finding you…*** ([#869](https://github.com/Rakieta02/Rakieta/issues/869);
  * the loading-shimmer log §9) — `Button`'s own `busy`, the spinner before the busy word at the
  * button's full fill, the busy word its spoken name, and a press blocked, so a second one asks for
  * nothing. The button sizes to its words, so its width changes as they swap. **The list says when**

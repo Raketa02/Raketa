@@ -1,6 +1,6 @@
 /**
  * **The folding line** — FOR YOU's quiet lines, the section they stand in, and the footer an open one
- * ends with ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5, §8, §9; home refactor
+ * ends with ([#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0205 §5, §8, §9; home refactor
  * 3–13). Which line is open, and what each holds, are the shell's and the features' suites'; this is the
  * frame: the look closed and open, what a press reports, what is drawn and for how long, the rail's
  * bounds inside it, where it says it stands on the page, the page asked to show it, and the footer.

@@ -1,5 +1,5 @@
 /**
- * **The skeleton** (design system 5.6; PRD #867, [#870](https://github.com/Raketa02/Raketa/issues/870);
+ * **The skeleton** (design system 5.6; PRD #867, [#870](https://github.com/Rakieta02/Rakieta/issues/870);
  * Part 16, 2026-11-24) — grey shapes standing where a screen's content will be while its first read
  * is out, and **one band of light sweeping across all of them at once**.
  *

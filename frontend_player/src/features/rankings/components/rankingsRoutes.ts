@@ -1,5 +1,5 @@
 /**
- * **Where Rankings is** ([#775](https://github.com/Raketa02/Raketa/issues/775)) — `/rankings`, pushed
+ * **Where Rankings is** ([#775](https://github.com/Rakieta02/Rakieta/issues/775)) — `/rankings`, pushed
  * over Home (the shell lists it inside Home's tab, so the Home column stays lit), on the sport it is
  * asked for: the trophy's, or the one a pass returns to. No sport opens it on the deck's last, or
  * padel (the rankings mechanics §9).

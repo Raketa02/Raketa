@@ -6,16 +6,16 @@
 
 **A feature is turned on by a pull request to another repository and decided on the device, and
 this feature is the device's half**
-([#826](https://github.com/Raketa02/Raketa/issues/826),
+([#826](https://github.com/Rakieta02/Rakieta/issues/826),
 [ADR-0206](../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)).
-Feature flags are YAML in `Raketa02/raketa-features`, built into one JSON datafile per environment
+Feature flags are YAML in `Rakieta02/rakieta-features`, built into one JSON datafile per environment
 and served from `EXPO_PUBLIC_FEATURES_URL`. The app fetches
 `<it>/<environment>/featurevisor-player.json`, evaluates locally with the Featurevisor SDK (3.8.0,
 pinned exactly, paired with the flags repo's CLI 3.11.0), and answers one question: _is this feature
 enabled for this player?_ The public surface is two hooks and a name — `useFeatureDatafile`,
 `useFeatureOnMount`, `FeatureKey` — plus the key factory the router harness waits on.
 
-**It came back from git** ([#826](https://github.com/Raketa02/Raketa/issues/826)). The slice was
+**It came back from git** ([#826](https://github.com/Rakieta02/Rakieta/issues/826)). The slice was
 first built for `find_a_game` (#479), became `classic_play`'s (#550), and was removed with the loop
 that key hid (#576), its record ADR-0180 deleted with it (#583). It is restored as it was at
 `6d8d1388^` — the fetch, the saved copy, the SDK wrapper, the schema, the queries, the gate and

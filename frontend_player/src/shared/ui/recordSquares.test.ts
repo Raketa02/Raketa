@@ -1,6 +1,6 @@
 /**
  * *Last 5* is five squares distinguished by **fill**, and this is the arithmetic that makes
- * that legal ([#312](https://github.com/Raketa02/Raketa/issues/312)).
+ * that legal ([#312](https://github.com/Rakieta02/Rakieta/issues/312)).
  *
  * A square carries no word. It is a **graphical object** conveying information, so
  * [1.4.11](../../../docs/design-system.md#25-contrast--computed) asks 3:1 of it — against

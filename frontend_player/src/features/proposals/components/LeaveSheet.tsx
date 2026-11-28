@@ -1,6 +1,6 @@
 /**
  * **The departure's confirmation** — `WithdrawSheet`'s exact shape, a third time, and since
- * [#427](https://github.com/Raketa02/Raketa/issues/427) the one sheet the act has, wherever it is
+ * [#427](https://github.com/Rakieta02/Rakieta/issues/427) the one sheet the act has, wherever it is
  * met.
  *
  * The third irreversible act in this app that reaches other people, and it takes the shape the
@@ -13,7 +13,7 @@
  * All five of those are `BottomSheet`'s already, which is the whole reason this file is short:
  * what a third sheet on that shape owes is its sentences and the name of its act — and they are
  * `leaveSheetCopy.ts`' beside it, moved here from the challenge's departure deck with the sheet
- * ([#574](https://github.com/Raketa02/Raketa/issues/574)), where the difference from the
+ * ([#574](https://github.com/Rakieta02/Rakieta/issues/574)), where the difference from the
  * withdraw's is argued.
  *
  * ## Two surfaces, one sheet, and what the second one needed

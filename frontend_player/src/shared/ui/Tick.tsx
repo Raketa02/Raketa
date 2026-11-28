@@ -32,7 +32,7 @@
  * ## The plus is drawn twice, because it lands on two beds
  *
  * The editor grid marks the cell a times rung added for one search
- * ([#283](https://github.com/Raketa02/Raketa/issues/283)), and that cell is deliberately
+ * ([#283](https://github.com/Rakieta02/Rakieta/issues/283)), and that cell is deliberately
  * **not** filled: it is not part of the week the player is asking with. So the diff's volt
  * stroke cannot be reused — volt on `surface` is 1,3:1 and simply not there — and the second
  * one is `ink` on `surface`, which is the tick's own contrast read the other way round. Two

@@ -1,6 +1,6 @@
 /**
- * **Discovery's query keys** ([#801](https://github.com/Raketa02/Raketa/issues/801),
- * [#802](https://github.com/Raketa02/Raketa/issues/802), [#803](https://github.com/Raketa02/Raketa/issues/803)) — each people row and its See all, one
+ * **Discovery's query keys** ([#801](https://github.com/Rakieta02/Rakieta/issues/801),
+ * [#802](https://github.com/Rakieta02/Rakieta/issues/802), [#803](https://github.com/Rakieta02/Rakieta/issues/803)) — each people row and its See all, one
  * entry per sport. **A friend write reaches them all** — through the
  * `LISTS_PEOPLE` tag their reads declare, not these keys — so one tap moves that person on every row
  * and See all at once (the Home rows mechanics §13). The cursor is the infinite query's page parameter, so a See all entry holds every

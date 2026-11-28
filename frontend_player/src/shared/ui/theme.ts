@@ -243,7 +243,7 @@ const color = {
   splashGroundEdge: '#0B2B33',
 
   /** THE PORTRAIT TILE'S WASH — what was the deck card's, and the one card that wears a wash
-   *  ([#801](https://github.com/Raketa02/Raketa/issues/801); home rows 17–19; docs/design-system.md
+   *  ([#801](https://github.com/Rakieta02/Rakieta/issues/801); home rows 17–19; docs/design-system.md
    *  7.31, Part 16 2026-11-14). The deck card it was fenced to (ADR-0169 §7, Part 16 2026-09-15) left
    *  with Classic play (#576), so the value moved here whole rather than standing twice: New in
    *  Rakieta's tile — and Top 10's portrait after it (#805) — is a face edge to edge with a name, a
@@ -258,7 +258,7 @@ const color = {
    *  the ramp and the arithmetic). Nothing else may draw it. */
   portraitWash: 'rgba(16,27,32,0.94)',
 
-  /** THE TOP 10 NUMERAL'S GRADIENT ([#805](https://github.com/Raketa02/Raketa/issues/805); home rows
+  /** THE TOP 10 NUMERAL'S GRADIENT ([#805](https://github.com/Rakieta02/Rakieta/issues/805); home rows
    *  25–26; docs/design-system.md 7.36, Part 16 2026-11-15) — the huge place standing behind each
    *  card, filled from `numeralTop` at its figures' top to `numeralFoot` at its baseline, inside a
    *  paper outline: the screens' *night-to-teal*. MEASURED off home rows 25 at 1×, down the figure
@@ -420,7 +420,7 @@ const color = {
 
   /** THE STAGE'S GROUND — the dark hero over sign-in (and, from #785, sign-up), and the app's
    *  FIFTH dark surface: a hero over a screen's top four tenths, behind the paper sheet that holds
-   *  the form ([#784](https://github.com/Raketa02/Raketa/issues/784); the design system's 12.2,
+   *  the form ([#784](https://github.com/Rakieta02/Rakieta/issues/784); the design system's 12.2,
    *  Part 16 2026-11-08). Argued for its own record, as ADR-0167 §2 said the next dark surface
    *  would be: the first thing a person sees, drawn the colour of the night the yes screen is.
    *
@@ -433,7 +433,7 @@ const color = {
   stageGround: '#15252C',
 
   /** THE SAME LEVEL CARD'S GROUND — Home's *Same competitive level players* card, the app's SIXTH
-   *  dark surface ([#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows screens §4.2;
+   *  dark surface ([#802](https://github.com/Rakieta02/Rakieta/issues/802); the Home rows screens §4.2;
    *  design-system 7.34, Part 16 2026-11-14). A card whose one figure is a forecast, drawn in the
    *  game cards' three inks (`gameGreen`, `gameAmber`, `gameRed` — the ticket's *existing forecast
    *  tokens*), which `night` cannot carry: `gameGreen` on it is 2,88, under large text's 3:1.
@@ -655,7 +655,7 @@ const type = {
    *  name this size reopens ADR-0169 §7 rather than reaching for this role. */
   deckName: { fontFamily: font.sans[700], fontSize: 24, letterSpacing: -0.84, lineHeight: 28 },
   /** THE TOP 10 NUMERAL — 1 to 10, huge, tucked behind each card of Home's Top 10
-   *  ([#805](https://github.com/Raketa02/Raketa/issues/805); home rows 25–26; 7.36, Part 16
+   *  ([#805](https://github.com/Rakieta02/Rakieta/issues/805); home rows 25–26; 7.36, Part 16
    *  2026-11-15). Archivo at its heaviest loaded weight, whose figures stand 0,699 em over the
    *  baseline: at 108 that is 75pt, where home rows 25 and 26 MEASURE 70–79 at 1× beside a 154pt
    *  card. Tracked −16 (−0,15 em) so *10*'s two figures touch, the *0* over the *1*'s foot, as home
@@ -664,7 +664,7 @@ const type = {
   numeral: { fontFamily: font.sans[800], fontSize: 108, letterSpacing: -16 },
   /** THE SPLASH'S WORDMARK — *Rakieta*, white, over the drawn splash's ground, and nothing else's
    *  ([ADR-0209](../../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)
-   *  §5; [#855](https://github.com/Raketa02/Raketa/issues/855); 3.3, Part 16 2026-11-23). The
+   *  §5; [#855](https://github.com/Rakieta02/Rakieta/issues/855); 3.3, Part 16 2026-11-23). The
    *  product owner's brief to the point: Archivo at its heaviest loaded weight, 42, tracked −4 %
    *  (−1,68). A fixed size on every phone that ignores the OS text size, because a logo is a logo.
    *  **Not a text role**: its seven letters are placed one by one from Archivo 800's own advances
@@ -682,7 +682,7 @@ const type = {
    *  (`DeckStage.tsx`). Feedback and never a control: nothing announces it. ONE USE. */
   deckStamp: { fontFamily: font.sans[800], fontSize: 22, letterSpacing: 1.1, lineHeight: 26 },
   /** THE STAGE'S TWO LARGE WORDS — the hero's headline in white and the sheet's title in `ink`,
-   *  on sign-in and sign-up and nowhere else ([#784](https://github.com/Raketa02/Raketa/issues/784);
+   *  on sign-in and sign-up and nowhere else ([#784](https://github.com/Rakieta02/Rakieta/issues/784);
    *  12.2, Part 16 2026-11-08). MEASURED off mocks 2 and 3, and the two are one size there: the
    *  headline's first line is 256pt wide and *Sign in* 69pt, which Archivo 700 at 22 with the sans
    *  ramp's −0,035em (−0,77) sets at 259 and 65. Line 26, `deckStamp`'s at the same size. Not
@@ -1138,7 +1138,7 @@ const size = {
     radius: 0.27,
     letters: 0.37,
   },
-  /** HOME'S HOTTEST GROUPS CARD ([#800](https://github.com/Raketa02/Raketa/issues/800); the Home
+  /** HOME'S HOTTEST GROUPS CARD ([#800](https://github.com/Rakieta02/Rakieta/issues/800); the Home
    *  rows screens §3.2; home rows 3–5, 21), read off the mocks at 1× and put on the 3pt grid:
    *
    *  - `band` — the striped band across the top, and `stripe` each stripe's width across, the gap
@@ -1177,7 +1177,7 @@ const size = {
    *  `stackOverlap` how far each slides under the one before it, about a third, and `stackRing`
    *  the card-coloured ring that keeps one face from merging into the next. */
   groupPage: { seat: 34, filterPad: 9, stackFace: 28, stackOverlap: 9, stackRing: 2 },
-  /** RANKINGS ([#775](https://github.com/Raketa02/Raketa/issues/775); the rankings screens §1, §4,
+  /** RANKINGS ([#775](https://github.com/Rakieta02/Rakieta/issues/775); the rankings screens §1, §4,
    *  §5; Part 16, 2026-11-08). Read off rankings 1, 4 and 6 at 1x and put on the 3pt grid:
    *
    *  - `trophyPill` — Home's dark pill left of the bell, and `trophy` the drawn cup inside it at the
@@ -1244,7 +1244,7 @@ const size = {
    *  than stops; `tilt` is the most a card turns under the thumb, reached at twice the commit
    *  distance and measured off the two swipe mocks. */
   deckSwipe: { commit: 95, intent: SWIPE_INTENT, flight: 480, tilt: 12 },
-  /** THE SHEET'S SWIPE DOWN — 9.1 as amended by [#816](https://github.com/Raketa02/Raketa/issues/816),
+  /** THE SHEET'S SWIPE DOWN — 9.1 as amended by [#816](https://github.com/Rakieta02/Rakieta/issues/816),
    *  the third gesture in the app, on a sheet that asks for it (`closesOnSwipe`), read on its head.
    *
    *  `intent` is the swipe row's number, READ FROM THERE for the deck's reason: the same finger
@@ -1680,7 +1680,7 @@ const size = {
    *  whole. What carries the affordance there is 7.18's dots. */
   railCardRatio: 0.74,
   /** THE REQUEST CARD in Needs your answer — a friend request, and the ask for a level drawn as
-   *  one ([#816](https://github.com/Raketa02/Raketa/issues/816); home refactor 2; ADR-0205 §9.3):
+   *  one ([#816](https://github.com/Rakieta02/Rakieta/issues/816); home refactor 2; ADR-0205 §9.3):
    *  the peeking rail's card, WIDER, so the face, two lines of title, the chip and two buttons fit
    *  without the squeeze 0,74 gave them. MEASURED off home refactor 2: the tile is 450 of the
    *  content's 540 pixels, 0,833. A RATIO, for `railCardRatio`'s reason; the next card's edge is
@@ -1700,14 +1700,14 @@ const size = {
    *  heating up page keep the page's. */
   lineCardRatio: 0.83,
   /** THE PHOTO CAROUSEL's card — all of a player's photos, sideways, on the record
-   *  ([#799](https://github.com/Raketa02/Raketa/issues/799)) and the vibe sheet (home rows 23, #803),
+   *  ([#799](https://github.com/Rakieta02/Rakieta/issues/799)) and the vibe sheet (home rows 23, #803),
    *  over Part 8's Strip (Part 16 2026-11-14). A card's share of the content width, for
    *  `railCardRatio`'s reason — a ratio, never a point value. **Half**: home rows 23 draws two photos
    *  side by side, the second running into the sheet's edge, so two stand on screen and a third's
    *  edge is the affordance. Its height is the photo panel's 4:5, read off `PHOTO_PANEL` — one owner
    *  of the shape. */
   photoCarouselRatio: 0.5,
-  /** **FOR YOU's folding line** ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205
+  /** **FOR YOU's folding line** ([#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0205
    *  §5, §9.5; home refactor 3–13). A white card, `radius.card`, its 1pt border `line` closed and
    *  `ink` open. `pad` is the card's inset, the title's and the open content's — the gutter's 15,
    *  which is what the mocks measure (23 of the phone's 1,5 pixels to the point): a rail inside it
@@ -1767,7 +1767,7 @@ const size = {
    *  and 33), in See all's two columns 60 and 48 at 1,74 (34 and 28), onto the 3pt grid. The vibe
    *  sheet's face is the row's. */
   sameVibe: { face: { row: 42, grid: 36 }, percent: { row: 33, grid: 30 } },
-  /** TOP 10'S CARD ([#805](https://github.com/Raketa02/Raketa/issues/805); home rows 2, 25–27; 7.36)
+  /** TOP 10'S CARD ([#805](https://github.com/Rakieta02/Rakieta/issues/805); home rows 2, 25–27; 7.36)
    *  — MEASURED off home rows 2 at 1,5 to the point and 25–26 at 3:
    *
    *  - `railRatio` — a card's share of the content width, for `railCardRatio`'s reason, narrower than
@@ -1800,7 +1800,7 @@ const size = {
   /** Nothing tappable may have a reachable area smaller than this. Use hitSlop. */
   minTouch: 44,
   /** THE STAGE — sign-in's and sign-up's dark hero and the paper sheet over it
-   *  ([#784](https://github.com/Raketa02/Raketa/issues/784); 12.2, Part 16 2026-11-08).
+   *  ([#784](https://github.com/Rakieta02/Rakieta/issues/784); 12.2, Part 16 2026-11-08).
    *
    *  `heroShare` is where the sheet's top edge sits at rest, as a SHARE of the window's height:
    *  mock 1 puts it 366 of the screen's 885 pixels down, 0,41 — *a little under half*. Of the
@@ -1979,7 +1979,7 @@ const shadow = {
     elevation: 3,
   },
   /** THE OPEN LINE — the seventh, and the second card that casts one: FOR YOU's line while it is
-   *  open ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5, §9.1; home refactor
+   *  open ([#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0205 §5, §9.1; home refactor
    *  5, 6, 8, 10, 12), beside its `ink` border and its chevron turned down. A closed line casts
    *  none, as any card.
    *
@@ -2096,7 +2096,7 @@ const motion = {
   kindSwap: { out: 200, in: 250, rise: 24 },
   /**
    * **The tab bar's selection marker travelling** to the newly lit tab (10.2, ADR-0210 §8,
-   * [#884](https://github.com/Raketa02/Raketa/issues/884); the brief's *"460 ms, spring easing … colour
+   * [#884](https://github.com/Rakieta02/Rakieta/issues/884); the brief's *"460 ms, spring easing … colour
    * in 300 ms, starting 140 ms after the slide"*). **The app's first spring**: `slide` long at
    * `dampingRatio`, so it starts fast, overshoots by 2.8 % of its trip and settles; every trip takes
    * `slide`, so the far jump moves faster. It stretches like a bubble with its own motion — wide and
@@ -2140,7 +2140,7 @@ const motion = {
    */
   disclose: 280,
   /**
-   * **FOR YOU's line unfolding** ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205
+   * **FOR YOU's line unfolding** ([#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0205
    * §5; the brief's *about a quarter of a second, fast at the start and settling at the end*): the
    * fold's height runs to the content's measured height in one layout transition, the lines below
    * sliding down on the same beat, while the content fades in from a `space.md` above its place and
@@ -2184,8 +2184,8 @@ const motion = {
     buttonsAfter: RISE / 2 + RISE,
   },
   /**
-   * **Sign-in's hero loop** ([#786](https://github.com/Raketa02/Raketa/issues/786),
-   * [#787](https://github.com/Raketa02/Raketa/issues/787), 12.2) — the hero's picture, and the one
+   * **Sign-in's hero loop** ([#786](https://github.com/Rakieta02/Rakieta/issues/786),
+   * [#787](https://github.com/Rakieta02/Rakieta/issues/787), 12.2) — the hero's picture, and the one
    * thing on the stage that moves; the **third looping animation in the app**, after `ripple` and
    * `typing`, argued in Part 16 against 1.5. One cycle, about nine seconds:
    *
@@ -2213,7 +2213,7 @@ const motion = {
     reset: 400,
   },
   /**
-   * **Sign-up's podium rising** ([#788](https://github.com/Raketa02/Raketa/issues/788), 12.2) —
+   * **Sign-up's podium rising** ([#788](https://github.com/Rakieta02/Rakieta/issues/788), 12.2) —
    * played **once** when sign-up opens, and never again until it opens again: a statement, not a
    * gesture, so it does not loop (argued in Part 16 against 1.5). About a second and a half:
    *

@@ -1,8 +1,8 @@
 /**
  * **The other kind's door, the panel it opens, and finding after an answer** — the words §28
  * ([ADR-0201](../../../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
- * §2 and §4, [#740](https://github.com/Raketa02/Raketa/issues/740) and
- * [#741](https://github.com/Raketa02/Raketa/issues/741)), for `KindDoor` and `FindingGames` beside it.
+ * §2 and §4, [#740](https://github.com/Rakieta02/Rakieta/issues/740) and
+ * [#741](https://github.com/Rakieta02/Rakieta/issues/741)), for `KindDoor` and `FindingGames` beside it.
  *
  * Written once for each declared kind, so a competitive player's panel and a for-fun player's are
  * the same sentences read from the other side. Each cost line has a singular and a zero form, and

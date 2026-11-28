@@ -1,6 +1,6 @@
 /**
  * **The photo carousel** — all of a player's photos, sideways, a card at a time
- * ([#799](https://github.com/Raketa02/Raketa/issues/799); the Home rows screens §6.3, §9.3; home rows
+ * ([#799](https://github.com/Rakieta02/Rakieta/issues/799); the Home rows screens §6.3, §9.3; home rows
  * 23). The record draws it first; the vibe sheet (#803) draws the same one.
  *
  * Held here: the photos in their order, the card's share of the content width and its 4:5 shape, the

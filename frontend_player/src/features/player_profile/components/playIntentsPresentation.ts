@@ -1,7 +1,7 @@
 /**
  * What the You tab says about the **per-sport declaration** — the fact a stranger's search
  * reads, given a home that is not the search form
- * ([#296](https://github.com/Raketa02/Raketa/issues/296)).
+ * ([#296](https://github.com/Rakieta02/Rakieta/issues/296)).
  *
  * As long as the only place a declaration was ever seen was Find a game, it read as a search
  * setting; ADR-0094 makes it a fact about the player, kept per sport and read by other people.
@@ -87,7 +87,7 @@ const STAY = 'Games you’re In on stay.';
 
 /**
  * **The line under an answer that changes something** (ADR-0201 §6, the words §27's rows marked
- * *(ADR-0201)*, [#742](https://github.com/Raketa02/Raketa/issues/742)).
+ * *(ADR-0201)*, [#742](https://github.com/Rakieta02/Rakieta/issues/742)).
  *
  * The lines that drop a kind are the group page's panel lines with *in your groups* added, because
  * the count is summed across every group: *Your 7 competitive cards in your groups go. Games you’re

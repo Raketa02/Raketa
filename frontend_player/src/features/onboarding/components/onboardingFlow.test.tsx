@@ -6,7 +6,7 @@
  * pass here means the flow works end to end minus the socket.
  *
  * **Onboarding is a nickname and a profile** ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §1, [#730](https://github.com/Raketa02/Raketa/issues/730)): sign-up, the naming, the six profile
+ * §1, [#730](https://github.com/Rakieta02/Rakieta/issues/730)): sign-up, the naming, the six profile
  * steps and Home — eight screens, and no questionnaire. A level is asked where play begins, by the
  * door on a group's tabs (`levelWherePlayBegins.test`). The gate's outcomes are routing behaviour,
  * so they are asserted as routing: which screen a launch lands on. These tests live outside

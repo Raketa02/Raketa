@@ -1,6 +1,6 @@
 /**
  * **The reveal's rule for a screen with several parts** (design system 5.6; PRD #867,
- * [#871](https://github.com/Raketa02/Raketa/issues/871); the loading shimmer log §5, Q11, Q13) —
+ * [#871](https://github.com/Rakieta02/Rakieta/issues/871); the loading shimmer log §5, Q11, Q13) —
  * which of a screen's parts, named top-down, are shown, from what its reads have done and how long it
  * has been up. Pure; `useRevealParts` wraps it with the ceiling's one timer.
  *

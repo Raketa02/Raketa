@@ -1,5 +1,5 @@
 /**
- * **The Games deck's swap, drawn** ([#863](https://github.com/Raketa02/Raketa/issues/863), PRD #859;
+ * **The Games deck's swap, drawn** ([#863](https://github.com/Rakieta02/Rakieta/issues/863), PRD #859;
  * the tab menu log §5.1–§5.2) — the layer the stack stands in, and the one the buttons stand in. The
  * rules are `domain/kindSwap.ts`, the clock `useKindSwap`; this file only moves what it is told to.
  *
@@ -9,7 +9,7 @@
  * rises from the same `rise` below into its place and fades in over `.in`. **Away** — the kind picked
  * still on its way — it holds where going out left it, unseen, and what the deck hands it stands in
  * its place, filling the stage's box: the deck-card skeleton, or the note that the read waits for a
- * connection ([#876](https://github.com/Raketa02/Raketa/issues/876)). It goes the moment the read
+ * connection ([#876](https://github.com/Rakieta02/Rakieta/issues/876)). It goes the moment the read
  * lands, and the rise is the motion there — it replaces the shimmer's cross-fade, which a swap never
  * runs. **Opacity and a translation only**, on React Native's `Animated` and its native driver: no
  * layout prop moves frame by frame, and nothing is scaled — iOS rasterises a scaled layer blurred.

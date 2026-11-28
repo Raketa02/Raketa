@@ -1,5 +1,5 @@
 /**
- * **Your friend link** ([#756](https://github.com/Raketa02/Raketa/issues/756), the friends mechanics
+ * **Your friend link** ([#756](https://github.com/Rakieta02/Rakieta/issues/756), the friends mechanics
  * §4.1) — the Add friends sheet's *Not on Rakieta yet?* card.
  *
  * Each player has one, `<public site>/f/<code>`: made the first time its owner reads it, the same on

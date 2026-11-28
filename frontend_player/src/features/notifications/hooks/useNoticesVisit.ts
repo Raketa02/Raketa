@@ -1,6 +1,6 @@
 /**
  * **The list behind the bell, opened** — the visit it records and the rows that stand out on it
- * ([#627](https://github.com/Raketa02/Raketa/issues/627); the mechanics Q101; the screens A9).
+ * ([#627](https://github.com/Rakieta02/Rakieta/issues/627); the mechanics Q101; the screens A9).
  *
  * ## The visit follows a read of what the list draws
  *

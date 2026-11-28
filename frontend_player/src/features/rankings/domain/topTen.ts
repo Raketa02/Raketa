@@ -1,5 +1,5 @@
 /**
- * **Top 10 on Home** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home rows mechanics
+ * **Top 10 on Home** ([#805](https://github.com/Rakieta02/Rakieta/issues/805); the Home rows mechanics
  * §10, the screens §7; ADR-0204) — places 1 to 10 of General in one sport, the true top of the
  * Rankings page: everybody at their true place, whoever blocked whom.
  *

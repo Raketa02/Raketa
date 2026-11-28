@@ -1,7 +1,7 @@
 /**
  * **Official groups, from the player's side** — the club's groups as a player meets them in both
  * searches, on the Groups list, on the page and on Members
- * ([#519](https://github.com/Raketa02/Raketa/issues/519), PRD #500 stories 40, 56, 57;
+ * ([#519](https://github.com/Rakieta02/Rakieta/issues/519), PRD #500 stories 40, 56, 57;
  * ADR-0183 §3, §6, §7).
  *
  * Kasia is rated only in tennis. She finds *Ogrody 33 Club*, which plays padel, and joins it

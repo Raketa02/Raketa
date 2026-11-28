@@ -1,6 +1,6 @@
 /**
- * **A people row's See all, read page by page** ([#801](https://github.com/Raketa02/Raketa/issues/801),
- * [#802](https://github.com/Raketa02/Raketa/issues/802); the Home rows mechanics §6.7, §7.4, §13) —
+ * **A people row's See all, read page by page** ([#801](https://github.com/Rakieta02/Rakieta/issues/801),
+ * [#802](https://github.com/Rakieta02/Rakieta/issues/802); the Home rows mechanics §6.7, §7.4, §13) —
  * 20 to a page, the next read as the list nears its end, one entry per sport.
  *
  * **One tap moves a person everywhere** (§13): the read declares `LISTS_PEOPLE`, so every friend

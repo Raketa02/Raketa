@@ -1,5 +1,5 @@
 /**
- * **Where the skeleton's band stands** (PRD #867, [#870](https://github.com/Raketa02/Raketa/issues/870);
+ * **Where the skeleton's band stands** (PRD #867, [#870](https://github.com/Rakieta02/Rakieta/issues/870);
  * design system 5.6) — pure numbers, since Jest has no layout. One band crosses the whole ground at
  * once: every shape draws its own piece of it, placed by where the shape stands on the ground, so a
  * shape anywhere shows the band exactly where the screen-wide band would be.

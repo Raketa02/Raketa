@@ -1,7 +1,7 @@
 /**
  * **The stage's ground, computed** — the hero's flat dark and the glow at its foot, which the
  * theme fences as sign-in's and sign-up's alone, and every ratio their comments state
- * ([#784](https://github.com/Raketa02/Raketa/issues/784), [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking)
+ * ([#784](https://github.com/Rakieta02/Rakieta/issues/784), [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking)
  * 2026-11-08).
  *
  * The app's fifth dark surface, and 2.5's table has no row for it, so this is the row: what sits

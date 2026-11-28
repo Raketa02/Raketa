@@ -1,6 +1,6 @@
 /**
  * **New in Rakieta's See all** — pushed over Home, whose tab stays lit
- * ([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows screens §5.3; the mechanics
+ * ([#801](https://github.com/Rakieta02/Rakieta/issues/801); the Home rows screens §5.3; the mechanics
  * §7.4; home rows 19, 19.2).
  *
  * - **Header**: ‹, *New in Rakieta*, and the sport pill — *● All ‹* — which slides open over the title

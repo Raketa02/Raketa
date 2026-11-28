@@ -1,6 +1,6 @@
 /**
  * **The drawn ▲ / ▼** — a place moved up or down this week, on the Rankings page's chip (`RankChip`)
- * and on a Top 10 card ([#805](https://github.com/Raketa02/Raketa/issues/805)). Drawn, never a
+ * and on a Top 10 card ([#805](https://github.com/Rakieta02/Rakieta/issues/805)). Drawn, never a
  * character (§30's preamble: Archivo ships neither triangle), in a 10-unit box at the size and ink
  * each caller hands it. Hidden with the chip it stands in: the row or the card names the move.
  */

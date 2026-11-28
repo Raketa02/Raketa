@@ -1,5 +1,5 @@
 /**
- * **A For-fun game's details open on the Social vibe card** ([#840](https://github.com/Raketa02/Raketa/issues/840);
+ * **A For-fun game's details open on the Social vibe card** ([#840](https://github.com/Rakieta02/Rakieta/issues/840);
  * for fun 7, which leads over 5 and 6; ADR-0207 §6) — walked the way a player opens them: the real
  * route tree, the real shell, and only `fetch` faked.
  *

@@ -1,5 +1,5 @@
 /**
- * **Home, with Needs your answer up** ([#817](https://github.com/Raketa02/Raketa/issues/817),
+ * **Home, with Needs your answer up** ([#817](https://github.com/Rakieta02/Rakieta/issues/817),
  * ADR-0205 §1; Q25) — where a link or a notice that pointed at one of the sheet's cards lands now:
  * the friend link, a friends game invitation's notice and a friend request's.
  *

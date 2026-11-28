@@ -1,6 +1,6 @@
 /**
  * **The link an Android install carried, read once on the app's first launch**
- * ([#756](https://github.com/Raketa02/Raketa/issues/756), the friends mechanics §4.3).
+ * ([#756](https://github.com/Rakieta02/Rakieta/issues/756), the friends mechanics §4.3).
  *
  * Zofia has no Rakieta, opens Tomek's friend link, and installs from the public site's Google Play
  * button, which carries the page's own link as the **install referrer** (#755). Opening the app

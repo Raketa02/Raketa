@@ -1,6 +1,6 @@
 /**
  * **Join a group, walked** — play mocks 23–37 through the real routes, with the socket and the
- * clipboard faked ([#512](https://github.com/Raketa02/Raketa/issues/512), PRD #500 stories 29–44).
+ * clipboard faked ([#512](https://github.com/Rakieta02/Rakieta/issues/512), PRD #500 stories 29–44).
  *
  * One field, a Paste chip that turns into ✕ while typing, and an answer on every keystroke: club
  * cards that are context rather than a choice, with each group's row and what the reader can do

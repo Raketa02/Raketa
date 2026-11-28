@@ -1,6 +1,6 @@
 /**
  * **A row's reporter** — the cards that came on screen, told in batches, once per card and Warsaw
- * day ([#804](https://github.com/Raketa02/Raketa/issues/804); the rules are `domain/onScreen.ts`).
+ * day ([#804](https://github.com/Rakieta02/Rakieta/issues/804); the rules are `domain/onScreen.ts`).
  *
  * The first owed card opens a batch window of `REPORT_BATCH_MS`; when it closes, one report tells
  * everything owed — the rest of the scroll's cards with it. A report that fails leaves its cards

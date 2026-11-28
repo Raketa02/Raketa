@@ -1,5 +1,5 @@
 /**
- * **Which view Rankings is on, and the reader choosing another** ([#777](https://github.com/Raketa02/Raketa/issues/777);
+ * **Which view Rankings is on, and the reader choosing another** ([#777](https://github.com/Rakieta02/Rakieta/issues/777);
  * the rankings screens §3, the mechanics §8) — *General* or *Friends*, remembered per account on the
  * phone, as the deck's last sport is
  * ([ADR-0188](../../../../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md);

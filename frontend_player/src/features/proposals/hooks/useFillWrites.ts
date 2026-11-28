@@ -1,7 +1,7 @@
 /**
  * **The fill's two writes, and what a booking re-reads** — the yes sent when its ten seconds are up,
  * and the yes again on a payment confirmed in the app
- * ([#555](https://github.com/Raketa02/Raketa/issues/555); #541).
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555); #541).
  *
  * | | |
  * | --- | --- |

@@ -1,5 +1,5 @@
 /**
- * **The reader's place card** (the rankings screens §4; rankings 3; [#775](https://github.com/Raketa02/Raketa/issues/775)).
+ * **The reader's place card** (the rankings screens §4; rankings 3; [#775](https://github.com/Rakieta02/Rakieta/issues/775)).
  *
  * - **Listed** — the dark card: the eyebrow *YOUR PLACE*, the place large in volt with *of 13*
  *   beside it; the level on the right with the chip and its words under it; and under a fold the gap
@@ -17,7 +17,7 @@
  * the confidence ring's own ground (13,96:1 is ink on volt; volt on night is the ring's pair). The
  * bold numbers in the gap line are mono, as every number is (Part 16, 2026-11-08).
  *
- * **No switch on it** ([#799](https://github.com/Raketa02/Raketa/issues/799), ADR-0204 §2): the
+ * **No switch on it** ([#799](https://github.com/Rakieta02/Rakieta/issues/799), ADR-0204 §2): the
  * *Hidden from General* card and the *Show me in General* switch it drew under the fold (#778) are
  * gone, since nobody is hidden from the ranking. The one switch about being found is You's *Show me
  * to new people*, which moves nothing here.

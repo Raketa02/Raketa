@@ -33,13 +33,13 @@
  * ## The fill takes a tone, and the tone is the caller's rule rather than the meter's
  *
  * The record card's metered rows were drawn in three fills where the why-fit row's were drawn in
- * one ([#385](https://github.com/Raketa02/Raketa/issues/385)), so `tone` is a **step in an
+ * one ([#385](https://github.com/Rakieta02/Rakieta/issues/385)), so `tone` is a **step in an
  * existing fill** and invents no colour — [15.2](../../../docs/design-system.md#152-adding-a-colour)'s
  * own licence. What it deliberately does not carry is the ladder: *where* good becomes poor is a
  * fact about the figure being drawn and belongs to whoever knows what the figure means. A meter
  * that banded its own share would be a second opinion.
  *
- * **No surface draws it since [#660](https://github.com/Raketa02/Raketa/issues/660)**: the
+ * **No surface draws it since [#660](https://github.com/Rakieta02/Rakieta/issues/660)**: the
  * why-fit sheet left with Classic play, and the record card draws Player reliability's counts as
  * words. It stays as 7.3's primitive (`shared/ui/README.md` says until when).
  *

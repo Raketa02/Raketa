@@ -11,7 +11,7 @@
  * **`marked` is the third border, and it is the only one that is not about this control.**
  * Pressed and selected are both things the reader has done to the card; a marked card carries a
  * standing fact about **whoever is drawn on it**, in `voltStroke`
- * ([#310](https://github.com/Raketa02/Raketa/issues/310)). That is why it announces nothing —
+ * ([#310](https://github.com/Rakieta02/Rakieta/issues/310)). That is why it announces nothing —
  * `accessibilityState` says what a control is, and this is not one of those — and why the press
  * state still wins over it: a finger on a marked card must read as a press, or the one border
  * the reader can act on is the one they cannot see.
@@ -38,7 +38,7 @@ export interface CardProps {
    * Now's game card is the one such surface: it carries two actions — the body, which is the
    * whole statement, and the ✉ beside it, which goes somewhere else — so it cannot be a
    * `PressableCard` without swallowing the second into the first's one accessibility element
-   * ([#367](https://github.com/Raketa02/Raketa/issues/367)). What it still owes the player is the
+   * ([#367](https://github.com/Rakieta02/Rakieta/issues/367)). What it still owes the player is the
    * press *state*, and that is this: the same coral outline `PressableCard` draws, from the same
    * table, so a second surface cannot draw a different one.
    */

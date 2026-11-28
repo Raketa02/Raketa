@@ -37,7 +37,7 @@ describe('levels', () => {
    *
    * A Level is 1,00–5,00, so nothing was negative until the forecast card's **gap**, which is
    * one side's strength minus the other's and signed by construction
-   * ([#290](https://github.com/Raketa02/Raketa/issues/290)).
+   * ([#290](https://github.com/Rakieta02/Rakieta/issues/290)).
    */
   it('writes a negative one with the typographic minus', () => {
     expect(formatLevel(-0.09)).toBe('\u22120,09');
@@ -48,7 +48,7 @@ describe('levels', () => {
 describe('a movement on that scale', () => {
   /**
    * The competitive card's stake boxes print two figures whose **signs are the fact**
-   * ([#312](https://github.com/Raketa02/Raketa/issues/312)), so the gain carries a plus that a
+   * ([#312](https://github.com/Rakieta02/Rakieta/issues/312)), so the gain carries a plus that a
    * Level never needs.
    */
   it('signs a gain, which is the whole of what it adds', () => {

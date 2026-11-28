@@ -1,5 +1,5 @@
 /**
- * **Fill in's and You’re in's skeleton** ([#875](https://github.com/Raketa02/Raketa/issues/875); PRD
+ * **Fill in's and You’re in's skeleton** ([#875](https://github.com/Rakieta02/Rakieta/issues/875); PRD
  * #867; the loading shimmer log §10) — **rows**, where the boards' rows will stand while the tab's
  * first read is out: on the group page's reveal, and in the board's own place while that read
  * retries (`FillInBoard`, `YoureInBoard`).

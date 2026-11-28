@@ -1,5 +1,5 @@
 /**
- * **The group sheet and the withdraw sheet** ([#800](https://github.com/Raketa02/Raketa/issues/800);
+ * **The group sheet and the withdraw sheet** ([#800](https://github.com/Rakieta02/Rakieta/issues/800);
  * the Home rows screens §3.3, §3.5; home rows 6).
  *
  * **One sheet, two faces.** *Asked* on the group sheet opens *Withdraw request*, and two native

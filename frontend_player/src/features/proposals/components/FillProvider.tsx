@@ -1,7 +1,7 @@
 /**
  * **The moment a yes fills a game, on the phone** — the ten seconds of *Undo* in front of a yes
  * that moves money, the payment setup a first yes needs, *It's a game!*, and the confirmation a
- * refused share needs ([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A2.4;
+ * refused share needs ([#555](https://github.com/Rakieta02/Rakieta/issues/555); the screens A2.4;
  * the mechanics §6.1, §6.5, §11, §12.2).
  *
  * ## One host, mounted by the shell for the session

@@ -1,5 +1,5 @@
 /**
- * **The Top 10 numeral** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home rows screens
+ * **The Top 10 numeral** ([#805](https://github.com/Rakieta02/Rakieta/issues/805); the Home rows screens
  * §7.2, §11; home rows 25–26.1; design-system 7.36) — the card's place, 1 to 10, huge, standing behind
  * the card's left edge so the card overlaps it.
  *

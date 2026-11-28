@@ -1,5 +1,5 @@
 /**
- * **Which of FOR YOU's lines is open** ([#820](https://github.com/Raketa02/Raketa/issues/820);
+ * **Which of FOR YOU's lines is open** ([#820](https://github.com/Rakieta02/Rakieta/issues/820);
  * ADR-0205 §5; the Home rows screens §1, §2; Q10, Q12, Q21, Q38).
  *
  * Home's five discovery rows fold into five lines under *Your games*, and **one is open at a time**:

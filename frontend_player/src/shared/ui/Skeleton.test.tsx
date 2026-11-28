@@ -1,6 +1,6 @@
 /**
  * **The skeleton at its own seam** (design system 5.6; PRD #867,
- * [#870](https://github.com/Raketa02/Raketa/issues/870)) — the shapes a screen composes its loading
+ * [#870](https://github.com/Rakieta02/Rakieta/issues/870)) — the shapes a screen composes its loading
  * layout from, and the one band of light that sweeps across them.
  *
  * Reanimated is real here, as it is in the router harness (ADR-0176 §2): every worklet runs on the

@@ -34,23 +34,23 @@
  * account panel draws it, pinned under the scroller.
  *
  * **Your games lost two rows** with the old loop's ranking, the only thing that read them:
- * *How far to look* and *Game suggestions* ([#582](https://github.com/Raketa02/Raketa/issues/582)).
+ * *How far to look* and *Game suggestions* ([#582](https://github.com/Rakieta02/Rakieta/issues/582)).
  * A setting on this tab is one a proposed game still reads. The group was *Finding players* until
  * ADR-0200 §10 renamed it (#733): nothing on the tab finds players any more.
  *
- * **_Friends_ closes Your games** ([#754](https://github.com/Raketa02/Raketa/issues/754), a call:
+ * **_Friends_ closes Your games** ([#754](https://github.com/Rakieta02/Rakieta/issues/754), a call:
  * the friends screens say only *a new row*). The group's rows are who and when a game is with, and a
  * friend is the shortcut to one (ADR-0202) — `friends`' row, its line *3 friends · 1 asked you*,
  * the door to You › Friends.
  *
- * **_Show me to new people_ closes On your card** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+ * **_Show me to new people_ closes On your card** ([#799](https://github.com/Rakieta02/Rakieta/issues/799),
  * which renamed #778's _Show me in General_; the Home rows screens §9.1): the one fact on the tab that
  * says who may read the rest of the group, and the one row that is a switch rather than a door —
  * `player_profile`'s, written at once.
  *
  * ## The switcher chip
  *
- * **The header's right slot is the profile switcher** ([#518](https://github.com/Raketa02/Raketa/issues/518),
+ * **The header's right slot is the profile switcher** ([#518](https://github.com/Rakieta02/Rakieta/issues/518),
  * club 7; ADR-0185 §3 amends ADR-0179 §1's locked header by exactly this element) — the
  * administrator feature's, drawn only for an account that also runs a club's groups. **The route
  * file hands it in** (`headerRight`) rather than this file importing it: the administrator feature

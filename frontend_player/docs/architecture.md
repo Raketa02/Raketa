@@ -158,7 +158,7 @@ lands on it, and the rule fails with **no symptom at all**. Switching tabs **rep
 above Home; You and Play lay down `[Home, their root]`; Home itself is the bottom of every stack and
 is **kept**, never rebuilt by a press (it is the costliest screen to draw); and all of it goes
 through one function, `resetShellStack`, over one table, `TAB_STACK`
-([#227](https://github.com/Raketa02/Raketa/issues/227); `docs/features/shell.md`).
+([#227](https://github.com/Rakieta02/Rakieta/issues/227); `docs/features/shell.md`).
 
 A route file may own: the route declaration, its params, a layout, a redirect, navigation
 options, route-scoped provider composition, and a very small adapter. That is the entire
@@ -191,7 +191,7 @@ Is the session authorized?  →  Is this route allowed?  →  Are the params val
 ```
 
 **Before any of that, an address from outside is read, and only four are links**
-([#520](https://github.com/Raketa02/Raketa/issues/520), [#756](https://github.com/Raketa02/Raketa/issues/756)).
+([#520](https://github.com/Rakieta02/Rakieta/issues/520), [#756](https://github.com/Rakieta02/Rakieta/issues/756)).
 expo-router hands every address the operating system opens the app with to `src/app/+native-intent.ts`
 before it routes one, and the links feature answers: `join/<code>`, `invite/<token>`,
 `reset/<token>` and `f/<code>` — by the app's scheme, or the web domain once one is set — are read
@@ -511,7 +511,7 @@ session that cannot recover.
 Step 5 is a **privacy control**, not tidiness: user A's cached profile, bookings and
 matches sitting in memory when user B signs in on the same device is a data leak. Route
 replacement clears nothing. **Step 6 is the same control one store over**
-([#512](https://github.com/Raketa02/Raketa/issues/512)): the Play segment, and later the last
+([#512](https://github.com/Rakieta02/Rakieta/issues/512)): the Play segment, and later the last
 sport and profile, are kept per account on the phone, and a sign-out of any kind — by hand, or
 by the server refusing the credentials — empties them, because the store cannot tell _me again_
 from _somebody else_. `endSession` runs it after the status change, awaited, because it waits
@@ -828,13 +828,13 @@ acceptable for a product flow. Build the reusable states — `LoadingState`, `Em
 > `LoadingState`, `EmptyState`, `ErrorState` and `Skeleton` stand as written. This list is
 > a menu of states to model, and declining one of its components is a decision about where
 > a state renders, never about whether it is modelled.
-> Decided by [#239](https://github.com/Raketa02/Raketa/issues/239), built as
+> Decided by [#239](https://github.com/Rakieta02/Rakieta/issues/239), built as
 > `src/shared/errors/offlineMessage.ts` by
-> [#265](https://github.com/Raketa02/Raketa/issues/265).
+> [#265](https://github.com/Rakieta02/Rakieta/issues/265).
 
 > **Amendment (2026-11-24) — `Skeleton` is built**, by
-> [#870](https://github.com/Raketa02/Raketa/issues/870) (PRD
-> [#867](https://github.com/Raketa02/Raketa/issues/867); design system 5.6): `Skeleton.tsx`'s block,
+> [#870](https://github.com/Rakieta02/Rakieta/issues/870) (PRD
+> [#867](https://github.com/Rakieta02/Rakieta/issues/867); design system 5.6): `Skeleton.tsx`'s block,
 > line and circle on a `SkeletonGround`, one band of light sweeping across all of them at once,
 > and `Reveal.tsx`, the cross-fade from a screen's skeleton to its content. **The primitive owns the
 > shapes and the band; each screen composes its own layout from them**, so there is no generic
@@ -941,19 +941,19 @@ sessions.
   far side is a socket. The linter enforces all three bans and
   `scripts/test-import-boundaries.sh` proves it still does. Four more have joined them since —
   haptics, the clipboard, the share sheet, and **`PaymentsPort` over `@stripe/stripe-react-native`**
-  ([#552](https://github.com/Raketa02/Raketa/issues/552)), the one port that carries a component:
+  ([#552](https://github.com/Rakieta02/Rakieta/issues/552)), the one port that carries a component:
   Stripe's card fields are a native view whose entry stays inside it, so the port hands a screen
   `CardFields` beside its verbs, and `fakePayments()` behaves as Stripe's test cards do
   ([`docs/features/_shared.md`](features/_shared.md)). The eighth is **`PushPort` over
-  `expo-notifications`** ([#559](https://github.com/Raketa02/Raketa/issues/559)): the permission, the
+  `expo-notifications`** ([#559](https://github.com/Rakieta02/Rakieta/issues/559)): the permission, the
   push token, a push arriving while the app is open and a push tapped, with `fakePush()` beside it.
   The ninth is the install referrer over `expo-application`
-  ([#756](https://github.com/Raketa02/Raketa/issues/756)). The tenth is **`SystemBarsPort`**
-  ([#857](https://github.com/Raketa02/Raketa/issues/857)): the status and navigation bars, which
+  ([#756](https://github.com/Rakieta02/Rakieta/issues/756)). The tenth is **`SystemBarsPort`**
+  ([#857](https://github.com/Rakieta02/Rakieta/issues/857)): the status and navigation bars, which
   the launch gate paints for the drawn splash and restores as it fades. It is the first port
   split into platform files, `systemBars.ts` for an iPhone and `systemBars.android.ts`, the one
   importer of `expo-navigation-bar`, with `fakeSystemBars()` beside them. The eleventh is
-  **`KeyboardPort`** ([#882](https://github.com/Raketa02/Raketa/issues/882), ADR-0210 §9): whether
+  **`KeyboardPort`** ([#882](https://github.com/Rakieta02/Rakieta/issues/882), ADR-0210 §9): whether
   the soft keyboard is up, and a way to follow it. It is the app's one listener for the keyboard's
   show and hide, in `keyboard.ts` beside the avoidance value and the dismissal, the only importer of
   React Native's `Keyboard`, with `fakeKeyboard()` beside it. Both shells stand the tab bar down
@@ -975,7 +975,7 @@ sessions.
 - **Location has two uses, and the prompt names both** (ADR-0195 §3): the area a player plays
   in — one `Balanced` fix, coarsened the moment it is read — and, when they say who's at a
   game, one precise fix (`readPreciseFix`) read at that tap, sent with it and kept by nobody
-  ([#658](https://github.com/Raketa02/Raketa/issues/658), `games`' `useAttendance`). Neither is
+  ([#658](https://github.com/Rakieta02/Rakieta/issues/658), `games`' `useAttendance`). Neither is
   a subscription; a third use is a change to the permission text first.
 - **Platform files over scattered branches.** `share.ios.ts` / `share.android.ts` when
   behaviour genuinely differs; not `if (Platform.OS === 'ios')` in twenty components.
@@ -1049,7 +1049,7 @@ sessions.
 
 **The app has exactly one, and it is a conversation's**
 ([ADR-0147](../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md),
-built by [#365](https://github.com/Raketa02/Raketa/issues/365)). This is the section that
+built by [#365](https://github.com/Rakieta02/Rakieta/issues/365)). This is the section that
 record left to the first client build, and it is short because the record spent its design
 budget making it short.
 
@@ -1069,12 +1069,12 @@ budget making it short.
   finger, and a conversation is append-ordered.
 - **A nudge re-reads the room and the game it is about, and nothing else.** The room's query and
   `gameKeys.list()` — a standing that moves on a _we played_ line reaches the result screen behind
-  the details through the games list ([#406](https://github.com/Raketa02/Raketa/issues/406)). On
+  the details through the games list ([#406](https://github.com/Rakieta02/Rakieta/issues/406)). On
   every nudge, never on sighting a line, because a trigger keyed on the line vocabulary goes stale
   on exactly the build too old to read a new code. The rooms list is not re-read: the room draws
   nothing from it. The games list needs no cancel, because a result write invalidates rather than
   writes in. (The old loop's plan card was the other reader, re-read off `GET /plans` on the same
-  nudge, until that loop was removed — [#576](https://github.com/Raketa02/Raketa/issues/576).)
+  nudge, until that loop was removed — [#576](https://github.com/Rakieta02/Rakieta/issues/576).)
 - **One stream per open conversation, and never one for a list.** The port opens while a room
   is on screen and closes when it leaves. ADR-0147's _never build_ list says the rest.
 - **The port owns the route as well as the transport.** A port taking an arbitrary path
@@ -1121,7 +1121,7 @@ rewrite. Nothing is hosted yet, so off a developer's machine every feature is at
 
 `EXPO_PUBLIC_LINK_DOMAIN` is the one **optional** value: the web domain the app's links live on
 (`rakieta.app`, bare), and **empty in every environment today**
-([#520](https://github.com/Raketa02/Raketa/issues/520), ADR-0187 §7). Set, `app.config.ts` gives iOS
+([#520](https://github.com/Rakieta02/Rakieta/issues/520), ADR-0187 §7). Set, `app.config.ts` gives iOS
 an associated domain and Android a verified intent filter for the four link paths; empty, the links
 use the app's scheme alone. The native document and the runtime read it through one pure function,
 `src/shared/config/appLinks.ts`, so the binary and the running app cannot disagree about which links
@@ -1355,11 +1355,11 @@ and sign-out leaves it, because it belongs to no account.
 **The second is the phone-preferences store**
 ([ADR-0188](../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)):
 `src/shared/lib/preferences/phonePreferences.ts` keeps the choices a player made on this phone —
-the Play segment since [#512](https://github.com/Raketa02/Raketa/issues/512), the last sport and
+the Play segment since [#512](https://github.com/Rakieta02/Rakieta/issues/512), the last sport and
 the last profile to come — **one key per account per value**, and **empties itself at sign-out**
 as step 4 of `endSession`, beside the cache clear. It holds a choice, never a copy of server
 state; a value it cannot read, or one the owning feature no longer recognises, is that value's
-default. **Since [#849](https://github.com/Raketa02/Raketa/issues/849) it also keeps the rows a
+default. **Since [#849](https://github.com/Rakieta02/Rakieta/issues/849) it also keeps the rows a
 player has seen on a group page's tabs**
 ([ADR-0208](../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md)):
 one list of ids per group, sport and tab (`seenRows.<entry>`), per account and emptied at sign-out
@@ -1526,13 +1526,13 @@ when the code that needs them is written — not preemptively:
 - Maestro — E2E journeys ([Part 16](#part-16--testing)).
 
 > `expo-notifications` joined the manifest with the notices
-> ([#559](https://github.com/Raketa02/Raketa/issues/559)), at the version Expo SDK 52 pins (0.29.14),
+> ([#559](https://github.com/Rakieta02/Rakieta/issues/559)), at the version Expo SDK 52 pins (0.29.14),
 > behind the eighth platform port — a native module, so it needs a development build rebuilt with
 > it; its config plugin's iPhone push entitlement is taken back out until the Apple Developer
 > membership exists (`plugins/push.ts`).
 >
 > `@stripe/stripe-react-native` joined the manifest with You › Payments
-> ([#552](https://github.com/Raketa02/Raketa/issues/552)), at the version Expo SDK 52 pins (0.38.6),
+> ([#552](https://github.com/Rakieta02/Rakieta/issues/552)), at the version Expo SDK 52 pins (0.38.6),
 > behind the seventh platform port — a native module and a native view, so it needs a development
 > build rebuilt with it.
 >
@@ -1551,7 +1551,7 @@ when the code that needs them is written — not preemptively:
 > Featurevisor, pinned exactly at 3.8.0, with AsyncStorage for its saved datafile — twice: it
 > arrived with ADR-0180, left with the one loop it hid (#576), and came back with its first gate
 > since, `explore` ([ADR-0206](../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md),
-> [#826](https://github.com/Raketa02/Raketa/issues/826)). The rule it carries here stands, whole:
+> [#826](https://github.com/Rakieta02/Rakieta/issues/826)). The rule it carries here stands, whole:
 > build-time config and runtime product flags stay separate, no `if (env === 'production')` is a
 > rollout mechanism, and every feature flag has an owner, purpose, default, rollout strategy and a
 > removal condition — all five beside its key in `features/feature_flags/domain/featureFlags.ts`,

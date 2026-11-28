@@ -210,7 +210,7 @@ function badge(): ViewStyle | undefined {
 
 /**
  * **Home · Play · You, and nothing else** — the old loop's Players and Chats columns went with
- * that loop ([#576](https://github.com/Raketa02/Raketa/issues/576)), and no switch brings them back.
+ * that loop ([#576](https://github.com/Rakieta02/Rakieta/issues/576)), and no switch brings them back.
  */
 describe('what the bar offers', () => {
   it('is Home, Play and You, in that order', () => {

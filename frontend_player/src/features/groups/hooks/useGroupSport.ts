@@ -163,7 +163,7 @@ export function useGroupSport(declared?: readonly Sport[], opening?: Sport): Gro
 
 /**
  * **The sport the deck last showed** — what Rankings opens on when Home's trophy names no sport
- * ([#775](https://github.com/Raketa02/Raketa/issues/775); the rankings mechanics §9). The filter's own
+ * ([#775](https://github.com/Rakieta02/Rakieta/issues/775); the rankings mechanics §9). The filter's own
  * answer for a player group, so the same judgement as a group page's: the sport last picked while the
  * reader is still rated in it, else the first they are rated in. `null` for a reader rated in nothing,
  * whose deck shows no sport; `undefined` while either read is out.

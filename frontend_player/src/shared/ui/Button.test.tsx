@@ -69,7 +69,7 @@ describe('the volt button (6.1)', () => {
 /**
  * **`arranging` is volt's shape a second time**, and the same two rules are the ones a diff would
  * not show: `ink` and never white on it (7,05:1 against 2,48:1), and a press that dims rather
- * than a darker companion invented for it ([#429](https://github.com/Raketa02/Raketa/issues/429)
+ * than a darker companion invented for it ([#429](https://github.com/Rakieta02/Rakieta/issues/429)
  * F1: the Now card's *Fill the seat* is drawn in the stage dot's own colour).
  */
 describe('the arranging button (6.1)', () => {

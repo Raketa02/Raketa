@@ -1,7 +1,7 @@
 /**
  * **The sport pill, held open or folded on a page** — the pill in the page's header, and the bar
  * it unfolds into floating over the page (#513; shared since
- * [#774](https://github.com/Raketa02/Raketa/issues/774), so the group page's fast filter and
+ * [#774](https://github.com/Rakieta02/Rakieta/issues/774), so the group page's fast filter and
  * Rankings draw one control). A page hands it the sports to offer, in the order the bar lists
  * them, the sport it is on, and its words; it hears back a pick. **The state is the page's**: which
  * sports and which one are what the page decides — the group page's last sport, Rankings' own.

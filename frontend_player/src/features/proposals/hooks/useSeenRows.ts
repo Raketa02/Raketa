@@ -1,8 +1,8 @@
 /**
  * **The rows seen on a group page's tab** — what its badge is counted against, and the tab marking
  * what it has on screen ([ADR-0208](../../../../../docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md),
- * [#849](https://github.com/Raketa02/Raketa/issues/849)). Fill in and You’re in, and Games since
- * [#850](https://github.com/Raketa02/Raketa/issues/850) — a list per kind, its badge counted
+ * [#849](https://github.com/Rakieta02/Rakieta/issues/849)). Fill in and You’re in, and Games since
+ * [#850](https://github.com/Rakieta02/Rakieta/issues/850) — a list per kind, its badge counted
  * against both.
  *
  * **Kept per account on the phone** (`shared/lib/preferences`, one list per group, sport and tab) and

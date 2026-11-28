@@ -1,6 +1,6 @@
 /**
  * **The administrator area** — one club's official groups, on its own two tabs, **Groups · You**
- * (club 17–19; [#516](https://github.com/Raketa02/Raketa/issues/516), PRD #500 stories 122–137).
+ * (club 17–19; [#516](https://github.com/Rakieta02/Rakieta/issues/516), PRD #500 stories 122–137).
  *
  * The administrator is a second profile inside this app (ADR-0185), so the area is **its own group
  * of screens beside the player's**, not a tab inside them: the player's five tabs are about playing,
@@ -20,7 +20,7 @@
  * account that holds **nothing but** administrator profiles has nowhere left to be, so it is told
  * and signed out (PRD #500 story 136); one that also plays is told and switched to Player, and one
  * that runs another club's groups to that club's area — the switcher's own move
- * ([#518](https://github.com/Raketa02/Raketa/issues/518)), so the phone keeps it and the next launch
+ * ([#518](https://github.com/Rakieta02/Rakieta/issues/518)), so the phone keeps it and the next launch
  * opens where the removal left it.
  */
 

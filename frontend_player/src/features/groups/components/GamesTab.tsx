@@ -1,6 +1,6 @@
 /**
  * **Games** — the group's deck for the sport the page is on
- * ([#553](https://github.com/Raketa02/Raketa/issues/553); the screens A2), and, while it deals
+ * ([#553](https://github.com/Rakieta02/Rakieta/issues/553); the screens A2), and, while it deals
  * nothing, the dark card a starting group has always drawn (play 14–17, 39; PRD #500 stories
  * 60–65, ADR-0183 §13).
  *

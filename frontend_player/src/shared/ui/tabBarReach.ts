@@ -1,7 +1,7 @@
 /**
  * **The tab bar's reach** — the room the bar takes at the bottom of the phone
  * ([ADR-0210](../../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md)
- * §3, [#881](https://github.com/Raketa02/Raketa/issues/881)).
+ * §3, [#881](https://github.com/Rakieta02/Rakieta/issues/881)).
  *
  * The bar floats over the screen and owns no layout (10.1): every screen inside the tabs draws to
  * the bottom of the phone, so nothing ends above the bar because it is a flex sibling any more. What

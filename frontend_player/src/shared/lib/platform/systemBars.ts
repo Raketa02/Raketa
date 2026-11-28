@@ -1,6 +1,6 @@
 /**
  * **The phone's system bars**, behind a port: the status bar and, on Android, the navigation bar
- * ([#857](https://github.com/Raketa02/Raketa/issues/857), ADR-0209). **The tenth port.**
+ * ([#857](https://github.com/Rakieta02/Rakieta/issues/857), ADR-0209). **The tenth port.**
  *
  * While the drawn splash is up, the bars belong to it. On Android both are painted the field's edge
  * colour with light icons, so the splash reads edge to edge. On an iPhone the status bar shows light

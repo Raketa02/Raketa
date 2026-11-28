@@ -2,7 +2,7 @@
  * **The finish** — the control that ends onboarding's second part, and every state around it.
  *
  * It is drawn by the last step, which is *Who you play with* since the radius and the
- * proposals question left the part ([#582](https://github.com/Raketa02/Raketa/issues/582)).
+ * proposals question left the part ([#582](https://github.com/Rakieta02/Rakieta/issues/582)).
  * It used to be written inline on the proposals step; it is its own component now because
  * none of it is about the question the last step asks. It would say the same words on
  * whichever step ended the part, and the step that draws it should read as that step.
@@ -62,7 +62,7 @@ import { SOCIAL_STEP_PATH, pathThatAsks } from './socialStepRoutes';
 /**
  * Where the steps lead once the server has it: **Home**
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1,
- * [#730](https://github.com/Raketa02/Raketa/issues/730)). *What Rakieta keeps*, which stood here,
+ * [#730](https://github.com/Rakieta02/Rakieta/issues/730)). *What Rakieta keeps*, which stood here,
  * recorded nothing and went; the commit marks the profile on the player read, so the gate lets
  * her through to the app's root, which is Home.
  *

@@ -4,7 +4,7 @@
  *
  * ## A swipe is an answer, and the buttons remain the path
  *
- * [#231](https://github.com/Raketa02/Raketa/issues/231) §3 refused the gesture because *Show
+ * [#231](https://github.com/Rakieta02/Rakieta/issues/231) §3 refused the gesture because *Show
  * them again* had been struck, which left a pass as a thirty-day act with nothing that reverses
  * one — a swipe would have put the cheapest gesture in the app on the most durable act in it.
  * [ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
@@ -113,7 +113,7 @@
  * ## Two decks stand on it, and the stamps are each deck's words
  *
  * Players' *Let's play* / *Not today* and a group's Games deck's *I'm in* / *Not this time*
- * ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A2.2) are one stage with two
+ * ([#553](https://github.com/Rakieta02/Rakieta/issues/553), the screens A2.2) are one stage with two
  * pairs of words, so the words are the caller's — `stamps` — and the drawing is this file's. A
  * Games yes carries its price beside the words (*PAY · 32 zł*, *I'M IN · 32 zł*, Q124): the words
  * are uppercased by the stamp's style and the figure is not, because a figure is mono and `zł` is

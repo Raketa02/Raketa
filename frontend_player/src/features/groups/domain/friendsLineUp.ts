@@ -1,6 +1,6 @@
 /**
  * **The game being built on a group's Friends tab** — who sits where beside the reader, and the
- * court picked for them ([#757](https://github.com/Raketa02/Raketa/issues/757); the friends
+ * court picked for them ([#757](https://github.com/Rakieta02/Rakieta/issues/757); the friends
  * mechanics §7.1–§7.4, the screens §7.1).
  *
  * Pure: the seats as the player arranged them, and the four things they do to them — **Done**

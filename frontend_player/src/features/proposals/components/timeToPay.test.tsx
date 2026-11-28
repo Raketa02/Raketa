@@ -1,5 +1,5 @@
 /**
- * **Time to pay, walked on the phone** ([#630](https://github.com/Raketa02/Raketa/issues/630); the
+ * **Time to pay, walked on the phone** ([#630](https://github.com/Rakieta02/Rakieta/issues/630); the
  * backend's #625 and #626; the mechanics §11, §12.2, §14.1, Q109–Q112; the screens A2.4, A7.3, A8).
  *
  * At 14:10 on Tuesday Ivan's yes fills the 19:00 at Bonarka Arena, but Paula's bank wants to check
@@ -13,7 +13,7 @@
  *   in Needs your answer, behind Home's envelope, since #817 — details and sheet name the time.
  * - **Paying in time** shows the payer *It's a game!*, which they never saw; **out of time** the
  *   game is *Seat open* to the others and the payer's row loses its time.
- * - **Before the cut-off it is the time to fix the card** ([#643](https://github.com/Raketa02/Raketa/issues/643);
+ * - **Before the cut-off it is the time to fix the card** ([#643](https://github.com/Rakieta02/Rakieta/issues/643);
  *   Q113): nothing is being taken, so the payer is told to fix the card, never to pay — at the fill,
  *   and at the holding time of a game booked far ahead, which stays booked meanwhile. The others'
  *   words are the same in both windows.

@@ -1,5 +1,5 @@
 /**
- * **The ranking, from the wire** ([#775](https://github.com/Raketa02/Raketa/issues/775)) —
+ * **The ranking, from the wire** ([#775](https://github.com/Rakieta02/Rakieta/issues/775)) —
  * `GET /rankings/{sport}`'s answer folded into the page's own shapes.
  *
  * **A `null` is an absence here, never a nought**: a win count the server leaves out is a line with

@@ -1,7 +1,7 @@
 /**
  * **The stage** — sign-in's frame, and sign-up's since #785: a dark hero over the top four tenths of
  * the screen, and a paper sheet with rounded top corners rising over it, holding the form
- * ([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783; design system 12.2).
+ * ([#784](https://github.com/Rakieta02/Rakieta/issues/784), PRD #783; design system 12.2).
  *
  * **A new frame beside `AuthFrame`, not a change to it.** The eight other auth screens — the
  * *Forgot password?* flow, the invitation's, *Set your password* and the two links — keep today's

@@ -1,5 +1,5 @@
 /**
- * **The Games tab's skeleton** ([#875](https://github.com/Raketa02/Raketa/issues/875); PRD #867; the
+ * **The Games tab's skeleton** ([#875](https://github.com/Rakieta02/Rakieta/issues/875); PRD #867; the
  * loading shimmer log §10) — **one deck-card block filling the stage**, where the deck will stand
  * while its first read is out: on the group page's reveal, and in the deck's own place while that
  * read retries (`GamesDeck`).
@@ -10,7 +10,7 @@
  * Drawn on the page's `SkeletonGround`; hidden from a listener, as every shape is.
  *
  * **The same block stands in the stack's place while a kind picked from the tab's menu is read**
- * (`SwapSkeleton`, [#876](https://github.com/Raketa02/Raketa/issues/876); the loading shimmer log
+ * (`SwapSkeleton`, [#876](https://github.com/Rakieta02/Rakieta/issues/876); the loading shimmer log
  * §10, Q26) — where today's spinner stood.
  */
 

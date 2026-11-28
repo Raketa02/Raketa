@@ -1,7 +1,7 @@
 /**
  * **An official group's form, and its one schema** — New official group's (club 10, plus the Sports
- * card; [#516](https://github.com/Raketa02/Raketa/issues/516), PRD #500 story 125) and the group's
- * settings' ([#517](https://github.com/Raketa02/Raketa/issues/517), story 131), which ask the same
+ * card; [#516](https://github.com/Rakieta02/Rakieta/issues/516), PRD #500 story 125) and the group's
+ * settings' ([#517](https://github.com/Rakieta02/Rakieta/issues/517), story 131), which ask the same
  * four things.
  *
  * *Create the group* and *Save* are pressable only when this answers settings:

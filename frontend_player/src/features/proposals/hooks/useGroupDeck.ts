@@ -1,6 +1,6 @@
 /**
  * **A group's deck, and the writes that answer it** — the Games tab's read and its three answers
- * ([#553](https://github.com/Raketa02/Raketa/issues/553)).
+ * ([#553](https://github.com/Rakieta02/Rakieta/issues/553)).
  *
  * | | |
  * | --- | --- |

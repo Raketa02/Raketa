@@ -1,7 +1,7 @@
 /**
  * **What a Social tag row draws** — which of somebody's tags the reader also chose, and which
  * of three silences the absence of an answer is
- * ([#311](https://github.com/Raketa02/Raketa/issues/311)).
+ * ([#311](https://github.com/Rakieta02/Rakieta/issues/311)).
  *
  * The tags themselves are a fact about one person and cross on their card. This is the
  * **second** register over them: *you too*, or one of three different ways of saying nothing.
@@ -10,7 +10,7 @@
  *
  * The row began as the competitive candidate card's, and the shape of its answer began beside
  * the rule that computes one. The record sheet draws the same row
- * ([#373](https://github.com/Raketa02/Raketa/issues/373)), so the row is one component in
+ * ([#373](https://github.com/Rakieta02/Rakieta/issues/373)), so the row is one component in
  * `shared/ui` and the value it takes had to come below both features with it — a component
  * beneath every feature cannot read a type that lives inside one, and copying the union would
  * be two lists of four answers drifting apart.

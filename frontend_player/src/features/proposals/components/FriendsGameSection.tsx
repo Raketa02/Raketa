@@ -1,8 +1,8 @@
 /**
  * **FRIENDS GAME · n** — Needs your answer's section of friends game invitations, after TO CONFIRM
- * and before FRIEND REQUESTS ([#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1;
+ * and before FRIEND REQUESTS ([#817](https://github.com/Rakieta02/Rakieta/issues/817), ADR-0205 §1;
  * home refactor 2). It was Home's row at the very top from
- * [#759](https://github.com/Raketa02/Raketa/issues/759) (the friends screens §6.1; friends 12; the
+ * [#759](https://github.com/Rakieta02/Rakieta/issues/759) (the friends screens §6.1; friends 12; the
  * mechanics §9).
  *
  * ```

@@ -1,6 +1,6 @@
 /**
  * **A booked game's room** — the header, the stream and the composer
- * ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.4, the mechanics §14.3).
+ * ([#556](https://github.com/Rakieta02/Rakieta/issues/556); the screens A4.4, the mechanics §14.3).
  *
  * *The place the people on a court talk about it*: opened with the booking and reached **only from
  * the game's details**, and **destroyed** once the game it names is over. That is why nothing here
@@ -10,7 +10,7 @@
  *
  * It was the old loop's room too, with a plan card pinned under its header, quick chips asking
  * about the plan's empty slots and a *Details* door into the old game screen, until that loop was
- * removed ([#576](https://github.com/Raketa02/Raketa/issues/576)). A booked game has no plan to
+ * removed ([#576](https://github.com/Rakieta02/Rakieta/issues/576)). A booked game has no plan to
  * fill — the booking is the plan — and *back* is the details it was opened from, by the stack.
  *
  * ## The stream opens at its newest entry and pages backward
@@ -73,7 +73,7 @@
  * composer over a keyboard, not a header over a scroller — and for a while it went
  * through nothing at all: a bare `KeyboardAvoidingView` at the root, with the header under the
  * status bar on Android and under the clock on iOS
- * ([#400](https://github.com/Raketa02/Raketa/issues/400)). The frame is now the same
+ * ([#400](https://github.com/Rakieta02/Rakieta/issues/400)). The frame is now the same
  * `SafeAreaView` every other screen takes, and it takes **both edges**, which is the one place
  * in the app that is true of a screen inside the shell:
  *
@@ -163,7 +163,7 @@ export function ConversationScreen({ conversationId, gameState }: ConversationSc
    * nudge that tells this phone is answered by `conversation_not_found` — so what discovers it is
    * a re-read rather than the read this screen mounted on. That used to leave the screen too, and
    * a player reading a room was on the list a moment later with the room gone from under them
-   * ([#429](https://github.com/Raketa02/Raketa/issues/429)). What is held is still the
+   * ([#429](https://github.com/Rakieta02/Rakieta/issues/429)). What is held is still the
    * room as it last was, so it is drawn as it was, closed, with one sentence in the composer's
    * place (`ROOM_OVER_LINE`). Only a room nothing was ever read from has nothing to keep on screen,
    * and leaves — a stale row opened into a room that is not there. In an effect because it is a
@@ -239,7 +239,7 @@ function Room({
    * filter, which the server applies too and the ticket asks for twice, and the naming — off the
    * **members**, which makes this the one sentence on the screen that reads the roster rather than
    * `people`: a typist is gated on membership and is one (ADR-0156), where a system line's actor
-   * need not be ([#409](https://github.com/Raketa02/Raketa/issues/409)). Not query cache state:
+   * need not be ([#409](https://github.com/Rakieta02/Rakieta/issues/409)). Not query cache state:
    * the frame is the fact.
    */
   const typingSentence = over ? undefined : typingLine(typists(typing, playerId), room.members);

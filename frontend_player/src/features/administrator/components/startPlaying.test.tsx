@@ -2,7 +2,7 @@
  * ***Start playing*, walked** — an administrator who has never played becomes a player on the same
  * account: the Adult attestation with sign-up's tick box, the naming asking for a nickname,
  * then the questionnaire and the social steps, and afterwards both profiles
- * ([#517](https://github.com/Raketa02/Raketa/issues/517), PRD #500 story 133, ADR-0185 §3–§5).
+ * ([#517](https://github.com/Rakieta02/Rakieta/issues/517), PRD #500 story 133, ADR-0185 §3–§5).
  *
  * The real route tree with the socket faked. **The account is a small fake of the server**
  * (`account`): the attestation, the naming, a rating and the committed profile each change what the

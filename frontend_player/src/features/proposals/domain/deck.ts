@@ -1,6 +1,6 @@
 /**
  * **A group's deck, and the rules a card is drawn by** — the Games tab
- * ([#553](https://github.com/Raketa02/Raketa/issues/553); the screens A2, the mechanics §6–§8,
+ * ([#553](https://github.com/Rakieta02/Rakieta/issues/553); the screens A2, the mechanics §6–§8,
  * [ADR-0189](../../../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)).
  *
  * Pure: what the server dealt, as the mapper reads it, and the handful of decisions the card makes

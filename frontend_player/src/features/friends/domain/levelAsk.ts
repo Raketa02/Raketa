@@ -1,5 +1,5 @@
 /**
- * **A friend's ask for a level, as a card on Home** ([#765](https://github.com/Raketa02/Raketa/issues/765);
+ * **A friend's ask for a level, as a card on Home** ([#765](https://github.com/Rakieta02/Rakieta/issues/765);
  * the friends screens §6.4; the words §29.5; ADR-0202 §4 as amended 2026-11-07).
  *
  * One card per sport, naming every friend whose ask in it waits on the reader, newest first. Which

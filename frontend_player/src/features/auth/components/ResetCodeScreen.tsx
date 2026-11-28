@@ -1,6 +1,6 @@
 /**
  * *Enter the code* — **the email and the 8-character code**
- * ([#515](https://github.com/Raketa02/Raketa/issues/515)), for the phone the email's button
+ * ([#515](https://github.com/Rakieta02/Rakieta/issues/515)), for the phone the email's button
  * cannot reach: the email was opened on a laptop, or the link would not open the app.
  *
  * Both boxes, because the server exchanges the pair and not the code alone; the email opens with

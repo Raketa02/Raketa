@@ -1,5 +1,5 @@
 /**
- * **Friends, as the page reads it** ([#777](https://github.com/Raketa02/Raketa/issues/777); the
+ * **Friends, as the page reads it** ([#777](https://github.com/Rakieta02/Rakieta/issues/777); the
  * rankings screens §4.6, §5.3) — the reader and their friends, **one read, the whole table**:
  * `GET /rankings/{sport}?view=FRIENDS`. The server works it out on every read and keeps it nowhere
  * (the mechanics §4.2), and never pages it.

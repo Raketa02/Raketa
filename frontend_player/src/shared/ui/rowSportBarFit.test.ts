@@ -1,6 +1,6 @@
 /**
  * **Top 10's switcher, opened rightwards, against the line it opens in** — derived rather than
- * seen, because no device has drawn it ([#821](https://github.com/Raketa02/Raketa/issues/821);
+ * seen, because no device has drawn it ([#821](https://github.com/Rakieta02/Rakieta/issues/821);
  * ADR-0205 §5; home refactor 12, 13; design-system 7.36).
  *
  * `RowSportPill` starts the bar its own inset (`groupPage.filterPad`, 9) before the pill, which

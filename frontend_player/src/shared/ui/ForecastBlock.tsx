@@ -1,9 +1,9 @@
 /**
  * **`BALANCE FORECAST`** — a game's full forecast on paper: each side's level and the gap, the bar,
  * the % and its word, what a confirmed score does, and what is at stake
- * ([#415](https://github.com/Raketa02/Raketa/issues/415),
+ * ([#415](https://github.com/Rakieta02/Rakieta/issues/415),
  * [ADR-0161](../../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md); for fun 3,
- * [#839](https://github.com/Raketa02/Raketa/issues/839), ADR-0207 §6).
+ * [#839](https://github.com/Rakieta02/Rakieta/issues/839), ADR-0207 §6).
  *
  * ```
  * BALANCE FORECAST                                  eyebrow

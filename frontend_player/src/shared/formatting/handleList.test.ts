@@ -64,7 +64,7 @@ describe('the widest character a handle may contain', () => {
    * The budget is measured in the role the line is **set in**, and it defaults to the rows' —
    * the header sets its handles in `h1`, and a budget counted at `cardTitle` for a line drawn six
    * points larger is the mid-handle tail truncation §15 forbids, arriving through arithmetic
-   * ([#401](https://github.com/Raketa02/Raketa/issues/401)).
+   * ([#401](https://github.com/Rakieta02/Rakieta/issues/401)).
    */
   it('holds fewer characters in a larger role, and counts the rows’ role by default', () => {
     expect(charactersThatFit(200, theme.type.h1)).toBeLessThan(charactersThatFit(200));

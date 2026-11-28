@@ -1,5 +1,5 @@
 /**
- * **Home's reads** ([#556](https://github.com/Raketa02/Raketa/issues/556)) — the booked games
+ * **Home's reads** ([#556](https://github.com/Rakieta02/Rakieta/issues/556)) — the booked games
  * (`GET /home`), one booked game in detail (`GET /bookings/{id}`), which of them this phone has
  * opened, and the clock every fold over them runs on.
  *

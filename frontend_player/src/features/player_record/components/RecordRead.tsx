@@ -1,7 +1,7 @@
 /**
  * **A record, read, in every state** — what the record sheet draws while it reads, when it is
  * refused, and when it could not be reached; and the record itself, handed to the caller
- * ([#803](https://github.com/Raketa02/Raketa/issues/803)).
+ * ([#803](https://github.com/Rakieta02/Rakieta/issues/803)).
  *
  * The record sheet is one surface that reads a record; **the vibe sheet** (Discovery's, the Home
  * rows screens §6.3) is the second: it *reads the record*, and shows what the record shows — so it

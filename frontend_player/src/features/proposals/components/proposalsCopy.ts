@@ -1,6 +1,6 @@
 /**
  * **Every fixed word a group's Games deck and a game's details say** — copy is code, and nothing
- * is inlined in a component ([#553](https://github.com/Raketa02/Raketa/issues/553); the screens
+ * is inlined in a component ([#553](https://github.com/Rakieta02/Rakieta/issues/553); the screens
  * A2, A4.2).
  *
  * Import-free but for a type, so a screen can read it at module load; the sentences composed from a value are

@@ -1,7 +1,7 @@
 /**
  * **The administrator's official-group routes** — one of the two layers allowed to read generated
  * types, and the only place these paths are written down
- * ([#509](https://github.com/Raketa02/Raketa/issues/509)'s contract).
+ * ([#509](https://github.com/Rakieta02/Rakieta/issues/509)'s contract).
  *
  * Every route hangs under `/administrator/clubs/{club_id}` and **every one asks again** whether this
  * account is an active Administrator of that club: a removal takes effect on the next request, as

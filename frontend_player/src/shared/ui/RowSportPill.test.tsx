@@ -1,8 +1,8 @@
 /**
- * **The sport pill on a Home line** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home
+ * **The sport pill on a Home line** ([#805](https://github.com/Rakieta02/Rakieta/issues/805); the Home
  * rows screens §7.3; home rows 27) — the deck's pill (#774) in a folding line's footer since #820, at
  * the footer's left with the line's link at its right, and the bar it opens onto lying over the
- * footer, **opening rightwards** since [#821](https://github.com/Raketa02/Raketa/issues/821) (home
+ * footer, **opening rightwards** since [#821](https://github.com/Rakieta02/Rakieta/issues/821) (home
  * refactor 12, 13). Top 10 draws it; its router suite walks the picks end to end.
  * `SportPill.test.tsx` holds the bar's unfold.
  *

@@ -1,6 +1,6 @@
 /**
  * **The link the app is holding** — one that arrived and has not been answered yet
- * ([#520](https://github.com/Raketa02/Raketa/issues/520), PRD #500 story 48).
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520), PRD #500 story 48).
  *
  * A group link opened before the account exists is kept through sign-up, the naming, the
  * questionnaire and the social steps, and opened once the account is in the app; an invitation's link

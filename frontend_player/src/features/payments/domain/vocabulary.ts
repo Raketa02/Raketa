@@ -1,7 +1,7 @@
 /**
  * **A player's payment method, in the words the screens use** — the saved method, the setup that
  * saves one, and the reason a removal is refused
- * ([#552](https://github.com/Raketa02/Raketa/issues/552); the mechanics §12.4, §12.5).
+ * ([#552](https://github.com/Rakieta02/Rakieta/issues/552); the mechanics §12.4, §12.5).
  *
  * The wallet union is the wire's own, held equal to the generated one in
  * `mappers/wireVocabulary.ts`, because a copy table is keyed by it — the method card's badge and the

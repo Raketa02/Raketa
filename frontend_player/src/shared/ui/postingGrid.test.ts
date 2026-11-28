@@ -1,7 +1,7 @@
 /**
  * **The posting grid's greens, computed** — the two colours the theme adds for *Post a game*'s
  * cells, their inks, and every ratio their comments state
- * ([#558](https://github.com/Raketa02/Raketa/issues/558), the Games & Fill in screens A5.2, A10,
+ * ([#558](https://github.com/Rakieta02/Rakieta/issues/558), the Games & Fill in screens A5.2, A10,
  * [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking) 2026-10-02).
  *
  * `gameGround.test.ts`'s shape: 2.5's table has no row for these fills, so this is the row, and the

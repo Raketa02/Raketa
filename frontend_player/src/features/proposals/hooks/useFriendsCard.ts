@@ -1,5 +1,5 @@
 /**
- * **The friends card and *Find a court*** ([#757](https://github.com/Raketa02/Raketa/issues/757))
+ * **The friends card and *Find a court*** ([#757](https://github.com/Rakieta02/Rakieta/issues/757))
  * — one read each, keyed by everything asked, so the group's Friends court and the card under it
  * share one answer: the court draws the card's sides from the same read the card is drawn from.
  *

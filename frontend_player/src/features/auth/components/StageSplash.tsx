@@ -1,6 +1,6 @@
 /**
  * ***It's a game!*, in sign-in's hero** — what the swiped card becomes
- * ([#787](https://github.com/Raketa02/Raketa/issues/787), PRD #783; design system 12.2, mocks 7–8).
+ * ([#787](https://github.com/Rakieta02/Rakieta/issues/787), PRD #783; design system 12.2, mocks 7–8).
  *
  * ```
  *                 ● Rakieta                          the wordmark stays in its corner, over it

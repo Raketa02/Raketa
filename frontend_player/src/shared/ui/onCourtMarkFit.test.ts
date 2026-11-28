@@ -18,7 +18,7 @@
  * edge it is narrower. Everything below follows from those.
  *
  * **Both sizes are derived here and neither is scaled from the other**
- * ([#384](https://github.com/Raketa02/Raketa/issues/384)). The corner takes a *different
+ * ([#384](https://github.com/Rakieta02/Rakieta/issues/384)). The corner takes a *different
  * fraction* of a different width, so multiplying one cap by the widths' ratio would be
  * arithmetic over the wrong quantity. The ruled-out drawings are asserted at the card's size,
  * which is the one they were drawn against and the tighter of the two.

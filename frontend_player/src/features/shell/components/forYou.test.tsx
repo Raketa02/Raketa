@@ -1,6 +1,6 @@
 /**
  * **FOR YOU on Home** — the five discovery rows folded into five quiet lines, walked through the real
- * route tree ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5, §8; the Home rows
+ * route tree ([#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0205 §5, §8; the Home rows
  * screens §1, §2; home refactor 3–13).
  *
  * What each line holds, its footer and its hidden states are its feature's suite's
@@ -442,7 +442,7 @@ describe('under Reduce motion', () => {
 });
 
 /**
- * **The counts** ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §5, §6; home
+ * **The counts** ([#822](https://github.com/Rakieta02/Rakieta/issues/822); ADR-0205 §5, §6; home
  * refactor 3, 4, 7): how many there are to explore on four lines — a grey pill between the title and
  * the chevron, the served total, *99+* past 99 — said in the line's name, carried into the people
  * lines' *See all N ›*, and moving whenever the line's read does.

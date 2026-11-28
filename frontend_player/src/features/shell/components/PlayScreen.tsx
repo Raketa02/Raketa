@@ -1,8 +1,8 @@
 /**
  * **Play** — the player's groups, and, behind the `explore` feature flag, a *Groups | Explore*
  * segment pinned at the top with the page for the segment under it
- * ([#512](https://github.com/Raketa02/Raketa/issues/512), play mocks 1 and 3, PRD #500 stories 1–4;
- * [#826](https://github.com/Raketa02/Raketa/issues/826),
+ * ([#512](https://github.com/Rakieta02/Rakieta/issues/512), play mocks 1 and 3, PRD #500 stories 1–4;
+ * [#826](https://github.com/Rakieta02/Rakieta/issues/826),
  * [ADR-0206](../../../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)
  * §11).
  *

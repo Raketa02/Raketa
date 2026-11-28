@@ -1,6 +1,6 @@
 /**
  * **Finding** — the deck's area right after an intent answer on Games, while Rakieta deals the group
- * ([#741](https://github.com/Raketa02/Raketa/issues/741);
+ * ([#741](https://github.com/Rakieta02/Rakieta/issues/741);
  * [ADR-0201](../../../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
  * §4; the screens A2.1 state 5; the words §28).
  *

@@ -1,7 +1,7 @@
 /**
  * **What an invitation's link opens**, read before *Set your password* is drawn — the address its
  * email box is locked to, and whether the link still works
- * ([#518](https://github.com/Raketa02/Raketa/issues/518), ADR-0184 §2).
+ * ([#518](https://github.com/Rakieta02/Rakieta/issues/518), ADR-0184 §2).
  *
  * **Not retried unattended**, though a read is safe to repeat: while it is out the screen draws its
  * title and nothing else, and three retries with backoff would hold it so for seconds over a failure

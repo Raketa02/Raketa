@@ -6,7 +6,7 @@
 > changes what this feature does. Index: [`README.md`](README.md).
 
 **The result argument is one screen and eight states, and the state is derived**
-([#314](https://github.com/Raketa02/Raketa/issues/314),
+([#314](https://github.com/Rakieta02/Rakieta/issues/314),
 [ADR-0137](../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). **A result is the
 record that a game happened** — no booking, no calendar, no date field anywhere — so the entry
 _is_ the fact, and everything after it is an argument bounded to two rounds —
@@ -23,8 +23,8 @@ never something a player reaches by tapping, and the screen adds
 sentence. **`both-stand` draws both scores and offers the agreement that ends it** — ADR-0137
 §4's only exit short of the game going unscored, and the one the screen could not offer while
 `standing_proposal` was _"when exactly one is"_ and the wire returned **neither** score
-([#317](https://github.com/Raketa02/Raketa/issues/317),
-[#318](https://github.com/Raketa02/Raketa/issues/318)) — the **eighth** state is the agreement
+([#317](https://github.com/Rakieta02/Rakieta/issues/317),
+[#318](https://github.com/Rakieta02/Rakieta/issues/318)) — the **eighth** state is the agreement
 itself, below. The reader's own score is drawn quiet
 above the other side's, the one control is named for the score it agrees with, and the copy names
 the way out instead of stating an ending as though it were the only one. There is never a counter
@@ -70,7 +70,7 @@ prototype's `✓` went the way the on-court mark's did — **Archivo ships no U+
 winner's row carries the word instead.
 
 **One screen shows a game whatever state it is in, and the plan arrives on it as a child**
-([#368](https://github.com/Raketa02/Raketa/issues/368),
+([#368](https://github.com/Rakieta02/Rakieta/issues/368),
 [ADR-0149](../../../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md) §2).
 **Grown, not replaced**: `GameScreen` was already a state-keyed detail surface with ten arms, and a
 hand-off in the middle of one standing's life would give a player two different screens for the
@@ -116,11 +116,11 @@ deleted, the slots are tags, _Sun 9_ is a date this app does not have, _60 min_ 
 holds, and _COMPETITIVE_ is a search's mode rather than a game's kind — as is **press and hold for
 the full record**, and as were the **pairing forecast and the player rows** — upheld then with an
 argument of their own (a forecast helps you decide whether to play somebody, and on this screen
-you already have), filed as [#346](https://github.com/Raketa02/Raketa/issues/346), and **reversed
+you already have), filed as [#346](https://github.com/Rakieta02/Rakieta/issues/346), and **reversed
 since** by ADR-0161 for the plan lead, below.
 
 **The plan lead is redrawn — an eyebrow and no title, three slots over two doors, nothing
-pinned** ([#414](https://github.com/Raketa02/Raketa/issues/414), #410's design). `GameScreen`'s one
+pinned** ([#414](https://github.com/Rakieta02/Rakieta/issues/414), #410's design). `GameScreen`'s one
 slot became three — `card`, `court`, `plan`, all opaque, drawn in that order on the plan lead and
 nowhere else — and the screen still holds no plan, no ladder and no rung. **The eyebrow is
 `formatEyebrow`'s**: the format read off the seats (the rule the Now card's retired eyebrow used,
@@ -146,7 +146,7 @@ the score lead the grid is the screen). The score lead and the result arms keep 
 whole, and `result.test.tsx` asserts the entry window's sentence where it is still said.
 
 **The plan lead draws its court's pairing — the forecast block and the players card, read beside
-the game and never on it** ([#415](https://github.com/Raketa02/Raketa/issues/415),
+the game and never on it** ([#415](https://github.com/Rakieta02/Rakieta/issues/415),
 [ADR-0161](../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md), #410's design). #346
 had closed the reversal _wontfix_ on the argument that a forecast helps you decide and here you
 have decided; the ADR settles it the other way on the argument #346 itself named — **a Planning
@@ -191,7 +191,7 @@ honoured rather than reversed: the route the hold never offered is the one that 
 `gamePlan.test.tsx`'s refusal is inverted: the plan lead draws both blocks, and the score lead
 still draws neither and never asks.
 
-**A seat can be open, and the game survives it** ([#418](https://github.com/Raketa02/Raketa/issues/418),
+**A seat can be open, and the game survives it** ([#418](https://github.com/Rakieta02/Rakieta/issues/418),
 [ADR-0162](../../../docs/adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md)).
 `GameSeat.playerId` is optional — absent on a seat somebody left and nobody has filled — and
 `openSeats` in `domain/game.ts` is the one definition of _open_ that the card, the screen's acts
@@ -222,7 +222,7 @@ over the gloss _Called off_ — the two words #419 §3 and ADR-0163 fix — and 
 nothing is invented beside them. Its `called_off_at`, its shelf life and its screen are #419's.
 
 **The fourth end is dated, and drawn as the ghost is**
-([#419](https://github.com/Raketa02/Raketa/issues/419),
+([#419](https://github.com/Rakieta02/Rakieta/issues/419),
 [ADR-0163](../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). `Game` gains
 `calledOffAt` and the mapper reads `called_off_at` — the act's own instant, present exactly on
 `CALLED_OFF`, and what the card is shelved from one feature over. The `called-off` arm gains the
@@ -246,7 +246,7 @@ feature changed but the sentence: `EntryLead` is still derived from the card's d
 is still offered on every entry arm, and the two-arm docstrings now name one score-led rung.
 
 **Who called it off, the ending block, and the card's dismissal**
-([#454](https://github.com/Raketa02/Raketa/issues/454), [ADR-0172](../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
+([#454](https://github.com/Rakieta02/Rakieta/issues/454), [ADR-0172](../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
 §4–§5, §8). `called_off_by` is mapped onto `Game.calledOffBy` — the id and the whole name, because
 the leaver's seat is vacated and the court cannot supply it — and the `called-off` arm of
 `ResultArgument` gains `ending`: who (`you` for the reader's own press), **how** — a departure is
@@ -279,7 +279,7 @@ gone from the screen, and with it this feature's reach into `features/conversati
 seam ADR-0149 §3 named is back to its one importer.
 
 **`awaitsYourAgreement` — a score waiting on you**
-([#550](https://github.com/Raketa02/Raketa/issues/550)). Home's badge counts _a result to confirm_,
+([#550](https://github.com/Rakieta02/Rakieta/issues/550)). Home's badge counts _a result to confirm_,
 and `features/plans`, which counts the cards, cannot tell from _Confirm the result_ whether the arm
 waits on the reader. So this feature answers it, beside `resultArgument`: a score waits on your
 agreement exactly when agreeing is an act the screen would offer you — the other side's score up and
@@ -287,11 +287,11 @@ unanswered, or two scores standing with nobody agreed. Your own score waiting on
 neither does an agreement running out its grace. Read off `actsOffered`, so the badge and the screen
 cannot disagree about a state; what crosses is the boolean, never the argument.
 
-**`GameForecast` — the forecast block alone** ([#556](https://github.com/Raketa02/Raketa/issues/556)).
+**`GameForecast` — the forecast block alone** ([#556](https://github.com/Rakieta02/Rakieta/issues/556)).
 A booked game's details draw their own people, with _paid_ on each, so they take this feature's
 forecast without the players card: the same `usePairing` read of the Game the booking opened and the
 same `ForecastBlock`, absent on the same ground. **The block and its stake tiles are `shared/ui`'s
-since [#839](https://github.com/Raketa02/Raketa/issues/839)** — a competitive game's details open on
+since [#839](https://github.com/Rakieta02/Rakieta/issues/839)** — a competitive game's details open on
 them too, and ADR-0207 §6 moved them below both features — and so are their words (`BALANCE_FORECAST`,
 `GAP_WORD`, the
 counted sentence, `WIN_TILE` / `LOSE_TILE`, and the three spoken names), in
@@ -302,7 +302,7 @@ itself, composed by `proposals` with the score leading and the `card`, `court`, 
 slots empty — a booking is its own plan, and a seat open on one is a rescue (#557).
 
 **`GamePairingCard` — the pairing's card, the kind's own**
-([#841](https://github.com/Raketa02/Raketa/issues/841); ADR-0207 §5, §6, §12; the backend's #835).
+([#841](https://github.com/Rakieta02/Rakieta/issues/841); ADR-0207 §5, §6, §12; the backend's #835).
 `GameForecast` was renamed for what it now draws: **a For-fun game's Social vibe card where _A
 friendly — nothing moves._ stood**, and a competitive game's forecast and stakes as before, so a
 For-fun game reads the same before and after it is booked. The pairing carries **`vibe`** on a
@@ -325,7 +325,7 @@ the forecast was and no wider (ADR-0207 §5). Walked in `proposals`' `bookedForF
 `forecastBlock.test.tsx` asserts a friendly draws no forecast, sentence or tile.
 
 **`STARTED_SHORT` — a booked game whose hour came with a seat open**
-([#557](https://github.com/Raketa02/Raketa/issues/557); the backend's #544; the Games & Fill in
+([#557](https://github.com/Rakieta02/Rakieta/issues/557); the backend's #544; the Games & Fill in
 mechanics §14.1). Somebody left after the club's cut-off and nobody took the seat: the game takes no
 result, no Level moves and nobody who stayed is marked for it. It joins `GameStanding` as its own
 end — `resultArgument`'s `started-short`, titled _No result_, its standing line _A seat was empty._,
@@ -333,7 +333,7 @@ offering nothing — and the Classic card names it _uncounted_. A booked game is
 arm is reached only by a link straight to the Game; Home itself says _Uncounted · a seat was empty_.
 
 **A booked game's result can say somebody didn't come, and the player marked can say they came**
-([#560](https://github.com/Raketa02/Raketa/issues/560); the backend's #547; the Games & Fill in
+([#560](https://github.com/Rakieta02/Rakieta/issues/560); the backend's #547; the Games & Fill in
 mechanics §15.3). `NO_SHOW_REPORTED` and `NO_SHOW` join `GameStanding`, and `Game.noShows` carries
 each report — who, whole name, `reportedAt`, `disputeBy`, `disputedAt` — but never who made it: the
 report is the game's. **Two arms**: `no-show-reported` holds the reader's own mark (`yours`) and
@@ -367,7 +367,7 @@ hooks take an `AfterAWrite` and run its `reread` from the mutation, so a write t
 connection still re-reads after the screen has gone. A game whose every report was disputed is the
 backend's `UNSCORED` and reads as today's evening. **Not seen on a device.**
 
-**The old loop's game screen, its card and its dismissal left** ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+**The old loop's game screen, its card and its dismissal left** ([#576](https://github.com/Rakieta02/Rakieta/issues/576)).
 The `/games/[id]` route and `GAME_ROUTE`, the players card and `CourtPairing` (with `levelRow`, the
 row's words and `courtForReader`), the dismissal (`dismissGame`, `useDismissGame`, `RemoveCard`,
 `dropCardOfGame`), `awaitsYourAgreement` and `seatedOthers` went with the old loop's rail, cards and
@@ -379,13 +379,13 @@ plan lead, the `card`, `court`, `plan` and `fill` slots and `entryLead` are stil
 and nothing fills them: simplifying the screen to the one lead it now has is left for a ticket of
 its own rather than folded into a removal.
 
-**`Game` no longer carries `challengeId`** ([#577](https://github.com/Raketa02/Raketa/issues/577)).
+**`Game` no longer carries `challengeId`** ([#577](https://github.com/Rakieta02/Rakieta/issues/577)).
 It had no reader, and on a booked game it was the booking's id under the old loop's name; the wire's
 `GameSchema` still spells it `challenge_id` until the backend's removal reaches it. The record is
 [`conversations.md`](conversations.md), whose join to a booked game's room moved onto the booking in
 the same ticket.
 
-**Every other player on the court can be marked** ([#653](https://github.com/Raketa02/Raketa/issues/653);
+**Every other player on the court can be marked** ([#653](https://github.com/Rakieta02/Rakieta/issues/653);
 ADR-0195). Nobody at the club checks anybody in now, so `noShowRows` takes no check-ins. A row no
 longer reads _Inés Díaz · checked in at the club_ with nothing to press (`checkedInLine` is
 deleted), and `BookedFacts` carries only the `reread`. `gameErrorMessage` loses
@@ -393,7 +393,7 @@ deleted), and `BookedFacts` carries only the `reread`. `gameErrorMessage` loses
 [`proposals.md`](proposals.md), where the booking stopped carrying the desk's word.
 
 **The result screen tells the truth: silence costs nothing, _That's right_ settles at once, For
-fun asks nothing** ([#656](https://github.com/Raketa02/Raketa/issues/656); ADR-0195 §2, §5, Q114,
+fun asks nothing** ([#656](https://github.com/Rakieta02/Rakieta/issues/656); ADR-0195 §2, §5, Q114,
 Q119; the backend's #654 and #655). Four things moved, each because the rule under it did.
 **_Is that right?_ names the moment and says silence is free.** The standing line says when silence
 makes the score the result, on the club's clock — _tomek.p put a score up. If neither of you answers,
@@ -437,7 +437,7 @@ one-score-per-side race, which a partner's counter can cause as well as the othe
 **Not seen on a device.**
 
 **Who's here, caught at the court — attendance replaces the no-show report**
-([#658](https://github.com/Raketa02/Raketa/issues/658); ADR-0195 §3; the backend's #657). `gen:api`
+([#658](https://github.com/Rakieta02/Rakieta/issues/658); ADR-0195 §3; the backend's #657). `gen:api`
 brought #657's wire: `GameSchema.no_shows` became `attendance` — one row per player somebody tapped,
 `AttendanceState` (`WAITING`, `ON_TIME`, `CAME_LATE`, `DIDNT_COME`, `CLAIMED`, `CONFIRMED`, held
 equal in `wireVocabulary.ts`) with `notedAt`, `arriveBy`, `arrivedAt`, `claimBy`, `claimedAt` and
@@ -503,12 +503,12 @@ before this change still shows the old sentence. **Not seen on a device.**
   over _Yes, Oscar Nowak was here_); an awaited player reads others awaited as a line, with nothing
   to press.
 
-**Every seat, line and tap names the nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). A game's seats, its attendance
+**Every seat, line and tap names the nickname** ([#728](https://github.com/Rakieta02/Rakieta/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). A game's seats, its attendance
 rows and who called it off read the wire's `nickname`, so the court's eyebrow, the bar, the result
 screen's sentences, _oscar.n isn't here yet_ and the late claim's line say the whole nickname,
 never with an @. The stems on the bar cut at the first dot.
 
-**PLAYED WITH has a slot on the result screen** ([#754](https://github.com/Raketa02/Raketa/issues/754);
+**PLAYED WITH has a slot on the result screen** ([#754](https://github.com/Rakieta02/Rakieta/issues/754);
 the friends screens §3). `GameScreen` takes `playedWith`, a `ReactNode` it draws on every arm just
 above _How were they?_ — under everything about the score, and over the question about how they were.
 It is filled by `proposals`' `BookedGameResult` with `friends`' card, and this feature knows nothing

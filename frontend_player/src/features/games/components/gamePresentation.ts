@@ -13,7 +13,7 @@
  * ## Four sentences carry unusual weight, and the ticket names all four
  *
  * - **When silence makes a score the result is said before it happens**, and so is that saying
- *   nothing costs nothing ([#656](https://github.com/Raketa02/Raketa/issues/656), F-RESULT-35.1).
+ *   nothing costs nothing ([#656](https://github.com/Rakieta02/Rakieta/issues/656), F-RESULT-35.1).
  *   The standing line of a game with a score on the table names **the moment** — *at 20:30 on
  *   Wednesday*, on the club's clock — and the clock block under it the duration. It is not a
  *   footnote a player reaches by tapping. The screen said *there is no penalty* over a silence
@@ -105,7 +105,7 @@ import { durationLeft, durationSince } from '@/shared/formatting/durations';
  * against. A booked game has one now, and its details print the day; this eyebrow keeps the
  * duration because it is the one line every game state carries alike. That duration used to be the *only* thing
  * telling two padel games apart, which made three games in a week three near-identical rows
- * ([#319](https://github.com/Raketa02/Raketa/issues/319)); the handles are what tell them apart
+ * ([#319](https://github.com/Rakieta02/Rakieta/issues/319)); the handles are what tell them apart
  * now, and the duration goes on saying which was longest ago.
  *
  * **The court's own order, and the whole of every handle.** A doubles court is three people and
@@ -136,7 +136,7 @@ const KIND_WORD: Readonly<Record<GameKind, string>> = { COUNTED: 'Counted', FRIE
 
 /**
  * `Doubles · Counted` — **the eyebrow on the plan lead, and the whole head of that screen**
- * ([#414](https://github.com/Raketa02/Raketa/issues/414)).
+ * ([#414](https://github.com/Rakieta02/Rakieta/issues/414)).
  *
  * The format and the kind, and nothing else: the card under it names the people and the plan
  * names the day, so the handles and *arranged n ago* that `gameEyebrow` carries would be the same
@@ -907,7 +907,7 @@ export const RUB_OUT_LABEL = 'Rub out';
 /**
  * **The forecast block's own words are `shared/vocabulary`'s** — the eyebrow, *gap*, the counted
  * sentence and the two tiles — since the block moved to `shared/ui` when a competitive game's
- * details drew it too ([#839](https://github.com/Raketa02/Raketa/issues/839)). They are
+ * details drew it too ([#839](https://github.com/Rakieta02/Rakieta/issues/839)). They are
  * cited here because this screen says them, and a suite reads them off this feature's copy deck.
  */
 export {

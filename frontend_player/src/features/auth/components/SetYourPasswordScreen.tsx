@@ -1,6 +1,6 @@
 /**
  * ***Set your password*** — an invited person choosing the password they will sign in with, **their
- * email locked** ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories 113–116,
+ * email locked** ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 stories 113–116,
  * [ADR-0184](../../../../../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
  * §2).
  *

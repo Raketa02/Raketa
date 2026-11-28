@@ -63,7 +63,7 @@
  * describe a press.
  *
  * **`arranging` is a seventh variant, and it is volt's shape a second time** (added for the Now
- * card's *Fill the seat*, [#429](https://github.com/Raketa02/Raketa/issues/429) F1). The card's
+ * card's *Fill the seat*, [#429](https://github.com/Rakieta02/Rakieta/issues/429) F1). The card's
  * tag carries a stage dot in `arranging` — *the game is still in the players' hands* — and the
  * door under it was the settled green, which said the opposite of the errand it named. The
  * theme's own note on the colour said *nothing writes on a 6pt dot*; a button is the first thing
@@ -74,7 +74,7 @@
  * the colour.
  *
  * **`waiting` is the eighth variant: a request waiting on somebody else, as a control**
- * ([#800](https://github.com/Raketa02/Raketa/issues/800), home rows 6;
+ * ([#800](https://github.com/Rakieta02/Rakieta/issues/800), home rows 6;
  * [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-11-14). The group
  * sheet's *Asked* is drawn cream with a brown-gold word, and it is pressed — it opens *Withdraw
  * request* — so it is a button and not 6.4's warn tag, whose two colours it takes: `amberSoft` and
@@ -91,30 +91,30 @@
  * default is 4.2's corner, so nothing that exists changes, and the next surface that wants a
  * pill reopens the record rather than reaching for the prop.
  *
- * **Members' friend pills reopened it** ([#753](https://github.com/Raketa02/Raketa/issues/753),
+ * **Members' friend pills reopened it** ([#753](https://github.com/Rakieta02/Rakieta/issues/753),
  * friends 1–2; [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking),
  * 2026-11-06): **+ Add** and **Accept** are the `dark` button in a pill at `sm`, on the right of a
  * row, because the mock draws them so and the tags beside them on the next rows are pills too — a
  * 10pt corner among them would read as a different kind of thing. **The Friends page draws the same
- * pills** ([#754](https://github.com/Raketa02/Raketa/issues/754), friends 3; Part 16 2026-11-06):
+ * pills** ([#754](https://github.com/Rakieta02/Rakieta/issues/754), friends 3; Part 16 2026-11-06):
  * *+ Add friends* in its header, and a request row's **Accept** and **Cancel**.
  *
  * **`marks` are two drawn glyphs after the label, and they are not words**
- * ([#753](https://github.com/Raketa02/Raketa/issues/753); Part 16, 2026-11-06). The record's
+ * ([#753](https://github.com/Rakieta02/Rakieta/issues/753); Part 16, 2026-11-06). The record's
  * *Friend ✓ ▾* and *Request sent ▾* need a tick and a down-chevron, and Archivo ships no ✓
  * (`CLAUDE.md`), so they are Feather's `check` and `chevron-down`, in the label's own ink and at its
  * size, after it. **Never spoken**: the name is the label (or the caller's `accessibilityLabel`), and
  * a mark says nothing a sighted reader would read aloud. Two only, because two are asked for.
  *
  * **`lead` is a drawn glyph before the label, and `settledSoft` the ninth variant**
- * ([#801](https://github.com/Raketa02/Raketa/issues/801), home rows 9, 11; Part 16, 2026-11-14). A
+ * ([#801](https://github.com/Rakieta02/Rakieta/issues/801), home rows 9, 11; Part 16, 2026-11-14). A
  * sheet's worded friend button reads *+ Add friend* and *✓ Friends*, its mark before the words — so
  * the plus and the tick are Feather's `plus` and `check`, drawn before the label as `marks` are
  * after it, and never spoken. *✓ Friends* is drawn on mint's soft bed in its ink (5,08:1), the ok
  * tag's two colours as a control, as `waiting` is the warn tag's: it is pressed, and opens *Remove
  * friend*. It presses into `mintLine`, the fold the system already has for that bed.
  *
- * **`role` and `dot` are the sign-in stage's** ([#784](https://github.com/Raketa02/Raketa/issues/784);
+ * **`role` and `dot` are the sign-in stage's** ([#784](https://github.com/Rakieta02/Rakieta/issues/784);
  * [Part 16](../../../docs/design-system.md#part-16--amendments-after-locking), 2026-11-08). *I have an
  * invitation code* is `secondary` in look and a **link** in what it does — it opens a screen carrying
  * the email typed so far, as *Forgot password?* beside it does — so a screen reader meets it among the

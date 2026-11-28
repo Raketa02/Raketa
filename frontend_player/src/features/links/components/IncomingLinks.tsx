@@ -1,6 +1,6 @@
 /**
  * **Where a held link is answered** — mounted over each home a signed-in account can be in: the
- * player's app, and an administrator area ([#520](https://github.com/Raketa02/Raketa/issues/520),
+ * player's app, and an administrator area ([#520](https://github.com/Rakieta02/Rakieta/issues/520),
  * PRD #500 stories 46–48, 113, 117–119).
  *
  * A link is held from the moment it arrives (`redirectSystemPath`) until a place that can answer it

@@ -1,7 +1,7 @@
 /**
  * ***Leave the game*** — at the foot of a booked game's details, with the line under it stating
  * what leaving costs at this moment, behind today's *Before you leave* sheet with the new words
- * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A4.1, details 10; the
+ * ([#557](https://github.com/Rakieta02/Rakieta/issues/557); the screens A4.1, details 10; the
  * mechanics §13).
  *
  * **What it costs is the read's** (`leaving`, #544; said on the sheet, never under the door): before the club's cut-off nothing is taken and

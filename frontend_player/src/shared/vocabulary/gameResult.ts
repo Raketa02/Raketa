@@ -18,7 +18,7 @@
  * the only thing that had ever drawn a run of five. It is here now for `playIntent.ts`'s
  * reason and on `shared/README.md`'s own test — *"whether a second feature would have written
  * the identical table"*. The record sheet draws the same run
- * ([#373](https://github.com/Raketa02/Raketa/issues/373)), and it would have written this list
+ * ([#373](https://github.com/Rakieta02/Rakieta/issues/373)), and it would have written this list
  * of two exactly; what a win and a loss **are** is fixed by ADR-0137 rather than by either
  * surface that prints one.
  *

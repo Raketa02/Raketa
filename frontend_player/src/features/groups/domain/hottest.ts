@@ -1,5 +1,5 @@
 /**
- * **Home's *Hottest groups*, the phone's half** ([#800](https://github.com/Raketa02/Raketa/issues/800);
+ * **Home's *Hottest groups*, the phone's half** ([#800](https://github.com/Rakieta02/Rakieta/issues/800);
  * ADR-0204 §3; the Home rows mechanics §5). The heat, the tags, the order and the six are the
  * server's; what is left here is what a card and its sheet **offer** the reader, how many faces each
  * draws, and how a write's answer lands on the card it came from.

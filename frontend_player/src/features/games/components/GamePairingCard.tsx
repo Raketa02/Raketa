@@ -1,7 +1,7 @@
 /**
  * **A game's pairing, drawn as its kind's card** — the forecast on a competitive game, the Social
  * vibe card on a For-fun one — for a surface that draws its own people
- * ([#556](https://github.com/Raketa02/Raketa/issues/556); [#841](https://github.com/Raketa02/Raketa/issues/841);
+ * ([#556](https://github.com/Rakieta02/Rakieta/issues/556); [#841](https://github.com/Rakieta02/Rakieta/issues/841);
  * the screens A4.1, details 9; ADR-0207 §5).
  *
  * A booked game's details draw their tiles from the booking, with *paid* on each, so the players

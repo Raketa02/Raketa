@@ -13,7 +13,7 @@
  *
  * The radius and the proposals question used to follow it, and both left the part with the
  * old loop's ranking, the only thing that read them
- * ([#582](https://github.com/Raketa02/Raketa/issues/582)). So this step ends the part, and
+ * ([#582](https://github.com/Rakieta02/Rakieta/issues/582)). So this step ends the part, and
  * its control is the finish rather than *Continue*: `ProfileFinish`, which sends the one
  * request and draws every state around it. What is left in this file is the two questions.
  *

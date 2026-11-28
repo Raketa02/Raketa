@@ -1,5 +1,5 @@
 /**
- * **A list on its way** — offline, refused, or being read ([#754](https://github.com/Raketa02/Raketa/issues/754)):
+ * **A list on its way** — offline, refused, or being read ([#754](https://github.com/Rakieta02/Rakieta/issues/754)):
  * You › Friends' three tabs and the Add friends sheet's groups, each drawing this in place of its
  * list until the list is in. `blocks`' three states, in its register:
  *

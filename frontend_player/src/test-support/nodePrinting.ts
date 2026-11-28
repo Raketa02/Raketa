@@ -1,6 +1,6 @@
 /**
  * A rendered node printed as the element it is — for the test process only
- * ([#493](https://github.com/Raketa02/Raketa/issues/493)).
+ * ([#493](https://github.com/Rakieta02/Rakieta/issues/493)).
  *
  * ## What this fixes
  *

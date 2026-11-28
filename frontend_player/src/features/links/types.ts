@@ -2,7 +2,7 @@
  * **The links feature's only public surface** — links into the app: a **Group link**, an
  * **Invitation**'s button — a token's, or the app's bare address for an existing account — a
  * password reset's link, and a **Friend link** (#756)
- * ([#520](https://github.com/Raketa02/Raketa/issues/520), PRD #500 stories 46–48, 111–113, 117;
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520), PRD #500 stories 46–48, 111–113, 117;
  * ADR-0187 §4, §7).
  *
  * Four callers, all route files: `+native-intent` hands this feature every address the operating

@@ -1,7 +1,7 @@
 /**
  * ***Show me to new people*, as the You row's switch draws it**
  * ([ADR-0204](../../../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
- * §2; the Home rows screens §9.1; [#799](https://github.com/Raketa02/Raketa/issues/799)) — the profile
+ * §2; the Home rows screens §9.1; [#799](https://github.com/Rakieta02/Rakieta/issues/799)) — the profile
  * read's value, and the write that turns it. It replaced *Show me in General* (#778), and with it the
  * second switch that one had on the Rankings page: one switch, drawn once.
  *

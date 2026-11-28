@@ -132,7 +132,7 @@ describe('who a line names', () => {
   });
 
   /**
-   * **The line a roster lookup could never name** ([#409](https://github.com/Raketa02/Raketa/issues/409)).
+   * **The line a roster lookup could never name** ([#409](https://github.com/Rakieta02/Rakieta/issues/409)).
    * A *no* is not an accepted seat, so the actor of a `SEAT_LEFT` line was never a member — and a
    * roster lookup drew `? said no`. The line reads `people`, which names them.
    */
@@ -201,7 +201,7 @@ describe('the chat door', () => {
 
 /**
  * **The header's two lines, and the one name it speaks**
- * ([#401](https://github.com/Raketa02/Raketa/issues/401)). The drawn title is each handle's
+ * ([#401](https://github.com/Rakieta02/Rakieta/issues/401)). The drawn title is each handle's
  * **stem** — `handleStem`, the prefix up to the first word break, which ADR-0107 permits because
  * it invents nothing — and the spoken name is every handle **whole**, which is §20.4: *the visible
  * label truncates, the spoken one never does*.
@@ -234,7 +234,7 @@ describe('the header’s title line', () => {
 
   /**
    * **The organiser alone again** — somebody joined and left while the rest were still deciding
-   * ([#429](https://github.com/Raketa02/Raketa/issues/429) E4). There is nobody to name, and a
+   * ([#429](https://github.com/Rakieta02/Rakieta/issues/429) E4). There is nobody to name, and a
    * blank at `h1` over *Padel* is a gap rather than a title; the line says what the room is
    * doing instead.
    */

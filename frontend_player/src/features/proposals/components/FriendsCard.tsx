@@ -1,6 +1,6 @@
 /**
  * **The friends card** — a fixed line-up's card under a group's Friends court: the deck's card
- * without its tiles ([#757](https://github.com/Raketa02/Raketa/issues/757); the friends screens
+ * without its tiles ([#757](https://github.com/Rakieta02/Rakieta/issues/757); the friends screens
  * §7.2; friends 8, 9).
  *
  * ```

@@ -1,6 +1,6 @@
 /**
  * ***Have an invitation code?*** — **the email the club invited and the 8-character code from its
- * email** ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 story 114), for the
+ * email** ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 story 114), for the
  * phone the email's button cannot reach. Reached from under the Sign in button, with whatever the
  * sign-in box held.
  *

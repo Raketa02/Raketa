@@ -1,5 +1,5 @@
 /**
- * **The comparison sheet** — *You vs zofia.b* ([#802](https://github.com/Raketa02/Raketa/issues/802);
+ * **The comparison sheet** — *You vs zofia.b* ([#802](https://github.com/Rakieta02/Rakieta/issues/802);
  * the Home rows screens §4.3; the mechanics §6.5; the words §31.6; home rows 9, 11; design-system
  * 7.34). Opened by a card's *N sports ›*, on Home's row and in See all alike.
  *

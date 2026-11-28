@@ -1,6 +1,6 @@
 /**
  * **Same vibe's See all** — pushed over Home, whose tab stays lit
- * ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows screens §6.4; the mechanics
+ * ([#803](https://github.com/Rakieta02/Rakieta/issues/803); the Home rows screens §6.4; the mechanics
  * §8.6; home rows 24).
  *
  * - **Header**: ‹, *Same vibe players*, and the sport pill — *● All ‹* — which slides open over the

@@ -1,7 +1,7 @@
 /**
  * **The Friends page as a picker**, for one sport of one group — pushed over the group's page from
  * an empty seat on its court or from *+ Friends*, so *back* is the court
- * ([#757](https://github.com/Raketa02/Raketa/issues/757); the friends screens §4.2; friends 3, 6).
+ * ([#757](https://github.com/Rakieta02/Rakieta/issues/757); the friends screens §4.2; friends 3, 6).
  *
  * **`friends`' page, composed here** with what it may not import: the frame (`FriendsPage` — back,
  * *Friends*, **+ Add friends** and its sheet, with this feature's group tiles and Members as its

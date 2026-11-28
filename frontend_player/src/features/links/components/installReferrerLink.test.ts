@@ -1,5 +1,5 @@
 /**
- * **The install referrer, read once** ([#756](https://github.com/Raketa02/Raketa/issues/756), the
+ * **The install referrer, read once** ([#756](https://github.com/Rakieta02/Rakieta/issues/756), the
  * friends mechanics §4.3) — on an Android phone's first launch, the link the public site's Google
  * Play button carried through the install is held as if it had been tapped. What it opens is walked
  * in `friendLink.test.tsx`; this is the *once*.

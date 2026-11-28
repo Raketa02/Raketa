@@ -1,6 +1,6 @@
 /**
  * **Every sentence Home's booked cards and a booked game's details compose from a value**
- * ([#556](https://github.com/Raketa02/Raketa/issues/556)) — the money line, the details' second
+ * ([#556](https://github.com/Rakieta02/Rakieta/issues/556)) — the money line, the details' second
  * line and money row, WHERE's aside, and a card spoken as one element. The fixed words are
  * `homeCopy.ts`.
  *

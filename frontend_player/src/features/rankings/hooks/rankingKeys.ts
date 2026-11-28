@@ -1,6 +1,6 @@
 /**
- * **The Rankings query keys** ([#775](https://github.com/Raketa02/Raketa/issues/775),
- * [#776](https://github.com/Raketa02/Raketa/issues/776), [#777](https://github.com/Raketa02/Raketa/issues/777)) — one root, so whatever moves a ranking can
+ * **The Rankings query keys** ([#775](https://github.com/Rakieta02/Rakieta/issues/775),
+ * [#776](https://github.com/Rakieta02/Rakieta/issues/776), [#777](https://github.com/Rakieta02/Rakieta/issues/777)) — one root, so whatever moves a ranking can
  * mark every sport and view of it stale by prefix.
  *
  * General is two infinite queries under one prefix, the cursors in their pages: the list from the

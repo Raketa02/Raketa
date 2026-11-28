@@ -1,5 +1,5 @@
 /**
- * The dealt deck's arithmetic ([#786](https://github.com/Raketa02/Raketa/issues/786)) — where the
+ * The dealt deck's arithmetic ([#786](https://github.com/Rakieta02/Rakieta/issues/786)) — where the
  * three cards stand once dealt, the box the fan takes, and the scale that fits it into the hero's
  * room. Held as numbers, because a fan that crops on a small phone is a rule about numbers, and a
  * device look on one phone proves it for that phone only.

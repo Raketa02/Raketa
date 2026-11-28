@@ -42,7 +42,7 @@ export { useSocialStepAdmission, type SocialStepAdmission } from './hooks/useSoc
  * **The one-tap declaration's write** — the Games deck's interstitial asks it
  * ([ADR-0094](../../../../docs/adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md): *"permanent,
  * not a migration path"*). The profile surface's read and its other writes were Play's too,
- * until the old loop was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)); You
+ * until the old loop was removed ([#576](https://github.com/Rakieta02/Rakieta/issues/576)); You
  * reads and writes them inside this feature.
  */
 export type { PlayIntentSurface } from './api/playerProfileApi';
@@ -68,7 +68,7 @@ export { useLocationRefresh } from './hooks/useLocationRefresh';
  * chrome with a *Save* — the week, the tags, the intro, each of the two gender groups — or
  * written on every change to the row — the photos — or the section as built, behind a row.
  *
- * `PlayIntentsSection` ([#296](https://github.com/Raketa02/Raketa/issues/296)) is drawn by
+ * `PlayIntentsSection` ([#296](https://github.com/Rakieta02/Rakieta/issues/296)) is drawn by
  * `WhatKindOfGameScreen` and stays internal; `AreaUpdatesNote` moved into *Where you play*
  * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
  * §6), and its sentence `AREA_UPDATES_LINE` is exported for the suites that hold the tab to

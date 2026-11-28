@@ -1,6 +1,6 @@
 /**
  * **Not on Rakieta yet?** — the Add friends sheet's second card
- * ([#756](https://github.com/Raketa02/Raketa/issues/756); the friends screens §5; friends 4; the
+ * ([#756](https://github.com/Rakieta02/Rakieta/issues/756); the friends screens §5; friends 4; the
  * words §29.3).
  *
  * ```

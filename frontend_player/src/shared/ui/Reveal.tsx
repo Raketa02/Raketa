@@ -1,6 +1,6 @@
 /**
  * **The reveal, for a screen with one read** (design system 5.6; PRD #867,
- * [#870](https://github.com/Raketa02/Raketa/issues/870); the loading shimmer log §4, §5) — how a
+ * [#870](https://github.com/Rakieta02/Rakieta/issues/870); the loading shimmer log §4, §5) — how a
  * screen's content takes its skeleton's place.
  *
  * - **The content is drawn underneath the skeleton**, laid out and hidden — from sight, and from a
@@ -24,7 +24,7 @@
  * The skeleton is the screen's own layout of `Skeleton`'s shapes, drawn over the content's place and
  * taking no touch: a pull still reaches the list beneath it.
  *
- * **A screen with several parts** ([#871](https://github.com/Raketa02/Raketa/issues/871)) gives each
+ * **A screen with several parts** ([#871](https://github.com/Rakieta02/Rakieta/issues/871)) gives each
  * part a `Reveal` and asks **`useRevealParts`** which of them to show — together before the ceiling,
  * top-down from it (`revealParts.ts`'s rule) — handing each part *shown* as both its words: a part is
  * revealed once, and never taken back. **A part of a scrolling column is `sizedBy` its skeleton**

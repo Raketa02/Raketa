@@ -3,7 +3,7 @@
  * flight, and *Stay in* — for `LeaveSheet` beside it.
  *
  * They were the challenge's departure deck's (`features/challenges/components/leaveGamePresentation.ts`)
- * and came here with the sheet ([#574](https://github.com/Raketa02/Raketa/issues/574)): a booked
+ * and came here with the sheet ([#574](https://github.com/Rakieta02/Rakieta/issues/574)): a booked
  * game's *Leave the game* is the sheet's caller that stays, and it hands the sheet its own body
  * (`leavingSheetBody`). What the Chats row's door says — the list's line, the ending line and the
  * refusals — stayed with that door, which is the old loop's.

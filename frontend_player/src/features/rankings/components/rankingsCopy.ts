@@ -1,5 +1,5 @@
 /**
- * **Every sentence the Rankings page and Home's trophy say** ([#775](https://github.com/Raketa02/Raketa/issues/775)),
+ * **Every sentence the Rankings page and Home's trophy say** ([#775](https://github.com/Rakieta02/Rakieta/issues/775)),
  * as [the words §30](../../../../../docs/specs/matchmaking/the-words.md#30-rankings) write them. Where
  * this file and §30 differ, §30 wins.
  *
@@ -311,9 +311,9 @@ export const RANKINGS_PILL_WORDS: SportPillWords = {
 };
 
 /**
- * **Top 10 on Home** ([#805](https://github.com/Raketa02/Raketa/issues/805); §31.1, §31.11): FOR
+ * **Top 10 on Home** ([#805](https://github.com/Rakieta02/Rakieta/issues/805); §31.1, §31.11): FOR
  * YOU's line, *Top 10*, and its footer's link, ***Open the rankings ›*** since
- * [#821](https://github.com/Raketa02/Raketa/issues/821) (ADR-0205 §5; home refactor 12, 13), where it
+ * [#821](https://github.com/Rakieta02/Rakieta/issues/821) (ADR-0205 §5; home refactor 12, 13), where it
  * read *Rankings ›*. The pill's hint and the link's spoken name are calls: §31 writes only what is
  * drawn. The empty line is §30.7's `nobodyRankedLine`, as §31.11 cites it, and a card reads
  * `rowName`'s *You*.

@@ -56,7 +56,7 @@
  * sport is next is the pass's to answer, and with nothing after this one there is nothing to
  * offer — so the screen shows one control instead of pretending there is a choice. *Your
  * starting ratings*, the summary this used to lead to, repeated this screen and went with
- * [#730](https://github.com/Raketa02/Raketa/issues/730).
+ * [#730](https://github.com/Rakieta02/Rakieta/issues/730).
  *
  * **A pass begun at the Skill passport** ends there, its one control *See your ratings*,
  * because the passport *is* your ratings

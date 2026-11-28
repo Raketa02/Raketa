@@ -1,13 +1,13 @@
 /**
  * **The links into the app, as configuration** — the app's scheme, the four pages a link opens, and
  * the one setting that turns the web domain's links on
- * ([#520](https://github.com/Raketa02/Raketa/issues/520),
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520),
  * [ADR-0187](../../../../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
  * §4, §7).
  *
  * A group link in WhatsApp, the invitation email's button, the reset email's link and a friend link
  * are the public site's pages `join/<code>`, `invite/<token>`, `reset/<token>` and `f/<code>` (the
- * last since [#756](https://github.com/Raketa02/Raketa/issues/756), the friends mechanics §4.3).
+ * last since [#756](https://github.com/Rakieta02/Rakieta/issues/756), the friends mechanics §4.3).
  * On a phone with Rakieta installed the same four open the app — by its own scheme today, and by
  * the web domain once one exists, when iOS and Android are told the domain is the app's (universal
  * links, verified app links). **Which

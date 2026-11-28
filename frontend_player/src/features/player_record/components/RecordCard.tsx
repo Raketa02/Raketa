@@ -1,7 +1,7 @@
 /**
  * **The record** — everything anybody has to say about this person, counted or written
- * ([#385](https://github.com/Raketa02/Raketa/issues/385),
- * [#660](https://github.com/Raketa02/Raketa/issues/660)).
+ * ([#385](https://github.com/Rakieta02/Rakieta/issues/385),
+ * [#660](https://github.com/Rakieta02/Rakieta/issues/660)).
  *
  * Four counts, one printed pair, and what other players said.
  *

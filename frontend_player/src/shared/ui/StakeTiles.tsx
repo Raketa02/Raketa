@@ -1,8 +1,8 @@
 /**
  * **What's at stake** — the two figures a counted result on this court would move, drawn as the
  * designs draw them: *If you win* tinted mint, *If you lose* on the recessed ground
- * ([#415](https://github.com/Raketa02/Raketa/issues/415); for fun 3,
- * [#839](https://github.com/Raketa02/Raketa/issues/839)).
+ * ([#415](https://github.com/Rakieta02/Rakieta/issues/415); for fun 3,
+ * [#839](https://github.com/Rakieta02/Rakieta/issues/839)).
  *
  * ```
  * If you win        If you lose

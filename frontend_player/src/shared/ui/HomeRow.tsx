@@ -1,8 +1,8 @@
 /**
  * **The Home row frame** — a row in Needs your answer and *Your games* draws its heading and its
- * sideways rail through this one frame ([#798](https://github.com/Raketa02/Raketa/issues/798); the
+ * sideways rail through this one frame ([#798](https://github.com/Rakieta02/Rakieta/issues/798); the
  * Home rows screens §2; Part 16, 2026-11-14), and FOR YOU's open lines draw their rails on its rail
- * (`FoldingLine`, [#820](https://github.com/Raketa02/Raketa/issues/820)).
+ * (`FoldingLine`, [#820](https://github.com/Rakieta02/Rakieta/issues/820)).
  *
  * ```
  * FRIEND REQUESTS · 2                                ← eyebrow · muted · uppercase

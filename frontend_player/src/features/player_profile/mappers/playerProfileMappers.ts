@@ -196,7 +196,7 @@ const HOUR = new Set<number>(HOURS);
  * fields (`WeeklyHourResource`), so the outbound half is a copy rather than a translation.
  *
  * Exported because Play sends one too: the search's `availability_override` is this same week
- * improvised for one search ([#268](https://github.com/Raketa02/Raketa/issues/268)), and a
+ * improvised for one search ([#268](https://github.com/Rakieta02/Rakieta/issues/268)), and a
  * second table spelled in that feature's `mappers/` would be the drift `week.ts` was promoted
  * to stop, arriving one layer lower. `sport.ts`'s rule is the shape: *the two spellings meet in
  * `mappers/`, and only there* — so this is the one place, and Play reaches it through this

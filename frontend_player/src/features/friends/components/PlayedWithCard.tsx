@@ -1,6 +1,6 @@
 /**
  * **PLAYED WITH** — the result screen's card of the others on the game, each with where the reader
- * stands with them ([#754](https://github.com/Raketa02/Raketa/issues/754), PRD #743 story 15; the
+ * stands with them ([#754](https://github.com/Rakieta02/Rakieta/issues/754), PRD #743 story 15; the
  * friends screens §3; Q26). Designed, no mock.
  *
  * ```

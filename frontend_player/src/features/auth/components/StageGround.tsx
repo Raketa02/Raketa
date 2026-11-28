@@ -1,6 +1,6 @@
 /**
  * **The stage's ground** — the hero's flat night, and the glow at its foot where the sheet meets it
- * ([#784](https://github.com/Raketa02/Raketa/issues/784); design system 12.2, Part 16 2026-11-08).
+ * ([#784](https://github.com/Rakieta02/Rakieta/issues/784); design system 12.2, Part 16 2026-11-08).
  *
  * Two colours and nothing else, both the theme's and both fenced as the stage's alone:
  * `stageGround`, the one flat value mock 1 draws from the status bar to the sheet, and `stageGlow`,

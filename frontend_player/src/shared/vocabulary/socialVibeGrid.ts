@@ -1,6 +1,6 @@
 /**
  * **What the Social vibe card draws** — the table's number, its columns and your tags' rows
- * ([#840](https://github.com/Raketa02/Raketa/issues/840);
+ * ([#840](https://github.com/Rakieta02/Rakieta/issues/840);
  * [ADR-0207](../../../../docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
  * §6, for fun 7).
  *

@@ -1,8 +1,8 @@
 /**
- * **The one division the record card makes** ([#385](https://github.com/Raketa02/Raketa/issues/385)).
+ * **The one division the record card makes** ([#385](https://github.com/Rakieta02/Rakieta/issues/385)).
  *
  * The rule about which rows it may print went with the strands it filtered
- * ([#660](https://github.com/Raketa02/Raketa/issues/660)): the card is Player reliability's four
+ * ([#660](https://github.com/Rakieta02/Rakieta/issues/660)): the card is Player reliability's four
  * counts now, served as counts, and every one of them is drawn. What is left is variety's share.
  *
  * ## The share is this client's, and it is the only arithmetic on the sheet

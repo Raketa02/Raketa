@@ -1,5 +1,5 @@
 /**
- * **Top 10's own rules** ([#805](https://github.com/Raketa02/Raketa/issues/805); the Home rows
+ * **Top 10's own rules** ([#805](https://github.com/Rakieta02/Rakieta/issues/805); the Home rows
  * mechanics §10) — which read the row asks for, and what it draws for an answer. Every place, level
  * and chip is the server's.
  */

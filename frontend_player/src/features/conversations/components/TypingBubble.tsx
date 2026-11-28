@@ -1,6 +1,6 @@
 /**
  * **Somebody is typing** — three pulsing dots in the other side's bubble, at the newest end of the
- * stream ([#404](https://github.com/Raketa02/Raketa/issues/404),
+ * stream ([#404](https://github.com/Rakieta02/Rakieta/issues/404),
  * [ADR-0156](../../../../../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)).
  *
  * ## A third component, and never a branch inside `Bubble`

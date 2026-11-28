@@ -1,6 +1,6 @@
 /**
  * ***Leave the game*, walked** — from a booked game's details, before the club's cut-off, after it,
- * and while a full game waits for one payment ([#557](https://github.com/Raketa02/Raketa/issues/557);
+ * and while a full game waits for one payment ([#557](https://github.com/Rakieta02/Rakieta/issues/557);
  * the screens A4.1, A4.2, details 10; the mechanics §12.3, §13; the backend's #544, #625).
  *
  * The real route tree from Home: *Open game* on the card, *Leave the game* under the details with

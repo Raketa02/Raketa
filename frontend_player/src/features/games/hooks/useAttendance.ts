@@ -1,6 +1,6 @@
 /**
  * **Who turned up** — the four writes at a booked game's court, and the one place a tap reads where
- * the phone is ([#658](https://github.com/Raketa02/Raketa/issues/658); ADR-0195 §3).
+ * the phone is ([#658](https://github.com/Rakieta02/Rakieta/issues/658); ADR-0195 §3).
  *
  * | | |
  * | --- | --- |

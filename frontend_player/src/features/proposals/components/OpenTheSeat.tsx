@@ -1,6 +1,6 @@
 /**
  * ***Open to {group}*** — the sender's, on an empty seat of a friends game before the cut-off
- * ([#760](https://github.com/Raketa02/Raketa/issues/760), over #752's route; the friends mechanics
+ * ([#760](https://github.com/Rakieta02/Rakieta/issues/760), over #752's route; the friends mechanics
  * §10.1; the words §29.9), behind a confirmation **that a stranger can then take it**:
  *
  * ```

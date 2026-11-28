@@ -27,12 +27,12 @@
  * an account" above a three-field form still has to work out which box to change.
  *
  * **The two password boxes are `PasswordPairFields`**, *Set a new password*'s too
- * ([#515](https://github.com/Raketa02/Raketa/issues/515)): both can be read back, and the one
+ * ([#515](https://github.com/Rakieta02/Rakieta/issues/515)): both can be read back, and the one
  * password rule — a letter and a digit as well as the length — is written under the first before
  * anything is typed. The frame, the email box and the link at the foot are the sign-in screen's
  * pieces, so this screen owns only what it asks.
  *
- * **It is drawn on the stage, sign-in's second page** ([#785](https://github.com/Raketa02/Raketa/issues/785),
+ * **It is drawn on the stage, sign-in's second page** ([#785](https://github.com/Rakieta02/Rakieta/issues/785),
  * PRD #783; mocks 4 and 6): the same dark hero with the wordmark where sign-in has it and *Play
  * ranked. The competition starts with you.* at its foot, and the paper sheet over it holding this
  * form. **Nothing it does changed**: the same request, the same refusals from the same sources, the
@@ -50,7 +50,7 @@
  * backs to leave as presses to build. Opened with nothing under it, from a link, it replaces this
  * screen with sign-in instead. The move each way is the stack's cross-fade (`(auth)/_layout`).
  *
- * **Its hero is the podium** ([#788](https://github.com/Raketa02/Raketa/issues/788), mock 5): You on
+ * **Its hero is the podium** ([#788](https://github.com/Rakieta02/Rakieta/issues/788), mock 5): You on
  * the first step, rising once when the screen opens (`StagePodium`, `usePodiumRise`) — a picture,
  * hidden from screen readers, that nothing on the form touches.
  */

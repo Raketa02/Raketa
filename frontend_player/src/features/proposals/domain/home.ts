@@ -1,6 +1,6 @@
 /**
  * **Home's booked games, and a booked game in detail** — the rules a card and the details are
- * drawn by ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.1, A8; the
+ * drawn by ([#556](https://github.com/Rakieta02/Rakieta/issues/556); the screens A4.1, A8; the
  * mechanics §11, §14).
  *
  * Pure, and the server's folds are never re-derived: the status, *needs you*, the sides, the share,

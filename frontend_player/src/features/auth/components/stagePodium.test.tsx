@@ -1,5 +1,5 @@
 /**
- * **Sign-up's podium** ([#788](https://github.com/Raketa02/Raketa/issues/788), PRD #783) — the
+ * **Sign-up's podium** ([#788](https://github.com/Rakieta02/Rakieta/issues/788), PRD #783) — the
  * Rankings podium in the hero, with You on the first step, rising once when the screen opens.
  *
  * Drawn through `SignUpScreen` under the reduced-motion provider's `value` override, with the clock

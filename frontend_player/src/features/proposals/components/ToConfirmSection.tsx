@@ -1,7 +1,7 @@
 /**
  * **TO CONFIRM · n** — Needs your answer's first section: one tile per payment to confirm
- * ([#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1; Q14, Q32). It was Home's one
- * card of stacked rows above the rail from [#555](https://github.com/Raketa02/Raketa/issues/555);
+ * ([#817](https://github.com/Rakieta02/Rakieta/issues/817), ADR-0205 §1; Q14, Q32). It was Home's one
+ * card of stacked rows above the rail from [#555](https://github.com/Rakieta02/Rakieta/issues/555);
  * You › Payments keeps that card (`PaymentsToConfirm`).
  *
  * ```

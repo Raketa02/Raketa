@@ -1,8 +1,8 @@
 # rankings — the trophy on Home and the Rankings page
 
 The client side of the backend's **Rankings** context: a ranking per sport, sorted by the Level, in
-General and among your Friends. Built by [#775](https://github.com/Raketa02/Raketa/issues/775) for
-PRD [#766](https://github.com/Raketa02/Raketa/issues/766), on the contract #768–#773 built, and
+General and among your Friends. Built by [#775](https://github.com/Rakieta02/Rakieta/issues/775) for
+PRD [#766](https://github.com/Rakieta02/Rakieta/issues/766), on the contract #768–#773 built, and
 decided by [ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md). The spec
 set is [`docs/specs/rankings/`](../../../docs/specs/rankings/README.md) and every sentence is
 [the words §30](../../../docs/specs/matchmaking/the-words.md#30-rankings). The shell puts
@@ -10,14 +10,14 @@ set is [`docs/specs/rankings/`](../../../docs/specs/rankings/README.md) and ever
 `components/rankings.test.tsx`.
 
 **Who built what.** #775 drew the header, the reader's card in every General state, the podium and
-the first page of the list; [#776](https://github.com/Raketa02/Raketa/issues/776) the later pages and
-the _You · 212th_ button; [#777](https://github.com/Raketa02/Raketa/issues/777) the _General |
-Friends_ switch, the view the phone remembers, and Friends; [#778](https://github.com/Raketa02/Raketa/issues/778)
+the first page of the list; [#776](https://github.com/Rakieta02/Rakieta/issues/776) the later pages and
+the _You · 212th_ button; [#777](https://github.com/Rakieta02/Rakieta/issues/777) the _General |
+Friends_ switch, the view the phone remembers, and Friends; [#778](https://github.com/Rakieta02/Rakieta/issues/778)
 the _Show me in General_ switch on the hidden card, and the page following it; and
-[#779](https://github.com/Raketa02/Raketa/issues/779) _Add friend_ from a stranger's record, sent from
-the ranking. [#869](https://github.com/Raketa02/Raketa/issues/869) made the jump button say _Finding
-you…_ while it reads (PRD [#867](https://github.com/Raketa02/Raketa/issues/867), the loading shimmer),
-and [#870](https://github.com/Raketa02/Raketa/issues/870) made the page shimmer until it lands — the
+[#779](https://github.com/Rakieta02/Rakieta/issues/779) _Add friend_ from a stranger's record, sent from
+the ranking. [#869](https://github.com/Rakieta02/Rakieta/issues/869) made the jump button say _Finding
+you…_ while it reads (PRD [#867](https://github.com/Rakieta02/Rakieta/issues/867), the loading shimmer),
+and [#870](https://github.com/Rakieta02/Rakieta/issues/870) made the page shimmer until it lands — the
 first screen on the shared `Skeleton` and `Reveal`.
 
 **Every number is the server's, and this feature computes none of them.** The order, every place,
@@ -27,7 +27,7 @@ feature's own is in `domain/ranking.ts`: which sports the pill offers (`pillSpor
 first, each part in the app's order), which sport the page opens on (`openingSport`), and how three
 rows stand on the podium (`podiumOf`).
 
-**Sign-up's hero draws a picture of the podium** ([#788](https://github.com/Raketa02/Raketa/issues/788),
+**Sign-up's hero draws a picture of the podium** ([#788](https://github.com/Rakieta02/Rakieta/issues/788),
 `auth.md`): You on a volt first step between `stas.w` and `ines.d`, redrawn in auth because auth may
 not import this feature. `PodiumSteps` is not exported for it, so **a change to the podium here does
 not reach that picture by itself — whoever changes the podium checks the hero** (`StagePodium.tsx`).
@@ -72,7 +72,7 @@ nickname, the reader's own too**, as §30.7 writes it; only a row reads _You_.
 **A pull reads the page again**, a refused read says why with _Try again_, and a read waiting for a
 connection says so, each where the skeleton stood.
 
-**Until the page has something to draw, it shimmers below the header** ([#870](https://github.com/Raketa02/Raketa/issues/870);
+**Until the page has something to draw, it shimmers below the header** ([#870](https://github.com/Rakieta02/Rakieta/issues/870);
 the loading shimmer log §8, Q4–Q7; design system 5.6). **The header and the sport pill are the real
 ones throughout**, so the reader can change sport or go back while it loads. Below them, from the first
 frame: while the view or the sport is still unknown, a shape of the switch's own size and corner in
@@ -157,7 +157,7 @@ before it reached the reader. The reader's own drag takes the list back. A jump 
 again_.
 
 **The page ends at the tab bar's reach, and its rows do not pass under the bar**
-([#881](https://github.com/Raketa02/Raketa/issues/881), 2026-11-25; design-system §10.1). Every other
+([#881](https://github.com/Rakieta02/Rakieta/issues/881), 2026-11-25; design-system §10.1). Every other
 tab screen now runs to the phone's foot under the floating bar and pads its end by the reach; this one
 ends its layout at the reach, as a screen with a pinned button does. **On screen** and **centred** are
 the list's own measure of its frame — FlatList's viewability, which shows the button, and
@@ -166,7 +166,7 @@ hidden behind it seen and centre the reader's row half the bar too low. The list
 (15, or the room the button covers) and the button its gutter, both inside the frame.
 
 **While a jump reads the page around the reader, the button says so: _◌ Finding you…_**
-([#869](https://github.com/Raketa02/Raketa/issues/869); the loading-shimmer log §9). It is
+([#869](https://github.com/Rakieta02/Rakieta/issues/869); the loading-shimmer log §9). It is
 `Button`'s own `busy`: the spinner before the busy word at the dark fill, the busy word the button's
 spoken name, and the button sized to its words, so its width changes as they swap. **It is busy only on a
 jump that has to read** — a row the list has not drawn. A scroll is over before a spinner would
@@ -298,11 +298,11 @@ and #776's scrolling: a page landing at either end, the list holding still as a 
 the jump landing centred, and the button over the list; and #869's _Finding you…_ on the dark
 button, with its width change as the words swap; and #870's skeleton — its shapes against the page
 they stand for, the band's tone, beat and tilt, and the cross-fade (owed to the phone walk,
-[#877](https://github.com/Raketa02/Raketa/issues/877); its frame cost on the A32 is
-[#873](https://github.com/Raketa02/Raketa/issues/873)'s). The suites say what the list reports (the
+[#877](https://github.com/Rakieta02/Rakieta/issues/877); its frame cost on the A32 is
+[#873](https://github.com/Rakieta02/Rakieta/issues/873)'s). The suites say what the list reports (the
 rows on screen, an end reached), because a test renderer lays nothing out.
 
-**The ranking shows everybody, and the page has no switch** ([#799](https://github.com/Raketa02/Raketa/issues/799),
+**The ranking shows everybody, and the page has no switch** ([#799](https://github.com/Rakieta02/Rakieta/issues/799),
 [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 §2; the Home rows screens §9.2). The server lists every player at their true place — a player the
 reader blocked, or who blocked the reader, and one who turned their switch off, included — so the
@@ -321,8 +321,8 @@ quietly ([`player_record.md`](player_record.md), [`friends.md`](friends.md)). Wa
 `rankings.test.tsx`: Marek, blocked, at 4th and his row's refusal; no switch on the page; all of
 Piotr's photos with _Add friend_; no limit sentence; the quiet re-read.
 
-**Top 10 is the last of Home's rows** ([#805](https://github.com/Raketa02/Raketa/issues/805), PRD
-[#789](https://github.com/Raketa02/Raketa/issues/789);
+**Top 10 is the last of Home's rows** ([#805](https://github.com/Rakieta02/Rakieta/issues/805), PRD
+[#789](https://github.com/Rakieta02/Rakieta/issues/789);
 [ADR-0204](../../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md);
 the Home rows mechanics §10, the screens §7; the words §31.1, §31.11; home rows 2, 25–27). The shell
 draws `TopTenRow` after Same vibe and re-reads it on Home's pull (`rereadTopTen`). It reads `GET
@@ -405,7 +405,7 @@ the card's portrait and wash, the move's slant and colours on a pale photograph,
 pill on the heading's line and the bar sliding over _TOP 10_ while _Rankings ›_ stays, and the row's
 spacing among the others.
 
-**Top 10 is FOR YOU's last line** ([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205
+**Top 10 is FOR YOU's last line** ([#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0205
 §5; home refactor 12, 13). `TopTenRow` became `useTopTenLine`, which hands the shell the line's title
 (`TOP_TEN_COPY.line`), the cards on the `numbered` rail — stepping and snapping by an item, the
 numeral beside the card (`itemWidth`) — or _Nobody ranked in squash yet_, and **a footer holding
@@ -423,7 +423,7 @@ ranked in any sport. Walked in `topTen.test.tsx`, which now opens the line first
 kept across a close and a second pick, before the first lands, refused with the line kept open.
 
 **Top 10's footer: the switcher on the left, _Open the rankings ›_ on the right**
-([#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5, Q19, Q37; home refactor 12, 13,
+([#821](https://github.com/Rakieta02/Rakieta/issues/821); ADR-0205 §5, Q19, Q37; home refactor 12, 13,
 note 4). The pill stands first in the open line's footer and reads _● Padel ›_, its chevron pointing
 the way it opens — the mocks' _‹_ is overridden — and the link, `TOP_TEN_COPY.rankings`, reads _Open the
 rankings ›_, spoken _Open the rankings in padel_ (`topTenRankingsLabel`), going where _Rankings ›_ went:

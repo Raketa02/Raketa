@@ -1,8 +1,8 @@
 /**
  * **A count over a glyph** — 10.2's badge, the one count mark the system has, drawn by the tab bar's
  * Home column over its 18pt icon (`size.tabBar.icon`, #883), and over a 16pt one by the bell on
- * Home's header (7.29, [#627](https://github.com/Raketa02/Raketa/issues/627)) and the envelope beside
- * it (10.3, [#819](https://github.com/Raketa02/Raketa/issues/819)). The caller places it inside the
+ * Home's header (7.29, [#627](https://github.com/Rakieta02/Rakieta/issues/627)) and the envelope beside
+ * it (10.3, [#819](https://github.com/Rakieta02/Rakieta/issues/819)). The caller places it inside the
  * glyph's own box and says how big that box is (`over`), with `overflow: 'visible'` — Android clips
  * a child drawn outside its parent, and a clipped badge is a count disappearing on one platform.
  *

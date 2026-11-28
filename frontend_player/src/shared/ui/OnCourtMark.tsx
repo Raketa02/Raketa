@@ -1,6 +1,6 @@
 /**
  * The **ON COURT** mark — a small drawn tick and two words: what the on-court check concluded
- * about that photograph ([#313](https://github.com/Raketa02/Raketa/issues/313),
+ * about that photograph ([#313](https://github.com/Rakieta02/Rakieta/issues/313),
  * [ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
  * §7).
  *

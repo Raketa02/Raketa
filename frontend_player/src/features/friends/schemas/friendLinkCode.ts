@@ -1,5 +1,5 @@
 /**
- * **A friend link's code, read** ([#756](https://github.com/Raketa02/Raketa/issues/756), the friends
+ * **A friend link's code, read** ([#756](https://github.com/Rakieta02/Rakieta/issues/756), the friends
  * mechanics §4.1) — what follows `/f/` in `<public site>/f/<code>`.
  *
  * It arrives in somebody else's text — a WhatsApp message, a QR code, a Play install referrer — so

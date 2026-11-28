@@ -1,7 +1,7 @@
 /**
  * **The dealt deck's arithmetic** — where sign-in's three miniature cards stand once dealt, the box
  * the fan takes, and the scale that fits that box into the hero's room
- * ([#786](https://github.com/Raketa02/Raketa/issues/786), PRD #783; design system 12.2). No React
+ * ([#786](https://github.com/Rakieta02/Rakieta/issues/786), PRD #783; design system 12.2). No React
  * in any of it, for `deckStageGeometry`'s reason: a fan that crops on a small phone is a rule about
  * numbers, testable as numbers.
  *

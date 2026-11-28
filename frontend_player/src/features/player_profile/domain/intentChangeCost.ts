@@ -1,7 +1,7 @@
 /**
  * **What an answer on You › *What kind of game* costs**, said before the tap
  * ([ADR-0201](../../../../../docs/adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md)
- * §6, [#742](https://github.com/Raketa02/Raketa/issues/742)).
+ * §6, [#742](https://github.com/Rakieta02/Rakieta/issues/742)).
  *
  * Since Q127 a change of intent takes the player off the cards they have not answered of a kind
  * they dropped, in every group, and keeps their yeses (§3). So an answer either **drops** a kind,

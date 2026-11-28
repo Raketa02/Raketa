@@ -7,7 +7,7 @@
  * and what happened in a room is this feature's.
  *
  * It wrote the Chats tab's rows too — the last entry on one line, a place drawn without its court —
- * until that tab was removed with the old loop ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+ * until that tab was removed with the old loop ([#576](https://github.com/Rakieta02/Rakieta/issues/576)).
  * The plan's lines (*set the place*, *locked the plan*) stay in the table below although no room
  * writes them any more: a stored line still folds, and a code with no words would not compile.
  *
@@ -16,7 +16,7 @@
  * The line carries an `actor_id` and no handle, *"so a corrected one fixes the whole backlog"*.
  * `personNamed` over the response's **`people`** is what fills the slot — not the roster, because
  * the actor of a `SEAT_LEFT` line was never a member and a roster lookup drew `? said no`
- * ([#409](https://github.com/Raketa02/Raketa/issues/409)) — and an actor the response cannot
+ * ([#409](https://github.com/Rakieta02/Rakieta/issues/409)) — and an actor the response cannot
  * answer for draws the unknown player's `?`. **It is never *You***: these are third-person records
  * of what happened in a room, read identically by everybody in it — see `domain/membership.ts`.
  * The one sentence here that still reads the roster is {@link typingLine}, because a typist is a
@@ -140,7 +140,7 @@ const SYSTEM_LINE: Readonly<Record<SystemLineCode, (facts: SystemLineFacts) => s
   SIDE_FORMED: () => SIDE_FORMED_LINE,
 };
 
-/** One system line, as a sentence — the stream's, keyed by code ([#364](https://github.com/Raketa02/Raketa/issues/364)). */
+/** One system line, as a sentence — the stream's, keyed by code ([#364](https://github.com/Rakieta02/Rakieta/issues/364)). */
 export function systemLineSentence(
   line: SystemLine,
   people: readonly ConversationPerson[],
@@ -176,7 +176,7 @@ export const NO_CONVERSATION_HERE = 'No conversation of yours has this address.'
 
 /**
  * **The title line — each handle's stem, comma-separated, giving way by whole names**
- * ([#401](https://github.com/Raketa02/Raketa/issues/401)).
+ * ([#401](https://github.com/Rakieta02/Rakieta/issues/401)).
  *
  * `handleStem` is the sanctioned cut: the handle up to its first word break, `Sergio.Sabater`
  * drawn as `Sergio`. It is **not** the first name ADR-0107 forbids — that record is against
@@ -191,7 +191,7 @@ export const NO_CONVERSATION_HERE = 'No conversation of yours has this address.'
  *
  * **With nobody to name, the line says what the room is doing** — {@link WAITING_FOR_OTHERS}.
  * The organiser alone again is a real room: somebody joined and left while the rest were still
- * deciding ([#429](https://github.com/Raketa02/Raketa/issues/429) E4), and the room stands with
+ * deciding ([#429](https://github.com/Rakieta02/Rakieta/issues/429) E4), and the room stands with
  * one member until somebody accepts. `handleLine` of nothing is the empty string, which drew a
  * blank at `h1` over the sport; the rule lives here rather than at the call site so there is no
  * arrangement of props that draws that gap.
@@ -253,7 +253,7 @@ export const COMPOSER_LABEL = 'Message';
  * **The hint in the empty box** — a placeholder and not a label, which 6.13 keeps apart on
  * purpose: the placeholder goes the moment somebody types, so the name a listener gets is
  * `COMPOSER_LABEL` above and this is only what the box says while it is empty
- * ([#402](https://github.com/Raketa02/Raketa/issues/402), the-words §22.4). *About this game*
+ * ([#402](https://github.com/Rakieta02/Rakieta/issues/402), the-words §22.4). *About this game*
  * because that is what the room is for — the whole episode, and nothing else.
  */
 export const COMPOSER_PLACEHOLDER = 'Message about this game…';
@@ -332,13 +332,13 @@ const TYPISTS_NAMED_UP_TO = 2;
 
 /**
  * **The chat has ended, and the room is still on screen** — §22.5's fourth state, one sentence
- * in the composer's place ([#429](https://github.com/Raketa02/Raketa/issues/429)).
+ * in the composer's place ([#429](https://github.com/Rakieta02/Rakieta/issues/429)).
  *
  * A booked game's room ends with its game — the grace after its hour running out, or the game
  * called off — and why is the game's card to say, so the room says only that the chat has ended.
  * It named who had left, or that nobody else was coming, in the old loop's rooms, which could end
  * before they had a game; no room can since that loop was removed
- * ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+ * ([#576](https://github.com/Rakieta02/Rakieta/issues/576)).
  *
  * The register is a fact, not a warning and not a refusal: nothing here is reversible and nothing
  * was refused, so it is neither amber nor coral.

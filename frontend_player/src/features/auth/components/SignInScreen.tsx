@@ -5,7 +5,7 @@
  * `schemas/`, what signing in does is `use-cases/`, and what a failure means is the error model. A
  * `disabled={…}` expression encoding a rule would be a rule nobody can test.
  *
- * **It is drawn on the stage** ([#784](https://github.com/Raketa02/Raketa/issues/784), PRD #783):
+ * **It is drawn on the stage** ([#784](https://github.com/Rakieta02/Rakieta/issues/784), PRD #783):
  * the dark hero with the wordmark and *Your next game is only one swipe away.*, and the paper sheet
  * over it holding the form, restyled to mocks 1 and 3. **Nothing it does changed**: every control
  * keeps its target and what it carries, the refusals keep their sentences and sources, and **Sign
@@ -30,8 +30,8 @@
  * costing them a refusal they cannot distinguish from a wrong password — and a keychain that filled
  * the box with the wrong entry looks identical either way.
  *
- * ***Forgot password?*** ([#515](https://github.com/Raketa02/Raketa/issues/515)) and ***I have an
- * invitation code*** ([#518](https://github.com/Raketa02/Raketa/issues/518)) each carry what is in
+ * ***Forgot password?*** ([#515](https://github.com/Rakieta02/Rakieta/issues/515)) and ***I have an
+ * invitation code*** ([#518](https://github.com/Rakieta02/Rakieta/issues/518)) each carry what is in
  * the email box across, so it is not typed twice, on the one sign-in screen players and
  * administrators share.
  */

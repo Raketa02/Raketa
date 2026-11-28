@@ -1,5 +1,5 @@
 /**
- * **A friends game's seats, on its details** ([#759](https://github.com/Raketa02/Raketa/issues/759);
+ * **A friends game's seats, on its details** ([#759](https://github.com/Rakieta02/Rakieta/issues/759);
  * the friends screens §9, designed, no mock; the words §29.8) — one row per seat, the sender's
  * first, under the game's facts on its dark ground:
  *
@@ -17,7 +17,7 @@
  * time counts down on the read's clock — the deck ribbon's countdown, cited — until it reads
  * *didn't answer*. One element per row, named by the person and their state.
  *
- * **An empty seat** ([#760](https://github.com/Raketa02/Raketa/issues/760); the mechanics §10,
+ * **An empty seat** ([#760](https://github.com/Rakieta02/Rakieta/issues/760); the mechanics §10,
  * §11.3) — *can't make it*, *didn't answer*, *empty*, *Seat open* — draws under its row the friends
  * invited into it and still to answer, and the two acts the read gives the reader, taken away at
  * the instants the read's clock passes (`seatActionsAt`): ***Invite a friend***, anyone In's,

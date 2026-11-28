@@ -1,6 +1,6 @@
 /**
  * **One of the reader's groups' tiles, by its id** — the Add friends sheet's
- * ([#754](https://github.com/Raketa02/Raketa/issues/754); the friends screens §5; friends 4).
+ * ([#754](https://github.com/Rakieta02/Rakieta/issues/754); the friends screens §5; friends 4).
  *
  * The sheet's read (`friends`' `GET /friends/groups`) names each group and counts who is left to add,
  * and carries no tile: **the letters are cut once, by the server** (ADR-0183 §5), and the player's

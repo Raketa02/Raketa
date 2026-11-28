@@ -1,6 +1,6 @@
 /**
  * **A friend's ask for a level, in Needs your answer** — walked through the real route tree
- * ([#816](https://github.com/Raketa02/Raketa/issues/816), ADR-0205 §1, §4; #765, PRD #762; the
+ * ([#816](https://github.com/Rakieta02/Rakieta/issues/816), ADR-0205 §1, §4; #765, PRD #762; the
  * friends screens §6.4; the mechanics §5.1; the words §29.5).
  *
  * - **The section**: *ASKED FOR A LEVEL · n* behind the header's envelope, after FRIEND REQUESTS and

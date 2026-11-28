@@ -5,7 +5,7 @@
  *
  * A group's tab carries its group and its tab, for the pass to return to — the params the picker's
  * route reads (`groups`' `parseGroupPlace`); Home carries nothing. **A door that offers fewer than
- * every sport carries them too** — *+ Another sport* ([#731](https://github.com/Raketa02/Raketa/issues/731)),
+ * every sport carries them too** — *+ Another sport* ([#731](https://github.com/Rakieta02/Rakieta/issues/731)),
  * over the sports the player is unrated in — and the picker lists only those (`parsePickerOffer`).
  * The door and the Home card offer every sport, and carry none.
  *

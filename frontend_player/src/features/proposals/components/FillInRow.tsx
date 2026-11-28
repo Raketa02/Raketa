@@ -1,6 +1,6 @@
 /**
  * **A Fill in row's frame** — the two rows' shared drawing (the screens A3; mocks 11–13,
- * [#557](https://github.com/Raketa02/Raketa/issues/557)): a surface card framed 1.5pt in the row's
+ * [#557](https://github.com/Rakieta02/Rakieta/issues/557)): a surface card framed 1.5pt in the row's
  * colour, the upper block — the title over the club and the bold *when* — as one door to the game's
  * details, and the foot under it, the squares left and the act right.
  *

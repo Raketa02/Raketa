@@ -2,7 +2,7 @@
  * **The result argument, walked the way a player walks it**: the real route tree, the real
  * shell, and only `fetch` faked — on a booked game's result screen (`/booking/[id]/result`, #556),
  * which is where *We played* on the details leads. It walked the old loop's `/games/[id]` until that
- * route was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)); the screen is the same
+ * route was removed ([#576](https://github.com/Rakieta02/Rakieta/issues/576)); the screen is the same
  * one, on its score lead.
  *
  * The tickets' acceptance criteria are assertions in this file and not opinions anywhere else —
@@ -779,7 +779,7 @@ describe('a disagreement, which used to cross with neither score on it', () => {
   /**
    * Both scores travel now, so a reader can see what is being argued about — and *"the client
    * could offer the act only by asking somebody to agree with a score it cannot show them"*
-   * stops being true ([#317](https://github.com/Raketa02/Raketa/issues/317)).
+   * stops being true ([#317](https://github.com/Rakieta02/Rakieta/issues/317)).
    */
   it('draws both scores, the reader’s own side first in each', async () => {
     await openGame(disagreement());

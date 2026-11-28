@@ -1,5 +1,5 @@
 /**
- * **Friends, walked through the real route tree** ([#753](https://github.com/Raketa02/Raketa/issues/753),
+ * **Friends, walked through the real route tree** ([#753](https://github.com/Rakieta02/Rakieta/issues/753),
  * PRD #743; [ADR-0202](../../../../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md);
  * the friends screens §1, §2, §6.2).
  *

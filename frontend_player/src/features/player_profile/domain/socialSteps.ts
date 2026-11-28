@@ -55,7 +55,7 @@ export type SocialStep = 'tags' | 'intro' | 'photos' | 'availability' | 'locatio
  *
  * **It is also last, and carries the finish.** The radius and the proposals question used to
  * follow it, and both left the part with the old loop's ranking — the only thing that read
- * them ([#582](https://github.com/Raketa02/Raketa/issues/582)). So the part ends on a question
+ * them ([#582](https://github.com/Rakieta02/Rakieta/issues/582)). So the part ends on a question
  * every proposed game still reads, and nothing may come after the step whose answer opens
  * the commit.
  */

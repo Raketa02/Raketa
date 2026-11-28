@@ -35,7 +35,7 @@ export interface Conversation {
   /**
    * **The booking the room is filed under** — the join a booked game's details and Home's cards
    * find their chat by (`useBookingRoom`, `useBookingRooms`). A room is opened only by a booked
-   * game, so every room has one ([#577](https://github.com/Raketa02/Raketa/issues/577)).
+   * game, so every room has one ([#577](https://github.com/Rakieta02/Rakieta/issues/577)).
    */
   readonly bookingId: string;
   /** What the game is. The row's own identifying fact, beside the handles. */
@@ -45,7 +45,7 @@ export interface Conversation {
   /**
    * Everybody this row names — the members, and whoever `last_entry` is about — resolved in the
    * same read. **A superset of `members`**, and what `{name}` is filled from: the actor of a
-   * `SEAT_LEFT` line was never on the court ([#409](https://github.com/Raketa02/Raketa/issues/409)).
+   * `SEAT_LEFT` line was never on the court ([#409](https://github.com/Rakieta02/Rakieta/issues/409)).
    */
   readonly people: readonly ConversationPerson[];
   /**

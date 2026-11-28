@@ -1,6 +1,6 @@
 /**
  * **The payment setup as a sheet** — what a first yes opens when nothing is saved
- * ([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A2.4; the mechanics §6.1,
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555); the screens A2.4; the mechanics §6.1,
  * §12.5).
  *
  * *Before your first yes, the app asks you once to save a payment method and accept the terms. Your

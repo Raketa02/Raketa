@@ -1,6 +1,6 @@
 /**
  * **A group's deck, as `GET /pools/{id}/deck` answers it** — the Games tab's read, for the suites
- * that open a group's page ([#553](https://github.com/Raketa02/Raketa/issues/553)).
+ * that open a group's page ([#553](https://github.com/Rakieta02/Rakieta/issues/553)).
  *
  * The pool is filed under the group's id, so the path is the group's. The transport drops the
  * query string before matching, so one stub answers both kinds; a suite that needs the two

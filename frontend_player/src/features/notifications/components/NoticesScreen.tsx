@@ -1,5 +1,5 @@
 /**
- * **The recent notices — the list behind the bell on Home** ([#559](https://github.com/Raketa02/Raketa/issues/559);
+ * **The recent notices — the list behind the bell on Home** ([#559](https://github.com/Rakieta02/Rakieta/issues/559);
  * the screens A9; the mechanics §17.2).
  *
  * ```

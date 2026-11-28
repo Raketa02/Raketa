@@ -55,8 +55,8 @@
  * ## Why this is `shared/ui` and not a card's own component
  *
  * It was the competitive candidate card's, inline in its record block
- * ([#312](https://github.com/Raketa02/Raketa/issues/312)). The record sheet draws the same run
- * for a resolved sport ([#373](https://github.com/Raketa02/Raketa/issues/373)), and a second
+ * ([#312](https://github.com/Rakieta02/Rakieta/issues/312)). The record sheet draws the same run
+ * for a resolved sport ([#373](https://github.com/Rakieta02/Rakieta/issues/373)), and a second
  * copy would be a second thing to keep in step with a **pinned** geometry test — the one shape
  * this system's Part 15 says never to let happen twice.
  */

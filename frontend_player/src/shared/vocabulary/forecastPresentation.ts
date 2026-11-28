@@ -7,7 +7,7 @@
  *
  * The block (`shared/ui`'s `ForecastBlock`, `StakeTiles`) was the booked game's alone until a
  * competitive game's details drew it too, as the top card a player reads before saying yes
- * ([#839](https://github.com/Raketa02/Raketa/issues/839); ADR-0207 §6, which moves it). It came
+ * ([#839](https://github.com/Rakieta02/Rakieta/issues/839); ADR-0207 §6, which moves it). It came
  * here whole, with its words, because two features that may not import each other — `games` and
  * `proposals` — say them. `balancePresentation.ts` stays the home of the word and the tone a figure
  * is read in; this file is the block's own.

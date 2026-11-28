@@ -1,6 +1,6 @@
 /**
  * **The *or* rule** — a thin line with the word in its middle, between signing in and the other
- * way in on the stage's sheet ([#784](https://github.com/Raketa02/Raketa/issues/784)).
+ * way in on the stage's sheet ([#784](https://github.com/Rakieta02/Rakieta/issues/784)).
  *
  * The line is `line`, the boxes' own border — measured off mock 3, where the rule and the boxes'
  * edges are one value — because it **bounds** the two ways in from each other rather than folding

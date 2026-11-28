@@ -1,7 +1,7 @@
 /**
  * **You › Payments' *RECEIPTS*** — every share the reader paid, every refund, and every hold let go,
- * newest first, **the club named as the seller** ([#555](https://github.com/Raketa02/Raketa/issues/555),
- * [#644](https://github.com/Raketa02/Raketa/issues/644); the screens A7.3; mock 49; the mechanics
+ * newest first, **the club named as the seller** ([#555](https://github.com/Rakieta02/Rakieta/issues/555),
+ * [#644](https://github.com/Rakieta02/Rakieta/issues/644); the screens A7.3; mock 49; the mechanics
  * §12.1, Q113).
  *
  * Pure: the read's rows as the section draws them, and the one decision the row makes over them —

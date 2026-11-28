@@ -29,7 +29,7 @@
  *
  * ## A For-fun game carries its Social vibe, and draws it in the forecast's place
  *
- * [#841](https://github.com/Raketa02/Raketa/issues/841) (ADR-0207 §5, §12; the backend's #835):
+ * [#841](https://github.com/Rakieta02/Rakieta/issues/841) (ADR-0207 §5, §12; the backend's #835):
  * `vibe` is a For-fun game's alone — omitted on a competitive game, while a seat is open, and where
  * nobody on the court holds a tag that counts. The forecast is **still sent** on For fun, for the
  * apps already on phones, and this build ignores it there: **the kind decides the card**

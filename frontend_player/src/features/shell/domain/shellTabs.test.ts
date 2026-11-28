@@ -86,7 +86,7 @@ describe('which tab a route is inside', () => {
 
 /**
  * **One route stands the bar down, and it is named in full** — a booked game's room (#556), the
- * screen whose composer replaces the bar ([#400](https://github.com/Raketa02/Raketa/issues/400)).
+ * screen whose composer replaces the bar ([#400](https://github.com/Rakieta02/Rakieta/issues/400)).
  * The details it is pushed over and the result beside it keep theirs, so a prefix match would be
  * two screens too wide.
  */

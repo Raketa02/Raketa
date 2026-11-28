@@ -1,6 +1,6 @@
 /**
  * **A Same vibe player** — somebody who shares at least one Social tag with the reader, who they'd
- * enjoy a court and a coffee with ([#803](https://github.com/Raketa02/Raketa/issues/803); ADR-0204 §6;
+ * enjoy a court and a coffee with ([#803](https://github.com/Rakieta02/Rakieta/issues/803); ADR-0204 §6;
  * the Home rows mechanics §8; the backend's #795 `SameVibePlayerSchema`).
  *
  * The rules are the server's — who is on the row, the **vibe %** (1 − ½ⁿ for n shared tags), the

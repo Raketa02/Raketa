@@ -5,8 +5,8 @@
 > feature does. Index: [`README.md`](README.md).
 
 **The administrator is a second profile inside this app, and its area is its own group of screens**
-([#516](https://github.com/Raketa02/Raketa/issues/516), PRD
-[#500](https://github.com/Raketa02/Raketa/issues/500) stories 122–137, ADR-0184, ADR-0185). An
+([#516](https://github.com/Rakieta02/Rakieta/issues/516), PRD
+[#500](https://github.com/Rakieta02/Rakieta/issues/500) stories 122–137, ADR-0184, ADR-0185). An
 account a club named as its **Administrator** runs that club's **Official groups** from here: it
 makes one per WhatsApp group the club keeps and posts its link there. The area is
 `src/app/(administrator)/`, a **sibling of `(app)`** for onboarding's reason — the entry gate
@@ -28,7 +28,7 @@ has not asked to play, so its name without a nickname, its ratings and its runs 
 owes an answer to. The gate answers from the player read alone and never waits on the two player
 reads, and once the player read says so they are not asked at all. **The area opens on the first
 club the server lists**; which club a person running two opens on, and the last-used profile of an
-account that holds both, are the switcher's ([#518](https://github.com/Raketa02/Raketa/issues/518)).
+account that holds both, are the switcher's ([#518](https://github.com/Rakieta02/Rakieta/issues/518)).
 An account that also plays opens in Player, as ADR-0185 §3 defaults, and never reaches the area in
 this ticket.
 
@@ -95,7 +95,7 @@ somebody waits. Then **the members card** (`MembersCard`): Info's members row's 
 stacked faces, newest first, _+N_ for the rest of the member count, _N members_ and a chevron — with
 **a ring of how much of the group has arrived** on the right, and **a tap opens Members**. There is
 no door out of the group: running it is not membership, and only the club moves it (ADR-0183
-§7–§8); its settings are the You tab's ([#517](https://github.com/Raketa02/Raketa/issues/517)). **A pull reads
+§7–§8); its settings are the You tab's ([#517](https://github.com/Rakieta02/Rakieta/issues/517)). **A pull reads
 the page again** (#529, 2026-10-02), as the Groups tab's does, so somebody who asked or arrived on
 another phone is on it when the spinner stops, where they waited for a return to it.
 
@@ -130,7 +130,7 @@ are. The count is now `groups`' own `membersLine`, so the two cards cannot drift
 the name with it: `PlayersCard` is `MembersCard`, its faces `members-face-`. The read's `players`
 and `playersStack` keep the wire's word.
 
-**Members is read by whoever runs the group** ([#566](https://github.com/Raketa02/Raketa/issues/566),
+**Members is read by whoever runs the group** ([#566](https://github.com/Rakieta02/Rakieta/issues/566),
 `bf6822ac`). The members read (`GET /groups/{id}/members`) and the record route admitted a group's
 members only, so an Administrator who had not joined as a player — Marta Wójcik, administrator-only,
 on _Ogrody 33 Club_ — met a refusal; the backend now admits the account running an official group to
@@ -161,12 +161,12 @@ and signed out** — a `base` toast, _Ogrody 33 removed you as an administrator.
 raised before the sign-out so it is read over the sign-in screen, through `auth`'s own `useSignOut`,
 now public for this caller; one that also plays is told and moved to its player side, and one that
 runs another club's groups to that club's area — the switcher's moves
-([#518](https://github.com/Raketa02/Raketa/issues/518)), drawn here so a player is never signed out
+([#518](https://github.com/Rakieta02/Rakieta/issues/518)), drawn here so a player is never signed out
 for losing a hat. A refused answer adds no toast of its own, and signing out on purpose is not a
 removal.
 
 **The You tab is the account's: its name, each group's settings, _Start playing_ and the way out**
-([#517](https://github.com/Raketa02/Raketa/issues/517), stories 131–133; `AdministratorYouScreen`). No
+([#517](https://github.com/Rakieta02/Rakieta/issues/517), stories 131–133; `AdministratorYouScreen`). No
 mock draws it, so it is the player You tab's arrangement (ADR-0179 §1) with the administrator's rows:
 **club 8's header** — _OGRODY 33 · ADMINISTRATOR_ over the account's name — which PRD #500 took off the
 Groups tab and which belongs on the tab about the account; then **GROUP SETTINGS**, one door row per
@@ -224,7 +224,7 @@ the name; then welcome, the questionnaire and the social steps, as for anybody
 ([`onboarding.md`](onboarding.md)). Afterwards the account holds both profiles: it opens in Player, as
 ADR-0185 §3 defaults, the area still opens for it, and its You tab no longer offers _Start playing_.
 Reaching the area again from the player side is the switcher's
-([#518](https://github.com/Raketa02/Raketa/issues/518)).
+([#518](https://github.com/Rakieta02/Rakieta/issues/518)).
 
 **What `groups` lends, and why it is lent rather than drawn again.** An official group is a Group, so
 its tile (`GroupMonogram`), its dots, the group forms' two cards, the request row, a failed read, the
@@ -269,7 +269,7 @@ with the keyboard up, and the attestation step over the bar are asked for a look
 floating _+ New official group_ over a long list and the members card's ring at _117%_.
 
 **The invitation sheet offers an account that already exists a club's administrator profile, on
-launch** ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories 117–119, club 5–6;
+launch** ([#518](https://github.com/Rakieta02/Rakieta/issues/518), PRD #500 stories 117–119, club 5–6;
 `InvitationSheet`). It is offered **whenever the signed-in account's own read lists an invitation this
 launch has not set aside** — `/users/me` carries the ones addressed to its email, and the server stops
 listing one once it is accepted, removed or past its 72 hours, so _it stops appearing once the invitation
@@ -358,7 +358,7 @@ address, the existing-account email's button, takes back all of them; `/users/me
 plays to Player**, where Join a group is, and waits for one that does not. The rest is
 [`links.md`](links.md)'s.
 
-**The area says the account's nickname, or _You_** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §4). `/users/me` no longer
+**The area says the account's nickname, or _You_** ([#728](https://github.com/Rakieta02/Rakieta/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §4). `/users/me` no longer
 serves a name, and the name a club types for its Administrator stays the Administrator's, on the
 club's own pages. So **the You tab's header is the account's nickname once it plays, and _You_
 until then** — an account an Invitation opened that has not started playing holds no nickname, and

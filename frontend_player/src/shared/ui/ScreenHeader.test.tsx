@@ -1,5 +1,5 @@
 /**
- * 10.3's header, on the two things [#401](https://github.com/Raketa02/Raketa/issues/401) added
+ * 10.3's header, on the two things [#401](https://github.com/Rakieta02/Rakieta/issues/401) added
  * to it — a **sub-line** under the title, and a spoken name that may differ from the drawn one —
  * and on the one **control** in it, and the two things the amendment fixed about that.
  *
@@ -68,7 +68,7 @@ describe('the title and its sub-line', () => {
 describe('a header with no title', () => {
   /**
    * **The eyebrow is the heading where there is no h1.** The game screen's plan lead draws
-   * `DOUBLES · COUNTED` and nothing under it ([#414](https://github.com/Raketa02/Raketa/issues/414)),
+   * `DOUBLES · COUNTED` and nothing under it ([#414](https://github.com/Rakieta02/Rakieta/issues/414)),
    * so a listener's first stop has to be that line rather than an element with a role and no
    * words in it — and it is named by its own words, never labelled with them, for the reason the
    * title is not.

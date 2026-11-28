@@ -59,7 +59,7 @@
  *
  * A times rung widens the searcher's own week by one hour **for one search**, and the week the
  * player filled in disagrees with the search that ran until the grid says which hour that was
- * ([#283](https://github.com/Raketa02/Raketa/issues/283)). So an editor cell takes an optional
+ * ([#283](https://github.com/Rakieta02/Rakieta/issues/283)). So an editor cell takes an optional
  * `addedForThisSearch`, drawn as a plus on the **unfilled** cell. **It is a third fact and not
  * a third state**: the cell is unselected, reports itself unchecked, and toggles like every
  * other, because pressing it is how a player makes that widening their own ask.
@@ -118,7 +118,7 @@ export interface AvailabilityGridCell {
   readonly selected: boolean;
   /**
    * An hour **this one search** added, which the player never ticked — drawn as a plus on the
-   * unfilled cell ([#283](https://github.com/Raketa02/Raketa/issues/283)).
+   * unfilled cell ([#283](https://github.com/Rakieta02/Rakieta/issues/283)).
    *
    * It is a third *fact*, never a third state: the cell is not selected, reports itself
    * unticked, and presses like any other, because pressing it is how a player makes the

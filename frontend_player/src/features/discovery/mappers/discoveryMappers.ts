@@ -1,8 +1,8 @@
 /**
- * **Discovery's wire, read** — New in Rakieta ([#801](https://github.com/Raketa02/Raketa/issues/801);
+ * **Discovery's wire, read** — New in Rakieta ([#801](https://github.com/Rakieta02/Rakieta/issues/801);
  * #793's `NewInRakietaPlayerSchema`), Same competitive level
- * ([#802](https://github.com/Raketa02/Raketa/issues/802); #794's `SameLevelPlayerSchema`) and Same
- * vibe ([#803](https://github.com/Raketa02/Raketa/issues/803); #795's `SameVibePlayerSchema`). The
+ * ([#802](https://github.com/Rakieta02/Rakieta/issues/802); #794's `SameLevelPlayerSchema`) and Same
+ * vibe ([#803](https://github.com/Rakieta02/Rakieta/issues/803); #795's `SameVibePlayerSchema`). The
  * wire boundary: the generated types stop here and in `api/`.
  *
  * **A sport this build cannot name is left off with its level**, as every list of sports in the app

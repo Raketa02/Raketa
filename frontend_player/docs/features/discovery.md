@@ -5,7 +5,7 @@ their level (#802), sharing their tags (#803). [ADR-0204](../../../docs/adr/0204
 the spec set is [`docs/specs/home-rows/`](../../../docs/specs/home-rows/README.md), the words §31.
 The backend context of the same name (#793) owns the rows' rules; this feature draws its answers.
 
-**New in Rakieta is the first people row** ([#801](https://github.com/Raketa02/Raketa/issues/801); the
+**New in Rakieta is the first people row** ([#801](https://github.com/Rakieta02/Rakieta/issues/801); the
 Home rows screens §5; the mechanics §7; home rows 17–19). `NewInRakietaRow` reads `GET /new-in-rakieta`
 (`useNewInRakieta`, keyed `discoveryKeys.newInRakieta()`) and draws up to ten **portrait tiles**
 (`shared/ui`'s `PortraitTile` on `HomeRowRail`'s `tiles` geometry) in the read's order, with _See all
@@ -58,7 +58,7 @@ from the shell) and the review found every write made off those surfaces left th
 30-second rule does not help a row read less than 30 seconds ago. `newInRakieta.test.tsx` walks the row, the tiles, every button
 state and tap, the request line, and See all's pill, filter, paging and empty line.
 
-**Same competitive level is the second row** ([#802](https://github.com/Raketa02/Raketa/issues/802);
+**Same competitive level is the second row** ([#802](https://github.com/Rakieta02/Rakieta/issues/802);
 the Home rows screens §4; the mechanics §6, §9; home rows 7–16). `SameLevelRow` reads `GET /same-level`
 (`useSameLevel`, keyed `discoveryKeys.sameLevel()`, `LISTS_PEOPLE`, re-read on return as New in Rakieta
 is) and draws up to ten **dark cards** on a peeking `HomeRowRail`, in the read's order — fresh good
@@ -104,7 +104,7 @@ now_ on _All_ (calls: §31 words neither). `sameLevel.test.tsx` walks the row's 
 card's fields, colours, gap words and _N sports ›_, the face and the button's origin, the sheet's
 blocks and tags, See all's pill, re-compare, paging and empty line, and the request card's line.
 
-**Same vibe is the fourth row** ([#803](https://github.com/Raketa02/Raketa/issues/803); the Home rows
+**Same vibe is the fourth row** ([#803](https://github.com/Rakieta02/Rakieta/issues/803); the Home rows
 screens §6; the mechanics §8, §9; home rows 2, 20–24). `SameVibeRow` reads `GET /same-vibe`
 (`useSameVibe`, keyed `discoveryKeys.sameVibe()`, `LISTS_PEOPLE`, re-read on return as the others are)
 and draws up to ten **pale tiles** on a peeking `HomeRowRail`, in the read's order — fresh good matches
@@ -173,7 +173,7 @@ tile, its tint over each poster hue, the chips' fit and _+N more_, the vibe shee
 home rows 20–24.
 
 **Rows stay alive: the cards that came on screen are reported**
-([#804](https://github.com/Raketa02/Raketa/issues/804); the Home rows mechanics §9.2, call 2; the
+([#804](https://github.com/Rakieta02/Rakieta/issues/804); the Home rows mechanics §9.2, call 2; the
 backend's #796, `POST /on-screen`). On Home — never See all — every card of _Same competitive level_
 and every tile of _Same vibe_ that comes **at least half on screen** is told to the server, which
 rests a player in that row on the fifth different day without an add. **At least half is of the
@@ -211,7 +211,7 @@ nothing said, See all nothing, and a row read under See all or behind the home s
 on the way back; `use-cases/onScreen.test.ts` holds the reporter to its window, the midnight window,
 a late answer and its stop on a hand-turned clock.
 
-**The three people rows are FOR YOU's lines** ([#820](https://github.com/Raketa02/Raketa/issues/820);
+**The three people rows are FOR YOU's lines** ([#820](https://github.com/Rakieta02/Rakieta/issues/820);
 ADR-0205 §5; home refactor 6–11): **Players at your level**, **New in Rakieta** and **Players with your
 vibe** — only the words on screen change; the glossary's terms, the code's names and the endpoints
 keep theirs (`DISCOVERY_COPY.*.line`). Each row component became a hook the shell calls
@@ -227,7 +227,7 @@ on the heading_ were true until this one. Walked in `sameLevel`, `newInRakieta`,
 `onScreen.test.tsx` — the last now lays FOR YOU, the line and its fold out as a phone would, and adds
 a closed line reporting nothing and only the open line's cards counted.
 
-**The same-level card says no gap in words** ([#821](https://github.com/Raketa02/Raketa/issues/821);
+**The same-level card says no gap in words** ([#821](https://github.com/Rakieta02/Rakieta/issues/821);
 ADR-0205 §5, Q22; home refactor 7). _0,02 below you_, _0,09 above you_ and _Same level_ are gone from
 the card's foot, with the separator that joined them to _N sports ›_: the foot is _N sports ›_ where
 there is more than one shared sport, and the round button. **The pairing's spoken name drops the gap
@@ -238,7 +238,7 @@ on any card, drawn or spoken, and See all's re-comparison read off the level ins
 `discoveryCopy.test.ts`. **Not seen on a device** — a look is owed against home refactor 7: the foot
 with _2 sports ›_ alone at its left.
 
-**The people lines count who there is to explore** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+**The people lines count who there is to explore** ([#822](https://github.com/Rakieta02/Rakieta/issues/822);
 ADR-0205 §6, Q17, Q33, Q34; the mechanics §6.9, §7.5, §8.8; home refactor 3, 4, 7). Each row's read now
 keeps the server's **`total`** beside its cards — `PeopleRow<Person>` (`domain/peopleRow.ts`), read by
 `toNewInRakietaRow`, `toSameLevelRow` and `toSameVibeRow` — and each line hands it to the shell as its
@@ -285,7 +285,7 @@ height grown by the width's factor), `HomeRow.test.tsx` and `FoldingLine.test.ts
 device** — a look is owed on the A32: the three lines' cards and the tiles between them.
 
 **See all shimmers its own grid while its first page is read** (2026-11-24,
-[#872](https://github.com/Raketa02/Raketa/issues/872); PRD #867, the loading shimmer log §10; design
+[#872](https://github.com/Rakieta02/Rakieta/issues/872); PRD #867, the loading shimmer log §10; design
 system 5.6). The spinner at the top of an empty body is gone from all three. Under the real header,
 **the row's own tile or card stands as a skeleton, a column wide, in the grid's lines and gaps, as many
 lines as fill the screen** (`SeeAllScreen`'s `skeleton`, a `SeeAllSkeletonTile`: the drawing, and the

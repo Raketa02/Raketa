@@ -8,7 +8,7 @@
  *
  * **The full day is drawn outside the grid too.** A conversation's plan lines name a weekday in
  * a sentence, so `dayName` is exported beside the grid's own two — the same table, not a fourth
- * list of names ([#363](https://github.com/Raketa02/Raketa/issues/363)).
+ * list of names ([#363](https://github.com/Rakieta02/Rakieta/issues/363)).
  *
  * It was `player_profile/components/availabilityPresentation.ts` while the grid was the only
  * thing that named a day. Play is the **third** caller — an availability-overlap reason line

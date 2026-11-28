@@ -32,7 +32,7 @@ loop reads it.
 it has **two uses, which the permission prompt names**: the area's fix is **coarsened to about a
 kilometre the moment it is read**, and an attendance tap's precise fix (`readPreciseFix`, bounded
 at `PRECISE_FIX_WITHIN_MS`) is read at that tap and handed straight to its request
-([#658](https://github.com/Raketa02/Raketa/issues/658)) — so neither precise reading ever reaches
+([#658](https://github.com/Rakieta02/Rakieta/issues/658)) — so neither precise reading ever reaches
 a store, a screen or a crash report.
 
 `shared/lib/http` has **three verbs**: `httpRequest` for JSON, `httpUpload` for one file, and
@@ -59,7 +59,7 @@ the centre, drawn from one Feather family
 ([ADR-0135](../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)), which is
 why `@expo/vector-icons` is **declared** in `package.json` rather than inherited through
 `expo`: the app's primary navigation renders through it, and an SDK bump could move or drop
-it with no signal in this app's own manifest. (_Since [#883](https://github.com/Raketa02/Raketa/issues/883)
+it with no signal in this app's own manifest. (_Since [#883](https://github.com/Rakieta02/Rakieta/issues/883)
 the bar is the dock: three columns of Ionicons from the same declared package, and the selection
 marker under the lit one — [`shell.md`](shell.md), design-system 10.2._) Play's five arrivals join them — the **switch**
 (6.12), the **fit pill** (7.10), the **balance bar** (7.11), the **court** (7.12) and the
@@ -94,7 +94,7 @@ at the other end, and a slot rather than a `faces` prop because a header that kn
 would be the design system owning an avatar, which #338 §5 refused by name. **Two more arrived by promotion rather than by being
 built there** — the **Social tag row** and 7.13's **run of form**, both the competitive card's
 until the player record sheet turned out to draw both
-([#375](https://github.com/Raketa02/Raketa/issues/375)). A copy of either would be a second
+([#375](https://github.com/Rakieta02/Rakieta/issues/375)). A copy of either would be a second
 thing to keep in step with a **pinned** geometry test, and importing them out of the old loop's
 Play feature would have pointed the arrow the wrong way. **The drawing came down and the rule
 stayed**: Play read the row's four answers off a _candidate_, which was a search result and Play's
@@ -111,7 +111,7 @@ three ratios on `surface` are derived in `starRow.test.ts` off the component's o
 takes no rule of its own: it **reports every press with the value pressed**, exactly as 6.8's
 cell fires whether or not it is ticked, so whether a second press clears the row is the
 caller's. **6.15's swipe row is the first control that moves a row**
-([#427](https://github.com/Raketa02/Raketa/issues/427),
+([#427](https://github.com/Rakieta02/Rakieta/issues/427),
 ADR-0165
 §6): a list row that slides left on React Native's own `PanResponder` — as the radius slider
 already drags, and with neither `react-native-gesture-handler` nor `reanimated` added _(both are
@@ -130,11 +130,11 @@ sits, where it settles — is `swipeRowGeometry.ts` and is pinned as numbers; th
 never the only path: the control behind a closed card is hidden from assistive technology, and
 `PressableCard` gained `accessibilityActions` so the caller offers the same act in the rotor. A row
 handed nothing to reveal attaches no responder and draws nothing behind the card — which is the
-contract [#428](https://github.com/Raketa02/Raketa/issues/428)'s challenge row reuses, revealing
+contract [#428](https://github.com/Rakieta02/Rakieta/issues/428)'s challenge row reuses, revealing
 _Remove the challenge_ only while nobody has joined. `test-support/swipe.ts` is the finger a test
 moves, and it says why the handlers are called directly and in the responder system's own order
 rather than through `fireEvent`. **The button gained a `shape`, and the face two additions, for one
-screen** ([#433](https://github.com/Raketa02/Raketa/issues/433),
+screen** ([#433](https://github.com/Rakieta02/Rakieta/issues/433),
 [ADR-0167](../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
 §2–§3): `Button`'s `shape` is `rounded` by default and `pill` for the yes screen's two doors — a
 radius option on the one primitive rather than a second one, changing the corner and nothing else,
@@ -149,7 +149,7 @@ for `create-expo-app` — its default template contradicts ADR-0009 — and copy
 `src/features/auth/` or `src/features/onboarding/` rather than inventing a second one.
 
 **The bar's second column is Players, and a header may have no heading**
-([#443](https://github.com/Raketa02/Raketa/issues/443),
+([#443](https://github.com/Rakieta02/Rakieta/issues/443),
 [ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1;
 the decision is [`shell.md`](shell.md)'s, and this is what the primitives changed to carry it).
 `TabBar`'s inventory is still five and still Feather: the second key is `players`, its label
@@ -166,7 +166,7 @@ hears nothing from. `ShellScreen` forwards `lead` and `right` for it, _forwarded
 as it already forwards the way back; 10.3 carries the callout.
 
 **The deck's drag reached four primitives and one port, and only the tick is not fenced**
-([#444](https://github.com/Raketa02/Raketa/issues/444),
+([#444](https://github.com/Rakieta02/Rakieta/issues/444),
 [ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §3,
 §7; the decisions were the old loop's Play's, whose record left with it in #576, and this is what
 the shared layer changed to carry them). **`HapticsPort` is two verbs wide**: `light()` — the OS's own _impact: light_ — joins
@@ -192,7 +192,7 @@ looked at. And the deck reuses the swipe row's `intent` — `SWIPE_INTENT`, one 
 finger deciding between a tap, a scroll and a drag — beside its own `deckSwipe.commit` of 95.
 
 **The one formatter reads the name, its word break already cut at a space, and `@nickname` is
-spelled beside it** ([#451](https://github.com/Raketa02/Raketa/issues/451),
+spelled beside it** ([#451](https://github.com/Rakieta02/Rakieta/issues/451),
 [ADR-0171](../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
 `playerName()`'s `NamedPlayer` carries a **name** where it carried the nickname, and ADR-0107 §4's
 rule reads on it unchanged — the whole name or nobody, and nothing invents a familiar form.
@@ -209,7 +209,7 @@ fence is a fact about how a person is named, and nothing else in that file takes
 is how every other surface keeps it: by never being handed one.
 
 **The one formatter reads the nickname again, the stem cuts at the first dot, and the initials
-break at all three separators** ([#728](https://github.com/Raketa02/Raketa/issues/728),
+break at all three separators** ([#728](https://github.com/Rakieta02/Rakieta/issues/728),
 [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1–§2, superseding the
 paragraph above). `NamedPlayer`'s `name` is what a player is called — **their nickname**, whole and
 never with an @ — and the field keeps the word for the reason `playerName()` does (ADR-0199,
@@ -225,7 +225,7 @@ right. **One sentence capitalised a nickname**: the deck's `sidesSpoken` upper-c
 letter of whatever opened it, which said _Karol.t_ for _karol.t_; it now capitalises only our own
 words, _You_ and _Somebody_.
 
-**The HTTP client has two verbs again, and the env one URL** ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+**The HTTP client has two verbs again, and the env one URL** ([#576](https://github.com/Rakieta02/Rakieta/issues/576)).
 The third verb, `httpGetFromFeaturesHost` — the feature-flag datafile's unauthenticated read from
 `EXPO_PUBLIC_FEATURES_URL` (#479, ADR-0180 §4, §6) — left with the flags, and so did the variable,
 its startup check and `platform/appBuild.ts`, the reading a flag's rules targeted. The env's scheme
@@ -233,13 +233,13 @@ rule still runs as one loop over `SCHEMED_URLS`, which now names the API URL alo
 joins it by being named there.
 
 **The phone-preferences store, the clipboard port, and three primitives that grew a form each**
-([#512](https://github.com/Raketa02/Raketa/issues/512)). `shared/lib/preferences` is the second
+([#512](https://github.com/Rakieta02/Rakieta/issues/512)). `shared/lib/preferences` is the second
 and last AsyncStorage importer (ADR-0188): **one key per account per value**, a read that fails is
 _nothing saved_, and `forgetPhonePreferences` is step 4 of `endSession`, awaited after the status
 change because it waits on no query — whichever way the session ended. It judges no value; the
 owning feature turns a stale one into its default, and `phonePreferenceKeys` spells the Query key
 every owner holds its value under, so the three owners share one root. **A per-phone flag joined
-it with [#732](https://github.com/Raketa02/Raketa/issues/732)** (ADR-0200 §8): `readPhoneFlag` /
+it with [#732](https://github.com/Rakieta02/Rakieta/issues/732)** (ADR-0200 §8): `readPhoneFlag` /
 `raisePhoneFlag` keep _the guide on Your rating was shown_ under `rakieta.phone-flags.`, a prefix
 `forgetPhonePreferences` never lists, so it outlives the session — `phonePreferenceKeys.flag` is
 its Query key, with no account in it. `shared/lib/platform/clipboard.ts` is the fifth
@@ -253,7 +253,7 @@ than a screen (10.3). `theme.ts` gained `MONOGRAM_HUES` beside `POSTER_HUES` and
 `size.monogram` (7.20). All recorded in design-system Part 16.
 
 **A header can be the door to what it names, and the segment's badge is a primitive**
-([#721](https://github.com/Raketa02/Raketa/issues/721), Q125). `ScreenHeader` gained **`onPress`**,
+([#721](https://github.com/Rakieta02/Rakieta/issues/721), Q125). `ScreenHeader` gained **`onPress`**,
 which takes a `title` and a **`pressHint`** with it, so a pressable header is never unnamed: the
 whole row is the button but for the back control and the right slot, which keep their own taps as
 the deeper responders, and the named element is a `button` rather than a `header`. The row is
@@ -263,7 +263,7 @@ badge at `size.segmentBadge` over a box's top-right corner — so a group's tile
 count of waiting requests that the Info tab carried, in the same mark (10.3, 7.21, Part 16).
 
 **The sixth port is the share sheet, the clipboard writes, and a group page's pieces**
-([#513](https://github.com/Raketa02/Raketa/issues/513)). `shared/lib/platform/share.ts` wraps
+([#513](https://github.com/Rakieta02/Rakieta/issues/513)). `shared/lib/platform/share.ts` wraps
 **React Native's own `Share`** — one verb, `shareText`, never rejecting, because closing the sheet
 is an answer and a sheet that did not open has nothing to say — behind `ShareProvider`/`useShare`,
 with `fakeShare()` recording every text it was handed and `stubShare` wiring it into the router
@@ -279,7 +279,7 @@ drawing — and `theme.ts` gained `size.groupPage` (the Games card's seat, 34, a
 filter's bar inset, 9) and **`motion.unfold`**, 280 ms, the eighth motion (7.21). All recorded in
 design-system Part 16.
 
-**The share port opens WhatsApp** ([#516](https://github.com/Raketa02/Raketa/issues/516)).
+**The share port opens WhatsApp** ([#516](https://github.com/Rakieta02/Rakieta/issues/516)).
 `SharePort` gains `openWhatsApp(message)` — `Linking.openURL('whatsapp://send?text=…')` — which
 answers **whether WhatsApp took the message**: `openURL` rejects on iOS when no app claims the scheme
 and on Android when no activity resolves it, so opening it is the test of whether it is installed and
@@ -303,7 +303,7 @@ key so the two inventories share one drawing. Recorded in design-system Part 16.
 player's dock with two columns — Ionicons `people` for Groups, and the same marker._)
 
 **The phone keeps its third and last value, and a sheet can put a mark over its title**
-([#518](https://github.com/Raketa02/Raketa/issues/518)). `PhonePreference` gains `lastProfile` — the
+([#518](https://github.com/Rakieta02/Rakieta/issues/518)). `PhonePreference` gains `lastProfile` — the
 profile an account with two wore last, owned by `auth` ([`auth.md`](auth.md)) — and ADR-0188 §2's table
 is full: a fourth value is a new record. `BottomSheet` takes an optional **`mark`**: the close alone on
 the top row, then the mark and the title under it, centred, the title still the heading focus lands on
@@ -311,7 +311,7 @@ the top row, then the mark and the title under it, centred, the title still the 
 drawn ⇅ — a 16pt box and a 1,5pt stroke — because Feather ships no up-and-down pair.
 
 **6.8's grid is a week of hours, and a drag across it paints**
-([#551](https://github.com/Raketa02/Raketa/issues/551),
+([#551](https://github.com/Rakieta02/Rakieta/issues/551),
 [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5, mock 36).
 `AvailabilityGrid` is transposed — the days across, the hours down — and every caller builds its
 rows from `HOURS` and its cells from `WEEKDAYS`; `weeklyHoursAt` in `shared/vocabulary/week` turns
@@ -334,7 +334,7 @@ fill alone — both recorded in design-system Part 16 and flagged. The router su
 either platform, and the press the pan is meant to cancel.
 
 **The seventh port is the payment provider's phone half, and it carries a component**
-([#552](https://github.com/Raketa02/Raketa/issues/552)). `shared/lib/platform/payments.tsx` is the only
+([#552](https://github.com/Rakieta02/Rakieta/issues/552)). `shared/lib/platform/payments.tsx` is the only
 importer of `@stripe/stripe-react-native` — fenced in `CORE_PATTERNS` like the native ports, one file
 wide, and probed by `pnpm test:boundaries`. Stripe's card fields are a native **view** whose entry
 stays inside it, so `PaymentsPort` carries `CardFields` beside `phoneWallet`, `takeCard` (turn what
@@ -350,7 +350,7 @@ plugin and the port read is `shared/config/applePay.ts`, which imports nothing, 
 the step mark, the method card's badge and the fields' row. The record is
 [`payments.md`](payments.md).
 
-**The eighth port is the phone's push notifications** ([#559](https://github.com/Raketa02/Raketa/issues/559)).
+**The eighth port is the phone's push notifications** ([#559](https://github.com/Rakieta02/Rakieta/issues/559)).
 `shared/lib/platform/push.ts` is the only importer of `expo-notifications` — fenced in
 `CORE_PATTERNS` like the native ports, one file wide, and probed by `pnpm test:boundaries`. Six verbs:
 the permission in the platform's vocabulary (asked through a notification channel on Android, made
@@ -371,7 +371,7 @@ later**, and `npx expo config --type introspect` shows no `aps-environment`. `th
 holds the banner's six seconds. The record is [`notifications.md`](notifications.md).
 
 **A layer under a newer layer is hidden from a screen reader**
-([#587](https://github.com/Raketa02/Raketa/issues/587)). The record's _Block_ opens its confirm
+([#587](https://github.com/Rakieta02/Rakieta/issues/587)). The record's _Block_ opens its confirm
 sheet from inside the record sheet — the first sheet over a sheet. On iOS that is a native window
 presented from a native window, which hides the one beneath on its own; on Android it is the
 host's next layer, and the layer beneath stayed a listener's. So `OverlayHost` keeps the layers'
@@ -383,7 +383,7 @@ it back at the end — a new order, a new API, and again, a render loop the full
 worker out of memory. The back answers the newer stage first, being the newer subscription.
 `ModalStage.test.tsx` walks it.
 
-**A segment can be a door** ([#740](https://github.com/Raketa02/Raketa/issues/740), ADR-0201 §2,
+**A segment can be a door** ([#740](https://github.com/Rakieta02/Rakieta/issues/740), ADR-0201 §2,
 6.3 as amended). `Segment`'s `door` dims the option's label to `size.segDoorOpacity` and changes
 nothing else: the box, the slop, the press state and `selected: false` stay the unselected
 segment's, and it never carries `disabled`, because a door that reads as shut is one nobody opens.
@@ -391,7 +391,7 @@ Its press is reported like any other, and the caller decides what a door opens �
 other kind, recorded in `proposals.md`. The dim stops at 3,17:1 on `line2`, under 1.4.3 and past
 3:1, and the words say the state as well: a door carries no number. `Segment.test.tsx` holds all three.
 
-**Every row on Home sits on one frame** ([#798](https://github.com/Raketa02/Raketa/issues/798), the
+**Every row on Home sits on one frame** ([#798](https://github.com/Rakieta02/Rakieta/issues/798), the
 Home rows screens §2, Part 16 2026-11-14). `HomeRow` is the section — `space.lg` under the row above,
 the eyebrow heading, and on its line an optional **control** (Top 10's sport pill, #805) and an
 optional **link** (_See all ›_, _Rankings ›_) — with whatever the row draws under it. `HomeRowRail` is
@@ -420,7 +420,7 @@ row's cards**, not their count, and hands each back with its width, so the lone-
 dots can never disagree with what is drawn. `HomeRow.test.tsx` walks the link, the slot, both geometries and the rail's
 identity across re-renders.
 
-**`PhotoCarousel`: all of a player's photos, sideways** ([#799](https://github.com/Raketa02/Raketa/issues/799);
+**`PhotoCarousel`: all of a player's photos, sideways** ([#799](https://github.com/Rakieta02/Rakieta/issues/799);
 the Home rows screens §6.3, §9.3; home rows 23; design-system Part 16, 2026-11-14). Every photo in the
 order handed in, each a card at `size.photoCarouselRatio` (half) of the content width and 4:5
 (`PHOTO_PANEL`'s shape, read off it rather than restated), on `radius.card`, over Part 8's Strip — gap 9, bleeding past the
@@ -436,7 +436,7 @@ as it kept the switch itself while it was unbuilt; the dark-card tests and the t
 they derived went with the code.
 
 **`PortraitTile`, a third rail geometry, the sport pill's _All_, and two `Button` additions**
-([#801](https://github.com/Raketa02/Raketa/issues/801); design-system 7.31, 7.32, Part 16 2026-11-14).
+([#801](https://github.com/Rakieta02/Rakieta/issues/801); design-system 7.31, 7.32, Part 16 2026-11-14).
 **`PortraitTile`** is a face edge to edge with the wash rising over its foot (`portraitWash`, the deck
 card's value moved whole since that card is gone), a tag top-left that lets touches through, a control
 top-right beside the tile's own press, and the words over the wash; its width and aspect are the
@@ -453,7 +453,7 @@ calls, so a write made anywhere moves the person on every row without naming a f
 (architecture Part 7). Each has its suite: `HomeRow.test.tsx`, `SportPillFrame.test.tsx`,
 `Button.test.tsx`; the tile is walked through New in Rakieta.
 
-**`RowSportPill`, `HomeRow`'s `over`, and a `numbered` rail** ([#805](https://github.com/Raketa02/Raketa/issues/805);
+**`RowSportPill`, `HomeRow`'s `over`, and a `numbered` rail** ([#805](https://github.com/Rakieta02/Rakieta/issues/805);
 the Home rows screens §7; home rows 25–27; design-system 7.36, Part 16 2026-11-15). Top 10 puts the
 deck's sport pill on a row's heading line, beside _Rankings ›_, and its bar slides over the heading
 while the link stays put (home rows 27) — so the bar must end where **the pill** ends, which
@@ -470,7 +470,7 @@ numeral beside it is the row's own, so its items are wider than the width it han
 suite: `RowSportPill.test.tsx`, `HomeRow.test.tsx`; the row is walked in `rankings`' `topTen.test.tsx`.
 
 **`FoldingLine`, `FoldingLines` and `FoldingLineFooter` — FOR YOU's quiet lines**
-([#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0205 §5, §8, §9; home refactor 3–13;
+([#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0205 §5, §8, §9; home refactor 3–13;
 design-system 7.37, 4.3, Part 16 2026-11-18). `FoldingLines` is the section — the eyebrow and the
 lines `space.sm` apart — and `FoldingLine` is one line: a white card, its header the title in `h2`
 and a turning chevron, **a button named by its title that says whether it is expanded**. **The page
@@ -502,7 +502,7 @@ the context it stands in. Suites: `FoldingLine.test.tsx`, `HomeRow.test.tsx`, `R
 `onScreen.test.ts`; the lines are walked in the shell's `forYou.test.tsx` and each feature's own.
 
 **The sport pill opens either way, and the footer puts its control at the left**
-([#821](https://github.com/Raketa02/Raketa/issues/821); ADR-0205 §5, Q19, Q37; home refactor 12, 13).
+([#821](https://github.com/Rakieta02/Rakieta/issues/821); ADR-0205 §5, Q19, Q37; home refactor 12, 13).
 `SportPill` and `SportBar` take **`opens`**, `left` by default — a page's header, the bar growing over
 what stands before the pill — or `right`: the pill's chevron points _›_, the bar's row is laid against
 its **left** edge with the current sport first, its chevron turned back to _‹_, and the others after
@@ -513,7 +513,7 @@ edge. **`FoldingLineFooter`'s link takes the room before it** (`marginLeft: 'aut
 stands at the footer's left and the link at its right, and a footer with a link alone is unchanged.
 Suites: `SportPill.test.tsx` (the direction), `RowSportPill.test.tsx` and `FoldingLine.test.tsx`.
 
-**A folding line carries its count** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+**A folding line carries its count** ([#822](https://github.com/Rakieta02/Rakieta/issues/822);
 ADR-0205 §5, §6; home refactor 3, 4, 7; design-system 4.2, 7.37, Part 16 2026-11-18).
 `FoldingLineParts` and `FoldingLine` take an optional **`count`** — the row read's total, as served —
 drawn in **the count pill** between the title and the chevron, open or closed: `line2` under the
@@ -530,7 +530,7 @@ cap, open and closed, none without a count, the name); the counts are walked in 
 `lineNames` reads the whole names. **Not seen on a device**: the pill's size, fill and figure against
 home refactor 3, 4.
 
-**The third verb is back, and so are the second URL and `appBuild`** ([#826](https://github.com/Raketa02/Raketa/issues/826),
+**The third verb is back, and so are the second URL and `appBuild`** ([#826](https://github.com/Rakieta02/Rakieta/issues/826),
 [ADR-0206](../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)
 §4, §6, §8). The feature flags returned for Play's Explore, and the seams they used came back from
 `6d8d1388^` as they were. **`httpGetFromFeaturesHost`** reads the one document that is not the
@@ -549,7 +549,7 @@ feature flag's rules may target, each absent rather than guessed when the build 
 flags' saved datafile (`features/feature_flags/api/datafileCache.ts`), and
 `scripts/test-import-boundaries.sh` asserts both, and the ban everywhere else.
 
-**The tenth port is the system bars** ([#857](https://github.com/Raketa02/Raketa/issues/857),
+**The tenth port is the system bars** ([#857](https://github.com/Rakieta02/Rakieta/issues/857),
 [ADR-0209](../../../docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md);
 decision log Q12). `SystemBarsPort` has **two acts**, `paint(ground)` and `restore()`, and one
 caller: the launch gate paints the bars as the splash starts and restores them as its fade starts,
@@ -578,7 +578,7 @@ no platform.
 - **Not seen on a device.** It is a native change, so it needs a fresh build, and it needs a look on
   the A32 (three-button navigation) and an iPhone.
 
-**The eleventh port is the soft keyboard** ([#882](https://github.com/Raketa02/Raketa/issues/882),
+**The eleventh port is the soft keyboard** ([#882](https://github.com/Rakieta02/Rakieta/issues/882),
 [ADR-0210](../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §9).
 `KeyboardPort` has **two halves**, `isUp()` and `follow(onChange)`, which are
 `useSyncExternalStore`'s. It joined `keyboard.ts`, the keyboard's module already, rather than a second

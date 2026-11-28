@@ -3,7 +3,7 @@
  * which datafiles it can read
  * ([ADR-0206](../../../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)).
  *
- * A feature flag is defined in another repository, `Raketa02/raketa-features`, and turned on or off
+ * A feature flag is defined in another repository, `Rakieta02/rakieta-features`, and turned on or off
  * by a pull request there. This file is the client's half of that agreement, and **the only list
  * there is**: a key declared here and missing from the datafile evaluates to its code default,
  * silently, so a typo here is a feature that never turns on. Nothing checks the two repositories
@@ -29,7 +29,7 @@
 export const FEATURE_DEFAULTS = {
   /**
    * **Explore** — Play's second segment, beside Groups
-   * ([#826](https://github.com/Raketa02/Raketa/issues/826), ADR-0206 §11).
+   * ([#826](https://github.com/Rakieta02/Rakieta/issues/826), ADR-0206 §11).
    *
    * **Off by default.** Off, Play is the player's groups under a single *Groups* title, with no
    * *Groups | Explore* switcher, and Explore cannot be reached: a saved `explore` segment is read

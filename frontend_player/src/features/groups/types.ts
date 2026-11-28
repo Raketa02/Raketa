@@ -1,9 +1,9 @@
 /**
  * **The groups feature's only public surface** — Play › Groups, New group, Join a group, a
  * group's page, its Friends screen, Info (Q125), Members and Edit group
- * ([#512](https://github.com/Raketa02/Raketa/issues/512),
- * [#513](https://github.com/Raketa02/Raketa/issues/513),
- * [#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500).
+ * ([#512](https://github.com/Rakieta02/Rakieta/issues/512),
+ * [#513](https://github.com/Rakieta02/Rakieta/issues/513),
+ * [#514](https://github.com/Rakieta02/Rakieta/issues/514), PRD #500).
  *
  * The Play tab's segment is the shell's, and it draws `GroupsSection` under *Groups*; the seven
  * screens are mounted by their route files under `play/`, and the page's routes check their params
@@ -26,12 +26,12 @@ export {
   parseJoinRouteParams,
 } from './schemas/groupRouteParams';
 /**
- * **Join a group, opened by a group link** ([#520](https://github.com/Raketa02/Raketa/issues/520)):
+ * **Join a group, opened by a group link** ([#520](https://github.com/Rakieta02/Rakieta/issues/520)):
  * where the links feature sends a link it has read, with the code the screen fills its field with.
  */
 export { joinGroupRouteFor } from './components/groupRoutes';
 /**
- * **A group's deck, opened at a card** ([#559](https://github.com/Raketa02/Raketa/issues/559)): where
+ * **A group's deck, opened at a card** ([#559](https://github.com/Rakieta02/Rakieta/issues/559)): where
  * the notifications feature sends a notice about a card waiting for the player — the page on Games,
  * in the card's sport and kind, the card first.
  */
@@ -39,13 +39,13 @@ export { groupDeckRoute } from './components/groupRoutes';
 export type { DeckArrival } from './schemas/groupRouteParams';
 /**
  * **A group's Friends picker, with the page on its Friends tab under it**
- * ([#758](https://github.com/Raketa02/Raketa/issues/758)): where *Level got* opens — the group the
+ * ([#758](https://github.com/Rakieta02/Rakieta/issues/758)): where *Level got* opens — the group the
  * ask was made from, in its sport — so Done and *back* land on the court.
  */
 export { groupPickerRoutes } from './components/groupRoutes';
 
 /**
- * **A rating pass begun on a group returns to it** ([#729](https://github.com/Raketa02/Raketa/issues/729),
+ * **A rating pass begun on a group returns to it** ([#729](https://github.com/Rakieta02/Rakieta/issues/729),
  * ADR-0200 §3, §5): the tab the pass began on is this feature's word, and onboarding carries it as
  * the pass's origin; the picker's route reads a group's tab off its params; the result's route names
  * the group; and the app's gate lays the page back down on that tab, on the sport rated last.
@@ -56,7 +56,7 @@ export { useGroupName } from './hooks/useGroups';
 export { groupReturnRoute } from './components/groupRoutes';
 
 /**
- * **Home's *Get your level*** ([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §7):
+ * **Home's *Get your level*** ([#731](https://github.com/Rakieta02/Rakieta/issues/731), ADR-0200 §7):
  * the door where play begins, drawn on Home for a member of a group rated in nothing. The shell
  * places it; whether it is drawn is this feature's rule.
  */
@@ -64,8 +64,8 @@ export { HomeLevelCard } from './components/HomeLevelCard';
 /** **Whether the card's reads have finished** (#871) — what the shell's reveal waits on for it. */
 export { useLevelCardFinished } from './hooks/useHomeAsksForALevel';
 /**
- * **Home's Groups heating up** ([#800](https://github.com/Raketa02/Raketa/issues/800), was HOTTEST
- * GROUPS; [#820](https://github.com/Raketa02/Raketa/issues/820); ADR-0204 §3, ADR-0205 §5; the Home
+ * **Home's Groups heating up** ([#800](https://github.com/Rakieta02/Rakieta/issues/800), was HOTTEST
+ * GROUPS; [#820](https://github.com/Rakieta02/Rakieta/issues/820); ADR-0204 §3, ADR-0205 §5; the Home
  * rows screens §3): the first of FOR YOU's lines, which the shell folds just below *Your games* —
  * `undefined` while hidden — the re-read Home's pull makes of it, and whether the reader is in no
  * group: *Your games* then says the groupless line (`GROUPS_COPY.hottest.groupless`), and the line
@@ -100,7 +100,7 @@ export { useDeckSport } from './hooks/useGroupSport';
 export { deckSportIn, prefetchDeckSport } from './hooks/useGroupSport';
 
 /**
- * **The home-club search, for a Location area** ([#733](https://github.com/Raketa02/Raketa/issues/733),
+ * **The home-club search, for a Location area** ([#733](https://github.com/Rakieta02/Rakieta/issues/733),
  * ADR-0200 §10): a player who refuses the phone's location picks a club near where she plays, from
  * the same search New group's home club uses — by name or district, A–Z with no area yet — drawn
  * as the same card with the caller's own pill. `player_profile` owns what the pick means.
@@ -111,8 +111,8 @@ export { clubLine, noClubCalled } from './components/groupsPresentation';
 export type { SearchedClub } from './domain/group';
 
 /**
- * **What the administrator area draws with** ([#516](https://github.com/Raketa02/Raketa/issues/516),
- * [#517](https://github.com/Raketa02/Raketa/issues/517)): an official group is a Group, so its tile,
+ * **What the administrator area draws with** ([#516](https://github.com/Rakieta02/Rakieta/issues/516),
+ * [#517](https://github.com/Rakieta02/Rakieta/issues/517)): an official group is a Group, so its tile,
  * its dots, its club's tile, its form cards, its request row, who a switch to Anyone let in, a failed
  * read and the words they share are this feature's, used there rather than drawn twice. The
  * dependency points one way — `administrator` reads `groups`, never the reverse.

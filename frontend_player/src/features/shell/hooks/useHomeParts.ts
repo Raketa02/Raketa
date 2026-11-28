@@ -1,5 +1,5 @@
 /**
- * **Home's two parts, top-down, and whether each has been read** ([#871](https://github.com/Raketa02/Raketa/issues/871);
+ * **Home's two parts, top-down, and whether each has been read** ([#871](https://github.com/Rakieta02/Rakieta/issues/871);
  * PRD #867; the loading shimmer log §6, Q11, Q12) — what `HomeScreen` hands `shared/ui`'s
  * `useRevealParts`, which shows them together, or top-down from the ceiling.
  *

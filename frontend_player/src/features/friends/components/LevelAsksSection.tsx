@@ -1,6 +1,6 @@
 /**
  * **ASKED FOR A LEVEL · n** — Needs your answer's section of a friend's asks for a level, one tile
- * per sport, after FRIEND REQUESTS ([#816](https://github.com/Raketa02/Raketa/issues/816),
+ * per sport, after FRIEND REQUESTS ([#816](https://github.com/Rakieta02/Rakieta/issues/816),
  * ADR-0205 §1; the friends screens §6.4; the mechanics §5.1; the words §29.5). It was Home's row,
  * between FRIEND REQUESTS and Your games, from #765.
  *

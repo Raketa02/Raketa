@@ -1,5 +1,5 @@
 /**
- * **A ranking, as the page draws it** ([#775](https://github.com/Raketa02/Raketa/issues/775);
+ * **A ranking, as the page draws it** ([#775](https://github.com/Rakieta02/Rakieta/issues/775);
  * [ADR-0203](../../../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md); the rankings
  * mechanics and screens) — the reader's place card, the podium and the rows, for one sport and one
  * view.

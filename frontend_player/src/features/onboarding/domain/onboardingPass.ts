@@ -56,7 +56,7 @@ export interface RatedRun {
 /**
  * Where a pass began — which is where it ends. **Every pass begins inside the app now**: the
  * questionnaire left onboarding ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §1, [#730](https://github.com/Raketa02/Raketa/issues/730)), and onboarding's own door, *welcome*,
+ * §1, [#730](https://github.com/Rakieta02/Rakieta/issues/730)), and onboarding's own door, *welcome*,
  * went with it.
  *
  * `home` is Home (§7): the picker opened with no group to return to, and a run reached with no
@@ -70,7 +70,7 @@ export interface RatedRun {
  * **Identifiers only**, as `rated` is: the group's name is TanStack Query's, read where the
  * way back is labelled, and a copy here would go stale the moment its Owner renamed it.
  *
- * `rankings` is the Rankings page's *Get your {sport} level* ([#775](https://github.com/Raketa02/Raketa/issues/775);
+ * `rankings` is the Rankings page's *Get your {sport} level* ([#775](https://github.com/Rakieta02/Rakieta/issues/775);
  * the rankings mechanics §9): a pass of that one sport, ending back on Rankings **on the sport the
  * page was on** — the one just asked for, rated or not.
  */
@@ -167,7 +167,7 @@ export function recordRated(pass: OnboardingPass, run: RatedRun): OnboardingPass
 /**
  * **The sports the picker lists** — every one the server serves, or, where a door narrowed them,
  * only those of them it offers (*+ Another sport*'s, [ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §4, [#731](https://github.com/Raketa02/Raketa/issues/731)). **The server's order, always**: the
+ * §4, [#731](https://github.com/Rakieta02/Rakieta/issues/731)). **The server's order, always**: the
  * offer says which, never in what order, and a sport the server does not serve is not offered
  * whatever a door said.
  */

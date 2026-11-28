@@ -1,5 +1,5 @@
 /**
- * **Add friends** — the sheet **+ Add friends** opens ([#754](https://github.com/Raketa02/Raketa/issues/754),
+ * **Add friends** — the sheet **+ Add friends** opens ([#754](https://github.com/Rakieta02/Rakieta/issues/754),
  * PRD #743 stories 39–41; the friends screens §5; friends 4).
  *
  * ```

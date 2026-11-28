@@ -1,6 +1,6 @@
 /**
  * **Every address the operating system opens the app with, read before anything is routed**
- * ([#520](https://github.com/Raketa02/Raketa/issues/520)).
+ * ([#520](https://github.com/Rakieta02/Rakieta/issues/520)).
  *
  * expo-router calls `redirectSystemPath` with the launch address and with every one opened while the
  * app runs — `rakieta://…` always, the web domain's `https://…` once one is set — and routes to what

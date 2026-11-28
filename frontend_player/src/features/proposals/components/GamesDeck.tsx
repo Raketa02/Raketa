@@ -1,6 +1,6 @@
 /**
  * **A group's Games tab** — the deck, for the sport the page is on and the kind its menu stands on
- * ([#553](https://github.com/Raketa02/Raketa/issues/553); the screens A2; the mechanics §6–§8).
+ * ([#553](https://github.com/Rakieta02/Rakieta/issues/553); the screens A2; the mechanics §6–§8).
  *
  * ## Four states, in the order the screens list them
  *
@@ -24,7 +24,7 @@
  * kind named, and its own states follow: the cards, or *Nothing picked right now*.
  *
  * **While the first read is on its way, one deck-card block shimmers where the deck will stand**
- * (`DeckSkeleton`, [#875](https://github.com/Raketa02/Raketa/issues/875)) — the group page reveals the
+ * (`DeckSkeleton`, [#875](https://github.com/Rakieta02/Rakieta/issues/875)) — the group page reveals the
  * tab once that read has finished, and while it retries the block stands here in the tab's own place.
  * A read that failed says why and offers the retry, unless the failure is one no retry can mend; **a
  * read held for a connection says it resumes** (the amber note), where a spinner used to turn forever.

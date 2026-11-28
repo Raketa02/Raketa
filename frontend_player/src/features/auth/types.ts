@@ -15,7 +15,7 @@ export { AccountPanel } from './components/AccountPanel';
 export { NamingScreen } from './components/NamingScreen';
 /**
  * ***Start playing*'s first step, the Adult attestation** (ADR-0185 §4–§5,
- * [#517](https://github.com/Raketa02/Raketa/issues/517)) — this feature's on the naming's precedent:
+ * [#517](https://github.com/Rakieta02/Rakieta/issues/517)) — this feature's on the naming's precedent:
  * the act is the users context's, on the account, and the tick box and its sentence are sign-up's.
  */
 export { StartPlayingScreen } from './components/StartPlayingScreen';
@@ -39,7 +39,7 @@ export { useScreenInView } from './hooks/useScreenInView';
 export { SignUpScreen } from './components/SignUpScreen';
 
 /**
- * ***Forgot password?*** ([#515](https://github.com/Raketa02/Raketa/issues/515)) — the email form,
+ * ***Forgot password?*** ([#515](https://github.com/Rakieta02/Rakieta/issues/515)) — the email form,
  * the neutral confirmation, the code, and *Set a new password* by a claimed code or by the email's
  * link. Each route file reads its params through the parser beside it and mounts the screen.
  */
@@ -57,7 +57,7 @@ export {
 } from './schemas/credentialRouteParams';
 
 /**
- * ***Have an invitation code?*** and ***Set your password*** ([#518](https://github.com/Raketa02/Raketa/issues/518))
+ * ***Have an invitation code?*** and ***Set your password*** ([#518](https://github.com/Rakieta02/Rakieta/issues/518))
  * — the email and the code, and the password by a claimed code or by the invitation email's link,
  * validated before the form is drawn. `INVITATION_ROUTES.link` is what the links ticket (#520) opens.
  */
@@ -67,7 +67,7 @@ export { SetYourPasswordScreen } from './components/SetYourPasswordScreen';
 export { INVITATION_ROUTES } from './components/invitationRoutes';
 
 /**
- * **An invitation's link, read — and its words** ([#520](https://github.com/Raketa02/Raketa/issues/520)):
+ * **An invitation's link, read — and its words** ([#520](https://github.com/Rakieta02/Rakieta/issues/520)):
  * a link opened on a phone that is signed in is read here too, before the sheet it opens is drawn,
  * and a spent one is said in the sentence *Set your password* would have said it in.
  */

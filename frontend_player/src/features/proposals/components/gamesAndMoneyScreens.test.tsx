@@ -1,6 +1,6 @@
 /**
  * **You › Account › Games & money, walked the way a player walks it** — the real route tree and
- * the real bar, with only `fetch` faked ([#554](https://github.com/Raketa02/Raketa/issues/554); the
+ * the real bar, with only `fetch` faked ([#554](https://github.com/Rakieta02/Rakieta/issues/554); the
  * screens A7, A7.1; mocks 37–39).
  *
  * The server is `GET` and `PUT …/games-and-money` as #539 serves them: a save answers the pair it

@@ -1,8 +1,8 @@
 /**
- * **A Same competitive level card** ([#802](https://github.com/Raketa02/Raketa/issues/802); the Home
+ * **A Same competitive level card** ([#802](https://github.com/Rakieta02/Rakieta/issues/802); the Home
  * rows screens §4.2, §4.4; the words §31.5; home rows 7, 8, 10, 10.2, 10.3, 12–16; design-system
  * 7.34) — a dark card on its own ground (`levelCardGround`). **Its foot says no gap in words since
- * [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home refactor 7): *0,02
+ * [#821](https://github.com/Rakieta02/Rakieta/issues/821)** (ADR-0205 §5, Q22; home refactor 7): *0,02
  * below you* is gone, from the drawing and from the pairing's spoken name; the comparison sheet's
  * blocks still say it. Top to bottom:
  *
@@ -33,7 +33,7 @@
  * width did, the words, the faces and the bar their own size and the sides their own inset.
  *
  * **While See all's first page is read, the card is one skeleton block** (`SAME_LEVEL_CARD_SKELETON`,
- * [#872](https://github.com/Raketa02/Raketa/issues/872)): a dark card is drawn as a `skeleton` block,
+ * [#872](https://github.com/Rakieta02/Rakieta/issues/872)): a dark card is drawn as a `skeleton` block,
  * never a dark one (design system 5.6), at its own corner and at the height its drawing gives it.
  */
 

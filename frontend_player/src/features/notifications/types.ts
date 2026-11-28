@@ -1,7 +1,7 @@
 /**
  * **The notifications feature's only public surface** — You › Account › Notifications, the phone's
  * push, the in-app banner and the recent notices behind the bell on Home
- * ([#559](https://github.com/Raketa02/Raketa/issues/559); the screens A7.2, A9; the mechanics
+ * ([#559](https://github.com/Rakieta02/Rakieta/issues/559); the screens A7.2, A9; the mechanics
  * §17.2) — over the backend's Notifications context (#549).
  *
  * The shell composes the row into the You tab's ACCOUNT group, the bell into Home's header, and the

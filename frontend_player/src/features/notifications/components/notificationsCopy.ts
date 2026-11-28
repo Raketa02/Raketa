@@ -1,6 +1,6 @@
 /**
  * **Every sentence the notifications feature says** — the row on the You tab, the screen behind it,
- * the bell on Home, the list behind the bell and the banner ([#559](https://github.com/Raketa02/Raketa/issues/559);
+ * the bell on Home, the list behind the bell and the banner ([#559](https://github.com/Rakieta02/Rakieta/issues/559);
  * the screens A7, A7.2, A9; mocks 50, 52, 53).
  *
  * **Import-light** — shared formatting and vocabulary only — because the shell composes the row

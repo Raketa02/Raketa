@@ -1,7 +1,7 @@
 /**
  * **The group page's rules** — which sports its fast filter lists, which one it opens on, and
  * what the Games tab's card says for the sport chosen
- * ([#513](https://github.com/Raketa02/Raketa/issues/513), PRD #500 stories 51–63,
+ * ([#513](https://github.com/Rakieta02/Rakieta/issues/513), PRD #500 stories 51–63,
  * [ADR-0183](../../../../../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
  * §13, [ADR-0188](../../../../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)
  * §2, §4).
@@ -109,7 +109,7 @@ export function sportsToAdd(
  * **Whether the reader meets the door where play begins** — *Get your level*, in place of a player
  * group's Games, Fill in and Friends, its *Post a game* and its Members
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §2,
- * [#730](https://github.com/Raketa02/Raketa/issues/730)). A player group plays whatever its members
+ * [#730](https://github.com/Rakieta02/Rakieta/issues/730)). A player group plays whatever its members
  * are rated in, so a reader rated in nothing has no sport for any of them. **Never an official
  * group's reader**: it plays what it declares, and offers those sports on its own card
  * (`sportsToAdd`, §3).
@@ -121,7 +121,7 @@ export function needsALevel(rated: readonly Sport[], declared?: readonly Sport[]
 /**
  * **What *+ Another sport* offers** — the sports the reader is unrated in, in the registry's order,
  * that the picker it opens lists ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md)
- * §4, [#731](https://github.com/Raketa02/Raketa/issues/731)). A player group plays whatever its
+ * §4, [#731](https://github.com/Rakieta02/Rakieta/issues/731)). A player group plays whatever its
  * members are rated in, so it offers every one of them; **an official group plays what it declares**,
  * so it offers only its own sports she is missing — never a sport the group does not play.
  *
@@ -174,7 +174,7 @@ export function levelCardReadsFinished({
 }
 
 /**
- * **What the group page's two parts wait on** ([#875](https://github.com/Raketa02/Raketa/issues/875);
+ * **What the group page's two parts wait on** ([#875](https://github.com/Rakieta02/Rakieta/issues/875);
  * PRD #867; the loading shimmer log §10) — the header and the tab bar first, then the body of the
  * tab on screen, handed top-down to `shared/ui`'s `useRevealParts`.
  *

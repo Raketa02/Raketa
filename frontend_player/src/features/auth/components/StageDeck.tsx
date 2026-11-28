@@ -1,6 +1,6 @@
 /**
  * **Sign-in's dealt deck** — three miniature Games-deck cards in the hero's room
- * ([#786](https://github.com/Raketa02/Raketa/issues/786), [#787](https://github.com/Raketa02/Raketa/issues/787),
+ * ([#786](https://github.com/Rakieta02/Rakieta/issues/786), [#787](https://github.com/Rakieta02/Rakieta/issues/787),
  * PRD #783; design system 12.2, mock 2): a padel game waiting for a fourth in front, straight; a
  * tennis single and a squash Fill in turned either side of it. What each card says is
  * `stageDeckPresentation`'s, and each is a `MiniGameCard`, an illustration copied from the real card

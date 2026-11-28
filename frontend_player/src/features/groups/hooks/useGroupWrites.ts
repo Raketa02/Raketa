@@ -12,7 +12,7 @@
  * whether a tap admits or asks is the group's policy **on the server**, and a client that guessed
  * would draw *you're in* over a group that has just switched to *People I approve*.
  *
- * **Home's Hottest groups card is** ([#800](https://github.com/Raketa02/Raketa/issues/800); the
+ * **Home's Hottest groups card is** ([#800](https://github.com/Rakieta02/Rakieta/issues/800); the
  * Home rows screens §3.4: *Join turns the chip to You're in at once*). Its chip turns on the tap, to
  * what the card's own policy says — *You're in* or *Asked* — and **the answer's relation lands over
  * the guess**, so a group that switched policy meanwhile reads what the server did. A refusal puts
@@ -20,7 +20,7 @@
  * then read again — the row, the Groups list, Home's own read (*Your games*) — and the searches are
  * written, as above, never re-read.
  *
- * **The Groups heating up page's card is the same card** ([#823](https://github.com/Raketa02/Raketa/issues/823);
+ * **The Groups heating up page's card is the same card** ([#823](https://github.com/Rakieta02/Rakieta/issues/823);
  * ADR-0205 §7): the guess, the answer and a refusal each move it **on the row and on every page read**,
  * whichever of the two it was tapped on, and both are read again after — so the page and Home's line,
  * still mounted under it, never disagree.

@@ -1,5 +1,5 @@
 /**
- * **Same vibe's two reads** ([#803](https://github.com/Raketa02/Raketa/issues/803)) — pass-throughs,
+ * **Same vibe's two reads** ([#803](https://github.com/Rakieta02/Rakieta/issues/803)) — pass-throughs,
  * the template's uniform-strict escape hatch: who is on the row, with which vibe % and in which order
  * are the server's (the Home rows mechanics §8, §9), and nothing here judges them again.
  */

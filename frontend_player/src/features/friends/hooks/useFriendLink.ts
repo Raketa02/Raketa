@@ -1,5 +1,5 @@
 /**
- * **Your friend link, and New link** ([#756](https://github.com/Raketa02/Raketa/issues/756); the
+ * **Your friend link, and New link** ([#756](https://github.com/Rakieta02/Rakieta/issues/756); the
  * friends mechanics §4.1) — the Add friends sheet's *Not on Rakieta yet?* card.
  *
  * **The read is made when the sheet opens**, as the groups above it are, and **its first read

@@ -1,7 +1,7 @@
 /**
  * **New official group** — full screen, pushed over the Groups tab, with a back arrow that discards
  * the form (club 10, plus a **Sports** card; PRD #500 stories 125–126;
- * [#516](https://github.com/Raketa02/Raketa/issues/516)).
+ * [#516](https://github.com/Rakieta02/Rakieta/issues/516)).
  *
  * Five cards and a button, club 10's order with Sports last:
  *

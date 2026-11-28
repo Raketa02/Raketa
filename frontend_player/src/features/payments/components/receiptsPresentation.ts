@@ -1,6 +1,6 @@
 /**
  * **What a receipt row says** — composed from a value, beside the fixed words in `paymentsCopy.ts`
- * ([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A7.3; mock 49). Kept out of
+ * ([#555](https://github.com/Rakieta02/Rakieta/issues/555); the screens A7.3; mock 49). Kept out of
  * the copy module, which the shell reads at module load and which therefore imports nothing that
  * reaches back into a feature.
  */

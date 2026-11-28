@@ -1,6 +1,6 @@
 /**
  * **Home's reads set out while the splash plays** — walked through the real route tree
- * ([#874](https://github.com/Raketa02/Raketa/issues/874); PRD #867; ADR-0209 §2, amended 2026-11-24;
+ * ([#874](https://github.com/Rakieta02/Rakieta/issues/874); PRD #867; ADR-0209 §2, amended 2026-11-24;
  * the loading shimmer log §7, Q18).
  *
  * Each walk is a cold launch through the harness's warmed launch (`launchWarmed`): the session

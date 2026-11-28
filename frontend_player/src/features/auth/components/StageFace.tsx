@@ -1,8 +1,8 @@
 /**
  * **A face on the stage's pictures** — the yes tile's drawing, redrawn in auth: a poster at a
  * third-of-the-box corner, and two letters over it in the heaviest weight with the on-media shadow,
- * set at a share of the poster ([#787](https://github.com/Raketa02/Raketa/issues/787),
- * [#788](https://github.com/Raketa02/Raketa/issues/788); design system 12.2). Sign-in's *It's a
+ * set at a share of the poster ([#787](https://github.com/Rakieta02/Rakieta/issues/787),
+ * [#788](https://github.com/Rakieta02/Rakieta/issues/788); design system 12.2). Sign-in's *It's a
  * game!* draws it bare; sign-up's podium draws it inside an edge — You's volt ring, the others'
  * translucent rim.
  *

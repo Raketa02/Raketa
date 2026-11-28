@@ -1,6 +1,6 @@
 /**
  * **A group's Fill in tab** — `GET /pools/{id}/fill-in?sport` (#545), its rescues and the tab's
- * badge ([#557](https://github.com/Raketa02/Raketa/issues/557); the rows not seen yet since #849).
+ * badge ([#557](https://github.com/Rakieta02/Rakieta/issues/557); the rows not seen yet since #849).
  * You’re in, the tab beside it since
  * #847, is the live yeses (`useLiveYeses`), each row's game read in detail (`useProposal`) — and asks
  * this read only whether Fill in is empty, for its starting card.

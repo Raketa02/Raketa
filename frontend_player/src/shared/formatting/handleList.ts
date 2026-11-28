@@ -98,7 +98,7 @@ export interface HandleRole {
  * a line drawn at another promises room the line does not have — six points of size is nearly half
  * again as many characters — and what that draws is a one-line row cut mid-handle or a header
  * grown a second line, depending on which surface capped it
- * ([#401](https://github.com/Raketa02/Raketa/issues/401)). The role's tracking is spent too: it
+ * ([#401](https://github.com/Rakieta02/Rakieta/issues/401)). The role's tracking is spent too: it
  * is part of every character's advance, and ignoring `h1`'s negative tracking would drop a name
  * that fitted.
  *

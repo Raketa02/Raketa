@@ -1,7 +1,7 @@
 /**
  * **Posting a game, as the backend answers it** — the grid, a cell's sheet and the post
  * (`GET /pools/{id}/posting-grid`, `…/posting-grid/slot`, `POST /pools/{id}/posts`; #546), for the
- * suites that walk *Post a game* ([#558](https://github.com/Raketa02/Raketa/issues/558)).
+ * suites that walk *Post a game* ([#558](https://github.com/Rakieta02/Rakieta/issues/558)).
  *
  * The grid is read at `DECK_READ_AT` — Wednesday 30 September 2026, 10:00 in Warsaw — so week one
  * runs Wednesday 30 September to Tuesday 6 October and week two the seven days after. **Every cell

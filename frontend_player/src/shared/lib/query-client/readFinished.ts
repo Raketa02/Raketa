@@ -1,5 +1,5 @@
 /**
- * **When a read counts as finished** (PRD #867, [#871](https://github.com/Raketa02/Raketa/issues/871);
+ * **When a read counts as finished** (PRD #867, [#871](https://github.com/Rakieta02/Rakieta/issues/871);
  * the loading shimmer log §5, Q13) — what a screen built from several reads waits on before it
  * reveals (`shared/ui`'s `useRevealParts`). A read has finished once any of these has happened:
  *
@@ -43,7 +43,7 @@ export function readHasFinished(read: ReadEnding | undefined): boolean {
 }
 
 /**
- * **How far a read has come** ([#875](https://github.com/Raketa02/Raketa/issues/875)): `reading` —
+ * **How far a read has come** ([#875](https://github.com/Rakieta02/Rakieta/issues/875)): `reading` —
  * out, or not yet asked, with nothing to show; `landed` — it holds data, whatever it is doing now;
  * `ended` — finished with nothing to show: refused, paused for a connection, or failed once and
  * retrying. A part whose read has *ended* reveals what it draws then, the failure or the offline

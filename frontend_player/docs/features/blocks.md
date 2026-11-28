@@ -3,9 +3,9 @@
 The client side of the backend's **Blocks** context: a player keeps somebody off their games from
 that person's record, and undoes it from a list under You › Account (the record's own _Unblock_ went
 with #779, below). Built by
-[#587](https://github.com/Raketa02/Raketa/issues/587) for PRD
-[#571](https://github.com/Raketa02/Raketa/issues/571), on the contract
-[#586](https://github.com/Raketa02/Raketa/issues/586) built, and decided by
+[#587](https://github.com/Rakieta02/Rakieta/issues/587) for PRD
+[#571](https://github.com/Rakieta02/Rakieta/issues/571), on the contract
+[#586](https://github.com/Rakieta02/Rakieta/issues/586) built, and decided by
 [ADR-0193](../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md).
 `player_record`'s sheet draws `BlockRow` at the foot of every record but your own; the shell
 composes `BlockedPlayersRow` into the You tab's **ACCOUNT** group under _Notifications_; the
@@ -83,12 +83,12 @@ is not carried: nothing draws it.
 **Not seen on a device**: the confirm sheet rising over the record on both platforms, TalkBack
 inside the stacked sheet, the row at the record's foot under a long name, and the list's rows.
 
-**The row and the list name the nickname** ([#728](https://github.com/Raketa02/Raketa/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). `BlockedPlayer.name` is mapped from
+**The row and the list name the nickname** ([#728](https://github.com/Rakieta02/Rakieta/issues/728), [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §1). `BlockedPlayer.name` is mapped from
 the wire's `nickname`, and the record hands the row its `nickname`, so the row reads _Block kuba.w_,
 the sheet _Block kuba.w?_ and _"You won't be put in games with kuba.w. They aren't told."_ — whole,
 never with an @, and the paragraph above read through ADR-0199 §7.
 
-**Block is half a row now, and Unblock the whole of it** ([#753](https://github.com/Raketa02/Raketa/issues/753);
+**Block is half a row now, and Unblock the whole of it** ([#753](https://github.com/Rakieta02/Rakieta/issues/753);
 the friends screens §2). The record's foot became _Add friend_ beside _Block_, so the row draws
 **_Block_** and **_Unblock_** (`BLOCKS_COPY.row`) and still speaks _Block kuba.w_ / _Unblock kuba.w_ —
 a half-width button cannot hold the whole nickname, and the spoken name was always the one that
@@ -97,7 +97,7 @@ alone and full width, and `friends` offers nothing beside it (the friends mechan
 above the row moved to the record's foot, which holds both buttons. A block also ends a friendship
 on the server (ADR-0202 §2); the record's re-read after it shows that, and nothing here names it.
 
-**Unblock left the record, and a block closes it** ([#779](https://github.com/Raketa02/Raketa/issues/779);
+**Unblock left the record, and a block closes it** ([#779](https://github.com/Rakieta02/Rakieta/issues/779);
 [ADR-0203](../../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §8; the rankings
 screens §6; the words §30.8). Since #773 a record never opens between two people either of whom
 blocked the other, so the row is always _Block_: `BlockRow` lost its `blocked` prop, its _Unblock_

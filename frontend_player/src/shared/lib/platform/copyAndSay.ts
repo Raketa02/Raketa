@@ -1,6 +1,6 @@
 /**
  * **Copy a link, and say whether it went** — the clipboard port's write, answered by a toast
- * ([#756](https://github.com/Raketa02/Raketa/issues/756)): *Link copied*, or that the phone would
+ * ([#756](https://github.com/Rakieta02/Rakieta/issues/756)): *Link copied*, or that the phone would
  * not take it, so a tap never passes silently.
  *
  * Three surfaces wrote it the same way — a group page's **Copy link** (#513), an official group's

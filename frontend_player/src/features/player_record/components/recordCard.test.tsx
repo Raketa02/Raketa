@@ -1,6 +1,6 @@
 /**
  * The record card and the block over it, and the claims a build session could quietly undo
- * ([#660](https://github.com/Raketa02/Raketa/issues/660), ADR-0195 §1).
+ * ([#660](https://github.com/Rakieta02/Rakieta/issues/660), ADR-0195 §1).
  *
  * **Counts, and no meters.** Player reliability is points now, and what the record shows beside
  * them is four counts over the last 6 months — *Shows up*, *Keeps plans*, *Being late*, *Results
@@ -125,7 +125,7 @@ describe('the record card', () => {
   /**
    * **What other players said is one row, drawn the same for everybody** — the label naming its
    * author and the figure with its count, in the card's mono figure role, spoken as one clause of
-   * the card (ADR-0179 §5, [#473](https://github.com/Raketa02/Raketa/issues/473)).
+   * the card (ADR-0179 §5, [#473](https://github.com/Rakieta02/Rakieta/issues/473)).
    */
   it('draws the sportsmanship row as the figure and its count', () => {
     render(<RecordCard counts={SERGIO} opinion={{ average: 4.3, raters: 12 }} />);

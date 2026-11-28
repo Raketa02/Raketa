@@ -1,6 +1,6 @@
 /**
  * **The administrator's You tab** — who is here, each official group's settings, *Start playing*
- * and the way out ([#517](https://github.com/Raketa02/Raketa/issues/517), PRD #500 stories
+ * and the way out ([#517](https://github.com/Rakieta02/Rakieta/issues/517), PRD #500 stories
  * 131–133). No mock draws it, so it is the player's You tab's arrangement (ADR-0179 §1) with the
  * administrator's rows in it:
  *
@@ -18,7 +18,7 @@
  * ([ADR-0199](../../../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §4), so an
  * account that has not started playing has no nickname yet and the header says *You*. Club 8's *OGRODY 33 · ADMINISTRATOR* over it went at the product
  * owner's ask (#529, 2026-10-02), as the Groups tab's had: the switcher chip beside the name and
- * the area's own bar already say whose profile it is. **The switcher chip is its right slot** ([#518](https://github.com/Raketa02/Raketa/issues/518),
+ * the area's own bar already say whose profile it is. **The switcher chip is its right slot** ([#518](https://github.com/Rakieta02/Rakieta/issues/518),
  * club 7), drawn only for an account with a second profile to switch to.
  *
  * **A group's row is the You tab's door row**: a glyph, the group's name, and the one of its settings

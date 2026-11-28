@@ -1,11 +1,11 @@
 /**
  * **The next Find a game — empty, for now.**
  *
- * What Play › Explore shows ([#479](https://github.com/Raketa02/Raketa/issues/479),
- * [#512](https://github.com/Raketa02/Raketa/issues/512)). Find a game is to be rebuilt, and the
+ * What Play › Explore shows ([#479](https://github.com/Rakieta02/Rakieta/issues/479),
+ * [#512](https://github.com/Rakieta02/Rakieta/issues/512)). Find a game is to be rebuilt, and the
  * rebuild needs somewhere to live: this feature is that place, and this screen is where it starts.
  * The old Find a game it once stood in for went with the old loop
- * ([#576](https://github.com/Raketa02/Raketa/issues/576)), and the flag that chose between them
+ * ([#576](https://github.com/Rakieta02/Rakieta/issues/576)), and the flag that chose between them
  * with it.
  *
  * **No copy, deliberately.** Nothing here says *coming soon*, because there is no promise to make

@@ -1,6 +1,6 @@
 /**
  * **A miniature game card** — one of the three sign-in's hero deals
- * ([#786](https://github.com/Raketa02/Raketa/issues/786), PRD #783; design system 12.2, mock 2).
+ * ([#786](https://github.com/Rakieta02/Rakieta/issues/786), PRD #783; design system 12.2, mock 2).
  *
  * ```
  * ┌─────────────────────────────────┐

@@ -1,7 +1,7 @@
 /**
  * **The heartbeat** — *I am typing*, posted while the words are changing and never otherwise
  * ([ADR-0156](../../../../../docs/adr/0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md)
- * §2, [#404](https://github.com/Raketa02/Raketa/issues/404)).
+ * §2, [#404](https://github.com/Rakieta02/Rakieta/issues/404)).
  *
  * ## A beat per keystroke, throttled to the cadence, and nothing scheduled
  *

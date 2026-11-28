@@ -1,6 +1,6 @@
 /**
  * **Edit group** — the Owner renames the group and changes who can join
- * ([#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 75–76). No mock draws
+ * ([#514](https://github.com/Rakieta02/Rakieta/issues/514), PRD #500 stories 75–76). No mock draws
  * it: it is *the New group form's Name and Who can join cards and Save*, and those two cards are
  * New group's own (`GroupFormCards`). The home club is not here — it never changes (ADR-0183 §2).
  *

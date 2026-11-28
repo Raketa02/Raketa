@@ -4,7 +4,7 @@
  * **The shell keeps no per-tab history**, so this table is not "each tab's last position" —
  * it is each tab's *only* position. Home is the shell's root and is never laid down again once it
  * is up; You and Play are laid down over it, fresh, on every press, and their depth is thrown away
- * every time a player leaves them ([#227](https://github.com/Raketa02/Raketa/issues/227) — one
+ * every time a player leaves them ([#227](https://github.com/Rakieta02/Rakieta/issues/227) — one
  * stack, not three).
  *
  * Pure on purpose: the rule below is what draws the bar's active column on every screen in
@@ -20,7 +20,7 @@ import type { TabBarKey } from '@/shared/ui';
  * `home` is `/` rather than `/home` because it is the shell's root: the entry gate lands a
  * player at `/`, and a second spelling for the screen they land on would be two answers to
  * where the app opens. It was `now` until Now was renamed Home
- * ([#550](https://github.com/Raketa02/Raketa/issues/550)), and the route did not move.
+ * ([#550](https://github.com/Rakieta02/Rakieta/issues/550)), and the route did not move.
  */
 export const SHELL_TAB_ROOT = {
   home: '/',
@@ -124,9 +124,9 @@ export function tabForPathname(pathname: string): TabBarKey {
 /**
  * Whether the bar **stands down** on a pathname — drawn nowhere, rather than drawn and hidden.
  *
- * One route does this: **a booked game's chat** ([#556](https://github.com/Raketa02/Raketa/issues/556)),
+ * One route does this: **a booked game's chat** ([#556](https://github.com/Rakieta02/Rakieta/issues/556)),
  * where the composer replaces the bar so the keyboard and the stream get the whole screen
- * ([#400](https://github.com/Raketa02/Raketa/issues/400)). It is a fact about **which screen the
+ * ([#400](https://github.com/Rakieta02/Rakieta/issues/400)). It is a fact about **which screen the
  * player is on** and so belongs beside `tabForPathname`, which is the other thing the shell reads
  * off a route — and it is pure for the same reason that one is: stated here it can be read back
  * without a renderer, and the shell that draws the bar learns nothing about what a room is.

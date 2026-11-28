@@ -12,7 +12,7 @@ the active column off the current path —
 It is a `Stack` and deliberately **not** `<Tabs>`, which keeps a history per tab and restores
 it: built that way, a player who leaves a screen and comes back lands on it, and _back goes
 where I came from_ fails with **no symptom** — nothing throws and nothing looks wrong
-([#227](https://github.com/Raketa02/Raketa/issues/227)). So switching tabs **replaces**, and
+([#227](https://github.com/Rakieta02/Rakieta/issues/227)). So switching tabs **replaces**, and
 entering Play lays down `[Home, Play]` — two screens, which is the whole of _back from Play
 leaves Play_. Both go through **one function**, `resetShellStack`, reading **one table**,
 `TAB_STACK`: Home lays down nothing over itself, You and ⚡Play each lay their root over Home, and
@@ -42,7 +42,7 @@ is one reset of the navigation state at the root, `(app)` › `(tabs)` › the t
 screen on top, made by the entry gate before the shell mounts; screens are named as `Stack.Screen`
 names them, resolved against `PUSHED_SCREENS` and the two unpushed roots
 ([`onboarding.md`](onboarding.md)'s landing paragraph). **The bar stands down on exactly one route, a booked game's room**, where the
-composer replaces it ([#400](https://github.com/Raketa02/Raketa/issues/400)): `barStandsDown`
+composer replaces it ([#400](https://github.com/Rakieta02/Rakieta/issues/400)): `barStandsDown`
 beside `tabForPathname` names the whole path, `TabShell` does not render the bar there rather than
 hiding it, and the room takes the bottom safe-area inset the bar owns everywhere else — the one
 exception to design-system §10.1, recorded in Part 16. The column stays lit while the bar is
@@ -55,7 +55,7 @@ from the right would read as going deeper on the gesture whose meaning is that n
 and the push kept for the screens pushed over a tab, which genuinely are ones.
 
 **The bar floats over the screen, and every screen inside the tabs ends at its reach**
-([#881](https://github.com/Raketa02/Raketa/issues/881), 2026-11-25;
+([#881](https://github.com/Rakieta02/Rakieta/issues/881), 2026-11-25;
 [ADR-0210](../../../docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §3,
 design-system §10.1). It was a flex sibling under the stack, which ended every screen above it for
 free; it is now drawn absolutely at the phone's foot and owns no layout, so the screens draw to the
@@ -90,7 +90,7 @@ no longer runs under the bar, which stands 12 in from either side.
 `administratorArea.test.tsx` walk it against the reach worked out from the theme
 (`test-support/tabBarReach.ts`).
 
-**The bar is the dock, and the selection marker stands under the lit tab** ([#883](https://github.com/Raketa02/Raketa/issues/883),
+**The bar is the dock, and the selection marker stands under the lit tab** ([#883](https://github.com/Rakieta02/Rakieta/issues/883),
 2026-11-25; ADR-0210 §2, §4–§7, design-system §10.2). `TabBar` draws a rounded slab 54 tall, 12 in
 from each side and lifted the larger of 12 and the bottom inset: `color.glass` over `expo-blur` on
 the iPhone, and opaque `surface` on Android, where the A32 measured the blur costing frames
@@ -104,10 +104,10 @@ whichever tab that is — under Play for a group opened from Home's _Groups heat
 inside a booked game. The administrator's area draws the same dock with Groups (`people`) and You.
 `theShell.test.tsx` and `administratorArea.test.tsx` walk where the marker stands (`markerUnder`);
 the look is the phone
-walk's ([#885](https://github.com/Raketa02/Raketa/issues/885)), and a phone build needs a native
+walk's ([#885](https://github.com/Rakieta02/Rakieta/issues/885)), and a phone build needs a native
 rebuild for `expo-blur`.
 
-**The marker travels** ([#884](https://github.com/Raketa02/Raketa/issues/884), 2026-11-25; ADR-0210
+**The marker travels** ([#884](https://github.com/Rakieta02/Rakieta/issues/884), 2026-11-25; ADR-0210
 §8, design-system §10.2). On every change of the lit tab after the dock's first draw it slides to
 the new one on `motion.tabMarker`'s spring — 460 ms at damping ratio 0.75, so it overshoots by a few
 points and settles — stretching like a bubble with its own speed and recoiling as it brakes, and
@@ -123,9 +123,9 @@ walks it through the shell, `hottestGroups.test.tsx` the trip to Play and back, 
 travelling cannot be walked through the router harness**, whose flush on the second navigation lands
 the first slide, so the turn mid-flight is the bar's own suite's. The feel is the phone walk's
 (#885), and so is whether the slide stutters while a tab's screen mounts under it
-([#886](https://github.com/Raketa02/Raketa/issues/886), measured on the A32 by the spike).
+([#886](https://github.com/Rakieta02/Rakieta/issues/886), measured on the A32 by the spike).
 
-**On Android the bar stands down while the keyboard is up** ([#882](https://github.com/Raketa02/Raketa/issues/882),
+**On Android the bar stands down while the keyboard is up** ([#882](https://github.com/Rakieta02/Rakieta/issues/882),
 2026-11-25; ADR-0210 §9, design-system §10.1). Android shrinks the window for the keyboard, and the
 floating bar sits at the window's foot, so it would ride up above the keyboard and over a field near
 it: Intro, Name, New group, Edit group, Post a game and the administrator's forms, whose pages no
@@ -143,13 +143,13 @@ and `theFill.test.tsx` the Undo toast. **Not seen on a device**: the bar going a
 keyboard is for the phone walk (#885).
 
 **You draws one more of another feature's sections: the Location area sentence**
-([#462](https://github.com/Raketa02/Raketa/issues/462)). `AreaUpdatesNote` sits under
+([#462](https://github.com/Rakieta02/Rakieta/issues/462)). `AreaUpdatesNote` sits under
 `PlayIntentsSection` and above the account panel, composed exactly as the section above it is;
 the sentence, the refresh it is the trace of and the reasons are the profile feature's
 ([`player_profile.md`](player_profile.md)).
 
 **You is a screen, and the last placeholder went with it**
-([#469](https://github.com/Raketa02/Raketa/issues/469),
+([#469](https://github.com/Rakieta02/Rakieta/issues/469),
 [ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
 §1). `YouScreen` — in a file of its own, because it is not thin — is a header card
 over three titled groups of rows and _Sign out_ at the foot: **Playing** (Skill passport ·
@@ -195,7 +195,7 @@ card's fit beside a long name, the row lead's 28 pt against the chevron, and the
 tab.
 
 **Play is a _Groups | Explore_ segment, and the shell draws it**
-([#512](https://github.com/Raketa02/Raketa/issues/512), play mocks 1 and 3, PRD #500 stories 1–4).
+([#512](https://github.com/Rakieta02/Rakieta/issues/512), play mocks 1 and 3, PRD #500 stories 1–4).
 `PlayScreen` is the shell's for the reason Home and You are — a tab owns its own words and
 composes other features' pages under them: _Groups_ is `features/groups`' list, _Explore_ is
 `features/find_a_game_next`'s empty screen. The segment is `Segment`'s new **`prominent`** form —
@@ -215,7 +215,7 @@ never refetches `/users/me`. The walks are `components/playSegment.test.tsx`: th
 across a tab change, another account on the same phone, a sign-out, and a value that is not a
 segment. **Not seen on a device.**
 
-**The You header's right slot is the profile switcher's chip** ([#518](https://github.com/Raketa02/Raketa/issues/518),
+**The You header's right slot is the profile switcher's chip** ([#518](https://github.com/Rakieta02/Rakieta/issues/518),
 club 7; ADR-0185 §3 amends ADR-0179 §1's locked header by this element). The You route hands it
 to `YouScreen` (`headerRight`), which forwards it to `ShellScreen`'s right slot: the chip is the
 administrator feature's, and the shell importing it would close a cycle through `auth`, so the route
@@ -224,7 +224,7 @@ feature's ([`administrator.md`](administrator.md)). **It draws
 nothing for an account that only plays**, so the tab most people see is unchanged. **Not seen on a
 device.**
 
-**Now is Home** ([#550](https://github.com/Raketa02/Raketa/issues/550), the Games & Fill in
+**Now is Home** ([#550](https://github.com/Rakieta02/Rakieta/issues/550), the Games & Fill in
 screens A1), renamed whole — key `home`, label _Home_, `HomeScreen`, `HOME_COPY` (title only; its
 two lines are still true of the tab), `landOnHome`, and the harness's `HOME_TAB_LINE` — on the same
 route, `/`. **Home carries a badge**: the booked games that need you, handed to the bar as
@@ -235,18 +235,18 @@ once.
 **The You tab asks the fourth question since money arrived** — _how do I pay for a game_ — in an
 **ACCOUNT** group after _On your card_ and before _Sign out_ (ADR-0189 amending ADR-0179 §9; the
 screens A7), which the paragraph above predates. It holds _Games & money_ (`proposals`,
-[#554](https://github.com/Raketa02/Raketa/issues/554)) then _Payments_ (`payments`, #552);
+[#554](https://github.com/Rakieta02/Rakieta/issues/554)) then _Payments_ (`payments`, #552);
 _Notifications_ (#559) joins under them. Both screens are pushed under `you/` and listed in
 the shell's `PUSHED_SCREENS`, so they take the push transition and keep the You column lit.
 
-**A booked game is pushed over Home** ([#556](https://github.com/Raketa02/Raketa/issues/556);
+**A booked game is pushed over Home** ([#556](https://github.com/Rakieta02/Rakieta/issues/556);
 the Games & Fill in screens A8) under a `booking` segment `INSIDE_A_TAB` counts as Home's — its
 details, its chat and its result, each a `Stack.Screen` with the push transition — and **the bar
 stands down in its room** (`/booking/{id}/chat`), for the room's own reason. `HomeScreen` puts
 `proposals`' _TO CONFIRM_ above the rail, drawn only while a payment waits. _It's a game!_'s _Open
 game_ lays Home down and pushes the booking's details (`openGame(bookingId)`).
 
-**Home has a bell, and the notices are held around the tabs** ([#559](https://github.com/Raketa02/Raketa/issues/559);
+**Home has a bell, and the notices are held around the tabs** ([#559](https://github.com/Rakieta02/Rakieta/issues/559);
 the Games & Fill in screens A9). `HomeScreen` puts `notifications`' `NoticeBell` in `ShellScreen`'s
 right slot; the list behind it is `/notices`, pushed over Home under a segment `INSIDE_A_TAB` counts as
 Home's, with the push transition, and the bar stays up there. `TabShell` mounts
@@ -258,7 +258,7 @@ _Payments_ (mock 50). **The price, stated as the badges' were: the shell now hol
 while the phone is not being pushed, so every launch makes it and the harness's gate stubs it.
 
 **The old loop left, and the bar is Home · ⚡Play · You for good**
-([#576](https://github.com/Raketa02/Raketa/issues/576), PRD [#569](https://github.com/Raketa02/Raketa/issues/569)).
+([#576](https://github.com/Rakieta02/Rakieta/issues/576), PRD [#569](https://github.com/Rakieta02/Rakieta/issues/569)).
 The Players and Chats columns, the `classic_play` flag that drew them (and `useFollowedFeature`, the
 followed read the bar took it through), the Chats tab's inbox and its pull to refresh, the yes
 screen the bar stood down on, Find a game's builder and pool under Play, the old game screen at
@@ -280,50 +280,50 @@ three-column bar at a large text size.
 `proposals`' `rereadHome`, the games, _TO CONFIRM_ and the live yeses — and `ShellScreen`'s
 `onRefresh` spins until they have landed, refused or not.
 
-**_Finding players_ is three rows** ([#582](https://github.com/Raketa02/Raketa/issues/582)):
+**_Finding players_ is three rows** ([#582](https://github.com/Rakieta02/Rakieta/issues/582)):
 _Your week · Where you play · Who you play with_. _How far to look_ and _Game suggestions_ left
 with the two questions they answered again — the Search radius and the Proposals opt-in, read
 only by the old loop's ranking — and their screens, `you/radius` and `you/game-suggestions`,
 left `PUSHED_SCREENS` with them. The group keeps its title: what it holds is still what a proposed
 game reads. The walk is `theShell.test.tsx`, which asserts neither title is drawn.
 
-**ACCOUNT ends with _Blocked players_** ([#587](https://github.com/Raketa02/Raketa/issues/587)):
+**ACCOUNT ends with _Blocked players_** ([#587](https://github.com/Rakieta02/Rakieta/issues/587)):
 `blocks`' row under _Notifications_, its line _Nobody_, _1 player_ or _2 players_, and its screen
 `you/blocked-players` in `PUSHED_SCREENS`. The gate stubs `GET /blocks` (none), because the row reads
 it on every visit to the tab. The record is [`blocks.md`](blocks.md).
 
-**_Name_ is _Nickname_** ([#728](https://github.com/Raketa02/Raketa/issues/728),
+**_Name_ is _Nickname_** ([#728](https://github.com/Rakieta02/Rakieta/issues/728),
 [ADR-0199](../../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §3). The **On your
 card** group's last row is `auth`'s `NicknameRow`, its line the nickname whole and never with an
 @, and the header card draws the nickname large with nothing under it. The screen behind the row is
 still `you/name`: the route keeps the word, as the act's path does. The paragraphs above that say
 _Name_ read through it.
 
-**_Show me in General_ closes _On your card_** ([#778](https://github.com/Raketa02/Raketa/issues/778),
+**_Show me in General_ closes _On your card_** ([#778](https://github.com/Rakieta02/Rakieta/issues/778),
 the You screen 3.14), after _Nickname_: `player_profile`'s `ShowMeInGeneralRow`, the one row on the tab
 that is a switch rather than a door. The record is [`player_profile.md`](player_profile.md).
 
 **Home asks a member of a group rated in nothing for a level, first**
-([#731](https://github.com/Raketa02/Raketa/issues/731), ADR-0200 §7). `groups`' `HomeLevelCard`
+([#731](https://github.com/Rakieta02/Rakieta/issues/731), ADR-0200 §7). `groups`' `HomeLevelCard`
 is drawn at the top of Home, above _TO CONFIRM_ and the rail, because until she has a level nothing
 under it can happen; what it says and when, and the reads it costs, are in
 [`groups.md`](groups.md). The gate stubs both reads empty, so a suite's Home draws no card unless it
 puts the player in a group. **Calls made here**: its place on Home; the pull does not re-read it.
 
-**_Finding players_ is _Your games_** ([#733](https://github.com/Raketa02/Raketa/issues/733),
+**_Finding players_ is _Your games_** ([#733](https://github.com/Rakieta02/Rakieta/issues/733),
 ADR-0200 §10). Nothing on the tab finds players any more, so the group holding _Your week · Where
 you play · Who you play with_ is named for what they are read by — a game proposed to the player.
 `YOU_COPY.groups.findingPlayers` became `yourGames`, and the three screens behind the rows wear it
 as their eyebrow. The paragraph on #582 above that says _the group keeps its title_ was true until
 this one.
 
-**Home holds FRIEND REQUESTS above Your games** ([#753](https://github.com/Raketa02/Raketa/issues/753);
+**Home holds FRIEND REQUESTS above Your games** ([#753](https://github.com/Rakieta02/Rakieta/issues/753);
 the friends screens §6; Q13): the level card, _TO CONFIRM_, then `friends`' `FriendRequestsRow`, then
 the rail — drawn only while a request waits. The shell hands it the two things that are
 `player_record`'s, the reliability chip (`PlayerScoreTag`) and the record a card's face opens, so
 `friends` never imports the feature that draws its record button. #757 adds FRIENDS GAME above it.
 
-**ASKED FOR A LEVEL sits under FRIEND REQUESTS** ([#765](https://github.com/Raketa02/Raketa/issues/765);
+**ASKED FOR A LEVEL sits under FRIEND REQUESTS** ([#765](https://github.com/Rakieta02/Rakieta/issues/765);
 the friends screens §6.4; Q129): `friends`' `LevelAsksRow`, drawn only while a friend's ask waits,
 handed the record a face opens — one sheet for both rows (`HomeFriendRows`) — the bell's re-read, and
 `notifications`' `OPEN_NOTICE_WORDS.unstarted` for a start that fails. **It stands in place of the
@@ -332,7 +332,7 @@ plainly. **What a level got changes on Home is the shell's** (`useRereadAfterALe
 sport's ask card dropped from Home's cache and Home and the bell re-read, handed by the entry gate to
 `useEndOnboardingPass` and run as a rating pass ends — the record is [`friends.md`](friends.md).
 
-**You › Friends is composed here** ([#754](https://github.com/Raketa02/Raketa/issues/754)).
+**You › Friends is composed here** ([#754](https://github.com/Rakieta02/Rakieta/issues/754)).
 `friends`' row closes the You tab's _Your games_ group, and `YouFriendsScreen` mounts `friends`' page
 with the three things that are other features' handed in: the record a row opens (`player_record`'s),
 and the Add friends sheet's group tiles and door into Members (`groups`' `MyGroupMonogram` and
@@ -340,14 +340,14 @@ and the Add friends sheet's group tiles and door into Members (`groups`' `MyGrou
 back would be a dependency both ways. `you/friends` is a pushed screen. The record of the page is
 [`friends.md`](friends.md).
 
-**_Invite a friend_ into an empty seat is composed here** ([#760](https://github.com/Raketa02/Raketa/issues/760)):
+**_Invite a friend_ into an empty seat is composed here** ([#760](https://github.com/Rakieta02/Rakieta/issues/760)):
 `InviteAFriendScreen`, at `booking/[bookingId]/invite`, mounts `friends`' page and its picker with one
 seat around `proposals`' `SeatInvite` (the game, and who is on it) and `InviteOrder` (the order at the
 foot), with `groups`' doors in the Add friends sheet — three features, each read by another, so
 neither can draw the rest. The pick is the screen's own; the record of it is
 [`proposals.md`](proposals.md).
 
-**Home has a trophy left of the bell, and Rankings is pushed over Home** ([#775](https://github.com/Raketa02/Raketa/issues/775);
+**Home has a trophy left of the bell, and Rankings is pushed over Home** ([#775](https://github.com/Rakieta02/Rakieta/issues/775);
 the rankings screens §1, §2; Q11, Q13). `HomeScreen`'s right slot is a row now, `rankings`'
 `RankingTrophy` then `notifications`' `NoticeBell`, so the bell keeps the corner. `/rankings` is a
 pushed screen (`PUSHED_SCREENS`) under a segment `INSIDE_A_TAB` counts as Home's, so the Home column
@@ -355,12 +355,12 @@ stays lit there, as on the notices. The trophy reads Home's own read, so it cost
 page's reads are the feature's ([`rankings.md`](rankings.md)). The entry gate lands a pass begun on
 Rankings back on it with Home beneath (`useShellLanding`), as it lands a group with Play beneath.
 
-**_Show me to new people_ closes _On your card_** ([#799](https://github.com/Raketa02/Raketa/issues/799)):
+**_Show me to new people_ closes _On your card_** ([#799](https://github.com/Rakieta02/Rakieta/issues/799)):
 `player_profile`'s `ShowMeToNewPeopleRow`, in the place `ShowMeInGeneralRow` stood — the paragraph
 above's row, renamed with its switch. The record is [`player_profile.md`](player_profile.md).
 
 **The five Home rows begin below _Your games_, HOTTEST GROUPS first**
-([#800](https://github.com/Raketa02/Raketa/issues/800); ADR-0204; the Home rows screens §1).
+([#800](https://github.com/Rakieta02/Rakieta/issues/800); ADR-0204; the Home rows screens §1).
 `HomeScreen` draws `groups`' `HottestGroupsRow` after `HomeRail`, and the pull re-reads it beside
 Home's own reads (`rereadHomeGroups`, the row and the Groups list) — each row reads on its own, so a slow or failed one holds up
 nothing. **A reader in no group** reads _Join a group to get games — the hottest ones are just below._
@@ -369,7 +369,7 @@ handed to `HomeRail` from `groups`' answer (`useInNoGroup`) and its words (`GROU
 the empty sentences have always been handed down. The walk is `groups`' `hottestGroups.test.tsx`.
 
 **NEW IN RAKIETA follows HOTTEST GROUPS, and See all is pushed over Home**
-([#801](https://github.com/Raketa02/Raketa/issues/801); the Home rows screens §1, §5). `HomeScreen`
+([#801](https://github.com/Rakieta02/Rakieta/issues/801); the Home rows screens §1, §5). `HomeScreen`
 draws `discovery`'s `NewInRakietaRow` after `HottestGroupsRow` — Same competitive level (#802) will
 stand between them — and the pull re-reads it (`rereadDiscovery`). **The shell hands it nothing
 else**: accepting a request on FRIEND REQUESTS turns that person's envelope to ✓ on the row because the
@@ -377,7 +377,7 @@ row's reads list people (`LISTS_PEOPLE`) and every friend write re-reads those. 
 `/new-in-rakieta`, in `PUSHED_SCREENS` and `INSIDE_A_TAB` (Home stays lit). The record is
 [`discovery.md`](discovery.md).
 
-**Home says what of it is on screen** ([#804](https://github.com/Raketa02/Raketa/issues/804); the
+**Home says what of it is on screen** ([#804](https://github.com/Rakieta02/Rakieta/issues/804); the
 Home rows mechanics §9.2). `HomeScreen` turns on `ShellScreen`'s **`watchesOnScreen`** — forwarded,
 not designed, and off on every other shell screen, whose scroller says nothing of where it is. With
 it on, the page's scroller hands its rows `shared/ui`'s `PageOnScreen` (`useWatchedPage`): how far
@@ -399,7 +399,7 @@ A32, eleven of eleven presses across the five lines failed at 100 and none at 16
 Android throttles nothing. A larger figure here is that bug again.
 
 **Home's header reads envelope, bell, trophy, and what waits on the player is behind the envelope**
-([#816](https://github.com/Raketa02/Raketa/issues/816), PRD #810;
+([#816](https://github.com/Rakieta02/Rakieta/issues/816), PRD #810;
 [ADR-0205](../../../docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
 §1, §2, §4; home refactor 1 and 2). `HomeScreen`'s right slot is `NeedsYourAnswer`, then
 `notifications`' `NoticeBell`, then `rankings`' `RankingTrophy` in the corner — the trophy took it from
@@ -425,7 +425,7 @@ self-close and what arrives after it). **Not seen on a device**: the header agai
 against mock 2, the pull and its spring back.
 
 **TO CONFIRM and FRIENDS GAME join the sheet, first and second, and links and notices land on it**
-([#817](https://github.com/Raketa02/Raketa/issues/817), ADR-0205 §1; Q14, Q24, Q25, Q32). The sheet
+([#817](https://github.com/Rakieta02/Rakieta/issues/817), ADR-0205 §1; Q14, Q24, Q25, Q32). The sheet
 reads **TO CONFIRM · n**, **FRIENDS GAME · n**, then `friends`' two — `proposals`'
 `ToConfirmSection` and `FriendsGameSection` above `friends`' sections — and **Home's body is _Get your
 level_, _Your games_ and the five rows**. The envelope counts all four off `proposals`'
@@ -459,7 +459,7 @@ Friends game tiles against mock 2, and every sheet the fill draws over this one 
 native window opened inside the sheet's; nothing in jest can show that it presents.
 
 **The envelope carries the bell's count mark, and closing the sheet records a visit**
-([#819](https://github.com/Raketa02/Raketa/issues/819), ADR-0205 §2, §3; home refactor 1). The badge
+([#819](https://github.com/Rakieta02/Rakieta/issues/819), ADR-0205 §2, §3; home refactor 1). The badge
 is `shared/ui`'s `CountBadge`, tone `news`, in ink — **the bell's, unchanged** (design-system 10.3) —
 on a glyph box of its own inside the 44pt target, as the bell's is: _99+_ above 99, nothing at
 nought (`envelopeFigure`, `shellCopy.ts`). **It counts what arrived since the sheet was last closed**,
@@ -488,7 +488,7 @@ The walk is `envelopeCount.test.tsx`. **Not seen on a device**: the badge on the
 mock 1, where it sits over the mail mark's corner as the bell's does over the bell.
 
 **The five Home rows fold into FOR YOU, and which line is open is the shell's**
-([#820](https://github.com/Raketa02/Raketa/issues/820), ADR-0205 §5, §8; the Home rows screens §1,
+([#820](https://github.com/Rakieta02/Rakieta/issues/820), ADR-0205 §5, §8; the Home rows screens §1,
 §2; home refactor 3–13). Under _Your games_, `ForYou` draws `shared/ui`'s `FoldingLines` — the eyebrow
 _FOR YOU_ (`HOME_COPY.forYou`) — and five `FoldingLine`s in ADR-0205 §5's order, each its feature's:
 `groups`' `useHottestGroupsLine`, `discovery`'s `useSameLevelLine`, `useNewInRakietaLine` and
@@ -527,7 +527,7 @@ hidden, FOR YOU is not drawn. The paragraphs above that say `HomeScreen` draws `
 The walk is `forYou.test.tsx`; each line's own is its feature's suite. **Not seen on a device**: the
 fold, the unfold, the switch, the lines sliding and the page easing down, against home refactor 3–13.
 
-**FOR YOU's lines show their counts** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+**FOR YOU's lines show their counts** ([#822](https://github.com/Rakieta02/Rakieta/issues/822);
 ADR-0205 §5, §6; home refactor 3, 4, 7). A line's parts carry its `count`, and `ForYou` hands it to the
 `FoldingLine` as it hands the title — the shell decides nothing about it: what a count counts is each
 feature's read, the pill and its _99+_ are `shared/ui`'s. Four lines carry one, Top 10 none.
@@ -537,7 +537,7 @@ in `forYou.test.tsx`'s _the counts_: each line's figure, the cap, no pill on Top
 open, the spoken names, _See all N_ in the people lines' footers, and the pull and a return moving
 the figure.
 
-**Play's Explore goes behind the `explore` feature flag, off** ([#826](https://github.com/Raketa02/Raketa/issues/826),
+**Play's Explore goes behind the `explore` feature flag, off** ([#826](https://github.com/Rakieta02/Rakieta/issues/826),
 [ADR-0206](../../../docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)
 §11). `PlayScreen` asks `useFeatureOnMount('explore')` **once, when it mounts**, and draws one of
 two components — the answer cannot change under either, so neither reads what the other reads.
@@ -561,7 +561,7 @@ unknown `schemaVersion` with and without a saved datafile, and one refused mid-s
 `theShell.test.tsx` finds Play by its title. **Not seen on a device**: the title over the list, and
 the switcher back through a locally served datafile.
 
-**Home shimmers until it is built, then reveals together** ([#871](https://github.com/Raketa02/Raketa/issues/871);
+**Home shimmers until it is built, then reveals together** ([#871](https://github.com/Rakieta02/Rakieta/issues/871);
 PRD #867; the loading shimmer log §5, §6, Q11–Q16). Home was about ten reads drawn as each landed —
 the envelope, the level card, _Your games · 0_ and its sentences, then FOR YOU's lines one by one.
 **Now it has two parts, top-down** (`hooks/useHomeParts`), each waiting on its reads:
@@ -636,7 +636,7 @@ ended. **So the header's numbers held before the ceiling are walked by no suite*
 hook. **Not seen on a device**: the shimmer over Home, the card's block against a real card, the two
 fades, and a slow part coming in at the ceiling.
 
-**Home's reads set out while the splash plays** ([#874](https://github.com/Raketa02/Raketa/issues/874);
+**Home's reads set out while the splash plays** ([#874](https://github.com/Rakieta02/Rakieta/issues/874);
 PRD #867; ADR-0209 §2, amended 2026-11-24; the loading shimmer log §7, Q18). Since the tree mounts
 only once the ball is still, Home's own reads set out about 0.2 s before the fade, and a cold open
 often faded onto Home's skeleton. **Now a launch step, `hooks/warmHome`, sets them out as soon as the

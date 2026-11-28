@@ -1,7 +1,7 @@
 /**
  * The yes stamp's longest words against the narrowest phone's card — measured rather than looked
  * at, because no device has drawn *I'M IN · 32,50 zł*
- * ([#719](https://github.com/Raketa02/Raketa/issues/719)).
+ * ([#719](https://github.com/Rakieta02/Rakieta/issues/719)).
  *
  * Until Q124 only a yes that charged at once carried the share; now every yes stamp does — a vote's
  * *I'M IN · 32 zł* and a payment's *PAY · 32 zł* — so the longest is a vote's with a share in

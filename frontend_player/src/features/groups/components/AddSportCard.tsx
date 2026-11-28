@@ -1,7 +1,7 @@
 /**
  * **An official group, for a player rated in none of its sports** — one card in place of Games,
  * Fill in and Friends, and of Members' list
- * ([#519](https://github.com/Raketa02/Raketa/issues/519), PRD #500 story 57): *This group plays
+ * ([#519](https://github.com/Rakieta02/Rakieta/issues/519), PRD #500 story 57): *This group plays
  * padel*, *Add padel to your Skill passport to see its games.*, and a button per sport it plays —
  * *Rate Padel*.
  *
@@ -13,7 +13,7 @@
  * **Each button is the Skill passport's *Add a sport*** — onboarding's `useAddASport`, the second
  * door into the onboarding pass (ADR-0179 §3) — for that one sport, **begun on this group**: it
  * starts the questionnaire, and the pass ends back here, on the tab the card was pressed on, with
- * the chip on the sport just rated — not on the passport ([#729](https://github.com/Raketa02/Raketa/issues/729),
+ * the chip on the sport just rated — not on the passport ([#729](https://github.com/Rakieta02/Rakieta/issues/729),
  * ADR-0200 §3, §5). Each host hands in the tab: the page its own, *Post a game* You’re in (where its
  * button lives and a post lands, whichever tab it was opened from — #848), Members the page's
  * beneath it. The start's wait and its failure are said here, beside the buttons, as the passport

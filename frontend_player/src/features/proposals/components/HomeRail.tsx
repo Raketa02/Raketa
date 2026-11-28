@@ -1,9 +1,9 @@
 /**
  * **`YOUR GAMES · n`, one card, swipe** — Home's rail of booked games and the games waiting for a
- * club ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A8).
+ * club ([#556](https://github.com/Rakieta02/Rakieta/issues/556); the screens A8).
  *
  * It was the old loop's rail with the booked cards handed in as a slot, until that loop was
- * removed ([#576](https://github.com/Raketa02/Raketa/issues/576)): Home is booked games only now, so
+ * removed ([#576](https://github.com/Rakieta02/Rakieta/issues/576)): Home is booked games only now, so
  * the rail is this feature's whole, and it looks as it did — the heading's count, the pager and its
  * dots, the empty state and the error note.
  *
@@ -33,7 +33,7 @@
  *
  * ## What it draws when it holds nothing, and when the read failed
  *
- * **Nothing until its read lands** ([#871](https://github.com/Raketa02/Raketa/issues/871); the
+ * **Nothing until its read lands** ([#871](https://github.com/Rakieta02/Rakieta/issues/871); the
  * loading shimmer log §6, Q16): it never says *· 0*, nor that nothing is here, while it does not
  * know. Home shimmers in its place meanwhile (`YourGamesSkeleton`, drawn by the shell), so there is
  * no blank screen to hold anything back for. **This reverses the rail's first rule**, that the empty

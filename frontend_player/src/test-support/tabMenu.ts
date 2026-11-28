@@ -1,6 +1,6 @@
 /**
  * **A group page's tab menu, as a suite opens it** — *open a tab's menu, then pick a kind*, said one
- * way by every suite ([#861](https://github.com/Raketa02/Raketa/issues/861); PRD #859). Where a row
+ * way by every suite ([#861](https://github.com/Rakieta02/Rakieta/issues/861); PRD #859). Where a row
  * of *Competitive | For fun* once stood, the selected tab draws a chevron and a press on it opens
  * `TabMenu`; a suite that picked a kind on the row picks it here.
  *

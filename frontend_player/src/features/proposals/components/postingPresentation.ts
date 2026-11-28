@@ -1,7 +1,7 @@
 /**
  * **Every sentence *Post a game* composes from a value** — the chips, the grid's heads and cells, a
  * cell's sheet, the pick and the guards, each drawn and spoken
- * ([#558](https://github.com/Raketa02/Raketa/issues/558); the screens A5; mocks 15–35). The fixed
+ * ([#558](https://github.com/Rakieta02/Rakieta/issues/558); the screens A5; mocks 15–35). The fixed
  * words are `postingCopy.ts`.
  *
  * A day and an hour are the club's (`shared/date/platformZone`), named as the court block names a

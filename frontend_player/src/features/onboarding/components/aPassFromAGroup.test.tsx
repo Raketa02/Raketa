@@ -1,6 +1,6 @@
 /**
  * **A rating pass begun on a group returns to that group**
- * ([#729](https://github.com/Raketa02/Raketa/issues/729),
+ * ([#729](https://github.com/Rakieta02/Rakieta/issues/729),
  * [ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §3, §5), driven
  * through the real route tree with only `fetch` faked.
  *

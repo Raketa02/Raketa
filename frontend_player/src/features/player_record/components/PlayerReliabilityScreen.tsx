@@ -3,7 +3,7 @@
  * card's counts as it draws them
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
  * §2, [ADR-0195](../../../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
- * §1, [#660](https://github.com/Raketa02/Raketa/issues/660)).
+ * §1, [#660](https://github.com/Rakieta02/Rakieta/issues/660)).
  *
  * Points, from 100, computed from what happened and never from opinions or results. This screen
  * is where a player looks: the figure in 7.8's ring on a dark card at `ringLg`, with the band said
@@ -24,7 +24,7 @@
  *
  * `ReliabilityFilterCard` — *Play only with players of · Off | At least Medium | At least High*,
  * with *Your filter hides 2 of the 11 players in your groups* while it is on (ADR-0195 §6,
- * [#662](https://github.com/Raketa02/Raketa/issues/662)) — is drawn where the record serves a
+ * [#662](https://github.com/Rakieta02/Rakieta/issues/662)) — is drawn where the record serves a
  * filter, which is on your own record only. Under it, for a player somebody's filter keeps off a
  * court, one 5.4 `info` note: *Some players in your groups play only with High reliability or
  * above. At 75 you're dealt with everyone again.* It names nobody, and it is explanation and not
@@ -34,7 +34,7 @@
  *
  * The figure and its count — *Sportsmanship, by players · 4,3 / 5 · 12 players* — the same row
  * a stranger reads on this player's record (ADR-0179 §5,
- * [#473](https://github.com/Raketa02/Raketa/issues/473)). Nothing here chooses: the row is
+ * [#473](https://github.com/Rakieta02/Rakieta/issues/473)). Nothing here chooses: the row is
  * `RecordCard`'s, drawn here unchanged.
  */
 

@@ -2,7 +2,7 @@
  * **The kind of game you don't play is a door** — a group's Games tab's menu draws both kinds always,
  * the one the intent doesn't want dimmed with no number, and picking it shuts the menu and opens a
  * panel in place that changes the intent for the page's sport (the menu since #862; the switch's
- * before) ([#740](https://github.com/Raketa02/Raketa/issues/740),
+ * before) ([#740](https://github.com/Rakieta02/Rakieta/issues/740),
  * ADR-0201 §2; the screens A1, A2.1; the words §28).
  *
  * The real route tree, with the socket faked at the platform edge as a small server: it holds the

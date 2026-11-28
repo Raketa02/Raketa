@@ -7,7 +7,7 @@
  * product change wearing the clothes of a wording tweak.
  *
  * **The refusal outlived every placeholder it was written for.** Now's line left the
- * placeholder table when the rail replaced it ([#367](https://github.com/Raketa02/Raketa/issues/367)),
+ * placeholder table when the rail replaced it ([#367](https://github.com/Rakieta02/Rakieta/issues/367)),
  * and You's, the last, went with the tab ADR-0179 built. *Never says nothing is happening* was
  * Now's refusal in the first place — it is where a game lands — so a build that deleted the row
  * along with the last placeholder would have dropped the one assertion the whole rule came from.

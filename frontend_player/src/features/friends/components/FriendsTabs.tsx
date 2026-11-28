@@ -1,5 +1,5 @@
 /**
- * **The Friends page from You — three tabs** ([#754](https://github.com/Raketa02/Raketa/issues/754),
+ * **The Friends page from You — three tabs** ([#754](https://github.com/Rakieta02/Rakieta/issues/754),
  * PRD #743 stories 34–37; the friends screens §4.1; Q4, Q41). Designed, no mock.
  *
  * ```

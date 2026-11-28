@@ -10,7 +10,7 @@
  * ([ADR-0200](../../../../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §1, #730). The
  * whole sign-up, in its eight screens, is `onboardingFlow.test`'s.
  *
- * **The finish is on *Who you play with*** ([#582](https://github.com/Raketa02/Raketa/issues/582)):
+ * **The finish is on *Who you play with*** ([#582](https://github.com/Rakieta02/Rakieta/issues/582)):
  * the radius and the proposals question left the part, so the step that asks who a player is
  * matched with is the last one, and it carries the finish the opt-in used to.
  *
@@ -529,7 +529,7 @@ describe('a failed commit', () => {
 
   /**
    * **The intro's three refusals, each in its own sentence and each with the way back**
-   * (ADR-0170 §2, [#445](https://github.com/Raketa02/Raketa/issues/445)).
+   * (ADR-0170 §2, [#445](https://github.com/Rakieta02/Rakieta/issues/445)).
    *
    * The fence is the server's pattern, so a phone number typed on step two is refused here,
    * four screens later. What the player reads is the *reason's* sentence — what to change —

@@ -1,6 +1,6 @@
 /**
- * **What waits in Needs your answer, and what is new in it** ([#817](https://github.com/Raketa02/Raketa/issues/817),
- * [#819](https://github.com/Raketa02/Raketa/issues/819), ADR-0205 §1, §3) — the four sections' counts
+ * **What waits in Needs your answer, and what is new in it** ([#817](https://github.com/Rakieta02/Rakieta/issues/817),
+ * [#819](https://github.com/Rakieta02/Rakieta/issues/819), ADR-0205 §1, §3) — the four sections' counts
  * and the envelope's badge, off Home's one read, and the visit that clears the badge, for the shell's
  * envelope and sheet.
  *

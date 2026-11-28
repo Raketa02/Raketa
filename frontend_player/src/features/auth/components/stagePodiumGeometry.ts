@@ -1,7 +1,7 @@
 /**
  * **Sign-up's podium, as numbers** — the three places, the order they stand and rise in, and the box
  * the podium takes, which is fitted into the hero's room
- * ([#788](https://github.com/Raketa02/Raketa/issues/788), PRD #783; design system 12.2). No React in
+ * ([#788](https://github.com/Rakieta02/Rakieta/issues/788), PRD #783; design system 12.2). No React in
  * it, for `stageDeckGeometry`'s reason: a podium that crops on a small phone is a rule about numbers.
  *
  * ## A column, top to bottom

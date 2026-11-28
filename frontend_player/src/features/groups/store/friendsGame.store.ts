@@ -1,6 +1,6 @@
 /**
  * **The game being built on a group's Friends tab** — its kind, and who is seated where
- * ([#757](https://github.com/Raketa02/Raketa/issues/757); the friends mechanics §7.1–§7.3).
+ * ([#757](https://github.com/Rakieta02/Rakieta/issues/757); the friends mechanics §7.1–§7.3).
  *
  * **The kind is this game's, and nothing else's** (ADR-0202; the friends README's defaults: *the
  * Friends tab's kind switch is per game, never intent*). Until #757 the switch shared

@@ -1,6 +1,6 @@
 /**
  * **Members** — who in the group the reader could play the filter's sport with (play 61;
- * [#514](https://github.com/Raketa02/Raketa/issues/514), PRD #500 stories 80–84).
+ * [#514](https://github.com/Rakieta02/Rakieta/issues/514), PRD #500 stories 80–84).
  *
  * Pushed over Info from its members row (Q125). The header is *Members · N* and **the sport pill,
  * sharing the filter's one state** (`SportFilterPage`): a sport picked here is the group page's
@@ -21,7 +21,7 @@
  * ## Each row ends in where the reader stands with them
  *
  * **+ Add**, *request sent*, *friend* or **Accept** on every row but your own
- * ([#753](https://github.com/Raketa02/Raketa/issues/753); the friends screens §1; friends 1, 2):
+ * ([#753](https://github.com/Rakieta02/Rakieta/issues/753); the friends screens §1; friends 1, 2):
  * `friends`' `RowWithFriendEnd`, handed the row as it was and the list's own re-read. **The rows
  * keep today's design** — only the right-hand end is new — and **the pill acts while the rest of the
  * row opens the record**, two controls side by side. A request asked here names this group and the

@@ -1,6 +1,6 @@
 /**
  * **Player reliability, as a record serves it** — the fixture every suite that answers
- * `GET /players/…/record` builds on ([#660](https://github.com/Raketa02/Raketa/issues/660),
+ * `GET /players/…/record` builds on ([#660](https://github.com/Rakieta02/Rakieta/issues/660),
  * ADR-0195 §1).
  *
  * The block is **always present** since #659: everyone starts at 100, so a player nothing has

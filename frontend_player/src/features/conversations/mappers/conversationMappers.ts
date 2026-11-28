@@ -25,7 +25,7 @@
  *
  * The rule is *"these fields are mapped by the screen that draws them"*. **`booking_id` is mapped
  * on the row**, because it is the join a booked game's chat and Home's cards find their room by
- * ([#577](https://github.com/Raketa02/Raketa/issues/577)), and not on the opened room, which is
+ * ([#577](https://github.com/Rakieta02/Rakieta/issues/577)), and not on the opened room, which is
  * reached through that join and reads nothing back from it. **`game_id` is mapped nowhere**: it was
  * the join until the room was filed under its booking on the wire (#575), and nothing has read it
  * since. `read_at` stays off the row and is on the room: it earns its place wherever something is

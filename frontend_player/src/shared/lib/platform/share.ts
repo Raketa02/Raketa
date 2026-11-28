@@ -1,6 +1,6 @@
 /**
  * The system share sheet, behind a port. **The only module that imports React Native's `Share`**
- * ([#513](https://github.com/Raketa02/Raketa/issues/513)).
+ * ([#513](https://github.com/Rakieta02/Rakieta/issues/513)).
  *
  * A group's page sends its link through whatever the player has installed — WhatsApp, Messages,
  * a mail — with **Share the link** (PRD #500 story 64), and an official group's page does with
@@ -14,7 +14,7 @@
  * offered.
  *
  * It had a second verb, `openWhatsApp` — WhatsApp by its own scheme, for an official group's
- * *Post to WhatsApp* ([#516](https://github.com/Raketa02/Raketa/issues/516)) — until that door
+ * *Post to WhatsApp* ([#516](https://github.com/Rakieta02/Rakieta/issues/516)) — until that door
  * became *Share link* and the sheet (#529), and nothing else asked for it.
  */
 
