@@ -20,14 +20,19 @@ runs:
 
     # The environment is a directory inside the app (backend/.venv, which git
     # ignores), so there is exactly one thing to cache. The key is the lock's hash
-    # and never the branch, and it carries the interpreter's full version too: a
-    # virtualenv points at its Python by absolute path, and one restored onto a
-    # runner that has since moved to another patch release is broken.
+    # and never the branch, and it carries two absolute paths a virtualenv bakes in.
+    # The interpreter's full version: a virtualenv points at its Python by absolute
+    # path, so one restored onto a runner that has since moved to another patch
+    # release is broken. And the workspace: every script in .venv/bin starts with
+    # the venv's own absolute path, which is /home/runner/work/<repo>/<repo>. When
+    # the repo was renamed (#904), a venv built under the old name restored cleanly
+    # under the new one, `poetry install` found nothing to do, and every
+    # `poetry run` said "Command not found" (#905).
     - name: Restore the virtualenv
       uses: actions/cache@v4
       with:
         path: backend/.venv
-        key: backend-venv-${{ runner.os }}-py${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
+        key: backend-venv-${{ runner.os }}-py${{ steps.python.outputs.python-version }}-${{ github.workspace }}-${{ hashFiles('backend/poetry.lock') }}
 
     # On a restored environment this finds nothing to do, and says so in seconds.
     # It still runs, so a cache that lies about its contents is repaired, not trusted.
