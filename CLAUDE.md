@@ -103,6 +103,14 @@ the hooks themselves, `make gen-api`.
   It asserts presence and deadlines, never the values behind the secret ARNs, and reads
   nothing from AWS ([`.github/scripts/check-taskdef.sh`](.github/scripts/check-taskdef.sh),
   `make taskdef`, proven still to fire by `make test-taskdef`).
+- **The brand is Rakieta, in every file and every path, and a gate keeps the old name
+  out.** A case-insensitive search of every tracked file's content and every tracked path
+  goes red outside a short allowlist: the passages that quote the old spelling as history,
+  ADR-0211, and the check and its test
+  ([ADR-0211](docs/adr/0211-the-brand-is-rakieta-everywhere.md) §7). The allowlist counts
+  occurrences per file, so one more in a listed file is red too, and raising a count is a
+  question for the review ([`.github/scripts/check-brand.sh`](.github/scripts/check-brand.sh),
+  `make brand`, proven still to fire by `make test-brand`).
 - **One session changes one app.** A `PreToolUse` hook blocks writes that cross an app
   boundary. A block is information — surface it, don't route around it. See
   [`docs/agents/ownership-boundaries.md`](docs/agents/ownership-boundaries.md).
@@ -150,9 +158,9 @@ guardrail doing its job.
 After changing either hook, run `make test-hooks` (109 assertions). A guardrail that
 silently stops matching is worse than none, because you stop watching for it. The same
 argument is why `make test-drift`, `make test-poetry-pin`, `make test-taskdef`,
-`make test-shards-add-up` and `make test-ci-ok` exist: each drives its check against a
-deliberately broken tree and asserts it goes red. After adding a CI job, run `make ci-ok`
-— the job must also be in `ci-ok`'s `needs`, or it can fail unseen.
+`make test-shards-add-up`, `make test-brand` and `make test-ci-ok` exist: each drives its
+check against a deliberately broken tree and asserts it goes red. After adding a CI job,
+run `make ci-ok` — the job must also be in `ci-ok`'s `needs`, or it can fail unseen.
 
 ## Agent skills
 

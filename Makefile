@@ -8,7 +8,7 @@
 .PHONY: help gen-api openapi check check-backend check-player check-club check-public \
         test-hooks test-drift contract-freshness test-contract-freshness \
         poetry-pin test-poetry-pin taskdef test-taskdef ci-ok test-ci-ok test-memory-peak \
-        shards-add-up test-shards-add-up \
+        shards-add-up test-shards-add-up brand test-brand \
         afk-install afk-build afk
 
 help:              ## list targets
@@ -124,6 +124,17 @@ shards-add-up:     ## verify the group reports in REPORTS=<dir> add up to the ba
 
 test-shards-add-up: ## verify the shards-add-up check still fires
 	bash .github/scripts/test-shards-add-up.sh
+
+# The brand is Rakieta (docs/adr/0211). The rename took the old name out of every
+# app, and this keeps it out: a case-insensitive search of every tracked file's
+# content and every tracked path, red outside a short allowlist that counts each
+# file's occurrences, so listing a file never hides a new one. The allowlist is
+# in the check. Cross-app because the old name can come back through any of them.
+brand:             ## verify the old brand name is only in its allowlisted passages
+	bash .github/scripts/check-brand.sh
+
+test-brand:        ## verify the brand check still fires (a word, a path, a count)
+	bash .github/scripts/test-brand.sh
 
 # ----------------------------------------------------------------------------
 # AFK agent loop (sandbuket). See tools/afk/README.md.
