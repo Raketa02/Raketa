@@ -245,7 +245,7 @@ the two suites can run side by side.
 - **Every page is checked at 360 px** for sideways scrolling.
 
 No automated test crosses apps. The journey through the backend, the app and this site is a QA
-plan walked by hand ([#528](https://github.com/Raketa02/Raketa/issues/528)).
+plan walked by hand ([#528](https://github.com/Rakieta02/Rakieta/issues/528)).
 
 ## 8. Tokens and primitives
 
