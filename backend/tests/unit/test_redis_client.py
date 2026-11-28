@@ -1,7 +1,7 @@
 """A connect timeout and a read timeout are two different things.
 
 One constant used to be both (`#342
-<https://github.com/Raketa02/Raketa/issues/342>`_), which made the shared client
+<https://github.com/Rakieta02/Rakieta/issues/342>`_), which made the shared client
 unusable by a long-lived subscriber: ``pubsub.listen()`` passes no timeout of its
 own, ``read_response`` falls back to the socket's, and an idle subscription
 therefore raises every two seconds and loses whatever was published while it

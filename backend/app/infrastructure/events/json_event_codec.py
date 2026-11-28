@@ -87,7 +87,7 @@ def _declared(hint: Any) -> Any:
     ``UUID | None`` is not ``UUID``, and matching the hint by identity left every
     nullable id and instant as the string JSON handed back — so a replayed
     ``SystemLineRecorded`` carried its actor as text, equal to no member's id and
-    unsortable beside one ([#408](https://github.com/Raketa02/Raketa/issues/408)).
+    unsortable beside one ([#408](https://github.com/Rakieta02/Rakieta/issues/408)).
     A ``None`` value is already returned untouched above; this only decides what
     a *present* value is coerced to. A union of two real types is left alone.
     """

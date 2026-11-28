@@ -409,7 +409,7 @@ def test_a_line_and_a_message_never_share_a_seq():
 
 
 def test_a_page_names_every_author_and_every_actor_and_nobody_twice():
-    """[#408](https://github.com/Raketa02/Raketa/issues/408) — ``{name}`` is
+    """[#408](https://github.com/Rakieta02/Rakieta/issues/408) — ``{name}`` is
     filled from the people the response resolves, so the read asks about
     everybody the page names, not only about the roster."""
 

@@ -1,7 +1,7 @@
 """notifications: a notice knows its reader had left the game
 
 **Every ending of a full game is told, and a leaver only when it touches
-them** ([#623](https://github.com/Raketa02/Raketa/issues/623); the mechanics
+them** ([#623](https://github.com/Rakieta02/Rakieta/issues/623); the mechanics
 Q104, Q105, Q108). One fact beside the notices:
 
 - **``notices.you_left``** — a notice told to a player who had left the game,

@@ -110,7 +110,7 @@ class _NullableEvent:
 def test_a_nullable_id_or_instant_decodes_as_the_type_it_was_declared(event):
     """``UUID | None`` is not ``UUID``, and a codec that matched the hint by
     identity left the filled arm as a string — equal to no id, unsortable beside
-    one ([#408](https://github.com/Raketa02/Raketa/issues/408))."""
+    one ([#408](https://github.com/Rakieta02/Rakieta/issues/408))."""
 
     catalog = EventCatalog()
     catalog.register(_NullableEvent, name="tests.nullable", version=1)

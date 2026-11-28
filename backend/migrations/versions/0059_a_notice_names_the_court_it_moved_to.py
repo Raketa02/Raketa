@@ -1,7 +1,7 @@
 """notifications: a *Game moved* notice names the court and its kind
 
 **The club's Move tells the players where the game is now**
-([#671](https://github.com/Raketa02/Raketa/issues/671); the mechanics §17.2,
+([#671](https://github.com/Rakieta02/Rakieta/issues/671); the mechanics §17.2,
 Q122): *Bonarka Arena moved your game to Court 3 · Thu 19:00* / *Padel ·
 indoor · nothing else changes*. A notice records facts, never words, and the
 court it names must read the same after a second move — so the court's name

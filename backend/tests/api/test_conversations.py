@@ -430,7 +430,7 @@ async def a_room_somebody_left(client, session_factory, a_room):
 
     His message is the newest entry and its author is **no longer a member**:
     membership is the game's current line-up, so ``bo`` is named by the page and
-    by nothing the roster says ([#408](https://github.com/Raketa02/Raketa/issues/408)).
+    by nothing the roster says ([#408](https://github.com/Rakieta02/Rakieta/issues/408)).
     """
 
     said = await _say(
@@ -472,7 +472,7 @@ async def test_a_leaver_drops_out_of_the_room_the_moment_they_leave(
 async def test_the_room_names_the_person_who_left_beside_the_members(
     client, a_room_somebody_left
 ):
-    """[#408](https://github.com/Raketa02/Raketa/issues/408) — *bo* and never
+    """[#408](https://github.com/Rakieta02/Rakieta/issues/408) — *bo* and never
     *?*. ``people`` is everybody the response names, resolved once, and the
     departed are among them."""
 

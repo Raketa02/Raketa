@@ -13,7 +13,7 @@
 > **Before reactivating, re-read this against the current code.** Dormant infrastructure
 > drifts silently — and it did: the task definition went eleven days without three of the
 > variables the settings object demands, which is a task that starts and immediately dies
-> ([#341](https://github.com/Raketa02/Raketa/issues/341)).
+> ([#341](https://github.com/Rakieta02/Rakieta/issues/341)).
 >
 > **That particular drift is now a build gate.** `make taskdef` at the repository root
 > boots [`../../deploy/ecs/taskdef.json`](../../deploy/ecs/taskdef.json) through
@@ -228,7 +228,7 @@ this was first filed.** A task being replaced enters `DEACTIVATING`, where **ECS
 the target to finish deregistering; only then does it reach `STOPPING`, which is where
 SIGTERM lands. So nothing holds a target draining *after* the process stopped serving — the
 drain is what the deploy waits on *before* the process is told to stop.
-[#372](https://github.com/Raketa02/Raketa/issues/372) and
+[#372](https://github.com/Rakieta02/Rakieta/issues/372) and
 [ADR-0147](../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
 §8 both describe it the other way round. The number and the direction they settle stand; what
 changes is the defect behind them — a deploy that takes five minutes per task, rather than a
@@ -242,7 +242,7 @@ rather than undercuts: when the delay elapses the balancer **closes** whatever c
 are still open on that target, so a drain shorter than the application's own window would
 cut requests the application was willing to finish.
 
-`stopTimeout` was unset before [#345](https://github.com/Raketa02/Raketa/issues/345),
+`stopTimeout` was unset before [#345](https://github.com/Rakieta02/Rakieta/issues/345),
 which is not the same as unbounded: Fargate supplies **30** when the key is absent —
 exactly the graceful timeout — so the agent's SIGKILL landed on the same second the
 master would have force-killed its own stragglers. Fargate accepts 2–120 and rejects
@@ -258,7 +258,7 @@ Nothing in this repository describes that resource, so there is no file for a ch
 read — which is why the number is written into §1 step 6, in the step that creates the
 thing it belongs to, and a provisioner is what applies it. Committing the balancer and its
 target group as infrastructure is
-[#396](https://github.com/Raketa02/Raketa/issues/396); if that lands, §1 step 6's line
+[#396](https://github.com/Rakieta02/Rakieta/issues/396); if that lands, §1 step 6's line
 moves into it rather than becoming wrong.
 
 ## 5. Smoke testing the deploy

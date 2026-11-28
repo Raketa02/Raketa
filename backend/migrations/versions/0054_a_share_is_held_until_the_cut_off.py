@@ -1,7 +1,7 @@
 """payments: a share is held until the cut-off
 
 **The fill holds the shares and the cut-off takes them**
-([#637](https://github.com/Raketa02/Raketa/issues/637); the mechanics Q113;
+([#637](https://github.com/Rakieta02/Rakieta/issues/637); the mechanics Q113;
 ADR-0189's 2026-10-10 amendment). A game that books before its club's cut-off
 keeps each seat's hold for the booked game and takes nothing; the cut-off job
 takes it. Two changes to the ``seat_charges`` projection, written from the

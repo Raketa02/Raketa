@@ -4,7 +4,7 @@ publishes outward.
 **Two of these are the module's own** — the repository and the directory — one
 is somebody else's, and three are the platform's. ``GameHistoryQuery`` is the read
 every other context in
-[#302](https://github.com/Raketa02/Raketa/issues/302) was blocked on. It is
+[#302](https://github.com/Rakieta02/Rakieta/issues/302) was blocked on. It is
 contracted in ``tests/demands/`` in ADR-0098's shape, over every registered
 implementation, because *a demand nobody executes is a demand satisfied by
 accident*. Its readers today are ``player_score`` (what each game says about

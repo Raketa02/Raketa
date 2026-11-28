@@ -1,7 +1,7 @@
 """on request: a booking waits for the club, and a game it turned down ends
 
 **At an On request club a full game waits for the club's answer** — nobody pays
-until it accepts ([#543](https://github.com/Raketa02/Raketa/issues/543); the
+until it accepts ([#543](https://github.com/Rakieta02/Rakieta/issues/543); the
 mechanics §16.3, §16.8; ADR-0189 §3, §5). The Booking stream records it; its
 projections learn it:
 

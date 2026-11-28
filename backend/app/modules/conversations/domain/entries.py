@@ -29,7 +29,7 @@ allowed (``docs/adr/0148`` §4) and no code had used until ``docs/adr/0169`` §8
 
 **And the people a page names are not only the members** — the difference is
 ``people_named`` at the bottom, and it is
-[#408](https://github.com/Raketa02/Raketa/issues/408)'s whole finding. Membership
+[#408](https://github.com/Rakieta02/Rakieta/issues/408)'s whole finding. Membership
 is the accepted seats and then the game's line-up, and a *no* is not an accepted
 seat, so the actor of a ``SEAT_LEFT`` line was never a member: **today that is
 the one line a roster lookup cannot name**, since an accepted seat cannot leave
@@ -86,7 +86,7 @@ class SystemLineCode(str, Enum):
 
     **A seat leaving is one code with the answer as a value**, not two codes.
     *That seat is open again* is the same news either way
-    ([#221](https://github.com/Raketa02/Raketa/issues/221)), and **a lapse is
+    ([#221](https://github.com/Rakieta02/Rakieta/issues/221)), and **a lapse is
     still not a decline** — the two facts stay apart in the value rather than in
     a second code, which is ``the-words.md`` §13's rule holding one layer down.
 

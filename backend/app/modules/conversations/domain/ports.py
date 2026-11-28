@@ -174,7 +174,7 @@ class MemberFace:
     **Named for the member and answered for everybody the page names.** The
     person a ``SEAT_LEFT`` line is about is by definition no longer a member, and
     the read still resolves their face beside the roster's
-    ([#408](https://github.com/Raketa02/Raketa/issues/408)); one shape for both,
+    ([#408](https://github.com/Rakieta02/Rakieta/issues/408)); one shape for both,
     because a client fills ``{nickname}`` from one list.
 
     **A nickname, a photograph, and nothing else.** No Level, no band, no area, no

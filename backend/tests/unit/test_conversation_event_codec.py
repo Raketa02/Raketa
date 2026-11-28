@@ -7,7 +7,7 @@ was appended — **including the nullable actor**. ``SystemLineRecorded.actor_id
 is ``UUID | None``, and a codec that coerces only a bare ``UUID`` hint hands a
 replayed line its actor as a string: equal to no member's id, unsortable beside
 one, and the reason a face read keyed on it could answer nothing
-([#408](https://github.com/Raketa02/Raketa/issues/408)).
+([#408](https://github.com/Rakieta02/Rakieta/issues/408)).
 
 **The opening is written at version 2 and read at 1 and 2** (#575): version 1
 named the room's arrangement ``challenge_id``, and a stored room opened under it

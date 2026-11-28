@@ -6,7 +6,7 @@ between two codes* — the shape
 licenses a client to compute. Both codes have to reach it, and until now only the
 candidate's did: `area_code` crossed on `player_card` and on the distance
 evidence, and both of those are the person being looked at
-([#279](https://github.com/Raketa02/Raketa/issues/279)).
+([#279](https://github.com/Rakieta02/Rakieta/issues/279)).
 
 **One column, and it is stored rather than looked up.** The searcher's area is on
 their profile and could be read there per response — but the profile's area is

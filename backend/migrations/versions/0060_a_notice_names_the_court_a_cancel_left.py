@@ -1,7 +1,7 @@
 """notifications: *Game moved* by a club's cancel names the court it left
 
 **A club's cancel moves the game when a free court of the same club absorbs it**
-([#672](https://github.com/Raketa02/Raketa/issues/672); the mechanics §16.9,
+([#672](https://github.com/Rakieta02/Rakieta/issues/672); the mechanics §16.9,
 §17.2, Q122), and the players are told why: *Bonarka Arena moved your game to
 Court 3 · Thu 19:00* / *Court 2 can't be played · Padel · indoor · nothing else
 changes*. A notice records facts, never words, and the court the game left is

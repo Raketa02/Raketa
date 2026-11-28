@@ -20,7 +20,7 @@ route carries no header — this is the response whose membership is a fold, and
 this is the one that says when it was folded.
 
 **The faces are resolved for everybody the response names, not only for the
-roster** ([#408](https://github.com/Raketa02/Raketa/issues/408)). Membership is
+roster** ([#408](https://github.com/Rakieta02/Rakieta/issues/408)). Membership is
 derived live, so the person a ``SEAT_LEFT`` line is about has by definition just
 left it — and the one line whose actor is never a member was the one line a
 roster lookup could not name. One face read over the union, and ``people`` is

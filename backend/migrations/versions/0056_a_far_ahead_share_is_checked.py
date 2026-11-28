@@ -2,7 +2,7 @@
 
 **A share whose hold would not last until the cut-off is checked at the fill
 and held four days before it**
-([#639](https://github.com/Raketa02/Raketa/issues/639); the mechanics Q113;
+([#639](https://github.com/Rakieta02/Rakieta/issues/639); the mechanics Q113;
 ADR-0189's 2026-10-10 amendment). A refused holding gives its player time to
 fix the card on the booked game. Three changes to the projections, written from
 the aggregates on every save:

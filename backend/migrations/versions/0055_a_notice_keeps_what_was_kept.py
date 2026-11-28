@@ -2,7 +2,7 @@
 
 **After the cut-off a leaver whose seat is taken gets the share back less
 exactly what was kept on their payment, and is told both**
-([#641](https://github.com/Raketa02/Raketa/issues/641); the mechanics §13,
+([#641](https://github.com/Rakieta02/Rakieta/issues/641); the mechanics §13,
 Q113): *You've been refunded 38,24 zł · your seat was taken* / *40 zł less the
 1,76 zł kept on your payment.* One fact beside the notices:
 

@@ -1,6 +1,6 @@
 """notifications: push, the recent list and the three choices
 
-**Players are told** ([#549](https://github.com/Raketa02/Raketa/issues/549);
+**Players are told** ([#549](https://github.com/Rakieta02/Rakieta/issues/549);
 the mechanics §17.2; the screens A7.2, A9; ADR-0189 §5). Two new streams — a
 player's **Notification preferences**, and **what they were told on a day** —
 and three projections beside them:

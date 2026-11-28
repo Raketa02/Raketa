@@ -1,6 +1,6 @@
 """rankings: the level history — ``ranking_level_history``
 
-**Where each Level stood, point by point** ([#769](https://github.com/Raketa02/Raketa/issues/769);
+**Where each Level stood, point by point** ([#769](https://github.com/Rakieta02/Rakieta/issues/769);
 [ADR-0203](../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §4, §10).
 One point per stored event that put a player's Level where it stood: the
 rating's opening, and every ``rating.moved_on_result`` — the Level in

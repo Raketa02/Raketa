@@ -1,6 +1,6 @@
 """the fill: a booking holds a court, and every seat is charged
 
-**The last yes books the game** ([#541](https://github.com/Raketa02/Raketa/issues/541);
+**The last yes books the game** ([#541](https://github.com/Rakieta02/Rakieta/issues/541);
 the mechanics §11–§12.2; ADR-0189 §2, §4–§5). The Booking and the Seat charge
 are streams in ``event_store`` and need no table; their projections do:
 

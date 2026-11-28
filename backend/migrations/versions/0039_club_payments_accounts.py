@@ -1,7 +1,7 @@
 """clubs: which club a payments account is
 
 A club connects payments by filling in the payment provider's hosted pages
-([#537](https://github.com/Raketa02/Raketa/issues/537),
+([#537](https://github.com/Rakieta02/Rakieta/issues/537),
 [ADR-0189](../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)
 §4–§5). The account is recorded on the club's **Club courts** stream in
 ``event_store`` and needs no table of its own; one thing beside it does:

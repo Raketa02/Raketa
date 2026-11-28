@@ -4,7 +4,7 @@
 five different Warsaw days while the two were unconnected, the player is a gap
 in that row, not fresh — *Same competitive level* and *Same vibe* each keep
 their own count
-([#796](https://github.com/Raketa02/Raketa/issues/796);
+([#796](https://github.com/Rakieta02/Rakieta/issues/796);
 [ADR-0204](../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 §7, §10, the third stated exception to *derived, never stored*). One row per
 viewer, row and player seen: how many different days, and the last of them.

@@ -1,7 +1,7 @@
 """who sees whom: drop ``ranking_visibility`` and ``friend_requests_counted``
 
 **The ranking hides nobody, and a friend request has no daily limit**
-([#791](https://github.com/Raketa02/Raketa/issues/791);
+([#791](https://github.com/Rakieta02/Rakieta/issues/791);
 [ADR-0204](../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 §2). *Show me in General* is replaced by *Show me to new people*, which the
 record and the ask read live off the profile, so the rows' copy of the old

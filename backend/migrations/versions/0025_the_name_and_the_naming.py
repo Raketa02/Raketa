@@ -1,7 +1,7 @@
 """a player has a name and a nickname, and both are null until the naming
 
 Sign-up asks for credentials only and a ``User`` is created **unnamed**
-([#450](https://github.com/Raketa02/Raketa/issues/450),
+([#450](https://github.com/Rakieta02/Rakieta/issues/450),
 [ADR-0171](../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)).
 Onboarding's first step then names the player in one act — a **Name**, free text
 that every screen says and that is never unique, and the **Nickname**, today's

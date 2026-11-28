@@ -1,7 +1,7 @@
 """bookings: a friends game's sender and its invited seats
 
 **A friends game is booked the moment it is sent**
-([#751](https://github.com/Raketa02/Raketa/issues/751);
+([#751](https://github.com/Rakieta02/Rakieta/issues/751);
 [ADR-0202](../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
 §5–§6). Its stream is the Booking's, in ``event_store``; these are its rows,
 written by the repository's ``save`` in the same transaction:

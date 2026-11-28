@@ -1,7 +1,7 @@
 """the reading — a fifth surface with no mode, a bearing and the sport chips on its rows
 
 The radar's **reading** is the fifth recorded search surface, ``RADAR``
-([#460](https://github.com/Raketa02/Raketa/issues/460),
+([#460](https://github.com/Rakieta02/Rakieta/issues/460),
 [ADR-0174](../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
 §1). Like the deck it scores every pairing under one ruler and takes no mode,
 so the two constraints that said *no mode exactly on the deck* and *a

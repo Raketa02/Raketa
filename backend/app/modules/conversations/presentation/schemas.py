@@ -13,7 +13,7 @@ which the read resolved at that moment. A name correction therefore reaches the
 whole backlog for free.
 
 **And ``people`` is everybody the response names, not only the roster**
-([#408](https://github.com/Raketa02/Raketa/issues/408)). Membership is derived
+([#408](https://github.com/Rakieta02/Rakieta/issues/408)). Membership is derived
 live from the game's line-up, so the author of an old message or the actor of a
 line may have left the court since, and a client that filled ``{name}`` from
 ``members`` alone would draw *?* for them. ``members`` is still the roster and

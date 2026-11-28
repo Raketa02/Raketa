@@ -1,6 +1,6 @@
 """a club and its account, and a refresh token that says whose it is
 
-Rakieta gets clubs ([#503](https://github.com/Raketa02/Raketa/issues/503),
+Rakieta gets clubs ([#503](https://github.com/Rakieta02/Rakieta/issues/503),
 [ADR-0182](../../docs/adr/0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md)).
 Both new tables are **projections**, written beside their events in the same
 transaction; the streams live in ``event_store`` beside everybody else's.

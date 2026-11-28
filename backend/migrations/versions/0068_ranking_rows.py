@@ -1,6 +1,6 @@
 """rankings: the ranking projection — ``ranking_rows``
 
-**A ranking per sport, sorted by the level** ([#768](https://github.com/Raketa02/Raketa/issues/768);
+**A ranking per sport, sorted by the level** ([#768](https://github.com/Rakieta02/Rakieta/issues/768);
 [ADR-0203](../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §10).
 One row per player per sport, made on their first confirmed competitive result
 with a winner there: the Level in hundredths and its uncertainty, the count of

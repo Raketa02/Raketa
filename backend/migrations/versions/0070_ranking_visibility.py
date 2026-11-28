@@ -1,6 +1,6 @@
 """rankings: *Show me in General* beside the rows — ``ranking_visibility``
 
-**The ranking follows the switch** ([#772](https://github.com/Raketa02/Raketa/issues/772);
+**The ranking follows the switch** ([#772](https://github.com/Rakieta02/Rakieta/issues/772);
 [ADR-0203](../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §7, §10).
 One row per player: whether they turned *Show me in General* off, and the
 profile stream's version that was read at. **Per player, never per sport**:

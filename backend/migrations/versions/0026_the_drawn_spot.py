@@ -3,7 +3,7 @@
 Every candidate's ``distance_km`` is now the one-decimal distance between two
 **drawn spots** — a fixed point inside each player's coarse cell, derived from a
 stable digest of who they are — rather than the whole-kilometre distance between
-two cell centres ([#458](https://github.com/Raketa02/Raketa/issues/458),
+two cell centres ([#458](https://github.com/Rakieta02/Rakieta/issues/458),
 [ADR-0174](../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
 §2). The recorded row keeps what the card printed (ADR-0109: a read-back
 reproduces the answer that was given), so the column widens from an integer to

@@ -1,6 +1,6 @@
 """notifications: the bell counts what is new
 
-**The bell's number** ([#621](https://github.com/Raketa02/Raketa/issues/621);
+**The bell's number** ([#621](https://github.com/Rakieta02/Rakieta/issues/621);
 the mechanics Q101, Q102; ADR-0189's 2026-10-09 amendment). A third stream —
 a player's **bell**, when they last opened their recent notices — and beside it:
 

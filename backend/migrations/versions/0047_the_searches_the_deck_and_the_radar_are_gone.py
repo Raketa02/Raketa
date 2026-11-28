@@ -1,6 +1,6 @@
 """the searches, the deck and the radar are gone, and their six tables with them
 
-**Find a game, the Players deck and its radar were removed** ([#579](https://github.com/Raketa02/Raketa/issues/579),
+**Find a game, the Players deck and its radar were removed** ([#579](https://github.com/Rakieta02/Rakieta/issues/579),
 PRD #569): a game is made one way now — a group's Games deck books it — and
 nothing reads or writes a search, a *Let's play*, a pass, a prompt's *not now*
 or a *Show them again* any more. The six tables those records lived in go:

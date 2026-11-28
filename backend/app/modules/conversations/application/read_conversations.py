@@ -30,7 +30,7 @@ everybody in any of them **and everybody a last entry names**. Never one
 question per room.
 
 **A row names its people, and they are not only its members**
-([#408](https://github.com/Raketa02/Raketa/issues/408)). The person a line is
+([#408](https://github.com/Rakieta02/Rakieta/issues/408)). The person a line is
 about may have left the court since, so ``people`` is everybody the row names,
 resolved in the same read as the roster, and the roster stays the roster.
 """

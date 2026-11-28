@@ -1,7 +1,7 @@
 """official groups: a group with no Owner, run by an Administrator
 
 Administrators create and run their club's official groups from the app
-([#509](https://github.com/Raketa02/Raketa/issues/509),
+([#509](https://github.com/Rakieta02/Rakieta/issues/509),
 [ADR-0183](../../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
 §3). One aggregate holds both kinds, so its projection gains the kind and the
 three facts only an official group has:

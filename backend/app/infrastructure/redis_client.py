@@ -9,7 +9,7 @@ connection storm dressed as dependency injection.
 
 **And one exception, which is why there are two factories below.** A connect
 timeout and a read timeout are two different things (`#342
-<https://github.com/Raketa02/Raketa/issues/342>`_), and a **subscriber** wants
+<https://github.com/Rakieta02/Rakieta/issues/342>`_), and a **subscriber** wants
 one of them and emphatically not the other. It gets its own client rather than a
 flag on the shared one: a blocking read has no business in the pool a player's
 critical path draws its commands from, and that is a decision to take once here

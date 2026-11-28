@@ -1,7 +1,7 @@
 """friends: the requests that count towards the limit — ``friend_requests_counted``
 
 **At most ten requests a Warsaw day to people you share no group with**
-([#773](https://github.com/Raketa02/Raketa/issues/773);
+([#773](https://github.com/Rakieta02/Rakieta/issues/773);
 [ADR-0203](../../docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §9).
 One row per request **sent** that counts — asked of somebody the requester
 shared no group with — keyed on the requester and the instant, so *how many

@@ -1,7 +1,7 @@
 """users: no account holds a player name — the ``name`` column goes
 
 **A player is known by their nickname**
-([#724](https://github.com/Raketa02/Raketa/issues/724);
+([#724](https://github.com/Rakieta02/Rakieta/issues/724);
 [ADR-0199](../../docs/adr/0199-a-player-is-known-by-their-nickname.md) §6). The
 Name 0025 added beside the nickname is retired: the naming carries a nickname
 and nothing else (``users.user_named`` v2), an account an Invitation opens holds

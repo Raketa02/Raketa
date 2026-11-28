@@ -1,7 +1,7 @@
 """the tester mark is gone, and its column with it
 
 **The feature flags and the Tester mark that fed them were removed**
-([#581](https://github.com/Raketa02/Raketa/issues/581), PRD #569). A Tester was
+([#581](https://github.com/Rakieta02/Rakieta/issues/581), PRD #569). A Tester was
 a real player who could be given a feature before anyone else, and the player
 app handed the mark to flag evaluation (``0028``). The flag machinery went with
 Classic play, there will never be an old build to switch, and nothing reads the

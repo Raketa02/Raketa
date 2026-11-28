@@ -1,7 +1,7 @@
 """notifications: a notice keeps the club's deadline
 
 **It's a game! at a club that confirms, and Your new game**
-([#622](https://github.com/Raketa02/Raketa/issues/622); the mechanics Q103,
+([#622](https://github.com/Rakieta02/Rakieta/issues/622); the mechanics Q103,
 Q107). Two new kinds of notice, and one fact beside them:
 
 - **``notices.until``** — the deadline a notice names: when the club must

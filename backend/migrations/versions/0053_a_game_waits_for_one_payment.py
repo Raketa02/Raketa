@@ -1,7 +1,7 @@
 """proposals: a game waits for one payment
 
-**Time to pay** ([#625](https://github.com/Raketa02/Raketa/issues/625),
-[#626](https://github.com/Raketa02/Raketa/issues/626); the mechanics §12.2,
+**Time to pay** ([#625](https://github.com/Rakieta02/Rakieta/issues/625),
+[#626](https://github.com/Rakieta02/Rakieta/issues/626); the mechanics §12.2,
 Q109–Q112). A share refused as a full game fills — or as its On request club
 says yes — holds that player's seat for thirty minutes, never past the book-by,
 and the game waits for the payment. Two facts on the proposals row, each written

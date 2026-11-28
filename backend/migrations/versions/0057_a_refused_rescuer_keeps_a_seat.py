@@ -1,7 +1,7 @@
 """bookings, notifications: a refused rescuer keeps a seat for thirty minutes
 
 **A rescuer whose share was refused keeps a seat for themselves alone**
-([#640](https://github.com/Raketa02/Raketa/issues/640); the mechanics §10.1,
+([#640](https://github.com/Rakieta02/Rakieta/issues/640); the mechanics §10.1,
 Q113): their time to fix the card before the cut-off, or to pay after it, never
 past the game's start, and offered to nobody else meanwhile. Two changes to
 the projections, written from the streams on every save:

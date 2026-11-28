@@ -2,7 +2,7 @@
 
 When the last court at a card's club and hour goes, the card stops filling and
 the people who were In are dealt a new card first (the mechanics §5.2, §19;
-[#540](https://github.com/Raketa02/Raketa/issues/540)). The proposal stream
+[#540](https://github.com/Rakieta02/Rakieta/issues/540)). The proposal stream
 records it as ``proposals.court_hour_lost``, and the ``proposals`` projection's
 recorded ending gains the value, so the live reads — which filter on an
 unrecorded ending — drop the card the moment it is written.

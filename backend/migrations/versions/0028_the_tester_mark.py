@@ -2,7 +2,7 @@
 
 A **Tester** is a player whose account carries the tester mark — a real player
 who may be given a feature before anyone else
-([#478](https://github.com/Raketa02/Raketa/issues/478),
+([#478](https://github.com/Rakieta02/Rakieta/issues/478),
 [ADR-0180](../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
 §9). The mark is two events on the ``User`` stream, and the projection row gains
 an ``is_tester`` column beside ``is_admin`` and ``is_active`` — **beside

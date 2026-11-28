@@ -1,7 +1,7 @@
 """the candidate index is gone, and its three tables with it
 
 **The "who fits whom" ranking and the candidate index were removed**
-([#580](https://github.com/Raketa02/Raketa/issues/580), PRD #569). The index
+([#580](https://github.com/Rakieta02/Rakieta/issues/580), PRD #569). The index
 was the matcher's picture of the city — a projection of the event log that a
 search scanned — and the searches went in #579; since then a tail reader and a
 refresh loop kept it current and nothing read it. Its three tables go:

@@ -1,6 +1,6 @@
 """notifications: a notice may be about no game — *Get your level*
 
-**One notice is about no game at all** ([#727](https://github.com/Raketa02/Raketa/issues/727);
+**One notice is about no game at all** ([#727](https://github.com/Rakieta02/Rakieta/issues/727);
 [ADR-0200](../../docs/adr/0200-a-level-is-asked-where-play-begins.md) §7; the
 mechanics §17.2, Q126): *Get your level so your groups can deal you games.*,
 once per account, ever, a day after a first group join while rated in nothing.

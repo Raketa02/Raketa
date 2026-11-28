@@ -1,7 +1,7 @@
 """club money and payouts: a club is paid after the game
 
 **The club sees its money, and is paid after the game is played**
-([#548](https://github.com/Raketa02/Raketa/issues/548); the mechanics §12.6,
+([#548](https://github.com/Rakieta02/Rakieta/issues/548); the mechanics §12.6,
 §16.11, §16.12; ADR-0189 §4). A new stream — the **Club payout**, one per club
 per day it is paid for — and the club's day of new bookings summed up once,
 another stream with no projection. The projections need:

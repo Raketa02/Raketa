@@ -4,7 +4,7 @@
 with the reader** — the Level, its Uncertainty, the band the rating published
 with it and how many results have moved it, one row per player and sport, the
 questionnaire's alone included
-([#794](https://github.com/Raketa02/Raketa/issues/794);
+([#794](https://github.com/Rakieta02/Rakieta/issues/794);
 [ADR-0204](../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 §10, a stated exception to *derived, never stored*). Written by the Discovery
 context's follower on every delivered ``rating.rating_initialised`` and

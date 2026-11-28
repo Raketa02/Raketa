@@ -1,6 +1,6 @@
 """friends: the reader's relation to each player — ``friend_relations``
 
-**A new bounded context, Friends** ([#745](https://github.com/Raketa02/Raketa/issues/745);
+**A new bounded context, Friends** ([#745](https://github.com/Rakieta02/Rakieta/issues/745);
 [ADR-0202](../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
 §8). Its **Friendship** is event-sourced, one stream per pair, in ``event_store``;
 this is the one projection beside it, written by the repository's ``save`` in

@@ -1,6 +1,6 @@
 """friends: an Ask for a level may be set aside — ``friend_level_asks.set_aside_at``
 
-**A friend's ask for a level waits on their Home** ([#764](https://github.com/Raketa02/Raketa/issues/764);
+**A friend's ask for a level waits on their Home** ([#764](https://github.com/Rakieta02/Rakieta/issues/764);
 [ADR-0202](../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
 §4's 2026-11-07 amendment; the friends mechanics §5.1). **Not now** on the
 ask's Home card records ``friends.level_ask_set_aside`` on the pair's

@@ -1,7 +1,7 @@
 """payments: whose customer is whose, and which notices were read
 
 A player saves a payment method once, after terms naming the club as the one
-charging ([#536](https://github.com/Raketa02/Raketa/issues/536),
+charging ([#536](https://github.com/Rakieta02/Rakieta/issues/536),
 [ADR-0189](../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)
 §4–§5). The **Payment method** itself is a stream in ``event_store`` and needs
 no table; two things beside it do

@@ -1,7 +1,7 @@
 """the sportsmanship card, and one standing answer per pair of people
 
 The first part of the player record that **stores** anything
-([#376](https://github.com/Raketa02/Raketa/issues/376),
+([#376](https://github.com/Rakieta02/Rakieta/issues/376),
 [ADR-0158](../../docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)).
 Everything else on that sheet derives; this is a new bounded context with an
 aggregate, and it is the first aggregate on this platform that is stored rather

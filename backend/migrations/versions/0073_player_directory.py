@@ -3,7 +3,7 @@
 **The people rows read a directory of every account** — the nickname, the
 first photograph, the area cell, when sign-up finished (*joined*), the social
 tags one row per tag, *Show me to new people* and whether the account plays
-([#793](https://github.com/Raketa02/Raketa/issues/793);
+([#793](https://github.com/Rakieta02/Rakieta/issues/793);
 [ADR-0204](../../docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 §10, a stated exception to *derived, never stored*). Written by the Discovery
 context's follower on every delivered user or Player profile event that changes

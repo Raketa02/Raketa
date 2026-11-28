@@ -1,6 +1,6 @@
 """friends: every Ask for a level — ``friend_level_asks``
 
-**Ask for a level** ([#749](https://github.com/Raketa02/Raketa/issues/749);
+**Ask for a level** ([#749](https://github.com/Rakieta02/Rakieta/issues/749);
 [ADR-0202](../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
 §4; the mechanics §5). An ask is recorded on the pair's **Friendship** stream in
 ``event_store``; this is its projection, rewritten for the pair by the

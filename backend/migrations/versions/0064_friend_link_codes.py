@@ -1,6 +1,6 @@
 """friends: every code a Friend link ever carried — ``friend_link_codes``
 
-**The Friend link** ([#748](https://github.com/Raketa02/Raketa/issues/748);
+**The Friend link** ([#748](https://github.com/Rakieta02/Rakieta/issues/748);
 [ADR-0202](../../docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)
 §1; the mechanics §4). A player's link is event-sourced, one stream per player,
 in ``event_store``; this is the projection beside it, written by the

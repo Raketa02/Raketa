@@ -2,7 +2,7 @@
 
 A **Proposal** is a game still filling — a pool, a sport, a kind, a court hour
 at a club, the share fixed on it, the versions it was dealt in, the yeses and
-the book-by ([#538](https://github.com/Raketa02/Raketa/issues/538),
+the book-by ([#538](https://github.com/Rakieta02/Rakieta/issues/538),
 [ADR-0189](../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)
 §2, §5). The stream is in ``event_store``; three tables sit beside it:
 

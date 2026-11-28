@@ -1,7 +1,7 @@
 """the deck reads no declaration, and a deal may record that none stood
 
 The Players deal scores every viewer under the fun ruler and reads no Play intent
-([#439](https://github.com/Raketa02/Raketa/issues/439),
+([#439](https://github.com/Rakieta02/Rakieta/issues/439),
 [ADR-0169](../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
 §2). `play_intent_not_declared` is never raised by the deck any more, so a viewer
 who never declared is dealt — and the row still records **the declaration as it

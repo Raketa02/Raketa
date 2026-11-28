@@ -1,7 +1,7 @@
 """administrators, and a password a club can clear
 
 A club makes people administrators, and they get in
-([#508](https://github.com/Raketa02/Raketa/issues/508),
+([#508](https://github.com/Rakieta02/Rakieta/issues/508),
 [ADR-0184](../../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md),
 [ADR-0185](../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)).
 

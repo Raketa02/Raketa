@@ -1,7 +1,7 @@
 """the join requests waiting on a group
 
 A *People I approve* group turns a join into a Join request its Owner answers
-([#505](https://github.com/Raketa02/Raketa/issues/505),
+([#505](https://github.com/Rakieta02/Rakieta/issues/505),
 [ADR-0183](../../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
 §7). **``group_join_requests``** is the third projection ADR-0183 §1 names,
 written beside the group's events in the same transaction: one row per request

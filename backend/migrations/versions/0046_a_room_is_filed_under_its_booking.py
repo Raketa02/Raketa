@@ -1,6 +1,6 @@
 """a room is filed under its booking: conversation.challenge_id becomes booking_id
 
-**A room is opened only by a booked game** ([#575](https://github.com/Raketa02/Raketa/issues/575)).
+**A room is opened only by a booked game** ([#575](https://github.com/Rakieta02/Rakieta/issues/575)).
 A booked game's room was always filed under its booking's id — the arrangement
 the game names — but the column still called it a challenge, from when a
 challenge's first acceptance opened rooms too. Nothing opens a room that way any

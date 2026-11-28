@@ -555,7 +555,7 @@ there; they are not repeated here.
   Connecting is bounded at `REDIS_CONNECT_TIMEOUT_SECONDS` and reading is not bounded at
   all, because on a subscription **waiting is the operation** and a `socket_timeout` there
   does not reconnect quietly — it raises at the caller every two seconds and loses whatever
-  was published in the gap ([#342](https://github.com/Raketa02/Raketa/issues/342)). One
+  was published in the gap ([#342](https://github.com/Rakieta02/Rakieta/issues/342)). One
   client per **process**, not per stream: each open stream takes a `PubSub` off it. _Avoid_:
   putting a blocking read on the pool a player's critical path draws commands from.
 - **Stream item type** — what a generator route yields, and the thing FastAPI 0.136.1

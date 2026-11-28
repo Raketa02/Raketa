@@ -1,7 +1,7 @@
 """bookings, proposals: no club confirms a game — On request's columns go
 
 **A full game books the moment its last yes lands, at every club**
-([#669](https://github.com/Raketa02/Raketa/issues/669); ADR-0196 §1): On
+([#669](https://github.com/Rakieta02/Rakieta/issues/669); ADR-0196 §1): On
 request is removed, so nothing waits for a club's answer and nothing is turned
 down. What only its requests used goes with it:
 

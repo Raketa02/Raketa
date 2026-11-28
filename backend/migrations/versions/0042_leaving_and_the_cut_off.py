@@ -1,7 +1,7 @@
 """leaving a booked game, and the cut-off
 
 **A player may leave a booked game, and a game plays full or not at all**
-([#544](https://github.com/Raketa02/Raketa/issues/544); the mechanics §12.3,
+([#544](https://github.com/Rakieta02/Rakieta/issues/544); the mechanics §12.3,
 §13, §15.4; ADR-0189 §5). The Booking stream records the leaving and the
 call-off; its projections learn them:
 

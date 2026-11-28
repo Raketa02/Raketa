@@ -13,7 +13,7 @@ gave it.
 **No ``has_more``.** The sequence is gapless, so ``seq`` 1 *is* the beginning.
 
 **But a page does carry the faces of whoever it names**
-([#408](https://github.com/Raketa02/Raketa/issues/408)), and that is not a
+([#408](https://github.com/Rakieta02/Rakieta/issues/408)), and that is not a
 header: it is the one thing a client cannot fill from what the detail read gave
 it, because the people a page names are not only the members — the actor of a
 ``SEAT_LEFT`` line was never one, and that line is on whichever page the *no*
