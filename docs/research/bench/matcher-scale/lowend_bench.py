@@ -12,7 +12,7 @@ neither:
     tens-of-players market actually looks like, since people join because
     somebody at their club told them to.
 
-Feeds https://github.com/Raketa02/Raketa/issues/162 (Cold start).
+Feeds https://github.com/Rakieta02/Rakieta/issues/162 (Cold start).
 
 Run: python lowend_bench.py
 """

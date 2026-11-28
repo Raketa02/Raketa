@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The ranking is gone (#580), so there are no weight vectors and no quality floor for newness to leave alone: decisions 1 and 5, and the Consequences' empty screens, radius rungs, calibration modifier and judged pairings, describe nothing that runs, and decision 4 is moot. Decisions 2 and 3 are the rule today: while either player in a pair is inside their fourteen-day newcomer window, the pair is held to the competitive tolerance whatever the kind of game (`matchmaking/domain/level_window.py`) — for every pair the proposer, the fill and a rescue would seat, and for a post's level range.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The ranking is gone (#580), so there are no weight vectors and no quality floor for newness to leave alone: decisions 1 and 5, and the Consequences' empty screens, radius rungs, calibration modifier and judged pairings, describe nothing that runs, and decision 4 is moot. Decisions 2 and 3 are the rule today: while either player in a pair is inside their fourteen-day newcomer window, the pair is held to the competitive tolerance whatever the kind of game (`matchmaking/domain/level_window.py`) — for every pair the proposer, the fill and a rescue would seat, and for a post's level range.
 
 ## Context
 
@@ -17,8 +17,8 @@ selected when `counted_games == 0 ∧ rating_status == INITIAL_ESTIMATE`. Its ar
 this ADR does not dispute it: a first game is the most consequential game a player will play, the
 return-rate figure applies most brutally to it, and evenness and reliability are what protect it.
 
-Resolving [#175](https://github.com/Raketa02/Raketa/issues/175) on the map
-[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
+Resolving [#175](https://github.com/Rakieta02/Rakieta/issues/175) on the map
+[The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155)
 found the vector unaffordable for a reason that has nothing to do with its numbers.
 
 **A third weight vector re-opens the quality floor.**
@@ -88,7 +88,7 @@ only one side is a rule with a door in it.
 
 **It is a real exclusion in for-fun, and it is the point.** For 14 days a newcomer will not be
 shown a for-fun opponent between Δμ 0.55 and 0.90 who would otherwise have been admitted. At
-launch density ([#161](https://github.com/Raketa02/Raketa/issues/161): 63% of searches already
+launch density ([#161](https://github.com/Rakieta02/Rakieta/issues/161): 63% of searches already
 return fewer than five candidates) that will occasionally be why a screen is emptier. It is the
 same trade ADR-0099 took deliberately — **a bad
 match is worse than no match** — and the empty-result rate stays a guardrail metric, never

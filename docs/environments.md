@@ -303,9 +303,9 @@ Concretely:
 The flag system is Featurevisor, adopted by
 [ADR-0206](adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) — the second time:
 ADR-0180 adopted it to hide the *Classic play* loop, and it left with that loop on 2026-10-06
-([#569](https://github.com/Raketa02/Raketa/issues/569)); it came back on 2026-11-21 to keep Play's
-Explore off while it is unbuilt ([#826](https://github.com/Raketa02/Raketa/issues/826)). Its
-definitions live in a separate repository, `Raketa02/raketa-features`, whose environments are
+([#569](https://github.com/Rakieta02/Rakieta/issues/569)); it came back on 2026-11-21 to keep Play's
+Explore off while it is unbuilt ([#826](https://github.com/Rakieta02/Rakieta/issues/826)). Its
+definitions live in a separate repository, `Rakieta02/rakieta-features`, whose environments are
 these four names; each builds its own datafile, and the player app reads the one for the
 environment it was built for. That is where a flag's per-environment default lives — in the
 flags repo's YAML, never in a branch in either app. The rule above was recorded before any flag
@@ -342,7 +342,7 @@ Which tier runs against which environment, and the one line that is not crossed.
 | Backend demands (`backend/tests/demands/`) | An in-memory SQLite database, for the one port with a real provider. | ADR-0098's consumer-driven **contract suite**, parameterised over every implementation registered in `app/bootstrap/matcher_demands.py`. Not in the *Contract* row below, and not named for it: that word means `openapi.player.json` here. |
 | Contract | Every document the backend emits: `openapi.{player,dev,club,public}.json`. | Two checks. **Freshness** re-emits every document and diffs the JSON (`make contract-freshness`, proven to still fire by `make test-contract-freshness`). **Drift** regenerates one client's types from its own document and diffs them (`check-contract-drift.sh <client>`, proven by `make test-drift`). |
 | Web app pages (Playwright, `frontend_club/e2e/`, `frontend_public/e2e/`) | The built site, started with a configuration made for the suite, its server pointed at a **stub backend** typed from that app's generated contract. No real backend and no database. | One worker, because one server talks to one stub. Each app owns its stub. |
-| End-to-end | Nothing automated. **No test crosses apps** ([ADR-0187](adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md) §6). | The journey across the apps is a QA plan walked by hand in `local` ([#528](https://github.com/Raketa02/Raketa/issues/528)), and in `development` or `staging` once either is provisioned. |
+| End-to-end | Nothing automated. **No test crosses apps** ([ADR-0187](adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md) §6). | The journey across the apps is a QA plan walked by hand in `local` ([#528](https://github.com/Rakieta02/Rakieta/issues/528)), and in `development` or `staging` once either is provisioned. |
 | Manual exploratory | `local`; `development` or `staging` once provisioned. | |
 
 **How the suite runs.** The merge gate runs every test of every app a push changes, never a

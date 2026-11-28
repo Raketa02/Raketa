@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `POST /forecasts` is gone, with the builder and the searches it was bound to (#579), so §1, §3, §4, the per-row `would_be_forecast` and the *Evenest* sort describe nothing that runs. §2's rule stands and the engine is built to it: one function, `v1/group.py`'s `forecast`, produces both the full and the provisional figure, reading an empty seat as if it matched its partner, and the assumption travels inside `Forecast`. A Games card prints its forecast as provisional while a side is short; a booked game's pairing reads the same function.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** `POST /forecasts` is gone, with the builder and the searches it was bound to (#579), so §1, §3, §4, the per-row `would_be_forecast` and the *Evenest* sort describe nothing that runs. §2's rule stands and the engine is built to it: one function, `v1/group.py`'s `forecast`, produces both the full and the provisional figure, reading an empty seat as if it matched its partner, and the assumption travels inside `Forecast`. A Games card prints its forecast as provisional while a side is short; a booked game's pairing reads the same function.
 
 ## Context
 

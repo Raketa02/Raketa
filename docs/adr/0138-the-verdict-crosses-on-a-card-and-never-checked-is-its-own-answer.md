@@ -6,10 +6,10 @@
   on two clauses: *the read does not carry it* becomes **the card does**, and *fail-open
   records `ALLOWED`* becomes **fail-open records nothing**. Everything else in that record —
   above all *the note never crosses, in any shape, on any route* — stands untouched.
-- Settles [#307](https://github.com/Raketa02/Raketa/issues/307) on
-  [#302](https://github.com/Raketa02/Raketa/issues/302)'s spec.
+- Settles [#307](https://github.com/Rakieta02/Rakieta/issues/307) on
+  [#302](https://github.com/Rakieta02/Rakieta/issues/302)'s spec.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The search's `player_card` is gone (#579), and with it `PlayerCardSource`, `RecordedCard`, the `HEAD` per shortlist row and the read-back's frozen shield. The decision stands where the verdict now crosses — the player record's `review` and the owner's own `ProfilePhotoResource.review` — with three answers: *not checked* is an omission, only `allowed` earns a shield, and the note never crosses.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The search's `player_card` is gone (#579), and with it `PlayerCardSource`, `RecordedCard`, the `HEAD` per shortlist row and the read-back's frozen shield. The decision stands where the verdict now crosses — the player record's `review` and the owner's own `ProfilePhotoResource.review` — with three answers: *not checked* is an omission, only `allowed` earns a shield, and the note never crosses.
 
 ## Context
 
@@ -56,7 +56,7 @@ still documented as provisional, and it is now load-bearing in a way it was not:
 on-court photo scoring 0.49 leaves its owner silently unbadged on twenty other people's
 screens. Every verdict records the similarities it was computed from, so the number is
 re-derivable over stored objects **without re-running inference** — filed as
-[#316](https://github.com/Raketa02/Raketa/issues/316) and deliberately not blocking here. It
+[#316](https://github.com/Rakieta02/Rakieta/issues/316) and deliberately not blocking here. It
 is the same trade ADR-0129 made and ADR-0133 restated, taken one notch further, and it is
 recorded rather than resolved.
 
@@ -120,7 +120,7 @@ changes is a shield that is not drawn.
 - **The threshold gains its third falsifier, and it is the one with teeth.** ADR-0133 added
   photos swapped after a warning; this adds photos whose owners never see a shield and never
   find out why. That is not a signal we can read — which is exactly why
-  [#316](https://github.com/Raketa02/Raketa/issues/316) exists and why the note is stored.
+  [#316](https://github.com/Rakieta02/Rakieta/issues/316) exists and why the note is stored.
 
 **Harder**
 

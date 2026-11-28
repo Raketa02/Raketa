@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The search, its liveness reasons and modifiers, the exposure ledger and the welcoming modifier are gone (#579, #580), so decisions 1, 3 and 4 and the 2026-08-28 amendment describe nothing that runs: nothing prints newness and nothing volunteers anybody, so there is nothing for a cap to bound. Decision 2 stands and is tested (`tests/unit/test_level_window.py`): no profile, commit or ruleset field lets a player decline newcomers, for the reason the Consequences give against ADR-0096. A newcomer's protection is now ADR-0113's tightened level window on every pair the Games deck would seat.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The search, its liveness reasons and modifiers, the exposure ledger and the welcoming modifier are gone (#579, #580), so decisions 1, 3 and 4 and the 2026-08-28 amendment describe nothing that runs: nothing prints newness and nothing volunteers anybody, so there is nothing for a cap to bound. Decision 2 stands and is tested (`tests/unit/test_level_window.py`): no profile, commit or ruleset field lets a player decline newcomers, for the reason the Consequences give against ADR-0096. A newcomer's protection is now ADR-0113's tightened level window on every pair the Games deck would seat.
 
 ## Context
 
@@ -16,8 +16,8 @@ asymmetry:
 
 It says the cost should be printed. It never says whether it may be **refused**.
 
-Resolving [#175](https://github.com/Raketa02/Raketa/issues/175) on the map
-[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
+Resolving [#175](https://github.com/Rakieta02/Rakieta/issues/175) on the map
+[The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155)
 put the question directly, because this platform has already answered a question of exactly this
 shape and answered it the other way.
 [ADR-0096](0096-gender-preference-mutual-gate-invisible-to-the-scorer.md) overruled the design
@@ -96,7 +96,7 @@ adjustment, and it would also be the first time this platform told somebody how 
 *them*, which is a much larger door than this decision needs.
 
 **One collision, real but not yet live.**
-[#171](https://github.com/Raketa02/Raketa/issues/171) settled that *a reason line never restates a
+[#171](https://github.com/Rakieta02/Rakieta/issues/171) settled that *a reason line never restates a
 value the card already renders*, and the player card carries `counted_games`. Newness here is a
 **date**, not a game count — a player twenty days in with no games is not in the window — so the
 two are different claims. Today it is moot: `counted_games` reads `matches` and renders absent.
@@ -114,7 +114,7 @@ people, and it would be settled by watching them, not by arguing about it here.
 
 ## Amendment — 2026-08-28: the cap bounds veterans, and the lift is left alone
 
-Building the cap ([#214](https://github.com/Raketa02/Raketa/issues/214)) found that decision 3's
+Building the cap ([#214](https://github.com/Rakieta02/Rakieta/issues/214)) found that decision 3's
 two clauses reach **opposite populations**, which is invisible in prose and unmissable in code.
 
 `welcoming_record` fires for a player who has *played opponents whose rating was still settling* —

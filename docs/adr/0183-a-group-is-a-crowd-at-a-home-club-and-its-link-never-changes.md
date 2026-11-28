@@ -34,7 +34,7 @@
   symmetric effect into a new surface, the Members list (§10).
 - **§10's Members list is also read by whoever runs an official group now**, by
   [ADR-0159](0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)'s
-  amendment of 2026-10-02 ([#566](https://github.com/Raketa02/Raketa/issues/566)), which opens
+  amendment of 2026-10-02 ([#566](https://github.com/Rakieta02/Rakieta/issues/566)), which opens
   the record of anybody on it too. Running a group is still not membership (§7): that account is
   no row until it joins as a player, counts in nothing, and a block either way round hides a row
   from it as from a member.
@@ -44,16 +44,16 @@
 - **Distinguishes [ADR-0167](0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
   §3's** client-cut initials. A group's monogram is served by the backend (§5), and a player's
   initials are still cut by the one client that draws them.
-- Settles [#501](https://github.com/Raketa02/Raketa/issues/501) for the PRD
-  [#500](https://github.com/Raketa02/Raketa/issues/500). Built by the backend tickets
-  [#504](https://github.com/Raketa02/Raketa/issues/504)–[#506](https://github.com/Raketa02/Raketa/issues/506),
-  [#509](https://github.com/Raketa02/Raketa/issues/509) and [#510](https://github.com/Raketa02/Raketa/issues/510),
-  and by the player app's [#512](https://github.com/Raketa02/Raketa/issues/512)–[#514](https://github.com/Raketa02/Raketa/issues/514),
-  [#516](https://github.com/Raketa02/Raketa/issues/516) and [#519](https://github.com/Raketa02/Raketa/issues/519).
+- Settles [#501](https://github.com/Rakieta02/Rakieta/issues/501) for the PRD
+  [#500](https://github.com/Rakieta02/Rakieta/issues/500). Built by the backend tickets
+  [#504](https://github.com/Rakieta02/Rakieta/issues/504)–[#506](https://github.com/Rakieta02/Rakieta/issues/506),
+  [#509](https://github.com/Rakieta02/Rakieta/issues/509) and [#510](https://github.com/Rakieta02/Rakieta/issues/510),
+  and by the player app's [#512](https://github.com/Rakieta02/Rakieta/issues/512)–[#514](https://github.com/Rakieta02/Rakieta/issues/514),
+  [#516](https://github.com/Rakieta02/Rakieta/issues/516) and [#519](https://github.com/Rakieta02/Rakieta/issues/519).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Find a game, the `find_a_game` flag and the flag system (ADR-0180) are gone (#576). Of §12, Play opening on **Groups | Explore** with Explore blank stands; the flag, its default, *turning it on restores Find a game* and *the backend guards nothing* do not. The header's amendments of ADR-0169 and ADR-0180, and the last *Harder* bullet, describe nothing that exists. The bar is Home · ⚡ Play · You (ADR-0189 §6).
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** Find a game, the `find_a_game` flag and the flag system (ADR-0180) are gone (#576). Of §12, Play opening on **Groups | Explore** with Explore blank stands; the flag, its default, *turning it on restores Find a game* and *the backend guards nothing* do not. The header's amendments of ADR-0169 and ADR-0180, and the last *Harder* bullet, describe nothing that exists. The bar is Home · ⚡ Play · You (ADR-0189 §6).
 
-> **Note — the feature flags return (2026-11-21, [#826](https://github.com/Raketa02/Raketa/issues/826)).** §12's *Groups | Explore* now stands **only with the `explore` feature flag on** ([ADR-0206](0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §11). Off — its code default, and its value in every environment — Play is titled **Groups**, over the groups list, with no switcher, and Explore cannot be reached. The flag is `explore`, not `find_a_game`, and *the backend guards nothing* holds for it.
+> **Note — the feature flags return (2026-11-21, [#826](https://github.com/Rakieta02/Rakieta/issues/826)).** §12's *Groups | Explore* now stands **only with the `explore` feature flag on** ([ADR-0206](0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §11). Off — its code default, and its value in every environment — Play is titled **Groups**, over the groups list, with no switcher, and Explore cannot be reached. The flag is `explore`, not `find_a_game`, and *the backend guards nothing* holds for it.
 
 ## Context
 
@@ -253,8 +253,8 @@ that differed by reader would itself tell someone that something was being hidde
 ### 12. Play opens on Groups, and the flag keeps the bridge
 
 The `find_a_game` flag's **code default becomes off**, and so does its value in every environment's
-definition in `Raketa02/raketa-features` ([#521](https://github.com/Raketa02/Raketa/issues/521),
-done by hand once [#512](https://github.com/Raketa02/Raketa/issues/512) lands, because until then an
+definition in `Rakieta02/rakieta-features` ([#521](https://github.com/Rakieta02/Rakieta/issues/521),
+done by hand once [#512](https://github.com/Rakieta02/Rakieta/issues/512) lands, because until then an
 off flag would show a blank Play). Play renders a **Groups | Explore** switch where the placeholder sits
 today. **Explore is a blank page** for now. **Turning the flag on restores Find a game**, so the
 rebuild never burns the bridge behind it. The five-tab bar is unchanged. The mocks' three-tab bar is

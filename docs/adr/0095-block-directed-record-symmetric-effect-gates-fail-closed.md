@@ -19,7 +19,7 @@
   suggest one player to another — keep the pair out of each other's view, and there the promise
   holds. A dated note marks §7.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the deck and the candidate index are gone (#579, #580), so §4's two enforcement points — the block set carried in the `SearchContext`, and the re-verify before a search response leaves — and §5's and §6's refusals at the search entry no longer exist. A block is now asked of every pair the proposer, the fill and a rescue would seat (`proposals`' `PlayerFit`, over `blocked_pairs_among`). *A gate that cannot be evaluated excludes* holds there, and in the account gates the player record runs, where `NoHoldsExist` still answers the hold. §1–§3 and §8 stand as ADR-0193 amended them.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The searches, the deck and the candidate index are gone (#579, #580), so §4's two enforcement points — the block set carried in the `SearchContext`, and the re-verify before a search response leaves — and §5's and §6's refusals at the search entry no longer exist. A block is now asked of every pair the proposer, the fill and a rescue would seat (`proposals`' `PlayerFit`, over `blocked_pairs_among`). *A gate that cannot be evaluated excludes* holds there, and in the account gates the player record runs, where `NoHoldsExist` still answers the hold. §1–§3 and §8 stand as ADR-0193 amended them.
 
 ## Context
 
@@ -27,12 +27,12 @@ The matchmaking engine applies eight gates before anything is scored
 (`docs/specs/matchmaking/matchmaking-engine.md` *(removed)* §9.1).
 Two of them read contexts this repository does not have: **a block, either direction**, and
 **a held account** — somebody with an open unsettled case. Charting the map
-[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
+[The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155)
 ruled a minimal block **inside** the destination while the other absent contexts stayed
 outside it, for one reason: shipping a system whose entire job is putting strangers in front
 of each other, with no control that lets somebody say *not them*, is a safety gap and not a
 phasing decision. This record settles
-[#159](https://github.com/Raketa02/Raketa/issues/159).
+[#159](https://github.com/Rakieta02/Rakieta/issues/159).
 
 **What the input material already says.** The design document makes both gates "verified
 live" (§7.5), keeps blocks and passes out of every response shape (§21), and proposes that
@@ -158,7 +158,7 @@ the engine's three refusals exist to prevent, and running the search only to ref
 challenge at send time wastes their time and then embarrasses them.
 
 What `cases` must answer, and how fast, is written into
-[What the matcher demands of `player_score`, `matches` and `cases`](https://github.com/Raketa02/Raketa/issues/163)
+[What the matcher demands of `player_score`, `matches` and `cases`](https://github.com/Rakieta02/Rakieta/issues/163)
 as a consumer-driven contract, not here.
 
 ### 7. How far the promise reaches
@@ -183,7 +183,7 @@ they will.
 **Backwards — not at all.** A block is forward-looking. It does not reach into a game already
 agreed or a chat already open, because `matches` does not exist to define what cancelling one
 would mean, and today no game can exist, so the question has no live consequence. The demand
-goes to [#163](https://github.com/Raketa02/Raketa/issues/163) with the expected answer
+goes to [#163](https://github.com/Rakieta02/Rakieta/issues/163) with the expected answer
 recorded and not decided: a block should cancel an *unaccepted* challenge and leave an
 *agreed* game to the humans, mirroring the prototype's reasoning about the chat it refuses to
 close.

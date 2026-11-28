@@ -1,20 +1,20 @@
 # Friends — the mechanics
 
 > **Status:** agreed in the friends grilling on 2026-11-05/06 (Q1–Q46 there), confirmed by the
-> product owner on 2026-11-06, and specified as PRD [#743](https://github.com/Raketa02/Raketa/issues/743).
+> product owner on 2026-11-06, and specified as PRD [#743](https://github.com/Rakieta02/Rakieta/issues/743).
 > Logged as **Q128** in the
 > [games and fill-in decision log](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log), and
 > recorded by [ADR-0202](../../adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md).
-> **Refined on 2026-11-07** by the level-ask grilling, PRD [#762](https://github.com/Raketa02/Raketa/issues/762),
+> **Refined on 2026-11-07** by the level-ask grilling, PRD [#762](https://github.com/Rakieta02/Rakieta/issues/762),
 > logged as **Q129** and recorded by ADR-0202 §4's amendment: an ask waits on the friend's Home
 > ([§5.1](#51-the-ask-waits-on-her-home-q129)), and its bell row with it ([§12](#12-notifications)).
-> **Amended on 2026-11-07** by the rankings grilling, PRD [#766](https://github.com/Raketa02/Raketa/issues/766),
+> **Amended on 2026-11-07** by the rankings grilling, PRD [#766](https://github.com/Rakieta02/Rakieta/issues/766),
 > logged as **Q130** and recorded by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md): a request may also go to anybody listed on
 > General ([§3.1](#31-who-can-be-a-friend)), reads *Found you in the padel ranking*
 > ([§3.2](#32-asking)), and is capped at 10 a day to people outside your groups
 > ([§13](#13-numbers-in-one-place)); a block closes the record both ways, so the record's Unblock goes
 > ([§3.5](#35-blocks)).
-> **Amended on 2026-11-14** by the Home rows grilling, PRD [#789](https://github.com/Raketa02/Raketa/issues/789),
+> **Amended on 2026-11-14** by the Home rows grilling, PRD [#789](https://github.com/Rakieta02/Rakieta/issues/789),
 > logged as **Q131** and recorded by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md): **anyone may be asked, with no daily limit**
 > ([§3.1](#31-who-can-be-a-friend), [§13](#13-numbers-in-one-place)), except across *Show me to new
 > people*'s rule; a request found on Home's rows records the row and reads its own line
@@ -255,11 +255,11 @@ iPhone and an app link on Android, through the public site's app-link files, whi
 ### 5.1 The ask waits on her Home (Q129)
 
 > Added 2026-11-07 from the level-ask grilling (Q1–Q8 there), PRD
-> [#762](https://github.com/Raketa02/Raketa/issues/762), and ADR-0202 §4's amendment of that day. The push
+> [#762](https://github.com/Rakieta02/Rakieta/issues/762), and ADR-0202 §4's amendment of that day. The push
 > alone left an ask nowhere to be found: without push permission, or on a simulator, nothing arrives,
 > and the bell's row is history once the list is opened. Built by the backend's
-> [#764](https://github.com/Raketa02/Raketa/issues/764) and the player app's
-> [#765](https://github.com/Raketa02/Raketa/issues/765).
+> [#764](https://github.com/Rakieta02/Rakieta/issues/764) and the player app's
+> [#765](https://github.com/Rakieta02/Rakieta/issues/765).
 
 - **An ask waiting on Zofia is a card on her Home**, in an **ASKED FOR A LEVEL · n** row after FRIEND
   REQUESTS and before Your games, until she has the level or says **Not now**. *n* is the number of
@@ -338,7 +338,7 @@ seat and **+ Friends** under it.
   changes your Play intent. Competitive counts for the score; For fun doesn't. A chevron on the
   selected Friends tab says the menu is there, and a tap on that tab opens it. It has no counts
   and no door, so any kind can be picked, and it never moves the Games deck (2026-11-24,
-  [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built; until then a
+  [#859](https://github.com/Rakieta02/Rakieta/issues/859), decided and not yet built; until then a
   switch above the court).
 - **Intent never excludes** (Q15). A friend whose intent is For fun only can be seated in a
   Competitive game; the invitation names the kind, and she decides.
@@ -372,7 +372,7 @@ loading state while it works. It is the deck's card **without the player tiles**
 
 - the sides, *YOU + EWA VS MAGDA + ANIA*, and **the kind's own number** (amended 2026-11-23,
   [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
-  §5, [#834](https://github.com/Raketa02/Raketa/issues/834)):
+  §5, [#834](https://github.com/Rakieta02/Rakieta/issues/834)):
   - on **Competitive**, the balance, *87% · Very even*, for the sides on the court;
   - on **For fun**, the **Social vibe** of the four, how much the line-up shares, worked out from
     everybody's tags now. It is the same however they stand, so a swap never moves it. **No
@@ -533,7 +533,7 @@ it"* or *"Ania didn't answer"*, with two choices (Q31):
 
 - **Anyone still in the game** may invite one of their own friends into an empty seat (Q44).
   **Whoever accepts and pays first gets it**, friend or rescuer, and every other invitation into that
-  seat ends with *seat taken* (a notice [#752](https://github.com/Raketa02/Raketa/issues/752) adds;
+  seat ends with *seat taken* (a notice [#752](https://github.com/Rakieta02/Rakieta/issues/752) adds;
   the PRD's list doesn't name it).
 - **Opening a seat to the group stays the sender's call** before the cut-off, because until then the
   seat costs him money.
@@ -708,7 +708,7 @@ club's cancel moves the game; the club sees an ordinary booking.
 - **Two invitees racing for one empty seat**: the first to accept and pay takes it; the other reads
   *seat taken*.
 - **An invitee whose card is refused on Accept** keeps her seat to retry until her 24 hours end
-  ([#751](https://github.com/Raketa02/Raketa/issues/751)'s rule, not the fill's 30-minute time to fix
+  ([#751](https://github.com/Rakieta02/Rakieta/issues/751)'s rule, not the fill's 30-minute time to fix
   the card: the invitation's own clock is already running).
 - **A friend's Accept when her week fills meanwhile** is refused with a sentence; her seat runs out as
   silence would.
@@ -716,8 +716,8 @@ club's cancel moves the game; the club sees an ordinary booking.
   plays as a guest.
 - **A link opened by somebody its owner already asked**, or opened twice, makes no second request:
   the owner's is already open. Whether a request the opener set aside comes back to Home when the
-  link is opened is left to [#748](https://github.com/Raketa02/Raketa/issues/748) and
-  [#756](https://github.com/Raketa02/Raketa/issues/756) to settle.
+  link is opened is left to [#748](https://github.com/Rakieta02/Rakieta/issues/748) and
+  [#756](https://github.com/Rakieta02/Rakieta/issues/756) to settle.
 - **A friend removed, then a friend again**, whose level ask was still waiting and not set aside, is
   back on the ask's card, because the card reads friendship live ([§5.1](#51-the-ask-waits-on-her-home-q129))
   *(a call: it follows from PRD #762's Home read, which no ruling names)*. This is no set-aside ask

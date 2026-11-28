@@ -1,10 +1,10 @@
 # Friends: the spec set
 
-**What PRD [#743](https://github.com/Raketa02/Raketa/issues/743) is drawn from.** The product owner's
+**What PRD [#743](https://github.com/Rakieta02/Rakieta/issues/743) is drawn from.** The product owner's
 Friends brief and its twelve mocks, copied here from `rakieta_v2.0/4-features/3-Friends` so that every
 session can read them, then grilled on 2026-11-05/06 (Q1–Q46 there, the
 [games and fill-in mechanics' Q128](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log)).
-Landed by [#744](https://github.com/Raketa02/Raketa/issues/744) on 2026-11-06.
+Landed by [#744](https://github.com/Rakieta02/Rakieta/issues/744) on 2026-11-06.
 
 | File | What it holds |
 | --- | --- |
@@ -67,7 +67,7 @@ from the mocks' own parts and the design system, and named there as designed, no
 ## Overrides
 
 Each is a ruling of the friends grilling, a call in PRD #743, or a rule from an earlier record;
-note 9 is a later decision, PRD [#859](https://github.com/Raketa02/Raketa/issues/859), whose record
+note 9 is a later decision, PRD [#859](https://github.com/Rakieta02/Rakieta/issues/859), whose record
 is [`docs/specs/tab-menu/`](../tab-menu/README.md). The mock is correct everywhere else.
 
 | Note | Mock | What it draws | What is built |
@@ -80,7 +80,7 @@ is [`docs/specs/tab-menu/`](../tab-menu/README.md). The mock is correct everywhe
 | 6 | friends 9 | *Overlap next week* | The deck's grade, *High / Good / Slim overlap*, as mock 8 draws it (*Slim overlap*) and the deck card does (games and fill-in Q71) |
 | 7 | friends 12 | *Saturday 10:00 · Wisła Park · Court 3 · Padel* | The line names the kind too: *Saturday 10:00 · Ogrody 33 · Court 3 · Padel · Competitive* (Q15). With Whole court the button is **Accept** and a line reads *Tomek paid the court* (Q29) |
 | 8 | friends 8, 9 | **Send game and pay 25 zł** sends at once | It opens the **send sheet**, which asks how to pay and carries the order button with the maximum above it (call 8) |
-| 9 | friends 7 | The **Competitive / For fun** switch above the court, on screen all the time | **The Friends tab's menu** (2026-11-24, [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built): a chevron on the selected Friends tab, and a tap on it opens a menu aligned to the tab's right edge, Competitive then For fun, with a coral tick and **no counts and no door**. It still sets this game's kind only. The court sits right under the tabs, at its own size ([the screens §7.1](the-screens.md#71-the-court); the tab menu's [mocks 2 and 4](../tab-menu/README.md), illustrations) |
+| 9 | friends 7 | The **Competitive / For fun** switch above the court, on screen all the time | **The Friends tab's menu** (2026-11-24, [#859](https://github.com/Rakieta02/Rakieta/issues/859), decided and not yet built): a chevron on the selected Friends tab, and a tap on it opens a menu aligned to the tab's right edge, Competitive then For fun, with a coral tick and **no counts and no door**. It still sets this game's kind only. The court sits right under the tabs, at its own size ([the screens §7.1](the-screens.md#71-the-court); the tab menu's [mocks 2 and 4](../tab-menu/README.md), illustrations) |
 
 ## Index
 

@@ -4,7 +4,7 @@
   ended exactly when its challenge is over, and not a grace after its last departure. §2's clock
   for a room with a game, and §4's grace after *we played*, stand.
 - **Date:** 2026-09-07
-- **Answers [#347](https://github.com/Raketa02/Raketa/issues/347)**, which
+- **Answers [#347](https://github.com/Rakieta02/Rakieta/issues/347)**, which
   [ADR-0149](0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md) §3 filed as a
   cost it could not pay: *"the chat door disappears before the loop closes, and this record does
   not fix it."*
@@ -19,10 +19,10 @@
   a challenge.
 - **Closes the case ADR-0145 named and declined**: a conversation with no plan, no game and no
   withdrawal.
-- Rewrites [#359](https://github.com/Raketa02/Raketa/issues/359)'s acceptance criteria **before**
+- Rewrites [#359](https://github.com/Rakieta02/Rakieta/issues/359)'s acceptance criteria **before**
   it is built.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** A room is opened only by a booked game and is born about it (#575), so §3 — and ADR-0164 §6, which superseded it and was deleted — §2's challenge arm, the withdrawal in its fourth, and the plan-and-challenge reasoning around them describe nothing. A room with no game has ended: it can only be one a challenge opened before #575, every route answers `conversation_not_found` about it, and the sweep destroys it. §2's clock holds for every room: `entry_closes_at`, now measured from the end of the booked hour, or `CONVERSATION_GRACE` after *we played*. `GameCalledOff` destroys a room in the act, and the room is filed under `booking_id`.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** A room is opened only by a booked game and is born about it (#575), so §3 — and ADR-0164 §6, which superseded it and was deleted — §2's challenge arm, the withdrawal in its fourth, and the plan-and-challenge reasoning around them describe nothing. A room with no game has ended: it can only be one a challenge opened before #575, every route answers `conversation_not_found` about it, and the sweep destroys it. §2's clock holds for every room: `entry_closes_at`, now measured from the end of the booked hour, or `CONVERSATION_GRACE` after *we played*. `GameCalledOff` destroys a room in the act, and the room is filed under `booking_id`.
 
 ## Context
 
@@ -185,8 +185,8 @@ the refusal has lapsed with it.
 
 ### 7. The three 24-hour numbers are a coincidence, and they do not travel
 
-[#335](https://github.com/Raketa02/Raketa/issues/335)'s ended-challenge row and
-[#336](https://github.com/Raketa02/Raketa/issues/336)'s ended Now card also leave after 24 h, and
+[#335](https://github.com/Rakieta02/Rakieta/issues/335)'s ended-challenge row and
+[#336](https://github.com/Rakieta02/Rakieta/issues/336)'s ended Now card also leave after 24 h, and
 **neither moves.** They are shelf lives on an inbox, where the record survives and only the row
 departs — `the-loop-screens.md` §2 says it outright: *"nothing is lost and nothing lies, because
 the list still holds them."* This one destroys an aggregate.

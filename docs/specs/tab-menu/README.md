@@ -1,6 +1,6 @@
 # The tab menu: the record, its brief and its mocks
 
-**What PRD [#859](https://github.com/Raketa02/Raketa/issues/859) is drawn from.** Inside a group, the
+**What PRD [#859](https://github.com/Rakieta02/Rakieta/issues/859) is drawn from.** Inside a group, the
 *Competitive / For fun* row under the tabs goes. The choice moves into a small menu inside the
 **Games** or **Friends** tab you are on. A chevron at the tab's right edge marks it, and a second tap
 on that tab opens it. On Games, picking the other kind swaps the deck in place, and the deck card
@@ -8,7 +8,7 @@ takes the freed height with player tiles of a fixed shape. On Friends, it sets t
 being built. The PRD comes from the product owner's brief, its four mocks, and the grilling held on
 them on 2026-11-24 (Q1–Q19, with Q19a and Q19b). They are copied here from the product owner's own
 folder, `5.club_tab`, so every session can read them. Landed by
-[#860](https://github.com/Raketa02/Raketa/issues/860) on 2026-11-24.
+[#860](https://github.com/Rakieta02/Rakieta/issues/860) on 2026-11-24.
 
 | File | What it holds |
 | --- | --- |
@@ -33,12 +33,12 @@ log (§2, §6). [The words](../matchmaking/the-words.md) §28 and §29.6 carry d
 labels are unchanged, and the menu's spoken names are worded in copy modules by the tickets that
 build it. The player app's feature docs, its design system and the code comments that describe
 the row are amended by the tickets that build each part:
-[#861](https://github.com/Raketa02/Raketa/issues/861) (the menu, on Friends first),
-[#862](https://github.com/Raketa02/Raketa/issues/862) (the menu on Games, its counts and its door),
-[#863](https://github.com/Raketa02/Raketa/issues/863) (the swap),
-[#864](https://github.com/Raketa02/Raketa/issues/864) (the tiles' shape) and
-[#865](https://github.com/Raketa02/Raketa/issues/865) (the cap, the floor, the shrinking and the
-scroll). [#866](https://github.com/Raketa02/Raketa/issues/866) is the phone walk. Until a ticket
+[#861](https://github.com/Rakieta02/Rakieta/issues/861) (the menu, on Friends first),
+[#862](https://github.com/Rakieta02/Rakieta/issues/862) (the menu on Games, its counts and its door),
+[#863](https://github.com/Rakieta02/Rakieta/issues/863) (the swap),
+[#864](https://github.com/Rakieta02/Rakieta/issues/864) (the tiles' shape) and
+[#865](https://github.com/Rakieta02/Rakieta/issues/865) (the cap, the floor, the shrinking and the
+scroll). [#866](https://github.com/Rakieta02/Rakieta/issues/866) is the phone walk. Until a ticket
 amends them, those docs describe the row.
 
 The door's two sentences in the root [`CONTEXT.md`](../../../CONTEXT.md) are under **Player

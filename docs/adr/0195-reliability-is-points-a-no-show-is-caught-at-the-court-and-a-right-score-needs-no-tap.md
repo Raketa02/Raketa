@@ -39,19 +39,19 @@
   deck builds*. Reliability is now an optional filter, and it still ranks nothing (§6).
 - Decided in the grilling of story S-01D's findings F-RESULT-10.1, F-RESULT-44.1 and F-RESULT-35.1
   on 2026-10-11, and confirmed by the product owner
-  ([the decisions comment on #608](https://github.com/Raketa02/Raketa/issues/608#issuecomment-6113038779)).
-  Specified by PRD [#649](https://github.com/Raketa02/Raketa/issues/649), and logged as **Q114–Q120**
+  ([the decisions comment on #608](https://github.com/Rakieta02/Rakieta/issues/608#issuecomment-6113038779)).
+  Specified by PRD [#649](https://github.com/Rakieta02/Rakieta/issues/649), and logged as **Q114–Q120**
   in the mechanics' decision log. Built by the backend's
-  [#651](https://github.com/Raketa02/Raketa/issues/651), [#654](https://github.com/Raketa02/Raketa/issues/654),
-  [#655](https://github.com/Raketa02/Raketa/issues/655), [#657](https://github.com/Raketa02/Raketa/issues/657),
-  [#659](https://github.com/Raketa02/Raketa/issues/659), [#661](https://github.com/Raketa02/Raketa/issues/661)
-  and [#663](https://github.com/Raketa02/Raketa/issues/663); the player app's
-  [#653](https://github.com/Raketa02/Raketa/issues/653), [#656](https://github.com/Raketa02/Raketa/issues/656),
-  [#658](https://github.com/Raketa02/Raketa/issues/658), [#660](https://github.com/Raketa02/Raketa/issues/660),
-  [#662](https://github.com/Raketa02/Raketa/issues/662), [#664](https://github.com/Raketa02/Raketa/issues/664)
-  and [#666](https://github.com/Raketa02/Raketa/issues/666); the club website's
-  [#652](https://github.com/Raketa02/Raketa/issues/652); and the push set-up a human walks,
-  [#665](https://github.com/Raketa02/Raketa/issues/665).
+  [#651](https://github.com/Rakieta02/Rakieta/issues/651), [#654](https://github.com/Rakieta02/Rakieta/issues/654),
+  [#655](https://github.com/Rakieta02/Rakieta/issues/655), [#657](https://github.com/Rakieta02/Rakieta/issues/657),
+  [#659](https://github.com/Rakieta02/Rakieta/issues/659), [#661](https://github.com/Rakieta02/Rakieta/issues/661)
+  and [#663](https://github.com/Rakieta02/Rakieta/issues/663); the player app's
+  [#653](https://github.com/Rakieta02/Rakieta/issues/653), [#656](https://github.com/Rakieta02/Rakieta/issues/656),
+  [#658](https://github.com/Rakieta02/Rakieta/issues/658), [#660](https://github.com/Rakieta02/Rakieta/issues/660),
+  [#662](https://github.com/Rakieta02/Rakieta/issues/662), [#664](https://github.com/Rakieta02/Rakieta/issues/664)
+  and [#666](https://github.com/Rakieta02/Rakieta/issues/666); the club website's
+  [#652](https://github.com/Rakieta02/Rakieta/issues/652); and the push set-up a human walks,
+  [#665](https://github.com/Rakieta02/Rakieta/issues/665).
 
 ## Context
 
@@ -292,7 +292,7 @@ of at least **High** reliability*, or *at least **Medium***.
   reliability or above. At 75 you're dealt with everyone again.* The figure is the lowest band floor
   among the filters that hide them. Nobody is ever named: ADR-0193 §3's principle for blocks.
 
-  > **Note — as built, 2026-10-12 ([#661](https://github.com/Raketa02/Raketa/issues/661)), a call
+  > **Note — as built, 2026-10-12 ([#661](https://github.com/Rakieta02/Rakieta/issues/661)), a call
   > awaiting a ruling.** The figure is the floor of the **highest** minimum among the filters that
   > hide them, not the lowest. Only that figure passes every one of those filters at once, so only it
   > makes *dealt with everyone again* true for a player below both a Medium and a High filter. For a

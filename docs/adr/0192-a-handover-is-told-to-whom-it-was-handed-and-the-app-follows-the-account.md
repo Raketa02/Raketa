@@ -12,7 +12,7 @@
   §7's** *"Removal needs no push and no revocation list"* intact. The app now re-reads the
   account on a timer while an administrator has it open (§3). That is a poll, not a push, and it
   makes a removal arrive sooner as a side effect.
-- Decided at the #529 QA walk of PRD [#500](https://github.com/Raketa02/Raketa/issues/500)
+- Decided at the #529 QA walk of PRD [#500](https://github.com/Rakieta02/Rakieta/issues/500)
   (N5–N7), at the product owner's ask: *"whenever a handover is done the bottom dialog should
   appear to inform"*. They asked for two evaluations: which buttons the sheet carries, and whether
   it must appear without the app going to the background.

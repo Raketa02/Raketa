@@ -1,9 +1,9 @@
 # The Home refactor: the record and its mocks
 
-**What PRD [#810](https://github.com/Raketa02/Raketa/issues/810) is drawn from.** The product owner's
+**What PRD [#810](https://github.com/Rakieta02/Rakieta/issues/810) is drawn from.** The product owner's
 brief *Home Screen Refactor*, its mocks, and the decision log of the grilling held on it on 2026-11-16
 (Q1–Q46). They are copied here from the product owner's own folder, `homeRefactor`, so that every
-session can read them. Landed by [#811](https://github.com/Raketa02/Raketa/issues/811) on 2026-11-16.
+session can read them. Landed by [#811](https://github.com/Rakieta02/Rakieta/issues/811) on 2026-11-16.
 
 | File | What it holds |
 | --- | --- |

@@ -13,13 +13,13 @@ The two web apps are the newest, each built on its own scaffold:
 - **`frontend_club/`** — the **club website**, Next.js. A club signs up, invites its
   Administrators and watches its official groups. Its server keeps the session in an encrypted
   httpOnly cookie; the browser never holds a token. *Scaffolded by
-  [#522](https://github.com/Raketa02/Raketa/issues/522).*
+  [#522](https://github.com/Rakieta02/Rakieta/issues/522).*
 - **`frontend_public/`** — the **public site**, Next.js, server-rendered: the pages a group link,
   an invitation or a password reset opens when the app is not installed, and the app-link files.
-  No sign-in, no session. *Scaffolded by [#525](https://github.com/Raketa02/Raketa/issues/525).*
+  No sign-in, no session. *Scaffolded by [#525](https://github.com/Rakieta02/Rakieta/issues/525).*
 
-Outside the monorepo, **`Raketa02/raketa-features`** holds the feature flags as Featurevisor
-YAML, and **the player app reads it again** ([#826](https://github.com/Raketa02/Raketa/issues/826)). It
+Outside the monorepo, **`Rakieta02/rakieta-features`** holds the feature flags as Featurevisor
+YAML, and **the player app reads it again** ([#826](https://github.com/Rakieta02/Rakieta/issues/826)). It
 is not an app and holds no domain code: its CI builds one datafile per environment, and the
 player app fetches its own over HTTP and decides each feature flag on the device
 ([ADR-0206](docs/adr/0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md)).
@@ -45,14 +45,14 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 
 > **The club console that the 2026-08-25 reset removed returns as a different app.** It was
 > a Next.js console with a BFF; what arrives is the **club website** of PRD
-> [#500](https://github.com/Raketa02/Raketa/issues/500) — sign-up, Administrators, official
+> [#500](https://github.com/Rakieta02/Rakieta/issues/500) — sign-up, Administrators, official
 > groups — at the same path, `frontend_club/`, whose fence the guardrail hooks kept for exactly
 > this day. `frontend_public/` is new and gets a fence of its own
-> ([#502](https://github.com/Raketa02/Raketa/issues/502)).
+> ([#502](https://github.com/Rakieta02/Rakieta/issues/502)).
 
 > **Courts, bookings and money came back without a new app**
 > ([ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md), built under
-> PRD [#530](https://github.com/Raketa02/Raketa/issues/530)). The backend grew new contexts —
+> PRD [#530](https://github.com/Rakieta02/Rakieta/issues/530)). The backend grew new contexts —
 > Proposals, Bookings, Payments, Notifications, and courts in Clubs — the player app got the group deck, Fill in and an Account group on You, and
 > the club website got Bookings, Check in (its removal decided by
 > [ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)),
@@ -65,7 +65,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **Friends comes without a new app either**
 > ([ADR-0202](docs/adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md),
-> PRD [#743](https://github.com/Raketa02/Raketa/issues/743); built). The backend
+> PRD [#743](https://github.com/Rakieta02/Rakieta/issues/743); built). The backend
 > grows a **Friends** context, a friends game is a further birth in Bookings and its Cover a Seat
 > charge in Payments; the player app grows a friends feature; the public site grows a page for
 > `/f/<code>` beside its group, invitation and password-reset pages; and the club website only reads its
@@ -74,7 +74,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **Rankings comes without a new app either**
 > ([ADR-0203](docs/adr/0203-a-ranking-per-sport-sorted-by-the-level.md),
-> PRD [#766](https://github.com/Raketa02/Raketa/issues/766); built). The backend
+> PRD [#766](https://github.com/Rakieta02/Rakieta/issues/766); built). The backend
 > grows a **Rankings** context: a stored projection of every player's level per sport and its
 > history, fed by the rating's events through the outbox, and reaching Friends, Blocks, Users and
 > the Player profile only through ports it declares. The record gains a strand and a block gate,
@@ -85,7 +85,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **Discovery comes without a new app either**
 > ([ADR-0204](docs/adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md),
-> PRD [#789](https://github.com/Raketa02/Raketa/issues/789); built). Home gains five
+> PRD [#789](https://github.com/Rakieta02/Rakieta/issues/789); built). Home gains five
 > rows below *Your games*. The backend grows a **Discovery** context for the three people rows — *Same
 > competitive level*, *New in Rakieta* and *Same vibe* — with three stored tables, the stated exceptions
 > to *derived, never stored*: a player directory fed by the profile's and the user's events, every
@@ -102,7 +102,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **The Home refactor comes without a new context**
 > ([ADR-0205](docs/adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md),
-> PRD [#810](https://github.com/Raketa02/Raketa/issues/810); decided, not yet built). The four cards
+> PRD [#810](https://github.com/Rakieta02/Rakieta/issues/810); decided, not yet built). The four cards
 > that wait on the player move behind an envelope in Home's header, into **Needs your answer**, and
 > Home's five rows fold into FOR YOU's lines, with counts. **Proposals** keeps the envelope's *new*: a
 > visit per player, counted on `GET /home`. **Groups** gains a paged Groups heating up read, and the
@@ -113,7 +113,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **For fun is built by shared social tags, without a new context**
 > ([ADR-0207](docs/adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md),
-> PRD [#827](https://github.com/Raketa02/Raketa/issues/827); decided, not yet built). **Proposals**
+> PRD [#827](https://github.com/Rakieta02/Rakieta/issues/827); decided, not yet built). **Proposals**
 > builds and ranks For-fun tables by their **Social vibe**, then new faces, with skill only a guard,
 > and opens the For-fun deck on the best company; competitive building is untouched. **Match Fit**
 > gains the Social vibe as one pure function, which Proposals and **Games** both call. The **Player
@@ -124,7 +124,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **You’re in becomes its own tab, without a new context**
 > ([ADR-0208](docs/adr/0208-the-phone-remembers-which-rows-of-a-group-pages-tabs-a-player-has-seen.md),
-> PRD [#844](https://github.com/Raketa02/Raketa/issues/844); decided, not yet built). A group page
+> PRD [#844](https://github.com/Rakieta02/Rakieta/issues/844); decided, not yet built). A group page
 > has four tabs, Games · Fill in · You’re in · Friends: **Fill in** keeps the rescues, the player's
 > live yeses move to **You’re in**, and Post a game floats there. The badges count what the player
 > hasn't seen, and the phone remembers which rows were seen, per account (ADR-0208). The one
@@ -135,14 +135,14 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **The drawn splash touches no context**
 > ([ADR-0209](docs/adr/0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md),
-> PRD [#852](https://github.com/Raketa02/Raketa/issues/852); decided, not yet built). On every cold
+> PRD [#852](https://github.com/Rakieta02/Rakieta/issues/852); decided, not yet built). On every cold
 > open a volt ball bounces into the **Rakieta** wordmark, and startup runs behind it instead of
 > holding the native splash. A launch that already knows it has no internet doesn't send the launch
 > check. Only the player app changes: no backend change and no contract change. Since ADR-0211 the
 > splash's drawn wordmark, the launcher's name and every string spell the brand alike: **Rakieta**.
 > The brief, the decision log and the mock are `docs/specs/splash-screen/`.
 >
-> **The tab menu touches no context** (PRD [#859](https://github.com/Raketa02/Raketa/issues/859);
+> **The tab menu touches no context** (PRD [#859](https://github.com/Rakieta02/Rakieta/issues/859);
 > decided, not yet built). A group page's *Competitive / For fun* switch leaves the page for a menu on
 > the selected **Games** or **Friends** tab, with today's counts and **Play intent**'s door on Games
 > and neither on Friends, and the deck card's player tiles take a fixed shape. It is a change of
@@ -153,7 +153,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **The tab bar dock touches no context**
 > ([ADR-0210](docs/adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md), PRD
-> [#878](https://github.com/Raketa02/Raketa/issues/878); decided, not yet built). The player app's
+> [#878](https://github.com/Rakieta02/Rakieta/issues/878); decided, not yet built). The player app's
 > tab bar floats over every main screen as a glass dock, Home · Play · You, and a coral **selection
 > marker** travels to the lit tab. What each tab opens doesn't change. Only the player app changes:
 > no backend change and no contract change. The brief, the decision log and the mocks, which lead
@@ -161,7 +161,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 >
 > **The brand's new name touches no context**
 > ([ADR-0211](docs/adr/0211-the-brand-is-rakieta-everywhere.md), PRD
-> [#889](https://github.com/Raketa02/Raketa/issues/889); decided, being built). The brand is
+> [#889](https://github.com/Rakieta02/Rakieta/issues/889); decided, being built). The brand is
 > **Rakieta**, everywhere. The glossary's terms that carry it (*Rakieta hours*, *Rakieta settings*,
 > *Only Rakieta*, *Rakieta sells them alone*, *New in Rakieta*) change their brand word and nothing
 > else, and no concept, context or fence changes. Every app changes, and so
@@ -170,7 +170,7 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
 > radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
 > ranking, with the feature flag that hid them
-> ([#569](https://github.com/Raketa02/Raketa/issues/569)). No app or fence changed; the
+> ([#569](https://github.com/Rakieta02/Rakieta/issues/569)). No app or fence changed; the
 > `challenges` and `plans` contexts left the backend, `play`, `challenges`, `plans` and
 > `feature_flags` left the player app, and the records and specs that described only them were
 > deleted ([ADR index](docs/adr/README.md#the-2026-10-06-classic-play-removal--the-second-gap)).

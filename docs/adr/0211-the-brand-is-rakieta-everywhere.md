@@ -17,34 +17,34 @@
   - [the-words.md](../specs/matchmaking/the-words.md)'s §F1 rule 6, *no Rakieta*, and its one
     exception;
   - every concept in the glossary. Only the brand word in its terms changes (§3).
-- **Leaves the domain to [#888](https://github.com/Raketa02/Raketa/issues/888):** which domain it is,
+- **Leaves the domain to [#888](https://github.com/Rakieta02/Rakieta/issues/888):** which domain it is,
   switching on the link domain and its association files, the mail sender's DNS, Stripe live mode,
   the store listings and hosting.
-- **Settles PRD [#889](https://github.com/Raketa02/Raketa/issues/889).** Decided in the rename
+- **Settles PRD [#889](https://github.com/Rakieta02/Rakieta/issues/889).** Decided in the rename
   grilling on 2026-11-27 (Q1–Q20) and written by
-  [#890](https://github.com/Raketa02/Raketa/issues/890). Built by:
-  - [#891](https://github.com/Raketa02/Raketa/issues/891), the guardrails, CI, the root `Makefile`
+  [#890](https://github.com/Rakieta02/Rakieta/issues/890). Built by:
+  - [#891](https://github.com/Rakieta02/Rakieta/issues/891), the guardrails, CI, the root `Makefile`
     and the sandbox;
-  - [#892](https://github.com/Raketa02/Raketa/issues/892) and
-    [#893](https://github.com/Raketa02/Raketa/issues/893), *Rakieta settings* and *Rakieta hours*
+  - [#892](https://github.com/Rakieta02/Rakieta/issues/892) and
+    [#893](https://github.com/Rakieta02/Rakieta/issues/893), *Rakieta settings* and *Rakieta hours*
     in the backend and the club website;
-  - [#894](https://github.com/Raketa02/Raketa/issues/894) and
-    [#895](https://github.com/Raketa02/Raketa/issues/895), *New in Rakieta* in the backend and the
+  - [#894](https://github.com/Rakieta02/Rakieta/issues/894) and
+    [#895](https://github.com/Rakieta02/Rakieta/issues/895), *New in Rakieta* in the backend and the
     player app;
-  - [#896](https://github.com/Raketa02/Raketa/issues/896),
-    [#897](https://github.com/Raketa02/Raketa/issues/897) and
-    [#898](https://github.com/Raketa02/Raketa/issues/898), the app's identity and its link scheme in
+  - [#896](https://github.com/Rakieta02/Rakieta/issues/896),
+    [#897](https://github.com/Rakieta02/Rakieta/issues/897) and
+    [#898](https://github.com/Rakieta02/Rakieta/issues/898), the app's identity and its link scheme in
     the player app, the backend and the public site;
-  - [#899](https://github.com/Raketa02/Raketa/issues/899) to
-    [#902](https://github.com/Raketa02/Raketa/issues/902), the sweep of each app;
-  - [#903](https://github.com/Raketa02/Raketa/issues/903), the local setup (by hand);
-  - [#904](https://github.com/Raketa02/Raketa/issues/904) and
-    [#905](https://github.com/Raketa02/Raketa/issues/905), the GitHub rename (by hand) and every
+  - [#899](https://github.com/Rakieta02/Rakieta/issues/899) to
+    [#902](https://github.com/Rakieta02/Rakieta/issues/902), the sweep of each app;
+  - [#903](https://github.com/Rakieta02/Rakieta/issues/903), the local setup (by hand);
+  - [#904](https://github.com/Rakieta02/Rakieta/issues/904) and
+    [#905](https://github.com/Rakieta02/Rakieta/issues/905), the GitHub rename (by hand) and every
     link to it;
-  - [#906](https://github.com/Raketa02/Raketa/issues/906), the feature-flag repo (by hand);
-  - [#907](https://github.com/Raketa02/Raketa/issues/907), the brand check;
-  - [#908](https://github.com/Raketa02/Raketa/issues/908), the walk (by hand);
-  - [#909](https://github.com/Raketa02/Raketa/issues/909), the repo folder (by hand).
+  - [#906](https://github.com/Rakieta02/Rakieta/issues/906), the feature-flag repo (by hand);
+  - [#907](https://github.com/Rakieta02/Rakieta/issues/907), the brand check;
+  - [#908](https://github.com/Rakieta02/Rakieta/issues/908), the walk (by hand);
+  - [#909](https://github.com/Rakieta02/Rakieta/issues/909), the repo folder (by hand).
 
 ## Context
 
@@ -134,8 +134,8 @@ with it.
 
 ### 5. The GitHub names
 
-The product owner renames the account and both repos: `Raketa02` becomes **`Rakieta02`**, its
-monorepo **`Rakieta02/Rakieta`**, and its feature-flag repo **`Rakieta02/rakieta-features`**.
+The product owner renames the account and both repos: the account to **`Rakieta02`**, its
+monorepo to **`Rakieta02/Rakieta`**, and its feature-flag repo to **`Rakieta02/rakieta-features`**.
 `Rakieta` alone is taken by another user. Then, in one commit, every link in the repo, the `gh`
 instructions and the git remote point at the new names. GitHub forwards renamed repos, but anyone
 may claim a freed account name, and that would break every forwarded link.

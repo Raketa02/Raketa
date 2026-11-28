@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The offline diff and its gate are gone — `check-ruleset-diff.sh`, the replay harness's corpora and the searches they read (#572, #579) — and with no search there is nothing to shadow or canary, so §1–§4 and §5's first paragraph describe nothing that runs. The one live dataset, `2026.09.15-a`, was then trimmed in place (#580): the ranking's sections were cut, no number moved, and the two older releases were deleted. What stands is §6 — the ruleset is validated at import, and a malformed one fails the deploy and never falls back — and §5's rule that a pull request moving a number carries one line per changed constant with its hypothesis and its falsifier. Since the trim, a released dataset is never edited again.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The offline diff and its gate are gone — `check-ruleset-diff.sh`, the replay harness's corpora and the searches they read (#572, #579) — and with no search there is nothing to shadow or canary, so §1–§4 and §5's first paragraph describe nothing that runs. The one live dataset, `2026.09.15-a`, was then trimmed in place (#580): the ranking's sections were cut, no number moved, and the two older releases were deleted. What stands is §6 — the ruleset is validated at import, and a malformed one fails the deploy and never falls back — and §5's rule that a pull request moving a number carries one line per changed constant with its hypothesis and its falsifier. Since the trim, a released dataset is never edited again.
 
 ## Context
 

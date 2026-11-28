@@ -1,7 +1,7 @@
 # ADR-0201 — The other kind is a door, and a changed intent leaves the cards you haven't answered
 
 - **Status:** Accepted — **§2 noted 2026-11-24
-  ([#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built): the switch
+  ([#859](https://github.com/Rakieta02/Rakieta/issues/859), decided and not yet built): the switch
   becomes the Games tab's menu, and the door a line in it**
 - **Date:** 2026-11-05
 - **Amends [ADR-0094](0094-play-intent-declared-per-sport-in-its-own-aggregate.md)'s 2026-10-06
@@ -12,10 +12,10 @@
   §6's *from then on*** for Play intent. A name not yet In whose intent no longer wants a card's
   kind holds no seat on it, and the yeses already given stand (§3).
 - **Amends the proposals rule *no route makes a proposal*** (`backend/.claude/rules/proposals.md`,
-  written with the proposer by [#540](https://github.com/Raketa02/Raketa/issues/540); no ADR
+  written with the proposer by [#540](https://github.com/Rakieta02/Rakieta/issues/540); no ADR
   decided it). `POST /pools/{id}/deal` runs the card-builder's batch for one pool on the request
   path. The route never makes a card itself (§5). The rule's line is rewritten by
-  [#739](https://github.com/Raketa02/Raketa/issues/739), with the route, and stays true of the code
+  [#739](https://github.com/Rakieta02/Rakieta/issues/739), with the route, and stays true of the code
   until then.
 - **Leaves standing** ADR-0094's aggregate, its event, its three values and the unkeyed
   `PUT /play-intents/{sport}`: **Play intent** stays one setting, what a player is dealt *and* who
@@ -29,14 +29,14 @@
   of what a player is shown from who finds them; telling the phone when cards are dealt for any
   other reason; the Friends tab's switch, Post a game's Kind step and the first-time question's
   words; or any change to how cards are built, beyond a gone name freeing its seat.
-- Settles PRD [#736](https://github.com/Raketa02/Raketa/issues/736), decided in the intent grilling
+- Settles PRD [#736](https://github.com/Rakieta02/Rakieta/issues/736), decided in the intent grilling
   on 2026-11-05 (Q1–Q8 there, the mechanics' Q127) and written by
-  [#737](https://github.com/Raketa02/Raketa/issues/737). Built by
-  [#738](https://github.com/Raketa02/Raketa/issues/738) (the dropped-kind rule),
-  [#739](https://github.com/Raketa02/Raketa/issues/739) (the deal and the deck counts),
-  [#740](https://github.com/Raketa02/Raketa/issues/740) (the door and its panel),
-  [#741](https://github.com/Raketa02/Raketa/issues/741) (finding) and
-  [#742](https://github.com/Raketa02/Raketa/issues/742) (the You tab's lines).
+  [#737](https://github.com/Rakieta02/Rakieta/issues/737). Built by
+  [#738](https://github.com/Rakieta02/Rakieta/issues/738) (the dropped-kind rule),
+  [#739](https://github.com/Rakieta02/Rakieta/issues/739) (the deal and the deck counts),
+  [#740](https://github.com/Rakieta02/Rakieta/issues/740) (the door and its panel),
+  [#741](https://github.com/Rakieta02/Rakieta/issues/741) (finding) and
+  [#742](https://github.com/Rakieta02/Rakieta/issues/742) (the You tab's lines).
 
 ## Context
 
@@ -145,7 +145,7 @@ that a gone name frees its seat (§3).
 - **Untouched:** the Friends tab's switch, Post a game's Kind step and the first-time question's
   words. Post a game still lets Ania post a for-fun game as a one-off.
 
-> **Note — the switch moves into the tab (2026-11-24, [#859](https://github.com/Raketa02/Raketa/issues/859); decided and not yet built).**
+> **Note — the switch moves into the tab (2026-11-24, [#859](https://github.com/Rakieta02/Rakieta/issues/859); decided and not yet built).**
 > The switch under the tabs becomes **the Games tab's menu**: a chevron on the selected Games tab,
 > and a tap on that tab opens a menu with two lines, Competitive then For fun, each live line with
 > the count the switch shows today. **The door is a line in it**, still dimmed, still numberless and

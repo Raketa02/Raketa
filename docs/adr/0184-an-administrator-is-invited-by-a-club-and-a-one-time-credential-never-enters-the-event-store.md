@@ -16,14 +16,14 @@
   secret the server must recognise: only its hash is kept.
 - **Shares a name with the `ADMIN` `Authority` and nothing else.** The collision is recorded in the
   glossary. An Administrator holds no platform power and no power over anybody's account.
-- Settles [#501](https://github.com/Raketa02/Raketa/issues/501) for the PRD
-  [#500](https://github.com/Raketa02/Raketa/issues/500). Built by the backend tickets
-  [#507](https://github.com/Raketa02/Raketa/issues/507) (credentials, sign-out everywhere, Forgot
-  password), [#508](https://github.com/Raketa02/Raketa/issues/508) (administrators and invitations),
-  [#509](https://github.com/Raketa02/Raketa/issues/509) and [#510](https://github.com/Raketa02/Raketa/issues/510),
-  the player app's [#515](https://github.com/Raketa02/Raketa/issues/515)–[#518](https://github.com/Raketa02/Raketa/issues/518),
-  and the club website's [#522](https://github.com/Raketa02/Raketa/issues/522) and
-  [#523](https://github.com/Raketa02/Raketa/issues/523).
+- Settles [#501](https://github.com/Rakieta02/Rakieta/issues/501) for the PRD
+  [#500](https://github.com/Rakieta02/Rakieta/issues/500). Built by the backend tickets
+  [#507](https://github.com/Rakieta02/Rakieta/issues/507) (credentials, sign-out everywhere, Forgot
+  password), [#508](https://github.com/Rakieta02/Rakieta/issues/508) (administrators and invitations),
+  [#509](https://github.com/Rakieta02/Rakieta/issues/509) and [#510](https://github.com/Rakieta02/Rakieta/issues/510),
+  the player app's [#515](https://github.com/Rakieta02/Rakieta/issues/515)–[#518](https://github.com/Rakieta02/Rakieta/issues/518),
+  and the club website's [#522](https://github.com/Rakieta02/Rakieta/issues/522) and
+  [#523](https://github.com/Rakieta02/Rakieta/issues/523).
 
 ## Context
 

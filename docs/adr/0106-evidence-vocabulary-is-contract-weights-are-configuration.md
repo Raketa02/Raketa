@@ -3,8 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
-> **Checked 2026-09-05 against [#306](https://github.com/Raketa02/Raketa/issues/306) and
-> [#312](https://github.com/Raketa02/Raketa/issues/312) — the first batch of fields this record
+> **Checked 2026-09-05 against [#306](https://github.com/Rakieta02/Rakieta/issues/306) and
+> [#312](https://github.com/Rakieta02/Rakieta/issues/312) — the first batch of fields this record
 > had to classify — and nothing here changed.** This is a confirmation rather than an amendment,
 > recorded because a rule that has never been exercised is a rule nobody knows the cost of. The competitive card grew five fields —
 > `player_card.player_score`, `counted_games`, `last_five` and `review`, and `at_stake` on the
@@ -30,7 +30,7 @@
 > arriving with something in it — and an evidence kind a build cannot read still renders a named
 > gap rather than a shorter list.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The ranking is gone (#580), and with it every evidence variant — the modifier, liveness, inclusion and gate reason codes, the relaxation `ask`, the challenge `window` and `search_candidate.terms` — so §1, §2, §3 and §5 govern nothing that runs, and no weight is left to configure. Two rules outlived the matcher and still bind: §4's two spellings of absence (omitted where a field does not apply, `null` for a measured nothing), as the player record and a booked game's pairing serialise them, and §6's named gap, which the player app draws for any closed code it does not know (`shared/vocabulary/outOfDate.ts`).
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The ranking is gone (#580), and with it every evidence variant — the modifier, liveness, inclusion and gate reason codes, the relaxation `ask`, the challenge `window` and `search_candidate.terms` — so §1, §2, §3 and §5 govern nothing that runs, and no weight is left to configure. Two rules outlived the matcher and still bind: §4's two spellings of absence (omitted where a field does not apply, `null` for a measured nothing), as the player record and a booked game's pairing serialise them, and §6's named gap, which the player app draws for any closed code it does not know (`shared/vocabulary/outOfDate.ts`).
 
 ## Context
 

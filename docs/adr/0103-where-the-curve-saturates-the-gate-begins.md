@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the level-fit term, the quality floor and the judged pairings are gone (#579, #580), so the case-3 arithmetic, the never-relaxed list, the pool description's reason codes and #169's per-search counts below describe nothing that runs. The gate stands as the **level window**: two people may share a court only while `|Δμ|` is below their kind of game's own tolerance — 0.55 competitive, 0.90 for fun — with no constant of its own (`matchmaking/domain/level_window.py`). It is asked of every pair the proposer, the fill and a rescue would seat, and it bounds a post's level range.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The searches, the level-fit term, the quality floor and the judged pairings are gone (#579, #580), so the case-3 arithmetic, the never-relaxed list, the pool description's reason codes and #169's per-search counts below describe nothing that runs. The gate stands as the **level window**: two people may share a court only while `|Δμ|` is below their kind of game's own tolerance — 0.55 competitive, 0.90 for fun — with no constant of its own (`matchmaking/domain/level_window.py`). It is asked of every pair the proposer, the fill and a rescue would seat, and it bounds a post's level range.
 
 ## Context
 
@@ -12,8 +12,8 @@ every later context inherits: **a gate may be honestly empty; a term may never b
 neutral**, the test being whether a zero would be *measured* or *invented*. It governs what a
 term may say when it knows nothing.
 
-Resolving [#168](https://github.com/Raketa02/Raketa/issues/168) on the map
-[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
+Resolving [#168](https://github.com/Rakieta02/Rakieta/issues/168) on the map
+[The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155)
 found the *other* half of the same idea missing, and found it by arithmetic rather than by
 argument.
 
@@ -54,7 +54,7 @@ The third is the diagnosis, and it is mechanical:
 | beyond `LEVEL_TOL_mode` | **pinned at 0** | pinned at `BALANCE_PCT_MIN` |
 
 `pct = clamp(100 − Δμ·145 − σ_pair·32, 35, 96)` reaches its floor at **Δμ ≈ 0.34** for a
-typical σ_pair of 0.495; [#164](https://github.com/Raketa02/Raketa/issues/164) promoted that
+typical σ_pair of 0.495; [#164](https://github.com/Rakieta02/Rakieta/issues/164) promoted that
 clamp from cosmetics to the term's zero, and this is where it bites. Level fit reaches zero at
 `LEVEL_TOL_COMP = 0.55` and at `LEVEL_TOL_FUN = 0.90`.
 
@@ -118,7 +118,7 @@ expresses the top of the curve and `LEVEL_TOL_FUN` expressed the bottom, but nei
 anybody.
 
 **A gate is harsher than a weight in a thin market, and this one has no relief valve.** At
-launch density ([#161](https://github.com/Raketa02/Raketa/issues/161): 63% of searches already
+launch density ([#161](https://github.com/Rakieta02/Rakieta/issues/161): 63% of searches already
 return fewer than five candidates) it will occasionally be the reason a screen is empty. That is
 the same trade ADR-0099 already took
 deliberately — **a bad match is worse than no match** — and the empty-result rate remains a
@@ -132,6 +132,6 @@ way. **The gate and the curve can never drift apart, because there is only one n
 
 The measurement needs the outcome half of the telemetry chain, which needs `matches`, which is
 out of scope — so this ships as an argued judgement with its falsifier attached, like the other
-five numbers. Search-side, [#169](https://github.com/Raketa02/Raketa/issues/169) must record
+five numbers. Search-side, [#169](https://github.com/Rakieta02/Rakieta/issues/169) must record
 **how many candidates the level gate excluded, and the smallest Δμ among them**, per search;
 neither can be reconstructed afterwards.

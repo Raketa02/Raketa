@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the shortlist, the candidate index and the ranking are gone (#579, #580), so §2's *the same search*, §3's `rank_key` and `fit`, the shortlist's order and the past-search replay in the Consequences describe nothing that runs. The rule stands and binds every id ordering the new games make — the proposer's batches, the group deck, rescues and the people on a card: no order is ever read off a `set`, and a tie breaks on the canonical `player_id` string. The two-seed subprocess test (§2) is kept, now over a booked game's pairing and the result update rather than a search. The conflict table the last bullet names went with `docs/specs/matchmaking/README.md`'s old body.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The searches, the shortlist, the candidate index and the ranking are gone (#579, #580), so §2's *the same search*, §3's `rank_key` and `fit`, the shortlist's order and the past-search replay in the Consequences describe nothing that runs. The rule stands and binds every id ordering the new games make — the proposer's batches, the group deck, rescues and the people on a card: no order is ever read off a `set`, and a tie breaks on the canonical `player_id` string. The two-seed subprocess test (§2) is kept, now over a booked game's pairing and the result update rather than a search. The conflict table the last bullet names went with `docs/specs/matchmaking/README.md`'s old body.
 
 ## Context
 
@@ -105,7 +105,7 @@ The one place a seed is set deliberately is the test in §2, which sets two of t
 - **Byte-identical replay is now a property test, and not yet a production guarantee.**
   Reproducing a *past* search additionally needs the index as it stood, which is
   `snapshot_version` and belongs to
-  [The matcher's picture of the city](https://github.com/Raketa02/Raketa/issues/173). This record
+  [The matcher's picture of the city](https://github.com/Rakieta02/Rakieta/issues/173). This record
   makes the scoring half deterministic; the index half is that ticket's.
 - **§13 keeps all four of its promises and changes two of its four rules.** The conflict table in
   [`docs/specs/matchmaking/README.md`](../specs/matchmaking/README.md) carries the row.

@@ -4,7 +4,7 @@
 - **Date:** 2026-08-29
 
 > **Corrected on the colour space, 2026-08-31, by the build of
-> [#259](https://github.com/Raketa02/Raketa/issues/259): the one fixed pair (3) and (5) ask for
+> [#259](https://github.com/Rakieta02/Rakieta/issues/259): the one fixed pair (3) and (5) ask for
 > is fixed in CIE LCh(uv), not in sRGB HSL, because in HSL there is no such pair.** The two
 > requirements (5) names bind the ground's *luminance* from both sides — white at 4.5:1 against
 > the light stop puts it at or below 0,183, and `ink` at 3:1 against the dark stop puts that at
@@ -117,7 +117,7 @@ parameters: filled and stroked in one dark value, at one opacity, with no facial
 Design-system [1.3](../../frontend_player/docs/design-system.md#13-semantic-colour-is-never-decorative)
 — *semantic colour is never decorative* — and
 [2.3](../../frontend_player/docs/design-system.md#23-sport-identity)'s sport aliasing, which
-[#219](https://github.com/Raketa02/Raketa/issues/219) has just **upheld** on a premise it
+[#219](https://github.com/Rakieta02/Rakieta/issues/219) has just **upheld** on a premise it
 checked rather than asserted: a sport hue never appears without the sport's name in text.
 A poster hue taken as `hash % 360` breaks that premise on the one surface where it was
 checked — a coral-grounded poster on a card whose own sport tag says Tennis. It also makes

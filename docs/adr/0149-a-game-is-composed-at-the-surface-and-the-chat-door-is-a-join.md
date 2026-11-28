@@ -9,8 +9,8 @@
   chat's card, reused — and read-only in `Tag`s on the score lead alone.
 - **Date:** 2026-09-07
 
-Decided on [Now, and the one state-detail surface both tabs open](https://github.com/Raketa02/Raketa/issues/336),
-on the map [Closing the core loop](https://github.com/Raketa02/Raketa/issues/321), against the
+Decided on [Now, and the one state-detail surface both tabs open](https://github.com/Rakieta02/Rakieta/issues/336),
+on the map [Closing the core loop](https://github.com/Rakieta02/Rakieta/issues/321), against the
 prototype `prototype/now-and-game-screen`.
 
 Extends [ADR-0148](0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md) §8,
@@ -20,11 +20,11 @@ that join lives** to this ticket. Upholds
 [ADR-0146](0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) rather than narrowing
 either.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `features/plans`, the Now card and its ladder, the `/games/[gameId]` and `/chats/[conversationId]/details` routes and the 2026-09-12 amendment are gone, so §1, §4, §5 and the plan half of §2 describe nothing. The shape stands: `GameScreen` is still `features/games`' and is composed by another feature — the booked game's result, in `features/proposals`, which hands it no plan, card, court or fill. §3's chat door is still a client join over `GET /conversations` that fails soft, now keyed by `booking_id`. The pairing §6 admits, as ADR-0161 amended it, is drawn on the booked game's details.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** `features/plans`, the Now card and its ladder, the `/games/[gameId]` and `/chats/[conversationId]/details` routes and the 2026-09-12 amendment are gone, so §1, §4, §5 and the plan half of §2 describe nothing. The shape stands: `GameScreen` is still `features/games`' and is composed by another feature — the booked game's result, in `features/proposals`, which hands it no plan, card, court or fill. §3's chat door is still a client join over `GET /conversations` that fails soft, now keyed by `booking_id`. The pairing §6 admits, as ADR-0161 amended it, is drawn on the booked game's details.
 
 ## Context
 
-Now draws **fourteen cards** ([#324](https://github.com/Raketa02/Raketa/issues/324)), and four
+Now draws **fourteen cards** ([#324](https://github.com/Rakieta02/Rakieta/issues/324)), and four
 of them are keyed on how many of the plan's three slots are filled. The plan is not on
 `GameSchema` and never will be: ADR-0145 §4 made *"`games` importing the Plan"* the **checkable**
 statement of ADR-0137's scoping, and ADR-0148 §8 answered the resulting N+1 with a second list —
@@ -58,7 +58,7 @@ Chats tab already fetches whole. Putting `conversation_id` on the plan moves ADR
 coupling one context along rather than removing it. Putting it on `GameSchema` is the thing
 ADR-0146 exists to refuse.
 
-[#335](https://github.com/Raketa02/Raketa/issues/335) looks like a precedent against a client
+[#335](https://github.com/Rakieta02/Rakieta/issues/335) looks like a precedent against a client
 join and is not. It refused a conversation row's state pill because that pill would have been
 **a second spelling of a fact the row already had** — ADR-0148 §6's *the last line is what a
 pill would have said*. A chat door is a fact **no route provides** and the surface genuinely
@@ -84,7 +84,7 @@ other.**
 3. **The chat door is a client join over `GET /conversations`, and it fails soft.** The surface
    finds the row whose `game_id` matches and draws a door to it; finding none draws **no door**,
    which is not an error state but the ordinary one — a conversation is **destroyed 24 h after
-   the moment it was arranging** ([#325](https://github.com/Raketa02/Raketa/issues/325)) while
+   the moment it was arranging** ([#325](https://github.com/Rakieta02/Rakieta/issues/325)) while
    the entry window runs **eight days**. No route is added and no context learns about another.
 
 4. **The plan is read-only wherever it is drawn outside the chat**, so the slots are `Tag`s and
@@ -150,10 +150,10 @@ own argument — not a detail of a screen spec.
 
 §4 said **the plan is read-only wherever it is drawn outside the chat**, so the slots are `Tag`s
 and never `Chip`s, and the way to change one is the chat door. The design that arrived with
-[#410](https://github.com/Raketa02/Raketa/issues/410) draws the game screen's two plan-lead rungs
+[#410](https://github.com/Rakieta02/Rakieta/issues/410) draws the game screen's two plan-lead rungs
 — *Planning* and *Game on* — with **the chat's editable card**: the eyebrow and the counter, three
 chips with a sheet each, *Lock the plan*, and the panel inside it. The design wins and this record
-is amended ([#414](https://github.com/Raketa02/Raketa/issues/414)).
+is amended ([#414](https://github.com/Rakieta02/Rakieta/issues/414)).
 
 **The argument that the room is where the arranging happens stands**, and the reason the screen
 now offers the same card is the button that brings you there. #413's wide door on the Planning card
@@ -187,4 +187,4 @@ keep today's screen whole.
 **What this does not change.** §1 and §2 stand: `features/games` still never learns a plan exists.
 The screen grew from one slot to three — `card`, `court`, `plan` — every one an opaque `ReactNode`
 `GameScreenWithPlan` composes, and the `court` slot is `null` until
-[#415](https://github.com/Raketa02/Raketa/issues/415) draws the pairing ADR-0161 admitted.
+[#415](https://github.com/Rakieta02/Rakieta/issues/415) draws the pairing ADR-0161 admitted.

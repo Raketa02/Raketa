@@ -9,7 +9,7 @@
 > [ADR-0138](0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md) made
 > it a shield shown to twenty people who are not. The value is still `0.5` and still
 > provisional; what this record left as a note about a corpus that did not exist is now
-> [#316](https://github.com/Raketa02/Raketa/issues/316). The mechanism that makes it fixable
+> [#316](https://github.com/Rakieta02/Rakieta/issues/316). The mechanism that makes it fixable
 > is the one this record built: every verdict stores the similarities it was taken from.
 >
 > **Two Consequences below have been overtaken and neither is wrong about its own day.** *Fail-open
@@ -33,7 +33,7 @@ which attaches `photo_id` to a candidate after the engine returns — so every p
 *destined* to be seen by strangers, and the premise the deferral rested on has an expiry date.
 It is a **deadline and not a blocker**: what ends the deferral is the first route that returns
 `player_card.photo_id` to a client that renders it, and this work shares no file with the
-matchmaking build ([#181](https://github.com/Raketa02/Raketa/issues/181)).
+matchmaking build ([#181](https://github.com/Rakieta02/Rakieta/issues/181)).
 
 Three things were already settled and are not re-opened here. The check runs **server-side**,
 because a client-side one is trivially bypassed. It **soft-warns rather than hard-blocks** —

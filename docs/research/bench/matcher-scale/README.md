@@ -2,7 +2,7 @@
 
 The harness behind [`docs/research/matcher-scale-in-python.md`](../../matcher-scale-in-python.md),
 which is the research output for
-[`Raketa02/Raketa#161`](https://github.com/Raketa02/Raketa/issues/161).
+[`Rakieta02/Rakieta#161`](https://github.com/Rakieta02/Rakieta/issues/161).
 
 **This is throwaway measurement code, not a component.** It lives under `docs/`
 deliberately: it is not part of `backend/`, it is not on any import path, it is
@@ -16,7 +16,7 @@ itself rather than a copy of it, because a copy is exactly what went wrong:
 `population.py`'s row is §7.2's *specified* field list, the shipping row diverged
 from it before it was ever written, and **782 bytes a row was quoted about the
 shipping row from the day the constant was written, having been measured against
-the other one** ([#276](https://github.com/Raketa02/Raketa/issues/276)). A benchmark whose
+the other one** ([#276](https://github.com/Rakieta02/Rakieta/issues/276)). A benchmark whose
 subject can drift from the thing it is quoted about measures nothing. The rule
 above is unchanged in the direction that matters — the product still may not
 import from here — and the module reached for is domain, importing only
@@ -35,7 +35,7 @@ neither the backend's virtualenv nor its dependencies.
 | `terms_bench.py` | item 1 — which of the eight terms the microsecond goes to |
 | `doubles_bench.py` | item 6 — C(15,3) x 3, swept over K |
 | `memory_bench.py` | item 3 — bytes per row in six shapes, GC pause, refresh headroom — all of §7.2's row |
-| `candidate_row_bench.py` | [#276](https://github.com/Raketa02/Raketa/issues/276) item 1 — the same measurement against the **shipping** `CandidateRow`, imported |
+| `candidate_row_bench.py` | [#276](https://github.com/Rakieta02/Rakieta/issues/276) item 1 — the same measurement against the **shipping** `CandidateRow`, imported |
 | `fork_bench.py` | item 3 — whether `--preload` actually shares the index |
 | `port_bench.py` | item 7 — the `CandidateSource` port at three granularities; also response serialisation and a query-per-search floor |
 | `rebuild_bench.py` | item 5 — projection throughput |

@@ -43,19 +43,19 @@
 - **Lifts a rule nobody ruled on**: *the same players are never dealt the club and hour that turned
   them down*, which the On request build (#543) wrote for a refusal and the club's bookings build
   (#547) applied to a cancel (§3).
-- **Replaces** PRD [#530](https://github.com/Raketa02/Raketa/issues/530)'s out-of-scope line *a live
+- **Replaces** PRD [#530](https://github.com/Rakieta02/Rakieta/issues/530)'s out-of-scope line *a live
   link to a club's own booking system — the Instant way, automated, later*. **Rakieta will become the
   club's booking software** instead, and a later ADR decides its shape (§1).
 - Decided in the grilling of story S-01E's findings F-REQUEST-3.1, F-REQUEST-23.1 and
   F-REQUEST-22.1, with F-REQUEST-44.1 and 45.1, on 2026-10-12, and confirmed by the product owner
-  ([the decisions comment on #609](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776)).
-  Specified by PRD [#667](https://github.com/Raketa02/Raketa/issues/667), and logged as **Q121–Q123**
+  ([the decisions comment on #609](https://github.com/Rakieta02/Rakieta/issues/609#issuecomment-6120454776)).
+  Specified by PRD [#667](https://github.com/Rakieta02/Rakieta/issues/667), and logged as **Q121–Q123**
   in the mechanics' decision log. Built by the backend's
-  [#669](https://github.com/Raketa02/Raketa/issues/669)–[#673](https://github.com/Raketa02/Raketa/issues/673),
-  the club website's [#674](https://github.com/Raketa02/Raketa/issues/674) and
-  [#675](https://github.com/Raketa02/Raketa/issues/675), and the player app's
-  [#676](https://github.com/Raketa02/Raketa/issues/676) and
-  [#677](https://github.com/Raketa02/Raketa/issues/677).
+  [#669](https://github.com/Rakieta02/Rakieta/issues/669)–[#673](https://github.com/Rakieta02/Rakieta/issues/673),
+  the club website's [#674](https://github.com/Rakieta02/Rakieta/issues/674) and
+  [#675](https://github.com/Rakieta02/Rakieta/issues/675), and the player app's
+  [#676](https://github.com/Rakieta02/Rakieta/issues/676) and
+  [#677](https://github.com/Rakieta02/Rakieta/issues/677).
 
 ## Context
 

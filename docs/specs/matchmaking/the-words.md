@@ -10,13 +10,13 @@ artifact a later copy edit is made against — so that §F1's voice can be check
 itself in one place rather than a dozen.
 
 Decided by
-[Every sentence the client writes from a code](https://github.com/Raketa02/Raketa/issues/234).
+[Every sentence the client writes from a code](https://github.com/Rakieta02/Rakieta/issues/234).
 
 > **It is the whole player app's deck, and it lives here for historical reasons rather than scope ones.**
 > It stays in `matchmaking/` because a dozen documents and as many docstrings cite it by relative
 > path, and a move would break every one of them with no path left to repair it. **The Classic
 > play loop's sections were removed on 2026-10-06
-> ([#569](https://github.com/Raketa02/Raketa/issues/569))** — the candidate cards, the searches,
+> ([#569](https://github.com/Rakieta02/Rakieta/issues/569))** — the candidate cards, the searches,
 > challenges, plans, the Chats tab and the radar — and their numbers are kept: each such heading
 > stands over one line saying what it held, so a code citation of a § still lands somewhere
 > readable.
@@ -67,7 +67,7 @@ recorded the rule: a third copy is the signal to move it"* — so they were **pr
 
 ## 2. Mode — three places, and nowhere else
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): where a search's mode was worded.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): where a search's mode was worded.*
 
 ## 3. An unknown code
 
@@ -86,7 +86,7 @@ Today a system line (§23) and a game's standing draw the gap — each **is** th
 line — and a clause that keys no total is dropped: the sentence under a game's forecast figure
 (§25), the kind on an eyebrow (§22.2). The placements Classic play drew — the whyfit rows, a
 modifier, an unfilled seat, a challenge's standing, a card's reason lines and tags — went with
-it ([#569](https://github.com/Raketa02/Raketa/issues/569)).
+it ([#569](https://github.com/Rakieta02/Rakieta/issues/569)).
 
 **The gap's words, one string, everywhere:**
 
@@ -105,7 +105,7 @@ of one condition.
 
 ## 4. What a reason line may say
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): a reason line's register. The rule below stayed.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): a reason line's register. The rule below stayed.*
 
 **Counted phrases route through one pluralisation helper.** §J4's gap — *every counted phrase
 must route through proper plural handling before any further market* — is the map's fog, not
@@ -113,25 +113,25 @@ this file's; what this file owes is that no string here hardcodes an `s`.
 
 ## 5. The de-duplication filter, per surface
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the reason-line filter, per card.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the reason-line filter, per card.*
 
 ### 5a. The competitive card stopped arguing, so its filter has nothing to filter
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the competitive card's lost reason lines.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the competitive card's lost reason lines.*
 
 ### When nothing survives
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the reason row's fallback.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the reason row's fallback.*
 
 ## 6. The eight terms
 
 ### 6.1 Labels — the whyfit row heads
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the whyfit row heads.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the whyfit row heads.*
 
 ### 6.2 Reason lines — one renderer per evidence variant
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): a reason line per evidence variant. The format below stayed.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): a reason line per evidence variant. The format below stayed.*
 
 Levels use §B16's format throughout: two decimals, decimal comma, U+2212 minus, em dash for
 an absent one.
@@ -174,53 +174,53 @@ So the range carries a word of its own, and the band keeps its name:
 caveat. Levels use §B16's format on all three numbers — two decimals, decimal comma.
 
 **No card draws this row since Classic play went**
-([#569](https://github.com/Raketa02/Raketa/issues/569)), and the word outlived it: the record's
+([#569](https://github.com/Rakieta02/Rakieta/issues/569)), and the word outlived it: the record's
 skill card draws the range as a bracket under the level bar and says it `Likely {low}–{high}`
 (`likelyRangeLine`).
 
 ## 7. Concerns
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the concern sentences.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the concern sentences.*
 
 ## 8. A term that stood down
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): a stood-down term's sentences.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): a stood-down term's sentences.*
 
 ## 9. Modifiers
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the modifier sentences.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the modifier sentences.*
 
 ## 10. Why this person is on the list
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the liveness and inclusion tags.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the liveness and inclusion tags.*
 
 ## 11. An empty seat, and why this four
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): an empty seat's and a four's reasons.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): an empty seat's and a four's reasons.*
 
 ## 12. The four prompts
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the four search prompts.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the four search prompts.*
 
 ### The two answers, and the third way of giving one of them
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the prompts' answer buttons.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the prompts' answer buttons.*
 
 ## 13. A challenge's standing — seven codes, and an ended row names who
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): a challenge's standing sentences.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): a challenge's standing sentences.*
 
 ### 13.1 The third reading — an invitee who has left a challenge that has not
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): a departed invitee's sentences.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): a departed invitee's sentences.*
 
 ### 13.2 The same reading, one row up — an invitee who has answered a challenge still awaiting others
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): an answered invitee's sentences.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): an answered invitee's sentences.*
 
 ## 14. Deadlines — "24 h" is not a string
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): a challenge's deadline sentences.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): a challenge's deadline sentences.*
 
 ## 15. Names
 
@@ -280,16 +280,16 @@ round. The unknown player stays a question mark.
 
 ## 16. The searching states
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the searching states and the whyfit header.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the searching states and the whyfit header.*
 
 ## 17. Windows, rungs and sorts
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): windows, rungs, sorts and the forecast's caveat. `GameResult` below stayed.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): windows, rungs, sorts and the forecast's caveat. `GameResult` below stayed.*
 
 **`GameResult`** — the run of form. The field crossed with
-[#306](https://github.com/Raketa02/Raketa/issues/306) and nothing drew it;
-[#312](https://github.com/Raketa02/Raketa/issues/312) drew it on the competitive card and
-[#373](https://github.com/Raketa02/Raketa/issues/373) on the record sheet, and **neither code has
+[#306](https://github.com/Rakieta02/Rakieta/issues/306) and nothing drew it;
+[#312](https://github.com/Rakieta02/Rakieta/issues/312) drew it on the competitive card and
+[#373](https://github.com/Rakieta02/Rakieta/issues/373) on the record sheet, and **neither code has
 a sentence of its own — on purpose.**
 
 | | |
@@ -328,7 +328,7 @@ shape (ADR-0106 §5).
   seat-impact line, at-stake, Player Score's strands, languages. A code with no surface gets
   no words, and the map's Out of scope is the list.
 
-**And four more, added with §22–§24 by [#339](https://github.com/Raketa02/Raketa/issues/339):**
+**And four more, added with §22–§24 by [#339](https://github.com/Rakieta02/Rakieta/issues/339):**
 
 - **How a hold ends.** §22.5 gives this app its first hold sentence and nothing else; there is no
   appeal surface in this build, and a sentence offering one would be a promise nobody made.
@@ -344,7 +344,7 @@ shape (ADR-0106 §5).
 ## 20. What each control announces
 
 Decided by
-[What each Play control announces](https://github.com/Raketa02/Raketa/issues/236).
+[What each Play control announces](https://github.com/Rakieta02/Rakieta/issues/236).
 
 > **Paused in part 2026-10-25 by [ADR-0198](../../adr/0198-the-player-app-is-not-built-for-screen-readers-for-now.md).**
 > A new control still gets its name, written here. The live regions, the politeness rules and the
@@ -401,7 +401,7 @@ of `progressbar` for a control with no max.
 
 ### 20.3 The candidate card
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the candidate card's spoken name.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the candidate card's spoken name.*
 
 ### 20.4 The court — side and role, never an index
 
@@ -424,18 +424,18 @@ partner*.
 
 ### 20.4.1 A seat's hold, and the route that does not need one
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): a seated player's why-fit route and the hold on a seat. The label rule below stayed.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): a seated player's why-fit route and the hold on a seat. The label rule below stayed.*
 
 **The 9,5pt seat label does not earn `allowFontScaling={false}`.** Part 13 permits the escape
 only *"inside the level bar's drawn geometry"*, and §15 already ruled the court's case the
 other way: *"a seat label may truncate visually; a sentence may not, and a spoken name never
 does."* The visible label scales and truncates, the spoken one is whole, and nothing is
-invented. **This also settles [#240](https://github.com/Raketa02/Raketa/issues/240)'s
+invented. **This also settles [#240](https://github.com/Rakieta02/Rakieta/issues/240)'s
 truncation question**, which is recorded there rather than held by both.
 
 ### 20.5 The deck
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the Players deck's buttons. A group's Games deck kept the stage (`DeckStage`, in `features/proposals`) and the rules below.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the Players deck's buttons. A group's Games deck kept the stage (`DeckStage`, in `features/proposals`) and the rules below.*
 
 **When a card leaves, two things happen and both are deliberate.** §E3's first finding is that
 focus is destroyed on every render and nothing restores it, so today a listener is dropped at
@@ -467,7 +467,7 @@ heads hidden. §E6's *"'EVE' should be announced as 'evening'"* is already done 
 ### 20.8 Why-fit — the meter is decoration
 
 A metered row draws a label and its figure, **then** a meter — the why-fit row did, and the
-record card's strand rows do (`Shows up`, [#385](https://github.com/Raketa02/Raketa/issues/385)).
+record card's strand rows do (`Shows up`, [#385](https://github.com/Rakieta02/Rakieta/issues/385)).
 The number is already text two words earlier.
 
 > **The meter is hidden and the row's words carry it.**
@@ -484,7 +484,7 @@ this contract.**
 
 All polite. Three were listed here, and the two that were Find a game's — the searching status
 and the provisional forecast figure — went with Classic play
-([#569](https://github.com/Raketa02/Raketa/issues/569)):
+([#569](https://github.com/Rakieta02/Rakieta/issues/569)):
 
 | | |
 | --- | --- |
@@ -501,7 +501,7 @@ requirement was written against onboarding, which has one toast at a time.
 
 **Nothing interrupts now.** The one announcement that did — the send confirmation, the whole of
 what told a player the one irreversible act in Find a game had succeeded — went with Classic play
-([#569](https://github.com/Raketa02/Raketa/issues/569)); `interrupting` is still a value the
+([#569](https://github.com/Rakieta02/Rakieta/issues/569)); `interrupting` is still a value the
 toast store carries, and no caller sends it.
 
 ### 20.11 Two collapse conditions, and one screen rule
@@ -526,10 +526,10 @@ both readers navigating by heading.
 ### 20.12 What this section does not write, and what gates it
 
 **One obligation on the design system**, to land with
-[#219](https://github.com/Raketa02/Raketa/issues/219)'s outstanding rows so the amendment log
+[#219](https://github.com/Rakieta02/Rakieta/issues/219)'s outstanding rows so the amendment log
 stays in order: **Part 13 — every toast announces, queued rather than interrupting.**
 
-**Two gates**, booked onto [#232](https://github.com/Raketa02/Raketa/issues/232). An
+**Two gates**, booked onto [#232](https://github.com/Rakieta02/Rakieta/issues/232). An
 unenforced rule drifts silently, and §E6's *"seven `aria-label`s in the whole file"* is what
 that looks like:
 
@@ -542,7 +542,7 @@ that looks like:
 **The lint rule is the one gate here scoped by folder rather than by type**, and its folders
 follow the features that draw raw `Pressable`s and own a copy deck to name them from: it began
 over `features/play/`, widened with §24, and since Classic play went
-([#576](https://github.com/Raketa02/Raketa/issues/576)) it watches `features/games/` and
+([#576](https://github.com/Rakieta02/Rakieta/issues/576)) it watches `features/games/` and
 `features/proposals/`. A rule that watched one feature while others drew controls would be the
 guardrail that silently stops matching, which this repo already holds is worse than none.
 
@@ -551,7 +551,7 @@ guardrail that silently stops matching, which this repo already holds is worse t
 | | Where it already is |
 | --- | --- |
 | The availability grid, in edit mode | [6.8](../../../frontend_player/docs/design-system.md#68-the-availability-grid) |
-| Touch targets — §E4's fourteen under 44pt | [#219](https://github.com/Raketa02/Raketa/issues/219), which found the system stricter |
+| Touch targets — §E4's fourteen under 44pt | [#219](https://github.com/Rakieta02/Rakieta/issues/219), which found the system stricter |
 | Contrast, Dynamic Type, tabular figures, reduced motion | [Part 13](../../../frontend_player/docs/design-system.md#part-13--accessibility) |
 | Focus order | §E3 — DOM order matches visual order on every Play screen |
 | Numbers, levels, distances, durations | §B16, through §18 |
@@ -559,14 +559,14 @@ guardrail that silently stops matching, which this repo already holds is worse t
 
 ## 21. A refused send — two codes, and the naming done elsewhere
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): a refused send's sentences.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): a refused send's sentences.*
 
 ---
 
 ## 22. The loop's own sentences
 
-Decided by [Write the screen specs](https://github.com/Raketa02/Raketa/issues/339) on the map
-[Closing the loop](https://github.com/Raketa02/Raketa/issues/321). The surfaces were
+Decided by [Write the screen specs](https://github.com/Rakieta02/Rakieta/issues/339) on the map
+[Closing the loop](https://github.com/Rakieta02/Rakieta/issues/321). The surfaces were
 `the-loop-screens.md`; the sentences are here, because this file
 is the app's one copy deck and §1's mechanism is the only one there is.
 
@@ -581,14 +581,14 @@ there.
 
 ### 22.1 The Chats tab
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the Chats tab's panel, headings and empty states.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the Chats tab's panel, headings and empty states.*
 
 ### 22.2 The plan
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the plan — its panel, slots, lock and refusals. The eyebrow below is still in `gamePresentation.ts`, on a lead no route opens since [#576](https://github.com/Raketa02/Raketa/issues/576).*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the plan — its panel, slots, lock and refusals. The eyebrow below is still in `gamePresentation.ts`, on a lead no route opens since [#576](https://github.com/Rakieta02/Rakieta/issues/576).*
 
 **The game screen's eyebrow on the plan lead is the format and the kind** — and nothing else
-([#414](https://github.com/Raketa02/Raketa/issues/414)):
+([#414](https://github.com/Rakieta02/Rakieta/issues/414)):
 
 | Format | Counted | Friendly |
 | --- | --- | --- |
@@ -604,14 +604,14 @@ the same facts twice.
 
 ### 22.3 The withdraw — *Remove the challenge*
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the withdraw sheet, Remove the challenge.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the withdraw sheet, Remove the challenge.*
 
 ### 22.4 The quick chips
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the quick chips. The box under them stayed.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the quick chips. The box under them stayed.*
 
 **The composer's box says `Message about this game…` while it is empty**
-([#402](https://github.com/Raketa02/Raketa/issues/402)). A hint and not a label: it goes the moment
+([#402](https://github.com/Rakieta02/Rakieta/issues/402)). A hint and not a label: it goes the moment
 somebody types, so the name a listener gets is `Message` (§24.4) and this is only what the empty
 box says. *About this game* because the room is for the whole episode and nothing else
 (`the-loop-screens.md` §3).
@@ -632,7 +632,7 @@ a `Note` above the composer and the third sits in the stream (§24.6).
 | ended | `This chat has ended.` |
 
 **The ended sentence is the fourth state, and it stands where the composer stood** (added
-2026-09-14, [#429](https://github.com/Raketa02/Raketa/issues/429)). A booked game's room ends with
+2026-09-14, [#429](https://github.com/Rakieta02/Rakieta/issues/429)). A booked game's room ends with
 its game, and why is the game's card to say, so the room says only that the chat has ended. It
 named who had left, or that nobody else was coming, in Classic play's rooms, which could end
 before they had a game. A fact rather than a warning or a refusal, so it is neither amber nor
@@ -667,11 +667,11 @@ account, and saying it five times is the failure #326 §6 names about counts.
 
 ### 22.6 The card's slots, and the screen's checklist
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the plan card's slots and the checklist; the `{list}` rule is §15's now.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the plan card's slots and the checklist; the `{list}` rule is §15's now.*
 
 ### 22.7 Now, and the two answers
 
-**Now's empty state** — Home's, since [#550](https://github.com/Raketa02/Raketa/issues/550) —
+**Now's empty state** — Home's, since [#550](https://github.com/Rakieta02/Rakieta/issues/550) —
 present-tense, saying what the tab **is** and pointing at the act:
 
 > `Every game you arrange shows up here — what is agreed, what is today, and what still needs a
@@ -694,13 +694,13 @@ line — `Join a group to get games — see Groups heating up, just below.` sinc
 
 **An irreversible act that reaches other people**
 ([ADR-0162](../../adr/0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md), #411
-rules 1, 5, 6 and 8, built by [#418](https://github.com/Raketa02/Raketa/issues/418)): a title
+rules 1, 5, 6 and 8, built by [#418](https://github.com/Rakieta02/Rakieta/issues/418)): a title
 naming the **moment**, the act named once on the control that carries it out, a dismissal named by
 what it does.
 
 | | |
 | --- | --- |
-| The control | `Leave the game` — at the foot of a booked game's details ([#557](https://github.com/Raketa02/Raketa/issues/557)), which hands the sheet a body of its own; the three below are the sheet's default |
+| The control | `Leave the game` — at the foot of a booked game's details ([#557](https://github.com/Rakieta02/Rakieta/issues/557)), which hands the sheet a body of its own; the three below are the sheet's default |
 | In flight | `Leaving…` |
 | Sheet title | `Before you leave` |
 | Body | `The others keep the game and can fill your seat.` |
@@ -717,7 +717,7 @@ cost that is the leaver's alone.
 
 ### 22.9 Filling the seat, calling it off, and the fourth end
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the seat's door, the call-off sheet and the card's two buttons. The fourth end's words stayed.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the seat's door, the call-off sheet and the card's two buttons. The fourth end's words stayed.*
 
 **The ending's words** — the fourth end, drawn as *Never played* is, **and the screen says who**
 (amended 2026-09-15,
@@ -753,7 +753,7 @@ it off* is no longer a control anywhere.
 
 ### 22.10 Leaving from the Chats list, and before the court is whole
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): leaving a game from the Chats list.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): leaving a game from the Chats list.*
 
 ## 23. The system lines — the codes, and what publishes nothing
 
@@ -766,7 +766,7 @@ and meaningless for the other. **Nobody typed *Tomek set the day*.**
 **`values` never repeats what the read already resolves.** The line carries `actor_id` and the
 client fills `{name}` from the **`people`** beside it — the faces the response resolved for
 everybody it names — so a handle correction reaches the whole backlog for free. **Not from the
-members alone** ([#408](https://github.com/Raketa02/Raketa/issues/408), ADR-0148 §4 as amended):
+members alone** ([#408](https://github.com/Rakieta02/Rakieta/issues/408), ADR-0148 §4 as amended):
 membership is the game's line-up, so the person a *seat left* line is
 about has by definition just left it, and a client naming off the roster drew `? said no — that
 seat is open again`. `members` is still the roster and still the gate; `people` is the roster and
@@ -786,7 +786,7 @@ every author and actor the page names, resolved in the same read, and a page car
 
 **One of the nine is written today**: `GAME_PLAYED`, into a booked game's room. The other eight
 were written into rooms a challenge opened, and nothing opens one since Classic play went
-([#569](https://github.com/Raketa02/Raketa/issues/569)) — their publishers are gone, and their
+([#569](https://github.com/Rakieta02/Rakieta/issues/569)) — their publishers are gone, and their
 sentences stay only so that a stored line still folds.
 
 ### 23.1 The events that publish nothing, and why
@@ -849,11 +849,11 @@ content**, and nothing else on this map is one.
 
 ### 24.2 The Chats tab
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the Chats tab's spoken rows.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the Chats tab's spoken rows.*
 
 ### 24.3 The challenge screen
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the challenge screen's spoken names.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the challenge screen's spoken names.*
 
 ### 24.4 The conversation
 
@@ -872,7 +872,7 @@ pair — and *side and colour* is precisely what Part 13's **never colour as the
 refuses to let a listener depend on. **The whole handle**, never a first name (ADR-0107).
 
 **The header draws one thing and says another, and that is §20.4 applied to a title**
-([#401](https://github.com/Raketa02/Raketa/issues/401)). The drawn title is each handle's **stem** —
+([#401](https://github.com/Rakieta02/Rakieta/issues/401)). The drawn title is each handle's **stem** —
 `tomek, ola` — and the drawn line under it is `Padel · booked`; the element is named by the
 handles **whole**, joined with §15's final *and*, then the sport, then the state, with commas
 where the drawing has a `·`, because a middle dot is a mark a listener has no reading for. The
@@ -882,7 +882,7 @@ has no action of its own. The state is the booking's own word in lower case — 
 
 ### 24.5 Now, and the game screen
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the Now card's body and doors, the read-only plan and the checklist.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the Now card's body and doors, the read-only plan and the checklist.*
 
 | Element | Role | Announces |
 | --- | --- | --- |
@@ -900,7 +900,7 @@ has no action of its own. The state is the booking's own word in lower case — 
 | The typing bubble | one element, `accessibilityLiveRegion="polite"` | §22.5's sentence, whole — `ewa.m is typing…` |
 | The three dots inside it | — | **hidden.** They are the drawing of the same fact, and announcing both is §1.6's count problem in two spellings |
 
-**The bubble is the element and the sentence is its name** ([#404](https://github.com/Raketa02/Raketa/issues/404)):
+**The bubble is the element and the sentence is its name** ([#404](https://github.com/Rakieta02/Rakieta/issues/404)):
 the design draws three pulsing dots and no words, so the sentence a pulsing dot cannot say is
 what the element is named, rather than a line of text drawn beside it. **A person is named in a
 pair too.** A pair has exactly one possible typist and the name adds nothing a listener does not
@@ -929,17 +929,17 @@ anybody needs.
 | --- | --- |
 | The bottom sheet's modal semantics and focus rule | 9.1, and §20.6 |
 | Every toast — announced and queued | §20.10 |
-| The four `AWAITING_ANSWER` arms, the score grid, and every control on them | `gameAccessibility.ts`, built and tested by [#314](https://github.com/Raketa02/Raketa/issues/314) |
+| The four `AWAITING_ANSWER` arms, the score grid, and every control on them | `gameAccessibility.ts`, built and tested by [#314](https://github.com/Rakieta02/Rakieta/issues/314) |
 | Durations, weekdays, clock times, counts | §B16, through §18 |
 | Pluralisation | §19 — no string hardcodes an `s`, accessible names included |
 
 ### 24.8 The court's pairing on the game screen
 
 One block, the forecast, on a booked game's details
-([#415](https://github.com/Raketa02/Raketa/issues/415),
-[#556](https://github.com/Raketa02/Raketa/issues/556), §25), and §20.1 decides the elements:
+([#415](https://github.com/Rakieta02/Rakieta/issues/415),
+[#556](https://github.com/Rakieta02/Rakieta/issues/556), §25), and §20.1 decides the elements:
 nothing in it has an action, so it is four elements of facts. The players card under it went with
-Classic play ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+Classic play ([#576](https://github.com/Rakieta02/Rakieta/issues/576)).
 
 | Element | Role | Announces |
 | --- | --- | --- |
@@ -955,18 +955,18 @@ screen.
 
 ## 25. The court's pairing
 
-Decided by [#410](https://github.com/Raketa02/Raketa/issues/410) and built by
-[#415](https://github.com/Raketa02/Raketa/issues/415), on
+Decided by [#410](https://github.com/Rakieta02/Rakieta/issues/410) and built by
+[#415](https://github.com/Rakieta02/Rakieta/issues/415), on
 [ADR-0161](../../adr/0161-the-game-screen-draws-its-courts-pairing.md)'s reversal of §5.5's
 refusal. The surface was `the-loop-screens.md` §5.5, and is a booked game's details since
-[#556](https://github.com/Raketa02/Raketa/issues/556); the sentences are here, in
+[#556](https://github.com/Rakieta02/Rakieta/issues/556); the sentences are here, in
 `games/components/gamePresentation.ts`, because the pairing is the game's and §1's owner is the
 vocabulary.
 
 **Most of this section is cited.** The four balance words and their breaks are §B9's through
 `balancePresentation.ts` (§18); the figures take §B16's shapes through the one formatter. What is
 new is the block's own frame. The players card's words went with the card
-([#576](https://github.com/Raketa02/Raketa/issues/576)).
+([#576](https://github.com/Rakieta02/Rakieta/issues/576)).
 
 | Where | Sentence | Note |
 | --- | --- | --- |
@@ -982,14 +982,14 @@ pairing cannot be computed, and *there is deliberately no reason beside the abse
 absent entirely, the tiles with it, and nothing on the screen says *unrated*, *unavailable* or
 anything else.
 
-> **Amended 2026-11-23** ([#839](https://github.com/Raketa02/Raketa/issues/839), ADR-0207 §6): **a
+> **Amended 2026-11-23** ([#839](https://github.com/Rakieta02/Rakieta/issues/839), ADR-0207 §6): **a
 > competitive game's details open on the same block**, before the yes — the same words, the counted
 > sentence on every game they draw it for, and the same four elements as §24.8. The block's words
 > moved with it below both features, to the player app's `shared/vocabulary/forecastPresentation.ts`
 > (the eyebrow, `gap`, the counted sentence, the two tiles, and §24.8's three spoken names);
 > `gamePresentation.ts` cites them and keeps the friendly's. Never drawn on For fun (ADR-0207 §5).
 >
-> **Amended 2026-11-23** ([#841](https://github.com/Raketa02/Raketa/issues/841)): **a booked For-fun
+> **Amended 2026-11-23** ([#841](https://github.com/Rakieta02/Rakieta/issues/841)): **a booked For-fun
 > game draws the Social vibe card in the block's place** (§33.1), before its hour and at the court,
 > so the friendly's sentence is said nowhere and `gamePresentation.ts` keeps it no longer. A booked
 > competitive game is unchanged.
@@ -998,7 +998,7 @@ anything else.
 
 ## 26. The radar
 
-*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Raketa02/Raketa/issues/569)): the radar pane's sentences; its area line is §27's now.*
+*Removed with Classic play on 2026-10-06 ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the radar pane's sentences; its area line is §27's now.*
 
 ## 27. The You tab
 
@@ -1030,7 +1030,7 @@ anything else.
 > *(ADR-0203)*.
 >
 > **Amended 2026-11-22** by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
-> §7 ([#837](https://github.com/Raketa02/Raketa/issues/837)): the vocabulary is **27 tags** and a
+> §7 ([#837](https://github.com/Rakieta02/Rakieta/issues/837)): the vocabulary is **27 tags** and a
 > player picks **2 to 8**, in onboarding and on *Tags* alike. The picker's words quote the served
 > bounds, so they now read *Pick 2 to 8* and *8 tags is the most*; the eight new labels are §27.1.
 > The rows marked *(ADR-0207)* say the new words.
@@ -1044,10 +1044,10 @@ anything else.
 | The rows, On your card | `How others see you` · `Photos` · `Tags` · `Intro` · `Nickname` | *How others see you* is §25's `OWN_RECORD_TITLE`, cited |
 | The switch, On your card | ~~`Show me in General` · `Players who don't know you can see your place, open your record and send you a request.`~~ §31.12's `Show me to new people` and its sentence, cited | *(ADR-0203)* a switch in the row, on by default, after *Nickname*; **replaced 2026-11-14** (ADR-0204 §2) |
 | Live line, passport | `{sport} {level}` joined by ` · ` | one per rating, the registry's order |
-| Live line, reliability | `{points} · {band}` · `100 · New` | *(ADR-0195)* written in from the sheet's own head, `75 · High` ([#660](https://github.com/Raketa02/Raketa/issues/660): *the You row's line uses points and bands*); `{score} of 100 · {n} things counted` and `Nothing counted yet` retired with the strands |
+| Live line, reliability | `{points} · {band}` · `100 · New` | *(ADR-0195)* written in from the sheet's own head, `75 · High` ([#660](https://github.com/Rakieta02/Rakieta/issues/660): *the You row's line uses points and bands*); `{score} of 100 · {n} things counted` and `Nothing counted yet` retired with the strands |
 | Live line, kind of game | `{sport} {intent}` joined by ` · `, `not set` for a sport with no answer | the intent words are `playIntentPresentation`'s |
 | Live line, week | `{n} slots ticked` · `Nothing ticked — we do not know when you play` | |
-| Live line, area | `Area set · updates when you open Rakieta` | the one state — a profile cannot be committed without an area, a reading or *(ADR-0200)* a picked club; the words for a picked club on a phone without permission, which the cold start never updates, are [#733](https://github.com/Raketa02/Raketa/issues/733)'s |
+| Live line, area | `Area set · updates when you open Rakieta` | the one state — a profile cannot be committed without an area, a reading or *(ADR-0200)* a picked club; the words for a picked club on a phone without permission, which the cold start never updates, are [#733](https://github.com/Rakieta02/Rakieta/issues/733)'s |
 | Live line, who you play with | `Matched with anyone` · `… women only` · `… men only` | **the preference only** — the gender is drawn on its own screen and nowhere else on the tab |
 | Live line, record | `Your player record, as a stranger reads it` | |
 | Live line, photos | `{n} of 3 · profile photo on court` · `{n} of 3 · profile photo not checked as on court` · `None — a court poster stands in` | |
@@ -1058,16 +1058,16 @@ anything else.
 | Passport, add a sport | `Add a sport` · `One questionnaire, one rating. Nothing you already hold changes.` · chip `Rate {sport}` | the chip begins a pass of one sport (ADR-0179 §3) |
 | Passport, the ladder | `The ladder` · `{edges}` · `{band} · you ({sports})` · *the band's meaning* | `bandPresentation`'s meanings, cited |
 | Reliability, the figure and its word | `{points} · {band}` · `Out of 100` · the band said as `Very high reliability` · `High reliability` · `Medium reliability` · `Low reliability` · `New` beside 100 | *(ADR-0195)* the band is the server's — Very high 90–100, High 75–89, Medium 50–74, Low below 50 — and the phone holds no thresholds; `Reliable` from 90 · `Holding` from 70 · `Under the bar` below retired with the tone ladder |
-| Reliability, the counts | `Shows up` · `turned up {n} of {m}` — `Keeps plans` · `kept {n} of {m}` — `Being late` · `late {n} time(s)` — `Results left in dispute` · `{n}` | *(ADR-0195)* over the last 6 months; no meters and no ledger ([#660](https://github.com/Raketa02/Raketa/issues/660)) |
+| Reliability, the counts | `Shows up` · `turned up {n} of {m}` — `Keeps plans` · `kept {n} of {m}` — `Being late` · `late {n} time(s)` — `Results left in dispute` · `{n}` | *(ADR-0195)* over the last 6 months; no meters and no ledger ([#660](https://github.com/Rakieta02/Rakieta/issues/660)) |
 | Reliability, a new player | the new-player sentence, which no longer speaks of plans | *(ADR-0195)* `Nothing has fallen due for you yet — no plan has settled …` retired: everyone has a figure from the start. The new sentence is #660's to write |
-| Reliability, the filter | `Play only with players of at least High reliability` · `… at least Medium reliability` · off by default · `Your filter hides {n} of the {m} players in your groups.` | *(ADR-0195)* the *hides* line only while a filter is on ([#662](https://github.com/Raketa02/Raketa/issues/662)) |
-| Reliability, a player someone filters out | `Some players in your groups play only with {band} reliability or above. At {floor} you're dealt with everyone again.` | *(ADR-0195)* names nobody; `{floor}` is the lowest band floor among the filters that hide them ([#662](https://github.com/Raketa02/Raketa/issues/662)) |
+| Reliability, the filter | `Play only with players of at least High reliability` · `… at least Medium reliability` · off by default · `Your filter hides {n} of the {m} players in your groups.` | *(ADR-0195)* the *hides* line only while a filter is on ([#662](https://github.com/Rakieta02/Rakieta/issues/662)) |
+| Reliability, a player someone filters out | `Some players in your groups play only with {band} reliability or above. At {floor} you're dealt with everyone again.` | *(ADR-0195)* names nobody; `{floor}` is the lowest band floor among the filters that hide them ([#662](https://github.com/Rakieta02/Rakieta/issues/662)) |
 | What kind of game, under the title | `This changes how people find you` | replaces the section's heading and body; the footnote for an undeclared sport is #296's, cited |
-| What kind of game, under an answer that drops a kind | `Your {n} {kind} cards in your groups go. Games you're In on stay.` · `Your 1 {kind} card in your groups goes. Games you're In on stay.` · `Rakieta stops dealing you {kind} games. Games you're In on stay.` | *(ADR-0201)* under *Competitive* or *For fun* when the current answer is the other kind or *Either suits me*; `{kind}` is the kind that goes, `competitive` or `for-fun`; `{n}` is `GET /players/me/deck-counts`'s count of it, summed over the player's groups; the third at `{n}` = 0 ([#742](https://github.com/Raketa02/Raketa/issues/742)) |
+| What kind of game, under an answer that drops a kind | `Your {n} {kind} cards in your groups go. Games you're In on stay.` · `Your 1 {kind} card in your groups goes. Games you're In on stay.` · `Rakieta stops dealing you {kind} games. Games you're In on stay.` | *(ADR-0201)* under *Competitive* or *For fun* when the current answer is the other kind or *Either suits me*; `{kind}` is the kind that goes, `competitive` or `for-fun`; `{n}` is `GET /players/me/deck-counts`'s count of it, summed over the player's groups; the third at `{n}` = 0 ([#742](https://github.com/Rakieta02/Rakieta/issues/742)) |
 | What kind of game, under *Either suits me* | `Keep your {kind} cards and get {other kind} ones too.` | *(ADR-0201)* when the current answer is one kind: `Keep your competitive cards and get for-fun ones too.` · `Keep your for-fun cards and get competitive ones too.`; no count |
 | What kind of game, the current answer and an undeclared sport | *no line* | *(ADR-0201)* the current answer is marked as today; an undeclared sport keeps its footnote |
 | Your week, the buttons | `Save your week` · `Saved` · `Clear all` | the grid's footnote is the step's, cited |
-| Where you play | `Your area is set` · `Your area updates each time you open Rakieta; it is never finer than about a kilometre.` · `Use my location` · `Pick a club near where you play` | the permission states are the step's, cited; the middle line is static, the one written trace of the cold-start refresh, and was §26's until the radar went; *(ADR-0200)* the two ways are the location step's own, replacing `Read my area again` ([#733](https://github.com/Raketa02/Raketa/issues/733)) |
+| Where you play | `Your area is set` · `Your area updates each time you open Rakieta; it is never finer than about a kilometre.` · `Use my location` · `Pick a club near where you play` | the permission states are the step's, cited; the middle line is static, the one written trace of the cold-start refresh, and was §26's until the radar went; *(ADR-0200)* the two ways are the location step's own, replacing `Read my area again` ([#733](https://github.com/Rakieta02/Rakieta/issues/733)) |
 | Who you play with | *the step's headings, labels, cost line and reach sentence* · `Save` · `Saved` | the scope sentences are not repeated |
 | Photos | *the step's, whole* | title `Your court photos`; eyebrow `On-court only — up to three`; no *Continue* |
 | Tags, the eyebrow | `On your card · Pick {min} to {max}` | *On your card · Pick 2 to 8* *(ADR-0207)*; onboarding's is `Setting up · Step 1 of 6 · Pick 2 to 8`; both quote the served bounds |
@@ -1088,7 +1088,7 @@ first draft.
 ### 27.1 The eight tags ADR-0207 added
 
 > Added 2026-11-22 by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
-> §7 ([#837](https://github.com/Raketa02/Raketa/issues/837)). The nineteen that stood are
+> §7 ([#837](https://github.com/Rakieta02/Rakieta/issues/837)). The nineteen that stood are
 > `shared/vocabulary/socialTagPresentation.ts`'s and are cited, never respelled; these eight are
 > written here because they are new. Each is **appended at the end of its group**, so the picker
 > serves them last there: After the match 9, On the court 10, Why you're here 8.
@@ -1113,10 +1113,10 @@ common*) stays the server's (§3).
 ## 28. The Games tab's door, and finding
 
 > Added 2026-11-05 by [ADR-0201](../../adr/0201-the-other-kind-is-a-door-and-a-changed-intent-leaves-the-cards-you-havent-answered.md) §2 and §4,
-> the mechanics Q127, PRD [#736](https://github.com/Raketa02/Raketa/issues/736). The surface is
+> the mechanics Q127, PRD [#736](https://github.com/Rakieta02/Rakieta/issues/736). The surface is
 > [the screens A1 and A2.1](../games-and-fill-in/the-screens.md#a21-states). Built by
-> [#740](https://github.com/Raketa02/Raketa/issues/740) (the door and its panel) and
-> [#741](https://github.com/Raketa02/Raketa/issues/741) (finding). **The three answers are not
+> [#740](https://github.com/Rakieta02/Rakieta/issues/740) (the door and its panel) and
+> [#741](https://github.com/Rakieta02/Rakieta/issues/741) (finding). **The three answers are not
 > respelled here**: *Competitive*, *For fun* and *Either suits me* are `playIntentPresentation`'s, the
 > first-time question's and the You tab's, cited.
 
@@ -1126,11 +1126,11 @@ form. `{sport}` is the sport's name inside a sentence, as in *Carry on with your
 `{n}` is the count of the player's own cards of their declared kind in this group, the one the
 switch shows.
 
-*(Noted 2026-11-24, [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet
+*(Noted 2026-11-24, [#859](https://github.com/Rakieta02/Rakieta/issues/859), decided and not yet
 built: the switch becomes the Games tab's menu, and the door its dimmed line, with the same label,
 no number and the same press target as the live line. `{n}` is the live line's count. The menu's
 spoken names, the selected tab's *Games, Competitive* and each line's, are worded in copy modules by
-[#862](https://github.com/Raketa02/Raketa/issues/862); the door line keeps the door's.)*
+[#862](https://github.com/Rakieta02/Rakieta/issues/862); the door line keeps the door's.)*
 
 | Where | A competitive player taps *For fun* | A for-fun player taps *Competitive* | Note |
 | --- | --- | --- | --- |
@@ -1163,17 +1163,17 @@ a dropped kind is `no_longer_fits`, whose words `proposalsCopy` already has
 ## 29. Friends
 
 > Added 2026-11-06 by [ADR-0202](../../adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md),
-> the mechanics Q128, PRD [#743](https://github.com/Raketa02/Raketa/issues/743). The surfaces are
+> the mechanics Q128, PRD [#743](https://github.com/Rakieta02/Rakieta/issues/743). The surfaces are
 > [the Friends spec set](../friends/README.md): [the mechanics](../friends/the-mechanics.md) say what
 > happens and [the screens](../friends/the-screens.md) where each sentence stands. Built by the
-> player app's [#753](https://github.com/Raketa02/Raketa/issues/753),
-> [#754](https://github.com/Raketa02/Raketa/issues/754) and
-> [#756](https://github.com/Raketa02/Raketa/issues/756)–[#760](https://github.com/Raketa02/Raketa/issues/760),
-> and the public site's [#755](https://github.com/Raketa02/Raketa/issues/755). §29.5's Home card was
-> added 2026-11-07 (the mechanics Q129, PRD [#762](https://github.com/Raketa02/Raketa/issues/762)).
+> player app's [#753](https://github.com/Rakieta02/Rakieta/issues/753),
+> [#754](https://github.com/Rakieta02/Rakieta/issues/754) and
+> [#756](https://github.com/Rakieta02/Rakieta/issues/756)–[#760](https://github.com/Rakieta02/Rakieta/issues/760),
+> and the public site's [#755](https://github.com/Rakieta02/Rakieta/issues/755). §29.5's Home card was
+> added 2026-11-07 (the mechanics Q129, PRD [#762](https://github.com/Rakieta02/Rakieta/issues/762)).
 > §29.1's *Unblock* and §29.2's ranking rows were changed the same day by
 > [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) (the mechanics Q130, PRD
-> [#766](https://github.com/Raketa02/Raketa/issues/766)): a block closes the record both ways, and a
+> [#766](https://github.com/Rakieta02/Rakieta/issues/766)): a block closes the record both ways, and a
 > request may come from the ranking (§30).
 >
 > **Every sentence of PRD #743's *Solution* is here**, with its singular and zero forms. Rows marked
@@ -1182,7 +1182,7 @@ a dropped kind is `no_longer_fits`, whose words `proposalsCopy` already has
 > gender never crosses to another player (ADR-0096, the glossary's **Gender**), so the PRD's *Ask Zofia
 > to get her padel level*, *so he can add you* and *Zofia has her padel level — you can seat her now*
 > are written without one below. The club website's two lines are its own copy
-> ([#747](https://github.com/Raketa02/Raketa/issues/747)) and say *at an hour your courts are full*.
+> ([#747](https://github.com/Rakieta02/Rakieta/issues/747)) and say *at an hour your courts are full*.
 
 **Placeholders.** `{nickname}` is a player's whole nickname (§15). `{sport}` is the sport's name
 inside a sentence (*padel*), `{Sport}` at a line's start or after a `·` (*Padel*). `{share}` is the
@@ -1211,7 +1211,7 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 | --- | --- | --- |
 | Needs your answer, the section's title | `FRIEND REQUESTS · {n}` | `{n}` ≥ 1; at 0 the section and its title are gone. Home's row until 2026-11-17 ([§32](#32-needs-your-answer), #816) |
 | The card, who | `{nickname} wants to be your friend` | two lines at most on the tile |
-| The card, what they play | `{Sport} {level} · {Sport} {level}` | under who asks, since 2026-11-17 ([#818](https://github.com/Raketa02/Raketa/issues/818), ADR-0205 §1): every sport the sender holds a Level in, in the order served, each with its dot drawn before it: *● Padel 3,40 · ● Tennis 2,90*. Mono, a decimal comma. The `·` goes with the sport before it, so a wrapped line ends in one *(a call)*. Two lines at most; no line when they hold no Level |
+| The card, what they play | `{Sport} {level} · {Sport} {level}` | under who asks, since 2026-11-17 ([#818](https://github.com/Rakieta02/Rakieta/issues/818), ADR-0205 §1): every sport the sender holds a Level in, in the order served, each with its dot drawn before it: *● Padel 3,40 · ● Tennis 2,90*. Mono, a decimal comma. The `·` goes with the sport before it, so a wrapped line ends in one *(a call)*. Two lines at most; no line when they hold no Level |
 | The card, spoken | `{nickname} wants to be your friend, {Sport} {level}, {Sport} {level}` | the title and the levels as one name, every sport included *(a call)*: *ines.d wants to be your friend, Padel 3,40, Tennis 2,90*. The face, the chip and the buttons keep their own |
 | The card, where (a group) | `With you in {group} · {Sport} {level} ·` and the reliability chip | the group the request was made in and its sport; the chip is the existing one (*✦ 98*). **Retired on the tile 2026-11-17** (ADR-0205 §1, #816): the tile draws the chip alone, on its own line, and #818's *what they play* above it. The notice's body still says it |
 | The card, where (a link) | `Invited you to Rakieta` | in place of the group line. **Retired on the tile 2026-11-17**, as the group line |
@@ -1259,9 +1259,9 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 | Notice, back to the asker | `{nickname} has a {sport} level — you can seat {nickname} now.` | the friend, twice; opens the picker |
 
 > **The Home card**, added 2026-11-07 by [ADR-0202](../../adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md)'s
-> amendment of that day (§4), the mechanics Q129, PRD [#762](https://github.com/Raketa02/Raketa/issues/762).
+> amendment of that day (§4), the mechanics Q129, PRD [#762](https://github.com/Rakieta02/Rakieta/issues/762).
 > It stands on [the screens §6.4](../friends/the-screens.md#64-asked-for-a-level--n-designed-no-mock), and
-> the player app's [#765](https://github.com/Raketa02/Raketa/issues/765) builds it. **Every sentence of
+> the player app's [#765](https://github.com/Rakieta02/Rakieta/issues/765) builds it. **Every sentence of
 > PRD #762's *Solution* is here.** None says *her* or *him*: several askers are *they*. `{nickname}`
 > is an asker's, newest first. **Three or more askers name two and count the rest**, unlike §29's
 > list join, so the title stays one line.
@@ -1283,7 +1283,7 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| The switch | `Competitive` · `For fun` | `playIntentPresentation`'s, cited; it sets this game's kind. *Noted 2026-11-24 ([#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built): the same two words become the Friends tab's menu lines, with no counts; their spoken names, the kind alone, are worded by [#861](https://github.com/Raketa02/Raketa/issues/861).* |
+| The switch | `Competitive` · `For fun` | `playIntentPresentation`'s, cited; it sets this game's kind. *Noted 2026-11-24 ([#859](https://github.com/Rakieta02/Rakieta/issues/859), decided and not yet built): the same two words become the Friends tab's menu lines, with no counts; their spoken names, the kind alone, are worded by [#861](https://github.com/Rakieta02/Rakieta/issues/861).* |
 | The court | `THEIR SIDE` · `YOUR SIDE` · `{nickname} {level}` · `You {level}` · `+ Friends` | mock 7 |
 | The court, unfilled | `Seat {n} more friends` · `Seat 1 more friend` | at 0, the card |
 | The card | the deck card's words, without tiles: the *vs* line (`YOU + EWA VS MAGDA + ANIA`; singles `YOU VS ANIA`), the balance (`87%` · `Very even`), the overlap's grade, `Court available`, `{share} each`, `{when} · {club} · {court}` and the kind of court | the screens A2.3, cited |
@@ -1357,10 +1357,10 @@ and hour as the deck's court block writes them (*Saturday 10:00*, *Sat 26 Sep 20
 > The switch is §31.12's *Show me to new people*.
 >
 > Added 2026-11-07 by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md), the
-> mechanics Q130, PRD [#766](https://github.com/Raketa02/Raketa/issues/766). The surfaces are
+> mechanics Q130, PRD [#766](https://github.com/Rakieta02/Rakieta/issues/766). The surfaces are
 > [the Rankings spec set](../rankings/README.md): [the mechanics](../rankings/the-mechanics.md) say
 > what happens and [the screens](../rankings/the-screens.md) where each sentence stands. Built by the
-> player app's [#775](https://github.com/Raketa02/Raketa/issues/775)–[#779](https://github.com/Raketa02/Raketa/issues/779).
+> player app's [#775](https://github.com/Rakieta02/Rakieta/issues/775)–[#779](https://github.com/Rakieta02/Rakieta/issues/779).
 >
 > **Every sentence of PRD #766's *Solution* is here.** Rows marked *(a call)* are words written in
 > while recording it, for the product owner to overrule. **No sentence says *her*, *his*, *she* or
@@ -1466,10 +1466,10 @@ list*.
 ## 31. Home rows
 
 > Added 2026-11-14 by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md),
-> the mechanics Q131, PRD [#789](https://github.com/Raketa02/Raketa/issues/789). The surfaces are
+> the mechanics Q131, PRD [#789](https://github.com/Rakieta02/Rakieta/issues/789). The surfaces are
 > [the Home rows spec set](../home-rows/README.md): [the mechanics](../home-rows/the-mechanics.md) say
 > what happens and [the screens](../home-rows/the-screens.md) where each sentence stands. Built by the
-> player app's [#798](https://github.com/Raketa02/Raketa/issues/798)–[#805](https://github.com/Raketa02/Raketa/issues/805).
+> player app's [#798](https://github.com/Rakieta02/Rakieta/issues/798)–[#805](https://github.com/Rakieta02/Rakieta/issues/805).
 > The same record retires §30.4's *Hidden from General*, §30.8's switch and limit rows, and §29.2's
 > daily-limit row ([§31.13](#3113-retired)).
 >
@@ -1490,7 +1490,7 @@ the club the group plays at.
 
 ### 31.1 Home
 
-> **Amended by [#820](https://github.com/Raketa02/Raketa/issues/820)**
+> **Amended by [#820](https://github.com/Rakieta02/Rakieta/issues/820)**
 > ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
 > §5; home refactor 3–13): the five rows' headings became **FOR YOU**'s line titles, and their links
 > moved to the open line's footer. **Only the words on screen change**: *Hottest groups*, *Same
@@ -1499,11 +1499,11 @@ the club the group plays at.
 > `See all ›`, `NEW IN RAKIETA` · `See all ›`, `SAME VIBE PLAYERS` · `See all ›` and `TOP 10` · the
 > sport pill · `Rankings ›`, and the groupless line `… — the hottest ones are just below.`
 >
-> **Amended by [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q19, Q37; home
+> **Amended by [#821](https://github.com/Rakieta02/Rakieta/issues/821)** (ADR-0205 §5, Q19, Q37; home
 > refactor 12, 13): Top 10's footer reads the switcher on the left and `Open the rankings ›` on the
 > right, where it read the sport pill · `Rankings ›`.
 >
-> **Amended by [#822](https://github.com/Raketa02/Raketa/issues/822)** (ADR-0205 §5, §6, Q17, Q33,
+> **Amended by [#822](https://github.com/Rakieta02/Rakieta/issues/822)** (ADR-0205 §5, §6, Q17, Q33,
 > Q34; home refactor 3, 4, 7): every line but Top 10 draws its count, `{n}`, and says it after its
 > title; the people lines' footers read `See all {n} ›`, where they read `See all ›`. `{n}` is the
 > line's total as served — how many there are to explore, never how many are a good match — and
@@ -1523,7 +1523,7 @@ the club the group plays at.
 
 ### 31.2 Hottest groups — the card
 
-> **Amended by [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home
+> **Amended by [#821](https://github.com/Rakieta02/Rakieta/issues/821)** (ADR-0205 §5, Q22; home
 > refactor 5.1): the card no longer writes `+{n}` · `this month` beside the players, nor the sports'
 > names; the group sheet still says both (§31.3). The card is spoken as drawn: *Ogrody 33 Club,
 > hottest, 14 games this week, 11 players*.
@@ -1559,7 +1559,7 @@ the club the group plays at.
 
 ### 31.5 Same competitive level — the card
 
-> **Amended by [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home
+> **Amended by [#821](https://github.com/Rakieta02/Rakieta/issues/821)** (ADR-0205 §5, Q22; home
 > refactor 7): the card no longer says the gap in words — `{gap} below you`, `{gap} above you`,
 > `Same level` and the ` · ` before `{n} sports ›` are gone from it, drawn and spoken. They are the
 > comparison sheet's alone (§31.6). The pairing is spoken *91% even in padel, You 2,71, zofia.b 2,69*.
@@ -1664,7 +1664,7 @@ them, and the server still serves where a request was found:
 
 ### 31.14 The Groups heating up page
 
-> Added by [#823](https://github.com/Raketa02/Raketa/issues/823) ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> Added by [#823](https://github.com/Rakieta02/Rakieta/issues/823) ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
 > §7; the Home rows screens §3.6). No mock draws it. Its cards, chips and sheets keep §31.2–§31.4's
 > words, and its states those of the people See all screens.
 
@@ -1680,14 +1680,14 @@ them, and the server still serves where a request was found:
 ## 32. Needs your answer
 
 > Added 2026-11-17 by [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
-> §1–§2, PRD [#810](https://github.com/Raketa02/Raketa/issues/810). The sheet's words, and the
+> §1–§2, PRD [#810](https://github.com/Rakieta02/Rakieta/issues/810). The sheet's words, and the
 > envelope that opens it. Each section under the title keeps its own words: FRIEND REQUESTS is
 > [§29.2](#292-friend-requests) and ASKED FOR A LEVEL [§29.5](#295-asking-for-a-level), moved off Home by
-> the player app's [#816](https://github.com/Raketa02/Raketa/issues/816). *TO CONFIRM* and FRIENDS GAME
-> joined them with [#817](https://github.com/Raketa02/Raketa/issues/817): FRIENDS GAME keeps
+> the player app's [#816](https://github.com/Rakieta02/Rakieta/issues/816). *TO CONFIRM* and FRIENDS GAME
+> joined them with [#817](https://github.com/Rakieta02/Rakieta/issues/817): FRIENDS GAME keeps
 > [§29.8](#298-the-invitation-and-the-senders-game)'s card whole, and *TO CONFIRM* the rows' words of
 > You › Payments (the Games and Fill in screens A7.3), a tile per payment. The envelope's count comes
-> with [#819](https://github.com/Raketa02/Raketa/issues/819). Rows marked *(a call)* were written in by
+> with [#819](https://github.com/Rakieta02/Rakieta/issues/819). Rows marked *(a call)* were written in by
 > #816.
 
 | Where | Sentence | Note |
@@ -1705,7 +1705,7 @@ them, and the server still serves where a request was found:
 ## 33. The Social vibe
 
 > Added 2026-11-22 by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
-> §8, the player app's [#838](https://github.com/Raketa02/Raketa/issues/838). A For-fun game's
+> §8, the player app's [#838](https://github.com/Rakieta02/Rakieta/issues/838). A For-fun game's
 > headline number, where the forecast is a competitive one's: how much everybody at the table shares
 > (the root [`CONTEXT.md`](../../../CONTEXT.md)'s **Social vibe**). The server sends only the %; the
 > words and their breaks are the app's, in `shared/vocabulary/socialVibePresentation.ts`, and can be
@@ -1732,7 +1732,7 @@ For fun (#842, the rows above). Each cites this section's bands and adds its own
 
 ### 33.1 The Social vibe card
 
-> Added 2026-11-23 by the player app's [#840](https://github.com/Raketa02/Raketa/issues/840)
+> Added 2026-11-23 by the player app's [#840](https://github.com/Rakieta02/Rakieta/issues/840)
 > (ADR-0207 §6; for fun 7). A For-fun game's details open on it, where a competitive game's open on
 > the Balance forecast. The words are `shared/vocabulary/socialVibePresentation.ts`'s; the card is
 > `shared/ui`'s `SocialVibeCard`.

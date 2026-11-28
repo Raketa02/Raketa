@@ -2,8 +2,8 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-11
-- **Answers [#401](https://github.com/Raketa02/Raketa/issues/401)**, part of
-  [#397](https://github.com/Raketa02/Raketa/issues/397).
+- **Answers [#401](https://github.com/Rakieta02/Rakieta/issues/401)**, part of
+  [#397](https://github.com/Rakieta02/Rakieta/issues/397).
 - **Supersedes [ADR-0148](0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md)
   §6 for one surface — the conversation's header — and nothing else in it.** The row that §6 is
   written about keeps every word of it: no pill, no standing, the last line is what a pill would
@@ -18,7 +18,7 @@
   conversation is told, and tells nothing* is a fact about the backend context, and nothing here
   makes it ask anybody anything.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `features/plans`, its rung ladder and the Now card are gone, so the second line's source (`useGameCardName` over `GET /plans` and `GET /games`) and the room with no game that drew the sport alone describe nothing. The header still draws the sport and the game's state in lower case; the state is now the booking's own word (*booked*), passed in by the booked game's chat. The Chats rows this record kept stateless are no longer drawn anywhere. The stems, the whole-handle spoken name and the `h1` budget stand.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** `features/plans`, its rung ladder and the Now card are gone, so the second line's source (`useGameCardName` over `GET /plans` and `GET /games`) and the room with no game that drew the sport alone describe nothing. The header still draws the sport and the game's state in lower case; the state is now the booking's own word (*booked*), passed in by the booked game's chat. The Chats rows this record kept stateless are no longer drawn anywhere. The stems, the whole-handle spoken name and the `h1` budget stand.
 
 ## Context
 

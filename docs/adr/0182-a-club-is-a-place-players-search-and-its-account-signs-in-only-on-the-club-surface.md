@@ -18,12 +18,12 @@
   [ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
   does, for Administrators. A club isn't staff and isn't a person. A Club account is **not** a
   `User`, and is never matched, rated or shown to a player.
-- Settles [#501](https://github.com/Raketa02/Raketa/issues/501) for the PRD
-  [#500](https://github.com/Raketa02/Raketa/issues/500), grilled 2026-09-24/25. Built by
-  [#503](https://github.com/Raketa02/Raketa/issues/503) (backend) and the club website's tickets
-  [#522](https://github.com/Raketa02/Raketa/issues/522)–[#524](https://github.com/Raketa02/Raketa/issues/524).
+- Settles [#501](https://github.com/Rakieta02/Rakieta/issues/501) for the PRD
+  [#500](https://github.com/Rakieta02/Rakieta/issues/500), grilled 2026-09-24/25. Built by
+  [#503](https://github.com/Rakieta02/Rakieta/issues/503) (backend) and the club website's tickets
+  [#522](https://github.com/Rakieta02/Rakieta/issues/522)–[#524](https://github.com/Rakieta02/Rakieta/issues/524).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Plans went with Classic play, so §8's *it isn't a plan's venue*, the header's narrowing of ADR-0144 and the last *Harder* bullet describe nothing that exists; §8's first half was already superseded by ADR-0189. A game's place is a club's court, named on the card that proposes it. Everything else stands.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** Plans went with Classic play, so §8's *it isn't a plan's venue*, the header's narrowing of ADR-0144 and the last *Harder* bullet describe nothing that exists; §8's first half was already superseded by ADR-0189. A game's place is a club's court, named on the card that proposes it. Everything else stands.
 
 ## Context
 

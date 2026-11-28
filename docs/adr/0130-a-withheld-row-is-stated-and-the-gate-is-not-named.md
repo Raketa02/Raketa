@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-28
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The search read-back went with the searches (#579), and with it `GET /api/v1/searches/{id}`, the `{ "withheld": true }` row, its exemption from the forbidden-fact fence and everything under Consequences. The rule in the title outlived the route: the player record's one 404, `AccountGates`, and the Games deck's refusals — a pair that does not fit, a rescue or a post not open to you — each say that something stands in the way and never which gate.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The search read-back went with the searches (#579), and with it `GET /api/v1/searches/{id}`, the `{ "withheld": true }` row, its exemption from the forbidden-fact fence and everything under Consequences. The rule in the title outlived the route: the player record's one 404, `AccountGates`, and the Games deck's refusals — a pair that does not fit, a rescue or a post not open to you — each say that something stands in the way and never which gate.
 
 ## Context
 

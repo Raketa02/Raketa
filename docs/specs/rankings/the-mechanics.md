@@ -1,7 +1,7 @@
 # Rankings — the mechanics
 
 > **Status:** agreed in the rankings grilling on 2026-11-07 (Q1–Q26 there), confirmed by the product
-> owner the same day, and specified as PRD [#766](https://github.com/Raketa02/Raketa/issues/766).
+> owner the same day, and specified as PRD [#766](https://github.com/Rakieta02/Rakieta/issues/766).
 > Logged as **Q130** in the
 > [games and fill-in decision log](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log), and
 > recorded by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md).
@@ -18,7 +18,7 @@
 > **Calls marked *(a call)*** were made while specifying PRD #766 or writing this document, and are
 > open for the product owner to overrule ([§17](#17-calls-made-without-a-ruling)).
 >
-> **Amended 2026-11-14** by the Home rows grilling, PRD [#789](https://github.com/Raketa02/Raketa/issues/789),
+> **Amended 2026-11-14** by the Home rows grilling, PRD [#789](https://github.com/Rakieta02/Rakieta/issues/789),
 > logged as **Q131** and recorded by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2: **the ranking is the real ranking**. *Show me in
 > General* is replaced by *Show me to new people*, which closes nothing here ([§10](#10-show-me-in-general));
 > **blocked rows are shown**, and the record across a block is refused ([§11](#11-blocks)); every place,
@@ -88,7 +88,7 @@ For fun game, *Played · no score* and a *Disputed* game move no level and are n
 - **One list per sport, for all four sports**: padel, tennis, squash and badminton.
 - **Men and women in one list** (Q8).
 - **No cities** (Q1). General is everybody in Rakieta. Splitting it by city, once a second city opens,
-  is a follow-up and not decided ([#782](https://github.com/Raketa02/Raketa/issues/782)).
+  is a follow-up and not decided ([#782](https://github.com/Rakieta02/Rakieta/issues/782)).
 
 ### 3.3 Competitive games only
 
@@ -104,7 +104,7 @@ They move no level, so they can't move a place.
 - **A player is listed after 5 results in that sport.** *Played · no score* and disputed games don't
   count.
 - **The 5 stays "for now"** (Q24): when new players should first appear in General moves to the engine
-  review ([#781](https://github.com/Raketa02/Raketa/issues/781)).
+  review ([#781](https://github.com/Rakieta02/Rakieta/issues/781)).
 
 ### 4.2 Friends (Q26)
 
@@ -374,15 +374,15 @@ The proposed shapes; the tickets settle them.
 
 | Where | What |
 | --- | --- |
-| **Rankings** (new context) | **The projection**: one row per player per sport, made on their first result there: the level (two decimals) and its uncertainty, the count of results, when the last one settled, when the current level was reached, when the player first entered General (the 5th result) and Friends (the 1st), the last five outcomes oldest first, and whether the player is hidden from General. **The level history**: appended on every move, keyed by the event, so a redelivery changes nothing; it answers *a player's level and count of results at any instant*. Both are written on `rating.moved_on_result`, through the outbox, the moment a result settles; a deleted account's rows go. **A rebuild** from the event store fills both from existing rating history, and running it twice changes nothing. **An index**: sport, level descending, results descending, level reached ascending, player id ([#768](https://github.com/Raketa02/Raketa/issues/768), [#769](https://github.com/Raketa02/Raketa/issues/769)) |
+| **Rankings** (new context) | **The projection**: one row per player per sport, made on their first result there: the level (two decimals) and its uncertainty, the count of results, when the last one settled, when the current level was reached, when the player first entered General (the 5th result) and Friends (the 1st), the last five outcomes oldest first, and whether the player is hidden from General. **The level history**: appended on every move, keyed by the event, so a redelivery changes nothing; it answers *a player's level and count of results at any instant*. Both are written on `rating.moved_on_result`, through the outbox, the moment a result settles; a deleted account's rows go. **A rebuild** from the event store fills both from existing rating history, and running it twice changes nothing. **An index**: sport, level descending, results descending, level reached ascending, player id ([#768](https://github.com/Rakieta02/Rakieta/issues/768), [#769](https://github.com/Rakieta02/Rakieta/issues/769)) |
 | **Its ports**, each in its own words | the rating's *level moved on a result*; Friends' friend list; blocks, both directions; nicknames and photos; the profile's *Show me in General* |
-| **At scale** | a sport's General places and chips worked out together in one database pass and cached per sport, replaced on the next write in that sport or after at most a minute, so a 90-day drop-off shows within a minute; a page is a slice of it; Friends is worked out on each read ([#770](https://github.com/Raketa02/Raketa/issues/770), [#771](https://github.com/Raketa02/Raketa/issues/771)) |
-| **Player profile** | *Show me in General*: a new event on the profile's stream, returned by the profile read ([#772](https://github.com/Raketa02/Raketa/issues/772)) |
-| **Player record** | the new strand, a block either way among the gates, *blocked by you* removed, whether *Add friend* may be offered ([#773](https://github.com/Raketa02/Raketa/issues/773)) |
-| **Friends** | the widened admission, *made from* the ranking with its sport, `daily_request_limit` ([#773](https://github.com/Raketa02/Raketa/issues/773)) |
+| **At scale** | a sport's General places and chips worked out together in one database pass and cached per sport, replaced on the next write in that sport or after at most a minute, so a 90-day drop-off shows within a minute; a page is a slice of it; Friends is worked out on each read ([#770](https://github.com/Rakieta02/Rakieta/issues/770), [#771](https://github.com/Rakieta02/Rakieta/issues/771)) |
+| **Player profile** | *Show me in General*: a new event on the profile's stream, returned by the profile read ([#772](https://github.com/Rakieta02/Rakieta/issues/772)) |
+| **Player record** | the new strand, a block either way among the gates, *blocked by you* removed, whether *Add friend* may be offered ([#773](https://github.com/Rakieta02/Rakieta/issues/773)) |
+| **Friends** | the widened admission, *made from* the ranking with its sport, `daily_request_limit` ([#773](https://github.com/Rakieta02/Rakieta/issues/773)) |
 | **Player routes** | `GET /rankings/{sport}?view=general\|friends` (the card, the podium, General's first page or the whole of Friends); `GET /rankings/{sport}/general/rows` (pages of 50, after or before a cursor, or around the reader); `GET /home` gains `ranking`; `PUT /players/me/ranking-visibility` |
 | **Migrations** | the next numbers after the level-ask one (`0067`) |
-| **Since 2026-11-14** | ADR-0204 §2 takes *Show me in General*, the hidden flag, the lists' block filtering and `daily_request_limit` out of these shapes ([#791](https://github.com/Raketa02/Raketa/issues/791)), and adds the Top 10 read ([#797](https://github.com/Raketa02/Raketa/issues/797)) |
+| **Since 2026-11-14** | ADR-0204 §2 takes *Show me in General*, the hidden flag, the lists' block filtering and `daily_request_limit` out of these shapes ([#791](https://github.com/Rakieta02/Rakieta/issues/791)), and adds the Top 10 read ([#797](https://github.com/Rakieta02/Rakieta/issues/797)) |
 | **Seed** | through the use cases: a padel list longer than 50 with the protagonist below the first page; three or more friends listed in padel Friends; one account with 2–4 padel results; nobody listed in badminton. A second run changes nothing |
 
 **The card**, on `GET /rankings/{sport}`: a state — *listed*, *needs results* (with the count),
@@ -436,7 +436,7 @@ no friend is listed. The whole field is empty when the reader has no result anyw
 your first confirmed competitive game puts you on the list*, and *No squash level yet — get one, then
 one competitive game puts you on the list*.
 
-**Calls made while writing [#767](https://github.com/Raketa02/Raketa/issues/767)**, open for the
+**Calls made while writing [#767](https://github.com/Rakieta02/Rakieta/issues/767)**, open for the
 product owner to overrule:
 
 1. **The gap line names only rows the reader can see** ([§7.3](#73-whom-it-names)). A hidden or
@@ -489,8 +489,8 @@ product owner to overrule:
 
 - **The engine review**: how fast a level learns, especially in padel, and when new players should
   first appear in General. It needs research into Playtomic and DUPR first, then its own grilling
-  ([#781](https://github.com/Raketa02/Raketa/issues/781)).
-- **General by city**, once a second city opens ([#782](https://github.com/Raketa02/Raketa/issues/782)).
+  ([#781](https://github.com/Rakieta02/Rakieta/issues/781)).
+- **General by city**, once a second city opens ([#782](https://github.com/Rakieta02/Rakieta/issues/782)).
 - Points, seasons, or any second ranked number.
 - Separate lists by gender, and filters.
 - Pushes, bell lines or emails about the ranking.

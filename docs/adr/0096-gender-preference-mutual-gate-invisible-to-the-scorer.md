@@ -9,10 +9,10 @@
 - **§3's reach narrowed by [ADR-0159](0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)'s
   amendment of 2026-10-02.** The preference governs who a player is **matched** with. It does not
   reach the account **running an official group** the player joined, which opens their record
-  without it ([#566](https://github.com/Raketa02/Raketa/issues/566)). Every surface that
+  without it ([#566](https://github.com/Rakieta02/Rakieta/issues/566)). Every surface that
   introduces one player to another, and every co-member of a group, is still gated by it.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the candidate index and the scorer are gone (#579, #580), so §1's index row and scorer type, §3's per-search override, §4's relaxation and enumeration, §5's reason code and §6's `SearchContext` describe nothing that runs. The gate stands, mutual and unrelaxed: `player_profile`'s `preferences_are_mutual` is asked of every pair the proposer, the fill and a rescue would seat (`proposals`' `PlayerFit`), which is the every-pair reading ADR-0116 gave §4. §2, the silent half of §5 and §6 as amended stand, and `app/engines/matchfit/` still receives no gender.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The searches, the candidate index and the scorer are gone (#579, #580), so §1's index row and scorer type, §3's per-search override, §4's relaxation and enumeration, §5's reason code and §6's `SearchContext` describe nothing that runs. The gate stands, mutual and unrelaxed: `player_profile`'s `preferences_are_mutual` is asked of every pair the proposer, the fill and a rescue would seat (`proposals`' `PlayerFit`), which is the every-pair reading ADR-0116 gave §4. §2, the silent half of §5 and §6 as amended stand, and `app/engines/matchfit/` still receives no gender.
 
 ## Context
 
@@ -24,13 +24,13 @@ it *"the sharpest what-this-product-refuses-to-be line in the whole design"* and
 middle path: support it **only as a format declaration attached to a game** — *mixed doubles*,
 *women's doubles* — and **never as a browse filter over individuals**, handling the safety
 concern instead through public-place first games and the block machinery. This record settles
-[#160](https://github.com/Raketa02/Raketa/issues/160), and it **overrules that
+[#160](https://github.com/Rakieta02/Rakieta/issues/160), and it **overrules that
 recommendation**.
 
 **Why the middle path does not exist here.** The document's distinction is honest only where a
 game *already exists* and a player chooses to join it — an open invitation, where the
 composition rule is a property of the thing being joined rather than a filter over people. The
-map [The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
+map [The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155)
 rules open invitations and gatherings **out of scope** — they are the social half of the
 prototype. Inside scope, the only doubles surface is a searcher building their own four (§9.9).
 Declare *women's doubles* there and the engine hands back a shortlist for the three empty
@@ -208,8 +208,8 @@ badge would add no information and only a label.
 - **The pool fragments.** Every constrained searcher sees a fraction of the city, and under
   mutuality every constrained *candidate* is invisible to part of it. At eleven players this
   is severe, and it lands directly on
-  [The thin-pool experience](https://github.com/Raketa02/Raketa/issues/166) and
-  [The five numbers](https://github.com/Raketa02/Raketa/issues/167), which must now model the
+  [The thin-pool experience](https://github.com/Rakieta02/Rakieta/issues/166) and
+  [The five numbers](https://github.com/Rakieta02/Rakieta/issues/167), which must now model the
   gate's effect on coverage rather than assume one pool.
 - **`PREFER_NOT_TO_SAY` costs its holder reach**, and the honest framing of that cost is a copy
   problem nobody has solved yet.

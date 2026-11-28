@@ -7,15 +7,15 @@
 > `the-newcomer-path.md`: opponent variety is
 > withdrawn from the contract.** It was demanded on behalf of two consumers — familiarity's sign
 > flip (§9.4) and the welcoming-record modifier.
-> [#164](https://github.com/Raketa02/Raketa/issues/164) struck the first as a statistic that does
-> not exist; [#175](https://github.com/Raketa02/Raketa/issues/175) struck the second as an input
+> [#164](https://github.com/Rakieta02/Rakieta/issues/164) struck the first as a statistic that does
+> not exist; [#175](https://github.com/Rakieta02/Rakieta/issues/175) struck the second as an input
 > the style and vibe terms already pay for. **A consumer-driven contract with no consumer is
 > withdrawn, not carried**: the whole discipline is that a demand is executable against a
 > provider, and a demand nobody reads is a demand nobody notices going wrong. The six strands,
 > the two standing-down powers and everything else below are untouched. If a later term wants
 > variety, it returns as that term's demand and signs for it.
 
-> **Amended 2026-08-30 by [#253](https://github.com/Raketa02/Raketa/issues/253): one contract,
+> **Amended 2026-08-30 by [#253](https://github.com/Rakieta02/Rakieta/issues/253): one contract,
 > two providers.** `challenges` shipped, and it signs `MatchHistoryQuery` alongside the
 > still-unwritten `matches`. That knowingly bends *one provider signs one contract* — the rule
 > stated in `matchmaking/domain/ports.py` and the reason the five ports are split the way they
@@ -33,7 +33,7 @@
 > §5 and §6 below are read with that in mind — every count is still measured, but it is measured
 > against real seats rather than against an empty platform. Everything else here is untouched.
 
-> **Amended 2026-09-05 by [#253](https://github.com/Raketa02/Raketa/issues/253),
+> **Amended 2026-09-05 by [#253](https://github.com/Rakieta02/Rakieta/issues/253),
 > [ADR-0139](0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md) and
 > [ADR-0140](0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md):
 > the three null objects are gone, and the discipline is what retired them.** Every demand in this record was written against a context that did not exist, and each
@@ -44,9 +44,9 @@
 >
 > | Was | Said | Retired by |
 > | --- | --- | --- |
-> | `NoMatchHistoryExists` | *nobody has played anybody* | **deleted, not narrowed** — half of what it asserted became false when `challenges` shipped ([#253](https://github.com/Raketa02/Raketa/issues/253)); `games` then composed in the other half ([ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)) |
-> | `NoResultUpdateRuleExists` | *nobody's Level has ever moved on a result, because nothing moves it* | [ADR-0139](0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md) — `rating`'s own update rule, read forward as `at_stake` ([#304](https://github.com/Raketa02/Raketa/issues/304)) |
-> | `NoPlayerScoresExist` | *nobody has a Player Score, because nobody has ever been due to play* | [ADR-0140](0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md) — two of the five strands fold out of `games` and `challenges` ([#305](https://github.com/Raketa02/Raketa/issues/305)) |
+> | `NoMatchHistoryExists` | *nobody has played anybody* | **deleted, not narrowed** — half of what it asserted became false when `challenges` shipped ([#253](https://github.com/Rakieta02/Rakieta/issues/253)); `games` then composed in the other half ([ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)) |
+> | `NoResultUpdateRuleExists` | *nobody's Level has ever moved on a result, because nothing moves it* | [ADR-0139](0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md) — `rating`'s own update rule, read forward as `at_stake` ([#304](https://github.com/Rakieta02/Rakieta/issues/304)) |
+> | `NoPlayerScoresExist` | *nobody has a Player Score, because nobody has ever been due to play* | [ADR-0140](0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md) — two of the five strands fold out of `games` and `challenges` ([#305](https://github.com/Rakieta02/Rakieta/issues/305)) |
 >
 > **One consequence is worth naming because it is invisible in a diff.** The set of terms with
 > no provider is now **empty**, so the evidence gate's basis moved from seven live terms to
@@ -60,7 +60,7 @@
 > Everything else here is untouched — above all the discipline itself, which is what made three
 > provider arrivals three composition-root edits.
 
-> **Amended 2026-09-08 by [#380](https://github.com/Raketa02/Raketa/issues/380): opponent
+> **Amended 2026-09-08 by [#380](https://github.com/Rakieta02/Rakieta/issues/380): opponent
 > variety returns, with its consumer named.** The 2026-08-26 amendment above withdrew it and
 > said what would bring it back — *if a later term wants variety, it returns as that term's
 > demand and signs for it*. The **player record** ([ADR-0159](0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md))
@@ -87,7 +87,7 @@
 > asserted there, because an unbounded fold behind a set-shaped read is one somebody eventually
 > calls inside the walk over five hundred candidates §4 bounds.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches and the ranking are gone (#579, #580), and so are the matcher's demands on a Player Score and on the match history: Decisions 1–4, 7, the term half of 6 and the 2026-08-30 amendment describe ports and adapters that no longer exist. The discipline stands and has spread. Every outward port is a demand run over every registered implementation, the null ones included, from a register in the composition root (`app/bootstrap/*_demands.py`, `tests/demands/`). The matcher's register holds three rows — the hold (`NoHoldsExist`), the account status and the at-stake read — and Decision 2's value-plus-evidence shape lives on as `player_score`'s own publication, read by the player record.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The searches and the ranking are gone (#579, #580), and so are the matcher's demands on a Player Score and on the match history: Decisions 1–4, 7, the term half of 6 and the 2026-08-30 amendment describe ports and adapters that no longer exist. The discipline stands and has spread. Every outward port is a demand run over every registered implementation, the null ones included, from a register in the composition root (`app/bootstrap/*_demands.py`, `tests/demands/`). The matcher's register holds three rows — the hold (`NoHoldsExist`), the account status and the at-stake read — and Decision 2's value-plus-evidence shape lives on as `player_score`'s own publication, read by the player record.
 
 ## Context
 
@@ -95,11 +95,11 @@ Of the eight Fit terms in
 `docs/specs/matchmaking/matchmaking-engine.md` *(removed)* §9.3,
 five work against the backend as it stands. The rest read `player_score`, `matches` and `cases`,
 **none of which exist**, and the map
-[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
+[The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155)
 does not build them. It writes down what the matcher *demands* of them, and
 [ADR-0093](0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)'s §10 degradation
 property is what lets the engine ship in the meantime. This record settles
-[#163](https://github.com/Raketa02/Raketa/issues/163).
+[#163](https://github.com/Rakieta02/Rakieta/issues/163).
 
 **The specific failure this is written against.** §9.3.4 reads the Player Score's **six strands
 separately**, because *confirms results* is close to worthless for a friendly and close to
@@ -148,7 +148,7 @@ The alternatives considered and rejected:
   live. Rejected: `player_score` would then have signed half of two contracts and all of
   neither, and the point of a consumer-driven contract is that one provider signs one thing.
 - **A pair table in the candidate index.** Rejected on the same arithmetic that killed §9.2's
-  geo-cell buckets in [#161](https://github.com/Raketa02/Raketa/issues/161): the pairs a search
+  geo-cell buckets in [#161](https://github.com/Rakieta02/Rakieta/issues/161): the pairs a search
   needs are the searcher's own, they number in the tens, and reading them once per search costs
   nothing against the measured 1.00 µs per surviving candidate.
 - **Contract tests that skip until a provider exists.** Rejected — see Decision 4. A skipped

@@ -4,7 +4,7 @@
 - **Date:** 2026-08-26
 - **§1 narrowed 2026-09-25 by [ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §5**: age is a precondition of **playing**, not of holding an account. An account an Invitation created isn't attested, and *Start playing* asks before anything player-side; sign-up still refuses without it, and no Skill rating exists without one. *Adults only* and *attestation, not verification* stand.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The search, its candidate index and the gate roster this record counted against are gone (#579, #580), so *once per search*, *beside the block set*, *spent at generation* and *never an index column* describe nothing that runs. The gate stands as decided: `AccountStatusQuery` reads `users`, fails closed, tells nobody and stays apart from the hold, and it now guards the player record through `AccountGates`, where a block is no longer beside it (ADR-0193 §2). §1's attestation is untouched.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The search, its candidate index and the gate roster this record counted against are gone (#579, #580), so *once per search*, *beside the block set*, *spent at generation* and *never an index column* describe nothing that runs. The gate stands as decided: `AccountStatusQuery` reads `users`, fails closed, tells nobody and stays apart from the hold, and it now guards the player record through `AccountGates`, where a block is no longer beside it (ADR-0193 §2). §1's attestation is untouched.
 
 ## Context
 
@@ -15,8 +15,8 @@ column says `policy` rather than a context.
 
 `the-engine.md` §3 carried it forward as row 8 of ten,
 marked ⚠ **no policy, no field, no decision** — the only row of the roster with nothing behind
-it. Resolving [#189](https://github.com/Raketa02/Raketa/issues/189) on the map
-[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
+it. Resolving [#189](https://github.com/Rakieta02/Rakieta/issues/189) on the map
+[The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155)
 settles it, and the settling is not one decision but two, because **the row held two rules and
 neither was the one it looked like.**
 
@@ -65,10 +65,10 @@ ten because the eligibility half is replaced in place.
 
 The rule is **an attestation at sign-up — one boolean — and never a date of birth**, so §7.2's
 sentence stays literally true of the whole system and not only of the index. It is filed outside
-this map as [#191](https://github.com/Raketa02/Raketa/issues/191), split per app because one
-session changes one app ([#192](https://github.com/Raketa02/Raketa/issues/192) backend,
-[#193](https://github.com/Raketa02/Raketa/issues/193) player app), on the
-[#176](https://github.com/Raketa02/Raketa/issues/176) precedent for a decision made here that
+this map as [#191](https://github.com/Rakieta02/Rakieta/issues/191), split per app because one
+session changes one app ([#192](https://github.com/Rakieta02/Rakieta/issues/192) backend,
+[#193](https://github.com/Rakieta02/Rakieta/issues/193) player app), on the
+[#176](https://github.com/Rakieta02/Rakieta/issues/176) precedent for a decision made here that
 owes code elsewhere. **It is an attestation and not age verification** — it records that the
 question was asked and answered, and claims nothing more.
 
@@ -135,7 +135,7 @@ obligation rather than a matchmaking rule.
   §3 and a day-one item in §16.
 
 - **`AccountStatusQuery` needs no consumer-driven contract stub.** The other four ports exist
-  because their providers do not ([#163](https://github.com/Raketa02/Raketa/issues/163)); this
+  because their providers do not ([#163](https://github.com/Rakieta02/Rakieta/issues/163)); this
   one has a real adapter on day one, and the contract suite runs against it rather than against a
   fake standing in for a context nobody has written.
 

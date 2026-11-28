@@ -1,7 +1,7 @@
 # Home rows — the screens
 
 > **Status:** agreed in the Home rows grilling on 2026-11-13/14, specified as PRD
-> [#789](https://github.com/Raketa02/Raketa/issues/789), recorded by
+> [#789](https://github.com/Rakieta02/Rakieta/issues/789), recorded by
 > [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md).
 >
 > **Its companion** is [the-mechanics.md](the-mechanics.md), which says what happens. This document
@@ -19,15 +19,15 @@
 
 ### 1. Home, top to bottom
 
-> **Amended by [#820](https://github.com/Raketa02/Raketa/issues/820)**
+> **Amended by [#820](https://github.com/Rakieta02/Rakieta/issues/820)**
 > ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
 > §4, §5; home refactor 3–13): the five rows fold into **FOR YOU**'s five lines. What waits for an
 > answer moved behind the envelope with #816 and #817 ([the games screens A8](../games-and-fill-in/the-screens.md#a8-home)).
 >
-> **Amended by [#822](https://github.com/Raketa02/Raketa/issues/822)** (ADR-0205 §5, §6; home
+> **Amended by [#822](https://github.com/Rakieta02/Rakieta/issues/822)** (ADR-0205 §5, §6; home
 > refactor 3, 4, 7): every line but Top 10 draws its count, and the people lines read *See all N ›*.
 >
-> **Amended by [#823](https://github.com/Raketa02/Raketa/issues/823)** (ADR-0205 §7; home refactor
+> **Amended by [#823](https://github.com/Rakieta02/Rakieta/issues/823)** (ADR-0205 §7; home refactor
 > 5): Groups heating up's footer reads *All groups ›*, to the Groups heating up page (§3.6).
 
 - **The header, *Get your level* and *Your games***, as ADR-0205 §4 orders them.
@@ -39,7 +39,7 @@
 - **A closed line is a white card** with its title on the left and, on the right, a small grey
   **count pill** and a chevron (›), and nothing else: no faces, no subtitles, no tiles. Top 10 has no
   count.
-- **The count is how many there are to explore** ([#822](https://github.com/Raketa02/Raketa/issues/822);
+- **The count is how many there are to explore** ([#822](https://github.com/Rakieta02/Rakieta/issues/822);
   ADR-0205 §6; home refactor 3, 4): *Groups heating up · 6*, *Players at your level · 99+*, *New in
   Rakieta · 6*, *Players with your vibe · 14*. It is the line's **pool**, never how many of them are a
   good match: every group of 3 or more; everybody holding a level in a sport the reader plays;
@@ -58,8 +58,8 @@
   **its footer**: *See all N ›* on the three people lines, to their See all screens — N the line's
   count, *99+* included, though See all shows one sport at a time (#822; home refactor 7); on Top 10, the
   sport switcher, *Padel ›*, on the left, opening to the right, and *Open the rankings ›* on the
-  right ([#821](https://github.com/Raketa02/Raketa/issues/821), §7.1; home refactor 12, 13); on
-  Groups heating up, ***All groups ›***, to its page ([#823](https://github.com/Raketa02/Raketa/issues/823),
+  right ([#821](https://github.com/Rakieta02/Rakieta/issues/821), §7.1; home refactor 12, 13); on
+  Groups heating up, ***All groups ›***, to its page ([#823](https://github.com/Rakieta02/Rakieta/issues/823),
   §3.6; home refactor 5).
 - **Motion** (designed, no mock): the content unfolds and fades in over about a quarter of a second,
   fast at first and settling; the lines below slide down rather than jump; closing is a little
@@ -86,9 +86,9 @@
 **One frame in shared UI**, built first and used by today's rows and the five new ones: the heading,
 an optional *See all ›*, an optional slot for a control (Top 10's pill and *Rankings ›*), and the
 sideways rail. Moving today's rows onto it changes nothing on screen
-([#798](https://github.com/Raketa02/Raketa/issues/798)).
+([#798](https://github.com/Rakieta02/Rakieta/issues/798)).
 
-**Since [#820](https://github.com/Raketa02/Raketa/issues/820), the five rows are folding lines** (ADR-0205
+**Since [#820](https://github.com/Rakieta02/Rakieta/issues/820), the five rows are folding lines** (ADR-0205
 §9.5): a line is a card holding its title and chevron, and, open, the frame's sideways rail — its
 tiles a share of the line's content, cut at the line's own edge — and a **footer row** at the bottom
 right carrying the links that stood on the heading. The frame's heading keeps no link or control; it
@@ -99,7 +99,7 @@ draws Needs your answer's sections and *Your games*.
 #### 3.1 The row (home rows 1, 21)
 
 - **Up to 6 group cards**, HOTTEST first, then GROWING, then untagged ([the mechanics §5.4](the-mechanics.md#54-order-and-the-six-q10)).
-- **At the open line's foot, on the right, *All groups ›*** ([#823](https://github.com/Raketa02/Raketa/issues/823);
+- **At the open line's foot, on the right, *All groups ›*** ([#823](https://github.com/Rakieta02/Rakieta/issues/823);
   home refactor 5), to the Groups heating up page (§3.6). It had no *See all* before.
 
 #### 3.2 The card (home rows 3, 3.2, 4, 5)
@@ -113,7 +113,7 @@ draws Needs your answer's sections and *Your games*.
 - **Two figures**, mono: *14* over *games this week* on the left, *11* over *players* on the right,
   held against the card's edge (home refactor 5.1).
 - **No sport line, no *+N this month*, no heat bar** — the card is slimmer since
-  [#821](https://github.com/Raketa02/Raketa/issues/821) (ADR-0205 §5, Q22; home refactor 5.1). It
+  [#821](https://github.com/Rakieta02/Rakieta/issues/821) (ADR-0205 §5, Q22; home refactor 5.1). It
   drew the sports as dots and names cut with an ellipsis, a green *+3 this month* beside the players,
   and a heat bar filled by the card's heat share (home rows 3, 4). **The group sheet keeps the sports
   and *new this month*** (§3.3); the heat still orders the cards and picks the tags
@@ -171,7 +171,7 @@ circle** top-right.
 
 #### 3.6 The Groups heating up page (designed, no mock)
 
-Built by [#823](https://github.com/Raketa02/Raketa/issues/823) (ADR-0205 §7, Q18, Q35, Q36): **no mock
+Built by [#823](https://github.com/Rakieta02/Rakieta/issues/823) (ADR-0205 §7, Q18, Q35, Q36): **no mock
 draws it**, so it is made of the line's card and the people See all screens' frame (§4.4, §5.3).
 
 - **Pushed over Home** by the line's *All groups ›*, the Home tab still lit. **Back** (‹) is Home, the
@@ -216,7 +216,7 @@ draws it**, so it is made of the line's card and the people See all screens' fra
   one past it above (home rows 7, 8).
 - **The footer:** *2 sports ›* in volt when they share more than one sport, and the round button.
   With one, the button alone. **No gap in words** since
-  [#821](https://github.com/Raketa02/Raketa/issues/821) (ADR-0205 §5, Q22; home refactor 7): the card
+  [#821](https://github.com/Rakieta02/Rakieta/issues/821) (ADR-0205 §5, Q22; home refactor 7): the card
   read *0,02 below you*, *0,09 above you* or *Same level* before *· 2 sports ›*; the comparison sheet's
   blocks still say it (§4.3), and the card's pairing no longer speaks it. Everything else stays.
 - **The round friend button** ([§8](#8-the-round-friend-button-and-its-sheets)).
@@ -317,7 +317,7 @@ draws it**, so it is made of the line's card and the people See all screens' fra
 #### 7.1 The row (home rows 2, 25, 25.1, 25.2, 25.3)
 
 - **The heading:** *TOP 10*, the sliding sport pill (*● Padel ‹*), and *Rankings ›* on the right —
-  the row's, until FOR YOU's line (§1, #820). **Since [#821](https://github.com/Raketa02/Raketa/issues/821)**
+  the row's, until FOR YOU's line (§1, #820). **Since [#821](https://github.com/Rakieta02/Rakieta/issues/821)**
   (ADR-0205 §5, Q19, Q37; home refactor 12, 13) **the open line's footer** holds them: **the sport
   switcher on the left**, *● Padel ›*, its chevron pointing the way it opens (§7.3), and ***Open the
   rankings ›*** on the right, in *Rankings ›*'s place, going where it went
@@ -342,7 +342,7 @@ draws it**, so it is made of the line's card and the people See all screens' fra
 
 - **The deck's sliding sport pill**, lifted to shared UI by #774. Opened, it slid over the heading:
   the other sports in the app's order, then the chosen one in ink with *›*. **Since
-  [#821](https://github.com/Raketa02/Raketa/issues/821) it opens to the right** from the footer's left,
+  [#821](https://github.com/Rakieta02/Rakieta/issues/821) it opens to the right** from the footer's left,
   with today's animation (designed, no mock): the chosen one first, in ink with *‹*, where the pill
   stood, then the other sports in the app's order, sliding out after it — the bar lies over the
   footer, *Open the rankings ›* included, and a tap anywhere on the footer folds it.

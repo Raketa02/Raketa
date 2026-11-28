@@ -27,10 +27,10 @@
 - **Extends [ADR-0029](0029-seed-data-through-aggregates-never-in-production.md)** to situations:
   they go through the same use cases a request runs, on a backdated clock (§4).
 - Decided in the 2026-10-05 grilling that removed Classic play (Q8, Q13–Q16, Q23–Q25), for PRD
-  [#570](https://github.com/Raketa02/Raketa/issues/570). Settles
-  [#589](https://github.com/Raketa02/Raketa/issues/589). Built by
-  [#590](https://github.com/Raketa02/Raketa/issues/590)–[#594](https://github.com/Raketa02/Raketa/issues/594),
-  after [#578](https://github.com/Raketa02/Raketa/issues/578) removes the old console.
+  [#570](https://github.com/Rakieta02/Rakieta/issues/570). Settles
+  [#589](https://github.com/Rakieta02/Rakieta/issues/589). Built by
+  [#590](https://github.com/Rakieta02/Rakieta/issues/590)–[#594](https://github.com/Rakieta02/Rakieta/issues/594),
+  after [#578](https://github.com/Rakieta02/Rakieta/issues/578) removes the old console.
 
 ## Context
 

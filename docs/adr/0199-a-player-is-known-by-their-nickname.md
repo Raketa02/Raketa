@@ -31,13 +31,13 @@
 - **Does not decide** a limit on how often a nickname changes, a search by nickname, reserved or
   offensive nicknames, or how club staff are named on the club surface and in their own emails,
   which stays as it is.
-- Settles the nickname half of PRD [#722](https://github.com/Raketa02/Raketa/issues/722), decided
+- Settles the nickname half of PRD [#722](https://github.com/Rakieta02/Rakieta/issues/722), decided
   in the onboarding grilling on 2026-11-03 (Q13, Q23, Q24) and written by
-  [#723](https://github.com/Raketa02/Raketa/issues/723). Built by
-  [#724](https://github.com/Raketa02/Raketa/issues/724) (the player API),
-  [#725](https://github.com/Raketa02/Raketa/issues/725) (the club API),
-  [#728](https://github.com/Raketa02/Raketa/issues/728) (the phone) and
-  [#734](https://github.com/Raketa02/Raketa/issues/734) (the club website).
+  [#723](https://github.com/Rakieta02/Rakieta/issues/723). Built by
+  [#724](https://github.com/Rakieta02/Rakieta/issues/724) (the player API),
+  [#725](https://github.com/Rakieta02/Rakieta/issues/725) (the club API),
+  [#728](https://github.com/Rakieta02/Rakieta/issues/728) (the phone) and
+  [#734](https://github.com/Rakieta02/Rakieta/issues/734) (the club website).
 
 ## Context
 
@@ -51,7 +51,7 @@ Bookings page and join requests, and the payment emails.
 **Players don't expect that.** The name feels private and isn't. What players expect is what
 Instagram does: one handle is who you are, and it is what everybody sees. A real name Rakieta shows
 to strangers is a real name Rakieta holds, and Rakieta has no privacy policy yet
-([#735](https://github.com/Raketa02/Raketa/issues/735)).
+([#735](https://github.com/Rakieta02/Rakieta/issues/735)).
 
 **The naming is also one more field between sign-up and Home.** *How should people see you?* asks
 for a Name and a Nickname, with *"Use letters, numbers, and . _ - only — no spaces."* under the

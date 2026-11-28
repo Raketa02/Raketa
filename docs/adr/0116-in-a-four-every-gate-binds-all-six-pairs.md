@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the line-up route and the group objective are gone (#579, #580), so the searcher, the mask inside a K = 24 enumeration, `NO_ADMISSIBLE_COMBINATION`, the index's copy of gender and μ, the re-verified line-up and the per-search falsifier describe nothing that runs. The rule stands, and the Games deck is built on it: no block either way, mutual gender preference and the level window (narrowed while either player is new) bind every pair on a court. It is `proposals`' `PlayerFit`, asked by the proposer, the fill and a rescue over one bulk block read (`blocked_pairs_among`), and it fails closed.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The searches, the line-up route and the group objective are gone (#579, #580), so the searcher, the mask inside a K = 24 enumeration, `NO_ADMISSIBLE_COMBINATION`, the index's copy of gender and μ, the re-verified line-up and the per-search falsifier describe nothing that runs. The rule stands, and the Games deck is built on it: no block either way, mutual gender preference and the level window (narrowed while either player is new) bind every pair on a court. It is `proposals`' `PlayerFit`, asked by the proposer, the fill and a rescue over one bulk block read (`blocked_pairs_among`), and it fails closed.
 
 ## Context
 
@@ -23,8 +23,8 @@ pair on the screen.
 
 **A four contains six pairs. The searcher is in three of them.**
 
-Resolving [#180](https://github.com/Raketa02/Raketa/issues/180) on the map
-[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
+Resolving [#180](https://github.com/Rakieta02/Rakieta/issues/180) on the map
+[The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155)
 found that the other three are gated against nobody. I search; the engine seats me with `a`,
 `b` and `c`; all three passed every gate **against me**; nothing ever compared `a` to `b`.
 
@@ -101,9 +101,9 @@ that code the gate is indistinguishable from a thin pool, on the screen and in t
 **It is harsher than a shortlist gate, and it compounds.** Every pairwise exclusion removes a
 whole family of combinations. Combined with ADR-0113, a newcomer's for-fun four narrows three
 of its six pairs from 0.90 to 0.55, and at launch density
-([#161](https://github.com/Raketa02/Raketa/issues/161): 63% of searches already return fewer
+([#161](https://github.com/Rakieta02/Rakieta/issues/161): 63% of searches already return fewer
 than five candidates) **a newcomer's first doubles game may frequently be unreachable**. That is
-the trade ADR-0099 and [#175](https://github.com/Raketa02/Raketa/issues/175) have both already
+the trade ADR-0099 and [#175](https://github.com/Rakieta02/Rakieta/issues/175) have both already
 taken deliberately — *a bad match is worse than no match*, and a first game is the one this
 product can least afford to get wrong.
 

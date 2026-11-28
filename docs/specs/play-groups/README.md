@@ -1,9 +1,9 @@
 # Play › Groups, the club website and the Administrator: the mocks
 
-**What PRD [#500](https://github.com/Raketa02/Raketa/issues/500) is drawn from.** These are the
+**What PRD [#500](https://github.com/Rakieta02/Rakieta/issues/500) is drawn from.** These are the
 product owner's mocks, copied here from `rakieta_v2.0/1-play` (62 mocks) and `rakieta_v2.0/club` (19
 mocks, numbered 1–11 and 13–20, with no 12) so that every session can read them. Landed by
-[#501](https://github.com/Raketa02/Raketa/issues/501) on 2026-09-25.
+[#501](https://github.com/Rakieta02/Rakieta/issues/501) on 2026-09-25.
 
 ## How to read them
 
@@ -33,19 +33,19 @@ mocks, numbered 1–11 and 13–20, with no 12) so that every session can read t
 
 | Area | Mocks | Built by |
 | --- | --- | --- |
-| Play: the Groups entry and the list | play [1](mocks/play/01_groups_entry_point_screen.png), [3](mocks/play/03_groups_explore_tabs.png), [38](mocks/play/38_group_list_card.png) | [#512](https://github.com/Raketa02/Raketa/issues/512) |
-| New group | play [4](mocks/play/04_new_group_screen.png)–[13](mocks/play/13_new_group_button.png). The home club is **required**, overriding play 4 | [#512](https://github.com/Raketa02/Raketa/issues/512) |
-| Join a group | play [23](mocks/play/23_join_group_empty_state.png)–[37](mocks/play/37_join_group_result_card_4.png) | [#512](https://github.com/Raketa02/Raketa/issues/512) |
-| The group page: header, fast filter, tab bar, Games | play [14](mocks/play/14_new_group_page_games_tennis.png)–[17](mocks/play/17_new_group_game_badminton.png), [39](mocks/play/39_group_page_general.png)–[43](mocks/play/43_group_page_tab_bar.png) | [#513](https://github.com/Raketa02/Raketa/issues/513) |
-| Fill in | play [45](mocks/play/45_group_page_fill_in.png)–[47](mocks/play/47_group_page_fill_in_post_a_game_button.png) | [#513](https://github.com/Raketa02/Raketa/issues/513) |
-| Friends: the court and the Friends screen | play [49](mocks/play/49_group_page_friends_general.png)–[55](mocks/play/55_group_page_friends_screen_empty_message.png): the empty court in each sport and the empty picker. **Friends itself** — seating friends, the card, sending, requests — is drawn by the twelve mocks of [the Friends spec set](../friends/README.md) (PRD [#743](https://github.com/Raketa02/Raketa/issues/743)) | [#513](https://github.com/Raketa02/Raketa/issues/513); with friends, [#757](https://github.com/Raketa02/Raketa/issues/757) |
-| Info, the group's own screen, opened from the group page's header (Q125, [*Overrides*](#overrides)) | play [57](mocks/play/57_group_page_info_initial.png)–[60](mocks/play/60_group_page_info_cards_initial.png) | [#514](https://github.com/Raketa02/Raketa/issues/514); its own screen, [#721](https://github.com/Raketa02/Raketa/issues/721) |
-| Members | play [61](mocks/play/61_members_page.png) | [#514](https://github.com/Raketa02/Raketa/issues/514) |
-| The request card, **everywhere** | club [20](mocks/club/20_request_to_join_card.png), replacing play 62 | [#514](https://github.com/Raketa02/Raketa/issues/514), [#516](https://github.com/Raketa02/Raketa/issues/516) |
-| The club website: sign in, Administrators, Groups | club [1](mocks/club/01_club_sign_in.png)–[4](mocks/club/04_club_admin_invitation_sent.png), [14](mocks/club/14_administrator_table.png)–[16](mocks/club/16_groups_club_table.png) | [#522](https://github.com/Raketa02/Raketa/issues/522)–[#524](https://github.com/Raketa02/Raketa/issues/524) |
-| The invitation sheet and the profile switcher | club [5](mocks/club/05_player_admin_invitation.png)–[7](mocks/club/07_profile_selector_player_admin.png) | [#518](https://github.com/Raketa02/Raketa/issues/518) |
-| The Administrator's side of the app | club [8](mocks/club/08_administrator_view_general_no_groups_yet.png)–[11](mocks/club/11_administrator_group_created.png), [13](mocks/club/13_administrator_group_created_details.png), [17](mocks/club/17_administrator_with_groups_in_filled.png)–[19](mocks/club/19_administrator_group_no_pending_request.png) | [#516](https://github.com/Raketa02/Raketa/issues/516), [#517](https://github.com/Raketa02/Raketa/issues/517) |
-| A group seen from outside it: the card, the group sheet and Withdraw (2026-11-14) | home rows 3–6 and 21, in [the Home rows spec set](../home-rows/README.md#index) | [#792](https://github.com/Raketa02/Raketa/issues/792), [#800](https://github.com/Raketa02/Raketa/issues/800) |
+| Play: the Groups entry and the list | play [1](mocks/play/01_groups_entry_point_screen.png), [3](mocks/play/03_groups_explore_tabs.png), [38](mocks/play/38_group_list_card.png) | [#512](https://github.com/Rakieta02/Rakieta/issues/512) |
+| New group | play [4](mocks/play/04_new_group_screen.png)–[13](mocks/play/13_new_group_button.png). The home club is **required**, overriding play 4 | [#512](https://github.com/Rakieta02/Rakieta/issues/512) |
+| Join a group | play [23](mocks/play/23_join_group_empty_state.png)–[37](mocks/play/37_join_group_result_card_4.png) | [#512](https://github.com/Rakieta02/Rakieta/issues/512) |
+| The group page: header, fast filter, tab bar, Games | play [14](mocks/play/14_new_group_page_games_tennis.png)–[17](mocks/play/17_new_group_game_badminton.png), [39](mocks/play/39_group_page_general.png)–[43](mocks/play/43_group_page_tab_bar.png) | [#513](https://github.com/Rakieta02/Rakieta/issues/513) |
+| Fill in | play [45](mocks/play/45_group_page_fill_in.png)–[47](mocks/play/47_group_page_fill_in_post_a_game_button.png) | [#513](https://github.com/Rakieta02/Rakieta/issues/513) |
+| Friends: the court and the Friends screen | play [49](mocks/play/49_group_page_friends_general.png)–[55](mocks/play/55_group_page_friends_screen_empty_message.png): the empty court in each sport and the empty picker. **Friends itself** — seating friends, the card, sending, requests — is drawn by the twelve mocks of [the Friends spec set](../friends/README.md) (PRD [#743](https://github.com/Rakieta02/Rakieta/issues/743)) | [#513](https://github.com/Rakieta02/Rakieta/issues/513); with friends, [#757](https://github.com/Rakieta02/Rakieta/issues/757) |
+| Info, the group's own screen, opened from the group page's header (Q125, [*Overrides*](#overrides)) | play [57](mocks/play/57_group_page_info_initial.png)–[60](mocks/play/60_group_page_info_cards_initial.png) | [#514](https://github.com/Rakieta02/Rakieta/issues/514); its own screen, [#721](https://github.com/Rakieta02/Rakieta/issues/721) |
+| Members | play [61](mocks/play/61_members_page.png) | [#514](https://github.com/Rakieta02/Rakieta/issues/514) |
+| The request card, **everywhere** | club [20](mocks/club/20_request_to_join_card.png), replacing play 62 | [#514](https://github.com/Rakieta02/Rakieta/issues/514), [#516](https://github.com/Rakieta02/Rakieta/issues/516) |
+| The club website: sign in, Administrators, Groups | club [1](mocks/club/01_club_sign_in.png)–[4](mocks/club/04_club_admin_invitation_sent.png), [14](mocks/club/14_administrator_table.png)–[16](mocks/club/16_groups_club_table.png) | [#522](https://github.com/Rakieta02/Rakieta/issues/522)–[#524](https://github.com/Rakieta02/Rakieta/issues/524) |
+| The invitation sheet and the profile switcher | club [5](mocks/club/05_player_admin_invitation.png)–[7](mocks/club/07_profile_selector_player_admin.png) | [#518](https://github.com/Rakieta02/Rakieta/issues/518) |
+| The Administrator's side of the app | club [8](mocks/club/08_administrator_view_general_no_groups_yet.png)–[11](mocks/club/11_administrator_group_created.png), [13](mocks/club/13_administrator_group_created_details.png), [17](mocks/club/17_administrator_with_groups_in_filled.png)–[19](mocks/club/19_administrator_group_no_pending_request.png) | [#516](https://github.com/Rakieta02/Rakieta/issues/516), [#517](https://github.com/Rakieta02/Rakieta/issues/517) |
+| A group seen from outside it: the card, the group sheet and Withdraw (2026-11-14) | home rows 3–6 and 21, in [the Home rows spec set](../home-rows/README.md#index) | [#792](https://github.com/Rakieta02/Rakieta/issues/792), [#800](https://github.com/Rakieta02/Rakieta/issues/800) |
 
 **Mocks exist for none of these:** the sign-up page and Club details on the club website, the public
 site, the app's *Set your password*, *Have an invitation code?*, *Forgot password* and *Set a new
@@ -55,7 +55,7 @@ white card) and is laid out for phones first. The app's account screens are buil
 screen's own components.
 
 > **Amended 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
-> §3 (the games and fill-in mechanics Q131, PRD [#789](https://github.com/Raketa02/Raketa/issues/789)):
+> §3 (the games and fill-in mechanics Q131, PRD [#789](https://github.com/Rakieta02/Rakieta/issues/789)):
 >
 > - **A non-member sees a group from outside**, on Home's *Hottest groups*: its card and **the group
 >   sheet** — the name, *Open group* or *Closed group*, *run by* the club or the Owner's nickname, the
@@ -81,7 +81,7 @@ where the feature is going, and build nothing from them. They show things that a
 - a completed friends court
 - earlier drafts of the group page, which play 39–61 replace
 
-Play 56's completed friends court is now in scope (PRD [#743](https://github.com/Raketa02/Raketa/issues/743)),
+Play 56's completed friends court is now in scope (PRD [#743](https://github.com/Rakieta02/Rakieta/issues/743)),
 and *friends 7–8* in [the Friends spec set](../friends/README.md) draw it and lead; play 56 stays
 background.
 
@@ -97,7 +97,7 @@ everywhere else.
 | club 11, 13, 18 | club 18's link card with a *posted 40 d ago* tag and *Post again* | **Club 11's card, always**: *"Post this in the WhatsApp group. Everybody who taps it lands here."*, **Post to WhatsApp** and **Copy link**. There is no *posted* tag and no *Post again* state. |
 | club 8, 9 | the Administrator's Groups tab headed by the person's name, with the profile switcher chip | **Club 17's header**: *OGRODY 33 · ADMINISTRATOR / Groups*. The switcher chip sits **on the You tab only**, in both profiles (club 7; ADR-0185 §3). Club 8–9's button and empty card stand. |
 | every play mock | a three-tab bar: Games · Play · You | **The bar is Home · ⚡ Play · You** (#576); the five-tab bar went with Classic play. The Administrator's side has its own two tabs, **Groups · You** (club 17–19). |
-| club 15, 16 | *Games* of 8 and 9. The feature document beside them also says *Players* excludes the administrator and the rows aren't tappable | ***Games* counts the games booked in the group** — every game its deck filled into a booking, never one two of its members arranged elsewhere (ADR-0183 §11, amended by ADR-0189). *Players* is **the group's member count**, including an Administrator who joined as a player. **Every row is tappable** and opens the Hand over page (#500 story 108, [#524](https://github.com/Raketa02/Raketa/issues/524)), where any official group can be handed over (ADR-0183 §8). |
+| club 15, 16 | *Games* of 8 and 9. The feature document beside them also says *Players* excludes the administrator and the rows aren't tappable | ***Games* counts the games booked in the group** — every game its deck filled into a booking, never one two of its members arranged elsewhere (ADR-0183 §11, amended by ADR-0189). *Players* is **the group's member count**, including an Administrator who joined as a player. **Every row is tappable** and opens the Hand over page (#500 story 108, [#524](https://github.com/Rakieta02/Rakieta/issues/524)), where any official group can be handed over (ADR-0183 §8). |
 | the group page: play 14–17, 39–60 and 62, and the games-and-fill-in mocks [1](../games-and-fill-in/mocks/player/1-games_tap_general_view.png), [9](../games-and-fill-in/mocks/player/9_competitive_forfun_tap.png) and [11](../games-and-fill-in/mocks/player/11_fill_in_tap_general.png) | a tab bar of four, *Games · Fill in · Friends · Info* (play 43, and every mock that shows the bar); Info's content on that fourth tab (play 57–60, 62); and a header that is not a button | **Three tabs: Games · Fill in · Friends.** **Info opens from the header** as its own screen, with the same content: the group's monogram, its name with the official mark and *N members · home club* are one button. **The Owner's count of waiting requests is on the monogram's corner.** The rest is Q125 in the [games-and-fill-in decision log](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log). |
 | every mock | *Rakieta*, `rakieta.app/g/…` | **Rakieta**, as drawn (ADR-0211), and `<public site>/join/<code>`. |
 

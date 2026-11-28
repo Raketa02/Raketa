@@ -6,7 +6,7 @@
   everyone; Home gains **Top 10** (ADR-0204 §8). Dated notes mark §3 and §7–§10. — **§5's *the bell
   keeps its corner* and §9's card line amended 2026-11-16 by
   [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)**
-  §1–§2 (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)): the trophy takes the corner,
+  §1–§2 (PRD [#810](https://github.com/Rakieta02/Rakieta/issues/810)): the trophy takes the corner,
   the bell sits left of it, and an envelope left of the bell; a request's card no longer reads *Found
   you in the padel ranking*, which the notice still does. Dated notes mark §5 and §9.
 - **Date:** 2026-11-07
@@ -52,29 +52,29 @@
   - [ADR-0198](0198-the-player-app-is-not-built-for-screen-readers-for-now.md)'s ordinary-touch build.
 - **Does not decide:**
   - **the engine review**: how fast a level learns, in padel especially, and when new players should
-    first appear in General ([#781](https://github.com/Raketa02/Raketa/issues/781));
-  - **General by city**, once a second city opens ([#782](https://github.com/Raketa02/Raketa/issues/782));
+    first appear in General ([#781](https://github.com/Rakieta02/Rakieta/issues/781));
+  - **General by city**, once a second city opens ([#782](https://github.com/Rakieta02/Rakieta/issues/782));
   - points, seasons, or any second ranked number;
   - separate lists by gender, and filters;
   - pushes, bell lines or emails about the ranking;
   - a player's place on their record or passport;
   - a search for players by name;
   - the club website, the public site and the Administrator's views, which are untouched.
-- Settles PRD [#766](https://github.com/Raketa02/Raketa/issues/766), decided in the rankings grilling
+- Settles PRD [#766](https://github.com/Rakieta02/Rakieta/issues/766), decided in the rankings grilling
   on 2026-11-07 (Q1–Q26 there, the mechanics' **Q130**) and written by
-  [#767](https://github.com/Raketa02/Raketa/issues/767). Specified by
+  [#767](https://github.com/Rakieta02/Rakieta/issues/767). Specified by
   [`docs/specs/rankings/`](../specs/rankings/README.md): where this record and those documents
   disagree on a detail, the documents win, and this record holds the shape. The market research is
   [`docs/research/rankings-market.md`](../research/rankings-market.md). Built by the backend's
-  [#768](https://github.com/Raketa02/Raketa/issues/768) (the General list),
-  [#769](https://github.com/Raketa02/Raketa/issues/769) (the chip and the gap line),
-  [#770](https://github.com/Raketa02/Raketa/issues/770) (pages, at 50,000 players),
-  [#771](https://github.com/Raketa02/Raketa/issues/771) (Friends),
-  [#772](https://github.com/Raketa02/Raketa/issues/772) (the switch, and blocks in the lists) and
-  [#773](https://github.com/Raketa02/Raketa/issues/773) (strangers' records and requests, and a block
+  [#768](https://github.com/Rakieta02/Rakieta/issues/768) (the General list),
+  [#769](https://github.com/Rakieta02/Rakieta/issues/769) (the chip and the gap line),
+  [#770](https://github.com/Rakieta02/Rakieta/issues/770) (pages, at 50,000 players),
+  [#771](https://github.com/Rakieta02/Rakieta/issues/771) (Friends),
+  [#772](https://github.com/Rakieta02/Rakieta/issues/772) (the switch, and blocks in the lists) and
+  [#773](https://github.com/Rakieta02/Rakieta/issues/773) (strangers' records and requests, and a block
   closing the record); and the player app's
-  [#774](https://github.com/Raketa02/Raketa/issues/774)–[#779](https://github.com/Raketa02/Raketa/issues/779).
-  Walked by [#780](https://github.com/Raketa02/Raketa/issues/780).
+  [#774](https://github.com/Rakieta02/Rakieta/issues/774)–[#779](https://github.com/Rakieta02/Rakieta/issues/779).
+  Walked by [#780](https://github.com/Rakieta02/Rakieta/issues/780).
 
 ## Context
 
@@ -352,7 +352,7 @@ projection.
 
 **The backend's rule names its exception.** `backend/CLAUDE.md`'s *Derived, never stored* lists none
 today. A pointer to this section is owed there, and in the Rankings context's own rule note, by the
-backend session that builds [#768](https://github.com/Raketa02/Raketa/issues/768).
+backend session that builds [#768](https://github.com/Rakieta02/Rakieta/issues/768).
 
 **On the player surface:**
 
@@ -397,7 +397,7 @@ gains its admission, its origin and its daily limit. The shapes are
   or why, and places stay the same on every phone.
 - **The level learns slowly in padel.** After 5 games a newcomer's level is still more than half
   questionnaire, and an overclaimer can sit above honest players for months. The engine review
-  ([#781](https://github.com/Raketa02/Raketa/issues/781)) is where that is answered, and where 5
+  ([#781](https://github.com/Rakieta02/Rakieta/issues/781)) is where that is answered, and where 5
   results is revisited: the product owner calls the wait business-sensitive, because a newcomer who
   waits too long may leave.
 - **A friend request asks more.** Each one now reads whether the addressee is listed and hidden, and

@@ -21,10 +21,10 @@
   render it (§4).
 - **Follows [ADR-0028](0028-four-environment-model-and-typed-configuration.md)'s refusals** for every
   new setting.
-- Settles [#501](https://github.com/Raketa02/Raketa/issues/501) for the PRD
-  [#500](https://github.com/Raketa02/Raketa/issues/500). Built by
-  [#507](https://github.com/Raketa02/Raketa/issues/507), with the invitation emails in
-  [#508](https://github.com/Raketa02/Raketa/issues/508).
+- Settles [#501](https://github.com/Rakieta02/Rakieta/issues/501) for the PRD
+  [#500](https://github.com/Rakieta02/Rakieta/issues/500). Built by
+  [#507](https://github.com/Rakieta02/Rakieta/issues/507), with the invitation emails in
+  [#508](https://github.com/Rakieta02/Rakieta/issues/508).
 
 ## Context
 

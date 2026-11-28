@@ -9,7 +9,7 @@
 - **Completes ADR-0144**, which made
   a Plan *"its own bounded context"* and then deferred: *"the context's name, its events' spelling
   and what it refuses in the glossary's own voice are owed to
-  [#332](https://github.com/Raketa02/Raketa/issues/332)."*
+  [#332](https://github.com/Rakieta02/Rakieta/issues/332)."*
 - **Cites ADR-0110** — *two
   subscriptions, two guarantees*. That record sent the candidate index to the **log**; this one
   sends a conversation to the **outbox**, and the reason the objection does not transfer is
@@ -19,10 +19,10 @@
 - **Cites [ADR-0003](0003-transactional-outbox-for-event-delivery.md)** for the delivery
   mechanism, unchanged.
 - **Amends the preamble to `CONTEXT.md` Part 1**, on that preamble's own written instruction.
-- Settles [#332](https://github.com/Raketa02/Raketa/issues/332) on the map
-  [#321](https://github.com/Raketa02/Raketa/issues/321).
+- Settles [#332](https://github.com/Rakieta02/Rakieta/issues/332) on the map
+  [#321](https://github.com/Rakieta02/Rakieta/issues/321).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The Plan and `challenges` contexts are gone, so §1's second module, §3, the Plan's half of §8 and every challenge or plan telling the room describe code that no longer exists. A room is opened only by a booked game, through its `GamePlanned` with the hour on it, and `games` is the one context that tells it; a room with no game has ended (#575). Membership (§7) is the booked game's current line-up and nothing else, and the room is filed under `booking_id` on the wire and in the table, where it was `challenge_id`. ADR-0168's narrowing of §7 was never built on this branch and was deleted, so a room stores no membership fact at all.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The Plan and `challenges` contexts are gone, so §1's second module, §3, the Plan's half of §8 and every challenge or plan telling the room describe code that no longer exists. A room is opened only by a booked game, through its `GamePlanned` with the hour on it, and `games` is the one context that tells it; a room with no game has ended (#575). Membership (§7) is the booked game's current line-up and nothing else, and the room is filed under `booking_id` on the wire and in the table, where it was `challenge_id`. ADR-0168's narrowing of §7 was never built on this branch and was deleted, so a room stores no membership fact at all.
 
 ## Context
 

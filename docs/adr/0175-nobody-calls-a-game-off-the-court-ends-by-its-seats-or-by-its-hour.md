@@ -55,7 +55,7 @@
 - Decided 2026-09-16 with the author in session, grilled over three rounds; built in the same
   session, backend and player app.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Challenges, the Chats row, the dismissal and the hourly job that called off a court still short of a player are gone, so §1's `court_has_been_a_game`, §2's fold, §3's job, §4's *Fill the seat* and Chats swipe, §5 and §6's words describe nothing that runs. The record's rule outlived its loop: **no player can call a game off**. A booked game ends short only by its club's cut-off — a seat that opened before it and is still open at it calls the game off, with nobody named (`called_off_by` is `null`) — or by the club taking the court back, and the game screen's ending says the shortage and names nobody, as §1 and §3 decided.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** Challenges, the Chats row, the dismissal and the hourly job that called off a court still short of a player are gone, so §1's `court_has_been_a_game`, §2's fold, §3's job, §4's *Fill the seat* and Chats swipe, §5 and §6's words describe nothing that runs. The record's rule outlived its loop: **no player can call a game off**. A booked game ends short only by its club's cut-off — a seat that opened before it and is still open at it calls the game off, with nobody named (`called_off_by` is `null`) — or by the club taking the court back, and the game screen's ending says the shortage and names nobody, as §1 and §3 decided.
 
 ## Context
 

@@ -2,8 +2,8 @@
 
 > **Two captures, one machine.** Everything below except the `memory_bench` and
 > `candidate_row_bench` sections is the original run, captured for
-> [#161](https://github.com/Raketa02/Raketa/issues/161). Those two were re-captured
-> for [#276](https://github.com/Raketa02/Raketa/issues/276) — `memory_bench` because
+> [#161](https://github.com/Rakieta02/Rakieta/issues/161). Those two were re-captured
+> for [#276](https://github.com/Rakieta02/Rakieta/issues/276) — `memory_bench` because
 > its row label was corrected, and `candidate_row_bench` because it is new — on the
 > same hardware and the same CPython named below. `memory_bench`'s figures reproduced
 > the original to the byte (782 a row); its GC pause and RSS lines moved by ordinary

@@ -2,13 +2,13 @@
 
 - **Status:** Accepted — **§9's Radar decided and §4's *unmarked liker* narrowed for one sheet
   2026-09-16 by [ADR-0174](0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md).** **§5's reset given its storage by the amendment of 2026-09-15**
-  ([#440](https://github.com/Raketa02/Raketa/issues/440)): a durable, event-free row per
+  ([#440](https://github.com/Rakieta02/Rakieta/issues/440)): a durable, event-free row per
   press, the fifth of the matchmaking module's ledgers.
 - **Date:** 2026-09-14
 - **Narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) to the Classic play loop**: the Players tab and its deck move behind the *Classic play* feature flag, off by default, untouched. The group's Games deck is a different deck, of games with courts.
 - **§1's *Play opens on Find a game* amended 2026-09-25 by [ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md) §12**: Play opens on a **Groups | Explore** switch, with Find a game behind `find_a_game`. The deck on Players, *Match me*'s retirement and the five-tab bar stand.
 - **Supersedes, by named sentence:**
-  - [#231](https://github.com/Raketa02/Raketa/issues/231) §3's *"Decided: buttons only"* and its
+  - [#231](https://github.com/Rakieta02/Rakieta/issues/231) §3's *"Decided: buttons only"* and its
     argument — *a swipe would be the cheapest gesture in the application attached to the most
     durable consequence in the feature* — which
     ADR-0165 §6
@@ -73,11 +73,11 @@
 - **Does not decide** the Radar (§9), the other side of a mutual seeing the moment (ADR-0167 §5
   stands), or the intro line, which is
   [ADR-0170](0170-a-player-may-write-one-line-and-it-is-read-as-their-own.md)'s.
-- Settles the spec issue for the Players deck ([#438](https://github.com/Raketa02/Raketa/issues/438));
+- Settles the spec issue for the Players deck ([#438](https://github.com/Rakieta02/Rakieta/issues/438));
   built by its backend and client children. **A backend and contract change.** Grilled
   2026-09-14.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The Players tab, its deck of people, the count, the reset, the cool-off, the Radar toggle and the doubles mutual's `SIDE_FORMED` line are gone, so §1, §2, §4–§6, §8–§10, the amendment and §3's ceiling and toasts describe nothing; `SIDE_FORMED` is no longer written and stays only so stored lines fold. Two things stand because the group's Games deck took them over (`docs/specs/games-and-fill-in/the-screens.md` A2.2). §3's stage is now `DeckStage` in `features/proposals`: a drag is an answer, the stamps are feedback with a threshold, one haptic tick, `PanResponder` and `Animated`, and buttons that are never removed because they are the accessible path. §7's stamps and the on-court tick, never fenced to the card, are live; the wash and the 24 pt name role have no card left to draw on.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The Players tab, its deck of people, the count, the reset, the cool-off, the Radar toggle and the doubles mutual's `SIDE_FORMED` line are gone, so §1, §2, §4–§6, §8–§10, the amendment and §3's ceiling and toasts describe nothing; `SIDE_FORMED` is no longer written and stays only so stored lines fold. Two things stand because the group's Games deck took them over (`docs/specs/games-and-fill-in/the-screens.md` A2.2). §3's stage is now `DeckStage` in `features/proposals`: a drag is an answer, the stamps are feedback with a threshold, one haptic tick, `PanResponder` and `Animated`, and buttons that are never removed because they are the accessible path. §7's stamps and the on-court tick, never fenced to the card, are live; the wash and the 24 pt name role have no card left to draw on.
 
 ## Context
 
@@ -462,7 +462,7 @@ documents, the ruleset diff and the backend module records with the backend tick
 ## Amendment — 2026-09-15: the reset is a moment on a durable row, and the fifth ledger
 
 §5 decided the route and what it clears, and said nothing about what *Show them again* leaves
-behind. [#440](https://github.com/Raketa02/Raketa/issues/440) built it, and the shape it settled
+behind. [#440](https://github.com/Rakieta02/Rakieta/issues/440) built it, and the shape it settled
 on is worth recording because the obvious one was wrong.
 
 **A reset is one moment, and each of the three things it clears reads that moment its own

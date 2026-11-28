@@ -9,7 +9,7 @@
   player is still rated in nothing. A dated note marks the passage.
 - **§7's Home card restored 2026-11-16 by
   [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)**
-  §4 (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)): a friend's ask waits in *Needs your
+  §4 (PRD [#810](https://github.com/Rakieta02/Rakieta/issues/810)): a friend's ask waits in *Needs your
   answer*, the sheet behind Home's envelope, and is never drawn instead of *Get your level*. The card
   shows whenever §7 says, asked or not. The same dated note marks it.
 - **One more door, 2026-11-07, from [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)**
@@ -47,20 +47,20 @@
   unrated*, which the door now keeps (§6).
 - **Does not decide** the questionnaire itself (its questions, its engine, the 30% ceiling, the
   review), a privacy policy and its link at sign-up
-  ([#735](https://github.com/Raketa02/Raketa/issues/735)), making location optional or a map, the
+  ([#735](https://github.com/Rakieta02/Rakieta/issues/735)), making location optional or a map, the
   tags, photos, week and gender steps beyond their counter, screen-reader support
   ([ADR-0198](0198-the-player-app-is-not-built-for-screen-readers-for-now.md)), Explore, or the
   Friends tab beyond its door.
-- Settles the rest of PRD [#722](https://github.com/Raketa02/Raketa/issues/722), decided in the
+- Settles the rest of PRD [#722](https://github.com/Rakieta02/Rakieta/issues/722), decided in the
   onboarding grilling on 2026-11-03 (Q1–Q12, Q14–Q22, Q25–Q29) and written by
-  [#723](https://github.com/Raketa02/Raketa/issues/723). Built by
-  [#726](https://github.com/Raketa02/Raketa/issues/726) (the intro and an area from a club),
-  [#727](https://github.com/Raketa02/Raketa/issues/727) (the notice),
-  [#729](https://github.com/Raketa02/Raketa/issues/729) (a pass returns to its origin),
-  [#730](https://github.com/Raketa02/Raketa/issues/730) (onboarding and the door),
-  [#731](https://github.com/Raketa02/Raketa/issues/731) (*+ Another sport*, the Home card, the
-  notice on the phone), [#732](https://github.com/Raketa02/Raketa/issues/732) (the guide) and
-  [#733](https://github.com/Raketa02/Raketa/issues/733) (the intro and location steps).
+  [#723](https://github.com/Rakieta02/Rakieta/issues/723). Built by
+  [#726](https://github.com/Rakieta02/Rakieta/issues/726) (the intro and an area from a club),
+  [#727](https://github.com/Rakieta02/Rakieta/issues/727) (the notice),
+  [#729](https://github.com/Rakieta02/Rakieta/issues/729) (a pass returns to its origin),
+  [#730](https://github.com/Rakieta02/Rakieta/issues/730) (onboarding and the door),
+  [#731](https://github.com/Rakieta02/Rakieta/issues/731) (*+ Another sport*, the Home card, the
+  notice on the phone), [#732](https://github.com/Rakieta02/Rakieta/issues/732) (the guide) and
+  [#733](https://github.com/Rakieta02/Rakieta/issues/733) (the intro and location steps).
 
 ## Context
 

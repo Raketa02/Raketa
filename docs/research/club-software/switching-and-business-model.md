@@ -1,7 +1,7 @@
 # Why a Kraków club would switch — and what Rakieta could charge
 
 Research for the root grilling of the club-software map ("Rakieta becomes the club's booking
-software", decided 2026-10-12 on [#609](https://github.com/Raketa02/Raketa/issues/609)): what a
+software", decided 2026-10-12 on [#609](https://github.com/Rakieta02/Rakieta/issues/609)): what a
 Kraków club pays and gets today, why clubs change systems, what an empty hour is worth, and the
 mechanics and law of each way Rakieta could charge.
 

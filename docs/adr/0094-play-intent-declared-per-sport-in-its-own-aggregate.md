@@ -23,7 +23,7 @@
 > first per-sport fact on `PlayerProfile`"*. §6.1, §6.3, §6.4 and §6.5 transfer unchanged.
 > Recorded in that document's conflict table *(removed)*.
 
-> **Amended 2026-08-29 by [The prompt that asks again after you said no](https://github.com/Raketa02/Raketa/issues/237):
+> **Amended 2026-08-29 by [The prompt that asks again after you said no](https://github.com/Rakieta02/Rakieta/issues/237):
 > the suppression keeps its window, its scope and its refusal of an event, and stops living in
 > Redis.** The Decision below says a decline is *"held in the sweeper's Redis with a TTL"*. That
 > one clause becomes **a durable row in `matchmaking`, with the live suppression derived from
@@ -37,7 +37,7 @@
 > produces either nagging or silence."* There is now one store and one filter, read where every
 > prompt already converges, so the two halves have no way to disagree.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the Players deck, the drift prompt and the ranking are gone (#579, #580), so nothing scores Intent alignment: the alignment table, the search screen as the edit surface, the 30-day suppression and the 2026-08-29 amendment that moved it to a row, the daily drift loop and the search's gate have no code behind them. `SEARCH_SWITCH` and `DRIFT_PROMPT` stay in the enum only for the events that carry them. The aggregate, its event, the unkeyed `PUT /play-intents/{sport}` and the two-types rule stand. A group's Games deck reads the declaration to choose what it deals and its one-tap interstitial reports `DECK`, so the closed five of the 2026-09-01 amendment stands too; the You tab is the other place a player changes it.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The searches, the Players deck, the drift prompt and the ranking are gone (#579, #580), so nothing scores Intent alignment: the alignment table, the search screen as the edit surface, the 30-day suppression and the 2026-08-29 amendment that moved it to a row, the daily drift loop and the search's gate have no code behind them. `SEARCH_SWITCH` and `DRIFT_PROMPT` stay in the enum only for the events that carry them. The aggregate, its event, the unkeyed `PUT /play-intents/{sport}` and the two-types rule stand. A group's Games deck reads the declaration to choose what it deals and its one-tap interstitial reports `DECK`, so the closed five of the 2026-09-01 amendment stands too; the You tab is the other place a player changes it.
 
 ## Context
 
@@ -222,7 +222,7 @@ aggregate**, inside the **Player profile** context.
 
 ## Amendment — 2026-09-01: the deck is a surface, and the set widens rather than renaming
 
-Building the deck ([#270](https://github.com/Raketa02/Raketa/issues/270)) gave the `surface`
+Building the deck ([#270](https://github.com/Rakieta02/Rakieta/issues/270)) gave the `surface`
 code a **second Play screen** that the closed four could not name. `POST /api/v1/deck` carries
 no mode in either direction, so it reads the declaration and is refused with
 `play_intent_not_declared` exactly as a search is; its sport chips land on rated, undeclared
@@ -230,7 +230,7 @@ sports exactly as the search screen's do; and it therefore draws this record's o
 interstitial. That made the interstitial a component with two callers, and it shipped reporting
 `SEARCH_SWITCH` from both — a small untruth in the one field whose entire job is to say which
 screen it was, introduced deliberately and filed as
-[#280](https://github.com/Raketa02/Raketa/issues/280) rather than left to be noticed.
+[#280](https://github.com/Rakieta02/Rakieta/issues/280) rather than left to be noticed.
 
 **`PlayIntentSurface` gains `DECK` and is now a closed five.** The Decision's event bullet
 above still spells the closed four, and is left standing: this record is immutable once

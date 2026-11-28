@@ -38,10 +38,10 @@
   has been a game, and the room's `game_id` is no evidence against it.
 - **Cites** ADR-0142 §3 for the exemption `GameCalledOff` passes, and ADR-0162 §9 for the
   fold that let the last person leave *because* this record would give the court an exit.
-- Settles [#417](https://github.com/Raketa02/Raketa/issues/417), the second child of
-  [#411](https://github.com/Raketa02/Raketa/issues/411); the author's rule 4, grilled 2026-09-11.
+- Settles [#417](https://github.com/Rakieta02/Rakieta/issues/417), the second child of
+  [#411](https://github.com/Rakieta02/Rakieta/issues/411); the author's rule 4, grilled 2026-09-11.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `challenges` is gone, so the withdraw that called a game off and its hand-over through `PlannedGameHandover` (§2's first half), the `SeatableCourt`, plan and mutual bullets in §3, the room destroyed by `challenges.withdrawn` (§5's body) and §6 describe nothing. `CALLED_OFF` stands as the fourth end: settled, in neither tally, refused by `the_game_was_called_off` and `pairing_is_history`, with `called_off_at` on the wire. `Game.call_off` is now told by `bookings`, with nobody on the record, when the cut-off finds a seat still open, and `call_off_whole` sits beside it for when the club takes the court back. `GameCalledOff` destroys the room in the act and writes no line.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** `challenges` is gone, so the withdraw that called a game off and its hand-over through `PlannedGameHandover` (§2's first half), the `SeatableCourt`, plan and mutual bullets in §3, the room destroyed by `challenges.withdrawn` (§5's body) and §6 describe nothing. `CALLED_OFF` stands as the fourth end: settled, in neither tally, refused by `the_game_was_called_off` and `pairing_is_history`, with `called_off_at` on the wire. `Game.call_off` is now told by `bookings`, with nobody on the record, when the cut-off finds a seat still open, and `call_off_whole` sits beside it for when the club takes the court back. `GameCalledOff` destroys the room in the act and writes no line.
 
 ## Context
 

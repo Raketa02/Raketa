@@ -72,9 +72,9 @@
   - a count or a badge on FOR YOU itself, or a line dismissed by hand;
   - remembering the open line across a restart;
   - the club website and the public site, which don't change.
-- Settles PRD [#810](https://github.com/Raketa02/Raketa/issues/810). It was decided in the Home
+- Settles PRD [#810](https://github.com/Rakieta02/Rakieta/issues/810). It was decided in the Home
   refactor grilling on 2026-11-16 (Q1–Q46 there), from the product owner's brief *Home Screen
-  Refactor* and its mocks, and written by [#811](https://github.com/Raketa02/Raketa/issues/811).
+  Refactor* and its mocks, and written by [#811](https://github.com/Rakieta02/Rakieta/issues/811).
   - **Specified by** [`docs/specs/home-refactor/`](../specs/home-refactor/README.md): the brief, the
     grilling's decision log and the mocks. The home-rows, friends, rankings and Games and Fill in
     specs and the words are amended in place by the ticket that ships each part. Until then,
@@ -82,12 +82,12 @@
   - **The mocks lead on design.** Where an ADR, a spec or the locked design system disagrees with a
     mock on a look, the document changes, by name. **Their numbers, names and counts are only data**:
     no rule is read off them.
-  - **Built by** the backend's [#812](https://github.com/Raketa02/Raketa/issues/812) (the people
-    rows' totals), [#813](https://github.com/Raketa02/Raketa/issues/813) (Groups heating up's total
-    and page), [#814](https://github.com/Raketa02/Raketa/issues/814) (a request's sport levels) and
-    [#815](https://github.com/Raketa02/Raketa/issues/815) (what's new in Needs your answer), and the
-    player app's [#816](https://github.com/Raketa02/Raketa/issues/816)–[#823](https://github.com/Raketa02/Raketa/issues/823).
-    Walked by [#824](https://github.com/Raketa02/Raketa/issues/824).
+  - **Built by** the backend's [#812](https://github.com/Rakieta02/Rakieta/issues/812) (the people
+    rows' totals), [#813](https://github.com/Rakieta02/Rakieta/issues/813) (Groups heating up's total
+    and page), [#814](https://github.com/Rakieta02/Rakieta/issues/814) (a request's sport levels) and
+    [#815](https://github.com/Rakieta02/Rakieta/issues/815) (what's new in Needs your answer), and the
+    player app's [#816](https://github.com/Rakieta02/Rakieta/issues/816)–[#823](https://github.com/Rakieta02/Rakieta/issues/823).
+    Walked by [#824](https://github.com/Rakieta02/Rakieta/issues/824).
 
 ## Context
 
@@ -128,7 +128,7 @@ Everything shouts at once, so nothing is the one thing to look at.
   already counts every group with 3 or more players, to pick its six.
 - **The app's own bottom sheet** on the modal stage, capped at 88% of the screen, with no navigation
   hook allowed inside a sheet. **The row frame**, whose rail peeks at 0.74 of the content width and
-  can snap. **Home stays mounted under every tab** since [#809](https://github.com/Raketa02/Raketa/pull/809).
+  can snap. **Home stays mounted under every tab** since [#809](https://github.com/Rakieta02/Rakieta/pull/809).
 - **A rule against animating a size frame by frame**: under the New Architecture, Reanimated 3.16
   freezes and then jumps. A size changes once, and a layout transition moves the frames
   (`frontend_player/CLAUDE.md`).

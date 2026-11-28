@@ -158,7 +158,7 @@ deliberately broken tree and asserts it goes red. After adding a CI job, run `ma
 
 ### Issue tracker
 
-GitHub Issues on `Raketa02/Raketa`, via the `gh` CLI — **not** the dead
+GitHub Issues on `Rakieta02/Rakieta`, via the `gh` CLI — **not** the dead
 `RobertConstantin02/rakieta` this repo detached from, whose issues are not this repo's.
 `gh` is authenticated for two accounts and does not stay switched; the symptom is
 "could not resolve to a Repository", never a 403. Blocking edges live in the issue body

@@ -37,15 +37,15 @@
   `sportsmanship_band` retires from the record and the invariant beside `is_self` with it.
   The cost is accepted and written beside the reversal there.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Searches, challenges, the candidate index and its partitions are gone, so §3's search and challenge strands, §4's partition rule, §7's `SearchStore.sports_shown_in` and the costs built on them describe nothing. Admission is now three strands, each a `PriorDisclosure` answering yes or no: the pair played together (were on one court), they share a group, or the reader runs a group the subject is in (#575). The 2026-10-02 amendment's separate `RunnerDisclosure` port and `admits_regardless_of_preference` went with the difference they kept: **no strand reads the gender preference**. The gates are the account gates — a hold, an account that may not be shown — plus the reader's own hold, and ADR-0193 took the block off that list. Every amendment's reference to a search card or the matcher is historical.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** Searches, challenges, the candidate index and its partitions are gone, so §3's search and challenge strands, §4's partition rule, §7's `SearchStore.sports_shown_in` and the costs built on them describe nothing. Admission is now three strands, each a `PriorDisclosure` answering yes or no: the pair played together (were on one court), they share a group, or the reader runs a group the subject is in (#575). The 2026-10-02 amendment's separate `RunnerDisclosure` port and `admits_regardless_of_preference` went with the difference they kept: **no strand reads the gender preference**. The gates are the account gates — a hold, an account that may not be shown — plus the reader's own hold, and ADR-0193 took the block off that list. Every amendment's reference to a search card or the matcher is historical.
 
 ## Context
 
-[#373](https://github.com/Raketa02/Raketa/issues/373) opens a surface this platform has
+[#373](https://github.com/Rakieta02/Rakieta/issues/373) opens a surface this platform has
 never had: **tapping a face and being told who that person is.** Today that gesture opens
 the Fit breakdown — weights, contributions, a sub-total — which answers a question about a
 *pairing* to somebody who asked a question about a *person*.
-[#377](https://github.com/Raketa02/Raketa/issues/377) is the first ticket behind it, and
+[#377](https://github.com/Rakieta02/Rakieta/issues/377) is the first ticket behind it, and
 what it decides is not the sheet's contents. It decides **who may open one, and what
 happens when they may not.**
 
@@ -284,7 +284,7 @@ and the migrations for a table named after it.
 ## Amendment — 2026-09-08: the parameter arrives, and the demands are six
 
 Building the sport pills and the skill card
-([#379](https://github.com/Raketa02/Raketa/issues/379)) cashed the two forward references
+([#379](https://github.com/Rakieta02/Rakieta/issues/379)) cashed the two forward references
 above. Both are corrected here rather than in place, because this record is immutable once
 accepted.
 
@@ -343,7 +343,7 @@ context still stores nothing at all.
 
 ## Amendment — 2026-09-08: opponent variety, and a seventh demand
 
-Building opponent variety ([#380](https://github.com/Raketa02/Raketa/issues/380)) cashed one
+Building opponent variety ([#380](https://github.com/Rakieta02/Rakieta/issues/380)) cashed one
 more of the forward references above: *the metered rows, opponent variety and the
 sportsmanship figure are all somebody else's facts*, and this is the first of the three to
 arrive. It arrived as a port, and this context still has no table.
@@ -398,7 +398,7 @@ stores nothing at all.
 
 ## Amendment — 2026-09-08: the two live strands, and an eighth demand
 
-Building the metered rows ([#381](https://github.com/Raketa02/Raketa/issues/381)) cashed the
+Building the metered rows ([#381](https://github.com/Rakieta02/Rakieta/issues/381)) cashed the
 second of §6's three forward references. Nothing new is computed anywhere: the raw counts
 already existed in `player_score`'s domain and were never put on a wire, so what changed is
 that the caller stopped throwing them away.
@@ -449,7 +449,7 @@ context still stores nothing at all.
 
 ## Amendment — 2026-09-08: what other players said, and the zone that turns on who reads
 
-[#382](https://github.com/Raketa02/Raketa/issues/382) added the fifth and last zone on the
+[#382](https://github.com/Rakieta02/Rakieta/issues/382) added the fifth and last zone on the
 sheet, and it is the first thing here that is **not the same fact retitled for the subject**.
 Everything else on this record is one answer drawn two ways; this is two answers.
 
@@ -505,8 +505,8 @@ nothing at all.
 
 ## Amendment — 2026-09-30: a group they are both in is the fourth strand
 
-**Found in [#529](https://github.com/Raketa02/Raketa/issues/529) F1–F2.** A group's Members
-([#514](https://github.com/Raketa02/Raketa/issues/514)) lists every member rated in the sport and
+**Found in [#529](https://github.com/Rakieta02/Rakieta/issues/529) F1–F2.** A group's Members
+([#514](https://github.com/Rakieta02/Rakieta/issues/514)) lists every member rated in the sport and
 ends in *Press and hold anyone for the full record* — and every co-member a reader had not been
 shown by a search, a challenge or a game answered `record_unavailable`. A member who never
 searched could open nobody's record but their own.
@@ -526,8 +526,8 @@ than a search does is a product call, recorded here and not decided.
 
 ## Amendment — 2026-10-02: whoever runs their group is the fifth strand, and the preference does not reach it
 
-**Found in [#529](https://github.com/Raketa02/Raketa/issues/529) §K2, settled by
-[#566](https://github.com/Raketa02/Raketa/issues/566).** The player app's administrator area opens
+**Found in [#529](https://github.com/Rakieta02/Rakieta/issues/529) §K2, settled by
+[#566](https://github.com/Rakieta02/Rakieta/issues/566).** The player app's administrator area opens
 an official group's Members from its players card, and every row ends in a press-and-hold for the
 record. The account running an official group **is not a member of it**
 ([ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md) §7), so two

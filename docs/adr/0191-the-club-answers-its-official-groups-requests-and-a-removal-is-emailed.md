@@ -13,7 +13,7 @@
   *"Removal needs no push and no revocation list"* stands. The email informs, and enforces nothing.
 - **Amends [ADR-0186](0186-email-goes-through-a-port-and-a-purged-queue.md) §3** by two messages,
   and narrows its *"every message … carries a button"*: **a notice carries none** (§5).
-- Decided at the #529 QA walk of PRD [#500](https://github.com/Raketa02/Raketa/issues/500), at the
+- Decided at the #529 QA walk of PRD [#500](https://github.com/Rakieta02/Rakieta/issues/500), at the
   product owner's ask: *evaluate whether the club can approve join requests at any time*, and
   *evaluate whether a removed administrator needs an email*. Both evaluations came out positive.
 

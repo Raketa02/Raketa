@@ -3,7 +3,7 @@
 Research for area 1 of the planning map *Rakieta becomes the club's booking software*: the one calendar a
 club's desk works in all day — the grid, adding a booking, lengths, desk payments, moves, cancels, the log
 and the day's other acts. It follows the founder's decision of 2026-10-12 on
-[#609](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776).
+[#609](https://github.com/Rakieta02/Rakieta/issues/609#issuecomment-6120454776).
 
 **This file decides nothing.** Each feature is decided Build at launch · Build later · Leave out · Ask a real
 club in the club-software grilling. Build cost is estimated elsewhere.

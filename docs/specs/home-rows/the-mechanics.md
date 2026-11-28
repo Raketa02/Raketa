@@ -1,7 +1,7 @@
 # Home rows — the mechanics
 
 > **Status:** agreed in the Home rows grilling on 2026-11-13/14 (Q1–Q37 there), confirmed by the
-> product owner on 2026-11-14 ("agree"), and specified as PRD [#789](https://github.com/Raketa02/Raketa/issues/789).
+> product owner on 2026-11-14 ("agree"), and specified as PRD [#789](https://github.com/Rakieta02/Rakieta/issues/789).
 > Logged as **Q131** in the
 > [games and fill-in decision log](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log), and
 > recorded by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md).
@@ -23,9 +23,9 @@
 >
 > **Amended by [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
 > §6** for each people row's **total** — the count on its FOR YOU line — built by
-> [#812](https://github.com/Raketa02/Raketa/issues/812): §6.9, §7.5, §8.8 and §15; and **§6, §7**
+> [#812](https://github.com/Rakieta02/Rakieta/issues/812): §6.9, §7.5, §8.8 and §15; and **§6, §7**
 > for Hottest groups' total and the *Groups heating up* page, built by
-> [#813](https://github.com/Raketa02/Raketa/issues/813): §5.10 and §15.
+> [#813](https://github.com/Rakieta02/Rakieta/issues/813): §5.10 and §15.
 
 ---
 
@@ -81,7 +81,7 @@ group, *Anyone*, 7 players).
 
 ## 3. Home, top to bottom
 
-> **Amended by [#820](https://github.com/Raketa02/Raketa/issues/820)**
+> **Amended by [#820](https://github.com/Rakieta02/Rakieta/issues/820)**
 > ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
 > §4, §5): the five rows fold into **FOR YOU**'s lines, and what waits for an answer is behind the
 > envelope.
@@ -96,7 +96,7 @@ group, *Anyone*, 7 players).
   remembers the open line while the app lives**, across tab switches, and never across a restart.
   **For a player in no group, Groups heating up starts open.**
 - **A closed line draws no tiles.** Its read still runs, for its hiding and its count.
-- **Four lines carry a count** ([#822](https://github.com/Raketa02/Raketa/issues/822); ADR-0205 §6):
+- **Four lines carry a count** ([#822](https://github.com/Rakieta02/Rakieta/issues/822); ADR-0205 §6):
   each row's `total` — **how many there are to explore, never how many are a good match** (§5.10,
   §6.9, §7.5, §8.8) — counted up to 100 and drawn *99+* past 99, in the pill and in *See all N ›*
   alike. Top 10 has none. **It is the server's**: the phone never adds a card to it or takes one
@@ -235,7 +235,7 @@ join a second or third group.
 
 ### 5.5 The heat bar
 
-**Drawn nowhere since [#821](https://github.com/Raketa02/Raketa/issues/821)** (ADR-0205 §5, Q22; home
+**Drawn nowhere since [#821](https://github.com/Rakieta02/Rakieta/issues/821)** (ADR-0205 §5, Q22; home
 refactor 5.1): the card lost it, with *+N this month* and the sport line. The heat still orders the
 groups and picks the tags (§5.3, §5.4), and the read still serves each card's share. What the bar drew:
 
@@ -359,7 +359,7 @@ competitive game would be even with.
 - **The other's level minus the reader's, in the card's sport**, two decimals: *0,02 below you*,
   *0,09 above you*, and ***Same level*** when it rounds to 0,00.
 - **Said on the comparison sheet's blocks only** (§6.5) since
-  [#821](https://github.com/Raketa02/Raketa/issues/821) (ADR-0205 §5, Q22; home refactor 7): the card
+  [#821](https://github.com/Rakieta02/Rakieta/issues/821) (ADR-0205 §5, Q22; home refactor 7): the card
   no longer draws it, nor speaks it with the pairing. The read still serves the card's gap.
 - **The comparison bar** reads the same two levels on the Skill passport scale, 1,00–5,00.
 
@@ -592,7 +592,7 @@ Q33).
 ### 10.4 Taps
 
 - **A card opens the record**: *This record isn't available* across a block.
-- ***Open the rankings ›*** (*Rankings ›* until [#821](https://github.com/Raketa02/Raketa/issues/821),
+- ***Open the rankings ›*** (*Rankings ›* until [#821](https://github.com/Rakieta02/Rakieta/issues/821),
   now in the open line's footer) opens the Rankings page on the row's sport, **in General**, the
   view Top 10 is drawn from, so the reader sees the rest of the same list *(a call)*. The page then
   remembers General, as any look at it does.
@@ -653,7 +653,7 @@ Q33).
 - **Each row is its own read** (§3). A row that fails shows nothing, and the rest of Home stands.
 - **After any friend or join write from a row**, every row, See all and Home read that could show that
   person or group is read again, so one tap shows everywhere. **The Groups heating up page is one of
-  them** ([#823](https://github.com/Raketa02/Raketa/issues/823)): a join, an ask or a withdraw from
+  them** ([#823](https://github.com/Rakieta02/Rakieta/issues/823)): a join, an ask or a withdraw from
   the page or the line moves the card on both at once, and reads both again.
 - **A people row holds still under the tap** (2026-11-15): the person's card stays where it stands and
   shows the new state, and §9.1 moves them on the row's next read — a return to Home, a pull — never
@@ -761,7 +761,7 @@ through your tags*; a friend added after resting stays a gap; the group page's m
 unchanged; Discovery as the people rows' owner, Groups for Hottest groups, Rankings for Top 10, Friends
 for the round button.
 
-**Made while writing this document, [#790](https://github.com/Raketa02/Raketa/issues/790)** (open to
+**Made while writing this document, [#790](https://github.com/Rakieta02/Rakieta/issues/790)** (open to
 overrule):
 
 1. **Whoever runs a group the subject is in** still opens a switched-off subject's record (§4.1), as
@@ -837,7 +837,7 @@ the four new sheets carry the mocks' × in a beige circle.
 - Dismissing a card by hand.
 - The club website's and the public site's own screens, beyond the club's Join request list dropping a
   withdrawn request.
-- The engine review ([#781](https://github.com/Raketa02/Raketa/issues/781)) and General's entry rule.
+- The engine review ([#781](https://github.com/Rakieta02/Rakieta/issues/781)) and General's entry rule.
 
 ---
 

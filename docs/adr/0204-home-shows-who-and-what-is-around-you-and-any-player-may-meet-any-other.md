@@ -3,12 +3,12 @@
 - **Status:** Accepted — **§1's order and its *the header and today's rows stay on top, unchanged*,
   §3's card, §8's *Rankings ›* and §9's card line amended 2026-11-16 by
   [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)**
-  (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)): the cards that wait on the player go
+  (PRD [#810](https://github.com/Rakieta02/Rakieta/issues/810)): the cards that wait on the player go
   behind an envelope into *Needs your answer*, the header reads envelope, bell, trophy, and the five
   rows fold into **FOR YOU**'s lines, with counts. Every rule of the rows stands. Dated notes mark §1,
   §3, §8 and §9. — **§6's *tags … score nothing else* narrowed 2026-11-22 by
   [ADR-0207](0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)**
-  (PRD [#827](https://github.com/Raketa02/Raketa/issues/827)): tags also build and rank For-fun
+  (PRD [#827](https://github.com/Rakieta02/Rakieta/issues/827)): tags also build and rank For-fun
   proposals and give each For-fun game a **Social vibe**, and still touch no competitive card,
   forecast or level. A player holds 2 to 8 of 27 tags, so the vibe % gains 99 and 100. Every rule of
   Same vibe stands. A dated note marks §6.
@@ -73,30 +73,30 @@
   - [ADR-0198](0198-the-player-app-is-not-built-for-screen-readers-for-now.md)'s ordinary-touch build.
 - **Does not decide:**
   - **the rows by city**, the day a second city opens — a follow-up, beside General by city
-    ([#782](https://github.com/Raketa02/Raketa/issues/782));
+    ([#782](https://github.com/Rakieta02/Rakieta/issues/782));
   - notifications, bell lines or emails about a row: a newcomer arriving, a group heating up;
   - updating a row while the player is looking at it;
   - a group page or member list for non-members, and tapping a face in a group sheet;
   - a search by name, mutual friends, a feed, or dismissing a card by hand;
   - the club website's and the public site's own screens, beyond the club's Join request list
     dropping a withdrawn request;
-  - the engine review ([#781](https://github.com/Raketa02/Raketa/issues/781)) and General's entry
+  - the engine review ([#781](https://github.com/Rakieta02/Rakieta/issues/781)) and General's entry
     rule.
-- Settles PRD [#789](https://github.com/Raketa02/Raketa/issues/789), decided in the Home rows grilling
+- Settles PRD [#789](https://github.com/Rakieta02/Rakieta/issues/789), decided in the Home rows grilling
   on 2026-11-13/14 (Q1–Q37 there, the mechanics' **Q131**) from the product owner's brief and its
-  mocks, and written by [#790](https://github.com/Raketa02/Raketa/issues/790). Specified by
+  mocks, and written by [#790](https://github.com/Rakieta02/Rakieta/issues/790). Specified by
   [`docs/specs/home-rows/`](../specs/home-rows/README.md): where this record and those documents
   disagree on a detail, the documents win, and this record holds the shape. **The mocks are design
   only**: the product owner ruled that no rule is read off a mock's numbers, names or tags. Built by
-  the backend's [#791](https://github.com/Raketa02/Raketa/issues/791) (who sees whom),
-  [#792](https://github.com/Raketa02/Raketa/issues/792) (Hottest groups and Withdraw),
-  [#793](https://github.com/Raketa02/Raketa/issues/793) (New in Rakieta and the player directory),
-  [#794](https://github.com/Raketa02/Raketa/issues/794) (Same competitive level and the level
-  projection), [#795](https://github.com/Raketa02/Raketa/issues/795) (Same vibe),
-  [#796](https://github.com/Raketa02/Raketa/issues/796) (the rest count) and
-  [#797](https://github.com/Raketa02/Raketa/issues/797) (Top 10); and the player app's
-  [#798](https://github.com/Raketa02/Raketa/issues/798)–[#805](https://github.com/Raketa02/Raketa/issues/805).
-  Walked by [#806](https://github.com/Raketa02/Raketa/issues/806).
+  the backend's [#791](https://github.com/Rakieta02/Rakieta/issues/791) (who sees whom),
+  [#792](https://github.com/Rakieta02/Rakieta/issues/792) (Hottest groups and Withdraw),
+  [#793](https://github.com/Rakieta02/Rakieta/issues/793) (New in Rakieta and the player directory),
+  [#794](https://github.com/Rakieta02/Rakieta/issues/794) (Same competitive level and the level
+  projection), [#795](https://github.com/Rakieta02/Rakieta/issues/795) (Same vibe),
+  [#796](https://github.com/Rakieta02/Rakieta/issues/796) (the rest count) and
+  [#797](https://github.com/Rakieta02/Rakieta/issues/797) (Top 10); and the player app's
+  [#798](https://github.com/Rakieta02/Rakieta/issues/798)–[#805](https://github.com/Rakieta02/Rakieta/issues/805).
+  Walked by [#806](https://github.com/Rakieta02/Rakieta/issues/806).
 
 ## Context
 
@@ -466,7 +466,7 @@ either way, players with the switch off, accounts that don't play and deleted ac
 
 **The backend's rule names its exceptions.** `backend/CLAUDE.md`'s *Derived, never stored* gains a
 pointer to this section beside ADR-0203 §10's, owed by the backend session that builds
-[#793](https://github.com/Raketa02/Raketa/issues/793).
+[#793](https://github.com/Rakieta02/Rakieta/issues/793).
 
 ### 11. Groups: the heat read and Withdraw
 

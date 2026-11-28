@@ -4,14 +4,14 @@
 - **Date:** 2026-09-07
 - **Narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) to the Classic play loop**: a game made in a group has no answer window; a card lives until its court's book-by.
 - **Amends `challenges.domain.answer_window.ANSWER_WINDOW`**, which was
-  [#217](https://github.com/Raketa02/Raketa/issues/217)'s adopted number and is the first
+  [#217](https://github.com/Rakieta02/Rakieta/issues/217)'s adopted number and is the first
   clock in this repository to be argued for rather than inherited.
 - **Does not touch ADR-0145's
   interlock**: `ENTRY_GRACE` stays at twenty-four hours, and stops citing the number that moved.
-- Settles [#344](https://github.com/Raketa02/Raketa/issues/344) on the map
-  [#321](https://github.com/Raketa02/Raketa/issues/321).
+- Settles [#344](https://github.com/Rakieta02/Rakieta/issues/344) on the map
+  [#321](https://github.com/Rakieta02/Rakieta/issues/321).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `challenges` is gone, and with it `ANSWER_WINDOW`, lapsing seats, the one-open-challenge-per-pair rule, `CHALLENGE_LOAD`, the lapse sweep and *answers challenges*, which now stands down in `player_score` — so §1's number, §2, §5–§7 and most of the Consequences describe nothing. Two things stand. §1's rule — a window whose default costs somebody something must exceed the gap between app opens, not equal it — is what `CONVERSATION_GRACE`'s 48 hours rests on (ADR-0153 §4), and §4's reason a benign default may be short is still the reason in `games/domain/windows.py`. `ENTRY_GRACE` (§3) is still twenty-four hours, now measured from a booked game's hour.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** `challenges` is gone, and with it `ANSWER_WINDOW`, lapsing seats, the one-open-challenge-per-pair rule, `CHALLENGE_LOAD`, the lapse sweep and *answers challenges*, which now stands down in `player_score` — so §1's number, §2, §5–§7 and most of the Consequences describe nothing. Two things stand. §1's rule — a window whose default costs somebody something must exceed the gap between app opens, not equal it — is what `CONVERSATION_GRACE`'s 48 hours rests on (ADR-0153 §4), and §4's reason a benign default may be short is still the reason in `games/domain/windows.py`. `ENTRY_GRACE` (§3) is still twenty-four hours, now measured from a booked game's hour.
 
 ## Context
 
@@ -22,7 +22,7 @@ hold an answer for 24 hours"*, adopted whole while the aggregate was being built
 follows is not the overturning of a reasoned decision; it is the reasoning that was never
 supplied.
 
-**What forced the question.** [How an invitee finds out](https://github.com/Raketa02/Raketa/issues/326)
+**What forced the question.** [How an invitee finds out](https://github.com/Rakieta02/Rakieta/issues/326)
 ruled push out of scope — there is no `expo-notifications`, no device-token context, and nothing
 in this repository reaches a phone its owner is not holding — and affirmed `CHALLENGE_SENT`'s
 *"they'll see it the next time they open Rakieta"* as literally true. It then proved a cost it
@@ -66,7 +66,7 @@ lapse**, which is what the change is meant to move.
 
 ### 2. Dating the clock from first sight is refused, on four counts
 
-[#326](https://github.com/Raketa02/Raketa/issues/326) backed this shape and explicitly did not
+[#326](https://github.com/Rakieta02/Rakieta/issues/326) backed this shape and explicitly did not
 decide it. It is refused, and each count is already written down somewhere:
 
 - **The recordable fact is delivery, not sight.** #326 mounts `GET /challenges` on the shell at
@@ -122,7 +122,7 @@ denominator."* It is refused. **Once the window exceeds the gap between app open
 fact the strand exists to measure**: somebody who opens the app less often than every other day
 genuinely is slow to answer, and the matcher sinking them is the ranking working rather than
 failing. The exemption would also need *did they see it*, which §2 refused, and it breaks the
-strand from the far side — [#327](https://github.com/Raketa02/Raketa/issues/327)'s *"unmeasurable
+strand from the far side — [#327](https://github.com/Rakieta02/Rakieta/issues/327)'s *"unmeasurable
 if silence is filed as judgement"* has a mirror: **unmeasurable if judgement is filed as
 absence.** `answering_for` is untouched.
 
@@ -160,6 +160,6 @@ absence.** `answering_for` is untouched.
   which is what ADR-0029's *seed through aggregates* buys.
 - **`ANSWER_WINDOW` is still not configuration.** `config.py` says so by name and that is
   unchanged: it is what a player is promised, which is behaviour a domain test can observe.
-- **One row for the source ledger** ([#331](https://github.com/Raketa02/Raketa/issues/331)):
+- **One row for the source ledger** ([#331](https://github.com/Rakieta02/Rakieta/issues/331)):
   the documentation's *"Challenges hold an answer for 24 hours"* is **repo wins**, and the row
   records that the source's number was adopted without an argument and has been replaced with one.

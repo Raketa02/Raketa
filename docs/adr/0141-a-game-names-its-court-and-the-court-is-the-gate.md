@@ -19,8 +19,8 @@ throughout, and said so:
 [ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md) §4 forbids inventing a
 familiar form, and there was nothing here to shorten because there was nothing here at all.
 
-[#319](https://github.com/Raketa02/Raketa/issues/319), found while building
-[#314](https://github.com/Raketa02/Raketa/issues/314), is what that costs. Two things, and
+[#319](https://github.com/Rakieta02/Rakieta/issues/319), found while building
+[#314](https://github.com/Rakieta02/Rakieta/issues/314), is what that costs. Two things, and
 both are about the screens working rather than about the screens looking bare:
 
 - **Two padel games are told apart by *arranged 4 days ago* and nothing else.** It is the
@@ -131,7 +131,7 @@ today is what changes silently.
 **Easier**
 
 - The result conversation can name the person it is a conversation with, which is the tap
-  the whole of [#314](https://github.com/Raketa02/Raketa/issues/314) was built around.
+  the whole of [#314](https://github.com/Rakieta02/Rakieta/issues/314) was built around.
 - A row of *Your games* has a distinguishing fact that is not a duration.
 - The next surface that lists people you have a shared record with — a chat, a history
   screen — starts from §2 rather than re-deciding it, which is the thing ADR-0095 §7 asked

@@ -1,7 +1,7 @@
 # The You tab — what it holds, and what each row changes
 
 **Status:** decided, 2026-09-17 — [ADR-0179](../../adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
-records the decisions, the PRD is [#465](https://github.com/Raketa02/Raketa/issues/465) and the
+records the decisions, the PRD is [#465](https://github.com/Rakieta02/Rakieta/issues/465) and the
 tickets are its children. Investigated against the codebase as it stood on
 `feat/RKTA-05_chats_and_now_game_cards`; it has been built since (#466–#473). The walkable
 prototype is [`the-you-prototype.html`](the-you-prototype.html) — it predates the removal of
@@ -11,12 +11,12 @@ tap every row, and read the notes panel beside the phone: it names the read, the
 screen is open, and logs every request the screen would send.
 
 > **Amended 2026-11-07** by [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md) §7
-> (the games and fill-in mechanics Q130, PRD [#766](https://github.com/Raketa02/Raketa/issues/766)):
+> (the games and fill-in mechanics Q130, PRD [#766](https://github.com/Rakieta02/Rakieta/issues/766)):
 > **ON YOUR CARD** gains ***Show me in General***, a switch, [§3.14](#314-show-me-in-general). §4's
 > *Rankings* line is retired: Rakieta ranks players, by the level.
 
 > **Amended 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2 and §6
-> (the games and fill-in mechanics Q131, PRD [#789](https://github.com/Raketa02/Raketa/issues/789)):
+> (the games and fill-in mechanics Q131, PRD [#789](https://github.com/Rakieta02/Rakieta/issues/789)):
 > [§3.14](#314-show-me-in-general)'s switch is now ***Show me to new people***, which takes a player
 > out of Home's people rows and closes their record to strangers, and closes nothing in the ranking.
 > [§3.11](#311-tags)'s *a tag is shown, never scored* now reads: **tags order one row**, Home's *Same
@@ -139,7 +139,7 @@ were on the first draft and are out — §4 says why and what each would need.
 | Tags | `4 of 6 · Stays for a drink, Plays to win, +2` | the tags step as it is, with *Save* | `PUT /players/me/social-tags` | needs a route and the read |
 | Intro | `“Will travel for a hard game.”` | the intro step's box with its counter and fence, *Save* / *Remove intro* | `PUT /players/me/intro` | needs an aggregate change + route, ADR-0170 §5 |
 | Nickname | `tomek.k` | the naming screen's one field, pre-filled | `PUT /users/me/name`, a nickname alone | route exists, screen exists (`NamingScreen`), needs a door; was *Name* until ADR-0199 |
-| Show me to new people | *the switch, and its sentence under the title* | nothing: the switch is in the row | the switch's route at once | added 2026-11-07 by ADR-0203 §7 as *Show me in General* (`PUT /players/me/ranking-visibility`, [#772](https://github.com/Raketa02/Raketa/issues/772), [#778](https://github.com/Raketa02/Raketa/issues/778)); replaced 2026-11-14 by ADR-0204 §2, §3.14; the route is [#791](https://github.com/Raketa02/Raketa/issues/791)'s, the row [#799](https://github.com/Raketa02/Raketa/issues/799)'s |
+| Show me to new people | *the switch, and its sentence under the title* | nothing: the switch is in the row | the switch's route at once | added 2026-11-07 by ADR-0203 §7 as *Show me in General* (`PUT /players/me/ranking-visibility`, [#772](https://github.com/Rakieta02/Rakieta/issues/772), [#778](https://github.com/Rakieta02/Rakieta/issues/778)); replaced 2026-11-14 by ADR-0204 §2, §3.14; the route is [#791](https://github.com/Rakieta02/Rakieta/issues/791)'s, the row [#799](https://github.com/Rakieta02/Rakieta/issues/799)'s |
 
 ## 3. Each row
 
@@ -198,8 +198,8 @@ new sport. All exist.
 ### 3.2 Player reliability
 
 > **Amended 2026-10-11** by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §1 and §6 (the
-> mechanics Q117, Q118; built by [#660](https://github.com/Raketa02/Raketa/issues/660) and
-> [#662](https://github.com/Raketa02/Raketa/issues/662)). Until then this row was the weighted
+> mechanics Q117, Q118; built by [#660](https://github.com/Rakieta02/Rakieta/issues/660) and
+> [#662](https://github.com/Rakieta02/Rakieta/issues/662)). Until then this row was the weighted
 > Player Score — *Shows up* 35, *Answers about results* 15, *Keeps plans* 12, renormalised over the
 > strands present and never printed — drawn as a score ring with *Reliable* from 90, *Holding* from
 > 70 and *Under the bar* below, a meter per strand, and *nothing counted yet* for a player with no
@@ -363,7 +363,7 @@ screen calling it is the same request with a person behind it.
 carry either `latitude` and `longitude` or a `club_id`, exactly one of the two. The server stores
 that club's point rounded to the cell, and refuses an unknown club. The phone never holds a club's
 coordinates. A club-picked area stays until the phone has permission: the next cold start that
-can read the phone replaces it ([#726](https://github.com/Raketa02/Raketa/issues/726), [#733](https://github.com/Raketa02/Raketa/issues/733)).
+can read the phone replaces it ([#726](https://github.com/Rakieta02/Rakieta/issues/726), [#733](https://github.com/Rakieta02/Rakieta/issues/733)).
 
 **What changes.** The distance to the club this player reads on a game's details, a booked game
 and *Post a game*'s clubs, all measured from the cell; the nearest-first order of *New group*'s
@@ -487,7 +487,7 @@ scored**, and no proposal reads one. **A tag is not an intent**: `HERE_TO_COMPET
 > picks here also decide who sees them in that row.
 >
 > **Amended 2026-11-22** by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
-> §7 ([#837](https://github.com/Raketa02/Raketa/issues/837)): **two to eight** ids of **twenty-seven**
+> §7 ([#837](https://github.com/Rakieta02/Rakieta/issues/837)): **two to eight** ids of **twenty-seven**
 > — the eight new ones at the end of their groups. The picker opens as above with the bounds it is
 > served, so the eyebrow reads *On your card · Pick 2 to 8* and the ceiling note *8 tags is the
 > most*, on a ninth press. What ADR-0207 §1 changes about *a tag is shown, never scored* is the

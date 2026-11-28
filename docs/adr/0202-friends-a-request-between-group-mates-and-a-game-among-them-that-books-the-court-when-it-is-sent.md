@@ -1,6 +1,6 @@
 # ADR-0202 — Friends: a request between group-mates, and a game among them that books the court when it is sent
 
-- **Status:** Accepted — **§4 amended [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) on 2026-11-07** (Q129) — **§1 amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** (Q130) — **§1 amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** (Q131): anyone may be asked, with no daily limit, except across *Show me to new people*'s rule; three new origins from Home's rows — **§1's Home row, §3's *at the top of Home*, §5's FRIENDS GAME row and the 2026-11-07 amendment's Home row and hand-off amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)** (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)): a request, an invitation and an ask wait in *Needs your answer*, behind Home's envelope, and an ask is never drawn instead of *Get your level*
+- **Status:** Accepted — **§4 amended [below](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) on 2026-11-07** (Q129) — **§1 amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** (Q130) — **§1 amended 2026-11-14 by [ADR-0204](0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)** (Q131): anyone may be asked, with no daily limit, except across *Show me to new people*'s rule; three new origins from Home's rows — **§1's Home row, §3's *at the top of Home*, §5's FRIENDS GAME row and the 2026-11-07 amendment's Home row and hand-off amended 2026-11-16 by [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)** (PRD [#810](https://github.com/Rakieta02/Rakieta/issues/810)): a request, an invitation and an ask wait in *Needs your answer*, behind Home's envelope, and an ask is never drawn instead of *Get your level*
 - **Date:** 2026-11-06
 - **Supersedes [ADR-0199](0199-a-player-is-known-by-their-nickname.md)'s line *"there is no
   friendship in Rakieta (the Friends tab is out of scope)"***, in its rejected alternative *Keep the
@@ -26,7 +26,7 @@
   default** (§7). It serves the Games deck (the owed card included), Post a game and the friends
   card alike. The proposals rule note that states the old rule
   (`backend/.claude/rules/proposals.md`) is rewritten by
-  [#746](https://github.com/Raketa02/Raketa/issues/746), with the code, and stays true of the code
+  [#746](https://github.com/Rakieta02/Rakieta/issues/746), with the code, and stays true of the code
   until then.
 - **Extends [ADR-0193](0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
   §2's *it reaches nothing else*** by one reach. A block also **ends a friendship** and any open
@@ -48,31 +48,31 @@
   second tap; the club website showing friends games differently from other bookings; and what a
   club's cancel that no court absorbs owes a friends game's **guests**, who have no deck in its
   group to be dealt an owed card in.
-- Settles PRD [#743](https://github.com/Raketa02/Raketa/issues/743), decided in the friends grilling
+- Settles PRD [#743](https://github.com/Rakieta02/Rakieta/issues/743), decided in the friends grilling
   on 2026-11-05/06 (Q1–Q46 there, the mechanics' Q128) and written by
-  [#744](https://github.com/Raketa02/Raketa/issues/744). Specified by
+  [#744](https://github.com/Rakieta02/Rakieta/issues/744). Specified by
   [`docs/specs/friends/`](../specs/friends/README.md). Built by the backend's
-  [#745](https://github.com/Raketa02/Raketa/issues/745) (friendships),
-  [#746](https://github.com/Raketa02/Raketa/issues/746) (courts hour by hour),
-  [#748](https://github.com/Raketa02/Raketa/issues/748) (the link),
-  [#749](https://github.com/Raketa02/Raketa/issues/749) (asking for a level),
-  [#750](https://github.com/Raketa02/Raketa/issues/750) (the friends card),
-  [#751](https://github.com/Raketa02/Raketa/issues/751) (sending) and
-  [#752](https://github.com/Raketa02/Raketa/issues/752) (empty seats, the warning and leaving); the
-  club website's [#747](https://github.com/Raketa02/Raketa/issues/747); the public site's
-  [#755](https://github.com/Raketa02/Raketa/issues/755); and the player app's
-  [#753](https://github.com/Raketa02/Raketa/issues/753),
-  [#754](https://github.com/Raketa02/Raketa/issues/754),
-  [#756](https://github.com/Raketa02/Raketa/issues/756)–[#760](https://github.com/Raketa02/Raketa/issues/760).
-  Walked by [#761](https://github.com/Raketa02/Raketa/issues/761).
+  [#745](https://github.com/Rakieta02/Rakieta/issues/745) (friendships),
+  [#746](https://github.com/Rakieta02/Rakieta/issues/746) (courts hour by hour),
+  [#748](https://github.com/Rakieta02/Rakieta/issues/748) (the link),
+  [#749](https://github.com/Rakieta02/Rakieta/issues/749) (asking for a level),
+  [#750](https://github.com/Rakieta02/Rakieta/issues/750) (the friends card),
+  [#751](https://github.com/Rakieta02/Rakieta/issues/751) (sending) and
+  [#752](https://github.com/Rakieta02/Rakieta/issues/752) (empty seats, the warning and leaving); the
+  club website's [#747](https://github.com/Rakieta02/Rakieta/issues/747); the public site's
+  [#755](https://github.com/Rakieta02/Rakieta/issues/755); and the player app's
+  [#753](https://github.com/Rakieta02/Rakieta/issues/753),
+  [#754](https://github.com/Rakieta02/Rakieta/issues/754),
+  [#756](https://github.com/Rakieta02/Rakieta/issues/756)–[#760](https://github.com/Rakieta02/Rakieta/issues/760).
+  Walked by [#761](https://github.com/Rakieta02/Rakieta/issues/761).
 - **§4 amended 2026-11-07** by [its own amendment](#amendment--2026-11-07-a-friends-ask-for-a-level-waits-on-their-home) (the mechanics Q129, PRD
-  [#762](https://github.com/Raketa02/Raketa/issues/762), written by
-  [#763](https://github.com/Raketa02/Raketa/issues/763)): an ask waiting on a friend is a card on their
+  [#762](https://github.com/Rakieta02/Rakieta/issues/762), written by
+  [#763](https://github.com/Rakieta02/Rakieta/issues/763)): an ask waiting on a friend is a card on their
   Home, one per sport, until they have the level or say *Not now*, and its bell row lives only while
   the card does. It also amends [ADR-0200](0200-a-level-is-asked-where-play-begins.md) §7's Home card,
   which the ask's card is drawn instead of while it is there.
 - **§1 amended 2026-11-07 by [ADR-0203](0203-a-ranking-per-sport-sorted-by-the-level.md)** §8–§9 (the mechanics Q130, PRD
-  [#766](https://github.com/Raketa02/Raketa/issues/766)):
+  [#766](https://github.com/Rakieta02/Rakieta/issues/766)):
   - **requests are no longer only between group-mates.** A request is also admitted to anybody
     listed on General in at least one sport and not hidden from it. One made from the ranking records
     the ranking and its sport, and reads *Found you in the padel ranking*;
@@ -87,7 +87,7 @@
 - **§1, §3, §5 and the 2026-11-07 amendment amended 2026-11-16 by
   [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)**
   §1 and §4 (the Home refactor grilling, Q1–Q46 there, PRD
-  [#810](https://github.com/Raketa02/Raketa/issues/810)):
+  [#810](https://github.com/Rakieta02/Rakieta/issues/810)):
   - **the FRIEND REQUESTS and ASKED FOR A LEVEL rows leave Home**, with the friends game
     invitations, for *Needs your answer*: a sheet the header's envelope opens, there only while
     something waits. Every answer they give is unchanged;
@@ -532,7 +532,7 @@ serve. No threshold has either property.
   touching the switch. The club website's line says so, and the switch still turns it off.
 - **The court source changes under three readers at once.** The proposer's *no shared hour in 14
   days* refusal goes, and the deck, the posting grid and the owed card change with it, along with
-  their seeds and tests ([#746](https://github.com/Raketa02/Raketa/issues/746)).
+  their seeds and tests ([#746](https://github.com/Rakieta02/Rakieta/issues/746)).
 - **An iPhone forgets the link through an install**, so a new player taps *Open in Rakieta* twice.
   Android carries it through the install referrer, for group links too.
 - **A link is the one place a block could be guessed.** A blocked player who opens the blocker's
@@ -568,7 +568,7 @@ friend waits on you for, a friend request and a friends game invitation, already
 it is done (friends Q13). The level ask was the one friend notice without a Home row.
 
 The product owner ruled it on 2026-11-07, in the level-ask grilling (Q1–Q8 there), and confirmed PRD
-[#762](https://github.com/Raketa02/Raketa/issues/762) the same day. It is **Q129** in the
+[#762](https://github.com/Rakieta02/Rakieta/issues/762) the same day. It is **Q129** in the
 [games and fill-in decision log](../specs/games-and-fill-in/the-mechanics.md#appendix-c--decision-log),
 specified in [the friends mechanics §5.1](../specs/friends/the-mechanics.md#51-the-ask-waits-on-her-home-q129),
 [the screens §6.4](../specs/friends/the-screens.md#64-asked-for-a-level--n-designed-no-mock) and
@@ -614,8 +614,8 @@ card: several askers are *they*.
 names on the Friendship stream, and refuses it to anybody but the friend asked. **Proposals** reads
 Home's asks for a level through a port of its own, as it reads Home's friend requests. **Notifications**
 leaves a *level asked* row out of the recent notices, and out of the bell's number, while its asker is
-not on the reader's card. The backend is [#764](https://github.com/Raketa02/Raketa/issues/764), the
-player app [#765](https://github.com/Raketa02/Raketa/issues/765).
+not on the reader's card. The backend is [#764](https://github.com/Rakieta02/Rakieta/issues/764), the
+player app [#765](https://github.com/Rakieta02/Rakieta/issues/765).
 
 **The alternatives:**
 

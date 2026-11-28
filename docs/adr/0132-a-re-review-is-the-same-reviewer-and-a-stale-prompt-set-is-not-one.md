@@ -17,8 +17,8 @@ at the same commit ADR-0129 was measured against: **the first route that returns
 `player_card.photo_id` to a client that renders it**
 ([ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md)). On that day the
 corpus is part reviewed and part not, and the deadline is the one
-[#181](https://github.com/Raketa02/Raketa/issues/181) already carried, for the same
-reason. Filed as [#197](https://github.com/Raketa02/Raketa/issues/197).
+[#181](https://github.com/Rakieta02/Rakieta/issues/181) already carried, for the same
+reason. Filed as [#197](https://github.com/Rakieta02/Rakieta/issues/197).
 
 **The one thing that makes this tractable is that ADR-0129 shipped the distinction on
 purpose.** An unreviewed photo is already distinguishable from a reviewed one, by its note

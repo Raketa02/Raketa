@@ -1,11 +1,11 @@
 # Home rows: the spec set
 
-**What PRD [#789](https://github.com/Raketa02/Raketa/issues/789) is drawn from.** The product owner's
+**What PRD [#789](https://github.com/Rakieta02/Rakieta/issues/789) is drawn from.** The product owner's
 brief *new rows home* and its mocks, copied here from `rakieta_v2.0/4-features/5-login_signup_refactir`
 (the brief) and `rakieta_v2.0/4-features/6-home_improve` (the mocks) so that every session can read
 them, then grilled on 2026-11-13/14 (Q1–Q37 there, the
 [games and fill-in mechanics' Q131](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log)).
-Landed by [#790](https://github.com/Raketa02/Raketa/issues/790) on 2026-11-14.
+Landed by [#790](https://github.com/Rakieta02/Rakieta/issues/790) on 2026-11-14.
 
 | File | What it holds |
 | --- | --- |

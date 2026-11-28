@@ -55,7 +55,7 @@
   hours), and extends [ADR-0167](0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
   (its screen is reused as *It's a game!*).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Classic play is removed, not flagged: the Players deck, Chats, challenges with their plan, Find a game and the flag are gone. Of the records the header narrows to that loop, 0100, 0144, 0145, 0150 and 0164 were deleted; 0151, 0169 and 0175 stayed with notes, because a live rule rests on each (see the [ADR index](README.md#the-2026-10-06-classic-play-removal--the-second-gap)). So §6's second bullet, §8's third bullet and the *Consequences*' two game-making paths are history, and this record is the one way a game is made. The "who fits whom" ranking went too (#580): what deals is the pair rule (`PlayerFit`: no block, mutual gender preference, the level window) and the balance forecast, so §2's *today's Match Fit, unchanged*, §5's availability term and the judged pairings and ruleset diff in the *Consequences* no longer apply. ADR-0120, which the header amends, was deleted with the ranking; the hours a card's people share are read only to grade its overlap, over everybody on it. A Game is opened only by a booking.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** Classic play is removed, not flagged: the Players deck, Chats, challenges with their plan, Find a game and the flag are gone. Of the records the header narrows to that loop, 0100, 0144, 0145, 0150 and 0164 were deleted; 0151, 0169 and 0175 stayed with notes, because a live rule rests on each (see the [ADR index](README.md#the-2026-10-06-classic-play-removal--the-second-gap)). So §6's second bullet, §8's third bullet and the *Consequences*' two game-making paths are history, and this record is the one way a game is made. The "who fits whom" ranking went too (#580): what deals is the pair rule (`PlayerFit`: no block, mutual gender preference, the level window) and the balance forecast, so §2's *today's Match Fit, unchanged*, §5's availability term and the judged pairings and ruleset diff in the *Consequences* no longer apply. ADR-0120, which the header amends, was deleted with the ranking; the hours a card's people share are read only to grade its overlap, over everybody on it. A Game is opened only by a booking.
 
 ## Context
 
@@ -118,7 +118,7 @@ game, card, yes and post belongs to a pool, and the group is one kind of it.
   club's release time, or the start minus its minimum notice) and then disappears; nobody paid.
 - **Fill in offers only rescues**: open seats of *booked* games. Games still filling are offered
   only in decks; Fill in lists your own yeses on them, under *You're In*.
-  *(Noted 2026-11-23, [#844](https://github.com/Raketa02/Raketa/issues/844), decided and not yet
+  *(Noted 2026-11-23, [#844](https://github.com/Rakieta02/Rakieta/issues/844), decided and not yet
   built: your own yeses become a tab of their own, **You’re in**, beside Fill in, and Fill in lists
   only the rescues. A change of layout, specified in
   [`docs/specs/games-and-fill-in/`](../specs/games-and-fill-in/); nothing here moves.)*
@@ -274,7 +274,7 @@ waiting for its answer.
 ## Amendment — 2026-09-30: Proposals holds a player's Games & money
 
 §5's table gives **Proposals** one aggregate, the Proposal. Building the group deck
-([#539](https://github.com/Raketa02/Raketa/issues/539)) gave it a second: **Games & money** — a
+([#539](https://github.com/Rakieta02/Rakieta/issues/539)) gave it a second: **Games & money** — a
 player's *games per week* (1–7, default 2, Monday to Sunday) and *most I'll pay* (off, 35, 45 or
 60 zł), which the mechanics §6.6 and §17.1 decide and this record placed nowhere. It is
 **event-sourced, one stream per player** under the player's own id (`proposals.games_and_money_set`
@@ -296,7 +296,7 @@ their *Chat*. The room stays only the conversation, with no way into the details
 from the bubble clears the card's *new*, as opening the details does.
 
 The product owner ruled it on 2026-10-09 from story S-01A
-([#605](https://github.com/Raketa02/Raketa/issues/605), F-HOME-15.1). Marta tapped the bubble at
+([#605](https://github.com/Rakieta02/Rakieta/issues/605), F-HOME-15.1). Marta tapped the bubble at
 18:20 to say she would be late, and nothing happened — yet a chat icon is a button in every app a
 player uses, and Playtomic opens a match's chat from the match itself. It is **Q100** in the
 mechanics' decision log, which amends §14.3 there and the screens' A4.4 and A8. Nothing else in
@@ -305,7 +305,7 @@ mechanics' decision log, which amends §14.3 there and the screens' A4.4 and A8.
 ## Amendment — 2026-10-09: the bell's number, *It's a game!* when the four are matched, the club's answer emailed, and time to pay
 
 The product owner ruled twelve questions on 2026-10-09 from story S-01B
-([#606](https://github.com/Raketa02/Raketa/issues/606)), **Q101–Q112** in the mechanics' decision
+([#606](https://github.com/Rakieta02/Rakieta/issues/606)), **Q101–Q112** in the mechanics' decision
 log. Four of them move this record's shape; the rest are words and screens, and live in the
 mechanics §11–§17 and the screens A2.4, A4.2, A7–A9, B4, B9 and C3.
 
@@ -334,9 +334,9 @@ mechanics §11–§17 and the screens A2.4, A4.2, A7–A9, B4, B9 and C3.
   the book-by, so §2's *no clock of Rakieta's own* still holds for a card.
 
 Where the bell's number and the kept holds live among §5's aggregates is left to their builds,
-[#621](https://github.com/Raketa02/Raketa/issues/621),
-[#625](https://github.com/Raketa02/Raketa/issues/625) and
-[#626](https://github.com/Raketa02/Raketa/issues/626). Each records its shape here when it lands,
+[#621](https://github.com/Rakieta02/Rakieta/issues/621),
+[#625](https://github.com/Rakieta02/Rakieta/issues/625) and
+[#626](https://github.com/Rakieta02/Rakieta/issues/626). Each records its shape here when it lands,
 as the 2026-09-30 amendment recorded Games & money once it was built.
 
 **The bell's number, as built by #621.** Notifications gains a further aggregate, the **Bell**:
@@ -371,8 +371,8 @@ filled still ends silently, and the record (§4's leaving rules, the mechanics �
 ## Amendment — 2026-10-10: the share is held until the club's cut-off, and leaving before it is free
 
 The product owner ruled on 2026-10-10 from story S-01A
-([#605](https://github.com/Raketa02/Raketa/issues/605), F-LEAVE-6.1), **Q113** in the mechanics'
-decision log, specified by [#634](https://github.com/Raketa02/Raketa/issues/634). It moves **when
+([#605](https://github.com/Rakieta02/Rakieta/issues/605), F-LEAVE-6.1), **Q113** in the mechanics'
+decision log, specified by [#634](https://github.com/Rakieta02/Rakieta/issues/634). It moves **when
 money moves and what a leave costs**. It changes §2's *the last yes books the game and charges
 every seat together*, §4's second bullet, and two lines of the *Consequences*: *the club carries
 the fees, including those on refunds it did not cause (a called-off game, its own cancellation)*,
@@ -429,7 +429,7 @@ leaving before it is free, and after it it isn't.
   same day. **BLIK can't be held**, so §4's *BLIK waits* gains a reason: its rule is decided when it
   launches, and it is cards only until then.
 
-Six calls [#634](https://github.com/Raketa02/Raketa/issues/634) made without a ruling are rules
+Six calls [#634](https://github.com/Rakieta02/Rakieta/issues/634) made without a ruling are rules
 until the product owner overrules them, each marked where it stands in the mechanics:
 - a seat lost to a card not fixed at its holding counts as a leave before the cut-off on the
   record;
@@ -441,9 +441,9 @@ until the product owner overrules them, each marked where it stands in the mecha
 
 §4's *a game still short at the cut-off is called off* and *a seat nobody takes after it stays
 empty* stand, as do the record's rules and the club's payout after the game. The builds are
-[#636](https://github.com/Raketa02/Raketa/issues/636)–[#641](https://github.com/Raketa02/Raketa/issues/641)
-(backend), [#642](https://github.com/Raketa02/Raketa/issues/642)–[#645](https://github.com/Raketa02/Raketa/issues/645)
-(player app) and [#646](https://github.com/Raketa02/Raketa/issues/646) (club website). Where the
+[#636](https://github.com/Rakieta02/Rakieta/issues/636)–[#641](https://github.com/Rakieta02/Rakieta/issues/641)
+(backend), [#642](https://github.com/Rakieta02/Rakieta/issues/642)–[#645](https://github.com/Rakieta02/Rakieta/issues/645)
+(player app) and [#646](https://github.com/Rakieta02/Rakieta/issues/646) (club website). Where the
 Seat charge's states and the holding job live is theirs to record here when they land, as the
 2026-09-30 amendment recorded Games & money.
 

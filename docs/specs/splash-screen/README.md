@@ -1,18 +1,18 @@
 # The drawn splash: the record, its brief and its mock
 
-**What PRD [#852](https://github.com/Raketa02/Raketa/issues/852) is drawn from.** On every cold
+**What PRD [#852](https://github.com/Rakieta02/Rakieta/issues/852) is drawn from.** On every cold
 open, a volt ball bounces three times into the **Rakieta** wordmark and becomes its full stop. The
 lockup holds until 2.6 s, then fades over 0.5 s into the first screen, already drawn underneath,
 and startup runs behind it. The PRD comes from the product owner's brief, its mock, and the
 grilling held on them on 2026-11-23 (Q1–Q21, three rounds, the third on a launch with no
 connection). They are copied here from the product owner's own folder, `4.splash_screen`, so every
-session can read them. Landed by [#853](https://github.com/Raketa02/Raketa/issues/853) on
+session can read them. Landed by [#853](https://github.com/Rakieta02/Rakieta/issues/853) on
 2026-11-23.
 
 | File | What it holds |
 | --- | --- |
 | [splash_screen.md](splash_screen.md) | The product owner's brief, verbatim. Its sizes say *px*: read them as points, which already absorb pixel density (the log's Q7). Its last line points at their own folder: read that path by the [index](#index)'s original name |
-| [decisions.md](decisions.md) | The grilling's decision log, verbatim but for the brand's spelling ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md) §6), whose notes on the two spellings keep the old one as a quote: every ruling with its reason, the facts it rests on (§2, with `file` paths as of 2026-11-23), and the tests and delivery. Its status line and its delivery section (§11) predate PRD #852. Its §9 puts the design-system Part 16 rows in the first ticket; the tickets moved them to [#854](https://github.com/Raketa02/Raketa/issues/854) and [#855](https://github.com/Raketa02/Raketa/issues/855), which draw what they fence |
+| [decisions.md](decisions.md) | The grilling's decision log, verbatim but for the brand's spelling ([ADR-0211](../../adr/0211-the-brand-is-rakieta-everywhere.md) §6), whose notes on the two spellings keep the old one as a quote: every ruling with its reason, the facts it rests on (§2, with `file` paths as of 2026-11-23), and the tests and delivery. Its status line and its delivery section (§11) predate PRD #852. Its §9 puts the design-system Part 16 rows in the first ticket; the tickets moved them to [#854](https://github.com/Rakieta02/Rakieta/issues/854) and [#855](https://github.com/Rakieta02/Rakieta/issues/855), which draw what they fence |
 | [`mocks/`](mocks/) | The one mock, renamed for what it shows (the [index](#index) gives its original name) |
 
 **The decision is
@@ -36,7 +36,7 @@ and PRD #852 win. ADR-0209 makes two of them precise:
 today, and the ticket that changes each part amends them: architecture Part 3, the glossary's
 *Splash gate* and the agent guide's bootstrap paragraph by #854; design-system Part 16 by #854 (the
 two ground colours) and #855 (`splashWord`); the auth record's launch paragraph by
-[#858](https://github.com/Raketa02/Raketa/issues/858). Until a ticket amends them, they describe
+[#858](https://github.com/Rakieta02/Rakieta/issues/858). Until a ticket amends them, they describe
 the white native splash held by startup.
 
 ## How to read the brief and the mock

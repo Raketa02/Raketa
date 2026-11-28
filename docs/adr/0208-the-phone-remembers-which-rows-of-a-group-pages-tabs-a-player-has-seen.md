@@ -29,13 +29,13 @@
   its own "seen" on the server
   ([ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md),
   #819).
-- Settles the phone's half of PRD [#844](https://github.com/Raketa02/Raketa/issues/844), decided
+- Settles the phone's half of PRD [#844](https://github.com/Rakieta02/Rakieta/issues/844), decided
   in the Fill in refactor grilling on 2026-11-23 (Q2b, Q10–Q12) and written by
-  [#845](https://github.com/Raketa02/Raketa/issues/845). The decision log is
+  [#845](https://github.com/Rakieta02/Rakieta/issues/845). The decision log is
   [`docs/specs/fill-in-split/decisions.md`](../specs/fill-in-split/decisions.md), §6 and §11. Built
-  by [#849](https://github.com/Raketa02/Raketa/issues/849) (Fill in and You’re in) and
-  [#850](https://github.com/Raketa02/Raketa/issues/850) (Games, on the deck's new ids field from
-  [#846](https://github.com/Raketa02/Raketa/issues/846)).
+  by [#849](https://github.com/Rakieta02/Rakieta/issues/849) (Fill in and You’re in) and
+  [#850](https://github.com/Rakieta02/Rakieta/issues/850) (Games, on the deck's new ids field from
+  [#846](https://github.com/Rakieta02/Rakieta/issues/846)).
 
 ## Context
 

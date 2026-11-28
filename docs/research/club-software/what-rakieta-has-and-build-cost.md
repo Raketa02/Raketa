@@ -3,8 +3,8 @@
 Research for the club-software grilling that follows the founder's decision of 2026-10-12: **Rakieta
 becomes the club's whole booking software** — one calendar for the desk, the phone, walk-ins, season
 bookings, players booking online and the Games deck — replacing tenis4U, Playmore and kluby.org
-([#609 decisions](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776),
-[#667](https://github.com/Raketa02/Raketa/issues/667)). For each of eighteen feature areas it says what
+([#609 decisions](https://github.com/Rakieta02/Rakieta/issues/609#issuecomment-6120454776),
+[#667](https://github.com/Rakieta02/Rakieta/issues/667)). For each of eighteen feature areas it says what
 the code **has today** and what Rakieta's version would **cost**, so a product owner can weigh *Build
 at launch / Build later / Leave out*.
 
@@ -17,7 +17,7 @@ Playtomic and the rest do each thing). Market facts below are carried from there
 2026-10-12 (its uncommitted changes are the player app's attendance work, and touch none of the areas
 below); the root glossary [`CONTEXT.md`](../../../CONTEXT.md); the specs in
 [`docs/specs/games-and-fill-in/`](../../specs/games-and-fill-in/); the ADRs; the four emitted contract
-documents (`backend/openapi.*.json`); and GitHub issues on `Raketa02/Raketa`. Nothing was run, built or
+documents (`backend/openapi.*.json`); and GitHub issues on `Rakieta02/Rakieta`. Nothing was run, built or
 changed. Code paths are from the repository root; `:n` is a line.
 
 **Kinds:** `[CODE]` what the code does · `[DOC]` what an ADR, spec or the glossary says · `[ISSUE]` a
@@ -46,7 +46,7 @@ ticket, **M** ≈ 2–4, **L** ≈ 5–10, **XL** > 10.
   about **20 tickets** before any calendar screen is drawn (*reading*).
 - *Reading:* a desk-first launch (the desk calendar, the deck inside it, blocks, prices, customers,
   staff, and the prerequisites) is roughly **35–45 tickets**, plus production. For scale, the whole of
-  Games & Fill in was cut into 34 tickets ([#531](https://github.com/Raketa02/Raketa/issues/531)–[#564](https://github.com/Raketa02/Raketa/issues/564)).
+  Games & Fill in was cut into 34 tickets ([#531](https://github.com/Rakieta02/Rakieta/issues/531)–[#564](https://github.com/Rakieta02/Rakieta/issues/564)).
 - **Cheapest:** migrating today's clubs (S — there are no real ones), blocks and closures (M),
   the deck inside one calendar (M, once the prerequisites exist), a per-booking fee to the club (M),
   reports (M).
@@ -57,25 +57,25 @@ ticket, **M** ≈ 2–4, **L** ≈ 5–10, **XL** > 10.
   none. Becoming the club's whole software adds production, support and on-call cost against that.
 - **Only `local` has ever run.** No domain, a dormant deploy pipeline, no Stripe test account, no mail
   relay, no push credentials. A desk whose whole day runs on Rakieta stops when Rakieta does.
-- **Sequencing:** [#668](https://github.com/Raketa02/Raketa/issues/668)–[#677](https://github.com/Raketa02/Raketa/issues/677)
-  are all open. [#670](https://github.com/Raketa02/Raketa/issues/670) deletes the *minimum notice*
+- **Sequencing:** [#668](https://github.com/Rakieta02/Rakieta/issues/668)–[#677](https://github.com/Rakieta02/Rakieta/issues/677)
+  are all open. [#670](https://github.com/Rakieta02/Rakieta/issues/670) deletes the *minimum notice*
   (a book-by close to the start); a deck inside one calendar would likely want that rule back,
   because the desk then writes into the same calendar.
 
 ## The yardstick: what one ticket is here
 
-- **[ISSUE]** [#535](https://github.com/Raketa02/Raketa/issues/535) built the whole Club courts
+- **[ISSUE]** [#535](https://github.com/Rakieta02/Rakieta/issues/535) built the whole Club courts
   aggregate — courts, hours, exceptions, prices, ways of working, settings, the sellable-hours port and
-  the setup checklist — as **one backend ticket**. [#547](https://github.com/Raketa02/Raketa/issues/547)
+  the setup checklist — as **one backend ticket**. [#547](https://github.com/Rakieta02/Rakieta/issues/547)
   built the club's day list, Move, Cancel, check-in and the no-show report as one;
-  [#563](https://github.com/Raketa02/Raketa/issues/563) the club's Bookings page as one;
-  [#672](https://github.com/Raketa02/Raketa/issues/672) is one rule (a cancel absorbed by a free court).
+  [#563](https://github.com/Rakieta02/Rakieta/issues/563) the club's Bookings page as one;
+  [#672](https://github.com/Rakieta02/Rakieta/issues/672) is one rule (a cancel absorbed by a free court).
 - **[ISSUE]** The club side as it stands took **eight tickets**: backend #535, #537, #547, #548 and
   club website #561–#564.
-- **[ISSUE]** One spec, [#667](https://github.com/Raketa02/Raketa/issues/667), is ten tickets: root 1,
+- **[ISSUE]** One spec, [#667](https://github.com/Rakieta02/Rakieta/issues/667), is ten tickets: root 1,
   backend 5, club website 2, player app 2.
 - **[ISSUE]** After #530's 34 build tickets, walking its stories raised **58 more agent tickets** under
-  later PRDs and story findings ([#612](https://github.com/Raketa02/Raketa/issues/612)–[#677](https://github.com/Raketa02/Raketa/issues/677),
+  later PRDs and story findings ([#612](https://github.com/Rakieta02/Rakieta/issues/612)–[#677](https://github.com/Rakieta02/Rakieta/issues/677),
   less the PRDs, the stories and one human ticket).
   - *Reading:* every size below is a first build; on this record the story walk adds as much again.
 - **[CODE]** Every registered job must have a console press, or `backend/tests/api/test_games_test_console_time.py`
@@ -205,7 +205,7 @@ See area 17.
 **Exists today**
 - **[DOC]** *"Rakieta takes no fee and pays none"* (ADR-0189 §4, `docs/adr/0189-…md:116`); out of
   scope: *"Any Rakieta revenue: no fee, no subscription"*, Playtomic's player fee read as Rakieta's
-  advantage (the mechanics §20, line 1569); [#667](https://github.com/Raketa02/Raketa/issues/667)
+  advantage (the mechanics §20, line 1569); [#667](https://github.com/Rakieta02/Rakieta/issues/667)
   repeats it under *Out of Scope*.
 - **[CODE]** Charges are direct charges on the club's account, which pays Stripe's fees while Stripe
   covers losses — `fees_collector: stripe`, `losses_collector: stripe`
@@ -260,7 +260,7 @@ See area 17.
 
 **What it changes in the player app**
 - Nothing is required. A desk's Move or Cancel of a Rakieta game is told as *Game moved* or a cancel
-  notice ([#677](https://github.com/Raketa02/Raketa/issues/677), open).
+  notice ([#677](https://github.com/Rakieta02/Rakieta/issues/677), open).
 
 ### 2. Players booking a court directly, in the app and without it
 
@@ -313,8 +313,8 @@ See area 17.
 - **[CODE]** Book-by is the start less the release lead at an Only Rakieta club, or less the minimum
   notice otherwise (`backend/app/modules/clubs/domain/rakieta_terms.py:109-123`); the lead is 1–13 days
   (`:43`).
-- **[ISSUE]** [#670](https://github.com/Raketa02/Raketa/issues/670) (open) keeps only the release
-  lead, and [#667](https://github.com/Raketa02/Raketa/issues/667) records the consequence: *"No Rakieta
+- **[ISSUE]** [#670](https://github.com/Rakieta02/Rakieta/issues/670) (open) keeps only the release
+  lead, and [#667](https://github.com/Rakieta02/Rakieta/issues/667) records the consequence: *"No Rakieta
   game can fill later than a day before its start"*.
 - **[CODE]** A yes holds no court. The court is the first free one of the sport, picked at the fill
   (`backend/app/modules/bookings/infrastructure/club_courts.py`). Of two cards filling at once, the
@@ -376,8 +376,8 @@ See area 17.
   disappear.
 - **[CODE]** A court can be switched off, and is not deleted while a booking is ahead of it
   (`court_has_bookings`, `errors.py:164`). A club can be **Paused** (`CONTEXT.md:1372-1374`).
-- **[ISSUE]** A club's cancel moving the game to a free court ([#672](https://github.com/Raketa02/Raketa/issues/672)),
-  and Move keeping the court's kind ([#671](https://github.com/Raketa02/Raketa/issues/671)), are open.
+- **[ISSUE]** A club's cancel moving the game to a free court ([#672](https://github.com/Rakieta02/Rakieta/issues/672)),
+  and Move keeping the court's kind ([#671](https://github.com/Rakieta02/Rakieta/issues/671)), are open.
 - **[ABSENT]** Weekly recurring blocks, blocks to the minute, a block drawn on a calendar, an
   out-of-order-now flag, and courts that share a floor.
 - **[DOC]** tenis4U has weekly recurring blocks, *"Blokada wzajemna"*, closed dates and *"Ustawić status
@@ -503,7 +503,7 @@ See area 17.
   (`backend/app/modules/proposals/application/club_money.py`; the screens B7).
 - **[CODE] [DOC]** The fake is the default (`backend/app/core/config.py:401`); *"Until then,
   everything runs on the fake payments adapter"* (O7, the mechanics §21); the Stripe test account is
-  [#533](https://github.com/Raketa02/Raketa/issues/533), open.
+  [#533](https://github.com/Rakieta02/Rakieta/issues/533), open.
 - **[DOC]** BLIK waits (O1); receipts and invoices are the club's, and open (O5).
 - **[ABSENT]** Desk sales, payment links, refunds by hand, whole-court charges (P5), invoices and any
   fiscal printer.
@@ -564,8 +564,8 @@ See area 17.
   *"none of which exists today"* — is unchosen (`docs/environments.md:456`).
 - **[CODE]** Push is built and gated off: `EXPO_PROJECT_ID = null`, `IPHONE_PUSH = false`
   (`frontend_player/src/shared/config/push.ts:23-25`). Its setup is
-  [#665](https://github.com/Raketa02/Raketa/issues/665) (a human's) and
-  [#666](https://github.com/Raketa02/Raketa/issues/666), both open.
+  [#665](https://github.com/Rakieta02/Rakieta/issues/665) (a human's) and
+  [#666](https://github.com/Rakieta02/Rakieta/issues/666), both open.
 - **[DOC]** The club is emailed a daily summary, the cut-off's call-offs and its payouts (the mechanics
   §16.12; the screens B9), and *"cannot message players"* (§16.14).
 - **[ABSENT]** SMS, in all four apps.
@@ -639,7 +639,7 @@ See area 17.
   - **[ABSENT]** A backup, restore or alerting plan there.
 - **[CODE]** `make taskdef` proves the task definition would start (root `CLAUDE.md`).
 - **[DOC]** Missing, and written down: a Stripe test account and push credentials
-  ([#533](https://github.com/Raketa02/Raketa/issues/533), open), a mail relay, a map-tile provider, a
+  ([#533](https://github.com/Rakieta02/Rakieta/issues/533), open), a mail relay, a map-tile provider, a
   geocoder, store listings (`docs/environments.md` *Turning on a remote environment*). Reactivating
   deployment needs an ADR superseding ADR-0010 (step 1 there).
 - **Assumption it breaks:** none in code. *Reading:* today an outage costs a club only its Rakieta
@@ -663,7 +663,7 @@ See area 17.
 - **[CODE]** What a club holds today:
   - the **Club** (name, district, city, sports, map point) and its **Club account**;
   - **Club courts**: courts (one sport, indoor or outdoor, on or off), Rakieta hours per court,
-    exceptions, prices per sport with bands, the way of working ([#670](https://github.com/Raketa02/Raketa/issues/670)
+    exceptions, prices per sport with bands, the way of working ([#670](https://github.com/Rakieta02/Rakieta/issues/670)
     removes it), the release lead, the cut-off, other clubs' courts, paused, and the payments account
     (`backend/app/modules/clubs/domain/club_courts.py`);
   - **Bookings**, **Seat charges** and **Club payouts**; its **Official groups** and **Administrators**.

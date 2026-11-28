@@ -1,17 +1,17 @@
 # What scoring in Python actually costs, and where the in-process design breaks
 
-Research output for [`Raketa02/Raketa#161`](https://github.com/Raketa02/Raketa/issues/161), under the map
-[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155).
+Research output for [`Rakieta02/Rakieta#161`](https://github.com/Rakieta02/Rakieta/issues/161), under the map
+[The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155).
 
-**This file decides nothing.** [The scale posture](https://github.com/Raketa02/Raketa/issues/165)
+**This file decides nothing.** [The scale posture](https://github.com/Rakieta02/Rakieta/issues/165)
 decides what to do about these numbers, and
-[The matcher's picture of the city](https://github.com/Raketa02/Raketa/issues/173) decides how
+[The matcher's picture of the city](https://github.com/Rakieta02/Rakieta/issues/173) decides how
 a search reads the index. The job here is to replace the design document's **Go** performance
 claims with **measured CPython** ones, and to put a number on the two
 [ADR-0093](../adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md) reversal triggers
 this ticket exists to make measurable.
 
-> ### Corrected by [#276](https://github.com/Raketa02/Raketa/issues/276) — read this before quoting a byte count
+> ### Corrected by [#276](https://github.com/Rakieta02/Rakieta/issues/276) — read this before quoting a byte count
 >
 > **Every row measurement below is of the row `matchmaking-engine.md` §7.2 *specifies*, and
 > that is not the row the index holds.** The harness's `population.py` says so in its own
@@ -244,7 +244,7 @@ are nearly free, rejection *is* the cost and the advice is right. In Python it i
    the singles fit stage. A cheap pre-rank on level distance alone, then eight terms on the
    top few hundred, converts the dominant cost into the cheap one. This is a *product*
    decision — it changes which candidates get scored — and belongs to
-   [#173](https://github.com/Raketa02/Raketa/issues/173), not here.
+   [#173](https://github.com/Rakieta02/Rakieta/issues/173), not here.
 4. **numpy over the candidate block only** — 0.17 ms against 2.79 ms. But numpy is not a
    backend dependency, and adding one to solve a 2.8 ms problem is exactly the tax ADR-0093
    refused elsewhere. **Not recommended now**; recorded as the escape route with a price on it.
@@ -398,7 +398,7 @@ rather than just the container. The last column is the whole 125 000-row index o
 | *§7.2's claim, for comparison* | *160* | *20 MB* |
 
 **A note on §7.2's own arithmetic — a fifth numbering quirk to add to the four
-[#156](https://github.com/Raketa02/Raketa/issues/156) lists.** §7.2 says 160 bytes a row and
+[#156](https://github.com/Rakieta02/Rakieta/issues/156) lists.** §7.2 says 160 bytes a row and
 "a city of 50 000 players across four sports is roughly 32 MB", which is 200 000 rows — every
 player rated in all four sports. §17's own capacity table says candidate rows are **2.5 ×
 players**, which is 125 000 rows and 20 MB. And §17's ceiling paragraph says "roughly 10⁶ rows
@@ -467,7 +467,7 @@ is `(700, 10, 10)`.
 > **Call `gc.freeze()` immediately after the index is loaded, and after every refresh.** One
 > line. It moves the index into the permanent generation so no later collection scans it.
 > Without it the matcher's p99 is set by the collector rather than by the algorithm, and
-> [#173](https://github.com/Raketa02/Raketa/issues/173)'s freshness design ends up accounting
+> [#173](https://github.com/Rakieta02/Rakieta/issues/173)'s freshness design ends up accounting
 > for a 58 ms hiccup it did not cause.
 
 ### Refresh headroom [MEASURED]
@@ -549,7 +549,7 @@ onboarding for every city. So either:
   not merely its matching.
 
 **The second option is ADR-0093's extracted service arriving through the back door**, and it is
-worth naming in [#165](https://github.com/Raketa02/Raketa/issues/165): **multi-city under
+worth naming in [#165](https://github.com/Rakieta02/Rakieta/issues/165): **multi-city under
 ADR-0093 fires trigger 4, not trigger 2.** The map's stated target — multi-city, one country,
 with multi-country as "a config-and-capacity change" — is affordable with packed columns
 (43 B/row: ten cities of 50 000 players is 54 MB a worker) and is not affordable with plain
@@ -577,7 +577,7 @@ must not reset by crossing a boundary), suppression, and the newcomer window. Du
 row duplicates all of those or lets them disagree, and §10's degradation rules assume one row
 per player per sport.
 
-The recommendation for [#173](https://github.com/Raketa02/Raketa/issues/173):
+The recommendation for [#173](https://github.com/Rakieta02/Rakieta/issues/173):
 
 - **`shard_key` becomes `shard_keys`, a small set on the row** — a home metro plus any metro the
   player has opted into. It is still one row.
@@ -590,7 +590,7 @@ The recommendation for [#173](https://github.com/Raketa02/Raketa/issues/173):
   precisely the scan cost the shard exists to avoid.
 
 [NOT MEASURED] how a player declares a second city (a product question for
-[#173](https://github.com/Raketa02/Raketa/issues/173)), and whether the availability grid
+[#173](https://github.com/Rakieta02/Rakieta/issues/173)), and whether the availability grid
 should be per-city — it probably should be, and the schema cannot express that either.
 
 ---
@@ -788,8 +788,8 @@ the assumption]
 | 300 | 758 | 94 | 42 | 0% | 0% | 0% | 0% |
 | 1 200 | 3 000 | 386 | 167 | 0% | 0% | 0% | 0% |
 
-**What this says for [Cold start](https://github.com/Raketa02/Raketa/issues/162) and
-[The thin-pool experience](https://github.com/Raketa02/Raketa/issues/166):**
+**What this says for [Cold start](https://github.com/Rakieta02/Rakieta/issues/162) and
+[The thin-pool experience](https://github.com/Rakieta02/Rakieta/issues/166):**
 
 1. **At twenty players the empty state is the normal case, not the edge case.** Half of all
    searches return fewer than three candidates in the scattered model, and relaxation does not
@@ -808,13 +808,13 @@ the assumption]
 
 [NOT MEASURED] which spatial model is true of a real Polish metro. It is checkable from the
 first hundred sign-ups' `area_cell` values, and it should be checked before
-[#166](https://github.com/Raketa02/Raketa/issues/166) picks its relaxation constants.
+[#166](https://github.com/Rakieta02/Rakieta/issues/166) picks its relaxation constants.
 
 ---
 
 ## What this changes, in one page
 
-**For [The scale posture](https://github.com/Raketa02/Raketa/issues/165):**
+**For [The scale posture](https://github.com/Rakieta02/Rakieta/issues/165):**
 
 - Write trigger 1 as **p99 of one scoring call > 20 ms, or duty cycle > 0.25**, measured
   in-process by a lag monitor and a scoring histogram that ship with the engine.
@@ -827,7 +827,7 @@ first hundred sign-ups' `area_cell` values, and it should be checked before
   holds every shard unless the load balancer starts routing by city — which is the extracted
   service by another name.
 
-**For [The matcher's picture of the city](https://github.com/Raketa02/Raketa/issues/173):**
+**For [The matcher's picture of the city](https://github.com/Rakieta02/Rakieta/issues/173):**
 
 - `CandidateSource.snapshot()` at container granularity, verbatim from §15.2. It costs 54 ns.
 - Row identity is `(player, sport)`; `shard_keys` is a set on the row and the shard index holds
@@ -851,8 +851,8 @@ first hundred sign-ups' `area_cell` values, and it should be checked before
   anything replays the whole store. One migration now, a table rewrite later.
 - The matcher's routes should return `ORJSONResponse`, not FastAPI's default.
 
-**For [Cold start](https://github.com/Raketa02/Raketa/issues/162) and
-[The thin-pool experience](https://github.com/Raketa02/Raketa/issues/166):**
+**For [Cold start](https://github.com/Rakieta02/Rakieta/issues/162) and
+[The thin-pool experience](https://github.com/Rakieta02/Rakieta/issues/166):**
 
 - Check the spatial model against real sign-ups before tuning relaxation constants. Clustered
   versus scattered is a 4x difference in effective pool size and it dominates everything else at

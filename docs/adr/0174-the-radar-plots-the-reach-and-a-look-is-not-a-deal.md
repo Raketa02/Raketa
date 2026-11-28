@@ -69,11 +69,11 @@
   — no gesture library; the radar's pan and pinch are read from the raw touches (§7).
 - **Does not decide** venues, clustering, a location picker, blocking from the radar, or the
   radius on You (§8).
-- Settles the spec issue for the Radar ([#457](https://github.com/Raketa02/Raketa/issues/457));
+- Settles the spec issue for the Radar ([#457](https://github.com/Rakieta02/Rakieta/issues/457));
   built by its backend and client children. **A backend and contract change.** Grilled
   2026-09-16, three rounds, at the repo root, against sixteen mocks that are **locked**.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The radar went with the Players tab, and with it the reading, its gates, the two windows, the chip, the screen and §8's list (§1, §3–§5, §7–§8); nothing calls `drawn_spot` or `bearing_deg` any more. Two decisions here still run. §6 is how a player's area moves: `PUT /players/me/location` on every cold start and on a return after more than a day, never on a plain foreground, with the You tab's one sentence. §2's print — one decimal, never below a tenth (`shown_kilometres`) — is how a club's distance is printed (ADR-0182 §6), measured from the reader's area rather than from a drawn spot.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The radar went with the Players tab, and with it the reading, its gates, the two windows, the chip, the screen and §8's list (§1, §3–§5, §7–§8); nothing calls `drawn_spot` or `bearing_deg` any more. Two decisions here still run. §6 is how a player's area moves: `PUT /players/me/location` on every cold start and on a return after more than a day, never on a plain foreground, with the You tab's one sentence. §2's print — one decimal, never below a tenth (`shown_kilometres`) — is how a club's distance is printed (ADR-0182 §6), measured from the reader's area rather than from a drawn spot.
 
 ## Context
 
@@ -275,7 +275,7 @@ one thing that would surprise a careful player.
 > which clubs a player group plays at. A player who refused location may now hold an area picked
 > from a club; the first cold start with permission replaces it with the phone's reading, and
 > nothing moves it before then. The You sentence above describes a reading, not a picked club, and
-> its words for that case are [#733](https://github.com/Raketa02/Raketa/issues/733)'s.
+> its words for that case are [#733](https://github.com/Rakieta02/Rakieta/issues/733)'s.
 
 ### 7. The screen, as the mocks draw it
 

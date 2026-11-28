@@ -6,19 +6,19 @@
   **"The environment may select configuration defaults; it may never select behaviour a domain
   test could observe."** Item 3's work factor is argued against it and falls on the *default*
   side. The page's *Testing* section gains a paragraph that links here; its *Refusing to start*
-  table gains the bcrypt row when [#483](https://github.com/Raketa02/Raketa/issues/483) makes
+  table gains the bcrypt row when [#483](https://github.com/Rakieta02/Rakieta/issues/483) makes
   the refusal real, not before.
 - **Leaves standing** every "still fires" suite (`make test-drift`, `test-poetry-pin`,
   `test-judged-pairings`, `test-ruleset-diff`, `test-taskdef`, `test-contract-freshness`, the
   purity gates and the player's import-boundary proof). They move into parallel jobs; none is
   dropped from a push.
-- Settles [#480](https://github.com/Raketa02/Raketa/issues/480) (PRD) and
-  [#481](https://github.com/Raketa02/Raketa/issues/481). The work lands in
-  [#482](https://github.com/Raketa02/Raketa/issues/482)–[#490](https://github.com/Raketa02/Raketa/issues/490):
+- Settles [#480](https://github.com/Rakieta02/Rakieta/issues/480) (PRD) and
+  [#481](https://github.com/Rakieta02/Rakieta/issues/481). The work lands in
+  [#482](https://github.com/Rakieta02/Rakieta/issues/482)–[#490](https://github.com/Rakieta02/Rakieta/issues/490):
   the race first, then the suite's overheads, then parallel runs, then CI's new shape, and last
   the `/implement` skill's wording for the end-of-ticket run.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The judged-pairings and ruleset-diff gates were retired with the ranking they gated (#572), and their still-fires suites with them. §4's backend meta tier is one `backend-meta` job, not two, and there is no ruleset release-report job in any tier. ADR-0180, cited below for the flags repository's review convention, was deleted with the flags. Every numbered decision stands.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The judged-pairings and ruleset-diff gates were retired with the ranking they gated (#572), and their still-fires suites with them. §4's backend meta tier is one `backend-meta` job, not two, and there is no ruleset release-report job in any tier. ADR-0180, cited below for the flags repository's review convention, was deleted with the flags. Every numbered decision stands.
 
 ## Context
 
@@ -50,7 +50,7 @@ variables.
 | Coverage on every run | On by default in `backend/pyproject.toml`'s `addopts` and in CI. **2.4× slower** (19 s → 46 s). CI writes a `coverage.xml` nothing uploads, reads or gates on. |
 | DEBUG log capture | `APP_ENV=local` puts the root logger at `DEBUG`, and aiosqlite logs two lines per operation — about 490 just to create one test's schema. **About 13%.** |
 | No parallelism | Every test builds its own in-memory SQLite database, so the suite is parallel by construction, and it runs on one core. |
-| Runner size | `Raketa02/Raketa` is **private**, so a standard `ubuntu-latest` runner has **2 vCPU and 8 GB** (GitHub's published table; a public repository gets 4 and 16). The workflow's comment assumes 16 GB. Jest defaults to one fewer worker than cores — **one worker** there — and the 293 shared player suites take 359 s in CI against about 1 m 40 s on the laptop. |
+| Runner size | `Rakieta02/Rakieta` is **private**, so a standard `ubuntu-latest` runner has **2 vCPU and 8 GB** (GitHub's published table; a public repository gets 4 and 16). The workflow's comment assumes 16 GB. Jest defaults to one fewer worker than cores — **one worker** there — and the 293 shared player suites take 359 s in CI against about 1 m 40 s on the laptop. |
 | Cold Jest transform cache | Every CI run starts cold. On one feature folder a warm cache takes 71 s to 38 s. |
 | Serial "still fires" suites | They run after the tests, one after another: about 2.5 min on the backend job, 1 min on the player's. |
 
@@ -105,9 +105,9 @@ inner loop. What it proposes and this record refuses is listed under *Rejected*.
 2. **Choosing a subset of tests is the inner loop's job, never the gate's.** While iterating on a
    ticket, one command per app runs only what the change can affect: `pytest-testmon` behind a
    backend make target, with its data file ignored by git
-   ([#486](https://github.com/Raketa02/Raketa/issues/486)), and Jest's `--changedSince`
+   ([#486](https://github.com/Rakieta02/Rakieta/issues/486)), and Jest's `--changedSince`
    against the branch's base behind a player pnpm script
-   ([#487](https://github.com/Raketa02/Raketa/issues/487)). Both are conveniences for the
+   ([#487](https://github.com/Rakieta02/Rakieta/issues/487)). Both are conveniences for the
    inner loop. **Neither is a CI step, neither is the end-of-ticket run, and neither is ever
    what lets a pull request merge.** Each app's `CLAUDE.md` names the command and its blind
    spots, and says the full suite still runs at the end of every ticket and in CI.
@@ -129,8 +129,8 @@ inner loop. What it proposes and this record refuses is listed under *Rejected*.
       reading the cost out of a real hash.
    - **Coverage leaves the pull request's path.** It is gone from the default pytest options. It is
       measured **nightly, on every push to `main`, and on demand** (`make coverage`), and the
-      XML report is kept as an artifact ([#484](https://github.com/Raketa02/Raketa/issues/484),
-      [#488](https://github.com/Raketa02/Raketa/issues/488)). **Nothing gates on coverage
+      XML report is kept as an artifact ([#484](https://github.com/Rakieta02/Rakieta/issues/484),
+      [#488](https://github.com/Rakieta02/Rakieta/issues/488)). **Nothing gates on coverage
       today.** Adding a threshold is a separate decision; whoever makes it should know that a
       threshold checked on every push brings the 2.4× back onto every push.
    - **Tests log at `INFO`**, a default the test configuration sets, as it sets `APP_ENV`
@@ -139,9 +139,9 @@ inner loop. What it proposes and this record refuses is listed under *Rejected*.
       and is never the fix.
    - **The suite runs in parallel by default.** `make test`, and so `make check`, runs
       pytest-xdist with one worker per core and work-stealing distribution, because test
-      durations are uneven ([#485](https://github.com/Raketa02/Raketa/issues/485)). A serial
+      durations are uneven ([#485](https://github.com/Rakieta02/Rakieta/issues/485)). A serial
       run stays one command away, for chasing an order-dependent failure. **The race above is
-      fixed first** ([#482](https://github.com/Raketa02/Raketa/issues/482)), reproduced
+      fixed first** ([#482](https://github.com/Rakieta02/Rakieta/issues/482)), reproduced
       deterministically before it is fixed, so the fix can say whether the shared connection
       is a test artifact or a real ordering bug.
 
@@ -149,7 +149,7 @@ inner loop. What it proposes and this record refuses is listed under *Rejected*.
    static checks, the tests, the generated-artifact checks and the "still fires" suites all
    start at the same moment, so a typo answers in a minute or two and never waits on the
    tests, and the tests never wait on it. The first shape
-   ([#488](https://github.com/Raketa02/Raketa/issues/488)):
+   ([#488](https://github.com/Rakieta02/Rakieta/issues/488)):
    - **Backend:** static (ruff, import-linter, mypy, Poetry pin drift); tests (split groups ×
      xdist, Postgres only where the one Postgres test runs); generated artifacts (contract
      freshness, judged pairings, ruleset diff, taskdef); meta (the purity gates and the "still
@@ -172,7 +172,7 @@ inner loop. What it proposes and this record refuses is listed under *Rejected*.
 
 5. **Growth is absorbed by adding shards.** The backend suite splits into N groups with
    pytest-split, from a committed durations file refreshed by a make target
-   ([#489](https://github.com/Raketa02/Raketa/issues/489)). Every collected test lands in
+   ([#489](https://github.com/Rakieta02/Rakieta/issues/489)). Every collected test lands in
    exactly one group, and a test missing from the file is given the average duration, so
    **stale durations unbalance the shards and never drop a test.** CI fails when the shards do
    not add up to the whole suite, so a sharding mistake cannot produce a green run that tested

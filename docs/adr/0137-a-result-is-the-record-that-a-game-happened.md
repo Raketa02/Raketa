@@ -16,10 +16,10 @@
 - **Carries forward ADR-0049** (same)
   **whole**, and strikes the clause of the root [`CONTEXT.md`](../../CONTEXT.md) that contradicts
   it.
-- Settles [#303](https://github.com/Raketa02/Raketa/issues/303) on the spec
-  [#302](https://github.com/Raketa02/Raketa/issues/302).
+- Settles [#303](https://github.com/Rakieta02/Rakieta/issues/303) on the spec
+  [#302](https://github.com/Rakieta02/Rakieta/issues/302).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Challenges are gone, so a game is no longer opened by a completed line-up: a booking opens it, in the transaction that booked the court (#541), and the game carries its hour. A booked game's entry window runs from the end of that hour, and `PLAN_HORIZON` now measures only streams written before bookings. The matcher's pairwise read, `counted_games` and *Last 5* on a search card, and `late_change_threshold` went with the ranking (#580). The event-sourced context, the result flow and its clocks, the ends folded and never stored, and §5 all stand.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** Challenges are gone, so a game is no longer opened by a completed line-up: a booking opens it, in the transaction that booked the court (#541), and the game carries its hour. A booked game's entry window runs from the end of that hour, and `PLAN_HORIZON` now measures only streams written before bookings. The matcher's pairwise read, `counted_games` and *Last 5* on a search card, and `late_change_threshold` went with the ranking (#580). The event-sourced context, the result flow and its clocks, the ends folded and never stored, and §5 all stand.
 
 ## Context
 
@@ -235,7 +235,7 @@ wrong. The Player Score ships **five** strands, and ADR-0098's Decision 3 absorb
 construction: a strand nobody publishes stands down and the survivors renormalise *inside* the
 reliability term. `ReliabilityStrand.CONFIRMS_RESULTS`, its two ruleset weights and its enum
 member on `openapi.player.json` are removed by
-[#305](https://github.com/Raketa02/Raketa/issues/305) — the ticket that builds the provider,
+[#305](https://github.com/Rakieta02/Rakieta/issues/305) — the ticket that builds the provider,
 and the one whose change is a wire change that has to ship with its client.
 
 ### 6. What `games` publishes, and to whom
@@ -284,7 +284,7 @@ appends `SeatLapsed`. Tempting, and it is the shape the rating context will want
 same case: a lapse is a fact about **one person's silence**, where a confirmation is the
 **standing of the game**, and a durable name for a standing is the second place for it to be
 true. The rating context reads confirmed results forward instead, and how it does that is
-[#304](https://github.com/Raketa02/Raketa/issues/304)'s decision, recorded below as a cost.
+[#304](https://github.com/Rakieta02/Rakieta/issues/304)'s decision, recorded below as a cost.
 
 **Keep `matches` as the context name**, matching ADR-0098 and four specs. Rejected: the wire, the
 card and the newcomer path all say *game*, and a durable event name is the worst possible place
@@ -314,7 +314,7 @@ on was deleted with the product it described.
   player who will ever exist; from the first confirmed game it is not.
   `the-newcomer-path.md`'s *new until their first game, and never longer than 14 days* is live in
   both halves for the first time, and the seeded cohort now has to contain somebody who has
-  played — which is [#308](https://github.com/Raketa02/Raketa/issues/308).
+  played — which is [#308](https://github.com/Rakieta02/Rakieta/issues/308).
 - **The rating context has nothing to subscribe to.** A confirmation is derived, so #304 must
   read games forward from a cursor rather than handle an event. That is a real cost of §2 and it
   is being taken deliberately; if it turns out to need an announcement, the argument to beat is

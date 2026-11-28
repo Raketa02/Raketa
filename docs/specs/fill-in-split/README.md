@@ -1,12 +1,12 @@
 # The Fill in / You’re in split: the record and its mocks
 
-**What PRD [#844](https://github.com/Raketa02/Raketa/issues/844) is drawn from.** A group's page
+**What PRD [#844](https://github.com/Rakieta02/Rakieta/issues/844) is drawn from.** A group's page
 gets four tabs, **Games · Fill in · You’re in · Friends**: Fill in keeps only the rescues, the
 player's own live yeses move to You’re in, **+ Post a game** floats there, and the badges count what
 the player hasn't seen. It was decided in the Fill in refactor grilling on 2026-11-23 (Q1–Q12, with
 Q2b and Q3b), from the product owner's brief and 3 mocks. The log and the mocks are copied here from
 the product owner's own folder, `3.fill_in_refactor`, so every session can read them. Landed by
-[#845](https://github.com/Raketa02/Raketa/issues/845) on 2026-11-23.
+[#845](https://github.com/Rakieta02/Rakieta/issues/845) on 2026-11-23.
 
 | File | What it holds |
 | --- | --- |
@@ -23,7 +23,7 @@ and ADR-0208 or PRD #844 disagree, ADR-0208 and PRD #844 win.
 lives: [the Games and Fill in screens](../games-and-fill-in/the-screens.md) (A1, A3, A5) and
 [mechanics](../games-and-fill-in/the-mechanics.md) (§3, §10), amended by #845. The player app's
 feature docs and design system are amended by the tickets that build each part,
-[#847](https://github.com/Raketa02/Raketa/issues/847)–[#850](https://github.com/Raketa02/Raketa/issues/850).
+[#847](https://github.com/Rakieta02/Rakieta/issues/847)–[#850](https://github.com/Rakieta02/Rakieta/issues/850).
 Until a ticket amends them, they describe the page as it is today.
 
 The terms are in the root [`CONTEXT.md`](../../../CONTEXT.md), under **Bookings**: **Fill in**
@@ -69,7 +69,7 @@ are right everywhere else.
 | Note | Where | What it draws | What is built |
 | --- | --- | --- | --- |
 | 1 | 1, 2 | **+ Post a game** floating over Fill in, and nothing floating over You’re in | **+ Post a game floats on You’re in, and only there** (Q4): the button that makes a game sits on the tab where that game appears. Fill in has no button |
-| 2 | 1, 2, 3 | A badge on the selected tab: *Fill in 2* on mocks 1 and 3, *You’re in 3* on mock 2. The group page's first mocks do the same (*Games 4* on the Games and Fill in mock 1, *Fill in 1* on mock 11) | **The tab on screen draws no badge**, whatever it counts (Q2b, Q10). What it shows is seen while it is on screen; on Games, the other kind's unseen cards show in the Games badge only once you leave the tab. *Noted 2026-11-24 ([#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built): when the Competitive / For fun choice moves into the Games and Friends tabs' menu, the tab on screen still draws no badge, and on Games and Friends **the chevron is the selected tab's only mark**; Fill in and You’re in draw none. The tab menu's mocks draw a count on the selected tab too (*Games 3*), and it is not built either ([the tab menu's README](../tab-menu/README.md#the-ground-rule-the-mocks-are-illustrations)).* |
+| 2 | 1, 2, 3 | A badge on the selected tab: *Fill in 2* on mocks 1 and 3, *You’re in 3* on mock 2. The group page's first mocks do the same (*Games 4* on the Games and Fill in mock 1, *Fill in 1* on mock 11) | **The tab on screen draws no badge**, whatever it counts (Q2b, Q10). What it shows is seen while it is on screen; on Games, the other kind's unseen cards show in the Games badge only once you leave the tab. *Noted 2026-11-24 ([#859](https://github.com/Rakieta02/Rakieta/issues/859), decided and not yet built): when the Competitive / For fun choice moves into the Games and Friends tabs' menu, the tab on screen still draws no badge, and on Games and Friends **the chevron is the selected tab's only mark**; Fill in and You’re in draw none. The tab menu's mocks draw a count on the selected tab too (*Games 3*), and it is not built either ([the tab menu's README](../tab-menu/README.md#the-ground-rule-the-mocks-are-illustrations)).* |
 
 ## Index
 

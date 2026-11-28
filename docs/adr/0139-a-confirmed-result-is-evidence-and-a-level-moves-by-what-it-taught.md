@@ -10,10 +10,10 @@
   that sentence imagined.
 - **Second instance of [ADR-0015](0015-engines-as-a-pure-versioned-layer.md)'s versioned
   engines** inside RacketSkill: a second stamp beside the questionnaire's, retuned separately.
-- Settles [#304](https://github.com/Raketa02/Raketa/issues/304) on the spec
-  [#302](https://github.com/Raketa02/Raketa/issues/302).
+- Settles [#304](https://github.com/Rakieta02/Rakieta/issues/304) on the spec
+  [#302](https://github.com/Rakieta02/Rakieta/issues/302).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The search card that priced *you against this person* is gone (#579), and so are the matcher's skill term and the `games_match_history.py` beside which §6 put the adapter. *At stake* is read only on a booked game's pairing now, side against side, by the same `stakes()` that moves the Level (ADR-0161). The update rule, its constants, the statuses, a four's share and the hourly catch-up stand as written.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The search card that priced *you against this person* is gone (#579), and so are the matcher's skill term and the `games_match_history.py` beside which §6 put the adapter. *At stake* is read only on a booked game's pairing now, side against side, by the same `stakes()` that moves the Level (ADR-0161). The update rule, its constants, the statuses, a four's share and the hourly catch-up stand as written.
 
 ## Context
 

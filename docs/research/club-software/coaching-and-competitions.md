@@ -1,7 +1,7 @@
 # Coaches, classes and competitions — what rivals run, and what Kraków does
 
 Research for the club-software grilling that follows story S-01E
-([#609](https://github.com/Raketa02/Raketa/issues/609)), whose decisions of 2026-10-12 set Rakieta on the path
+([#609](https://github.com/Rakieta02/Rakieta/issues/609)), whose decisions of 2026-10-12 set Rakieta on the path
 to becoming the club's whole booking software. This file covers the map's **area 8** (coaches, lessons,
 classes, academies) and **area 9** (leagues, tournaments, ladders).
 

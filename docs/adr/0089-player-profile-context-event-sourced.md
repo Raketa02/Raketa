@@ -6,7 +6,7 @@
   holding up to 6 stay valid.
 - **Date:** 2026-08-25
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The proposals opt-in and the search radius are gone (#581): `ProposalsOptInAnswered` and `SearchRadiusChanged` are no longer registered, and `player_profile.created` is at version 3 without `search_radius_km`. The consent argument below was this record's deciding force and now has no subject. The aggregate stays event-sourced on the rest of its argument — a preference history, and a week nobody may see as a calendar — with one stream per player, one idempotent commit, photos by id and a served tag vocabulary.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The proposals opt-in and the search radius are gone (#581): `ProposalsOptInAnswered` and `SearchRadiusChanged` are no longer registered, and `player_profile.created` is at version 3 without `search_radius_km`. The consent argument below was this record's deciding force and now has no subject. The aggregate stays event-sourced on the rest of its argument — a preference history, and a week nobody may see as a calendar — with one stream per player, one idempotent commit, photos by id and a served tag vocabulary.
 
 ## Context
 

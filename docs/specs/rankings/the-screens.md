@@ -1,7 +1,7 @@
 # Rankings — the screens
 
 > **Status:** from the rankings grilling of 2026-11-07 and PRD
-> [#766](https://github.com/Raketa02/Raketa/issues/766), recorded by
+> [#766](https://github.com/Rakieta02/Rakieta/issues/766), recorded by
 > [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md).
 >
 > **What it is:** how each Rankings screen looks and behaves: the trophy, then the page section by
@@ -20,7 +20,7 @@
 > **The people in every example:** **Tomek** is the reader, 7th of 13 in padel at 2,71. **Karol** sits
 > just above at 2,75, **Zofia** just below at 2,69, and **Inés** at the top at 3,40.
 >
-> **Amended 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2 (Q131, PRD [#789](https://github.com/Raketa02/Raketa/issues/789)):
+> **Amended 2026-11-14** by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md) §2 (Q131, PRD [#789](https://github.com/Rakieta02/Rakieta/issues/789)):
 > every row is shown to every reader, blocked ones included, so [§4.5](#45-hidden-from-general-designed-no-mock)
 > is retired, [§5.1](#51-the-podium-rankings-4-6)'s podium is simply the first three, a blocked row's
 > tap reads *This record isn't available* ([§6](#6-the-record-from-the-ranking-designed-no-mock)), and
@@ -46,7 +46,7 @@
 - **Rankings**, the page title, and ***Competitive games only*** under it, small and grey (Q11). No
   mock draws the subtitle.
 - **The sport pill on the right**, the deck's own control, lifted to shared UI
-  ([#774](https://github.com/Raketa02/Raketa/issues/774)): the sport's dot and name, opening to the
+  ([#774](https://github.com/Rakieta02/Rakieta/issues/774)): the sport's dot and name, opening to the
   others. **It offers all four sports**, the reader's rated sports first, then the rest in the app's
   sport order.
 - **Switching sport re-reads the page.**

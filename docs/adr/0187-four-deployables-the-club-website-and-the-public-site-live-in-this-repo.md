@@ -2,11 +2,11 @@
 
 - **Status:** Accepted — **§8 superseded 2026-11-27 by
   [ADR-0211](0211-the-brand-is-rakieta-everywhere.md)** (PRD
-  [#889](https://github.com/Raketa02/Raketa/issues/889)): the brand is **Rakieta**, everywhere, and
+  [#889](https://github.com/Rakieta02/Rakieta/issues/889)): the brand is **Rakieta**, everywhere, and
   the mocks' *Rakieta* is read as written. §8 and this line keep the old spelling as a quote.
   Before that, **§8 was amended 2026-11-23 by
   [ADR-0209](0209-a-drawn-splash-opens-the-app-and-startup-runs-behind-it.md)** (PRD
-  [#852](https://github.com/Raketa02/Raketa/issues/852)), with one exception to *"The brand is
+  [#852](https://github.com/Rakieta02/Rakieta/issues/852)), with one exception to *"The brand is
   Raketa, everywhere"*: the player app's drawn splash spells its wordmark **Rakieta**. The
   launcher's name and every string stay *Raketa*, and the mocks' *Rakieta* is still read as Raketa
   everywhere else.
@@ -17,7 +17,7 @@
   `frontend_player/`, `frontend_club/` and `frontend_public/`. The hook's `frontend_club/` arm,
   kept after the reset *"so that a second client is fenced on the day it lands"*, is used for what
   it was kept for. `frontend_public/` gets a tier of its own
-  ([#502](https://github.com/Raketa02/Raketa/issues/502)).
+  ([#502](https://github.com/Rakieta02/Rakieta/issues/502)).
 - **Amends [ADR-0006](0006-backend-owns-api-contract.md): one document per surface, and there are
   four.** They are `player`, `dev`, `club` and `public` (§5). The decision is unchanged: the backend
   owns the contract, and no client hand-writes a type that mirrors a response.
@@ -34,12 +34,12 @@
 - **Gives way on one copy rule.** [`the-words.md`](../specs/matchmaking/the-words.md)'s voice rule
   *no Rakieta*, which bars naming the app inside a sentence, yields **wherever a mock sentence names
   the app** (§8).
-- Settles [#501](https://github.com/Raketa02/Raketa/issues/501) for the PRD
-  [#500](https://github.com/Raketa02/Raketa/issues/500). Fenced by
-  [#502](https://github.com/Raketa02/Raketa/issues/502). Scaffolded by
-  [#522](https://github.com/Raketa02/Raketa/issues/522) (club website) and
-  [#525](https://github.com/Raketa02/Raketa/issues/525) (public site). Gated in CI by
-  [#527](https://github.com/Raketa02/Raketa/issues/527).
+- Settles [#501](https://github.com/Rakieta02/Rakieta/issues/501) for the PRD
+  [#500](https://github.com/Rakieta02/Rakieta/issues/500). Fenced by
+  [#502](https://github.com/Rakieta02/Rakieta/issues/502). Scaffolded by
+  [#522](https://github.com/Rakieta02/Rakieta/issues/522) (club website) and
+  [#525](https://github.com/Rakieta02/Rakieta/issues/525) (public site). Gated in CI by
+  [#527](https://github.com/Rakieta02/Rakieta/issues/527).
 
 ## Context
 
@@ -125,7 +125,7 @@ preview tags (title, description, image) without running JavaScript. It serves:
   didn't fire.
 
 **The clubs' *Set a new password* page lives on the club website**, not here, because clubs already
-use that site. This corrects #500, as [#522](https://github.com/Raketa02/Raketa/issues/522) records.
+use that site. This corrects #500, as [#522](https://github.com/Rakieta02/Rakieta/issues/522) records.
 
 It has **no sign-in, no session and no cookies**. A future marketing site may live anywhere, because
 it isn't this.
@@ -142,7 +142,7 @@ it isn't this.
 A client never reads another client's document, which is ADR-0006's reason for splitting them.
 **Every document is emitted and freshness-checked, and every client's types are drift-checked**, each
 with its still-fires proof. `make gen-api` regenerates all three clients
-([#527](https://github.com/Raketa02/Raketa/issues/527)).
+([#527](https://github.com/Rakieta02/Rakieta/issues/527)).
 
 **The public surface discloses the least a page needs.** A group gives its name, monogram, club,
 district, sports and member count. An invitation gives the first name, the club and its state, and
@@ -198,7 +198,7 @@ from this section.
 app's server layer points at a small **stub backend** that answers with payloads typed from that app's
 generated contract and records the requests it receives. **No automated test crosses apps.** The
 end-to-end journey is a QA plan walked by hand
-([#528](https://github.com/Raketa02/Raketa/issues/528)).
+([#528](https://github.com/Rakieta02/Rakieta/issues/528)).
 
 ### 7. Every address is a setting, never a literal
 

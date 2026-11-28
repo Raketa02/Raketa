@@ -7,9 +7,9 @@
 
 > **Note — the 2026-08-25 reset.** It cites **ADR-0007** (the club console's cookie session), removed in the 2026-08-25 reset. This ADR's own decision, for the player app, is untouched. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The flags' datafile cache the ADR-0180 bullet above names is gone with the feature flags (#576), and ADR-0180 was deleted. `AsyncStorage` is imported by one module again, the phone-preferences store of ADR-0188, and `eslint.config.mjs` names it alone. The decision itself is untouched.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The flags' datafile cache the ADR-0180 bullet above names is gone with the feature flags (#576), and ADR-0180 was deleted. `AsyncStorage` is imported by one module again, the phone-preferences store of ADR-0188, and `eslint.config.mjs` names it alone. The decision itself is untouched.
 
-> **Note — the feature flags return (2026-11-21, [#826](https://github.com/Raketa02/Raketa/issues/826)).** The enforcement is narrowed again by [ADR-0206](0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §12: the feature flags' saved datafile may import `AsyncStorage` beside the phone-preferences store, and `eslint.config.mjs` names both. A datafile is public and names no player; the decision itself is untouched.
+> **Note — the feature flags return (2026-11-21, [#826](https://github.com/Rakieta02/Rakieta/issues/826)).** The enforcement is narrowed again by [ADR-0206](0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md) §12: the feature flags' saved datafile may import `AsyncStorage` beside the phone-preferences store, and `eslint.config.mjs` names both. A datafile is public and names no player; the decision itself is untouched.
 
 ## Context
 

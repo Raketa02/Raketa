@@ -1,9 +1,9 @@
 # Cold start with eleven players — what is known, what is repeated, and what nobody has measured
 
-Research output for [`Raketa02/Raketa#162`](https://github.com/Raketa02/Raketa/issues/162), under the map
-[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155).
+Research output for [`Rakieta02/Rakieta#162`](https://github.com/Rakieta02/Rakieta/issues/162), under the map
+[The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155).
 
-**This file decides nothing.** [The thin-pool experience](https://github.com/Raketa02/Raketa/issues/166)
+**This file decides nothing.** [The thin-pool experience](https://github.com/Rakieta02/Rakieta/issues/166)
 decides. The job here is to establish what is actually known about running a matching market
 at eleven players, and — more importantly — to separate the small amount that has been
 measured from the large amount that is repeated because it sounds true.

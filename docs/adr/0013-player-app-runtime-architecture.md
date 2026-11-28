@@ -7,9 +7,9 @@
 
 > **Note — the 2026-08-25 reset.** It cites **ADR-0007** (the club console's cookie session), removed in the 2026-08-25 reset. This ADR's own decision, for the player app, is untouched. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The feature flags were removed with the loop they hid (#576) — Featurevisor, its datafile fetch and cache, and the flag hooks — and ADR-0180 was deleted. Its supersession above has lapsed: *a feature-flag service* is back on the *Not adopted now* list, under that list's rule that a dependency arrives with the code that needs it.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The feature flags were removed with the loop they hid (#576) — Featurevisor, its datafile fetch and cache, and the flag hooks — and ADR-0180 was deleted. Its supersession above has lapsed: *a feature-flag service* is back on the *Not adopted now* list, under that list's rule that a dependency arrives with the code that needs it.
 
-> **Note — the feature flags return (2026-11-21, [#826](https://github.com/Raketa02/Raketa/issues/826)).** The feature-flag service is adopted again, by [ADR-0206](0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md), which restates ADR-0180 without the tester mark: *a feature-flag service* leaves the *Not adopted now* list a second time. The SDK and its saved datafile arrived with the flag that needs them, `explore`, under this record's rule. The rest of the list stands.
+> **Note — the feature flags return (2026-11-21, [#826](https://github.com/Rakieta02/Rakieta/issues/826)).** The feature-flag service is adopted again, by [ADR-0206](0206-a-feature-is-turned-on-by-a-pull-request-again-and-explore-is-the-first.md), which restates ADR-0180 without the tester mark: *a feature-flag service* leaves the *Not adopted now* list a second time. The SDK and its saved datafile arrived with the flag that needs them, `explore`, under this record's rule. The rest of the list stands.
 
 ## Context
 

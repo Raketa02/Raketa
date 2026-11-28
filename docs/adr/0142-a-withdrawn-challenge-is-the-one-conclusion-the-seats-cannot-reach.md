@@ -18,10 +18,10 @@
   `challenges`' *nothing announces a conclusion the seats already imply* and applies it to a
   result. The rule stands; this records its **first and only exemption**, and the test that
   keeps it one.
-- Settles [#325](https://github.com/Raketa02/Raketa/issues/325) on the map
-  [#321](https://github.com/Raketa02/Raketa/issues/321).
+- Settles [#325](https://github.com/Rakieta02/Rakieta/issues/325) on the map
+  [#321](https://github.com/Rakieta02/Rakieta/issues/321).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Challenges are gone, and with them the withdraw, the one-open-challenge-per-pair rule, `Standing.WITHDRAWN` and *answers challenges* (§1, §2, §4, §5). §3's test outlived the act it was written for: *an event may announce a conclusion only when no arrangement of the record could reach it* is what `games` holds `GameCalledOff`, `SeatVacated` and `LineUpReseated` to (ADR-0163). Read §3 for that rule and nothing else here.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** Challenges are gone, and with them the withdraw, the one-open-challenge-per-pair rule, `Standing.WITHDRAWN` and *answers challenges* (§1, §2, §4, §5). §3's test outlived the act it was written for: *an event may announce a conclusion only when no arrangement of the record could reach it* is what `games` holds `GameCalledOff`, `SeatVacated` and `LineUpReseated` to (ADR-0163). Read §3 for that rule and nothing else here.
 
 ## Context
 
@@ -30,7 +30,7 @@ derives a challenge's standing from its seats and the clock, and `ENDED` holds t
 `DECLINED` and `LAPSED`. Everything downstream of *is this challenge still open* reads that set:
 `Challenge.is_open_at`, `players_in_it_at`, and through them the **one-open-challenge-per-pair
 rule** that `send_challenge` re-verifies in its own transaction, and the deck's exclusion
-([#217](https://github.com/Raketa02/Raketa/issues/217): *that player has left the deck for good,
+([#217](https://github.com/Rakieta02/Rakieta/issues/217): *that player has left the deck for good,
 because you now have an open game together*).
 
 Folding the aggregate forward proves two permanences:
@@ -174,10 +174,10 @@ and is absent from the denominator**, exactly as the organiser's own seat is
   challenge copy, not the rewrite that is out of scope.
 - **The organiser's handle stops being a nicety.** The sentence names somebody and `SeatSchema`
   carries `side · player_id · answer · answer_by`, so
-  [#328](https://github.com/Raketa02/Raketa/issues/328)'s handle is a hard dependency of this
+  [#328](https://github.com/Rakieta02/Rakieta/issues/328)'s handle is a hard dependency of this
   copy rather than a held additive field.
 - **The conversation opened on the first acceptance now has an end.** Its lifetime is decided on
   #325 and belongs to a context that has no name yet; the record it needs is owed by
-  [#332](https://github.com/Raketa02/Raketa/issues/332), which names it.
+  [#332](https://github.com/Rakieta02/Rakieta/issues/332), which names it.
 - **Nothing is written into the root `CONTEXT.md` yet.** Part 1 documents *implemented* bounded
   contexts, and `withdraw` is a decision, not a behaviour. The term lands with the build.

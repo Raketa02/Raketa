@@ -15,12 +15,12 @@
   §5 weights take back the 15 they set aside.
 - **Is a ruleset release under [ADR-0119](0119-a-ruleset-ships-on-an-offline-diff-and-a-deploy.md)**:
   `2026.09.08-a`, with the offline diff committed beside it.
-- Settles [#383](https://github.com/Raketa02/Raketa/issues/383) on the spec
-  [#373](https://github.com/Raketa02/Raketa/issues/373), whose
+- Settles [#383](https://github.com/Rakieta02/Rakieta/issues/383) on the spec
+  [#373](https://github.com/Rakieta02/Rakieta/issues/373), whose
   `docs/specs/player-record/the-decisions.md` §4 and §6 are the product decisions this
   record carries out.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The ranking and its rulesets are gone (#580): only `2026.09.15-a` remains, with no strand weights, no `min_observations` and no `horizon_days`, so §4, §5's ruleset release and its offline gates, §6 and the matcher's half of the Consequences describe nothing. `ANSWERS_RESULTS` (§1–§2) is live, and so is `ANSWERED_RESULTS_WINDOW` at twelve months (§3), which now stands on its own: the horizon it was chosen to equal, and the test that held them together, are gone. The published blend keeps §5's 35/20/15/12/10/8 over the strands that publish; *answers challenges* stands down and *keeps plans* is read off booked games (#544).
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The ranking and its rulesets are gone (#580): only `2026.09.15-a` remains, with no strand weights, no `min_observations` and no `horizon_days`, so §4, §5's ruleset release and its offline gates, §6 and the matcher's half of the Consequences describe nothing. `ANSWERS_RESULTS` (§1–§2) is live, and so is `ANSWERED_RESULTS_WINDOW` at twelve months (§3), which now stands on its own: the horizon it was chosen to equal, and the test that held them together, are gone. The published blend keeps §5's 35/20/15/12/10/8 over the strands that publish; *answers challenges* stands down and *keeps plans* is read off booked games (#544).
 
 ## Context
 

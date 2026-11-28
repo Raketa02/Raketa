@@ -57,10 +57,10 @@
   - stakes on the deck card;
   - a stored projection of everyone's tags for the deck. If the read's statement count can't be held,
     it is argued in an ADR, not added silently (§11).
-- **Settles PRD [#827](https://github.com/Raketa02/Raketa/issues/827).** It was decided in the
+- **Settles PRD [#827](https://github.com/Rakieta02/Rakieta/issues/827).** It was decided in the
   For-fun refactor grilling on 2026-11-22 (Q1–Q22 and Q3b there), from the product owner's brief
   *For-Fun Game Cards Refactor* and its 7 mocks, and written by
-  [#828](https://github.com/Raketa02/Raketa/issues/828).
+  [#828](https://github.com/Rakieta02/Rakieta/issues/828).
   - **Specified by** [`docs/specs/for-fun/`](../specs/for-fun/README.md): the brief, the grilling's
     decision log and the mocks. Where the log and this record or PRD #827 disagree, this record and
     PRD #827 win.
@@ -71,15 +71,15 @@
   - **Mocks are cited by the folder's numbers, 1 to 7.** The decision log's prose and PRD #827 count
     by the files' original prefixes, so their *mock 6* is this folder's **7** and their *mocks 4/5*
     are **5 and 6**. The folder's README translates them.
-  - **Built by** the backend's [#829](https://github.com/Raketa02/Raketa/issues/829) (27 tags, 2–8),
-    [#830](https://github.com/Raketa02/Raketa/issues/830) (the vibe on a card and the For-fun deck
-    order), [#831](https://github.com/Raketa02/Raketa/issues/831) (building by shared tags),
-    [#832](https://github.com/Raketa02/Raketa/issues/832) (a tag edit reaches the next build, and
-    the seed), [#833](https://github.com/Raketa02/Raketa/issues/833) (the details read by kind),
-    [#834](https://github.com/Raketa02/Raketa/issues/834) (the Friends card and Post a game's fits)
-    and [#835](https://github.com/Raketa02/Raketa/issues/835) (a booked game's pairing); and the
-    player app's [#836](https://github.com/Raketa02/Raketa/issues/836)–[#842](https://github.com/Raketa02/Raketa/issues/842).
-    Walked by [#843](https://github.com/Raketa02/Raketa/issues/843).
+  - **Built by** the backend's [#829](https://github.com/Rakieta02/Rakieta/issues/829) (27 tags, 2–8),
+    [#830](https://github.com/Rakieta02/Rakieta/issues/830) (the vibe on a card and the For-fun deck
+    order), [#831](https://github.com/Rakieta02/Rakieta/issues/831) (building by shared tags),
+    [#832](https://github.com/Rakieta02/Rakieta/issues/832) (a tag edit reaches the next build, and
+    the seed), [#833](https://github.com/Rakieta02/Rakieta/issues/833) (the details read by kind),
+    [#834](https://github.com/Rakieta02/Rakieta/issues/834) (the Friends card and Post a game's fits)
+    and [#835](https://github.com/Rakieta02/Rakieta/issues/835) (a booked game's pairing); and the
+    player app's [#836](https://github.com/Rakieta02/Rakieta/issues/836)–[#842](https://github.com/Rakieta02/Rakieta/issues/842).
+    Walked by [#843](https://github.com/Rakieta02/Rakieta/issues/843).
 
 ## Context
 

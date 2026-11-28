@@ -13,7 +13,7 @@
   the nickname again.
 - **Date:** 2026-08-26
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches are gone (#579), so no returned candidate carries a `player_card`: §1's seam after `matchfit`, *Why 78?*, the distance and bearing beside the card, the providers read at assembly and the copy kept in an unexpiring search record describe nothing that runs. What the card settled for every surface that shows one player to another stands. A photograph crosses as its stored `photo_id` beside a `photo_url` minted per response and written down nowhere, both omitted when there is none; there is no activity recency at any granularity (§3); and §4, as ADR-0171 reads it, is the whole name or nobody. The player record keeps a closed list of its own (ADR-0159), not this one.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The searches are gone (#579), so no returned candidate carries a `player_card`: §1's seam after `matchfit`, *Why 78?*, the distance and bearing beside the card, the providers read at assembly and the copy kept in an unexpiring search record describe nothing that runs. What the card settled for every surface that shows one player to another stands. A photograph crosses as its stored `photo_id` beside a `photo_url` minted per response and written down nowhere, both omitted when there is none; there is no activity recency at any granularity (§3); and §4, as ADR-0171 reads it, is the whole name or nobody. The player record keeps a closed list of its own (ADR-0159), not this one.
 
 ## Context
 
@@ -100,8 +100,8 @@ player_card: { nickname, photo_id?, area_code, distance_km,
 > subject published, and every field on it is a fact about that person alone.*
 >
 > - **`range` was added** — the likely range, μ ± σ as `rating` published it, travelling as
->   `{low, high}` ([#235](https://github.com/Raketa02/Raketa/issues/235),
->   [#243](https://github.com/Raketa02/Raketa/issues/243)). Printing μ while refusing μ ± σ
+>   `{low, high}` ([#235](https://github.com/Rakieta02/Rakieta/issues/235),
+>   [#243](https://github.com/Rakieta02/Rakieta/issues/243)). Printing μ while refusing μ ± σ
 >   shows two players at the same Level with no way to tell that one of them is a guess. It
 >   is **projected** onto the index row and copied onto the card, never derived at assembly.
 >   The band's numeric **edges stay off**: their only consumer is the band bar, which is
@@ -109,7 +109,7 @@ player_card: { nickname, photo_id?, area_code, distance_km,
 >   range in any case.
 >
 > - **`photo_url` was added beside `photo_id`** — a short-lived signed link, minted per
->   response and recorded nowhere ([#245](https://github.com/Raketa02/Raketa/issues/245)).
+>   response and recorded nowhere ([#245](https://github.com/Rakieta02/Rakieta/issues/245)).
 >   The paragraph below already described it; nothing minted one, and
 >   `GET /photos/{id}` refuses another player's id on purpose — so as the contract stood
 >   **no photograph could reach a Play screen at all**. The two fields are omitted
@@ -134,7 +134,7 @@ player_card: { nickname, photo_id?, area_code, distance_km,
 >   response.
 >
 > - **The record block was added — `player_score`, `counted_games` and `last_five`**
->   ([#306](https://github.com/Raketa02/Raketa/issues/306)). `counted_games` was on the list
+>   ([#306](https://github.com/Rakieta02/Rakieta/issues/306)). `counted_games` was on the list
 >   from the beginning and had never been assembled; the other two joined it when their
 >   providers shipped
 >   ([ADR-0140](0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
@@ -201,7 +201,7 @@ apply* spelling, and the client draws the poster.
 > generated poster** — never over a photograph, never spoken, never in copy, and on no other
 > surface; the tile's accessible name is the whole handle. The rule below stands for every
 > sentence, every spoken name and every other drawing — `handleStem` and the seat's caption were
-> admitted *inside* it, and the Chats rows keep [#338](https://github.com/Raketa02/Raketa/issues/338)
+> admitted *inside* it, and the Chats rows keep [#338](https://github.com/Rakieta02/Rakieta/issues/338)
 > §5's refusal of a monogram. The argument, and the fence, are ADR-0167's.
 
 The card carries a **Nickname**. `users` holds no real name and no given name, and a nickname
@@ -227,7 +227,7 @@ are written down here so the next proposal starts from the reason rather than fr
 
 **Form and Player Score arrived on their own, through ports that already existed.** They were
 **gaps, not refusals**, and both are closed
-([#306](https://github.com/Raketa02/Raketa/issues/306)). The prediction was right about the
+([#306](https://github.com/Rakieta02/Rakieta/issues/306)). The prediction was right about the
 shape and wrong about one port name, which is worth recording because the correction is the
 rule doing its work:
 

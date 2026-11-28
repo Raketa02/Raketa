@@ -1,6 +1,6 @@
 # The tab bar dock: the record, its brief and its mocks
 
-**What PRD [#878](https://github.com/Raketa02/Raketa/issues/878) is drawn from.** The player app's
+**What PRD [#878](https://github.com/Rakieta02/Rakieta/issues/878) is drawn from.** The player app's
 tab bar stops ending the screen and floats over it as a rounded piece of frosted glass. Its three
 tabs are equal: **Home**, **Play** and **You**. The lit one sits in a soft coral capsule, **the
 selection marker**, which travels to the tab you press.
@@ -11,7 +11,7 @@ The PRD comes from three sources:
 - the grilling held on them on 2026-11-24 (Q1–Q26).
 
 They are copied here from the product owner's own folder, `7.refactor_menu`, so every session can
-read them. Landed by [#879](https://github.com/Raketa02/Raketa/issues/879) on 2026-11-25.
+read them. Landed by [#879](https://github.com/Rakieta02/Rakieta/issues/879) on 2026-11-25.
 **Decided, not yet built.**
 
 | File | What it holds |
@@ -19,7 +19,7 @@ read them. Landed by [#879](https://github.com/Raketa02/Raketa/issues/879) on 20
 | [menu_refactor.md](menu_refactor.md) | The product owner's brief, verbatim. Its mock paths point at their own desktop, so read each mock by the [index](#index)'s original name. The folder's `menu_refactor.pdf` holds the same text and isn't copied |
 | [decisions.md](decisions.md) | The grilling's decision log, verbatim. It holds every ruling with its reason; the facts it rests on (§2, with `file:line` positions as of 2026-11-24, the A32 measurements, and the contrast and overshoot computations); the docs and tests it reaches; and the question index Q1–Q26. Its status line and delivery section (§15) predate PRD #878. Its §12 lists five calls made while writing, all taken up by the PRD; the spec folder its call 5 suggests is this one |
 | [`mocks/`](mocks/) | The 3 mocks, renamed by what they show and numbered 1 to 3 (the [index](#index) gives each original name) |
-| [a32_spike.md](a32_spike.md) | The A32 spike's record ([#880](https://github.com/Raketa02/Raketa/issues/880), 2026-11-25): T1–T3 on debug native and release builds, with every A/B's numbers and run counts, the blur's strength, and what the spike learned for #883–#885. Its renders are in [`spike/`](spike/). They are measurement evidence, not mocks |
+| [a32_spike.md](a32_spike.md) | The A32 spike's record ([#880](https://github.com/Rakieta02/Rakieta/issues/880), 2026-11-25): T1–T3 on debug native and release builds, with every A/B's numbers and run counts, the blur's strength, and what the spike learned for #883–#885. Its renders are in [`spike/`](spike/). They are measurement evidence, not mocks |
 
 **The record is [ADR-0210](../../adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md)**,
 *the tab bar floats as glass, and its selection travels*. It changes four things in the design
@@ -34,10 +34,10 @@ It also retires the ⚡Play disc, adds the app's first spring, and stands the ba
 while the keyboard is up.
 
 **Its §7, Android's material, was completed by the A32 spike**
-([#880](https://github.com/Raketa02/Raketa/issues/880)) on 2026-11-25: **Android draws no glass**,
+([#880](https://github.com/Rakieta02/Rakieta/issues/880)) on 2026-11-25: **Android draws no glass**,
 so its dock is opaque `surface`, and the blur's strength is intensity 100. The slide's stutter
 while a tab mounts was confirmed, and its remedy is
-[#886](https://github.com/Raketa02/Raketa/issues/886). The spike's numbers, its builds and its run
+[#886](https://github.com/Rakieta02/Rakieta/issues/886). The spike's numbers, its builds and its run
 counts are in [a32_spike.md](a32_spike.md). Where the log and PRD #878 disagree, PRD #878 wins. Where either
 disagrees with ADR-0210, the ADR wins.
 
@@ -56,14 +56,14 @@ disagrees with ADR-0210, the ADR wins.
 **This folder holds the record, not the spec.** The design system's §1.1, §1.2, §10.1 and §10.2
 carry a *decided, not yet built* note today. Their text is rewritten with `theme.ts` by the tickets
 that build each part:
-- [#881](https://github.com/Raketa02/Raketa/issues/881), the bar floating with today's look, and
+- [#881](https://github.com/Rakieta02/Rakieta/issues/881), the bar floating with today's look, and
   every tab screen ending at its reach;
-- [#882](https://github.com/Raketa02/Raketa/issues/882), Android's keyboard stand-down;
-- [#883](https://github.com/Raketa02/Raketa/issues/883), the glass dock with the marker standing
+- [#882](https://github.com/Rakieta02/Rakieta/issues/882), Android's keyboard stand-down;
+- [#883](https://github.com/Rakieta02/Rakieta/issues/883), the glass dock with the marker standing
   still;
-- [#884](https://github.com/Raketa02/Raketa/issues/884), the marker's motion.
+- [#884](https://github.com/Rakieta02/Rakieta/issues/884), the marker's motion.
 
-[#885](https://github.com/Raketa02/Raketa/issues/885) is the phone walk.
+[#885](https://github.com/Rakieta02/Rakieta/issues/885) is the phone walk.
 
 The player glossary ([`frontend_player/CONTEXT.md`](../../../frontend_player/CONTEXT.md)) has
 **selection marker**, and its **The shell** carries the note. The root glossary's *Home — the first

@@ -16,7 +16,7 @@
   *"`ON` has become a game, and ending the challenge would not touch it"* — the **departure**
   half: a player may now leave a game that has not happened, and the leaving lands on the
   challenge and reaches the game. The **withdraw** half is
-  [#417](https://github.com/Raketa02/Raketa/issues/417)'s and is refused here until then.
+  [#417](https://github.com/Rakieta02/Rakieta/issues/417)'s and is refused here until then.
   [ADR-0146](0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) §7's *"the game's
   frozen line-up after"*: membership after the line-up completes is the game's **current**
   line-up. [ADR-0141](0141-a-game-names-its-court-and-the-court-is-the-gate.md) §2's *"a seat
@@ -33,10 +33,10 @@
 - **Cites** ADR-0142 §3 for the durable names below, and
   ADR-0145 §4 for why no
   arrow moves.
-- Settles [#416](https://github.com/Raketa02/Raketa/issues/416), the first child of
-  [#411](https://github.com/Raketa02/Raketa/issues/411); the author's decision, grilled 2026-09-11.
+- Settles [#416](https://github.com/Rakieta02/Rakieta/issues/416), the first child of
+  [#411](https://github.com/Rakieta02/Rakieta/issues/411); the author's decision, grilled 2026-09-11.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `challenges`, the Plan and their ports are gone, so the departure on the challenge (§1), the fold (§2), the moment guard (§4), the `SEAT_LEFT` line (§5), the fill and pool (§6), `late_change_threshold` (§8) and §9 describe nothing. §3 survives on a booked game: a seat can be open, and it is drawn, never dropped. `Game.vacate` writes `SeatVacated` when a player leaves through `bookings`, and a rescue taking the seat writes `LineUpReseated` through `Game.take_seat`. A result is refused while a seat is open, every reader — the room's membership included — reads the current line-up, neither event reaches the room, and `planned_at` never moves.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** `challenges`, the Plan and their ports are gone, so the departure on the challenge (§1), the fold (§2), the moment guard (§4), the `SEAT_LEFT` line (§5), the fill and pool (§6), `late_change_threshold` (§8) and §9 describe nothing. §3 survives on a booked game: a seat can be open, and it is drawn, never dropped. `Game.vacate` writes `SeatVacated` when a player leaves through `bookings`, and a rescue taking the seat writes `LineUpReseated` through `Game.take_seat`. A result is refused while a seat is open, every reader — the room's membership included — reads the current line-up, neither event reaches the room, and `planned_at` never moves.
 
 ## Context
 

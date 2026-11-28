@@ -18,10 +18,10 @@
   being absent platform-wide.
 - **Applies ADR-0111**:
   the published number may not go on the candidate index, and reaches a card at assembly time.
-- Settles [#305](https://github.com/Raketa02/Raketa/issues/305) on the spec
-  [#302](https://github.com/Raketa02/Raketa/issues/302).
+- Settles [#305](https://github.com/Rakieta02/Rakieta/issues/305) on the spec
+  [#302](https://github.com/Rakieta02/Rakieta/issues/302).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The matcher's half of this record is gone — `PlayerScoreQuery`, the reliability term and its evidence gate, the ruleset's strand weights and `horizon_days`, and the candidate index §6 kept the score off (#579, #580). *Answers challenges* stood down at #544, when *keeps plans* came up on booked games, and has no source now that challenges are gone, so `player_score` folds `games` and `bookings` instead. §1, §2, §4 and §5 stand: no record of its own, a ghost charged to the whole court, no decay beyond the ratio, and the published weights.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The matcher's half of this record is gone — `PlayerScoreQuery`, the reliability term and its evidence gate, the ruleset's strand weights and `horizon_days`, and the candidate index §6 kept the score off (#579, #580). *Answers challenges* stood down at #544, when *keeps plans* came up on booked games, and has no source now that challenges are gone, so `player_score` folds `games` and `bookings` instead. §1, §2, §4 and §5 stand: no record of its own, a ghost charged to the whole court, no decay beyond the ratio, and the published weights.
 
 ## Context
 
@@ -178,7 +178,7 @@ present, weighted at **35 / 20 / 12 / 10 / 8** and renormalised over whatever is
   ratios would occasionally differ from its own strands by a point.
 
 **The published score has two readers now and computes itself for neither.** The reliability
-floor prices it through `published_score_bar`, and — with [#306](https://github.com/Raketa02/Raketa/issues/306) —
+floor prices it through `published_score_bar`, and — with [#306](https://github.com/Rakieta02/Rakieta/issues/306) —
 the player card prints it. `PlayerScoreReading.published_score` already documented itself as
 *"the one deliberate exception"* to the never-blend rule; this record notes that the exception
 now has a second reader and that the reason is the same one: **a card explaining a match with a

@@ -22,8 +22,8 @@
 - **Leaves standing** [`docs/environments.md`](../environments.md)'s *Feature flags are not
   environment configuration* word for word — a flag may be defaulted per environment, never derived
   from it. Only the page's sentence *There is no flag system today* goes.
-- Settles [#826](https://github.com/Raketa02/Raketa/issues/826). The flags repository's half is
-  `Raketa02/raketa-features#3`: the `explore` key, off in every environment, and the dead
+- Settles [#826](https://github.com/Rakieta02/Rakieta/issues/826). The flags repository's half is
+  `Rakieta02/rakieta-features#3`: the `explore` key, off in every environment, and the dead
   `find_a_game`, `classic_play` and `testers` definitions out. Grilled 2026-11-21 (Q1–Q23).
 
 ## Context
@@ -39,7 +39,7 @@ flag machinery out with the loop it hid: the Featurevisor SDK, the datafile fetc
 copy, `httpGetFromFeaturesHost`, `appBuild`, the hooks and `EXPO_PUBLIC_FEATURES_URL` (#576), and
 the record that decided them (#583). ADR-0013 put *a feature-flag service* back on its *Not adopted
 now* list, and `docs/environments.md` said *There is no flag system today*. The flags repository,
-`Raketa02/raketa-features`, was left unread. Everything removed is recoverable from
+`Rakieta02/rakieta-features`, was left unread. Everything removed is recoverable from
 `6d8d1388^`, and the code it recovers was built, tested and walked on a phone.
 
 Rejected on the way:
@@ -60,7 +60,7 @@ Rejected on the way:
 tester mark, and gate Play's Explore with it.**
 
 1. **Feature flags live in their own repository and change by pull request.** The definitions are
-   YAML in **`Raketa02/raketa-features`** (private), not in this monorepo. A feature is toggled by a
+   YAML in **`Rakieta02/rakieta-features`** (private), not in this monorepo. A feature is toggled by a
    pull request there; its CI lints the definitions, runs their test specs and builds one JSON
    **datafile** per environment. **Every feature carries a test spec**, so a pull request states the
    effect it intends and proves it. Featurevisor's state files are committed back by the publish

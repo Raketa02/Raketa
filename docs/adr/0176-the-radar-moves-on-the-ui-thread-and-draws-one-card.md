@@ -35,7 +35,7 @@
 - Grilled 2026-09-16 at the repo root, from two devices — an iPhone simulator and an Android
   phone — and one screenshot each.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The radar's field is gone, and §3 and §4 with it. §2's adoption stands without the radar: `react-native-gesture-handler` and `react-native-reanimated` stay — the week grid, the undo toast, a group's sport filter and the record's details use them — `GestureHandlerRootView` stays outermost in the root layout, and the router harness still runs real reanimated. Of the three surfaces §2 kept on `PanResponder`, only the deck's drag is still drawn, as the Games deck's `DeckStage`; the swipe row and the radius slider have no caller.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The radar's field is gone, and §3 and §4 with it. §2's adoption stands without the radar: `react-native-gesture-handler` and `react-native-reanimated` stay — the week grid, the undo toast, a group's sport filter and the record's details use them — `GestureHandlerRootView` stays outermost in the root layout, and the router harness still runs real reanimated. Of the three surfaces §2 kept on `PanResponder`, only the deck's drag is still drawn, as the Games deck's `DeckStage`; the swipe row and the radius slider have no caller.
 
 ## Context
 

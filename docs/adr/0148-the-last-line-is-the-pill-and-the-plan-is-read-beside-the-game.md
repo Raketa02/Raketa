@@ -16,7 +16,7 @@
   this record decides about the three slots — §8's shape, `agreed_point`, and *a slot carries its
   value and nothing else* — is untouched; `locked_at` is not on a slot.)*
 - **§4's *the client renders the handle from the members it already holds* is amended below
-  (2026-09-11, [#408](https://github.com/Raketa02/Raketa/issues/408))**: the handle is rendered
+  (2026-09-11, [#408](https://github.com/Rakieta02/Rakieta/issues/408))**: the handle is rendered
   from the **`people`** the response resolves for everybody it names, of which the members are a
   subset. `values` still repeats nothing, and a corrected handle still fixes the whole backlog;
   what moved is *where the read puts the faces*.
@@ -38,10 +38,10 @@
 - **Cites [ADR-0022](0022-kernel-negative-space-and-constant-homes.md)** for constant homes, and
   **[ADR-0095](0095-block-directed-record-symmetric-effect-gates-fail-closed.md)** for the *no
   trace anywhere in any response* posture the refusals take.
-- Settles [#334](https://github.com/Raketa02/Raketa/issues/334) on the map
-  [#321](https://github.com/Raketa02/Raketa/issues/321).
+- Settles [#334](https://github.com/Rakieta02/Rakieta/issues/334) on the map
+  [#321](https://github.com/Rakieta02/Rakieta/issues/321).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The Plan and `challenges` contexts are gone, and with them §7, §8, the plan halves of §9 and §10, §1's Chats tab and `GET /challenges`, and ADR-0164's 2026-09-13 amendments (ADR-0164 was deleted). Rows and rooms are filed under `booking_id` where §2 put `challenge_id`. A room is opened only by a booked game, and membership is that game's current line-up, no longer accepted seats that only grow. Nothing draws the rows as a tab any more: `GET /conversations` remains as the read a booked game's chat door joins over (ADR-0149 §3). `SEAT_LEFT` and the plan codes are no longer written and stay only so stored lines fold.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The Plan and `challenges` contexts are gone, and with them §7, §8, the plan halves of §9 and §10, §1's Chats tab and `GET /challenges`, and ADR-0164's 2026-09-13 amendments (ADR-0164 was deleted). Rows and rooms are filed under `booking_id` where §2 put `challenge_id`. A room is opened only by a booked game, and membership is that game's current line-up, no longer accepted seats that only grow. Nothing draws the rows as a tab any more: `GET /conversations` remains as the read a booked game's chat door joins over (ADR-0149 §3). `SEAT_LEFT` and the plan codes are no longer written and stay only so stored lines fold.
 
 ## Context
 
@@ -61,7 +61,7 @@ ticket's own items had gone stale in the interval:
 And one constraint arrived from outside the ticket entirely. ADR-0145 scoped ADR-0137's *"no
 booking, no calendar and no date field anywhere"* to `games`' record and made the scoping
 **checkable**, in that record's own words: *"`games` importing the Plan is what breaks it."*
-Meanwhile [#324](https://github.com/Raketa02/Raketa/issues/324) keys four of the twelve card states
+Meanwhile [#324](https://github.com/Rakieta02/Rakieta/issues/324) keys four of the twelve card states
 — *Game on*, *Planning*, *Today*, *Needs result* — on `AWAITING_ENTRY` read against **the plan's
 filled slots and the clock**. So every card in Now needs its game's plan, and the plan may not be
 on `GameSchema`. That is an N+1 unless the wire is shaped for it, and a wire shaped badly here
@@ -92,7 +92,7 @@ because a row has to know which door it opens.
 safety gates ran over every pair of the court in the send's own transaction, and re-running them on
 a read would tell a reader that something changed about somebody else — the one thing a safety gate
 may never say. Membership is derived from accepted seats
-([#221](https://github.com/Raketa02/Raketa/issues/221)) and only ever grows.
+([#221](https://github.com/Rakieta02/Rakieta/issues/221)) and only ever grows.
 
 ### 3. One read for the header and the newest page; one for paging back
 
@@ -143,7 +143,7 @@ is for a key that is *only* a key. Here the same value does two jobs: it is the 
 replaces its own message when the real one arrives. **One mechanism for one fact**, which is the
 thing this repo consistently refuses to have two of.
 
-It also matters for [#327](https://github.com/Raketa02/Raketa/issues/327): *a paused act is not a
+It also matters for [#327](https://github.com/Rakieta02/Rakieta/issues/327): *a paused act is not a
 failed one*, so a send that pauses offline and resumes must not become two messages. A stable
 client id is what makes that retry safe.
 
@@ -173,7 +173,7 @@ bounded and small. The difference is not a change of mind; it is a difference be
 a room.
 
 **And read state resolves by scope rather than by decision.** The tab badge counts challenges only
-([#326](https://github.com/Raketa02/Raketa/issues/326)), and the unread mark inside a conversation
+([#326](https://github.com/Rakieta02/Rakieta/issues/326)), and the unread mark inside a conversation
 is out of scope, so **nothing marks a conversation read and no field carries it.**
 
 ### 7. The plan is read beside the game, never inside it
@@ -303,7 +303,7 @@ expect the other, and the asymmetry is the difference between a record and a roo
 
 **Harder**
 
-- **The wire was settled before the screen.** [The Chats tab](https://github.com/Raketa02/Raketa/issues/335)
+- **The wire was settled before the screen.** [The Chats tab](https://github.com/Rakieta02/Rakieta/issues/335)
   is unblocked and may find it needs a field this record did not anticipate. That is an additive
   change rather than a re-decision, but it is a real inversion of the normal order and it was
   accepted knowingly.
@@ -335,7 +335,7 @@ expect the other, and the asymmetry is the difference between a record and a roo
 sentence: *the line carries `actor_id`; the client renders the handle from the members it already
 holds.* The first half stands. The second half named the wrong list, and the one line whose actor
 is never a member showed it
-([#408](https://github.com/Raketa02/Raketa/issues/408)): a third player declined a doubles court
+([#408](https://github.com/Rakieta02/Rakieta/issues/408)): a third player declined a doubles court
 and the room drew **`? said no — that seat is open again`**.
 
 **Membership is derived live, and the person a `SEAT_LEFT` line is about was never in it.**

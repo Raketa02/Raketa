@@ -2,8 +2,8 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-10
-- **Answers [#399](https://github.com/Raketa02/Raketa/issues/399)**, part of
-  [#397](https://github.com/Raketa02/Raketa/issues/397).
+- **Answers [#399](https://github.com/Rakieta02/Rakieta/issues/399)**, part of
+  [#397](https://github.com/Rakieta02/Rakieta/issues/397).
 - **Supersedes one sentence of
   [ADR-0147](0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)** —
   §3's *the channel carries a nudge and nothing else* — and **nothing else in it**. The envelope,

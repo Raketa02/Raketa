@@ -1,6 +1,6 @@
 # Games & Fill in against the market — Playtomic, its rivals, Poland, Stripe
 
-Research input for the story tickets of PRD [`Raketa02/Raketa#530`](https://github.com/Raketa02/Raketa/issues/530)
+Research input for the story tickets of PRD [`Rakieta02/Rakieta#530`](https://github.com/Rakieta02/Rakieta/issues/530)
 (*Games & Fill in — a yes books a court*), specified in
 [`docs/specs/games-and-fill-in/the-mechanics.md`](../specs/games-and-fill-in/the-mechanics.md).
 Every rule of the feature is graded "against the market" from this file, so every fact here

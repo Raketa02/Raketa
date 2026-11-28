@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the deck, the candidate index and the "who fits whom" ranking are gone (#579, #580), and with them everything this record put in the stateful half: the index, the exposure, suppression and interest ledgers, the sweeper and the search telemetry — so the storage table, the per-result version stamps and the four triggers describe a scoring loop that no longer runs. The split stands. `app/engines/matchfit/` is still a pure engine, now the balance forecast and group availability, fenced from RacketSkill both ways; `app/modules/matchmaking/` is its stateful neighbour, holding the level window, geography and the account gates. One ruleset is released, `2026.09.15-a`, embedded and never chosen by the environment. When the ranking went, its other sections were cut from that ruleset in place rather than released under a new name — the one exception to *immutable once released*, taken because no number the new games read moved (#580).
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The searches, the deck, the candidate index and the "who fits whom" ranking are gone (#579, #580), and with them everything this record put in the stateful half: the index, the exposure, suppression and interest ledgers, the sweeper and the search telemetry — so the storage table, the per-result version stamps and the four triggers describe a scoring loop that no longer runs. The split stands. `app/engines/matchfit/` is still a pure engine, now the balance forecast and group availability, fenced from RacketSkill both ways; `app/modules/matchmaking/` is its stateful neighbour, holding the level window, geography and the account gates. One ruleset is released, `2026.09.15-a`, embedded and never chosen by the environment. When the ranking went, its other sections were cut from that ruleset in place rather than released under a new name — the one exception to *immutable once released*, taken because no number the new games read moved (#580).
 
 ## Context
 
@@ -11,7 +11,7 @@ The matchmaking engine answers *who sits down*: given a player, a sport and a mo
 returns a ranked shortlist, a seated line-up with a forecast, or a one-at-a-time deck. Today
 the backend ends at onboarding and nothing ranks anybody. Everything about the engine is being
 decided on the map
-[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155);
+[The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155);
 this record settles the first question on it, because nearly every operational question waits
 on the answer.
 
@@ -163,7 +163,7 @@ in a codebase to lift into a service:
    duplicates any of them — a delta refresh copies row **references** from the container it
    replaces. The trigger is `bytes_per_row × rows × workers`, which the same 1 GB container
    reaches at roughly **64 000 players** on four workers.)*
-   *(Corrected by [#276](https://github.com/Raketa02/Raketa/issues/276): the 782 both
+   *(Corrected by [#276](https://github.com/Rakieta02/Rakieta/issues/276): the 782 both
    amendments divide by was measured against the row §7.2 **specified** — two `int` bitmasks,
    scalar area columns, epoch ints — and never against `CandidateRow`, which holds tuples of
    strings, a tuple of `IndexedArea` and four `datetime` objects. Measured against the type

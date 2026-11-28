@@ -40,12 +40,12 @@
 > **A later ruling the mocks predate (Q127):** the Competitive / For fun switch always shows both
 > kinds, and the kind the player's intent doesn't want is a dimmed door to changing it. No mock
 > draws the door, its panel or the finding state ([A1](#a1-where-things-live), [A2.1](#a21-states)).
-> *(Noted 2026-11-24, [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet
+> *(Noted 2026-11-24, [#859](https://github.com/Rakieta02/Rakieta/issues/859), decided and not yet
 > built: the switch becomes the Games tab's menu, and the door a line in it, still dimmed, numberless
 > and never disabled, opening the same panel. The ruling itself stands.)*
 >
-> **A later decision the mocks predate (PRD [#844](https://github.com/Raketa02/Raketa/issues/844),
-> 2026-11-23; decided, built by [#847](https://github.com/Raketa02/Raketa/issues/847)–[#850](https://github.com/Raketa02/Raketa/issues/850)):**
+> **A later decision the mocks predate (PRD [#844](https://github.com/Rakieta02/Rakieta/issues/844),
+> 2026-11-23; decided, built by [#847](https://github.com/Rakieta02/Rakieta/issues/847)–[#850](https://github.com/Rakieta02/Rakieta/issues/850)):**
 > a group page has **four** tabs, *Games · Fill in · You’re in · Friends*. Fill in
 > holds only the rescues, You’re in the player's own live yeses, neither has a section heading, and
 > **+ Post a game** floats on You’re in. Wherever a mock draws Fill in's two sections or the button
@@ -56,8 +56,8 @@
 > The split's own mocks, its decision log and its two overrides are in
 > [`docs/specs/fill-in-split/`](../fill-in-split/README.md), cited as *split mock 1* to *3*.
 >
-> **A later decision the mocks predate (PRD [#859](https://github.com/Raketa02/Raketa/issues/859),
-> 2026-11-24; decided and not yet built, by [#861](https://github.com/Raketa02/Raketa/issues/861)–[#865](https://github.com/Raketa02/Raketa/issues/865)):**
+> **A later decision the mocks predate (PRD [#859](https://github.com/Rakieta02/Rakieta/issues/859),
+> 2026-11-24; decided and not yet built, by [#861](https://github.com/Rakieta02/Rakieta/issues/861)–[#865](https://github.com/Rakieta02/Rakieta/issues/865)):**
 > **the Competitive / For fun switch leaves the page.** The choice moves into a menu on the selected
 > Games or Friends tab, marked by a chevron and opened by a tap on that tab
 > ([A1](#a1-where-things-live)). Wherever a mock draws the switch under the tabs (mocks 1 and 9),
@@ -78,7 +78,7 @@
 - **Bottom bar:** **Home · ⚡ Play · You**. Home's badge counts games that need you (a result to
   enter or confirm on a Competitive game, a payment to confirm, a seat open in your game). **Players** and **Chats**
   were the older loop, hidden behind a *Classic play* flag and then removed on 2026-10-06
-  ([#569](https://github.com/Raketa02/Raketa/issues/569)).
+  ([#569](https://github.com/Rakieta02/Rakieta/issues/569)).
 - **Group page** (mock 1): header (back, monogram, name, *n members · home club*, the sport pill
   on the right), then the tabs **Games · Fill in · You’re in · Friends** (#844, split mock 3; Q125's
   three until then, and the mocks' *Info* is not a tab). The page opens on Games, and which tab it
@@ -146,8 +146,8 @@
   unrated in, in an official one — and returns to the group. Rated in everything there is to offer,
   there is no *+ Another sport*.
 - **The Games tab's menu** holds the Competitive / For fun choice (PRD
-  [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built, by
-  [#862](https://github.com/Raketa02/Raketa/issues/862); tab menu mocks 1 and 3, illustrations).
+  [#859](https://github.com/Rakieta02/Rakieta/issues/859), decided and not yet built, by
+  [#862](https://github.com/Rakieta02/Rakieta/issues/862); tab menu mocks 1 and 3, illustrations).
   *Until it is built, the choice is a switch under the tabs, on screen all the time: Competitive · 7
   / For fun · 1 (mock 9).*
   - **The chevron.** The selected Games tab draws a small chevron at its right edge, pointing down,
@@ -186,12 +186,12 @@
     press, with no tick. A tap closes the menu and opens its panel ([A2.1](#a21-states)), and
     doesn't move the kind.
   - **Picking.** The kind you are in just closes the menu. The other kind closes it and **swaps the
-    deck in place** ([#863](https://github.com/Raketa02/Raketa/issues/863)): the cards slide down and
+    deck in place** ([#863](https://github.com/Rakieta02/Rakieta/issues/863)): the cards slide down and
     out, and the other kind's rise into the same spot. ✕ · i · the ball stay put when both kinds
     have cards; they fade out when the new kind deals nothing and its starting card rises instead,
     and fade back in on the way back. You stay on Games, and nothing scrolls. A kind not read in the last few minutes shows the deck-card skeleton in the
-    deck's area until it lands (amended 2026-11-24, PRD [#867](https://github.com/Raketa02/Raketa/issues/867),
-    [the loading shimmer's](../loading-shimmer/README.md) Q26, built by [#876](https://github.com/Raketa02/Raketa/issues/876);
+    deck's area until it lands (amended 2026-11-24, PRD [#867](https://github.com/Rakieta02/Rakieta/issues/867),
+    [the loading shimmer's](../loading-shimmer/README.md) Q26, built by [#876](https://github.com/Rakieta02/Rakieta/issues/876);
     it was today's spinner, which stands until then), and a failed read today's failure with its retry; the menu works
     throughout. A notice opening the deck at a card of the other kind moves it there directly, with
     no swap.
@@ -204,7 +204,7 @@
   - **The deck never opens on the dimmed kind**, even when the phone last stood on that kind in
     another sport or group. The remembered kind stays one for the app, as today, and is corrected
     to a live kind.
-- **The Friends tab's menu** (#859, by [#861](https://github.com/Raketa02/Raketa/issues/861); tab
+- **The Friends tab's menu** (#859, by [#861](https://github.com/Rakieta02/Rakieta/issues/861); tab
   menu mocks 2 and 4): the same chevron on the selected Friends tab whenever its court is drawn, and
   a menu aligned to the tab's right edge with **no counts and no door**. It opens and closes as the
   Games tab's does. It sets one friends game's kind and never the intent
@@ -248,7 +248,7 @@
 ([A1](#a1-where-things-live)) closes the menu first, then opens a panel over the deck, inside the
 deck's area so the cards' layout is not squeezed. So the panel never opens under the menu. It is
 an overlay on the group page, not a new route. *(Until #859 is built, the door is the switch's
-dimmed kind.)* **Open, for [#862](https://github.com/Raketa02/Raketa/issues/862):** the grilling
+dimmed kind.)* **Open, for [#862](https://github.com/Rakieta02/Rakieta/issues/862):** the grilling
 didn't decide what a tap on the selected Games tab does while the panel is open and no answer is
 out. Today a press on the switch then closes the panel, and a live kind is chosen.
 
@@ -317,9 +317,9 @@ server orders it.
 
 **Singles** (mock 10) follow the same rules with two tall tiles and no *vs* line.
 
-**The tiles' shape** (PRD [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not
-yet built, by [#864](https://github.com/Raketa02/Raketa/issues/864) and
-[#865](https://github.com/Raketa02/Raketa/issues/865); the reasons and the measurements are
+**The tiles' shape** (PRD [#859](https://github.com/Rakieta02/Rakieta/issues/859), decided and not
+yet built, by [#864](https://github.com/Rakieta02/Rakieta/issues/864) and
+[#865](https://github.com/Rakieta02/Rakieta/issues/865); the reasons and the measurements are
 [the tab menu log](../tab-menu/decisions.md)'s §2 and §6). The card takes the height the switch
 gave back, and its tiles stop stretching to fill it:
 
@@ -372,7 +372,7 @@ this game* — counting the yeses on every version.
 
 ## A3. Fill in and You’re in
 
-> **Rewritten 2026-11-23 for PRD [#844](https://github.com/Raketa02/Raketa/issues/844).** Until
+> **Rewritten 2026-11-23 for PRD [#844](https://github.com/Rakieta02/Rakieta/issues/844).** Until
 > then this was one tab, Fill in (mock 11), stacking two sections under the headings *SEATS TO
 > FILL · N* and *YOU'RE IN · N*, with the FAB floating over it always. The split is drawn by
 > [split mocks 1 and 2](../fill-in-split/README.md#which-mock-shows-what).
@@ -800,7 +800,7 @@ games — the hottest ones are just below.*** under *Your games*, in place of *�
 ([the home rows screens §1](../home-rows/the-screens.md#1-home-top-to-bottom)).
 
 **Home, top to bottom** (2026-11-17, [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
-§1, §4; [#816](https://github.com/Raketa02/Raketa/issues/816), [#817](https://github.com/Raketa02/Raketa/issues/817)):
+§1, §4; [#816](https://github.com/Rakieta02/Rakieta/issues/816), [#817](https://github.com/Rakieta02/Rakieta/issues/817)):
 the header — the title, then the **envelope**, the bell and the trophy in the far-right corner;
 *Get your level*; *Your games*; then the five rows. **What waits on the player is behind the
 envelope**, in ***Needs your answer***, the sheet it opens, in this order: ***To confirm***, a tile per
@@ -811,7 +811,7 @@ a link or a notice that pointed at one of the four cards — the friend link, a 
 friends game invitation's — opens Home with the sheet already up, or Home as it is when nothing waits
 by then. *(The rows' order from ADR-0204 — Hottest groups, Same competitive level players, New in
 Rakieta, Same vibe players, Top 10 — stands until FOR YOU folds them,
-[#820](https://github.com/Raketa02/Raketa/issues/820)–[#823](https://github.com/Raketa02/Raketa/issues/823).)*
+[#820](https://github.com/Rakieta02/Rakieta/issues/820)–[#823](https://github.com/Rakieta02/Rakieta/issues/823).)*
 
 ## A9. Notifications delivery
 
@@ -885,7 +885,7 @@ row, and there is no *mark all*. The app icon carries no number until push is on
 - **Changed** — peeking deck cards fade; the group page's Competitive / For fun switch appears on
   Games, and since Q127 draws the kind the intent doesn't want dimmed, at full size and still
   pressable, as a door; the You tab gains *Account*; the bottom bar loses Players and Chats
-  (removed, #569). *(Noted 2026-11-24, [#859](https://github.com/Raketa02/Raketa/issues/859),
+  (removed, #569). *(Noted 2026-11-24, [#859](https://github.com/Rakieta02/Rakieta/issues/859),
   decided and not yet built: the switch leaves the page for a menu on the selected Games or Friends
   tab, and the door becomes the Games menu's dimmed line, still at full size and pressable. Its
   Part 16 rows are the building tickets': the option that owns a menu and widens, the menu itself,

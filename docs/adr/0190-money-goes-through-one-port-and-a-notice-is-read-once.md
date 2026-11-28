@@ -8,7 +8,7 @@
   because *On request* is removed and no club gives one. A club's cancel that a free court of the same
   club absorbs moves the game and calls nothing on the port. The port itself is unchanged.
 - **Builds** [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §4–§5 for
-  [#536](https://github.com/Raketa02/Raketa/issues/536): the payments port, its two adapters, and
+  [#536](https://github.com/Rakieta02/Rakieta/issues/536): the payments port, its two adapters, and
   the **Payment method** aggregate. Settles four things 0189 left to the ticket, one of which is
   an exemption the repository requires an ADR for.
 
@@ -150,7 +150,7 @@ caller's**: it is single use, and a replay would hand back a spent one.
 ## Amendment — 2026-10-10: a hold's last moment, the real fee, an exact refund
 
 [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s amendment of the same day
-(the mechanics **Q113**, specified by [#634](https://github.com/Raketa02/Raketa/issues/634)) holds
+(the mechanics **Q113**, specified by [#634](https://github.com/Rakieta02/Rakieta/issues/634)) holds
 each share from the fill until the club's cut-off and takes it then. A leave before the cut-off
 takes nothing, and a late leaver whose seat is taken gets the share back less exactly the fee kept
 on their payment. §1's port speaks of *an authorised payment* and *a refund with the fee
@@ -199,7 +199,7 @@ production uses.
 - whether Stripe objects to a second hold placed days after a card check was let go. Renewing
   a hold is undocumented, so the holding is a second, separate off-session payment.
 
-The build is [#636](https://github.com/Raketa02/Raketa/issues/636).
+The build is [#636](https://github.com/Rakieta02/Rakieta/issues/636).
 
 > **Amended 2026-10-12 by [ADR-0196](0196-only-rakieta-until-rakieta-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md) §1–§2.** The holds above were placed at the fill or,
 > through ADR-0189's amendment of the same day, at an On request club's yes. With *On request*

@@ -1,17 +1,17 @@
 # Friends — the screens
 
 > **Status:** from the friends grilling of 2026-11-05/06 and PRD
-> [#743](https://github.com/Raketa02/Raketa/issues/743), recorded by
+> [#743](https://github.com/Rakieta02/Rakieta/issues/743), recorded by
 > [ADR-0202](../../adr/0202-friends-a-request-between-group-mates-and-a-game-among-them-that-books-the-court-when-it-is-sent.md).
 > Home's ASKED FOR A LEVEL row ([§6.4](#64-asked-for-a-level--n-designed-no-mock)) was added on
-> 2026-11-07 by PRD [#762](https://github.com/Raketa02/Raketa/issues/762) (Q129). The same day, PRD
-> [#766](https://github.com/Raketa02/Raketa/issues/766) (Q130, [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md)) took Unblock off the
+> 2026-11-07 by PRD [#762](https://github.com/Rakieta02/Rakieta/issues/762) (Q129). The same day, PRD
+> [#766](https://github.com/Rakieta02/Rakieta/issues/766) (Q130, [ADR-0203](../../adr/0203-a-ranking-per-sport-sorted-by-the-level.md)) took Unblock off the
 > record ([§2](#2-the-player-record--add-friend-beside-block-designed-no-mock)) and gave the request
 > card a ranking line ([§6.2](#62-friend-requests--n-friends-5)). On 2026-11-14, PRD
-> [#789](https://github.com/Raketa02/Raketa/issues/789) (Q131, [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)) let anyone be asked, with no
+> [#789](https://github.com/Rakieta02/Rakieta/issues/789) (Q131, [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)) let anyone be asked, with no
 > daily limit, gave the request card three lines from Home's rows, and put a round friend button on
 > Home's people cards ([the home rows screens §8](../home-rows/the-screens.md#8-the-round-friend-button-and-its-sheets)).
-> On 2026-11-17, [#814](https://github.com/Raketa02/Raketa/issues/814) ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
+> On 2026-11-17, [#814](https://github.com/Rakieta02/Rakieta/issues/814) ([ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
 > §2, §10) gave the request card **every sport the sender holds a level in**
 > ([§6.2](#62-friend-requests--n-friends-5)).
 >
@@ -128,7 +128,7 @@ its title are there only while they hold a card. ASKED FOR A LEVEL is §6.4, aft
 so that §6.3 keeps its number.
 
 *(Since 2026-11-17, [ADR-0205](../../adr/0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)
-§1–§2, [#816](https://github.com/Raketa02/Raketa/issues/816); home refactor 1 and 2:)* **FRIEND
+§1–§2, [#816](https://github.com/Rakieta02/Rakieta/issues/816); home refactor 1 and 2:)* **FRIEND
 REQUESTS and ASKED FOR A LEVEL are no longer on Home.** They wait in **Needs your answer**, the sheet
 the envelope opens. The envelope is an ink Feather `mail` mark in Home's header, named *Needs your
 answer*, left of the bell, with the trophy in the far-right corner, and it is there only while
@@ -145,7 +145,7 @@ buttons at the bottom and their titles held to two lines, so the buttons sit lev
   anything still waits.
 - ***Get your padel level*** closes the sheet for good and starts the questionnaire.
 
-*(Since 2026-11-17, [#817](https://github.com/Raketa02/Raketa/issues/817):)* **FRIENDS GAME is no
+*(Since 2026-11-17, [#817](https://github.com/Rakieta02/Rakieta/issues/817):)* **FRIENDS GAME is no
 longer on Home either.** It waits in Needs your answer after *TO CONFIRM* and before FRIEND REQUESTS,
 **one big tile at a time on the paging rail**, full width, snapping, with dots from two invitations.
 The card is unchanged. Its notice, and a friend request's, and the friend link open Home with the
@@ -185,9 +185,9 @@ tile in *Needs your answer* this line stands **in place of** the group line and 
 above, which go (ADR-0205 §2); the face, the title and the reliability chip stay. The server sends
 `levels` on each of `GET /home`'s `friend_requests`, beside the `sport` and `level` an older app
 still draws; the tile is the player app's
-([#818](https://github.com/Raketa02/Raketa/issues/818)).
+([#818](https://github.com/Rakieta02/Rakieta/issues/818)).
 
-*(Since 2026-11-17, [#816](https://github.com/Raketa02/Raketa/issues/816), home refactor 2:)* **The
+*(Since 2026-11-17, [#816](https://github.com/Rakieta02/Rakieta/issues/816), home refactor 2:)* **The
 tile in *Needs your answer*** is about 0,83 of the content width, measured off the mock, the next one
 peeking. A lone tile takes the content width. It reads the face, *Inés D. wants to be your friend* in
 two lines at most, and the reliability chip on its own line under the title. **Not now** and
@@ -196,7 +196,7 @@ Kazimierz crew · Padel 3,40*, *Invited you to Rakieta*, *Found you in the padel
 rows' three. ~~Until #818 lands, nothing stands in their place.~~ The sport-levels line does, since
 #818 (below).
 
-*(Since 2026-11-17, [#818](https://github.com/Raketa02/Raketa/issues/818):)* **The tile reads the
+*(Since 2026-11-17, [#818](https://github.com/Rakieta02/Rakieta/issues/818):)* **The tile reads the
 face, *Inés D. wants to be your friend*, the sport-levels line under it, then the reliability chip.**
 - **Each sport** is its dot, its name and its Level — *● Padel 3,40* — in small grey mono, the numbers
   tabular with a decimal comma, **in the order the server sends them**. A `·` stands between two
@@ -241,7 +241,7 @@ number of sports. **It is a friend-request card** (friends 5) *(a call)*: faces,
   has a card, and is drawn again once the row is empty and she is still rated in nothing.
 - **Home's tab badge** doesn't count the row.
 
-*(Since 2026-11-17, ADR-0205 §1 and §4, [#816](https://github.com/Raketa02/Raketa/issues/816):)*
+*(Since 2026-11-17, ADR-0205 §1 and §4, [#816](https://github.com/Rakieta02/Rakieta/issues/816):)*
 **The section waits in *Needs your answer*, after FRIEND REQUESTS**, never on Home, on the same wider
 tile as a request (§6.2). It changes in three ways:
 - **There is no line under the title.** *A few questions, and they can add you to a game.* and
@@ -258,8 +258,8 @@ tile as a request (§6.2). It changes in three ways:
 #### 7.1 The court
 
 - **The Friends tab's menu**, **Competitive / For fun**, sets this game's kind only (2026-11-24,
-  [#859](https://github.com/Raketa02/Raketa/issues/859), decided and not yet built, by
-  [#861](https://github.com/Raketa02/Raketa/issues/861); [tab menu mocks 2 and
+  [#859](https://github.com/Rakieta02/Rakieta/issues/859), decided and not yet built, by
+  [#861](https://github.com/Rakieta02/Rakieta/issues/861); [tab menu mocks 2 and
   4](../tab-menu/README.md), illustrations). *Until it is built, the choice is a switch above the
   court (friends 7).*
   - **The chevron.** The selected Friends tab draws a small chevron at its right edge, pointing
@@ -393,13 +393,13 @@ The proposed shapes; the tickets settle them.
 
 | Where | What |
 | --- | --- |
-| **Friends** (new context, event-sourced) | **Friendship**, one stream per pair: requested (and where), set aside, cancelled, crossed, friends made (accepted or crossed), ended (removed or blocked). **Friend link**, one stream per player: code made, code replaced. **Ask for a level**, refused when already asked for that sport, answered by the rating context's first level in it, and **set aside** by the friend asked (an event per ask the Home card names, [#764](https://github.com/Raketa02/Raketa/issues/764)). A subscription to blocks. The reader's relations lent through a demand port ([#745](https://github.com/Raketa02/Raketa/issues/745), [#748](https://github.com/Raketa02/Raketa/issues/748), [#749](https://github.com/Raketa02/Raketa/issues/749)) |
-| **Clubs / the court source** | Answers per hour; the setting defaults to on, existing clubs read on ([#746](https://github.com/Raketa02/Raketa/issues/746)) |
-| **Proposals** | The friends card and the court list, reads only; Home's three rows ([#750](https://github.com/Raketa02/Raketa/issues/750), [#751](https://github.com/Raketa02/Raketa/issues/751), [#764](https://github.com/Raketa02/Raketa/issues/764)) |
-| **Bookings** | The birth *booked by a friend*, invited seats and their 24-hour job, the sender's choices, the covered booking's cut-off ([#751](https://github.com/Raketa02/Raketa/issues/751), [#752](https://github.com/Raketa02/Raketa/issues/752)) |
+| **Friends** (new context, event-sourced) | **Friendship**, one stream per pair: requested (and where), set aside, cancelled, crossed, friends made (accepted or crossed), ended (removed or blocked). **Friend link**, one stream per player: code made, code replaced. **Ask for a level**, refused when already asked for that sport, answered by the rating context's first level in it, and **set aside** by the friend asked (an event per ask the Home card names, [#764](https://github.com/Rakieta02/Rakieta/issues/764)). A subscription to blocks. The reader's relations lent through a demand port ([#745](https://github.com/Rakieta02/Rakieta/issues/745), [#748](https://github.com/Rakieta02/Rakieta/issues/748), [#749](https://github.com/Rakieta02/Rakieta/issues/749)) |
+| **Clubs / the court source** | Answers per hour; the setting defaults to on, existing clubs read on ([#746](https://github.com/Rakieta02/Rakieta/issues/746)) |
+| **Proposals** | The friends card and the court list, reads only; Home's three rows ([#750](https://github.com/Rakieta02/Rakieta/issues/750), [#751](https://github.com/Rakieta02/Rakieta/issues/751), [#764](https://github.com/Rakieta02/Rakieta/issues/764)) |
+| **Bookings** | The birth *booked by a friend*, invited seats and their 24-hour job, the sender's choices, the covered booking's cut-off ([#751](https://github.com/Rakieta02/Rakieta/issues/751), [#752](https://github.com/Rakieta02/Rakieta/issues/752)) |
 | **Payments** | The Cover: a seat charge whose payer is the sender; the amount agreed recorded with the terms acceptance |
-| **Notifications** | The new kinds of [the mechanics §12](the-mechanics.md#12-notifications), all always on; a *level asked* row listed only while its card is on Home ([#764](https://github.com/Raketa02/Raketa/issues/764)) |
-| **Player routes** | send (admitted to a group-mate, or to anybody listed on General and not hidden, at most 10 a Warsaw day to people outside your groups, `daily_request_limit` — Q130, [#773](https://github.com/Raketa02/Raketa/issues/773); since 2026-11-14 to anybody, with no limit, except across *Show me to new people*'s rule — Q131, [#791](https://github.com/Raketa02/Raketa/issues/791)), accept, set aside and cancel a request; remove a friend; list friends by sport; list requests by direction; read and replace the link; open a code; ask for a level; set aside a sport's level asks; the friends card and the court list; send, accept, decline, invite, open a seat, call off, leave |
+| **Notifications** | The new kinds of [the mechanics §12](the-mechanics.md#12-notifications), all always on; a *level asked* row listed only while its card is on Home ([#764](https://github.com/Rakieta02/Rakieta/issues/764)) |
+| **Player routes** | send (admitted to a group-mate, or to anybody listed on General and not hidden, at most 10 a Warsaw day to people outside your groups, `daily_request_limit` — Q130, [#773](https://github.com/Rakieta02/Rakieta/issues/773); since 2026-11-14 to anybody, with no limit, except across *Show me to new people*'s rule — Q131, [#791](https://github.com/Rakieta02/Rakieta/issues/791)), accept, set aside and cancel a request; remove a friend; list friends by sport; list requests by direction; read and replace the link; open a code; ask for a level; set aside a sport's level asks; the friends card and the court list; send, accept, decline, invite, open a seat, call off, leave |
 | **Public route** | read a code: the owner's nickname and face, or `friend_link_not_found` |
 | **Jobs** | the 24-hour run-out; the cover warning; the cut-off's cover |
 | **Seed and the games test console** | friendships, open requests both ways, a set-aside request, a link, a Split and a Whole-court friends game, a seat waiting on an answer, a level ask waiting on the protagonist's Home; console actions to send, accept, decline, invite and open a seat as seed accounts |

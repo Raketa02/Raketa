@@ -30,7 +30,7 @@ about failing open: **"That is the correct trade while nothing reads the decisio
 that has to be re-examined on the day something does."** This is that day.
 
 What is left is one product decision with three edges, and
-[#196](https://github.com/Raketa02/Raketa/issues/196) is right that the interesting ones are on
+[#196](https://github.com/Rakieta02/Rakieta/issues/196) is right that the interesting ones are on
 the backend side of a ticket that reads like copy work.
 
 - **`PhotoResponse` is three fields.** `UploadPhoto` returns the verdict to its caller and the

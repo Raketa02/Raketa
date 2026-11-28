@@ -38,14 +38,14 @@
   locked system already draws, and the two things without a numbered home are Part 16 rows.
 - **Does not decide** blocked players on the tab (§9), a block control on any client surface,
   changing email or password, deleting an account, notifications, a games history.
-- Settles [#465](https://github.com/Raketa02/Raketa/issues/465); the surface is
+- Settles [#465](https://github.com/Rakieta02/Rakieta/issues/465); the surface is
   [`docs/specs/you/the-you-screen.md`](../specs/you/the-you-screen.md) and the walkable
   prototype beside it, which is **locked**: where the prototype and a record disagree, the record
   is amended — this one first. The sentences are `the-words.md` §27. Decided in session
   2026-09-17 with the author, from a prototype walk over every screen; not grilled, because every
   question the walk raised was answered on the prototype itself.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** *How far to look* and *Game suggestions* are gone with the search radius and the proposals opt-in (#581, #582), so their rows in §1 and §2, §2's opt-in write and radius paragraph, and §8's `proposals_opt_in` field and its `PUT` no longer exist. §9's block control *on the deck card* has no deck card to go on; a block is made from the player record (ADR-0193). Everything else stands.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** *How far to look* and *Game suggestions* are gone with the search radius and the proposals opt-in (#581, #582), so their rows in §1 and §2, §2's opt-in write and radius paragraph, and §8's `proposals_opt_in` field and its `PUT` no longer exist. §9's block control *on the deck card* has no deck card to go on; a block is made from the player record (ADR-0193). Everything else stands.
 
 ## Context
 

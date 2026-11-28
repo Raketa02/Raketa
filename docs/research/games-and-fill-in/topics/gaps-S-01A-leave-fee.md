@@ -13,7 +13,7 @@ Kinds: `[DOCS]` a provider's or a regulator's documents; `[PRICE]`; `[LAW]`; `[P
 not found, with where.
 
 The decision these facts settled is the `story-decisions S-01A` comment of 2026-10-10 on
-[#605](https://github.com/Raketa02/Raketa/issues/605#issuecomment-6097600856).
+[#605](https://github.com/Rakieta02/Rakieta/issues/605#issuecomment-6097600856).
 
 ## 1. Stripe's fee on a refund and on a released hold
 

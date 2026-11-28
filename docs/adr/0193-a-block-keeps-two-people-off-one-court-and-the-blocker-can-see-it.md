@@ -62,11 +62,11 @@
   admitted under, in either direction (§2). The gates that remain still answer with one refusal
   that names nothing.
 - Decided in the 2026-10-05 grilling that removed Classic play (Q9, Q17–Q20), for PRD
-  [#571](https://github.com/Raketa02/Raketa/issues/571). A game **waiting for the club** was ruled
+  [#571](https://github.com/Rakieta02/Rakieta/issues/571). A game **waiting for the club** was ruled
   by the product owner on 2026-10-06 (§4). Settles
-  [#585](https://github.com/Raketa02/Raketa/issues/585). Built by the backend's
-  [#586](https://github.com/Raketa02/Raketa/issues/586) and the player app's
-  [#587](https://github.com/Raketa02/Raketa/issues/587).
+  [#585](https://github.com/Rakieta02/Rakieta/issues/585). Built by the backend's
+  [#586](https://github.com/Rakieta02/Rakieta/issues/586) and the player app's
+  [#587](https://github.com/Rakieta02/Rakieta/issues/587).
 
 ## Context
 
@@ -76,7 +76,7 @@ search's notification. It was unrepresentable in any response, even to the perso
 recorded which of those four screens it was made from. And it reached nothing already agreed,
 because no game could exist yet.
 
-**The Classic play removal ([#569](https://github.com/Raketa02/Raketa/issues/569)) deletes all four
+**The Classic play removal ([#569](https://github.com/Rakieta02/Rakieta/issues/569)) deletes all four
 screens**, and the search that *"everywhere"* was written around. What is left shows one player to
 another in five places:
 

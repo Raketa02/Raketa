@@ -1,6 +1,6 @@
 # The loading shimmer: the record
 
-**What PRD [#867](https://github.com/Raketa02/Raketa/issues/867) is drawn from.** Where a screen
+**What PRD [#867](https://github.com/Rakieta02/Rakieta/issues/867) is drawn from.** Where a screen
 has nothing to draw yet, grey shapes stand where its content will be, at its real sizes, and one
 soft band of light sweeps across the whole screen. This covers Home, Rankings, the four See all
 screens and the group page. The content is revealed with one 200 ms cross-fade: all together, or
@@ -9,7 +9,7 @@ Rankings' *You · 212th* button says *Finding you…* while it reads the page ar
 PRD comes from a grilling held on 2026-11-24 (Q1–Q27: three rounds, then one late question on the
 shimmer's own frame cost). The log is copied here from the product owner's own folder,
 `6.loading_shimmer`, so every session can read it. Landed by
-[#868](https://github.com/Raketa02/Raketa/issues/868) on 2026-11-24.
+[#868](https://github.com/Rakieta02/Rakieta/issues/868) on 2026-11-24.
 
 **There is no brief, and there are no mocks.** The request was three sentences, quoted at the top
 of the log, and the grilling worked from those. **The log is the source.** Every look, number and
@@ -26,32 +26,32 @@ theme, a primary source, or a measurement still owed. None was picked by taste.
   a second dated amendment of 2026-11-24, below the first: **the startup sequence gains a step that
   warms Home**. The step is started and never awaited, runs only for an account headed for the tabs,
   and is skipped when the phone already knows it is offline. The splash never waits for it. Built
-  by [#874](https://github.com/Raketa02/Raketa/issues/874).
+  by [#874](https://github.com/Rakieta02/Rakieta/issues/874).
 - **The player app's [theme](../../../frontend_player/src/shared/ui/theme.ts) and
   [design system](../../../frontend_player/docs/design-system.md)** gain the shimmer's tokens:
   `skeleton` (`paper3`'s value), `skeletonSheen` (`paper`'s value), and `motion.skeleton` (the
   1000 ms sweep and its 20° tilt). §1.5 gains the loop, Part 13 gains its third reduced-motion
   exception, and Part 15 and Part 16 record both. All of this landed with #868. No code reads them
-  until [#870](https://github.com/Raketa02/Raketa/issues/870) builds `Skeleton`.
+  until [#870](https://github.com/Rakieta02/Rakieta/issues/870) builds `Skeleton`.
 - **[The tab menu's log](../tab-menu/decisions.md) §5.2**, *When the new kind isn't read yet*,
   carries a dated note (Q26): a kind not read yet shows the deck-card skeleton, not the spinner. So
   does the same rule in [the Games and Fill in screens](../games-and-fill-in/the-screens.md) A1.
-  Built by [#876](https://github.com/Raketa02/Raketa/issues/876).
+  Built by [#876](https://github.com/Rakieta02/Rakieta/issues/876).
 
 **This folder holds the record, not the spec.** The player app's own docs say how each screen loads
 today. The ticket that changes a part amends its feature record and its module notes:
 
-- [#869](https://github.com/Raketa02/Raketa/issues/869): the jump button's *Finding you…*;
-- [#870](https://github.com/Raketa02/Raketa/issues/870): the `Skeleton` primitive, the reveal rule,
+- [#869](https://github.com/Rakieta02/Rakieta/issues/869): the jump button's *Finding you…*;
+- [#870](https://github.com/Rakieta02/Rakieta/issues/870): the `Skeleton` primitive, the reveal rule,
   and Rankings;
-- [#871](https://github.com/Raketa02/Raketa/issues/871): Home, with its two parts and the ceiling;
-- [#872](https://github.com/Raketa02/Raketa/issues/872): the four See all screens;
-- [#874](https://github.com/Raketa02/Raketa/issues/874): Home's warm-up during the splash;
-- [#875](https://github.com/Raketa02/Raketa/issues/875): the group page and its offline notes;
-- [#876](https://github.com/Raketa02/Raketa/issues/876): the kind swap's skeleton.
+- [#871](https://github.com/Rakieta02/Rakieta/issues/871): Home, with its two parts and the ceiling;
+- [#872](https://github.com/Rakieta02/Rakieta/issues/872): the four See all screens;
+- [#874](https://github.com/Rakieta02/Rakieta/issues/874): Home's warm-up during the splash;
+- [#875](https://github.com/Rakieta02/Rakieta/issues/875): the group page and its offline notes;
+- [#876](https://github.com/Rakieta02/Rakieta/issues/876): the kind swap's skeleton.
 
-[#873](https://github.com/Raketa02/Raketa/issues/873) measures the shimmer's frame cost on the A32
-(the log's §7.1, Q27), and [#877](https://github.com/Raketa02/Raketa/issues/877) is the phone walk.
+[#873](https://github.com/Rakieta02/Rakieta/issues/873) measures the shimmer's frame cost on the A32
+(the log's §7.1, Q27), and [#877](https://github.com/Rakieta02/Rakieta/issues/877) is the phone walk.
 That walk includes the 2.5 s ceiling, which the log (§5) asks to check against a measured cold
 open. Until a ticket amends a doc, that doc describes today's spinners and blank bodies.
 

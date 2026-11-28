@@ -2,7 +2,7 @@
 
 - **Status:** Accepted — **§5 superseded 2026-11-27 by
   [ADR-0211](0211-the-brand-is-rakieta-everywhere.md)** (PRD
-  [#889](https://github.com/Raketa02/Raketa/issues/889)): the brand is **Rakieta** everywhere, so
+  [#889](https://github.com/Rakieta02/Rakieta/issues/889)): the brand is **Rakieta** everywhere, so
   the splash's wordmark is no longer an exception. This line, the amendment below, §5 and the *two
   spellings* consequence keep the old spelling as a quote.
 - **Date:** 2026-11-23
@@ -32,23 +32,23 @@
     around *It's a game!*'s dark ground.
 - **Does not decide the design.** The motion, the geometry, the two ground colours and the
   `splashWord` type role are the product owner's brief, as amended by the decision log and PRD
-  [#852](https://github.com/Raketa02/Raketa/issues/852). All of it is kept in
+  [#852](https://github.com/Rakieta02/Rakieta/issues/852). All of it is kept in
   [`docs/specs/splash-screen/`](../specs/splash-screen/README.md). The colours and the type role
   become [design-system](../../frontend_player/docs/design-system.md) Part 16 rows, fenced to the
   splash, written by the tickets that draw them. They are a second dark surface beside *It's a
   game!*. The Android system bars, and the `expo-navigation-bar` module they need, sit behind a
   new platform port, arriving with the code that needs them under ADR-0013's rule.
-- Settles PRD [#852](https://github.com/Raketa02/Raketa/issues/852), decided in the splash
+- Settles PRD [#852](https://github.com/Rakieta02/Rakieta/issues/852), decided in the splash
   grilling on 2026-11-23 (Q1–Q21, three rounds, the third on a launch with no connection) and
-  written by [#853](https://github.com/Raketa02/Raketa/issues/853). The decision log is
+  written by [#853](https://github.com/Rakieta02/Rakieta/issues/853). The decision log is
   [`docs/specs/splash-screen/decisions.md`](../specs/splash-screen/decisions.md), §6, §7 and §9.
   Built by:
-  - [#854](https://github.com/Raketa02/Raketa/issues/854), the launch gate: the night launch window,
+  - [#854](https://github.com/Rakieta02/Rakieta/issues/854), the launch gate: the night launch window,
     never held, the fade, the hold and the ground glow;
-  - [#855](https://github.com/Raketa02/Raketa/issues/855), the lockup;
-  - [#856](https://github.com/Raketa02/Raketa/issues/856), the ball's motion;
-  - [#857](https://github.com/Raketa02/Raketa/issues/857), the system bars;
-  - [#858](https://github.com/Raketa02/Raketa/issues/858), the launch check's skip.
+  - [#855](https://github.com/Rakieta02/Rakieta/issues/855), the lockup;
+  - [#856](https://github.com/Rakieta02/Rakieta/issues/856), the ball's motion;
+  - [#857](https://github.com/Rakieta02/Rakieta/issues/857), the system bars;
+  - [#858](https://github.com/Rakieta02/Rakieta/issues/858), the launch check's skip.
 
 ## Context
 
@@ -167,8 +167,8 @@ the environment badge. **Until it is unmounted, it swallows every touch.**
 > debug build: 21 → 3–5, the overrun past 16.7 ms 488 → ~100 ms.
 
 > **Amended 2026-11-24, again — the sequence gains a step that warms Home**
-> ([PRD #867](https://github.com/Raketa02/Raketa/issues/867), the loading shimmer, written by
-> [#868](https://github.com/Raketa02/Raketa/issues/868); its decision log's §7 and Q18, in
+> ([PRD #867](https://github.com/Rakieta02/Rakieta/issues/867), the loading shimmer, written by
+> [#868](https://github.com/Rakieta02/Rakieta/issues/868); its decision log's §7 and Q18, in
 > [`docs/specs/loading-shimmer/`](../specs/loading-shimmer/README.md)). With the tree mounting once
 > the motion is still, Home's own reads set out about 0.2 s before the fade, and a cold open often
 > faded onto a Home still building itself. **_Nothing else is warmed_ no longer holds for Home's

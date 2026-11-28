@@ -1,22 +1,22 @@
-# Issue tracker: GitHub — `Raketa02/Raketa`
+# Issue tracker: GitHub — `Rakieta02/Rakieta`
 
-Issues and specs for this repo live as GitHub issues on **`Raketa02/Raketa`**. Use the
+Issues and specs for this repo live as GitHub issues on **`Rakieta02/Rakieta`**. Use the
 `gh` CLI for all operations.
 
 > This repo detached from `RobertConstantin02/rakieta` at `ba628d2`. That repo's issues
 > are **not** this repo's issues — do not read, reference, or close them. `#42` means
-> `Raketa02/Raketa#42` and nothing else.
+> `Rakieta02/Rakieta#42` and nothing else.
 >
 > The `gh` CLI is authenticated for two accounts, and it **does not stay switched** — a
 > `git push`, or a subagent running its own commands, can flip the active account back.
-> Issue operations here need `Raketa02` active:
+> Issue operations here need `Rakieta02` active:
 >
 > ```bash
-> gh auth switch --user Raketa02
+> gh auth switch --user Rakieta02
 > ```
 >
 > The symptom when it has flipped is **not** a 403. It is
-> `GraphQL: Could not resolve to a Repository with the name 'Raketa02/Raketa'` — this repo
+> `GraphQL: Could not resolve to a Repository with the name 'Rakieta02/Rakieta'` — this repo
 > is private, so the wrong account cannot see that it exists at all. Treat that message as
 > "wrong account", never as "wrong repo name". Re-run the switch and retry.
 
@@ -86,16 +86,16 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
   `gh issue create --label wayfinder:map`.
 - **Child ticket**: an issue linked to the map as a GitHub **sub-issue**:
   ```bash
-  CHILD_ID=$(gh api repos/Raketa02/Raketa/issues/<child> --jq .id)
-  gh api --method POST repos/Raketa02/Raketa/issues/<map>/sub_issues -F sub_issue_id=$CHILD_ID
+  CHILD_ID=$(gh api repos/Rakieta02/Rakieta/issues/<child> --jq .id)
+  gh api --method POST repos/Rakieta02/Rakieta/issues/<map>/sub_issues -F sub_issue_id=$CHILD_ID
   ```
   Labels: `wayfinder:<type>` (`research`/`prototype`/`grilling`/`task`). Once claimed,
   the ticket is assigned to the driving dev.
 - **Blocking**: GitHub's **native issue dependencies** — the canonical, UI-visible
   representation:
   ```bash
-  BLOCKER_ID=$(gh api repos/Raketa02/Raketa/issues/<blocker> --jq .id)
-  gh api --method POST repos/Raketa02/Raketa/issues/<child>/dependencies/blocked_by \
+  BLOCKER_ID=$(gh api repos/Rakieta02/Rakieta/issues/<blocker> --jq .id)
+  gh api --method POST repos/Rakieta02/Rakieta/issues/<child>/dependencies/blocked_by \
     -F issue_id=$BLOCKER_ID
   ```
   `<blocker-db-id>` is the blocker's numeric **database id** (`.id`), _not_ the `#number`
@@ -107,7 +107,7 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Frontier query**: list the map's open children, drop any with an open blocker or an
   assignee; first in map order wins.
   ```bash
-  gh api repos/Raketa02/Raketa/issues/<map>/sub_issues \
+  gh api repos/Rakieta02/Rakieta/issues/<map>/sub_issues \
     --jq '.[] | select(.state=="open")
               | select(.assignee == null)
               | select((.issue_dependencies_summary.blocked_by // 0) == 0)
@@ -120,7 +120,7 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
   never stale, so confirm against them and re-run:
 
   ```bash
-  gh api repos/Raketa02/Raketa/issues/<n>/dependencies/blocked_by \
+  gh api repos/Rakieta02/Rakieta/issues/<n>/dependencies/blocked_by \
     --jq '.[] | "#\(.number) [\(.state)] \(.title)"'
   ```
 - **Claim**: `gh issue edit <n> --add-assignee @me` — the session's first write.

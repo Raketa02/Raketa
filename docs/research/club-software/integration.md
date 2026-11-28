@@ -1,7 +1,7 @@
 # How rivals get a club's courts — and what that means for Rakieta
 
-Research for the grilling of story S-01E ([#609](https://github.com/Raketa02/Raketa/issues/609)), whose
-decisions of 2026-10-12 ([comment](https://github.com/Raketa02/Raketa/issues/609#issuecomment-6120454776))
+Research for the grilling of story S-01E ([#609](https://github.com/Rakieta02/Rakieta/issues/609)), whose
+decisions of 2026-10-12 ([comment](https://github.com/Rakieta02/Rakieta/issues/609#issuecomment-6120454776))
 removed *On request* and *Instant* and set Rakieta on the path to becoming the club's booking software.
 It is the starting point for the club-software grilling that follows.
 

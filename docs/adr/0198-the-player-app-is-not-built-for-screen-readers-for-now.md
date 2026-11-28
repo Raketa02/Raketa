@@ -2,7 +2,7 @@
 
 - **Status:** Accepted — **§1 narrowed 2026-11-16 by
   [ADR-0205](0205-what-waits-for-your-answer-goes-behind-an-envelope-and-homes-rows-fold-into-for-you.md)**
-  §8 (PRD [#810](https://github.com/Raketa02/Raketa/issues/810)), for three things the product owner
+  §8 (PRD [#810](https://github.com/Rakieta02/Rakieta/issues/810)), for three things the product owner
   asked for by name: Home's FOR YOU lines open and close at once under *Reduce motion*, *Needs your
   answer*'s title takes the screen reader's focus, and each line says whether it is open. A dated
   note marks §1.
@@ -18,8 +18,8 @@
   [`the-words.md`](../specs/matchmaking/the-words.md) §20's live regions and announcements. Their
   text stays where it is, marked paused, so it can come back as written.
 - Ruled by the product owner on 2026-10-25 from story S-16A,
-  [#713](https://github.com/Raketa02/Raketa/issues/713#issuecomment-6400470479): F-FILL-1.2
-  (*Keep*) and F-FILL-64.1 (*Defer*). Settles [#718](https://github.com/Raketa02/Raketa/issues/718).
+  [#713](https://github.com/Rakieta02/Rakieta/issues/713#issuecomment-6400470479): F-FILL-1.2
+  (*Keep*) and F-FILL-64.1 (*Defer*). Settles [#718](https://github.com/Rakieta02/Rakieta/issues/718).
 
 ## Context
 

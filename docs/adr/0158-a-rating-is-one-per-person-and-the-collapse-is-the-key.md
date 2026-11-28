@@ -9,7 +9,7 @@
 ## Context
 
 `the-decisions.md` §5 settles a whole new bounded context, and
-[#373](https://github.com/Raketa02/Raketa/issues/373) prices it: **sportsmanship is the
+[#373](https://github.com/Rakieta02/Rakieta/issues/373) prices it: **sportsmanship is the
 first part of the player record that stores anything.** Every other zone on that sheet
 derives — the metered rows are folds over `games` and `challenges`, opponent variety is a
 walk over a history that already exists, the skill card is a rating already recorded. This
@@ -272,7 +272,7 @@ one — but it is also a contract that will look like decoration until it fires.
 
 ## Amendment — 2026-09-08: the port answers at two arities, and the read that grew leaks nothing
 
-Building the games-list card ([#378](https://github.com/Raketa02/Raketa/issues/378)) needed
+Building the games-list card ([#378](https://github.com/Rakieta02/Rakieta/issues/378)) needed
 the one thing this record described as absent: *which of my games are still waiting for my
 stars*. Two sentences above are corrected here rather than in place, because this record is
 immutable once accepted.
@@ -316,7 +316,7 @@ still reads none of it, and the context still stores exactly the two tables §3 
 
 ## Amendment — 2026-09-08: the figure is published, and the band's edges are whole stars
 
-[#382](https://github.com/Raketa02/Raketa/issues/382) built the read §6 called *what may be
+[#382](https://github.com/Rakieta02/Rakieta/issues/382) built the read §6 called *what may be
 published, in the tickets that follow this one*. Everything that record decided held; what
 follows is what shipping it added, and one thing it did not decide.
 

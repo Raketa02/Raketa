@@ -19,12 +19,12 @@ extended to four apps.
 | `frontend_public/…` | `public` | `frontend_public/**` + shared docs |
 
 > **The two web apps were fenced before they existed.** `frontend_club/` (the club website) was
-> scaffolded inside its fence by [#522](https://github.com/Raketa02/Raketa/issues/522), and
+> scaffolded inside its fence by [#522](https://github.com/Rakieta02/Rakieta/issues/522), and
 > `frontend_public/` (the public site) inside its own by
-> [#525](https://github.com/Raketa02/Raketa/issues/525). That order is the point:
+> [#525](https://github.com/Rakieta02/Rakieta/issues/525). That order is the point:
 > the `club` tier survived the 2026-08-25 reset so that the day a second client landed it
 > would already be fenced, and `public` got its tier
-> ([#502](https://github.com/Raketa02/Raketa/issues/502)) before any session could be
+> ([#502](https://github.com/Rakieta02/Rakieta/issues/502)) before any session could be
 > launched inside it. Until then `frontend_public/` classified as *shared* — writable by every
 > scoped session — and a session started inside it resolved to root and owned everything.
 

@@ -15,10 +15,10 @@
   handle* is untouched.
 - **Cites [ADR-0095](0095-block-directed-record-symmetric-effect-gates-fail-closed.md) §7
   and §8** for the gate, in the same shape ADR-0141 cited them.
-- Settles [#328](https://github.com/Raketa02/Raketa/issues/328) on the map
-  [#321](https://github.com/Raketa02/Raketa/issues/321).
+- Settles [#328](https://github.com/Rakieta02/Rakieta/issues/328) on the map
+  [#321](https://github.com/Rakieta02/Rakieta/issues/321).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Challenges are gone, and with them the detail route, its card, its port, its standings and the reverse Fit (§1, §4, §5, §7, §8, §9 and the 2026-09-10 amendment). Three rules outlived the screen they were written for and are read by booked games: §2 — the arrangement is the gate, and nothing is re-gated against the reader — for a game's court and its room; §3's recompute-at-read while the game has not happened, for the game's pairing (ADR-0161); and §6's three answers when a pairing cannot be computed.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** Challenges are gone, and with them the detail route, its card, its port, its standings and the reverse Fit (§1, §4, §5, §7, §8, §9 and the 2026-09-10 amendment). Three rules outlived the screen they were written for and are read by booked games: §2 — the arrangement is the gate, and nothing is re-gated against the reader — for a game's court and its room; §3's recompute-at-read while the game has not happened, for the game's pairing (ADR-0161); and §6's three answers when a pairing cannot be computed.
 
 ## Context
 
@@ -30,7 +30,7 @@ draws a poster, a handle, a *For fun* pill, `Squash 2,44 · band 2,18–2,70 · 
 reasons and one concern. **There is no screen today that lists a challenge for you at all**:
 `GET /challenges` has exactly one caller, and it is the pair rule's naming after a send was
 refused with `open_challenge_stands`
-([#326](https://github.com/Raketa02/Raketa/issues/326)).
+([#326](https://github.com/Rakieta02/Rakieta/issues/326)).
 
 So the question is not which fields to add. It is **whether a person being asked to play may
 be shown as a card**, and ADR-0141 appears to have answered *no* four weeks ago.
@@ -231,7 +231,7 @@ than reading `Score 0`.
 
 **The bio stays refused, and the refusal is stronger here than where it was written.**
 `PlayerCardSchema` says *"No bio and no free text of any kind, ever"*, and
-[#218](https://github.com/Raketa02/Raketa/issues/218) recorded why: it would be the
+[#218](https://github.com/Rakieta02/Rakieta/issues/218) recorded why: it would be the
 platform's first player-authored text shown to strangers, and the moderation story is out of
 scope beyond the block. A searcher chose to look; **an invitee was put in front of somebody
 without asking**. Nothing about a challenge weakens that argument.
@@ -273,7 +273,7 @@ this is **one rule rather than a list of exceptions** — stated on the two that
 rather than on the ones that do not, so a standing added later is silent by default.
 
 - **`DECLINED` and `LAPSED`** keep their row and their screen
-  ([#324](https://github.com/Raketa02/Raketa/issues/324)) and draw the arrangement and the
+  ([#324](https://github.com/Rakieta02/Rakieta/issues/324)) and draw the arrangement and the
   handle alone. [ADR-0142](0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
   and `domain/challenge.ts` both hold that the pair **releases** when a seat leaves — *"that
   person is a stranger to you once more the moment they leave"* — and a live, as-of-now card
@@ -295,7 +295,7 @@ This **refines** §2 rather than contradicting it. Nothing is re-gated against t
 card is part of an arrangement being decided, and it stops when the deciding does.
 
 **The two answer routes are untouched.** They return `ChallengeSchema` and keep returning it,
-so [#327](https://github.com/Raketa02/Raketa/issues/327)'s *the reply is the redraw* stands
+so [#327](https://github.com/Rakieta02/Rakieta/issues/327)'s *the reply is the redraw* stands
 and costs no second shape. A doubles accept that leaves the challenge in
 `LINE_UP_INCOMPLETE` keeps the card block the client already holds — nothing about accepting
 changes who those people are — and an accept or decline that ends the arrangement drops it
@@ -314,7 +314,7 @@ be wrong for a reason that is otherwise one comment deep in `shortlist.py`.
 **Easier**
 
 - **A challenge can be answered by somebody who can see who is asking**, which is the whole
-  of what [#328](https://github.com/Raketa02/Raketa/issues/328) opened on, and it is the same
+  of what [#328](https://github.com/Rakieta02/Rakieta/issues/328) opened on, and it is the same
   gap ADR-0141 closed one surface earlier.
 - **The mutual-born challenge stops being a special case.** Recomputing means the deck-born
   conversation and the search-born one render through one path, which is what the map's
@@ -354,7 +354,7 @@ be wrong for a reason that is otherwise one comment deep in `shortlist.py`.
 
 §8 stated the card block's lifetime at two levels — per challenge, then per seat — and both hold.
 **It needed a third, per reader**, and the case it missed was found by
-[#392](https://github.com/Raketa02/Raketa/issues/392): `standing_of` returns `AWAITING_ANSWERS`
+[#392](https://github.com/Rakieta02/Rakieta/issues/392): `standing_of` returns `AWAITING_ANSWERS`
 while **any** seat is awaiting, so a padel four sits in that standing with the reader's own answer
 already given, and §8's rules let them be drawn a full court of cards. The client drew one there
 and, for the same reader, none in `LINE_UP_INCOMPLETE` — the same person, released by the same
@@ -399,9 +399,9 @@ argument, and it is the server's own: `ReadChallenge._court` says the per-seat r
 *"by not putting them in the question — so there is no card computed, no photograph signed and
 nothing to leak."* §8 states the rule; that docstring is where it says how, and it is quoted from
 there rather than from here. A reader who has left is owed that, and both halves have now shipped:
-the client declines to draw the block ([#392](https://github.com/Raketa02/Raketa/issues/392)), and
+the client declines to draw the block ([#392](https://github.com/Rakieta02/Rakieta/issues/392)), and
 `_court` **returns no court at all** where the reader's own seat is not live
-([#394](https://github.com/Raketa02/Raketa/issues/394)) — so there is no card computed and no
+([#394](https://github.com/Rakieta02/Rakieta/issues/394)) — so there is no card computed and no
 photograph signed, which is the only shape under which there is nothing to leak. It is the same
 `is_live_at` that predicate already applied to everybody else, asked of the reader's own seat.
 

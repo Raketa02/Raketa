@@ -33,7 +33,7 @@
   §7's *"the challenge is `WITHDRAWN`"* — *Call it off* records an ending of its own,
   `CALLED_OFF`, and `WITHDRAWN` is *Remove the challenge*'s alone (§1). ADR-0163 §5's
   *"`GameCalledOff` reaches the room **not at all**"* — it has reached it since the departure's
-  call-off arrived without a withdrawal beside it ([#424](https://github.com/Raketa02/Raketa/issues/424),
+  call-off arrived without a withdrawal beside it ([#424](https://github.com/Rakieta02/Rakieta/issues/424),
   `tell_the_room.py`'s `_called_off`), and §6 says which arm destroys the room on each path.
   ADR-0163's Consequence *"who withdrew a court whose game had already ended is not recorded"* —
   it is now (§4).
@@ -44,7 +44,7 @@
   card offers two things (§8).
   The client's rule that dropped the row of a court ended by somebody else's departure
   (`endedOnADepartureLeavingTheReader`, added 2026-09-14 from
-  [#429](https://github.com/Raketa02/Raketa/issues/429) because the only sentence available would
+  [#429](https://github.com/Rakieta02/Rakieta/issues/429) because the only sentence available would
   have read *? said no*) — retired, because the sentence exists (§7).
   **Narrows** [ADR-0142](0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)'s
   title and §3's *"the rule's **one** exemption … Nothing else in this context qualifies today"* —
@@ -75,17 +75,17 @@
   *Counted* or *Uncounted*, a confirmation on the trash, a *Find another game* door on the ended
   row, a room line naming the presser, or any change to live filling rows, the badge, the sort or
   the 24 h shelf.
-- Settles [#448](https://github.com/Raketa02/Raketa/issues/448); written by
-  [#452](https://github.com/Raketa02/Raketa/issues/452), built by
-  [#453](https://github.com/Raketa02/Raketa/issues/453) (backend) and
-  [#454](https://github.com/Raketa02/Raketa/issues/454) (player app). Grilled 2026-09-15,
+- Settles [#448](https://github.com/Rakieta02/Rakieta/issues/448); written by
+  [#452](https://github.com/Rakieta02/Rakieta/issues/452), built by
+  [#453](https://github.com/Rakieta02/Rakieta/issues/453) (backend) and
+  [#454](https://github.com/Rakieta02/Rakieta/issues/454) (player app). Grilled 2026-09-15,
   session *left-alone*, from QA plan #429's D1 finding and its screenshot, on the names
   vocabulary of ADR-0171. The mock every screen was decided on:
   [Diego Left](https://claude.ai/artifact/N7wHrEwhWmFvuJE8B4kRYn) — row look *A · Tag, red*,
   faces *only who the sentence names*; the other switches were the alternatives and stay for
   comparison.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Challenges, the Chats list, the Now card and the card's dismissal are gone (`games.dismissed` is still decoded and changes nothing), so §1–§3, §4's `game_id`, §5–§7, §8's card and §9 describe nothing that exists. Two things stand: `called_off_by` on the game read (§4), and the game screen's ending block (§8), whose heading is the shortage's alone since ADR-0175. A booked game is called off only by its cut-off or by its club, so `called_off_by` is always `null` today and the block names nobody.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** Challenges, the Chats list, the Now card and the card's dismissal are gone (`games.dismissed` is still decoded and changes nothing), so §1–§3, §4's `game_id`, §5–§7, §8's card and §9 describe nothing that exists. Two things stand: `called_off_by` on the game read (§4), and the game screen's ending block (§8), whose heading is the shortage's alone since ADR-0175. A booked game is called off only by its cut-off or by its club, so `called_off_by` is always `null` today and the block names nobody.
 
 ## Context
 

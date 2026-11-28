@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
   - §1 is built in the player app, on `feat/RKTA-06_games_fill_in` (a91b71bb).
-  - §2's three optimisations are built in the backend on the same branch, 2026-10-12: [#702](https://github.com/Raketa02/Raketa/issues/702) (432c315b), [#703](https://github.com/Raketa02/Raketa/issues/703) (e51fc77f) and [#704](https://github.com/Raketa02/Raketa/issues/704) (f588b29a). The figures as built are under §2.
+  - §2's three optimisations are built in the backend on the same branch, 2026-10-12: [#702](https://github.com/Rakieta02/Rakieta/issues/702) (432c315b), [#703](https://github.com/Rakieta02/Rakieta/issues/703) (e51fc77f) and [#704](https://github.com/Rakieta02/Rakieta/issues/704) (f588b29a). The figures as built are under §2.
   - §3 waits on the product owner's choice of transport.
   - (0196 is taken on `feature/club_no_confirms`.)
 - **Date:** 2026-10-12
@@ -94,9 +94,9 @@ against the real code and local data:
 
 | | What changes | 47 dealt | 16 dealt | Elsewhere |
 | --- | --- | --- | --- | --- |
-| **a** · [#702](https://github.com/Raketa02/Raketa/issues/702) | Photo URLs are signed by **one client per process** instead of a new S3 client per signature. Presigning sends no request; building the client is the whole cost. | −54 ms CPU | −48 ms | Group page 70 → 32 ms (−52%). The same applies on every surface that draws faces. |
-| **b** · [#703](https://github.com/Raketa02/Raketa/issues/703) | **A week's hours answer *is this hour ticked?* by lookup**, not by scanning every ticked hour. | Grid 40 → 8 ms | Grid 5 → 1 ms | Post a game's grid −14%; the proposer's *free for the hour*. |
-| **c** · [#704](https://github.com/Raketa02/Raketa/issues/704) | **Each event stream is read once per deck read.** Today each adapter replays the same profile and rating streams again. | 256 → 137 statements, −32 ms CPU | 107 → 61 | Every removed statement is a network round trip once deployed. |
+| **a** · [#702](https://github.com/Rakieta02/Rakieta/issues/702) | Photo URLs are signed by **one client per process** instead of a new S3 client per signature. Presigning sends no request; building the client is the whole cost. | −54 ms CPU | −48 ms | Group page 70 → 32 ms (−52%). The same applies on every surface that draws faces. |
+| **b** · [#703](https://github.com/Rakieta02/Rakieta/issues/703) | **A week's hours answer *is this hour ticked?* by lookup**, not by scanning every ticked hour. | Grid 40 → 8 ms | Grid 5 → 1 ms | Post a game's grid −14%; the proposer's *free for the hour*. |
+| **c** · [#704](https://github.com/Rakieta02/Rakieta/issues/704) | **Each event stream is read once per deck read.** Today each adapter replays the same profile and rating streams again. | 256 → 137 statements, −32 ms CPU | 107 → 61 | Every removed statement is a network round trip once deployed. |
 | **all three** | | **171 → 59 ms CPU (−65%)** | **90 → 29 ms (−68%)** | 6 cards, no photos: 28 → 17 ms |
 
 **As built** (2026-10-12, the same method on the same seed decks, the container's log at

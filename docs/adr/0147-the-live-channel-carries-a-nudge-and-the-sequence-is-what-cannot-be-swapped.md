@@ -20,9 +20,9 @@
   response, and it is generated from the contract like every other one. This is not an exception
   to that record, and no exception is granted.
 - **Cites [ADR-0010](0010-local-first-development-aws-deferred.md)**, whose predicted rot is
-  [#341](https://github.com/Raketa02/Raketa/issues/341).
-- Settles [#333](https://github.com/Raketa02/Raketa/issues/333) on the map
-  [#321](https://github.com/Raketa02/Raketa/issues/321).
+  [#341](https://github.com/Rakieta02/Rakieta/issues/341).
+- Settles [#333](https://github.com/Rakieta02/Rakieta/issues/333) on the map
+  [#321](https://github.com/Rakieta02/Rakieta/issues/321).
 
 > **One sentence of Decision 3 superseded 2026-09-10 by
 > [ADR-0156](0156-the-live-channel-carries-presence-and-a-heartbeat-is-the-only-honest-shape.md):
@@ -33,7 +33,7 @@
 > and the fail-loud subscriber — and the new frame is emphatically outside the sequence: it is not
 > an entry, takes no lock, and never asks the allocator for a number.
 
-> **Amended 2026-09-08 by [#342](https://github.com/Raketa02/Raketa/issues/342): the subscriber's
+> **Amended 2026-09-08 by [#342](https://github.com/Rakieta02/Rakieta/issues/342): the subscriber's
 > own client is the shared module's, and `REDIS_TIMEOUT_SECONDS` no longer exists.** Decision 5
 > gives the subscriber its own Redis client because that constant was passed as both timeouts;
 > it is now two — `REDIS_CONNECT_TIMEOUT_SECONDS` and `REDIS_READ_TIMEOUT_SECONDS` — beside a
@@ -41,7 +41,7 @@
 > **What Decision 5 asks for is unchanged**; one of the stated consequences retires. The amendment
 > at the foot of this record says what moved and what did not.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The Plan and `challenges` are gone, so §3's plan and challenge lines, §12's live plan slots, lock and growing membership, and the plan half of the 2026-09-11 amendment — the plan list, the cancel before a plan write, the accept that wrote `SeatAccepted` with `GamePlanned` — describe nothing. Only `games` writes into a room now, and on a nudge the client re-reads the room and the games list. Membership (§5) is the booked game's current line-up. There is no Chats tab: the room list survives only as the read a booked game's chat door joins over. The transport, the nudge, the gapless sequence, the token deadline and the fail-soft/fail-loud split stand.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The Plan and `challenges` are gone, so §3's plan and challenge lines, §12's live plan slots, lock and growing membership, and the plan half of the 2026-09-11 amendment — the plan list, the cancel before a plan write, the accept that wrote `SeatAccepted` with `GamePlanned` — describe nothing. Only `games` writes into a room now, and on a nudge the client re-reads the room and the games list. Membership (§5) is the booked game's current line-up. There is no Chats tab: the room list survives only as the read a booked game's chat door joins over. The transport, the nudge, the gapless sequence, the token deadline and the fail-soft/fail-loud split stand.
 
 ## Context
 
@@ -51,7 +51,7 @@ rule is that *nothing in Play background-refetches*. Everything below is new gro
 is load-bearing for four slices of the core loop.
 
 The options were surveyed in
-[`docs/research/the-chat-real-time-layer.md`](https://github.com/Raketa02/Raketa/blob/research/chat-real-time-layer/docs/research/the-chat-real-time-layer.md)
+[`docs/research/the-chat-real-time-layer.md`](https://github.com/Rakieta02/Rakieta/blob/research/chat-real-time-layer/docs/research/the-chat-real-time-layer.md)
 (branch `research/chat-real-time-layer`, 1414 lines). Its findings are treated here as facts to
 argue **against**, not to re-derive. The ones that survived the argument:
 
@@ -176,7 +176,7 @@ SSE therefore wins on the two arguments that do survive:
   absence fails silently.
 - **The channel is unidirectional by construction.** A WebSocket's bidirectionality would buy a
   second write path this design has no use for — a second place to authorize, a second place to
-  validate, and a second place for [#327](https://github.com/Raketa02/Raketa/issues/327)'s
+  validate, and a second place for [#327](https://github.com/Rakieta02/Rakieta/issues/327)'s
   offline-pause rule to be re-litigated. The only thing it adds is a capability we would then have
   to write a rule forbidding.
 
@@ -190,7 +190,7 @@ surface to a problem that costs six dollars a month inside a process already run
 One channel per conversation, `conversation:{id}`, subscribed and unsubscribed as streams open and
 close. **The research's per-user channel is refused**: it forces the publisher to resolve *who is
 in this conversation* before it can publish, and membership is derived from accepted seats
-([#221](https://github.com/Raketa02/Raketa/issues/221)) — a read added to the append path to buy
+([#221](https://github.com/Rakieta02/Rakieta/issues/221)) — a read added to the append path to buy
 nothing. Per-conversation, the publisher already holds the id: it just appended to it.
 
 **The bus payload is the same nudge as Decision 3**, so at-most-once delivery is adequate and
@@ -199,7 +199,7 @@ Redis Streams are not needed. A subscriber that misses a notification loses **la
 **The subscriber constructs its own Redis client with its own timeout policy.** `redis_client.py`'s
 `REDIS_TIMEOUT_SECONDS = 2.0` is passed as **both** `socket_timeout` and `socket_connect_timeout`,
 and a `socket_timeout` of 2.0 makes `pubsub.listen()` reconnect every two seconds. That is
-[#342](https://github.com/Raketa02/Raketa/issues/342), and this decision does not wait on it: a
+[#342](https://github.com/Rakieta02/Rakieta/issues/342), and this decision does not wait on it: a
 long-lived subscriber owns its own connection policy whichever way #342 lands. *(Amended 2026-09-08 —
 see the amendment below. #342 has landed: that constant is now two, and the subscriber's own
 client is the shared module's rather than hand-rolled. What this clause asks for is unchanged.)*
@@ -267,7 +267,7 @@ iOS severs a backgrounded app's connections. The client closes the stream on bac
 existing `appState` port and re-opens on foreground — **the same code path as any other reconnect**,
 so there is no second story to write.
 
-This is coherent with [#326](https://github.com/Raketa02/Raketa/issues/326) rather than a cost of
+This is coherent with [#326](https://github.com/Rakieta02/Rakieta/issues/326) rather than a cost of
 it: with push ruled out of scope there is no out-of-app reach, so a backgrounded app was never
 going to be told anything, and it catches up on foreground.
 
@@ -294,7 +294,7 @@ seat in, unpaged — so a convention is invented here whether or not one is deci
 the page-back and the catch-up.**
 
 **The parameter names and the response envelope are
-[#334](https://github.com/Raketa02/Raketa/issues/334)'s**, and this convention is **scoped to the
+[#334](https://github.com/Rakieta02/Rakieta/issues/334)'s**, and this convention is **scoped to the
 conversation**. A repo-wide pagination standard is a decision nobody has asked for, and inventing
 one here would widen the map past its destination.
 
@@ -366,7 +366,7 @@ entire surface; the list is a Query cache on ordinary defaults.
 ## Amendment — 2026-09-08: #342 landed, and the subscriber's own client is the shared module's
 
 Decision 5 said the subscriber constructs its own Redis client with its own timeout policy, and
-named [#342](https://github.com/Raketa02/Raketa/issues/342) as the reason it could not reuse the
+named [#342](https://github.com/Rakieta02/Rakieta/issues/342) as the reason it could not reuse the
 one the process holds. **#342 has landed, and `REDIS_TIMEOUT_SECONDS` no longer exists.**
 `app/infrastructure/redis_client.py` now names the two halves separately —
 `REDIS_CONNECT_TIMEOUT_SECONDS` and `REDIS_READ_TIMEOUT_SECONDS`, both still `2.0`, for two
@@ -428,13 +428,13 @@ on a second list, `GET /plans`, read beside the room and never inside it. Decisi
 half — *on a nudge it invalidates the conversation's query* — re-read the stream alone, so a phone
 in the room drew *tomek.p set the place to Zabłocie* under a chip still reading `Where`, and
 *tomek.p locked the plan* under a live `Lock the plan`, until the app was next foregrounded
-([#405](https://github.com/Raketa02/Raketa/issues/405)).
+([#405](https://github.com/Rakieta02/Rakieta/issues/405)).
 
 **What changes, and it is one rule.** Decision 10 now reads: on a nudge the client invalidates
 **the conversation's query, the plan list and the games list** — a nudge re-reads what the room
 draws, and nothing it does not. The plan card is `(game, plan)`: the plan half is
-[#405](https://github.com/Raketa02/Raketa/issues/405), and the game half is
-[#406](https://github.com/Raketa02/Raketa/issues/406) — a doubles court that completed while the
+[#405](https://github.com/Rakieta02/Rakieta/issues/405), and the game half is
+[#406](https://github.com/Rakieta02/Rakieta/issues/406) — a doubles court that completed while the
 room was open re-read a room that now carried a game and drew no card, because `GET /games` had
 been read on the way in and held no game born a second ago; and a *we played* line moves a
 standing the header reads off that list. The rule is chosen over the alternative — inspecting the

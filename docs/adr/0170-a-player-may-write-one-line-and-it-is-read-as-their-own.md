@@ -28,11 +28,11 @@
 - **Does not decide** editing the line after onboarding (§5), reporting a line (§2), or a second
   language for it.
 - Settles the intro half of the Players deck spec
-  ([#438](https://github.com/Raketa02/Raketa/issues/438)) and is built by the same backend and
+  ([#438](https://github.com/Rakieta02/Rakieta/issues/438)) and is built by the same backend and
   client children. Grilled 2026-09-14, in the same session as
   [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md).
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The search card, the candidate index and the Players deck are gone, so §3's `player_card.intro`, §4's deck-card and shortlist rules, and the Consequences about a search record carrying the line describe nothing. The intro itself is live: one optional line of at most 100 characters, its own event, refused at the write for contact (§1–§2), drawn on the player record. Sign-up still asks for it between tags and photos and now ends on *Who you play with*, because the opt-in it was to precede was removed (#581, #582). Editing arrived with ADR-0179.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The search card, the candidate index and the Players deck are gone, so §3's `player_card.intro`, §4's deck-card and shortlist rules, and the Consequences about a search record carrying the line describe nothing. The intro itself is live: one optional line of at most 100 characters, its own event, refused at the write for contact (§1–§2), drawn on the player record. Sign-up still asks for it between tags and photos and now ends on *Who you play with*, because the opt-in it was to precede was removed (#581, #582). Editing arrived with ADR-0179.
 
 ## Context
 

@@ -2,7 +2,7 @@
 
 > **This is the plan the record was built from, and it is built** —
 > `backend/app/modules/player_record` and `frontend_player/src/features/player_record`. Since
-> the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)) a
+> the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)) a
 > record is opened from a player's face on a game or a group — a Games card, a game's details, a
 > booked game, Fill in, *Post a game*, a group's Members — or about yourself from You, and it is
 > admitted by *played together*, *share a group* or *runs their group*, each a yes-or-no
@@ -19,7 +19,7 @@
 > face in Home's rows too ([the home rows mechanics §4.1](../home-rows/the-mechanics.md#41-records-q18-q27)).
 >
 > **Amended 2026-11-22** by [ADR-0207](../../adr/0207-for-fun-is-built-by-shared-social-tags-and-every-for-fun-game-carries-a-social-vibe.md)
-> §7 ([#837](https://github.com/Raketa02/Raketa/issues/837)): a player holds **2 to 8** of **27**
+> §7 ([#837](https://github.com/Rakieta02/Rakieta/issues/837)): a player holds **2 to 8** of **27**
 > tags, so **the record shows up to 8** — `SOCIAL_TAG_ROW_CAP` is 8, where §1.4 below says six. A
 > tag code the app has no words for is skipped, never drawn blank.
 

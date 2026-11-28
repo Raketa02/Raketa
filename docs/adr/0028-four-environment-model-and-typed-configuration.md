@@ -159,7 +159,7 @@ one environment nobody had exempted deliberately would have inherited
 `redis://redis:6379/0` — the service name in `docker-compose-local.yml` — and run
 permanently degraded, which is the state `app/infrastructure/redis_client.py` says must not
 be reachable. Two more variables were missing outright, and the committed artifact could not
-have started a container at all ([#341](https://github.com/Raketa02/Raketa/issues/341)).
+have started a container at all ([#341](https://github.com/Rakieta02/Rakieta/issues/341)).
 
 **The rule is restated over `DEPLOYED`.** What makes an address dangerous is not that the
 environment is unbuilt; it is that the shipped default is a compose service name, which

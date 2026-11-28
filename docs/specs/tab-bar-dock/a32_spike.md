@@ -1,13 +1,13 @@
 # The A32 spike: does the dock's glass cost frames, and does the slide hold while a tab mounts?
 
-**Ticket [#880](https://github.com/Raketa02/Raketa/issues/880), measured 2026-11-25** on the
+**Ticket [#880](https://github.com/Rakieta02/Rakieta/issues/880), measured 2026-11-25** on the
 product owner's Samsung Galaxy A32 5G. It completes
 [ADR-0210](../../adr/0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md) §7.
 
 | Test | Pass mark | Debug native, JS in production mode | Release | Verdict |
 | --- | --- | --- | --- | --- |
 | **T1, the blur** | the blur adds no frame over 16.7 ms to a scroll or to the slide | **fails**: You's scroll 17 → 26 frames over 16.7 ms | **fails**: You's scroll 6 → 16; the slide 19 → 28 | **Android draws no glass.** Its dock is opaque `surface` |
-| **T2, the mount during the slide** | no frame over 33 ms in the 460 ms | **fails**: 16 of 16 slides, blur off | **fails**: 14 of 16, blur off, up to 176 ms on Home → Play | **A confirmed fail.** The named remedy is [#886](https://github.com/Raketa02/Raketa/issues/886), not built |
+| **T2, the mount during the slide** | no frame over 33 ms in the 460 ms | **fails**: 16 of 16 slides, blur off | **fails**: 14 of 16, blur off, up to 176 ms on Home → Play | **A confirmed fail.** The named remedy is [#886](https://github.com/Rakieta02/Rakieta/issues/886), not built |
 | **T3, the shadow** | `boxShadow` is clipped outside the dock, and nothing shows through the glass | passes | not run (a drawing check, not a timing one) | Passes, but moot on Android now, which draws no glass |
 | **The blur's strength** | the product owner picks one | rendered at intensities 20, 60 and 100 | | **100** is recorded, for the iPhone. It was not seen on an iPhone (see below) |
 
@@ -165,7 +165,7 @@ The marker is set off before the navigation in the same press handler.
 - It failed on the debug build, which was inconclusive alone.
 - It failed on the release build, which confirms it.
 - The named remedy is to keep the three tab roots mounted, so a press mounts nothing. It is opened
-  as [#886](https://github.com/Raketa02/Raketa/issues/886), `needs-triage`, and decided there;
+  as [#886](https://github.com/Rakieta02/Rakieta/issues/886), `needs-triage`, and decided there;
   #880 builds nothing.
 
 ## T3 — the shadow, with the glass on

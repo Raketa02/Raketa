@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-02
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The line-up and forecast routes are gone (#579, #580), and with them `ArrangementSchema`, `is_current`/`is_best`, *Even it out* and the group objective `G` this record kept off the wire. The split survives on one route: `GET /games/{id}/pairing` serves `your_side`, `their_side` and a signed `gap` beside the forecast, in the reader's direction, from the engine's `Split`. The input-versus-second-score boundary and rules 2 and 3 stand as written.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The line-up and forecast routes are gone (#579, #580), and with them `ArrangementSchema`, `is_current`/`is_best`, *Even it out* and the group objective `G` this record kept off the wire. The split survives on one route: `GET /games/{id}/pairing` serves `your_side`, `their_side` and a signed `gap` beside the forecast, in the reader's direction, from the engine's `Split`. The input-versus-second-score boundary and rules 2 and 3 stand as written.
 
 ## Context
 

@@ -3,18 +3,18 @@
 - **Status:** Accepted — ***`map-pin` for Around* superseded 2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §1: the
   tab is **Players** and draws `users`. One family, and `radar` still not drawn, stand.
   — **Superseded for the bar 2026-11-25 by [ADR-0210](0210-the-tab-bar-floats-as-glass-and-its-selection-travels.md)**
-  §5 (decided, not yet built — PRD [#878](https://github.com/Raketa02/Raketa/issues/878)): the bar
+  §5 (decided, not yet built — PRD [#878](https://github.com/Rakieta02/Rakieta/issues/878)): the bar
   draws **Ionicons**, and selection changes marker, shape and tone; the ⚡Play disc and its white
   `zap` retire (§6). Feather stays on every other surface, and one family on the bar, typed glyph
   names, the ⚡ never drawn as the character and the declared dependency all stand. The body below
   is history.
 - **Date:** 2026-08-29
 - **Closes:** [ADR-0012](0012-player-app-design-system.md)'s one deliberately-open item — *"The glyph set for tab icons is deliberately still open. The system specifies the 16pt box and the position; `@expo/vector-icons` ships with Expo and is the likely answer, but choosing it is a separate decision"*
-- **Answers:** [#238](https://github.com/Raketa02/Raketa/issues/238) — *Five glyphs, and the set they come from*, on [#217](https://github.com/Raketa02/Raketa/issues/217)
-- **Builds on:** [#227](https://github.com/Raketa02/Raketa/issues/227) (the five-tab shell), [#219](https://github.com/Raketa02/Raketa/issues/219) (the 9.5 type floor), [#221](https://github.com/Raketa02/Raketa/issues/221) (a chat opens on the first acceptance)
-- **Evidence:** branch [`prototype/play-tab-glyphs`](https://github.com/Raketa02/Raketa/tree/prototype/play-tab-glyphs) — three families × three glyph slates × four treatments of the bolt × two state channels, drawn in #227's own bar over its own back stack, and looked at
+- **Answers:** [#238](https://github.com/Rakieta02/Rakieta/issues/238) — *Five glyphs, and the set they come from*, on [#217](https://github.com/Rakieta02/Rakieta/issues/217)
+- **Builds on:** [#227](https://github.com/Rakieta02/Rakieta/issues/227) (the five-tab shell), [#219](https://github.com/Rakieta02/Rakieta/issues/219) (the 9.5 type floor), [#221](https://github.com/Rakieta02/Rakieta/issues/221) (a chat opens on the first acceptance)
+- **Evidence:** branch [`prototype/play-tab-glyphs`](https://github.com/Rakieta02/Rakieta/tree/prototype/play-tab-glyphs) — three families × three glyph slates × four treatments of the bolt × two state channels, drawn in #227's own bar over its own back stack, and looked at
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The bar is three columns now — Home · ⚡ Play · You (#576) — so `map-pin`, `message-circle` and the Players tab's `users` left the player bar with Around, Chats and Players. Feather, `home`, `zap` at 15pt in the disc, `user`, selection in tone alone and the declared dependency all stand; the administrator's bar draws `users` for Groups under this record's one-family rule.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The bar is three columns now — Home · ⚡ Play · You (#576) — so `map-pin`, `message-circle` and the Players tab's `users` left the player bar with Around, Chats and Players. Feather, `home`, `zap` at 15pt in the disc, `user`, selection in tone alone and the declared dependency all stand; the administrator's bar draws `users` for Groups under this record's one-family rule.
 
 ## Context
 
@@ -25,18 +25,18 @@ declined to choose and left the question named, with `@expo/vector-icons` attach
 the likely answer.
 
 **A square that was honest over an unbuilt bar is not honest in the app's real bottom
-chrome.** [#227](https://github.com/Raketa02/Raketa/issues/227) built the bar — five
+chrome.** [#227](https://github.com/Rakieta02/Rakieta/issues/227) built the bar — five
 columns `Now · Around · ⚡Play · Chats · You`, §10.2's geometry, `tag` labels, a 30pt
 `coralInk` disc with a 2pt `coral` ring when Play is active — so the decision is now due.
 
 ### This was decided once, and the record was deleted
 
-ADR-0082 (2026-08-22, merged as [#58](https://github.com/Raketa02/Raketa/pull/58)) chose
+ADR-0082 (2026-08-22, merged as [#58](https://github.com/Rakieta02/Rakieta/pull/58)) chose
 Feather and five glyphs, and was removed by the 2026-08-25 reset along with **0030–0088**.
 Its numbers are not reusable and the index's own rule governs: *anything rebuilt gets a
 fresh ADR at the next free number, argued from the code that exists then.* Its prototype
-survives on [`prototype/tabbar-glyphs`](https://github.com/Raketa02/Raketa/tree/prototype/tabbar-glyphs)
-and its text on [`docs/adr-0082-tab-bar-glyphs`](https://github.com/Raketa02/Raketa/tree/docs/adr-0082-tab-bar-glyphs).
+survives on [`prototype/tabbar-glyphs`](https://github.com/Rakieta02/Rakieta/tree/prototype/tabbar-glyphs)
+and its text on [`docs/adr-0082-tab-bar-glyphs`](https://github.com/Rakieta02/Rakieta/tree/docs/adr-0082-tab-bar-glyphs).
 
 **It is precedent to argue with, not an answer to copy, because three of its premises are
 gone:**
@@ -44,7 +44,7 @@ gone:**
 1. **The five acts are different.** It named `Now · Find · Create · Inbox · You`. Two of
    those tabs have since changed what they *are* — `Around` is proximity rather than a
    query, and `Chats` is a conversation that opens on the first acceptance
-   ([#221](https://github.com/Raketa02/Raketa/issues/221)) rather than a mailbox that
+   ([#221](https://github.com/Rakieta02/Rakieta/issues/221)) rather than a mailbox that
    receives.
 2. **The centre is no longer a create button.** 0082 explicitly *declined to raise the
    control out of the bar*; #227 raised it, and made it both an action and a destination.
@@ -114,7 +114,7 @@ geometry, no per-glyph decisions left to make — is what a five-column bar want
 Now's competing slates drew a calendar and a clock. Both **over-promise**: #227 fixed Now's
 own placeholder as *"What is happening today and next — not built yet"*, and a calendar
 glyph on a tab with no plans, no bookings and no courts announces a scheduling surface that
-[#217](https://github.com/Raketa02/Raketa/issues/217) has explicitly ruled out of scope.
+[#217](https://github.com/Rakieta02/Rakieta/issues/217) has explicitly ruled out of scope.
 `home` claims nothing that is not built, and Now is where a sent challenge lands.
 
 Around drew a compass, a globe and — in MaterialCommunity, which is the only family that has
@@ -165,7 +165,7 @@ it is the difference between a dependency we have and a dependency we rely on.
 
 ### What this hands the build
 
-Not written by this map — [#217](https://github.com/Raketa02/Raketa/issues/217) plans and does
+Not written by this map — [#217](https://github.com/Rakieta02/Rakieta/issues/217) plans and does
 not build, and #227 routed its own design-system edits the same way:
 
 | File | Change |

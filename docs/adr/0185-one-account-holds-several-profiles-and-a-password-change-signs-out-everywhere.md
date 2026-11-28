@@ -34,13 +34,13 @@
 - **Grows [ADR-0002](0002-event-sourced-user-aggregate.md)'s `User` stream** by the facts this record
   needs: an attestation given after registration, and a password set, changed or cleared. It stays
   one aggregate.
-- Settles [#501](https://github.com/Raketa02/Raketa/issues/501) for the PRD
-  [#500](https://github.com/Raketa02/Raketa/issues/500). Built by
-  [#503](https://github.com/Raketa02/Raketa/issues/503) (audiences),
-  [#507](https://github.com/Raketa02/Raketa/issues/507) (signing out everywhere),
-  [#508](https://github.com/Raketa02/Raketa/issues/508) (profiles on `/users/me`, the attestation act),
-  [#517](https://github.com/Raketa02/Raketa/issues/517) (Start playing) and
-  [#518](https://github.com/Raketa02/Raketa/issues/518) (the switcher and the gate).
+- Settles [#501](https://github.com/Rakieta02/Rakieta/issues/501) for the PRD
+  [#500](https://github.com/Rakieta02/Rakieta/issues/500). Built by
+  [#503](https://github.com/Rakieta02/Rakieta/issues/503) (audiences),
+  [#507](https://github.com/Rakieta02/Rakieta/issues/507) (signing out everywhere),
+  [#508](https://github.com/Rakieta02/Rakieta/issues/508) (profiles on `/users/me`, the attestation act),
+  [#517](https://github.com/Rakieta02/Rakieta/issues/517) (Start playing) and
+  [#518](https://github.com/Rakieta02/Rakieta/issues/518) (the switcher and the gate).
 
 ## Context
 

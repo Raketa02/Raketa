@@ -4,7 +4,7 @@
 - **Date:** 2026-08-26
 - **Amended 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: the grid becomes hours per weekday (07:00–23:00). A blank week is still absent, never zero, and onboarding still needs at least one hour.
 
-> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The ranking is gone (#580): there is no availability term, no `NoEvidence` renormalisation and no quality floor, so the fifteen points, the five of eight terms and #167's minimum-evidence rule below describe nothing that runs. Parts 1 and 2 stand: a commit with no hour ticked is refused (`weekly_hours_empty`), and one hour is enough. Part 3's rule stands on its new readers: the engine's `group_availability` reads a blank week as unknown rather than zero, so a Games card grades it *Slim* and never scores it, and `free_for_the_hour` finds a blank week free for nothing.
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Rakieta02/Rakieta/issues/569)).** The ranking is gone (#580): there is no availability term, no `NoEvidence` renormalisation and no quality floor, so the fifteen points, the five of eight terms and #167's minimum-evidence rule below describe nothing that runs. Parts 1 and 2 stand: a commit with no hour ticked is refused (`weekly_hours_empty`), and one hour is enough. Part 3's rule stands on its new readers: the engine's `group_availability` reads a blank week as unknown rather than zero, so a Games card grades it *Slim* and never scores it, and `free_for_the_hour` finds a blank week free for nothing.
 
 ## Context
 
@@ -15,8 +15,8 @@ record.** [ADR-0098](0098-matcher-demands-as-executable-contracts.md) sharpened 
 invariant every later context inherits — *a gate may be honestly empty; a term may never be
 honestly neutral* — where the test is whether a zero would be **measured** or **invented**.
 
-Resolving [#167](https://github.com/Raketa02/Raketa/issues/167) on the map
-[The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
+Resolving [#167](https://github.com/Rakieta02/Rakieta/issues/167) on the map
+[The matchmaking engine: who sits down, and why](https://github.com/Rakieta02/Rakieta/issues/155)
 found that one field already breaks it, in shipped code, and that the breach lands exactly
 where it does the most damage — at the quality floor, which decides whether a player is shown
 somebody or shown an apology.
@@ -98,7 +98,7 @@ The rejected readings, and why:
   nobody expressed. They keep their blank grid, and part 3 already says what the engine does
   with one — which is why part 3 is a rule and not a transitional clause.
 
-- **The evidence rule from [#167](https://github.com/Raketa02/Raketa/issues/167) is left with
+- **The evidence rule from [#167](https://github.com/Rakieta02/Rakieta/issues/167) is left with
   almost nobody to judge, on purpose.** With the grid required, every new profile produces
   evidence on every day-one term, so the *minimum evidence about a specific person* rule
   excludes no one today. It is standing insurance: the day a new term turns on, *we know nothing

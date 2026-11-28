@@ -22,10 +22,10 @@
 > nothing, while a false reject blocks a real player on their first day."* ADR-0107 decides the
 > player card, so every photo is *destined* to become visible to strangers. The `PhotoReview`
 > port and its pass-through adapter stand as decided, and the soft-warn-never-hard-block ruling
-> stands. Filed as [#181](https://github.com/Raketa02/Raketa/issues/181).
+> stands. Filed as [#181](https://github.com/Rakieta02/Rakieta/issues/181).
 >
 > **Read the tense carefully, because the first draft of this note got it wrong.** ADR-0107 is a
-> decision on the matchmaking map ([#155](https://github.com/Raketa02/Raketa/issues/155)), and
+> decision on the matchmaking map ([#155](https://github.com/Rakieta02/Rakieta/issues/155)), and
 > that map plans rather than builds. `app/modules/` is `auth`, `player_profile`, `rating` and
 > `users`; `player_card` appears nowhere in `app/`. So the condition expired **in the decision
 > record, not in running code** — today nobody can still see another player's photo, and the

@@ -1,10 +1,10 @@
 # For fun: the record and its mocks
 
-**What PRD [#827](https://github.com/Raketa02/Raketa/issues/827) is drawn from.** The product
+**What PRD [#827](https://github.com/Rakieta02/Rakieta/issues/827) is drawn from.** The product
 owner's brief *For-Fun Game Cards Refactor*, its 7 mocks, and the decision log of the grilling held
 on it on 2026-11-22 (Q1–Q22 and Q3b). They are copied here from the product owner's own folder,
 `2.for_fun_refactor`, so every session can read them. Landed by
-[#828](https://github.com/Raketa02/Raketa/issues/828) on 2026-11-22.
+[#828](https://github.com/Rakieta02/Rakieta/issues/828) on 2026-11-22.
 
 | File | What it holds |
 | --- | --- |

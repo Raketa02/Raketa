@@ -7,7 +7,7 @@ documents and docstrings cite it by this relative path and by section number, so
 it is and its sections are never renumbered.
 
 **The matchmaking specs that used to live here were deleted on 2026-10-06**, with the Classic play
-loop they described ([#569](https://github.com/Raketa02/Raketa/issues/569)): the two verbatim input
+loop they described ([#569](https://github.com/Rakieta02/Rakieta/issues/569)): the two verbatim input
 documents (`matchmaking-engine.md`, `social-prototype-v1.html`), the engine's own spec set (the
 pipeline, the ranking weights, the five numbers, the newcomer path, the availability term, the
 group objective, the tag matrix, the two contracts, the consumer-driven contracts, the candidate

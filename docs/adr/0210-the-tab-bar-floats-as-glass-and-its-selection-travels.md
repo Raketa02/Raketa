@@ -1,9 +1,9 @@
 # ADR-0210 — The tab bar floats as glass, and its selection travels
 
 - **Status:** Accepted. **§7 was completed on 2026-11-25** by the A32 spike,
-  [#880](https://github.com/Raketa02/Raketa/issues/880), in a dated amendment: **Android draws no
+  [#880](https://github.com/Rakieta02/Rakieta/issues/880), in a dated amendment: **Android draws no
   glass**, so its dock is opaque `surface`. The slide's stutter while a tab mounts was confirmed, and
-  its named remedy is [#886](https://github.com/Raketa02/Raketa/issues/886), to be decided there.
+  its named remedy is [#886](https://github.com/Rakieta02/Rakieta/issues/886), to be decided there.
 - **Date:** 2026-11-25
 - **Amends the player app's [design system](../../frontend_player/docs/design-system.md)
   §1.1, *Paper, not glass*,** with one exception: the tab bar is the one glass surface (§2).
@@ -20,29 +20,29 @@
 - **Adds the app's first spring**, with a stretch that follows the motion (§8). The motion list's
   *"Nothing else moves"* gains one entry.
 - **Leaves standing:**
-  - the shell's one stack and its reset ([#227](https://github.com/Raketa02/Raketa/issues/227)):
+  - the shell's one stack and its reset ([#227](https://github.com/Rakieta02/Rakieta/issues/227)):
     what each tab opens and how a press navigates;
   - the URL as the only source of the lit tab;
-  - the chat's stand-down (§10.1, [#400](https://github.com/Raketa02/Raketa/issues/400));
+  - the chat's stand-down (§10.1, [#400](https://github.com/Rakieta02/Rakieta/issues/400));
   - [ADR-0198](0198-the-player-app-is-not-built-for-screen-readers-for-now.md): the name is the
     whole job, and the bar's names don't change;
   - [ADR-0012](0012-player-app-design-system.md)'s rule on dependencies that own styling.
     `expo-blur`, the one new dependency, owns none;
   - from ADR-0135: one family on the bar, every glyph name typed against its family's `glyphMap`,
     the ⚡ never drawn as the character, and `@expo/vector-icons` declared rather than transitive.
-- **Settles PRD [#878](https://github.com/Raketa02/Raketa/issues/878).** Decided in the dock
-  grilling on 2026-11-24 (Q1–Q26) and written by [#879](https://github.com/Raketa02/Raketa/issues/879).
+- **Settles PRD [#878](https://github.com/Rakieta02/Rakieta/issues/878).** Decided in the dock
+  grilling on 2026-11-24 (Q1–Q26) and written by [#879](https://github.com/Rakieta02/Rakieta/issues/879).
   The brief, the decision log and the mocks are in
   [`docs/specs/tab-bar-dock/`](../specs/tab-bar-dock/README.md). Built by:
-  - [#880](https://github.com/Raketa02/Raketa/issues/880), the A32 spike: the blur, the mount
+  - [#880](https://github.com/Rakieta02/Rakieta/issues/880), the A32 spike: the blur, the mount
     during the slide, the shadow, and the blur's strength;
-  - [#881](https://github.com/Raketa02/Raketa/issues/881), the bar floating with today's look, and
+  - [#881](https://github.com/Rakieta02/Rakieta/issues/881), the bar floating with today's look, and
     every tab screen ending at the reach;
-  - [#882](https://github.com/Raketa02/Raketa/issues/882), Android's keyboard stand-down;
-  - [#883](https://github.com/Raketa02/Raketa/issues/883), the glass dock with the marker standing
+  - [#882](https://github.com/Rakieta02/Rakieta/issues/882), Android's keyboard stand-down;
+  - [#883](https://github.com/Rakieta02/Rakieta/issues/883), the glass dock with the marker standing
     still;
-  - [#884](https://github.com/Raketa02/Raketa/issues/884), the marker's motion;
-  - [#885](https://github.com/Raketa02/Raketa/issues/885), the phone walk.
+  - [#884](https://github.com/Rakieta02/Rakieta/issues/884), the marker's motion;
+  - [#885](https://github.com/Rakieta02/Rakieta/issues/885), the phone walk.
 
 ## Context
 
@@ -237,7 +237,7 @@ same over anything.
 - **Its icon is `coral`**: a mark, 3.38:1 on `coralSoft`, clearing 3:1 for a graphical object.
 - **Its label is `coralInk`**: words, 5.11:1 on `coralSoft`. `coral` would be 3.38, failing 4.5:1
   for 9.5pt `tag`. This is Rule C's spirit, and the tab's menu tick already took `coralInk`
-  ([#861](https://github.com/Raketa02/Raketa/issues/861)).
+  ([#861](https://github.com/Rakieta02/Rakieta/issues/861)).
 - Mock 3 draws the label in bright coral. That is illustration.
 
 **§1.2 gains a third line beside its two.** It already says *a coral stroke is where you are* and
@@ -249,7 +249,7 @@ the bar.**
   coloured thing on the dock"* is read as *the only coloured thing that means selected*.
   *Something needs you* and *you are here* are kept apart by fill.
 - **Rankings' own row is already tinted `coralSoft`** for *where you are* in a list
-  ([#775](https://github.com/Raketa02/Raketa/issues/775)), recorded as a meaning above. It stays
+  ([#775](https://github.com/Rakieta02/Rakieta/issues/775)), recorded as a meaning above. It stays
   what it is. The third line names the bar and licenses no further surface.
 
 ### 5. The bar draws Ionicons, and selection changes marker, shape and tone — ADR-0135 superseded for the bar
@@ -367,7 +367,7 @@ rim, hairline, shadow and marker. Two in-between options were rejected:
 - **translucency without blur**, because sharp text behind the labels shows through;
 - **near-opaque (about 95%)**, because it needs a new token for almost nothing.
 
-**The spike** ([#880](https://github.com/Raketa02/Raketa/issues/880)) runs before the dock is
+**The spike** ([#880](https://github.com/Rakieta02/Rakieta/issues/880)) runs before the dock is
 built:
 - **The build:** the debug native build with JavaScript in production mode, through the
   shared-prefs switch. It is the only build that can be made locally.
@@ -400,7 +400,7 @@ Android draws the glass. #880 completes this section with a dated amendment: **A
 glass, yes or no.** It also adds the blur's strength and the measured numbers.
 
 > **Amended 2026-11-25 — Android draws the glass: no.** The A32 spike
-> ([#880](https://github.com/Raketa02/Raketa/issues/880)) measured a throwaway prototype dock on a
+> ([#880](https://github.com/Rakieta02/Rakieta/issues/880)) measured a throwaway prototype dock on a
 > local branch that was never merged: `expo-blur`'s `dimezisBlurView` under 88% white, and the
 > 460 ms spring. The numbers, the builds and the run counts are in the spec folder's
 > [`a32_spike.md`](../specs/tab-bar-dock/a32_spike.md).
@@ -422,7 +422,7 @@ glass, yes or no.** It also adds the blur's strength and the measured numbers.
 >   - The slide also starts late. A real press draws nothing for 104–208 ms (release medians) while
 >     the new tab is rendered in JavaScript, against about 47 ms with no navigation.
 >   - **The named remedy, keeping the three tab roots mounted, is
->     [#886](https://github.com/Raketa02/Raketa/issues/886)**, `needs-triage`, and is decided there.
+>     [#886](https://github.com/Rakieta02/Rakieta/issues/886)**, `needs-triage`, and is decided there.
 > - **The confirming build was made locally.** The Context's *no local release APK can be built* no
 >   longer holds: a checkout at a short path builds one. The product owner accepted that release
 >   build as T2's confirmation.

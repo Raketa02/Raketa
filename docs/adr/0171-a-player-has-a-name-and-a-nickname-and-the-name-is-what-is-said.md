@@ -36,8 +36,8 @@
   and `player-record/the-decisions.md` §0 say *the whole handle* where the rule now says *the
   whole name*, and `the-words.md` says so once in §15 for the rest of that file. The client's
   own copies — `docs/features/play.md` and `playerName.ts`'s docstring — are
-  [#451](https://github.com/Raketa02/Raketa/issues/451)'s; the backend's `PlayerHandles` port
-  and its `CLAUDE.md` are [#450](https://github.com/Raketa02/Raketa/issues/450)'s.
+  [#451](https://github.com/Rakieta02/Rakieta/issues/451)'s; the backend's `PlayerHandles` port
+  and its `CLAUDE.md` are [#450](https://github.com/Rakieta02/Rakieta/issues/450)'s.
 - **Leaves standing** [ADR-0157](0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)
   — the stem's word break already includes a space, so a name's stem is the same rule with a
   second character finally exercised (§4); [ADR-0002](0002-event-sourced-user-aggregate.md) — the
@@ -48,11 +48,11 @@
 - **Does not decide** editing the name or the nickname from the You tab after onboarding (the act
   is repeatable; the screen is a follow-up), searching players by nickname, a first-name form
   anywhere, or migrating accounts (only `local` runs; a reset seed is the migration).
-- Settles [#447](https://github.com/Raketa02/Raketa/issues/447), built by
-  [#450](https://github.com/Raketa02/Raketa/issues/450) (backend) and
-  [#451](https://github.com/Raketa02/Raketa/issues/451) (player app). Grilled 2026-09-15, session
+- Settles [#447](https://github.com/Rakieta02/Rakieta/issues/447), built by
+  [#450](https://github.com/Rakieta02/Rakieta/issues/450) (backend) and
+  [#451](https://github.com/Rakieta02/Rakieta/issues/451) (player app). Grilled 2026-09-15, session
   *left-alone*, rounds 5–6 of the grilling that also produced the called-off spec
-  ([#448](https://github.com/Raketa02/Raketa/issues/448)), which is written on this vocabulary and
+  ([#448](https://github.com/Rakieta02/Rakieta/issues/448)), which is written on this vocabulary and
   lands after it. The mock every sentence was read on:
   [Diego Left](https://claude.ai/artifact/N7wHrEwhWmFvuJE8B4kRYn).
 
@@ -173,7 +173,7 @@ that is correct immediately after the commit*: the moment after the naming is ex
 lagging read would send a player back to a step they just finished.
 
 **The step cannot be skipped.** The hardware back does not leave it
-([#451](https://github.com/Raketa02/Raketa/issues/451)'s own criterion); it submits the naming,
+([#451](https://github.com/Rakieta02/Rakieta/issues/451)'s own criterion); it submits the naming,
 re-reads `/me`, and only then moves to welcome. A player who closes the app between sign-up and
 the naming lands back on it.
 
@@ -232,8 +232,8 @@ is what it asked for.
 ## Consequences
 
 - **Every screen changes one word and every read model renames one field.** The drift check is
-  red between [#450](https://github.com/Raketa02/Raketa/issues/450) and
-  [#451](https://github.com/Raketa02/Raketa/issues/451), by design; the branch rule is green at
+  red between [#450](https://github.com/Rakieta02/Rakieta/issues/450) and
+  [#451](https://github.com/Rakieta02/Rakieta/issues/451), by design; the branch rule is green at
   the end, not per ticket. The formatter that turns a player into words reads `name` and keeps
   its word break; its tests move from handles to names.
 - **Two people may share a name, and a row cannot tell them apart.** That is accepted: a row is

@@ -1,10 +1,10 @@
 # Rankings: the spec set
 
-**What PRD [#766](https://github.com/Raketa02/Raketa/issues/766) is drawn from.** The product owner's
+**What PRD [#766](https://github.com/Rakieta02/Rakieta/issues/766) is drawn from.** The product owner's
 Rankings brief and its eleven mocks, copied here from `rakieta_v2.0/4-features/4-ranking` so that every
 session can read them, then grilled on 2026-11-07 (Q1–Q26 there, the
 [games and fill-in mechanics' Q130](../games-and-fill-in/the-mechanics.md#appendix-c--decision-log)).
-Landed by [#767](https://github.com/Raketa02/Raketa/issues/767) on 2026-11-07. **Amended 2026-11-14**
+Landed by [#767](https://github.com/Rakieta02/Rakieta/issues/767) on 2026-11-07. **Amended 2026-11-14**
 by [ADR-0204](../../adr/0204-home-shows-who-and-what-is-around-you-and-any-player-may-meet-any-other.md)
 (Q131, [the Home rows spec set](../home-rows/README.md)): no row is hidden by a switch or a block,
 *Show me in General* is replaced by *Show me to new people*, requests have no daily limit, and Home
@@ -75,7 +75,7 @@ mock is correct everywhere else.
 | 3 | rankings 4, 5 | The **You** tab lit | **The Home tab stays lit**, because Rankings opens from Home (Q11) |
 | 4 | rankings 2, 4 | *Rankings* alone | ***Competitive games only*** is added under the title, small and grey (Q11) |
 | 5 | rankings 1 | The pill alone; the brief puts it in *the top-right corner of Home* | **Just left of the bell**, which keeps the corner (Q13) |
-| 6 | rankings 2, 4 | A pill, *● Padel ‹* | **The deck's own sport pill**, lifted to shared UI so the deck and Rankings use one control (call 13, [#774](https://github.com/Raketa02/Raketa/issues/774)), offering all four sports, rated first (Q22) |
+| 6 | rankings 2, 4 | A pill, *● Padel ‹* | **The deck's own sport pill**, lifted to shared UI so the deck and Rankings use one control (call 13, [#774](https://github.com/Rakieta02/Rakieta/issues/774)), offering all four sports, rated first (Q22) |
 | 7 | rankings 5 | All 13 rows at once | **General loads in pages of 50**, with a floating ***You · 212th*** button whenever the reader's row is off screen (Q16). Friends is shown whole, with the same button |
 | 8 | rankings 6; the brief | *It appears only when at least three players are ranked* | **The first three rows the reader sees**, each step labelled with its true place; only when at least three rows are visible to the reader (call 4) |
 | 9 | the brief | *Not ranked in squash yet — your first confirmed competitive game puts you on the list* for General; *Just you so far / Nobody rated in squash yet* for Friends *with fewer than two rated friends* | General lists after **5 results** (Q17): *2 of 5 games — 3 more competitive padel games put you on the list*. The brief's line is **Friends'** (a call made while ticketing). Friends' empty line is ***None of your friends is ranked in squash yet*** (call 14), and the table appears **with one listed friend** (Q7) |
